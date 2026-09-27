@@ -1322,7 +1322,9 @@ function persistSession() {
   } catch (e) {}
 }
 // Thay chữ của tin NGƯỜI DÙNG cuối cùng bằng câu đã diễn giải (sự kiện user_text), cả trên
-// bong bóng lẫn trong convo để F5 còn đúng. `raw` là chữ thô của máy nghe, hiện nhỏ bên dưới.
+// bong bóng lẫn trong convo để F5 còn đúng. `raw` là chữ thô của máy nghe: CHỈ dùng để nhận
+// đúng bong bóng, KHÔNG hiện ra. Chủ dự án 27/09: dòng "Máy nghe: ..." nhỏ bên dưới không
+// cần, bong bóng chỉ hiện câu đã nhận diện (bản 0.59.25 tới 0.64.67 có hiện).
 function capNhatTinNguoiDung(text, raw) {
   if (!text || !text.trim()) return;
   const lastUser = [...convo].reverse().find(m => m.role === "user");
@@ -1333,12 +1335,6 @@ function capNhatTinNguoiDung(text, raw) {
     div.dataset.text = text;
     const u = div.querySelector(".utext");
     if (u) u.textContent = text;
-    const bubble = div.querySelector(".bubble");
-    if (bubble && raw && raw.trim() !== text.trim()) {
-      let tho = bubble.querySelector(".nghe-tho");
-      if (!tho) { tho = document.createElement("div"); tho.className = "nghe-tho"; bubble.appendChild(tho); }
-      tho.textContent = window.t("app.nghe_tho", { raw });
-    }
   }
   for (let i = convo.length - 1; i >= 0; i--) {
     if (convo[i].role === "user") { convo[i].text = text; break; }

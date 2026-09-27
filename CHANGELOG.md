@@ -4,6 +4,12 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.68] - 2026-09-27
+### Cải thiện
+- **Đọc từ tiếng Anh theo kiểu người Việt nói**, cả câu một giọng anh đã chọn: "GitHub Actions" đọc là "ghít hắp ác sừn", "Micro" là "mi cờ rô", "Emma" là "em ma". Bỏ cách ghép hai giọng của bản trước, nên chọn giọng nào thì nghe đúng giọng đó.
+- **Bong bóng chat hiện đúng câu anh định nói:** "huyết áp Action", "khít half action" nay được sửa thành "GitHub Actions". Những chỗ sửa làm đổi nghĩa (số tiền, "không" thành "có"...) vẫn bị chặn như cũ.
+- Bỏ dòng chữ nhỏ "Máy nghe: ..." dưới bong bóng, chỉ còn câu đã nhận diện.
+
 ## [0.64.67] - 2026-09-27
 ### Cải thiện
 - **Đọc từ tiếng Anh cho ra tiếng Anh:** trong câu Việt xen Anh, những từ như GitHub Actions, deploy, dashboard nay được đọc bằng giọng tiếng Anh, phần tiếng Việt vẫn giọng Việt. Áp dụng cho giọng Edge Hoài My, Nam Minh và các giọng đa ngôn ngữ.

@@ -27,6 +27,7 @@ from typing import AsyncIterator, Callable, Dict, List, Optional
 
 import winproc         # lệnh con câm lặng trên Windows (canary test_windows_no_console)
 import nghe_sua
+import phien_am
 
 MARKER = "JAVIS_ASK_MAIN:"
 # Đường TẮT cho việc chỉ đụng tới giao diện: bộ não giọng tự phát, server gọi thẳng dashboard,
@@ -125,7 +126,8 @@ SYSTEM_PROMPT = (
     "HIỂU CÂU THEO NGỮ CẢNH cuộc trò chuyện. DÒNG ĐẦU TIÊN luôn là " + NGHE_MARKER + " rồi "
     "câu người dùng ĐÚNG NHƯ HỌ ĐỊNH NÓI trên một dòng, bỏ khối ngữ cảnh giao diện nếu có: "
     "chép lại nguyên văn, CHỈ thay từ nghe sai bằng từ gần âm đúng với ngữ cảnh (từ tiếng Anh "
-    "viết đúng chính tả tiếng Anh); giữ nguyên tiếng Việt, xưng hô, thứ tự, số, từ phủ định; "
+    "viết đúng chính tả tiếng Anh, ví dụ 'huyết áp Action', 'khít half action' là 'GitHub "
+    "Actions', 'mô đồ' là 'Models'); giữ nguyên tiếng Việt, xưng hô, thứ tự, số, từ phủ định; "
     "không dịch, không tóm tắt, không thêm bớt ý; không chắc thì chép y nguyên. Hệ thống tự "
     "kiểm lại dòng này, sửa quá tay thì bị bỏ. Từ dòng thứ hai mới trả lời hoặc dùng "
     + MARKER + " hay " + UI_MARKER + ", và trả lời theo câu đã hiểu đó: không bám nghĩa đen "
@@ -158,6 +160,41 @@ _TRANSCRIPT_WORDS = re.compile(r"[+−-]?\d+(?:[.,:/-]\d+)*%?|[^\W\d_]+(?:['’]
 # nguyên văn và tự hiểu theo ngữ cảnh.
 NGUONG_DIEN_GIAI = 0.6
 MAX_GHEP_DIEN_GIAI = 4
+# Tổng số từ được thay khi chỗ sửa là THUẬT NGỮ tiếng Anh: nửa câu, tối thiểu 4, để câu ngắn
+# vẫn sửa được một cụm tên bị nghe thành 3 tiếng ("anh hỏi về khít half action"). Sửa bằng
+# từ tiếng Việt vẫn giữ trần cũ, xem safe_transcript_rewrite.
+MAX_SUA_TOI_THIEU = 4
+
+
+def _doc_trung(cu: list, moi: list) -> bool:
+    """Từ ngắn chỉ được sửa khi từ mới là TIẾNG ANH và người Việt đọc nó y hệt chữ máy nghe
+    ("mên" -> "main"). Giữ nguyên rào cũ cho từ tiếng Việt: "vâng" không thành "Vân"."""
+    try:
+        if not moi or not all(phien_am.la_tu_tieng_anh(w) for w in moi):
+            return False
+        a = nghe_sua.bo_dau("".join(" ".join(cu).split()))
+        b = nghe_sua.bo_dau("".join(phien_am.doc_cum(" ".join(moi)).split()))
+        return bool(a) and a == b
+    except Exception:
+        return False
+
+
+def _giong_am(cu: list, moi: list) -> float:
+    """Độ giống âm giữa cụm máy nghe và cụm bộ não sửa, lấy cách so CAO HƠN trong hai:
+      - theo mặt chữ (nghe_sua.khoa_am) như trước: "David" với "Javis";
+      - theo cách người Việt ĐỌC từ tiếng Anh (phien_am): "action" viết một đằng đọc một
+        nẻo, so mặt chữ "huyết áp Action" với "GitHub Actions" chỉ được 0,6 và bị chặn,
+        còn so cách đọc ("ghít hắp ác sừn") thì khớp (0.64.68).
+    """
+    a, b = nghe_sua.khoa_am("".join(cu)), nghe_sua.khoa_am("".join(moi))
+    d = nghe_sua.do_giong(a, b)
+    try:
+        a2 = nghe_sua.khoa_am("".join(phien_am.doc_cum(" ".join(cu)).split()))
+        b2 = nghe_sua.khoa_am("".join(phien_am.doc_cum(" ".join(moi)).split()))
+        d = max(d, nghe_sua.do_giong(a2, b2))
+    except Exception:
+        pass
+    return d
 
 
 def safe_transcript_rewrite(original: str, proposed: str) -> str:
@@ -184,7 +221,7 @@ def safe_transcript_rewrite(original: str, proposed: str) -> str:
     after = [w.casefold() for w in after_raw]
     if not before or not after:
         return original
-    changed = 0
+    changed = changed_en = 0
     for kind, i, j, k, l in difflib.SequenceMatcher(None, before, after, autojunk=False).get_opcodes():
         if kind == "equal":
             continue
@@ -202,10 +239,21 @@ def safe_transcript_rewrite(original: str, proposed: str) -> str:
         if any(w in nghe_sua.PROTECTED_WORDS or any(c.isdigit() for c in w) for w in old + new):
             return original
         a, b = nghe_sua.khoa_am("".join(old)), nghe_sua.khoa_am("".join(new))
-        if min(len(a), len(b)) < nghe_sua.KHOA_MIN_MO or nghe_sua.do_giong(a, b) < NGUONG_DIEN_GIAI:
+        if min(len(a), len(b)) < nghe_sua.KHOA_MIN_MO and not _doc_trung(before_raw[i:j], after_raw[k:l]):
             return original
-        changed += max(len(old), len(new))
+        if _giong_am(before_raw[i:j], after_raw[k:l]) < NGUONG_DIEN_GIAI:
+            return original
+        if all(phien_am.la_tu_tieng_anh(w) for w in after_raw[k:l]):
+            changed_en += max(len(old), len(new))
+        else:
+            changed += max(len(old), len(new))
+    # Hai trần riêng: sửa bằng từ tiếng Việt giữ trần cũ (một phần ba câu, tối thiểu 2) vì đó
+    # là chỗ đổi nghĩa ("trả lời vâng" -> "trở thành Vân"); sửa bằng THUẬT NGỮ tiếng Anh được
+    # rộng hơn (nửa câu, tối thiểu 4) vì một cụm tên bị nghe thành 3 tiếng Việt là chuyện
+    # thường ("khít half action" -> "GitHub Actions").
     if changed > max(2, len(before) // 3):
+        return original
+    if changed + changed_en > max(MAX_SUA_TOI_THIEU, len(before) // 2):
         return original
     return prefix + candidate
 

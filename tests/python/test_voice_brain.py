@@ -442,8 +442,10 @@ check("main: làn nhanh bóc JAVIS_NGHE giữa lúc stream và ở lưới sau",
 # Storage/UI correction and destructive rewrites are executed by test_voice_turn_integrity.py.
 _src_app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8", errors="replace")
 check("app.js: nhận user_text, thay bong bóng người dùng cuối và convo",
-      'data.type === "user_text"' in _src_app and "function capNhatTinNguoiDung" in _src_app
-      and 'window.t("app.nghe_tho"' in _src_app)
+      'data.type === "user_text"' in _src_app and "function capNhatTinNguoiDung" in _src_app)
+# Chủ dự án 27/09: bong bóng chỉ hiện câu đã nhận diện, không kèm dòng "Máy nghe: ..." bên dưới.
+check("app.js: KHÔNG hiện chữ thô của máy nghe dưới bong bóng",
+      "app.nghe_tho" not in _src_app and "nghe-tho" not in _src_app)
 
 asyncio.run(main())
 if _fails:

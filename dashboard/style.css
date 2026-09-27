@@ -3126,8 +3126,6 @@ body.ne-full-on .cview { z-index: 250; }
 }
 .msg-javis .viec-giao svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--accent); }
 .msg-javis .viec-giao .viec-ten { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text); }
-/* Chữ THÔ của máy nghe, dưới câu đã diễn giải trong bong bóng người dùng (sự kiện user_text). */
-.msg-user .nghe-tho { font-size: 12.5px; color: var(--text3); margin-top: 4px; font-style: italic; }
 
 /* ============================================================
    LINH VẬT (pet.js) - khuôn mặt nhỏ nép ở mép màn hình
