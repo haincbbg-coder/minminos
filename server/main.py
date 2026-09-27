@@ -13870,7 +13870,10 @@ async def websocket_endpoint(ws: WebSocket):
             async def _giu_cau_goc():
                 await send_raw({"type": "status", "session_id": conv_sid,
                                 "content": "Javis đang kiểm tra lại câu vừa nghe..."})
-                await run_turn(conv_sid, original_message, brain, turn_tag, runtime_trace)
+                # Kho phiên và bong bóng giữ câu gốc; chỉ lời gửi bộ não chính kèm ghi chú để
+                # nó tự hiểu từ nghe nhầm mà không giải thích ra (voice_brain.GHI_CHU_CAU_NGHE).
+                await run_turn(conv_sid, original_message + "\n\n" + voice_brain.GHI_CHU_CAU_NGHE,
+                               brain, turn_tag, runtime_trace)
 
             async def _ap_dien_giai(nghe):
                 """Nhận câu bộ não giọng HIỂU theo ngữ cảnh, nhưng chỉ khi đó là sửa từ nghe nhầm

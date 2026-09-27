@@ -33,6 +33,13 @@ class VoiceTurnIntegrity(unittest.IsolatedAsyncioTestCase):
                 frames.append(frame)
 
             async def fallback(sid, message, *args):
+                # 0.64.72: lượt quay về câu gốc gửi bộ não chính CÂU GỐC + đúng một lời dặn cố
+                # định (voice_brain.GHI_CHU_CAU_NGHE). Bóc lời dặn ra để mọi phép so bên dưới
+                # vẫn canh câu gốc còn nguyên từng chữ; self.ghi_chu đếm số lần có lời dặn.
+                duoi = '\n\n' + voice_brain.GHI_CHU_CAU_NGHE
+                if message.endswith(duoi):
+                    self.ghi_chu = getattr(self, 'ghi_chu', 0) + 1
+                    message = message[:-len(duoi)]
                 fallbacks.append(message)
 
             async def ui_request(*args, **kwargs):
@@ -115,6 +122,9 @@ class VoiceTurnIntegrity(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(messages, [original])
             self.assertEqual(fallbacks, [original])
             self.assertFalse([f for f in frames if f['type'] == 'user_text'])
+        # Bộ não chính nhận kèm lời dặn "đừng giải thích chuyện nghe nhầm", nhưng KHÔNG nhận
+        # câu bị rào chặn ("trở thành Vân", "Gửi tin cho khách").
+        self.assertEqual(getattr(self, 'ghi_chu', 0), 2)
 
     async def test_exact_transcript_can_answer_without_fallback(self):
         original = 'Em phải trả lời vâng'

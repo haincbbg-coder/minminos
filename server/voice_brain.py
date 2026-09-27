@@ -148,6 +148,19 @@ GHI_CHU_TAT_LOC = (
     + BO_QUA_MARKER + ".]"
 )
 
+# Dặn bộ não CHÍNH khi câu diễn giải của bộ não giọng bị rào chặn và lượt quay về câu gốc
+# (main.run_voice_turn._giu_cau_goc). Chủ dự án 27/09: câu nghe "cave của clap Play" đi thẳng
+# sang bộ não chính, nó trả lời mở đầu bằng "Em hiểu 'cave' là KV của Cloudflare..." - đúng ý
+# nhưng thừa, người nghe chỉ cần câu trả lời. CỐ Ý không kèm câu bộ não giọng hiểu: rào chặn
+# chính là vì câu đó có thể đổi nghĩa ("không gửi" thành "có gửi").
+GHI_CHU_CAU_NGHE = (
+    "[GHI CHÚ HỆ THỐNG: câu trên đến từ MÁY NGHE giọng nói, từ tiếng Anh hay bị chép thành từ "
+    "gần âm (\"cave\" là KV, \"clap Play\" là Cloudflare). Tự hiểu theo nghĩa hợp ngữ cảnh "
+    "nhất rồi TRẢ LỜI THẲNG vào việc, KHÔNG giải thích hay bình luận chuyện nghe nhầm (đừng nói "
+    "\"em hiểu X là Y\"). Chỉ hỏi lại khi thật sự không đoán được. Việc tác động ra ngoài (gửi "
+    "tin, đăng bài, tiêu tiền, xoá) vẫn nói lại ngắn điều sắp làm và hỏi xác nhận trước.]"
+)
+
 _MARK_RE = re.compile(r"^[ \t]*" + re.escape(MARKER) + r"[ \t]*(.+?)[ \t]*$", re.M)
 _NGHE_RE = re.compile(r"^[ \t]*" + re.escape(NGHE_MARKER) + r"[ \t]*(.*?)[ \t]*(?:\n|$)", re.M)
 _TRANSCRIPT_WORDS = re.compile(r"[+−-]?\d+(?:[.,:/-]\d+)*%?|[^\W\d_]+(?:['’][^\W\d_]+)?", re.U)
@@ -164,6 +177,11 @@ MAX_GHEP_DIEN_GIAI = 4
 # vẫn sửa được một cụm tên bị nghe thành 3 tiếng ("anh hỏi về khít half action"). Sửa bằng
 # từ tiếng Việt vẫn giữ trần cũ, xem safe_transcript_rewrite.
 MAX_SUA_TOI_THIEU = 4
+# Cụm thay bằng thuật ngữ tiếng Anh được dài tới chừng này tiếng (0.64.72).
+MAX_GHEP_ANH = 6
+# Từ ngắn (dưới nghe_sua.KHOA_MIN_MO) được thay bằng từ tiếng Anh khi CÁCH ĐỌC kiểu Việt giống
+# từ mức này: "cave" (đọc "cây") -> "KV" (đọc "cây vi") là 0,67.
+NGUONG_TU_NGAN_ANH = 0.65
 
 
 def _doc_trung(cu: list, moi: list) -> bool:
@@ -179,6 +197,16 @@ def _doc_trung(cu: list, moi: list) -> bool:
         return False
 
 
+def _giong_doc(cu: list, moi: list) -> float:
+    """Độ giống âm CHỈ theo cách đọc kiểu Việt (phien_am), cho từ ngắn."""
+    try:
+        a = nghe_sua.khoa_am("".join(phien_am.doc_cum(" ".join(cu)).split()))
+        b = nghe_sua.khoa_am("".join(phien_am.doc_cum(" ".join(moi)).split()))
+        return nghe_sua.do_giong(a, b)
+    except Exception:
+        return 0.0
+
+
 def _giong_am(cu: list, moi: list) -> float:
     """Độ giống âm giữa cụm máy nghe và cụm bộ não sửa, lấy cách so CAO HƠN trong hai:
       - theo mặt chữ (nghe_sua.khoa_am) như trước: "David" với "Javis";
@@ -189,12 +217,16 @@ def _giong_am(cu: list, moi: list) -> float:
     a, b = nghe_sua.khoa_am("".join(cu)), nghe_sua.khoa_am("".join(moi))
     d = nghe_sua.do_giong(a, b)
     try:
-        a2 = nghe_sua.khoa_am("".join(phien_am.doc_cum(" ".join(cu)).split()))
-        b2 = nghe_sua.khoa_am("".join(phien_am.doc_cum(" ".join(moi)).split()))
-        d = max(d, nghe_sua.do_giong(a2, b2))
+        # Chữ cũ là tiếng Việt, chữ mới là tiếng Anh: so MẶT CHỮ là so hai thứ khác loại
+        # ("việc" với chính tả "Webhook" được 0,67 và từng lọt, đổi hẳn trang cần mở). Khi đó
+        # chỉ tin cách ĐỌC ("việc" với "quép húc" 0,44). Hai bên cùng tiếng Anh ("David" ->
+        # "Javis") hay cùng tiếng Việt thì mặt chữ vẫn có nghĩa, lấy điểm cao hơn.
+        anh_moi = all(phien_am.la_tu_tieng_anh(w) for w in moi)
+        anh_cu = all(phien_am.la_tu_tieng_anh(w) for w in cu)
+        doc = _giong_doc(cu, moi)
+        return doc if (anh_moi and not anh_cu) else max(d, doc)
     except Exception:
-        pass
-    return d
+        return d
 
 
 def safe_transcript_rewrite(original: str, proposed: str) -> str:
@@ -226,9 +258,14 @@ def safe_transcript_rewrite(original: str, proposed: str) -> str:
         if kind == "equal":
             continue
         # No dropped/added words, even when the remaining transcript is still long.
-        if kind != "replace" or max(j - i, l - k) > MAX_GHEP_DIEN_GIAI:
+        if kind != "replace":
             return original
         old, new = before[i:j], after[k:l]
+        # Thay bằng THUẬT NGỮ tiếng Anh: một tên 3 chữ có thể bị nghe thành 5, 6 tiếng Việt
+        # ("Quốc cơ ford plat form" -> "Workers for Platforms"), nên cụm được dài hơn.
+        la_anh = all(phien_am.la_tu_tieng_anh(w) for w in after_raw[k:l])
+        if max(j - i, l - k) > (MAX_GHEP_ANH if la_anh else MAX_GHEP_DIEN_GIAI):
+            return original
         if "".join(old) == "".join(new):
             # Allow compound proper names (Open Router -> OpenRouter), not merged
             # command/negation words. Lowercase brand repairs still use explicit hotwords.
@@ -239,18 +276,19 @@ def safe_transcript_rewrite(original: str, proposed: str) -> str:
         if any(w in nghe_sua.PROTECTED_WORDS or any(c.isdigit() for c in w) for w in old + new):
             return original
         a, b = nghe_sua.khoa_am("".join(old)), nghe_sua.khoa_am("".join(new))
-        if min(len(a), len(b)) < nghe_sua.KHOA_MIN_MO and not _doc_trung(before_raw[i:j], after_raw[k:l]):
+        if (min(len(a), len(b)) < nghe_sua.KHOA_MIN_MO and not _doc_trung(before_raw[i:j], after_raw[k:l])
+                and not (la_anh and _giong_doc(before_raw[i:j], after_raw[k:l]) >= NGUONG_TU_NGAN_ANH)):
             return original
         if _giong_am(before_raw[i:j], after_raw[k:l]) < NGUONG_DIEN_GIAI:
             return original
-        if all(phien_am.la_tu_tieng_anh(w) for w in after_raw[k:l]):
-            changed_en += max(len(old), len(new))
+        if la_anh:
+            changed_en += len(new)
         else:
             changed += max(len(old), len(new))
     # Hai trần riêng: sửa bằng từ tiếng Việt giữ trần cũ (một phần ba câu, tối thiểu 2) vì đó
     # là chỗ đổi nghĩa ("trả lời vâng" -> "trở thành Vân"); sửa bằng THUẬT NGỮ tiếng Anh được
-    # rộng hơn (nửa câu, tối thiểu 4) vì một cụm tên bị nghe thành 3 tiếng Việt là chuyện
-    # thường ("khít half action" -> "GitHub Actions").
+    # rộng hơn (nửa câu, tối thiểu 4, đếm theo số chữ tiếng Anh thay vào) vì một cụm tên bị
+    # nghe thành nhiều tiếng Việt là chuyện thường ("khít half action" -> "GitHub Actions").
     if changed > max(2, len(before) // 3):
         return original
     if changed + changed_en > max(MAX_SUA_TOI_THIEU, len(before) // 2):

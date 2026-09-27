@@ -472,6 +472,8 @@ class JavisVoice {
     if (!cu) return moi;
     if (moi.startsWith(cu)) return moi;
     if (cu.endsWith(moi)) return cu;
+    const sua = JavisVoice.ghepSua(cu, moi);   // phiên mới giao lại BẢN SỬA của câu đã chốt
+    if (sua !== null) return sua;
     return (cu + " " + moi).trim();
   }
 
@@ -490,7 +492,49 @@ class JavisVoice {
     const a = chuan(cu), b = chuan(moi);
     if (b.startsWith(a)) return moi;
     if (a.endsWith(b) && /\s/.test(b)) return cu;
+    const sua = JavisVoice.ghepSua(cu, moi);
+    if (sua !== null) return sua;
     return cu + " " + moi;
+  }
+
+  // Mảnh mới là BẢN SỬA của đoạn cuối câu đang có không? Có thì trả câu đã thay đoạn cuối bằng
+  // mảnh mới, không thì null. Thuần để test bằng node.
+  // Vì sao (0.64.72): Chrome Android không chỉ KÉO DÀI câu mà còn SỬA LẠI nó giữa các mảnh:
+  // "tìm hiểu cho anh Ford plat for" -> "tìm hiểu cho anh ford plat" (ngắn đi, đổi hoa thường)
+  // -> "... ford plat form". Luật tiền tố ở ghepManh không nhận ra nên nối thêm, và chủ dự án
+  // nhận được năm bản của cùng một câu nối nhau (máy tính bảng Android, 27/09).
+  // Là bản sửa khi mảnh mới (từ 3 chữ) mở đầu ĐÚNG chữ mở đầu một đoạn cuối, và hai bên chỉ
+  // khác nhau ở MỘT chữ cuối, hoặc giống nhau từ 80% số chữ trở lên. Hai câu nói khác nhau
+  // thật ("xem báo cáo doanh thu" rồi "xem báo cáo chi phí", khác hai chữ, giống 71%) vẫn nối.
+  static ghepSua(daCo, manh) {
+    const cu = String(daCo || "").trim();
+    const moi = String(manh || "").trim();
+    const tokA = cu.match(/\S+/g) || [];
+    const tokB = moi.match(/\S+/g) || [];
+    if (tokB.length < 3 || !tokA.length) return null;
+    const chuan = (w) => w.toLowerCase().replace(/^[("'“‘]+|[.,!?;:…)"'”’]+$/g, "");
+    const na = tokA.map(chuan), nb = tokB.map(chuan);
+    const giong = (x, y) => {                // tỉ lệ chữ chung (dãy con chung dài nhất)
+      const d = Array.from({ length: x.length + 1 }, () => new Array(y.length + 1).fill(0));
+      for (let i = 1; i <= x.length; i++)
+        for (let j = 1; j <= y.length; j++)
+          d[i][j] = x[i - 1] === y[j - 1] ? d[i - 1][j - 1] + 1 : Math.max(d[i - 1][j], d[i][j - 1]);
+      return (2 * d[x.length][y.length]) / (x.length + y.length);
+    };
+    for (let p = Math.max(0, na.length - nb.length - 3); p < na.length; p++) {
+      if (na[p] !== nb[0]) continue;
+      const duoi = na.slice(p);
+      let chung = 0;
+      while (chung < duoi.length && chung < nb.length && duoi[chung] === nb[chung]) chung++;
+      if ((chung >= 3 && chung >= duoi.length - 1) || giong(duoi, nb) >= 0.8) {
+        let vt = 0;                           // vị trí ký tự của chữ thứ p trong câu gốc
+        const re = /\S+/g;
+        for (let k = 0; k <= p; k++) { const m = re.exec(cu); vt = m.index; }
+        const truoc = cu.slice(0, vt).trim();
+        return truoc ? truoc + " " + moi : moi;
+      }
+    }
+    return null;
   }
 
   // Ghép đuôi chữ TẠM (chưa final) vào phần đã chốt, lúc phiên kết thúc. Thuần để test bằng
@@ -504,6 +548,8 @@ class JavisVoice {
     const chuan = (s) => s.toLowerCase().replace(/[.,!?;:…]+$/, "").trim();
     const a = chuan(cu), b = chuan(moi);
     if (a === b || a.endsWith(b) || b.startsWith(a)) return b.startsWith(a) && b.length > a.length ? moi : cu;
+    const sua = JavisVoice.ghepSua(cu, moi);
+    if (sua !== null) return sua;
     return (cu + " " + moi).trim();
   }
 

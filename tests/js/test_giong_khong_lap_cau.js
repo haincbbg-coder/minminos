@@ -116,6 +116,51 @@ const CAU = "Em có nghe thấy anh nói gì không";
       gui.length === 1 && gui[0] === "xem doanh thu tháng này so tháng trước", JSON.stringify(gui));
   }
 
+  // ---- 4. Android SỬA LẠI chữ giữa các mảnh (0.64.72) ----
+  // Chủ dự án 27/09, máy tính bảng Android: nói "tìm hiểu cho anh Workers for Platforms của
+  // Cloudflare", tin gửi đi thành 5 bản của cùng một câu nối nhau. Mảnh sau không KÉO DÀI
+  // nguyên văn mảnh trước mà SỬA nó: "Ford plat for" -> "ford plat" (ngắn đi, đổi hoa
+  // thường) -> "ford plat form" -> ... Luật cũ chỉ nhận ra bản dài hơn nên nối thêm cả câu.
+  {
+    const g = JavisVoiceTinh.ghepManh;
+    const MANH = ["tìm hiểu cho anh Quốc cơ Ford plat for", "tìm hiểu cho anh Quốc cơ ford plat",
+      "tìm hiểu cho anh Quốc cơ ford plat form", "tìm hiểu cho anh Quốc cơ ford plat form của",
+      "tìm hiểu cho anh Quốc cơ ford plat form của clap Play"];
+    check("ghepManh: bản SỬA (ngắn đi, đổi chữ cuối) thay đoạn cũ, không nối",
+      g(MANH[0], MANH[1]) === MANH[1], g(MANH[0], MANH[1]));
+    check("ghepManh: đúng chuỗi 27/09 ra MỘT câu cuối cùng",
+      MANH.reduce((a, m) => g(a, m), "") === MANH[4], MANH.reduce((a, m) => g(a, m), ""));
+    check("ghepManh: bản sửa ở ĐUÔI đoạn dài, phần trước giữ nguyên",
+      g("xem doanh thu tháng này. Rồi tìm hiểu cho anh Ford plat for", "tìm hiểu cho anh ford plat form")
+        === "xem doanh thu tháng này. Rồi tìm hiểu cho anh ford plat form",
+      g("xem doanh thu tháng này. Rồi tìm hiểu cho anh Ford plat for", "tìm hiểu cho anh ford plat form"));
+    check("ghepManh: hai câu KHÁC nhau thật (khác 2 chữ) vẫn nối đủ",
+      g("anh muốn xem báo cáo doanh thu", "anh muốn xem báo cáo chi phí")
+        === "anh muốn xem báo cáo doanh thu anh muốn xem báo cáo chi phí");
+    check("ghepManh: mảnh ngắn (dưới 3 chữ) không bị coi là bản sửa",
+      g("gửi cho anh", "gửi em") === "gửi cho anh gửi em");
+    check("ghepDuoiTam: đuôi tạm là bản sửa của phần đã chốt -> thay",
+      JavisVoiceTinh.ghepDuoiTam(MANH[0], MANH[2]) === MANH[2]);
+
+    const { SRGia, d } = nhanDangGia();
+    const JavisVoice = napVoice(SRGia, UA_ANDROID);
+    const gui = [];
+    const v = new JavisVoice({ onTranscript: (t) => gui.push(t) });
+    v.silenceMs = 20;
+    v.userStopped = true;
+    v.startListening();
+    await cho(5);
+    d.dangMo.onresult(ketQua(MANH.map(t => [t, true])));
+    await cho(60);
+    check("Android: năm bản sửa của một câu -> tin gửi đi đúng MỘT câu",
+      gui.length === 1 && gui[0] === MANH[4], JSON.stringify(gui));
+
+    // Qua hai phiên: Chrome Android tự đóng phiên rồi ta mở lại, phiên mới giao lại bản sửa.
+    v._committed = MANH[0];
+    check("qua phiên: bản sửa của câu đã chốt thay chứ không nối",
+      v._ghepChuyenBien(MANH[3]) === MANH[3], v._ghepChuyenBien(MANH[3]));
+  }
+
   console.log(fails.length ? "\nFAIL: " + fails.join(", ") : "\nTat ca OK");
   process.exit(fails.length ? 1 : 0);
 })();

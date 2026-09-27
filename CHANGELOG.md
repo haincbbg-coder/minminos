@@ -4,6 +4,12 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.72] - 2026-09-27
+### Sửa lỗi
+- **Nói trên điện thoại, máy tính bảng Android không còn bị lặp câu:** trình duyệt Android hay gửi đi gửi lại một câu mà sửa dần chữ cuối, trước đây mỗi bản bị nối thêm vào tin. Nay chỉ giữ bản cuối cùng.
+- **Bong bóng hiện đúng thuật ngữ nhiều hơn:** "cave" thành "KV", "Quốc cơ ford plat form của clap Play" thành "Workers for Platforms của Cloudflare".
+- Câu nào máy chưa chắc để tự sửa thì Javis trả lời thẳng vào việc, không mở đầu bằng "em hiểu X là Y" nữa.
+
 ## [0.64.71] - 2026-09-27
 ### Sửa lỗi
 - **Chat bằng ChatGPT (Codex) nay gọi công cụ đúng brain đang mở.** Trước đây Javis có gửi brain cho Codex nhưng ghi sai cách, nên Codex bỏ qua, và Javis phải đoán brain theo cuộc trò chuyện vừa hoạt động gần nhất trên cả máy. Hậu quả: đang ở brain này mà một lệnh (ví dụ tạo đơn TTS Dropship) lại chạy ở brain khác, chỉ vì một kênh khác (Telegram, Zalo, việc chạy nền) vừa có tin nhắn. Nay brain đi kèm đúng từng lệnh, kể cả brain tên tiếng Việt có dấu.

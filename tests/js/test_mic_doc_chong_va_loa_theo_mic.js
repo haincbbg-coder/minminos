@@ -44,7 +44,11 @@ check("phần final được GÁN LẠI qua _ghepChuyenBien, không nối thêm"
 // Chạy thật hàm ghép bằng cách nhấc nó ra khỏi class.
 const ghepSrc = (voice.match(/_ghepChuyenBien\(finalNay\) \{[\s\S]*?\n  \}/) || [""])[0];
 check("tìm được _ghepChuyenBien", !!ghepSrc);
+// _ghepChuyenBien gọi JavisVoice.ghepSua (0.64.72: bản SỬA của câu đã chốt) nên nhấc kèm.
+const suaSrc = (voice.match(/static ghepSua\(daCo, manh\) \{[\s\S]*?\n  \}/) || [""])[0];
+check("tìm được ghepSua", !!suaSrc);
 const ghep = new Function("committed", "finalNay",
+  "const JavisVoice = class { " + suaSrc + " };" +
   "const self = { _committed: committed, " + ghepSrc.replace(/^_ghepChuyenBien/, "_ghepChuyenBien") + " }; return self._ghepChuyenBien(finalNay);");
 check("Android giao final DÀI HƠN final trước thì lấy bản dài, không nối",
   ghep("Ok có", "Ok có vẻ") === "Ok có vẻ", ghep("Ok có", "Ok có vẻ"));
