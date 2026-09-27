@@ -11084,9 +11084,17 @@ async def _watchtower_ly_do() -> str:
                 pass
 
 
-@app.get("/version")
-async def version_info():
-    cur = _read_version()
+async def _latest_remote_version(cur: str = ""):
+    """(bản mới nhất trên nhánh main, lỗi | None), lấy số LỚN HƠN giữa hai nguồn.
+
+    Vì sao hai nguồn (0.64.69): raw.githubusercontent.com đệm MỖI FILE riêng 5 phút
+    (Cache-Control max-age=300, thêm ?query cũng không lách được: đã thử, vẫn HIT). Ngay sau
+    một lần phát hành, VERSION có thể còn số cũ trong khi CHANGELOG.md đã mới, hoặc ngược lại.
+    Chủ dự án gặp đúng cảnh đó 27/09: khung trên báo "đang dùng bản mới nhất (v0.64.66)",
+    danh sách bên dưới lại báo "Có bản mới: v0.64.67", và không có nút cập nhật.
+    Nhật ký đã có cache 10 phút riêng (_cl_remote_releases); VERSION chưa thấy bản mới mà cache
+    đó đã cũ hơn một phút thì tải lại, để bấm "Kiểm tra lại" không phải chờ hết 10 phút.
+    """
     latest, err = None, None
     try:
         import httpx
@@ -11099,6 +11107,22 @@ async def version_info():
                 err = f"VERSION chưa có trên nhánh main (HTTP {r.status_code})"
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
+    try:
+        cu = time.monotonic() - (_CL_REMOTE.get("at") or 0) > 60
+        rels, _ = await _cl_remote_releases(refresh=bool(cu and not _ver_newer(latest, cur)))
+        ban = [r.get("version") for r in (rels or []) if _ver_tuple(r.get("version"))]
+        top = max(ban, key=_ver_tuple) if ban else None
+        if top and (not latest or _ver_newer(top, latest)):
+            latest, err = top, None
+    except Exception:
+        pass
+    return latest, err
+
+
+@app.get("/version")
+async def version_info():
+    cur = _read_version()
+    latest, err = await _latest_remote_version(cur)
     mode = _deploy_mode()
     avail = _ver_newer(latest, cur)
     # docker: chỉ tự cập nhật tại chỗ được nếu Watchtower ĐANG chạy (ping thật). Không có →
@@ -11179,15 +11203,7 @@ async def do_update():
 
     mode = _deploy_mode()
     cur = _read_version()
-    latest = None
-    try:
-        import httpx
-        async with httpx.AsyncClient(timeout=8) as client:
-            r = await client.get(f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/VERSION")
-            if r.status_code == 200:
-                latest = (r.text or "").strip() or None
-    except Exception:
-        latest = None
+    latest, _err = await _latest_remote_version(cur)
 
     if mode == "docker":
         if not await _watchtower_reachable():
