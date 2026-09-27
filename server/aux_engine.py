@@ -563,9 +563,7 @@ def _build_codex(spec, claude_cli_obj, mode, tag, codex_profile=None):
             print(f"[aux codex profile] {e}", file=sys.stderr)
     try:
         import mcp_hub
-        override = mcp_hub.codex_vault_override(getattr(claude_cli_obj, "javis_vault", None))
-        if override:
-            cc.extra_config.append(override)
+        mcp_hub.dat_codex_vault(cc.extra_config, getattr(claude_cli_obj, "javis_vault", None))
     except Exception as e:
         print(f"[aux codex vault] {e}", file=sys.stderr)
     return cc

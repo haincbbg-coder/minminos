@@ -20,6 +20,7 @@ import time
 from collections import deque
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote, unquote
 
 from fastapi.responses import JSONResponse, Response
 
@@ -1250,12 +1251,21 @@ def resolve_vault(raw_vault):
     raw = (raw_vault or "").strip()
     header_hong = ""
     if raw:
+        # Ba cách đọc, nguyên văn trước: đường dẫn ASCII như cũ; dạng mã hoá phần trăm (Codex
+        # gửi brain tên có dấu như vậy, xem `ma_hoa_vault`); và UTF-8 thô mà Starlette đã giải
+        # thành latin-1, trường hợp một client khác gửi thẳng byte UTF-8 trong header.
+        ung = [raw, unquote(raw)]
         try:
-            p = Path(raw).expanduser().resolve()
-            if p.is_dir():
-                return str(p), "header", ""
+            ung.append(raw.encode("latin-1").decode("utf-8"))
         except Exception:
             pass
+        for thu in dict.fromkeys(ung):
+            try:
+                p = Path(thu).expanduser().resolve()
+                if p.is_dir():
+                    return str(p), "header", ""
+            except Exception:
+                pass
         header_hong = raw
     root, nguon = _brain_dang_mo()
     return (root or None), (nguon if root else ""), header_hong
@@ -1537,6 +1547,23 @@ def codex_profile(mode="full"):
         return None
 
 
+# Tiền tố của override brain. KHÔNG được bọc tên header trong dấu nháy: Codex tách khoá của
+# `-c` bằng `path.split('.')` (codex-rs/config/src/overrides.rs, apply_toml_override) và giữ
+# NGUYÊN dấu nháy, nên `http_headers."X-Javis-Vault"` thành header tên `"X-Javis-Vault"` - có
+# cả hai dấu nháy. Đó không phải tên header HTTP hợp lệ, và rmcp-client của Codex bỏ qua nó
+# với đúng một dòng warn (rmcp-client/src/utils.rs, build_default_headers). Hub không bao giờ
+# nhận được brain, rơi về "phiên cập nhật gần nhất" của CẢ MÁY - sự cố 27/09/2026: dashboard
+# đang ở My Bullet Journal mà lệnh tạo đơn TTS chạy trên brain Ngọc Thu Phạm.
+CODEX_VAULT_KEY = "mcp_servers.javis.http_headers.X-Javis-Vault"
+
+
+def ma_hoa_vault(vault: str) -> str:
+    """Giá trị header CHỈ được là ASCII: rmcp-client dựng header bằng `HeaderValue::from_str`,
+    hàm này từ chối ký tự ngoài ASCII, và brain tên tiếng Việt ("Ngọc Thu Phạm") thì đường
+    dẫn có dấu. Mã hoá phần trăm; hub thử nguyên văn trước rồi mới giải mã (`resolve_vault`)."""
+    return vault if vault.isascii() else quote(vault, safe="/:\\ ")
+
+
 def codex_vault_override(vault_root):
     """Override `-c` theo từng tiến trình Codex để hub nhận đúng brain mà không ghi đè profile chung.
 
@@ -1549,7 +1576,21 @@ def codex_vault_override(vault_root):
         vault = str(Path(vault_root).expanduser().resolve())
     except Exception:
         vault = str(vault_root)
-    return f'mcp_servers.javis.http_headers."X-Javis-Vault"={_toml_str(vault)}'
+    return f"{CODEX_VAULT_KEY}={_toml_str(ma_hoa_vault(vault))}"
+
+
+def dat_codex_vault(extra_config, vault_root):
+    """Gắn override brain vào danh sách `-c` của MỘT CodexCLI, THAY override brain cũ nếu có.
+
+    Engine Telegram giữ nguyên một CodexCLI qua nhiều lượt. Chỉ nối thêm khi chuỗi chưa có thì
+    đổi brain A -> B -> A để lại cả [A, B] trong argv, và Codex lấy giá trị đứng sau: lượt đang
+    ở A vẫn chạy trên B. Bỏ cả dạng cũ có dấu nháy để bản vá này không để lại rác."""
+    cu = (CODEX_VAULT_KEY + "=", 'mcp_servers.javis.http_headers."X-Javis-Vault"=')
+    extra_config[:] = [x for x in extra_config if not str(x).startswith(cu)]
+    override = codex_vault_override(vault_root)
+    if override:
+        extra_config.append(override)
+    return extra_config
 
 
 # ============================================================

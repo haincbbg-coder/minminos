@@ -3428,9 +3428,9 @@ def _apply_codex_hub(cli, vault_root=None):
     """Gắn profile MCP và brain hiện tại vào riêng tiến trình Codex."""
     cli.profile = _write_codex_profile()
     if _hub_enabled():
-        override = mcp_hub.codex_vault_override(vault_root)
-        if override and override not in cli.extra_config:
-            cli.extra_config.append(override)
+        # THAY override brain cũ chứ không nối thêm: engine Telegram giữ một CodexCLI qua nhiều
+        # lượt, và nối thêm thì đổi brain qua lại để Codex dùng giá trị brain đứng sau.
+        mcp_hub.dat_codex_vault(cli.extra_config, vault_root)
     return cli
 
 
