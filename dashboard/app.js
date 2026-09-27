@@ -130,8 +130,11 @@ function setOrbState(state, label, petState) {
 const attention = new window.JavisVoiceAttention.Attention();
 const voice = new JavisVoice({
   lang: "vi-VN",
-  preserveTranscript: true,
-  onTranscriptSuggestion: () => ghiChuThoang(window.t("app.voice_alt_transcript")),
+  // KHÔNG bật preserveTranscript (0.64.73). 0.64.32 bật nó: chữ Groq Whisper chỉ còn là "gợi
+  // ý", tin gửi đi luôn là chữ Chrome, nên người đã CHỌN Groq cũng chỉ nhận được bản Chrome
+  // tiếng Việt chép tiếng Anh thành "clash", "cloud Play". Chủ dự án 27/09: "lần trước có bản
+  // nhận đúng Việt Anh, tuyệt vời lắm, giờ không tái hiện được" - chính là bản trước 0.64.32.
+  // Chữ Chrome vẫn hiện TẠM lúc đang nói; câu chốt gửi đi là chữ Groq (Groq lỗi thì chữ Chrome).
   onPlaybackError: () => ghiChuThoang(window.t("app.voice_playback_failed")),
   acceptTranscript: (text) => !handsFree || attention.accept(text),
   onStart: () => {

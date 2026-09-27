@@ -73,6 +73,31 @@ test('locked dashboard transcript is not replaced by optional STT', async () => 
   await voice._quaStt('vâng', t => { received = t; });
   assert.equal(received, 'vâng'); assert.deepEqual(suggestions, ['Vân']);
 });
+
+// 0.64.73: người dùng đã CHỌN Groq Whisper thì câu gửi đi là chữ Groq. 0.64.32 khoá chữ
+// Chrome ở dashboard, nên "Cloudflare" nói ra vẫn gửi đi thành "clash" (chủ dự án 27/09).
+test('selected Groq transcript replaces the browser draft', async () => {
+  const { voice, context } = setup(() => {});
+  voice.sttUpload = true; voice._recComplete = true;
+  voice._stopRecorder = async () => new Blob(['x'.repeat(3000)]);
+  context.fetch = async () => ({ok: true, json: async () => ({ok: true, text: 'Cloudflare là dịch vụ lưu trữ đám mây'})});
+  let received;
+  await voice._quaStt('clash là dịch vụ như chưa đám mây', t => { received = t; });
+  assert.equal(received, 'Cloudflare là dịch vụ lưu trữ đám mây');
+});
+test('Groq failure keeps the browser draft', async () => {
+  const { voice, context } = setup(() => {});
+  voice.sttUpload = true; voice._recComplete = true;
+  voice._stopRecorder = async () => new Blob(['x'.repeat(3000)]);
+  context.fetch = async () => ({ok: false, json: async () => ({ok: false, ly_do: 'loi'})});
+  let received;
+  await voice._quaStt('clash là dịch vụ', t => { received = t; });
+  assert.equal(received, 'clash là dịch vụ');
+});
+test('dashboard does not lock the transcript against the selected Groq STT', () => {
+  const app = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'dashboard', 'app.js'), 'latin1');
+  assert.equal(/preserveTranscript:\s*true/.test(app), false);
+});
 test('failed selected voice never silently switches to the browser', () => {
   const { voice } = setup(); let switched = false, error = '';
   voice.vietnameseVoice = {name: 'Google tiếng Việt'};

@@ -3062,10 +3062,9 @@
   "coding.mode_suggest_note": "Reads the code and returns a plan, changes nothing yet",
   "coding.mode_auto_note": "Edits files and runs tests, no commit or deploy",
   "coding.mode_full_note": "Adds commit, push and deploy when the task calls for it",
-  "app.voice_alt_transcript": "The second recognizer returned different words. MinMin kept the displayed transcript; you can repeat the request if needed.",
   "app.voice_playback_failed": "The selected voice could not play. Try again or choose another voice in Settings.",
   "app.voice_sample": "Hello, I am MinMin. Here is a sample of this voice.",
-  "settings.v2_stt_note": "In Standard/Fast mode, the displayed text is kept when the utterance ends. Groq cross-checks and reports differences; it does not rewrite sent messages.",
+  "settings.v2_stt_note": "With Groq Whisper selected, the sent message is Groq's transcript (better with mixed Vietnamese and English); the browser's text is only a live preview while you speak. If Groq fails, the browser's text is used.",
   "settings.voice_advanced": "Advanced: model, recognition and microphone",
   "settings.voice_focus_short": "Say “MinMin” after an idle pause to resume the conversation.",
   "settings.tts_advanced": "Provider and connection",
@@ -3093,5 +3092,6 @@
   "app.adaptive_received": "Your message was saved. Reopen the conversation for its latest status.",
   "app.adaptive_unsupported": "Server does not support natural timing yet; using fixed timing.",
   "app.adaptive_retry": "Retry sending",
-  "app.adaptive_not_sent": "Message not sent: the previous turn has not stopped. You can retry sending."
+  "app.adaptive_not_sent": "Message not sent: the previous turn has not stopped. You can retry sending.",
+  "app.voice_alt_transcript": "The second recognizer returned different words. MinMin kept the displayed transcript; you can repeat the request if needed."
 }

@@ -3062,10 +3062,9 @@
   "coding.mode_suggest_note": "Đọc mã rồi trả về kế hoạch, chưa sửa gì",
   "coding.mode_auto_note": "Sửa file và chạy test, chưa commit hay deploy",
   "coding.mode_full_note": "Thêm commit, push và deploy khi việc yêu cầu",
-  "app.voice_alt_transcript": "Bộ nghe phụ có kết quả khác. MinMin giữ nguyên câu đã hiển thị; bạn có thể nói lại nếu cần.",
   "app.voice_playback_failed": "Giọng đã chọn hiện không phát được. Bạn có thể thử lại hoặc đổi giọng trong Cài đặt.",
   "app.voice_sample": "Xin chào, tôi là MinMin. Bạn nghe thử giọng này nhé.",
-  "settings.v2_stt_note": "Trong chế độ Chuẩn/Nhanh, chữ đã hiện lúc chốt câu được giữ nguyên. Groq chỉ đối chiếu và báo khi có kết quả khác; không tự sửa tin đã gửi.",
+  "settings.v2_stt_note": "Chọn Groq Whisper thì câu gửi đi là chữ Groq nghe được (chép tiếng Việt xen tiếng Anh đúng hơn); chữ của trình duyệt chỉ hiện tạm trong lúc đang nói. Groq lỗi thì dùng chữ của trình duyệt.",
   "settings.voice_advanced": "Nâng cao: bộ não, nhận giọng và micro",
   "settings.voice_focus_short": "Gọi “MinMin” sau lúc chờ để tiếp tục trò chuyện.",
   "settings.tts_advanced": "Nhà cung cấp và kết nối",
@@ -3093,5 +3092,6 @@
   "app.adaptive_received": "Tin đã được lưu. Mở lại hội thoại để xem trạng thái mới nhất.",
   "app.adaptive_unsupported": "Máy chủ chưa hỗ trợ nhịp tự nhiên; đang dùng chờ cố định.",
   "app.adaptive_retry": "Thử gửi lại",
-  "app.adaptive_not_sent": "Tin chưa gửi được vì lượt trước chưa dừng. Bạn có thể thử gửi lại."
+  "app.adaptive_not_sent": "Tin chưa gửi được vì lượt trước chưa dừng. Bạn có thể thử gửi lại.",
+  "app.voice_alt_transcript": "Bộ nghe phụ có kết quả khác. MinMin giữ nguyên câu đã hiển thị; bạn có thể nói lại nếu cần."
 }

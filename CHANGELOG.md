@@ -4,6 +4,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.73] - 2026-09-27
+### Sửa lỗi
+- **Chọn Groq Whisper thì câu gửi đi là chữ Groq nghe được**, như trước bản 0.64.32. Từ 0.64.32, chữ Groq chỉ được dùng để đối chiếu, câu gửi đi vẫn là chữ của trình duyệt, nên tiếng Anh xen tiếng Việt bị chép thành "clash", "cloud Play" dù đã chọn Groq. Chữ của trình duyệt vẫn hiện tạm trong lúc đang nói.
+
 ## [0.64.72] - 2026-09-27
 ### Sửa lỗi
 - **Nói trên điện thoại, máy tính bảng Android không còn bị lặp câu:** trình duyệt Android hay gửi đi gửi lại một câu mà sửa dần chữ cuối, trước đây mỗi bản bị nối thêm vào tin. Nay chỉ giữ bản cuối cùng.
