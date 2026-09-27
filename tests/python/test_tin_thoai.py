@@ -101,7 +101,7 @@ try:
     check("gọi đúng endpoint Whisper của Groq", g["url"] == stt.GROQ_STT_URL)
     check("gửi key dạng Bearer", g["headers"]["Authorization"] == "Bearer gsk_test")
     check("gợi ý tiếng Việt cho Whisper", g["data"].get("language") == "vi")
-    check("model mặc định là bản turbo", g["data"]["model"] == stt.STT_MODEL_MAC_DINH)
+    check("model mặc định là stt.STT_MODEL_MAC_DINH", g["data"]["model"] == stt.STT_MODEL_MAC_DINH)
 
     _FakeClient.tra = (200, {"text": "   "})
     kq = chay(stt.groq_nghe(b"audio", "voice.ogg", "k"))

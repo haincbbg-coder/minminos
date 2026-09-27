@@ -45,7 +45,8 @@ antigravity_cli.list_models = lambda: [{"id": "gemini-3.8-flash-low", "label": "
 
 r = client.post("/stt", files={"file": ("voice.webm", b"OggS-fake", "audio/webm")}, data={"lang": "vi-VN"})
 check("/stt: 200 ok=true kèm text đã sửa David -> Javis", r.status_code == 200 and r.json()["ok"] is True and r.json()["text"] == "xin chào Javis")
-check("/stt: mồi hotwords cho Whisper (Javis + từ người dùng khai)", calls[-1]["hotwords"] == "Javis, Pancake, OpenRouter.")
+check("/stt: mồi hotwords cho Whisper (Javis + từ người dùng khai, đứng cuối sát audio)", calls[-1]["hotwords"].endswith("Javis, Pancake, OpenRouter."))
+check("/stt: mồi kèm từ tiếng Anh hay nói xen (GitHub Actions)", "GitHub Actions" in calls[-1]["hotwords"])
 check("/stt: byte file tới nguyên vẹn, tên file giữ", calls[-1]["data"] == b"OggS-fake" and calls[-1]["ten"] == "voice.webm")
 check("/stt: vi-VN rút thành vi", calls[-1]["lang"] == "vi")
 check("/stt: key lấy từ model.groq_api_key", calls[-1]["key"] == "gk")

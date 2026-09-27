@@ -115,12 +115,23 @@ check("chuỗi rỗng vẫn rỗng", L("") == "" and L(None) == "")
 check("chỉ còn dấu câu thì coi như rỗng", L("Ghiền Mì Gõ . !") == "")
 check("không làm hỏng khoảng trắng thừa", L("  Chào Javis  ") == "Chào Javis")
 
+# ---- 4b. Whisper chép lại chính lời mồi (danh sách từ, 0.64.67) ----
+MOI = "GitHub, GitHub Actions, commit, push, pull request, merge, deploy, Javis, Pancake."
+check("chép lại một đoạn lời mồi: bỏ", stt.la_lap_loi_moi("commit, push, pull request, merge.", MOI))
+check("chép lại cả lời mồi: bỏ", stt.la_lap_loi_moi(MOI, MOI))
+check("câu thật ngắn trùng từ mồi: giữ", not stt.la_lap_loi_moi("GitHub Actions", MOI))
+check("câu thật có từ mồi xen tiếng Việt: giữ",
+      not stt.la_lap_loi_moi("cho anh hỏi về GitHub Actions deploy thế nào", MOI))
+check("không có lời mồi: không bỏ gì", not stt.la_lap_loi_moi("commit push pull request", ""))
+
 # ---- 5. Nối vào đường nghe: groq_nghe lọc trước khi trả ----
 src = (SERVER / "stt.py").read_text(encoding="utf-8", errors="replace")
 than = src[src.index("async def groq_nghe"):]
 check("groq_nghe gọi loc_ao_giac trước khi trả text", "loc_ao_giac(" in than)
 check("lọc xong rỗng thì báo khong_nghe_ro (chỗ gọi giữ chữ Web Speech)",
       than.index("loc_ao_giac(") < than.index('"khong_nghe_ro"'))
+check("groq_nghe bỏ bản chép lại lời mồi trước khi trả",
+      than.index("la_lap_loi_moi(") < than.index('"khong_nghe_ro"', than.index("loc_ao_giac(")))
 
 if _fails:
     print("\nFAIL:", len(_fails), _fails)

@@ -84,6 +84,7 @@ import stt            # nghe tin thoại (Whisper qua Groq) -> chữ, cho kênh 
 import luot_dang_chay # sổ lượt chat đang chạy theo brain: tool giao việc tự biết khung chat nào hỏi
 import tool_label     # một dòng mô tả lệnh gọi công cụ (lệnh nào, file nào) cho khối tiến trình
 import nghe_sua       # sửa chữ nghe nhầm theo ngữ cảnh (David -> Javis) + hotwords cho Whisper
+import tts_tron_tieng # đọc câu Việt xen Anh: tách đoạn, mỗi đoạn một giọng hợp tiếng
 import voice_privacy
 voice_privacy.install()
 import zalo_login
@@ -11944,6 +11945,33 @@ async def _tts_edge_stream(text: str, voice: str, rate: str):
     return first, _rest()
 
 
+async def _tts_edge_doan(text: str, voice: str, rate: str):
+    """Một đoạn cho tts_tron_tieng.doc_tron: (audio, (mốc tiếng đầu, mốc hết tiếng cuối) ms).
+
+    Xin mốc WordBoundary để cắt khoảng lặng Edge chèn ở đầu (~125 ms) và đuôi (~1,4 giây) mỗi
+    đoạn. Edge thỉnh thoảng trả rỗng (NoAudioReceived) nên thử lại một lần; câu tách thành
+    nhiều đoạn thì xác suất gặp cao hơn.
+    """
+    import edge_tts   # lazy - xem ghi chú ở đầu file
+    loi = None
+    for _ in range(2):
+        try:
+            buf, dau, ket = bytearray(), None, None
+            async for chunk in edge_tts.Communicate(text, voice, rate=rate,
+                                                    boundary="WordBoundary").stream():
+                if chunk["type"] == "audio":
+                    buf.extend(chunk["data"])
+                elif chunk["type"] == "WordBoundary":
+                    if dau is None:
+                        dau = chunk["offset"] / 1e4                       # 100ns -> ms
+                    ket = (chunk["offset"] + chunk["duration"]) / 1e4
+            if buf:
+                return bytes(buf), (dau, ket)
+        except Exception as e:
+            loi = e
+    raise RuntimeError(f"Edge không trả audio: {type(loi).__name__ if loi else 'rỗng'}")
+
+
 async def _tts_openai(text: str, rate: str, cfg: dict) -> bytes:
     import httpx
     key = (cfg.get("model", {}) or {}).get("openai_api_key", "")
@@ -12006,6 +12034,18 @@ async def tts(
         elif provider == "elevenlabs":
             audio = await _tts_elevenlabs(text, cfg)
         else:
+            # Câu Việt xen Anh: đọc từng đoạn bằng giọng hợp tiếng (tts_tron_tieng). Hỏng thì
+            # rơi về đọc nguyên câu như cũ, chứ không để lượt nói im bặt.
+            if tts_tron_tieng.nen_tach(voice, text):
+                try:
+                    audio = await tts_tron_tieng.doc_tron(
+                        text, voice, lambda d, g: _tts_edge_doan(d, g, rate))
+                except Exception as e:
+                    print(f"[TTS tron tieng] {type(e).__name__}: {e}", file=sys.stderr)
+                    audio = b""
+                if audio:
+                    return Response(content=audio, media_type="audio/mpeg",
+                                    headers={"Cache-Control": "no-cache"})
             return await _edge_streaming()
     except Exception as e:
         print(f"[TTS {provider}] {type(e).__name__}", file=sys.stderr)

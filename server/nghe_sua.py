@@ -41,6 +41,19 @@ import unicodedata
 TU_VUNG_GOC = ("Javis",)
 MAX_TU_VUNG = 60          # Whisper chỉ nhìn ~224 token cuối của prompt; hơn nữa là vô ích
 MAX_GHEP = 3              # ghép tối đa 3 tiếng liền nhau làm một ứng viên ("Gia vít", "Open Router")
+MAX_GOI_Y = 600           # trần độ dài prompt gửi Whisper (stt.groq_nghe cũng cắt ở mức này)
+
+# Từ tiếng Anh người Việt hay nói xen, CHỈ để mồi Whisper, không đưa vào lớp sửa mờ `sua` (sửa
+# mờ với cả chục từ thông dụng thì dễ đổi nhầm từ tiếng Việt). Vì sao cần (0.64.67): Whisper
+# được ép `language=vi`, gặp "GitHub Actions" nó viết theo âm Việt thành "huyết áp Action".
+# Prompt có sẵn vài từ tiếng Anh viết nguyên chính tả là tiền lệ để nó giữ chính tả tiếng Anh
+# cho cả những từ không có trong danh sách.
+TU_TIENG_ANH_MOI = (
+    "GitHub", "GitHub Actions", "commit", "push", "pull request", "merge", "deploy", "server",
+    "VPS", "API", "API key", "MCP", "workflow", "agent", "skill", "dashboard", "prompt",
+    "model", "token", "bug", "log", "Claude Code", "Codex", "Facebook Ads", "landing page",
+    "livestream", "inbox", "content", "marketing", "email",
+)
 
 # Trùng âm từ mức này trở lên: sửa ở mọi vị trí (thực tế là trùng khoá âm hoàn toàn).
 NGUONG_MOI_NOI = 0.95
@@ -152,14 +165,22 @@ def tu_vung(cfg: dict) -> list:
     return ra[:MAX_TU_VUNG]
 
 
-def goi_y_whisper(tv) -> str:
+def goi_y_whisper(tv, ky_thuat=TU_TIENG_ANH_MOI) -> str:
     """Tham số `prompt` cho Whisper: một danh sách tên, ngăn bằng phẩy, khép bằng dấu chấm.
 
     Whisper coi prompt là "đoạn trước" của bản ghi và bắt chước cách viết trong đó, nên chỉ cần
     tên xuất hiện là nó ưu tiên chép đúng chính tả ấy. Cố ý KHÔNG viết thành câu ("Nói chuyện
     với Javis") vì gặp im lặng Whisper hay chép lại chính câu mồi.
+
+    `ky_thuat` (mặc định `TU_TIENG_ANH_MOI`) đứng TRƯỚC bộ từ vựng: Whisper chỉ giữ phần cuối
+    prompt, nên từ người dùng khai phải ở sát audio nhất; cắt độ dài thì bỏ từ mồi chung trước.
     """
     ds = [t for t in (tv or []) if t]
+    da = {t.lower() for t in ds}
+    moi = [t for t in (ky_thuat or ()) if t and t.lower() not in da]
+    while moi and len(", ".join(moi + ds)) + 1 > MAX_GOI_Y:
+        moi.pop()
+    ds = moi + ds
     return (", ".join(ds) + ".") if ds else ""
 
 

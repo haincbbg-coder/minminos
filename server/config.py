@@ -65,7 +65,7 @@ _DEFAULT = {
         "brain_provider": "",          # "" = bộ não chính | antigravity | groq | gemini | openai | openrouter
         "brain_model": "",             # rỗng = mặc định của provider (antigravity: gemini flash low)
         "stt_provider": "browser",     # browser (Web Speech) | groq (Whisper, key model.groq_api_key)
-        "stt_model": "",               # rỗng = whisper-large-v3-turbo
+        "stt_model": "",               # rỗng = whisper-large-v3 (stt.STT_MODEL_MAC_DINH)
         "live_provider": "gemini",     # gemini | openai (đều cần API key ở trang Models)
         "live_model": "",              # rỗng = gợi ý trong voice_live.PROVIDERS
         "live_voice": "",

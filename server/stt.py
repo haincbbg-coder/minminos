@@ -116,11 +116,30 @@ def loc_ao_giac(text) -> str:
     return out if _CO_CHU.search(out) else ""
 
 
+_CHU_THUONG = re.compile(r"[^\W_]+", re.U)
+_MOI_LAP_MIN = 4   # dưới số chữ này thì trùng lời mồi là chuyện thường ("deploy lên VPS")
+
+
+def la_lap_loi_moi(text, moi) -> bool:
+    """Whisper gặp im lặng hay chép lại chính prompt (danh sách từ mồi, xem nghe_sua.goi_y_whisper).
+
+    Nhận ra bằng cách: chữ nghe được, bỏ dấu câu và hạ thường, là một ĐOẠN LIỀN của lời mồi và
+    dài từ `_MOI_LAP_MIN` chữ. Người thật hầu như không đọc bốn từ mồi liền nhau đúng thứ tự.
+    """
+    a = _CHU_THUONG.findall(str(text or "").lower())
+    b = _CHU_THUONG.findall(str(moi or "").lower())
+    if len(a) < _MOI_LAP_MIN or len(a) > len(b):
+        return False
+    return f" {' '.join(a)} " in f" {' '.join(b)} "
+
+
 GROQ_STT_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 STT_MAC_DINH = "vi"   # gợi ý khi chỗ gọi không chốt gì; "" ở chỗ gọi = để Whisper tự dò
 
-# Model rẻ và nhanh nhất trong họ Whisper của Groq, tiếng Việt nghe được. Đổi được qua tham số.
-STT_MODEL_MAC_DINH = "whisper-large-v3-turbo"
+# Bản ĐẦY ĐỦ, không phải turbo (0.64.67): đo thật trên câu Việt xen Anh, turbo chép "GitHub
+# Actions" thành "Youtube Action", "build agent" thành "bill A-Ren"; bản đầy đủ ra đúng. Độ trễ
+# trên Groq gần như bằng nhau (~0,7 giây một câu), giá vẫn rẻ. Đổi được qua `voice.stt_model`.
+STT_MODEL_MAC_DINH = "whisper-large-v3"
 MAX_STT_MB = 24          # Groq chặn ở 25MB; chừa biên cho phần multipart bọc ngoài
 STT_TIMEOUT = 120.0      # tin thoại dài vài phút vẫn phải kịp, mạng VPS có lúc chậm
 
@@ -228,6 +247,8 @@ async def groq_nghe(data, ten_file, api_key, model="", ngon_ngu=None, hotwords="
         # Lọc câu bịa TRƯỚC khi trả: lọc xong rỗng thì đúng nghĩa là không nghe được gì, đi
         # chung một đường với im lặng thật để chỗ gọi chỉ phải xử một trường hợp.
         text = loc_ao_giac(d.get("text"))
+        if text and la_lap_loi_moi(text, form.get("prompt")):
+            text = ""
         if not text:
             return {"ok": False, "ly_do": "khong_nghe_ro",
                     "noi_voi_javis": loi_thanh_dong("khong_nghe_ro")}

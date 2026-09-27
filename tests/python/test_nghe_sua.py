@@ -81,8 +81,24 @@ check("Javis luôn đứng đầu, không nhân đôi dù người dùng gõ 'ja
 check("tách bằng phẩy, chấm phẩy, xuống dòng; bỏ trùng", tv == ["Javis", "OpenRouter", "Pancake", "Zalo"])
 check("không có cài đặt vẫn có Javis", nghe_sua.tu_vung({}) == ["Javis"])
 check("gợi ý Whisper là danh sách ngăn phẩy, khép dấu chấm",
-      nghe_sua.goi_y_whisper(tv) == "Javis, OpenRouter, Pancake, Zalo.")
-check("gợi ý rỗng khi không có từ", nghe_sua.goi_y_whisper([]) == "")
+      nghe_sua.goi_y_whisper(tv, ky_thuat=()) == "Javis, OpenRouter, Pancake, Zalo.")
+check("gợi ý rỗng khi không có từ", nghe_sua.goi_y_whisper([], ky_thuat=()) == "")
+
+# ---- 7. Mồi thêm từ tiếng Anh hay nói xen (0.64.67: "GitHub Actions" thành "huyết áp Action") ----
+gy = nghe_sua.goi_y_whisper(tv)
+check("mặc định mồi kèm từ tiếng Anh thông dụng", "GitHub Actions" in gy and "deploy" in gy)
+check("từ người dùng khai đứng CUỐI (Whisper chỉ giữ phần cuối prompt)",
+      gy.endswith("Javis, OpenRouter, Pancake, Zalo."))
+gy2 = nghe_sua.goi_y_whisper(["Javis", "github"])
+check("không nhân đôi từ người dùng đã khai (không phân biệt hoa thường)",
+      [x.strip(" .").lower() for x in gy2.split(",")].count("github") == 1 and gy2.endswith("Javis, github."))
+dai = ["Tu%02d dai dai dai dai" % i for i in range(20)]      # ~460 ký tự, chừa chỗ cho vài từ mồi
+gy3 = nghe_sua.goi_y_whisper(dai)
+check("quá trần thì bỏ bớt từ mồi chung, giữ nguyên từ người dùng",
+      gy3.endswith(", ".join(dai) + ".") and len(gy3) <= nghe_sua.MAX_GOI_Y
+      and gy3.startswith("GitHub") and "email" not in gy3)
+check("vừa trần thì nằm trong MAX_GOI_Y", len(nghe_sua.goi_y_whisper(tv)) <= nghe_sua.MAX_GOI_Y)
+check("từ mồi chung KHÔNG đi vào lớp sửa mờ", "GitHub" not in nghe_sua.tu_vung(cfg))
 
 if _fails:
     print("\nFAIL:", len(_fails), _fails)
