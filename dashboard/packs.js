@@ -1,0 +1,1027 @@
+/* Trang Gói: xem gói đã cài, cài từ tệp .zip, bật tắt, gỡ.
+ *
+ * File riêng thay vì nhét vào console.js (đã ~7k dòng), theo đúng cách studio.js và
+ * chatbots.js đang làm: console.js dựng khung rồi gọi window.JavisPacks.render(el).
+ *
+ * Nguyên tắc của màn hình xác nhận: nó VẼ TỪ /packs/inspect chứ không tự đoán. Danh sách "gói
+ * này chứa gì" viết tay trong JS thì sau vài tháng nó lệch khỏi thứ server thật sự cài, mà
+ * lệch theo hướng nguy hiểm - người dùng đọc thấy ít hơn thực tế. Server mở tệp ra, kiểm, rồi
+ * trả về đúng cái sắp xảy ra.
+ */
+(function () {
+  "use strict";
+
+  // Icon dùng chung của dashboard. KHÔNG emoji: `tests/python/test_icons.py` canh chuyện đó,
+  // và lý do là emoji vẽ khác nhau theo hệ điều hành lẫn theo phông, nên giao diện lệch hẳn
+  // giữa các máy.
+  function ic(ten, opt) { return (window.ic ? window.ic(ten, opt) : ""); }
+
+  const esc = (s) => (s || "").toString()
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+  // Từ điển vi.json khi file này chạy DƯỚI NODE (test nạp nó bằng `new Function`). Trong thân
+  // một `new Function` thì `require` KHÔNG tồn tại - nó là biến của module, không phải biến
+  // toàn cục - nên mượn `process.mainModule.require`. Ba đường dò vì lối nạp đó không để lại
+  // vị trí của chính file này. Trong trình duyệt không có `process`, cả khối rơi vào catch.
+  let _tuVi = null;
+  function tuDienVi() {
+    if (_tuVi) return _tuVi;
+    _tuVi = {};
+    try {
+      const req = process.mainModule.require;
+      const p = req("path");
+      const goc = p.dirname(process.mainModule.filename);
+      [p.join(process.cwd(), "dashboard/i18n/vi.json"),
+       p.join(goc, "../../dashboard/i18n/vi.json"),
+       p.join(goc, "i18n/vi.json")].forEach((d) => {
+        if (Object.keys(_tuVi).length) return;
+        try { _tuVi = req(d) || {}; } catch (e) { /* thử đường kế tiếp */ }
+      });
+    } catch (e) { /* trình duyệt: không có process, và cũng không cần */ }
+    return _tuVi;
+  }
+
+  // Chữ hiện ra lấy từ từ điển. Trong trình duyệt là window.t (i18n/index.js nạp trước file
+  // này); dưới node là vi.json ở trên, để hàm trả về chữ THẬT chứ không phải mã khoá trần -
+  // mấy test kho so đúng câu hiện ra trên thẻ.
+  function tw(khoa, bien) {
+    if (typeof window !== "undefined" && window.t) return window.t(khoa, bien);
+    const s = tuDienVi()[khoa];
+    if (s == null) return khoa;
+    return String(s).replace(/\{(\w+)\}/g, (m, ten) =>
+      (bien && bien[ten] != null) ? String(bien[ten]) : m);
+  }
+  // Tên nhóm của gói là tiếng Việt và là KHOÁ lọc (`data-kho-nhom`), nên chỉ dịch lúc vẽ; xem
+  // `JavisI18n.catLabel`. Tên lạ do gói cộng đồng tự đặt thì giữ nguyên.
+  function nhanNhom(ten) {
+    const i = (typeof window !== "undefined") && window.JavisI18n;
+    return i && typeof i.catLabel === "function" ? i.catLabel(ten) : (ten || "");
+  }
+
+  // name/description là map đa ngôn ngữ. Lấy theo ngôn ngữ giao diện, rơi về en, rồi về giá
+  // trị đầu tiên có được - thiếu bản dịch thì hiện tiếng khác, không bao giờ hiện trống.
+  function nn(v, mac) {
+    if (!v) return mac || "";
+    if (typeof v === "string") return v;
+    // Ngôn ngữ hiện tại lấy bằng một lời GỌI HÀM, phải có cặp ngoặc. Thiếu ngoặc thì `v[lang]`
+    // tra bằng một object hàm, luôn trượt, và mọi tên gói rơi về tiếng Anh trong giao diện
+    // tiếng Việt - hỏng lặng lẽ, vì vẫn có chữ để hiện nên trông như gói thiếu bản dịch chứ
+    // không như một lỗi. Đã sống trong file này từ 0.55.22 tới 0.55.28.
+    const lang = (window.JavisI18n && JavisI18n.lang()) || "vi";
+    return v[lang] || v.en || Object.values(v)[0] || mac || "";
+  }
+
+  function co(b) {
+    b = Number(b || 0);
+    if (!b) return "";
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return Math.round(b / 1024) + " KB";
+    return (b / 1024 / 1024).toFixed(1) + " MB";
+  }
+
+  async function postJson(url, obj) {
+    try {
+      const r = await fetch(url, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(obj || {})
+      });
+      return await r.json();
+    } catch (e) { return { ok: false, error: String(e) }; }
+  }
+
+  // Một cái khung cho MỌI hộp thoại của trang gói. `pkm=true` là biến thể dựng riêng cho luồng
+  // cài: trên máy tính là thẻ giữa màn hình, trên điện thoại là tờ trượt từ đáy. CSS lo phần
+  // hình, chỗ này chỉ gắn lớp.
+  function modal(html, pkm) {
+    let m = document.getElementById("packModal");
+    if (!m) {
+      m = document.createElement("div");
+      m.id = "packModal";
+      document.body.appendChild(m);
+    }
+    // Gán lại CẢ className chứ không add thêm: một hộp thoại mở tiếp sau hộp thoại khác phải
+    // xoá sạch biến thể của lượt trước, nếu không hộp báo lỗi ngắn vẫn dính bố cục tờ trượt.
+    m.className = "mp-overlay open" + (pkm ? " pkm-lop" : "");
+    m.innerHTML = '<div class="mp-box' + (pkm ? " pkm" : "") + '">'
+      + (pkm ? '<div class="pkm-nam"></div>' : "") + html + '</div>';
+    m.querySelectorAll('[data-act="close"]').forEach(b => b.onclick = dong);
+    // Bấm ra NGOÀI hộp là đóng - thói quen của mọi tờ trượt trên điện thoại. Đóng ở đây luôn
+    // an toàn vì nó chỉ huỷ, không có nhánh nào "đóng tức là đồng ý".
+    m.onclick = (e) => { if (e.target === m) dong(); };
+    return m;
+  }
+  function dong() {
+    const m = document.getElementById("packModal");
+    if (m) { m.classList.remove("open"); m.onclick = null; }
+  }
+
+  // Đầu hộp thoại cài: ảnh đại diện, tên, dòng phụ, nút đóng. `ten` và `phu` là HTML đã escape
+  // sẵn ở chỗ gọi - vài chỗ cần chèn <code> nên không escape lại ở đây.
+  function pkmDau(g, ten, phu) {
+    return '<div class="pkm-dau">' + (g ? veAvatar(g) : "")
+      + '<div class="pkm-chu"><div class="pkm-ten">' + ten + '</div>'
+      + (phu ? '<div class="pkm-phu">' + phu + '</div>' : "") + '</div>'
+      + '<button class="mp-x" data-act="close" title="' + esc(tw("common.close")) + '">'
+      + ic("x") + '</button></div>';
+  }
+
+  function dangCho(ten, dong2) {
+    modal(pkmDau(null, esc(ten), "")
+      + '<div class="pkm-danh"><div class="pkm-quay"></div><div>' + esc(dong2) + '</div></div>', true);
+  }
+
+  // Hỏng thì hiện đúng một khối đỏ nói ra chuyện gì, kèm bước dừng nếu server có trả. `lamLai`
+  // là đường quay về chọn tệp khác - thiếu nó thì người dùng phải đóng hộp rồi mò lại từ đầu.
+  function manHinhLoi(ten, loi, buoc, lamLai) {
+    modal(pkmDau(null, esc(ten), "")
+      + '<div class="pkm-than"><div class="pkm-canh do">'
+      + '<div class="pkm-canh-tieu">' + ic("triangle-alert") + tw("store.err.title") + '</div>'
+      + '<div>' + esc(loi) + '</div>'
+      + (buoc ? '<div class="pkm-o-phu">' + tw("store.err.stage", { buoc: esc(buoc) })
+          + '</div>' : "")
+      + '</div></div>'
+      + '<div class="pkm-chan">'
+      + (lamLai ? '<button class="mp-btn" id="pkLai">' + tw("store.pick_other_file")
+          + '</button>' : "")
+      + '<button class="mp-btn primary" data-act="close">' + tw("common.close")
+      + '</button></div>', true);
+    const b = document.getElementById("pkLai");
+    if (b) b.onclick = lamLai;
+  }
+
+  // Hộp hỏi lại dùng chung. Trả về Promise<bool>: gọi xong `await` là biết người dùng bấm gì.
+  //
+  // Vì sao không dùng `confirm()` của trình duyệt: nó không xuống dòng được, không in đậm được,
+  // không liệt kê được cái gì sắp mất, và trên điện thoại nó là một hộp hệ thống bé xíu mà
+  // người ta bấm OK theo phản xạ. Việc gỡ một dịch vụ đang có kết nối chạy thì đáng một câu
+  // hỏi đọc được.
+  function hoi(o) {
+    return new Promise(resolve => {
+      let xong = false;
+      const tra = (v) => { if (!xong) { xong = true; resolve(v); } };
+      const m = modal(pkmDau(o.icon ? { id: o.id || "", name: o.ten, icon: o.icon } : null,
+          esc(o.tieu), o.phu ? esc(o.phu) : "")
+        + '<div class="pkm-than">'
+        + '<div class="pkm-canh ' + (o.mau || "vang") + '">'
+        + '<div class="pkm-canh-tieu">' + ic(o.mau === "do" ? "triangle-alert" : "info")
+        + esc(o.canhTieu || tw("store.confirm.title")) + '</div>'
+        + '<div>' + (o.than || "") + '</div></div>'
+        + (o.themHtml || "") + '</div>'
+        + '<div class="pkm-chan">'
+        + '<button class="mp-btn" id="pkHoiKhong">'
+        + esc(o.khong || tw("common.cancel")) + '</button>'
+        + '<button class="mp-btn ' + (o.mau === "do" ? "danger" : "primary") + '" id="pkHoiCo">'
+        + esc(o.co || tw("store.confirm.yes")) + '</button></div>', true);
+      // Nút HUỶ giữ tiêu điểm: gõ Enter theo quán tính không được phép là "đồng ý xoá".
+      const k = document.getElementById("pkHoiKhong");
+      k.focus();
+      k.onclick = () => { dong(); tra(false); };
+      document.getElementById("pkHoiCo").onclick = () => { dong(); tra(true); };
+      m.querySelectorAll('[data-act="close"]').forEach(b => b.onclick = () => { dong(); tra(false); });
+      m.onclick = (e) => { if (e.target === m) { dong(); tra(false); } };
+    });
+  }
+
+  // Loại năng lực, thứ chia lưới kho thành các tab. Thứ tự ở đây LÀ thứ tự chip trên màn
+  // hình, đi từ thứ người dùng hiểu nhanh nhất (trợ lý) tới thứ kỹ thuật nhất (kết nối).
+  //
+  // `bundle` cố ý KHÔNG có chip riêng: nó là chỗ rơi của mục khai loại lạ, và một chip tên
+  // "Khác" chỉ mời người ta bấm vào để thấy lưới rỗng. Mục bundle vẫn hiện ở tab Tất cả.
+  //
+  // Icon lấy ĐÚNG icon trang tương ứng ở thanh bên (`console.js` VIEW_ICON), không chọn lại
+  // cho đẹp: người dùng nhận ra "cái này là kỹ năng" bằng hình họ đã thấy hàng ngày.
+  // `nhan` giữ KHOÁ từ điển chứ không giữ chữ: bảng này dựng lúc nạp file, sớm hơn lúc từ
+  // điển về, nên chỗ VẼ mới tra bằng tw().
+  const LOAI = {
+    agent:     { nhan: "store.kind.agent",     icon: "bot",      trang: "workspace" },
+    skill:     { nhan: "store.kind.skill",     icon: "puzzle",   trang: "skills" },
+    workflow:  { nhan: "store.kind.workflow",  icon: "workflow", trang: "workspace" },
+    tool:      { nhan: "store.kind.tool",      icon: "toolbox",  trang: "plugins" },
+    connector: { nhan: "store.kind.connector", icon: "plug",     trang: "mcp" },
+    bundle:    { nhan: "store.kind.bundle",    icon: "package",  trang: "" },
+  };
+  const THU_TU_LOAI = ["agent", "skill", "workflow", "tool", "connector"];
+
+  // Trần dung lượng tệp .zip, do server nói (`/packs` trả `max_mb`). Giữ ở module để hộp thoại
+  // chọn tệp nói đúng con số ngay cả khi nó mở lại sau một lần lỗi, lúc không còn `d` trong tay.
+  let _maxMb = 25;
+
+  // Loại được chọn sẵn khi mở kho. `moKho()` đặt, `render()` lấy rồi XOÁ ngay - nó là ý định
+  // của MỘT lần bấm tab, không phải trạng thái của trang.
+  let _loaiCho = "";
+  // Từ khoá điền sẵn vào ô tìm, cùng vòng đời với `_loaiCho`: đặt một lần rồi xoá ngay.
+  let _timCho = "";
+  // Trang đã dẫn người dùng sang kho, để vẽ nút quay lại. `null` = vào thẳng từ thanh bên.
+  //
+  // HAI biến chứ không một, và đây là lý do: `_veTrang` là ý định của MỘT lần bấm tab, còn
+  // `_veLuot` là đường về của LƯỢT đang mở - nó phải sống qua mọi lần vẽ lại, vì trang tự vẽ
+  // lại sau mỗi lần cài, gỡ hay bật tắt.
+  //
+  // Gộp làm một thì hoặc nút biến mất ngay sau khi cài xong một món (đúng lúc cần nó nhất),
+  // hoặc nó dính lại: bấm tab từ trang Kỹ năng, rời đi, rồi vào kho từ THANH BÊN - và thấy
+  // một cái nút "Quay lại Kỹ năng" trỏ về nơi mình không hề đi ra. Ca thứ hai trước 0.55.37
+  // không xảy ra được vì kho không có mặt trên thanh bên; giờ có rồi.
+  let _veTrang = null;
+  let _veLuot = null;
+
+  const BAC = {
+    data: { nhan: "store.tier.data", mau: "var(--ok-ink,#2f855a)" },
+    code: { nhan: "store.tier.code", mau: "var(--warn-ink,#b7791f)" },
+  };
+
+  function vaultTom(v) {
+    // Tóm tắt "gói này thêm gì vào bộ não", dạng "2 trợ lý, 1 kỹ năng".
+    const TEN = { agents: "store.vault.agents", workflows: "store.vault.workflows",
+                  skills: "store.vault.skills" };
+    return Object.keys(TEN)
+      .filter(k => ((v || {})[k] || []).length)
+      .map(k => tw(TEN[k], { count: v[k].length }));
+  }
+
+  // ---- Màn hình xác nhận trước khi cài, vẽ hoàn toàn từ kết quả /packs/inspect ----
+  //
+  // Trật tự đọc được đặt cứng, vì đây là màn hình duy nhất trong app nơi người dùng đồng ý cho
+  // mã lạ chạy trong máy chủ của họ: đây là gói gì → nó đến từ tệp nào và vân tay ra sao → nó
+  // chạm vào đâu trong máy → cảnh báo → rồi mới tới hai cái nút.
+  //
+  // `tuTep` là hàm quay về bước chọn tệp. Có khi cài từ kho thì không có nó, và chân hộp hiện
+  // "Huỷ" thay cho "Chọn tệp khác".
+  function manHinhDongY(d, el, tuTep) {
+    const coMa = d.tier === "code";
+    const py = (d.py_files || []);
+    const kn = (d.connectors || []);
+    const vt = vaultTom(d.vault);
+    // Mỗi ô trong bảng là MỘT câu hỏi người cài thật sự hỏi, nên ô nào không có câu trả lời
+    // thì biến mất chứ không hiện một dòng trống.
+    const o = (nhan, gt, phu, rong) =>
+      '<div class="pkm-o' + (rong ? " rong" : "") + '"><div class="pkm-o-nhan">' + nhan + '</div>'
+      + gt + (phu ? '<div class="pkm-o-phu">' + phu + '</div>' : "") + '</div>';
+    const bang = [
+      o(tw("store.inspect.file"), '<div class="pkm-o-gt">'
+        + esc(d.filename || tw("store.inspect.file_fallback"))
+        + ' <span class="nhe">· ' + co(d.size) + '</span></div>'),
+      o(tw("store.inspect.sha"),
+        '<div class="pkm-o-ma">' + esc((d.sha256 || "").slice(0, 20)) + '…</div>',
+        tw("store.inspect.sha_note")),
+      kn.length ? o(tw("store.inspect.add_conn"),
+        '<div class="pkm-o-gt">' + tw("store.inspect.conn_count", { count: kn.length }) + ' '
+        + kn.map(x => '<code>' + esc(x) + '</code>').join(", ") + '</div>',
+        tw("store.inspect.conn_note"), true) : "",
+      vt.length ? o(tw("store.inspect.add_vault"),
+        '<div class="pkm-o-gt">' + vt.join(", ") + '</div>',
+        tw("store.inspect.vault_note"), true) : "",
+    ].filter(Boolean).join("");
+
+    modal(
+      pkmDau(d, esc(nn(d.name, d.id))
+          + (d.version ? '<span class="pkm-ver">v' + esc(d.version) + '</span>' : ""),
+        '<code>' + esc(d.id) + '</code>'
+          + (d.author && d.author.name
+              ? ' · ' + tw("store.inspect.author", { ten: esc(d.author.name) }) : ""))
+      + '<div class="pkm-than">'
+      + (nn(d.description) ? '<p class="pkm-mota">' + esc(nn(d.description)) + '</p>' : "")
+      + '<div class="pkm-bang">' + bang + '</div>'
+      + (d.da_cai
+          ? '<div class="pkm-canh vang"><div class="pkm-canh-tieu">' + ic("info")
+            + tw("store.inspect.already.title") + '</div><div>'
+            + tw("store.inspect.already.body",
+                 { ver: '<b>' + esc(d.da_cai.version || "?") + '</b>' })
+            + '</div></div>' : "")
+      + (d.warning
+          ? '<div class="pkm-canh vang"><div class="pkm-canh-tieu">' + ic("info")
+            + tw("store.inspect.skipped.title") + '</div><div>' + esc(d.warning)
+            + '</div></div>' : "")
+      // Gói chưa qua review của người phát hành kho: nói dài hơn một dòng. Không chặn - ai tin
+      // nguồn nào là lựa chọn của người cài - nhưng họ phải biết mình đang chọn gì.
+      + ((d._tin && d._tin.verified === false)
+          ? '<div class="pkm-canh vang"><div class="pkm-canh-tieu">' + ic("info")
+            + tw("store.inspect.community.title") + '</div><div>'
+            + tw("store.inspect.community.body") + '</div></div>' : "")
+      // Khối cảnh báo cho gói có mã: KHÔNG gập được, không icon ổ khoá, không làm mềm chữ.
+      // `permissions` trong manifest là lời khai của tác giả, không có tầng nào chặn, và
+      // `min_mode` chỉ giới hạn cái MODEL được gọi chứ không giới hạn cái mã làm được.
+      + (coMa
+        ? '<div class="pkm-canh do"><div class="pkm-canh-tieu">' + ic("triangle-alert")
+          + tw("store.inspect.code.title") + '</div>'
+          + '<div>' + tw("store.inspect.code.body") + '</div>'
+          + (py.length
+              ? '<div class="pkm-o-phu">' + tw("store.inspect.code.files") + ' '
+                + py.slice(0, 12).map(x => '<code>' + esc(x) + '</code>').join(", ")
+                + (py.length > 12
+                    ? " " + tw("store.inspect.code.more", { count: py.length - 12 }) : "")
+                + '</div>' : "")
+          + '<label>'
+          + tw("store.inspect.code.type_label", { ma: '<b>' + esc(d.id) + '</b>' })
+          + '<input class="mp-input" id="pkGo" placeholder="'
+          + esc(tw("store.inspect.code.type_ph")) + '" autocomplete="off">'
+          + '</label></div>' : "")
+      // Mặc định của công tắc đi theo BẬC của gói, không phải một hằng số:
+      //
+      //   có mã   tắt. Người dùng nên mở tệp ra xem trước khi cho nó chạy trong máy chủ mình.
+      //   dữ liệu bật. Gói chỉ-dữ-liệu không chạy gì cả - nó chỉ thêm một khuôn connector hay
+      //           vài tệp vào bộ não - nên cài xong mà nó nằm im là một cái bẫy chứ không phải
+      //           một lớp an toàn. Vấp thật khi thử đường di trú: kết nối đang chết, người dùng
+      //           bấm cài đúng gói cần, và KHÔNG có gì xảy ra vì gói vào máy ở trạng thái tắt.
+      + '<button class="pkm-gat" id="pkBat" type="button" aria-pressed="' + (coMa ? "false" : "true") + '">'
+      + '<span><span class="pkm-gat-t">' + tw("store.inspect.enable.title") + '</span>'
+      + '<span class="pkm-gat-s">'
+      + (coMa ? tw("store.inspect.enable.off_note")
+              : tw("store.inspect.enable.on_note"))
+      + '</span></span>'
+      + '<span class="pkm-cong"><span></span></span></button>'
+      + '</div>'
+      + '<div class="pkm-chan"><span class="mp-note" id="pkNote"></span>'
+      + '<button class="mp-btn" ' + (tuTep ? 'id="pkKhac"' : 'data-act="close"') + '>'
+      + (tuTep ? tw("store.pick_other_file") : tw("common.cancel")) + '</button>'
+      + '<button class="mp-btn primary" id="pkCai">' + tw("store.inspect.install_btn")
+      + '</button></div>', true);
+
+    // Nút bên TRÁI (huỷ / chọn tệp khác) nhận tiêu điểm mặc định: Enter theo quán tính không
+    // được phép là "đồng ý cài mã lạ".
+    const trai = document.querySelector("#packModal .pkm-chan .mp-btn");
+    if (trai) trai.focus();
+    const khac = document.getElementById("pkKhac");
+    if (khac) khac.onclick = tuTep;
+    const gat = document.getElementById("pkBat");
+    gat.onclick = () => gat.setAttribute("aria-pressed",
+      gat.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    const note = document.getElementById("pkNote");
+    document.getElementById("pkCai").onclick = async () => {
+      if (coMa) {
+        const v = (document.getElementById("pkGo") || {}).value || "";
+        if (v.trim() !== d.id) {
+          note.textContent = tw("store.inspect.type_wrong");
+          return;
+        }
+      }
+      note.textContent = tw("store.installing");
+      const r = await postJson("/packs/install", {
+        staging_id: d.staging_id, consent_sha256: d.sha256,
+        enable: gat.getAttribute("aria-pressed") === "true",
+        source: d.source || { kind: "zip" },
+        // Brain ĐANG MỞ. `currentBrainPath` là hàm toàn cục mà app.js phơi ra và cả
+        // console.js lẫn chat-render.js đều dùng - đi qua nó thay vì tự đoán chỗ khác.
+        brain: (typeof currentBrainPath === "function" ? currentBrainPath() : "") || "brain",
+      });
+      if (!r || !r.ok) {
+        note.textContent = (r && r.error) || tw("store.install_failed");
+        return;
+      }
+      dong();
+      veLai(el);
+    };
+  }
+
+  async function tuUrl(el, url, expect, tin) {
+    // Tải từ kho hay từ link đều dừng ở bước SOI rồi mở đúng màn hình xác nhận như tệp tải
+    // lên. Đường từ kho về máy không được phép ngắn hơn đường từ tệp: cùng một thứ để đọc,
+    // cùng một chốt dấu vân tay.
+    dangCho(tw("store.downloading.title"), tw("store.downloading.body"));
+    const d = await postJson("/packs/install-url", { url: url, expect_sha256: expect || "" });
+    if (!d || !d.ok) {
+      manHinhLoi(tw("store.install_from_store"),
+        (d && d.error) || tw("store.download_failed"), d && d.stage);
+      return;
+    }
+    d._tin = tin || null;
+    manHinhDongY(d, el);
+  }
+
+  // ---- Gỡ một connector ĐI KÈM APP khỏi kho Kết nối ----
+  //
+  // Ba bước, và bước nào cũng cần thiết: hỏi server xem cái gì sắp dừng (`plan`), hỏi NGƯỜI
+  // DÙNG một câu đọc được, rồi mới gỡ.
+  //
+  // Trước 0.55.36 đường này gỡ THẲNG khi connector chưa có kết nối nào - một cú bấm nhầm vào
+  // dấu × bé ở góc thẻ là dịch vụ biến khỏi kho, không ai hỏi câu nào. Câu hỏi chỉ hiện đúng
+  // trong ca đã có kết nối chạy, tức là ca hiếm hơn, còn ca thường thì im lặng.
+  //
+  // Dùng chung cho cả thẻ trong kho lẫn dấu × trên trang Kết nối - hai lối vào một hành động
+  // thì phải hỏi y hệt nhau. Vì thế nó nằm ở `window.JavisPacks`.
+  async function goApp(ten, id) {
+    const p = await postJson("/connect/core-toggle", { id: id, off: true, plan: true });
+    if (!p || !p.ok) {
+      return { ok: false, error: (p && p.error) || tw("store.conn.read_failed") };
+    }
+    const kn = p.connections || [];
+    const dongY = await hoi({
+      tieu: tw("store.conn.remove_title", { ten: ten }),
+      mau: "do", co: tw("proj.remove_short"), khong: tw("store.conn.keep"),
+      canhTieu: kn.length
+        ? tw("store.conn.will_stop", { count: kn.length })
+        : tw("store.conn.sure"),
+      than: (kn.length
+        ? tw("store.conn.stop_body",
+             { ten: "<b>" + kn.map(x => esc(x.label)).join(", ") + "</b>" })
+        : tw("store.conn.gone_body")),
+    });
+    if (!dongY) return { ok: false, huy: true };
+    const r = await postJson("/connect/core-toggle", { id: id, off: true, confirm: true });
+    return { ok: !!(r && r.ok), error: (r && r.error) || tw("store.conn.remove_failed") };
+  }
+
+  // ---- Ảnh đại diện của một mục ----
+  // Ưu tiên icon THẬT của mục (connector đi kèm app đều có logo). Không có thì dựng một ô chữ
+  // cái: đó là chỗ dựa của lưới - mắt nhận ra hàng nào là hàng nào trước khi kịp đọc chữ.
+  const MAU_AVATAR = ["#2563eb", "#e8590c", "#0f766e", "#16a34a", "#7c3aed", "#0891b2",
+                      "#ca8a04", "#dc2626", "#0d9488", "#db2777"];
+
+  function chuCai(ten) {
+    const w = String(ten || "?").trim().split(/\s+/).filter(Boolean);
+    if (!w.length) return "?";
+    if (w.length === 1) return w[0].slice(0, 2).replace(/^./, c => c.toUpperCase());
+    return (w[0][0] + w[1][0]).toUpperCase();
+  }
+
+  function mauTheoId(id) {
+    let h = 0;
+    for (let i = 0; i < String(id).length; i++) h = (h * 31 + String(id).charCodeAt(i)) >>> 0;
+    return MAU_AVATAR[h % MAU_AVATAR.length];
+  }
+
+  function veAvatar(g) {
+    // Ba dạng, xử lý đúng thứ tự của `console.js iconInner` - trường `icon` của connector đã
+    // mang cả ba từ lâu và không thể ép về một dạng:
+    //   đường dẫn/URL ảnh (logo hãng)  -> <img>
+    //   tên icon Lucide                -> SVG, đặt trên nền màu
+    //   không có gì                    -> ô chữ cái
+    //
+    // `ic()` KHÔNG tự nhận đường dẫn (đó là việc của `iconInner`), nên bỏ nhánh <img> là mọi
+    // logo hãng hiện thành dấu hỏi - đúng lỗi thấy trên màn hình bản dựng đầu.
+    const src = String((g && g.icon) || "");
+    if (/^(https?:|\/)/.test(src)) {
+      return '<div class="kho-ava kho-ava-img"><img src="' + esc(src)
+        + '" alt="" loading="lazy"></div>';
+    }
+    const nen = ' style="background:' + mauTheoId(g.id) + '"';
+    if (src && window.Icons && window.Icons.has && window.Icons.has(src)) {
+      return '<div class="kho-ava"' + nen + '>' + ic(src) + '</div>';
+    }
+    return '<div class="kho-ava"' + nen + '>' + esc(chuCai(nn(g.name, g.id))) + '</div>';
+  }
+
+  // ---- Nút trên thẻ ----
+  // Bốn tình huống, và chúng KHÔNG cùng một hành động bên dưới. Mục tải từ kho thì cài là tải
+  // về rồi qua màn hình xác nhận, gỡ là trình gỡ gói. Connector đi kèm app thì không tải gì cả,
+  // "gỡ" chỉ là ghi vào sổ đã-gỡ (`core_off`) để nó biến khỏi kho Kết nối - tệp trong `system/`
+  // không hề bị đụng, vì cây code là read-only trên Docker và bị `git pull` ghi đè trên bản
+  // native. Trộn hai thứ này làm một là gỡ nhầm hoặc gỡ hụt.
+  // Gói ĐÃ CÀI mà kho đang công bố số hiệu khác. Một hàm dùng chung cho cả nút, thẻ, bộ đếm
+  // và bộ lọc: trước 0.55.42 phép so này chỉ nằm trong `nutThe`, nên cái nút "Có bản mới" là
+  // thứ DUY NHẤT trong toàn giao diện biết chuyện đó - không đếm được, không lọc được, và
+  // không thấy được từ tab khác.
+  //
+  // So bằng KHÁC chứ không phải LỚN HƠN, có chủ ý: kho là nguồn sự thật về bản đang phát
+  // hành, nên một gói bị RÚT về bản cũ (bản mới hỏng) cũng phải kéo lại được. So kiểu lớn hơn
+  // sẽ khoá người dùng ở đúng cái bản vừa bị rút.
+  //
+  // Connector đi kèm app không bao giờ tính: chúng không tải từ đâu cả (`download.url` rỗng).
+  function coBanMoi(g) {
+    return !!(g && g.nguon !== "app" && g.installed && g.installed_version && g.version
+              && g.installed_version !== g.version);
+  }
+
+  function nutThe(g) {
+    const moi = coBanMoi(g);
+    if (g.nguon === "app") {
+      return g.installed
+        ? { nhan: tw("store.btn.remove_from_javis"), lop: "kho-btn kho-btn-go", act: "coreoff" }
+        : { nhan: tw("store.btn.reinstall"), lop: "kho-btn kho-btn-chinh", act: "coreon" };
+    }
+    if (moi) {
+      return { nhan: tw("store.btn.update_to", { ver: esc(g.version) }),
+               lop: "kho-btn kho-btn-chinh", act: "cai" };
+    }
+    if (g.installed) {
+      return { nhan: tw("store.btn.uninstall"), lop: "kho-btn kho-btn-go", act: "go", tat: true };
+    }
+    return { nhan: tw("store.btn.install"), lop: "kho-btn kho-btn-chinh", act: "cai" };
+  }
+
+  // Dòng trạng thái dưới mô tả. Nói ĐỦ HAI SỐ khi có bản mới, vì "đang chạy cái gì" và "kho
+  // có cái gì" là hai câu hỏi khác nhau và người dùng cần cả hai để quyết định có bấm không.
+  function dongDaCai(g) {
+    if (!g.installed) return "";
+    if (g.nguon === "app" || !g.installed_version) {
+      return '<div class="kho-daicai">' + ic("check") + ' ' + tw("store.installed_here")
+        + '</div>';
+    }
+    if (coBanMoi(g)) {
+      return '<div class="kho-daicai moi">' + ic("arrow-up") + ' '
+        + tw("store.running_store_has",
+             { cai: esc(g.installed_version), kho: esc(g.version) }) + '</div>';
+    }
+    return '<div class="kho-daicai">' + ic("check") + ' '
+      + tw("store.installed_latest", { ver: esc(g.installed_version) }) + '</div>';
+  }
+
+  function theKho(g) {
+    const bac = BAC[g.tier] || BAC.data;
+    const lo = LOAI[g.kind] || LOAI.bundle;
+    const n = nutThe(g);
+    // Số hiệu KHÔNG nằm ở đây khi gói đã cài. Dòng meta lấy `g.version` (số của KHO), nên thẻ
+    // của một gói đã cài bản cũ hiện "v1.0.1" ngay trên dòng "Đã cài trên máy" - tức là nói
+    // với người dùng rằng họ đang chạy 1.0.1, đúng lúc họ chạy 1.0.0. Gói đã cài thì để dòng
+    // "Đã cài" kể chuyện phiên bản, một chỗ duy nhất và nói đủ cả hai số.
+    const meta = [g.id, g.installed ? "" : (g.version ? "v" + g.version : ""),
+                  (g.author && g.author.name) || ""].filter(Boolean).map(esc).join(" · ");
+    return '<div class="cat-card kho-the" data-loai="' + esc(g.kind || "bundle") + '"'
+      + ' data-nhom="' + esc(g.nhom || "") + '" data-ng="' + (g.verified ? "1" : "0") + '">'
+      + '<div class="kho-dau">' + veAvatar(g)
+      + '<span class="kho-nhom">' + esc(g.nhom ? nhanNhom(g.nhom) : tw(lo.nhan)) + '</span></div>'
+      + '<div class="kho-ten">' + esc(nn(g.name, g.id))
+      + ' <span class="prov-kind">' + esc(tw(lo.nhan)) + '</span>'
+      + ' <span class="prov-kind" style="color:' + bac.mau + '">' + tw(bac.nhan) + '</span>'
+      + (g.verified
+          ? ' <span class="prov-kind" style="color:var(--ok-ink,#2f855a)">'
+            + tw("store.verified") + '</span>'
+          : ' <span class="prov-kind">' + tw("store.community") + '</span>')
+      + '</div>'
+      + '<div class="cat-desc">' + esc(nn(g.description)) + '</div>'
+      + '<div class="prov-meta">' + meta + '</div>'
+      + dongDaCai(g)
+      + '<div class="kho-nut">'
+      // Bật/tắt tạm một gói đã cài. Trước 0.55.34 nút này chỉ có ở khối "Đã cài" dưới trang;
+      // khối đó bỏ đi rồi nên nó về đây, chứ không được biến mất - tắt tạm KHÁC gỡ hẳn, và
+      // người ta cần nó khi một gói đang gây phiền mà chưa muốn mất cấu hình.
+      + (n.tat
+          ? '<button class="kho-btn kho-btn-phu" data-kho-act="tat" data-kho-id="' + esc(g.id)
+            + '">' + (g.enabled === false ? tw("cb.bat") : tw("cb.tat")) + '</button>'
+          : "")
+      + '<button class="' + n.lop + '" data-kho-act="' + n.act + '" data-kho-id="' + esc(g.id) + '">'
+      + n.nhan + '</button></div>'
+      + '</div>';
+  }
+
+  // Trạng thái lưới kho. Để ở module vì mọi lần bấm tab, bấm nhóm hay đổi trang đều chỉ VẼ LẠI
+  // từ dữ liệu đã tải, không gọi lại mạng.
+  let _kho = { dl: null, loai: "connector", nhom: "Tất cả", trang: 1, tim: "" };
+  const MOI_TRANG = 20;
+  // Danh mục cũ hơn ngần này (giây) thì trang Kho tự lấy lại một lần ở nền. Xem `veKho`.
+  const CU_QUA = 30 * 60;
+
+  async function veKho(el, host, lamMoi, loaiDau, timDau) {
+    host.innerHTML = '<div class="mp-empty">' + tw("store.catalog_loading") + '</div>';
+    let d;
+    try { d = await (await fetch("/packs/store" + (lamMoi ? "?refresh=1" : ""))).json(); }
+    catch (e) { d = { ok: false, error: String(e) }; }
+    if (!d || !d.ok) {
+      // Kho không tới được thì KHÔNG phải là hỏng cả trang: cài từ tệp vẫn chạy như thường.
+      host.innerHTML = '<div class="mp-empty">'
+        + tw("store.catalog_failed", { loi: esc((d && d.error) || tw("store.catalog_failed_reason")) })
+        + '<br>' + tw("store.catalog_failed_hint") + '</div>';
+      return;
+    }
+    _kho.dl = d;
+    _kho.trang = 1;
+    _kho.tim = timDau || "";
+    if (loaiDau && LOAI[loaiDau]) _kho.loai = loaiDau;
+    _kho.nhom = "Tất cả";
+    veLuoi(el, host);
+
+    // Danh mục cache 6 giờ ở phía server (`packs_store.TTL`). Với việc TÌM một gói mới thì 6
+    // giờ là hợp lý. Với việc BIẾT gói mình đã cài có bản mới chưa thì nó sai một cách im
+    // lặng: mở trang ra vẫn là danh mục của sáng nay, không dấu hiệu gì, và người dùng kết
+    // luận là Javis không có tính năng cập nhật.
+    //
+    // Nên khi bản đang cầm đã quá cũ, lấy lại MỘT lần ở nền rồi vẽ lại. Không đụng TTL của
+    // server (các nơi khác vẫn hưởng cache), chỉ trang Kho mới trả cái giá một request nhỏ.
+    // Chốt `_kho.dl === d` để nếu người dùng đã bấm Làm mới hay đổi trang trong lúc chờ thì
+    // bản về sau không đè lên thứ mới hơn.
+    const tuoi = d.fetched_at ? (Date.now() / 1000 - Number(d.fetched_at)) : 0;
+    if (!lamMoi && tuoi > CU_QUA) {
+      fetch("/packs/store?refresh=1")
+        .then(r => r.json())
+        .then(d2 => {
+          if (d2 && d2.ok && _kho.dl === d) { _kho.dl = d2; veLuoi(el, host); }
+        })
+        .catch(() => {});
+    }
+  }
+
+  // Vẽ lại lưới kho = thay sạch `host.innerHTML`, nên Ô TÌM cũng bị vứt đi và dựng lại. Gõ một
+  // chữ là ô đang gõ rời khỏi trang, con trỏ rơi về `body`, phải bấm chuột vào ô mới gõ được
+  // chữ thứ hai - đúng lỗi chủ repo báo (2026-09-07): "tìm kiếm chỉ viết được 1 chữ cái 1 lần".
+  // Gọi `focus()` trên ô CŨ không cứu được gì vì nó không còn nằm trong trang nữa; phải trả con
+  // trỏ cho ô MỚI. Tách thành cặp ghi/trả để bọc quanh đúng một lần thay `innerHTML`.
+  function ghiConTro(host) {
+    const cu = host.querySelector ? host.querySelector("#pkQ") : null;
+    if (!cu || document.activeElement !== cu) return null;
+    return { cu: cu, dau: cu.selectionStart, cuoi: cu.selectionEnd };
+  }
+
+  function traConTro(host, nho) {
+    if (!nho) return;
+    const moi = host.querySelector ? host.querySelector("#pkQ") : null;
+    if (!moi || moi === nho.cu) return;
+    try { moi.focus(); } catch (e) {}
+    // Gõ chèn vào GIỮA chuỗi thì con trỏ phải ở lại giữa. Ô mới dựng từ `value=` nên mặc định
+    // con trỏ nhảy xuống cuối, làm mấy chữ gõ tiếp bị lộn chỗ.
+    try {
+      if (nho.dau !== null && nho.dau !== undefined) moi.setSelectionRange(nho.dau, nho.cuoi);
+    } catch (e) {}
+  }
+
+  function veLuoi(el, host) {
+    const d = _kho.dl || { packs: [] };
+    const ds = d.packs || [];
+    const cungLoai = ds.filter(g => (g.kind || "bundle") === _kho.loai);
+    const daCai = cungLoai.filter(g => g.installed);
+    // Đếm bản mới trên MỌI loại, không chỉ tab đang mở. Đây là chỗ sửa cái lỗi nặng nhất của
+    // tầng này: lưới lọc theo `_kho.loai` và tab mặc định là "Kết nối", nên một gói Kỹ năng có
+    // bản mới thì không có gì trong giao diện nói ra - phải tình cờ bấm đúng tab mới thấy.
+    const capNhat = ds.filter(coBanMoi);
+    const capNhatLoai = cungLoai.filter(coBanMoi);
+
+    // Nhóm chỉ liệt kê nhóm THẬT SỰ có hàng trong loại đang xem. Một hàng bấm vào ra lưới rỗng
+    // làm người ta tưởng kho hỏng, trong khi sự thật chỉ là loại đó chưa có mục nào thuộc nhóm.
+    const dem = {};
+    cungLoai.forEach(g => { const k = g.nhom || "Khác"; dem[k] = (dem[k] || 0) + 1; });
+    const tenNhom = Object.keys(dem).sort((a, b) => a.localeCompare(b, "vi"));
+
+    // Gói do người ngoài gửi vào kho. Chủ kho đọc mã trước khi trộn nên chúng KHÔNG phải hàng
+    // lạ, nhưng người cài vẫn có quyền muốn xem riêng - và khi kho lớn dần thì đây là bộ lọc
+    // họ tìm đầu tiên. Chỉ hiện hàng này khi thật sự có hàng cộng đồng.
+    const congDong = cungLoai.filter(g => !g.verified);
+    const laDaCai = _kho.nhom === "Đã cài";
+    const laCongDong = _kho.nhom === "Cộng đồng";
+    const laMoi = _kho.nhom === "Có bản mới";
+    const q = _kho.tim.trim().toLowerCase();
+    const hop = cungLoai.filter(g =>
+      (_kho.nhom === "Tất cả"
+        || (laDaCai ? g.installed
+            : laMoi ? coBanMoi(g)
+            : laCongDong ? !g.verified
+            : (g.nhom || "Khác") === _kho.nhom))
+      && (!q || (nn(g.name, g.id) + " " + nn(g.description) + " " + g.id).toLowerCase().includes(q)));
+
+    let gioLay = "";
+    try {
+      if (d.fetched_at) {
+        gioLay = new Date(d.fetched_at * 1000)
+          .toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+      }
+    } catch (e) { gioLay = ""; }
+
+    const soTrang = Math.max(1, Math.ceil(hop.length / MOI_TRANG));
+    const trang = Math.min(Math.max(1, _kho.trang), soTrang);
+    _kho.trang = trang;
+    const hienThi = hop.slice((trang - 1) * MOI_TRANG, trang * MOI_TRANG);
+
+    const tabLoai = THU_TU_LOAI.map(k => {
+      const on = k === _kho.loai;
+      const trong = ds.filter(g => (g.kind || "bundle") === k);
+      const nMoi = trong.filter(coBanMoi).length;
+      return '<button class="kho-tab' + (on ? " on" : "") + '" data-kho-loai="' + k + '">'
+        + esc(tw(LOAI[k].nhan))
+        + ' <span class="kho-dem">' + trong.length + '</span>'
+        // Huy hiệu ngay trên TAB, không chỉ trong lưới: mục đích là thấy được bản mới nằm ở
+        // tab nào mà không phải bấm thử từng tab một.
+        + (nMoi ? ' <span class="kho-dem moi">' + tw("store.tab_new_count", { count: nMoi })
+                  + '</span>' : "")
+        + '</button>';
+    }).join("");
+
+    const hangNhom = (ten, so, on, ngan, nhan) =>
+      '<button class="kho-nav' + (on ? " on" : "") + (ngan ? " ngan" : "") + '" data-kho-nhom="'
+      + esc(ten) + '"><span>' + esc(nhan || ten) + '</span><span class="kho-navdem">' + so + '</span></button>';
+
+    // Băng báo bản mới, đặt TRÊN tabs vì nó nói chuyện của cả kho chứ không riêng tab nào.
+    // Mỗi chip nhảy thẳng sang đúng tab và lọc sẵn, nên từ lúc thấy tới lúc bấm Cập nhật là
+    // một cú bấm.
+    const bangMoi = capNhat.length
+      ? '<div class="kho-bao-moi">' + ic("arrow-up")
+        + '<span><b>' + tw("store.updates_count", { count: capNhat.length }) + '</b> '
+        + tw("store.updates_tail") + '</span>'
+        + THU_TU_LOAI.filter(k => capNhat.some(g => (g.kind || "bundle") === k))
+            .map(k => '<button class="kho-chip" data-kho-moi="' + k + '">'
+              + esc(tw(LOAI[k].nhan)) + ' ('
+              + capNhat.filter(g => (g.kind || "bundle") === k).length + ')</button>').join("")
+        + '</div>'
+      : "";
+
+    const nhoConTro = ghiConTro(host);
+    host.innerHTML =
+      (d.stale ? '<div class="conn-guide" style="border-left:3px solid var(--warn,#e0a33e);padding-left:10px;margin-bottom:12px">' + tw("store.stale") + '</div>' : "")
+      + bangMoi
+      + '<div class="kho-tabs">' + tabLoai + '</div>'
+      + '<div class="kho-than">'
+      + '<div class="kho-cot">'
+      + '<div class="kho-cot-tieu">' + tw("studio.groups") + '</div>'
+      + hangNhom("Tất cả", cungLoai.length, _kho.nhom === "Tất cả", false, tw("studio.all"))
+      + hangNhom("Đã cài", daCai.length, laDaCai, false, tw("ol.installed"))
+      + (capNhatLoai.length
+          ? hangNhom("Có bản mới", capNhatLoai.length, laMoi, false, tw("cs.upd_have_new")) : "")
+      + (congDong.length
+          ? hangNhom("Cộng đồng", congDong.length, laCongDong, false, tw("store.community")) : "")
+      + tenNhom.map((t, i) => hangNhom(t, dem[t], _kho.nhom === t, i === 0, nhanNhom(t))).join("")
+      + '</div>'
+      + '<div class="kho-chinh">'
+      + '<div class="cat-tools">'
+      // Bề rộng do CSS lo, không viết cứng ở đây: trên điện thoại ô này phải chiếm trọn hàng,
+      // mà style nội tuyến thì media query không đè được nếu không kèm !important.
+      + '<input class="js-input kho-tim" id="pkQ" placeholder="'
+      + esc(tw("store.search_ph", { loai: tw(LOAI[_kho.loai].nhan) }))
+      + '" value="' + esc(_kho.tim) + '">'
+      + '<span class="prov-meta">'
+      + (laDaCai ? tw("store.count_installed", { count: hop.length })
+         : laMoi ? tw("store.count_updates", { count: hop.length })
+         : laCongDong ? tw("store.count_community", { count: hop.length })
+         : tw("store.count_items", { count: hop.length })) + '</span>'
+      + '<span style="flex:1"></span>'
+      // Nói ra danh mục này lấy lúc nào. Không có dòng này thì "sao tôi không thấy bản mới"
+      // là câu không ai trả lời được, kể cả người viết ra nó.
+      + (gioLay ? '<span class="prov-meta">' + esc(tw("store.catalog_at", { luc: gioLay })) + '</span>' : "")
+      + '<button class="mp-btn" id="pkLamMoi">' + tw("store.refresh") + '</button>'
+      + '<button class="mp-btn" id="pkChon2">' + tw("store.from_zip") + '</button>'
+      + '</div>'
+      + '<div class="cat-grid" id="pkGrid">' + hienThi.map(theKho).join("") + '</div>'
+      + (hienThi.length ? "" : '<div class="mp-empty">'
+          + (laDaCai ? tw("store.empty_installed", { loai: esc(tw(LOAI[_kho.loai].nhan)) })
+             : laMoi ? tw("store.empty_updates", { loai: esc(tw(LOAI[_kho.loai].nhan)) })
+             : tw("store.empty_filter")) + '</div>')
+      + (soTrang > 1
+          ? '<div class="kho-trang"><span class="prov-meta">'
+            + tw("store.paging", { tu: ((trang - 1) * MOI_TRANG + 1),
+                                   den: Math.min(trang * MOI_TRANG, hop.length),
+                                   tong: hop.length })
+            + '</span><span style="flex:1"></span>'
+            + Array.from({ length: soTrang }, (_, i) =>
+                '<button class="kho-so' + (i + 1 === trang ? " on" : "") + '" data-kho-trang="'
+                + (i + 1) + '">' + (i + 1) + '</button>').join("")
+            + '</div>'
+          : "");
+
+    traConTro(host, nhoConTro);
+
+    const lai = () => veLuoi(el, host);
+    host.querySelectorAll("[data-kho-loai]").forEach(b => b.onclick = () => {
+      _kho.loai = b.dataset.khoLoai; _kho.nhom = "Tất cả"; _kho.trang = 1; _kho.tim = ""; lai();
+    });
+    host.querySelectorAll("[data-kho-nhom]").forEach(b => b.onclick = () => {
+      _kho.nhom = b.dataset.khoNhom; _kho.trang = 1; lai();
+    });
+    // Chip trên băng báo: nhảy sang tab đó VÀ lọc sẵn còn mỗi gói có bản mới.
+    host.querySelectorAll("[data-kho-moi]").forEach(b => b.onclick = () => {
+      _kho.loai = b.dataset.khoMoi; _kho.nhom = "Có bản mới";
+      _kho.trang = 1; _kho.tim = ""; lai();
+    });
+    host.querySelectorAll("[data-kho-trang]").forEach(b => b.onclick = () => {
+      _kho.trang = Number(b.dataset.khoTrang); lai();
+    });
+    const o = document.getElementById("pkQ");
+    if (o) {
+      const loc = () => { _kho.tim = o.value; _kho.trang = 1; lai(); };
+      // Bộ gõ tiếng Việt (Gboard telex, bộ gõ sẵn của macOS/iOS) dựng một chữ qua nhiều nhịp
+      // composition. Vẽ lại giữa chừng là ô đang dựng chữ bị vứt đi và dấu thanh mất theo, nên
+      // đợi bộ gõ chốt chữ xong (`compositionend`) rồi mới lọc.
+      o.oninput = (ev) => { if (!(ev && ev.isComposing)) loc(); };
+      o.oncompositionend = loc;
+    }
+    const lm = document.getElementById("pkLamMoi");
+    if (lm) lm.onclick = () => veKho(el, host, true, _kho.loai);
+    const ct = document.getElementById("pkChon2");
+    if (ct) ct.onclick = () => manHinhChon(el, _maxMb);
+
+    const theo = {};
+    ds.forEach(g => { theo[g.id] = g; });
+    host.querySelectorAll("[data-kho-act]").forEach(b => b.onclick = () => {
+      const g = theo[b.dataset.khoId];
+      if (!g) return;
+      const act = b.dataset.khoAct;
+      if (act === "cai") return tuUrl(el, g.download.url, g.download.sha256, g);
+      if (act === "go") return hopGo(el, g.id);
+      if (act === "tat") {
+        return postJson("/packs/toggle", { id: g.id, enabled: g.enabled === false }).then(r => {
+          if (r && r.ok) veKho(el, host, false, _kho.loai);
+          else alert((r && r.error) || tw("store.toggle_failed"));
+        });
+      }
+      // Connector của app: `core_off` ghi vào sổ, tệp trong system/ không bị đụng.
+      if (act === "coreoff") {
+        return goApp(nn(g.name, g.id), g.id).then(r => {
+          if (r.ok) veKho(el, host, false, _kho.loai);
+          else if (!r.huy) alert(r.error);
+        });
+      }
+      postJson("/connect/core-toggle", { id: g.id, off: false, confirm: true }).then(r => {
+        if (r && r.ok) veKho(el, host, false, _kho.loai);
+        else alert((r && r.error) || tw("store.toggle_failed"));
+      });
+    });
+  }
+
+
+  // ---- Bước 1 của luồng "cài từ tệp": chọn tệp ----
+  //
+  // Trước 0.55.36 bước này không tồn tại - nút "Cài từ tệp .zip" bấm thẳng vào một <input>
+  // ẩn, nên KHÔNG kéo thả được, mà kéo tệp vừa tải về vào cửa sổ lại đúng là thao tác quen tay
+  // nhất. Tệ hơn: thả trượt ra ngoài thì trình duyệt MỞ tệp zip đó thay cho trang, mất sạch
+  // trạng thái. Giờ có một vùng thả thật, và cả lớp phủ chặn thả trượt.
+  function manHinhChon(el, maxMb) {
+    const m = modal(
+      pkmDau(null, tw("store.from_zip"), tw("store.pick.body"))
+      + '<div class="pkm-than">'
+      + '<label class="pkm-tha" id="pkTha">'
+      + '<input type="file" accept=".zip" id="pkTepHop" style="display:none">'
+      + '<span class="pkm-tha-ico">' + ic("upload-cloud") + '</span>'
+      + '<span class="pkm-tha-t">' + tw("store.pick.drop") + '</span>'
+      + '<span class="pkm-tha-s">' + tw("store.pick.or") + ' <u>' + tw("store.pick.browse")
+      + '</u></span>'
+      + '<span class="pkm-tha-n">' + tw("store.pick.limit", { mb: (maxMb || 25) }) + '</span>'
+      + '</label>'
+      + '<div class="pkm-luuy">' + ic("info")
+      + '<span>' + tw("store.pick.trust") + '</span></div>'
+      + '</div>'
+      + '<div class="pkm-chan"><button class="mp-btn" data-act="close">'
+      + tw("common.cancel") + '</button></div>', true);
+
+    const tha = document.getElementById("pkTha");
+    const inp = document.getElementById("pkTepHop");
+    inp.onchange = () => { if (inp.files && inp.files[0]) chonTep(el, inp.files[0]); };
+    // Thả TRƯỢT ra ngoài vùng nhận cũng phải bị nuốt: mặc định của trình duyệt là điều hướng
+    // sang chính tệp vừa thả, tức là mất trang và mất luôn việc đang làm.
+    ["dragenter", "dragover", "drop"].forEach(ev =>
+      m.addEventListener(ev, e => e.preventDefault()));
+    ["dragenter", "dragover"].forEach(ev =>
+      tha.addEventListener(ev, () => tha.classList.add("dang-keo")));
+    ["dragleave", "drop"].forEach(ev =>
+      tha.addEventListener(ev, () => tha.classList.remove("dang-keo")));
+    tha.addEventListener("drop", e => {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) chonTep(el, f);
+    });
+  }
+
+  async function chonTep(el, file) {
+    const lai = () => manHinhChon(el, _maxMb);
+    // Chặn ngay ở trình duyệt thay vì tải hết vài chục MB lên rồi mới nghe server từ chối.
+    if (!/\.zip$/i.test(file.name || "")) {
+      manHinhLoi(tw("store.from_zip"), tw("store.not_zip", { ten: (file.name || "?") }), "", lai);
+      return;
+    }
+    dangCho(tw("store.reading.title"), tw("store.reading.body"));
+    const fd = new FormData();
+    fd.append("file", file);
+    let d;
+    try { d = await (await fetch("/packs/inspect", { method: "POST", body: fd })).json(); }
+    catch (e) { d = { ok: false, error: String(e) }; }
+    if (!d || !d.ok) {
+      manHinhLoi(tw("store.from_zip"), (d && d.error) || tw("store.bad_zip"), d && d.stage, lai);
+      return;
+    }
+    manHinhDongY(d, el, lai);
+  }
+
+  async function hopGo(el, pid) {
+    dangCho(tw("store.rm.title"), tw("store.rm.checking"));
+    let d;
+    try {
+      d = await (await fetch("/packs/uninstall-plan?id=" + encodeURIComponent(pid))).json();
+    } catch (e) { d = { ok: false, error: String(e) }; }
+    if (!d || !d.ok) {
+      manHinhLoi(tw("store.rm.title"), (d && d.error) || tw("store.rm.read_failed"), d && d.stage);
+      return;
+    }
+    const kn = d.connections || [];
+    const xoa = (d.vault || {}).xoa || [];
+    const giu = (d.vault || {}).giu || [];
+    modal(pkmDau(d, tw("store.rm.heading", { ten: esc(nn(d.name, d.id)) }),
+                 '<code>' + esc(d.id) + '</code>')
+      + '<div class="pkm-than">'
+      + '<div class="pkm-canh do"><div class="pkm-canh-tieu">' + ic("triangle-alert")
+      + tw("store.rm.lose") + '</div>'
+      + '<ul class="pkm-mat">'
+      + '<li>' + tw("store.rm.files") + ' <span style="opacity:.65">(' + co(d.bytes) + ')</span></li>'
+      + ((d.connectors || []).length
+          ? '<li>' + tw("store.rm.services", { count: d.connectors.length }) + '</li>' : "")
+      // Kết nối theo gói bị xoá THEO, và nói thẳng ra chứ không giấu trong một ô tick: để lại
+      // một hàng kết nối chết vẫn là để lại credential của nó trên đĩa.
+      + (kn.length
+          ? '<li><b>' + tw("store.rm.conns", { count: kn.length }) + '</b>: '
+            + kn.map(x => esc(x.label)).join(", ")
+            + '<div class="pkm-o-phu">' + tw("store.rm.conns_note") + '</div>'
+            + '</li>' : "")
+      + (xoa.length
+          ? '<li>' + tw("store.rm.vault", { count: xoa.length })
+            + ' <span style="opacity:.65">('
+            + xoa.map(x => esc(x.slug)).join(", ") + ')</span></li>' : "")
+      + '</ul></div>'
+      // Thứ người dùng đã sửa thì KHÔNG bị xoá, và phải nói ra - nếu không họ sẽ tưởng mất.
+      + (giu.length
+          ? '<div class="pkm-canh tin"><div class="pkm-canh-tieu">' + ic("check")
+            + tw("store.rm.kept") + '</div><div>' + giu.map(x => esc(x.slug)).join(", ")
+            + '</div></div>' : "")
+      + ((d.plugin_data || []).length
+          ? '<button class="pkm-gat" id="pkData" type="button" aria-pressed="false">'
+            + '<span><span class="pkm-gat-t">' + tw("store.rm.purge") + '</span>'
+            + '<span class="pkm-gat-s">' + tw("store.rm.purge_note") + '</span></span>'
+            + '<span class="pkm-cong"><span></span></span></button>' : "")
+      + '</div>'
+      + '<div class="pkm-chan"><span class="mp-note" id="pkNote2"></span>'
+      + '<button class="mp-btn" data-act="close">' + tw("common.cancel") + '</button>'
+      + '<button class="mp-btn danger" id="pkGoOk">' + tw("proj.remove_short")
+      + '</button></div>', true);
+    const huy = document.querySelector("#packModal .pkm-chan .mp-btn");
+    if (huy) huy.focus();
+    const dl = document.getElementById("pkData");
+    if (dl) dl.onclick = () => dl.setAttribute("aria-pressed",
+      dl.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    const note = document.getElementById("pkNote2");
+    document.getElementById("pkGoOk").onclick = async () => {
+      note.textContent = tw("store.rm.working");
+      const r = await postJson("/packs/uninstall", {
+        id: pid, purge_data: !!(dl && dl.getAttribute("aria-pressed") === "true"),
+      });
+      if (!r || !r.ok) { note.textContent = (r && r.error) || tw("store.rm.failed"); return; }
+      dong();
+      veLai(el);
+    };
+  }
+
+  // console.js gọi hàm này MỖI LẦN điều hướng vào trang kho, và chỉ lúc đó. Nên đây là chỗ
+  // đúng để chốt đường về của lượt mới: lấy thứ `moKho` vừa đặt (nếu vào bằng tab), hoặc
+  // không có gì (nếu vào từ thanh bên).
+  async function render(el) {
+    _veLuot = _veTrang;
+    _veTrang = null;
+    return veLai(el);
+  }
+
+  async function veLai(el) {
+    el.innerHTML = '<div class="cview-placeholder">' + tw("sess.loading") + '</div>';
+    let d;
+    try { d = await (await fetch("/packs")).json(); }
+    catch (e) {
+      el.innerHTML = '<div class="cview-placeholder">' + tw("cs.cn_load_err") + '</div>';
+      return;
+    }
+    if (d && d.error) {
+      el.innerHTML = '<div class="cview-placeholder">' + esc(d.error) + '</div>';
+      return;
+    }
+    // Bộ lọc loại thì lấy rồi XOÁ NGAY: nó là ý định của MỘT lần bấm tab. Giữ lại thì lần sau
+    // vào kho vẫn thấy lưới bị cắt còn một loại mà không có gì giải thích.
+    //
+    // Nút quay lại thì đọc `_veLuot` - đã chốt ở `render()` cho cả lượt - nên nó sống qua mọi
+    // lần vẽ lại mà không dính sang lượt sau.
+    const loaiDau = _loaiCho;
+    const timDau = _timCho;
+    const veTrang = _veLuot;
+    _loaiCho = "";
+    _timCho = "";
+
+    el.innerHTML =
+      // Nút quay lại: chỉ hiện khi VÀO TỪ một trang năng lực. Vào thẳng từ thanh bên thì không
+      // có chỗ nào để quay về, và một cái nút dẫn đi đâu đó ngẫu nhiên còn tệ hơn không có.
+      (veTrang
+        ? '<button class="kho-quaylai" id="pkQuayLai">← '
+          + tw("store.back_to", { trang: esc(veTrang.nhan) }) + '</button>'
+        : "")
+      + '<div class="cview-section kho-khoi"><h3>◆ Javis Store</h3>'
+      + '<div class="gcard-meta" style="max-width:740px">' + tw("store.intro") + ' '
+      + tw("store.intro_press", { nut: '<b>' + tw("store.btn.install") + '</b>' }) + '</div>'
+      + (d.disabled
+        ? '<div class="conn-guide" style="border-left:3px solid var(--warn,#e0a33e);padding-left:10px;margin-top:12px">'
+          + tw("store.disabled_env", { bien: '<code>JAVIS_DISABLE_PACKS</code>' }) + '</div>'
+        : "")
+      + '<div id="pkKho" style="margin-top:12px"></div>'
+      + '<div class="gcard-meta" style="margin-top:16px;opacity:.7">'
+      + tw("store.dir_note", { duong: '<code>' + esc(d.dir || "") + '</code>' }) + ' '
+      + tw("store.zip_limit", { mb: (d.max_mb || 25) }) + '</div>'
+      + '</div>';
+
+    _maxMb = d.max_mb || 25;
+    const nutVe = document.getElementById("pkQuayLai");
+    if (nutVe) nutVe.onclick = () => {
+      const s = window.Alpine && Alpine.store("nav");
+      if (s && s.go) s.go(veTrang.id);
+    };
+    const hostKho = document.getElementById("pkKho");
+    if (hostKho) veKho(el, hostKho, false, loaiDau, timDau);
+  }
+
+  // Mở kho với một loại đã lọc sẵn. Tab "Kho cài đặt" trên trang Trợ lý / Kỹ năng / Quy
+  // trình / Plugin gọi hàm này, nên bốn trang KHÔNG ai nhúng một bản sao của lưới kho: chỉ có
+  // một kho, một chỗ sửa, và người dùng học một lần là xong.
+  //
+  // `tim` là từ khoá điền sẵn vào ô tìm. Dùng cho đường "kết nối này đang dừng vì dịch vụ của
+  // nó đã ra kho" trên trang Kết nối: bấm một nút là tới thẳng đúng gói cần cài, thay vì thả
+  // người dùng vào một kho vài chục mục rồi bảo họ tự tìm cái vừa biến mất.
+  function moKho(loai, tuTrang, nhanTrang, tim) {
+    _loaiCho = LOAI[loai] ? loai : "";
+    _veTrang = tuTrang ? { id: tuTrang, nhan: nhanTrang || tuTrang } : null;
+    _timCho = tim || "";
+    if (window.Alpine && Alpine.store("nav")) Alpine.store("nav").go("packs");
+  }
+
+  // `coBanMoi` và `nutThe` phơi ra để test GỌI THẬT chứ không quét chuỗi: phép so phiên bản là
+  // thứ quyết định người dùng có thấy nút cập nhật hay không, và một canary đọc chữ thì vẫn
+  // xanh y nguyên khi phép so bị đảo ngược. `veKho` phơi ra cùng lý do: ô tìm trong kho
+  // chỉ gõ được đúng một chữ rồi văng con trỏ, và chỉ có gõ THẬT qua đường vẽ lại mới bắt
+  // được lỗi đó.
+  window.JavisPacks = { render: render, moKho: moKho, LOAI: LOAI, goApp: goApp, hoi: hoi,
+                        coBanMoi: coBanMoi, nutThe: nutThe, theKho: theKho,
+                        ghiConTro: ghiConTro, traConTro: traConTro, veKho: veKho };
+})();

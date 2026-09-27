@@ -1,0 +1,1867 @@
+// ============================================================
+// Javis - Sidebar "Lịch sử hội thoại" TRONG chat workspace (cột trái khi phóng to chat).
+// chat-zoom.js tạo khung <aside id="chatSide"> và gọi window.JavisChatSide.mount/refresh;
+// module này render nội dung: + Hội thoại mới, tìm kiếm, danh sách nhóm theo thời gian,
+// đổi tên/xoá, highlight phiên đang mở. Mở phiên qua window.JavisSessions (app.js).
+// (Thay panel trượt bên phải cũ - nút "Lịch sử" góc phải giờ mở thẳng workspace.)
+// ============================================================
+(function () {
+  "use strict";
+
+  // Locale để định dạng số/ngày. Lấy từ i18n chứ KHÔNG khoá "vi-VN": người dùng đổi
+  // ngôn ngữ giao diện thì ngày giờ phải đổi theo, nếu không thì nửa màn hình tiếng Anh
+  // mà ngày vẫn dd/mm/yyyy kiểu Việt.
+  const LOC = () => (window.JavisI18n && JavisI18n.locale()) || "vi-VN";
+  function el(html) { var d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; }
+  function esc(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+  function brain() { try { return (window.JavisSessions && window.JavisSessions.brain()) || "brain"; } catch (e) { return "brain"; } }
+  function currentId() { try { return (window.JavisSessions && window.JavisSessions.current()) || null; } catch (e) { return null; } }
+
+  function fmtT(ts) {
+    try {
+      var d = new Date(ts * 1000), now = new Date();
+      if (d.toDateString() === now.toDateString())
+        return d.toLocaleTimeString(LOC(), { hour: "2-digit", minute: "2-digit" });
+      var dd = String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0");
+      return d.getFullYear() === now.getFullYear() ? dd : dd + "/" + String(d.getFullYear()).slice(2);
+    } catch (e) { return ""; }
+  }
+
+  function groupOf(ts) {
+    var d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    var start = d0.getTime() / 1000;
+    // Khoá riêng của danh sách hội thoại: usage.ky.* là nhãn ô chọn kỳ bên trang Mức dùng,
+    // mượn sang đây là một hôm sửa nhãn bên kia thì nhóm ngày bên này đổi theo mà không ai ngờ.
+    if (ts >= start) return window.t("sess.grp_hom_nay");
+    if (ts >= start - 86400) return window.t("sess.grp_hom_qua");
+    if (ts >= start - 6 * 86400) return window.t("sess.grp_7days");
+    return window.t("cs.cl_older");
+  }
+
+  var side = null, listEl = null, searchEl = null, searchTimer = null, refreshTimer = null;
+  // CHẾ ĐỘ LỌC THEO KÊNH (trang Cộng sự, 0.59.4). Cột lịch sử ở đó phải là ĐÚNG cột này -
+  // cùng ô tìm, cùng nhóm theo ngày, cùng ghim/đổi tên/xoá, cùng nút "Xem thêm" - chỉ khác
+  // là nó chỉ thấy hội thoại của một trợ lý (kênh "agent:<slug>") hay một quy trình.
+  // Dựng bản thứ hai cho cột đó là chép lại gần 200 dòng rồi để hai bản trôi lệch nhau.
+  //
+  // Module này giữ trạng thái ở mức file (side/listEl/...), tức MỘT chỗ gắn tại một thời
+  // điểm. Không sao: trang Trò chuyện và trang Cộng sự không bao giờ hiện cùng lúc, và mỗi
+  // trang đều gọi mount() lúc dựng, nên chỗ gắn luôn là trang đang xem.
+  var kenhLoc = "";        // "" = cột lịch sử thường; "agent:x"/"workflow:y" = lọc đúng kênh
+  var hamTaoMoi = null;    // nút "Hội thoại mới" ở chế độ lọc: trang Cộng sự tự lo (đúng kênh)
+  // Hàm TRANG TRÍ một hàng hội thoại, do nơi gắn cột cấp (trang Cộng sự). Trả
+  // {dau, meta}: `dau` là HTML đứng trước tiêu đề (trang Cộng sự bày avatar những trợ lý đã
+  // phối hợp trong lần chạy đó), `meta` là một nhãn nhỏ trong hàng meta (xong / lỗi / chờ
+  // duyệt). Cột này KHÔNG tự đi hỏi dữ liệu ấy: nó không biết gì về quy trình, và nhét một
+  // request của trang khác vào đây là buộc hai thứ vào nhau mà chẳng bên nào cần.
+  var hamTrangTri = null;
+  // Cột trái có HAI tab: hội thoại và cây thư mục brain. Nhớ tab đã chọn qua localStorage -
+  // ai dùng cây làm chính thì mỗi lần mở chat lại phải bấm sang là phiền vô ích.
+  var TAB_KEY = "javis.chatside.tab";
+  var tabHienTai = "chat", cayEl = null;
+
+  function tabDaLuu() {
+    try { return localStorage.getItem(TAB_KEY) === "files" ? "files" : "chat"; }
+    catch (e) { return "chat"; }
+  }
+
+  // ===== Project (nhóm hội thoại) =====
+  // Project đang mở là CHỖ ĐỨNG của người dùng trên MỘT máy, không phải dữ liệu chung, nên
+  // nhớ ở localStorage theo brain chứ không lưu server. Ba giá trị: "" = tất cả,
+  // "none" = các cuộc chưa xếp nhóm, còn lại là id project ("none" là chuỗi cố định, không
+  // bao giờ đụng id thật vì id là uuid hex).
+  var PROJ_KEY = "javis.chatside.project";
+  var projects = [];      // [{id,name,icon,session_count}] của brain đang xem
+  var projBar = null;
+
+  function projKey() { return PROJ_KEY + "." + brain(); }
+  function curProject() {
+    try { return localStorage.getItem(projKey()) || ""; } catch (e) { return ""; }
+  }
+  function setCurProject(id) {
+    try {
+      if (id) localStorage.setItem(projKey(), id);
+      else localStorage.removeItem(projKey());
+    } catch (e) {}
+  }
+  function projById(id) {
+    for (var i = 0; i < projects.length; i++) if (projects[i].id === id) return projects[i];
+    return null;
+  }
+  // Nhãn project trả về HTML (icon là thẻ <svg>, không phải ký tự) nên phần CHỮ phải tự
+  // escape ở đây - tên project do người dùng gõ.
+  function projLabelHtml() {
+    var cur = curProject();
+    if (!cur) return ic("layers") + " " + window.t("sess.proj_all");
+    if (cur === "none") return ic("circle") + " " + window.t("sess.proj_none");
+    var p = projById(cur);
+    if (!p) return ic("layers") + " " + window.t("sess.proj_all");
+    return projIcon(p) + " " + esc(p.name);
+  }
+
+  // Icon của một project. Chưa đặt thì lấy icon thư mục làm mặc định - hàng nào cũng có icon
+  // thì mắt quét theo cột icon được, và nhìn là biết chỗ này đổi icon được.
+  function projIcon(p) { return iconHtml((p || {}).icon) || ic("folder"); }
+
+  async function post(url, fields) {
+    var fd = new FormData();
+    Object.keys(fields || {}).forEach(function (k) { fd.append(k, fields[k]); });
+    try { return await (await fetch(url, { method: "POST", body: fd })).json(); }
+    catch (e) { return { error: String(e) }; }
+  }
+
+  async function loadProjects() {
+    try {
+      var d = await (await fetch("/projects?brain=" + encodeURIComponent(brain()))).json();
+      projects = d.projects || [];
+    } catch (e) { projects = []; }
+    // Project đang mở vừa bị xoá (ở tab khác, hoặc brain khác) → về "Tất cả". Không có nhát
+    // này thì danh sách rỗng trơn mà người dùng không hiểu vì sao.
+    var cur = curProject();
+    if (cur && cur !== "none" && !projById(cur)) setCurProject("");
+    renderProjBar();
+    renderProjChip();
+  }
+
+  function renderProjBar() {
+    if (!projBar) return;
+    var cur = curProject();
+    projBar.innerHTML =
+      '<button class="cs-proj-cur" type="button" title="' + esc(window.t("sess.proj_pick_title")) + '">' +
+        '<span class="cs-proj-name">' + projLabelHtml() + '</span>' +
+        '<span class="cs-proj-caret">' + ic("chevron-down") + '</span>' +
+      '</button>' +
+      (cur ? '<button class="cs-proj-x" type="button" title="' + esc(window.t("sess.proj_clear_title")) + '">' + ic("x") + '</button>' : '') +
+      '<button class="cs-proj-add" type="button" title="' + esc(window.t("sess.proj_add_title")) + '">' + ic("folder-plus") + '</button>';
+    projBar.querySelector(".cs-proj-cur").onclick = function (e) { openProjMenu(e.currentTarget); };
+    projBar.querySelector(".cs-proj-add").onclick = function () { newProject(); };
+    var x = projBar.querySelector(".cs-proj-x");
+    if (x) x.onclick = function () { chonProject(""); };
+  }
+
+  function chonProject(id) {
+    setCurProject(id);
+    shown = PAGE;
+    cached = null;          // bộ lọc đổi thì cache của bộ lọc cũ không dùng lại được
+    renderProjBar();
+    renderProjChip();
+    loadList();
+  }
+
+  function openProjMenu(anchor) {
+    var cur = curProject();
+    var rows = [
+      { label: window.t("sess.proj_all"), icon: "layers", on: !cur, run: function () { chonProject(""); } },
+      { label: window.t("sess.proj_none"), icon: "circle", on: cur === "none", run: function () { chonProject("none"); } },
+    ];
+    if (projects.length) rows.push({ sep: true });
+    projects.forEach(function (p) {
+      rows.push({
+        label: p.name,
+        icon: p.icon || "folder",
+        right: String(p.session_count || 0),
+        on: cur === p.id,
+        run: function () { chonProject(p.id); },
+        pinIcon: p.pinned ? "pin" : "",
+        // MỘT nút ba chấm thay cho bốn icon hiện-khi-rê-chuột (chủ repo yêu cầu 01/09). Ba
+        // lý do, không chỉ chuyện gọn mắt:
+        //   - Bốn icon ăn ~100px trong một popover rộng 280px, nên tên project dài bị cắt
+        //     cụt đúng lúc người dùng cần đọc nó để chọn.
+        //   - Hover KHÔNG tồn tại trên màn cảm ứng, nên trên máy tính bảng bốn nút đó là
+        //     bốn chức năng không có đường nào bấm tới.
+        //   - Icon trần bắt người dùng đoán nghĩa; hộp chức năng ghi bằng CHỮ thì không.
+        acts: [{ icon: "ellipsis-vertical", title: window.t("sess.proj_acts"),
+                 run: function () { openProjActs(anchor, p); } }],
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: window.t("sess.proj_new"), run: function () { newProject(); } });
+    openMenu(anchor, rows);
+  }
+
+  /** Hộp chức năng của MỘT project. Đi sâu vào cùng một popover (có hàng quay lại) chứ không
+   *  bung popover thứ hai: hai lớp nổi chồng nhau thì phải tự lo đóng đúng thứ tự, mà bấm ra
+   *  ngoài lớp trong lại đóng nhầm cả hai. */
+  function openProjActs(anchor, p) {
+    openMenu(anchor, [
+      // Hàng đầu là TÊN project, cho XUỐNG DÒNG chứ không cắt ba chấm: đây là chỗ người dùng
+      // liếc để chắc mình đang thao tác lên đúng project, mà một cái tên cụt thì không chắc
+      // được. Hàng này không có số đếm cũng không có nút nên xuống dòng không phá bố cục.
+      { label: p.name, icon: p.icon || "folder", wrap: true,
+        run: function () { chonProject(p.id); } },
+      { sep: true },
+      { label: p.pinned ? window.t("sess.proj_unpin") : window.t("sess.proj_pin"),
+        icon: "pin", run: function () { ghimProject(p); } },
+      { label: window.t("sess.proj_drawer"), icon: "sliders-horizontal",
+        run: function () { openProjDrawer(p.id); } },
+      { label: window.t("sess.proj_icon"), icon: "palette",
+        run: function () {
+          pickIcon(anchor, p.icon || "", function (v) {
+            post("/projects/" + encodeURIComponent(p.id) + "/update", { icon: v }).then(loadProjects);
+          });
+        } },
+      { label: window.t("proj.rename"), icon: "pencil", run: function () { renameProject(p); } },
+      { sep: true },
+      { label: window.t("sess.proj_delete"), icon: "trash-2", run: function () { delProject(p); } },
+      { sep: true },
+      { label: window.t("sess.proj_back"), icon: "chevron-left",
+        run: function () { openProjMenu(anchor); } },
+    ]);
+  }
+
+  async function ghimProject(p) {
+    await post("/projects/" + encodeURIComponent(p.id) + "/pin",
+               { pinned: p.pinned ? "0" : "1" });
+    await loadProjects();
+    // Neo cũ đã bị renderProjBar() thay bằng node mới, nên phải hỏi lại chứ không giữ tham
+    // chiếu: neo đã rời khỏi DOM thì menu sẽ được đặt vào một toạ độ vô nghĩa.
+    var neo = projBar && projBar.querySelector(".cs-proj-cur");
+    // Về DANH SÁCH chứ không về hộp chức năng: ghim là thao tác về THỨ TỰ, nên thứ cần nhìn
+    // ngay sau đó là danh sách đã xếp lại.
+    if (neo) openProjMenu(neo);
+  }
+
+  async function newProject() {
+    var name = prompt(window.t("sess.proj_new_q"), "");
+    if (name == null || !name.trim()) return;
+    var r = await post("/projects", { name: name.trim(), brain: brain() });
+    await loadProjects();
+    if (!r || !r.id) return;
+    chonProject(r.id);
+    // Mở sẵn một hội thoại trống: bộ lọc vừa trỏ vào project mới nên tin đầu tiên rơi đúng
+    // vào đó (JavisProjects.claim). Rồi mở luôn khung project kèm banner chào - một project
+    // rỗng thì chưa đổi được gì cho lượt chat nào, phải nói ra chỗ để đổ hướng dẫn vào.
+    try { if (window.JavisSessions) window.JavisSessions.new(); } catch (e) {}
+    quenPhienProj();
+    pdOnboard = true;
+    openProjDrawer(r.id);
+  }
+
+  async function renameProject(p) {
+    var name = prompt(window.t("sess.proj_rename_q"), p.name || "");
+    if (name == null || !name.trim()) return;
+    await post("/projects/" + encodeURIComponent(p.id) + "/update", { name: name.trim() });
+    await loadProjects();
+    renderProjBar();
+  }
+
+  async function delProject(p) {
+    // Nói THẲNG hội thoại không mất. Người dùng gom nhóm để đỡ rối, không ai muốn một cú bấm
+    // nhầm cuốn theo cả tháng trò chuyện - và cũng không có đường hoàn tác nào.
+    var n = p.session_count || 0;
+    if (!confirm(window.t("sess.proj_del_q", { ten: p.name || "" }) + "\n\n" +
+                 (n ? window.t("sess.proj_del_n", { count: n })
+                    : window.t("sess.proj_del_empty")))) return;
+    await post("/projects/" + encodeURIComponent(p.id) + "/delete", {});
+    if (projChiTiet && projChiTiet.id === p.id) { projChiTiet = null; closeProjDrawer(); }
+    quenPhienProj();
+    if (curProject() === p.id) setCurProject("");
+    await loadProjects();
+    loadList();
+  }
+
+  // ============================================================
+  // Khung project: hướng dẫn + tài liệu + link
+  // ============================================================
+  // Chip nằm ở thanh tiêu đề khung chat, bấm vào mở ngăn kéo này. Cả hai sống trong CÙNG
+  // closure với danh sách project ở trên: một mảng `projects`, một chỗ biết brain nào đang
+  // mở, nên không có bản thứ hai để trôi lệch.
+  //
+  // Chip nói về project CỦA LƯỢT CHAT, không phải bộ lọc cột trái. Hai thứ đó khác nhau và
+  // server bơm hướng dẫn theo cái thứ nhất (`sessions.project_id`): mở lại một cuộc cũ thuộc
+  // project A trong khi cột trái đang lọc project B thì Javis vẫn nhận hướng dẫn của A. Chip
+  // mà đọc bộ lọc là nó nói dối đúng vào lúc người dùng cần tin nó nhất.
+
+  var PROJ_INSTR_MAX = 4000;       // gương của PROJECT_INSTRUCTIONS_MAX (server/sessions.py)
+  var projChiTiet = null;          // {id,name,icon,instructions,files,links} của project đang mở
+  var projTab = "instr";
+  var pdEl = null;                 // node ngăn kéo, dựng MỘT lần rồi gắn vào body
+  var pdLuuTimer = null;
+  var pdOnboard = false;           // banner chào chỉ hiện ngay sau khi tạo project
+  var pdFormFile = false, pdFileMode = "search", pdFormLink = false;
+  // "project" = khung của project | "cuoc" = của cuộc trò chuyện | "agent" = của MỘT trợ lý
+  var pdCheDo = "project";
+  var phienProj = { sid: "", pid: "" };     // cache "phiên đang mở thuộc project nào"
+
+  function pdT(k, bien) { return (window.t ? window.t(k, bien) : k); }
+
+  /** Project ĐANG CÓ HIỆU LỰC cho lượt chat hiện tại. */
+  async function duAnCuaLuot() {
+    var sid = currentId();
+    var loc = curProject();
+    var locThat = (loc && loc !== "none") ? loc : "";
+    // Chưa có phiên = khung chat trống. Tin sau sẽ được JavisProjects.claim() gắn vào đúng
+    // project đang lọc, nên chip báo trước điều đó là đúng chứ không phải đoán.
+    if (!sid) return locThat;
+    if (phienProj.sid === sid) return phienProj.pid;
+    var pid = "";
+    try {
+      var r = await fetch("/sessions/" + encodeURIComponent(sid) + "/meta");
+      if (r.ok) {
+        var d = await r.json();
+        pid = (d && d.project_id) || "";
+      } else {
+        // 404 = id đã mint ở client nhưng chưa gửi tin nào, hàng trong DB chưa tồn tại.
+        pid = locThat;
+      }
+    } catch (e) { return locThat; }   // mạng hỏng: đừng ghi cache một câu trả lời sai
+    phienProj = { sid: sid, pid: pid };
+    return pid;
+  }
+
+  function quenPhienProj() { phienProj = { sid: "", pid: "" }; }
+
+  // ── Chip ─────────────────────────────────────────────────────────────────────
+  async function renderProjChip() {
+    var hosts = document.querySelectorAll(".proj-chip-host");
+    if (!hosts.length) return;
+    var pid = await duAnCuaLuot();
+    var p = pid ? projById(pid) : null;
+    // Mở thẳng trang chat sau F5 thì `projects` có thể chưa nạp. Nạp rồi thôi, KHÔNG gọi
+    // loadProjects() ở đây (nó gọi ngược lại hàm này - vòng lặp vô tận).
+    if (pid && !p && !projects.length) {
+      try {
+        var d = await (await fetch("/projects?brain=" + encodeURIComponent(brain()))).json();
+        projects = d.projects || [];
+        p = projById(pid);
+      } catch (e) {}
+    }
+    // Nút xem file/link của CUỘC TRÒ CHUYỆN. Luôn có mặt khi cuộc đã được lưu, không phụ
+    // thuộc project: chat dài đẻ ra tài liệu là chuyện xảy ra ở mọi cuộc, kể cả cuộc chưa
+    // xếp vào nhóm nào.
+    // Icon GHIM GIẤY, cùng icon với nút "File & link" của trang Cộng sự (workspace.js #wsFiles).
+    // Ba màn (Đồ thị, Trò chuyện, Cộng sự) mở ra CÙNG MỘT ngăn kéo, nên mang ba icon khác nhau
+    // thì người dùng phải học lại nút ấy ở mỗi trang (chủ dự án yêu cầu 16/09).
+    var html = currentId()
+      ? '<button class="cts-btn" type="button" title="' + esc(pdT("cts.open")) + '">' +
+          ic("paperclip") + "</button>"
+      : "";
+    if (p) {
+      var meta = "";
+      if (p.file_count) meta += '<span class="pc-n">' + ic("file-text") + (p.file_count) + '</span>';
+      if (p.link_count) meta += '<span class="pc-n">' + ic("link") + (p.link_count) + '</span>';
+      var coGi = !!(p.has_instructions || p.file_count || p.link_count);
+      // CỘNG THÊM, không gán đè. Bản 0.54.0 viết `html =` ở đây nên hễ cuộc thuộc một project
+      // là nút "file & link của cuộc" bị xoá sạch - mà đó lại là trường hợp thường gặp nhất,
+      // nên nút coi như không tồn tại (chủ repo báo 01/09).
+      html += '<button class="proj-chip' + (coGi ? " co-gi" : "") + '" type="button" title="' +
+               esc(pdT("proj.chip_title")) + '">' +
+               '<span class="pc-ico">' + projIcon(p) + '</span>' +
+               '<span class="pc-name">' + esc(p.name) + '</span>' +
+               (meta ? '<span class="pc-meta">' + meta + '</span>' : '') +
+               '<span class="pc-dot"></span>' +
+             '</button>';
+    }
+    hosts.forEach(function (h) {
+      h.innerHTML = html;
+      var b = h.querySelector(".proj-chip");
+      if (b) b.onclick = function () { openProjDrawer(pid); };
+      var c = h.querySelector(".cts-btn");
+      if (c) c.onclick = function () { openCuocDrawer(); };
+    });
+  }
+
+  // ── Ngăn kéo ─────────────────────────────────────────────────────────────────
+  function pdDung() {
+    if (pdEl) return pdEl;
+    pdEl = el(
+      '<div class="pd-wrap" id="projDrawer">' +
+        '<div class="pd-scrim"></div>' +
+        '<div class="pd-panel" role="dialog" aria-modal="true">' +
+          '<div class="pd-grip"></div>' +
+          '<div class="pd-head">' +
+            '<span class="pd-ico"></span>' +
+            '<span class="pd-name"></span>' +
+            '<button class="pd-hbtn pd-pin" type="button"></button>' +
+            '<button class="pd-hbtn pd-ren" type="button"></button>' +
+            '<button class="pd-hbtn pd-x" type="button"></button>' +
+          '</div>' +
+          '<div class="pd-scope" hidden></div>' +
+          '<div class="pd-tabs"></div>' +
+          '<div class="pd-body"></div>' +
+        '</div>' +
+      '</div>');
+    document.body.appendChild(pdEl);
+    noiThaFile(pdEl.querySelector(".pd-panel"));
+    pdEl.querySelector(".pd-scrim").onclick = closeProjDrawer;
+    pdEl.querySelector(".pd-x").onclick = closeProjDrawer;
+    pdEl.querySelector(".pd-x").innerHTML = ic("x");
+    pdEl.querySelector(".pd-x").title = pdT("proj.close");
+    pdEl.querySelector(".pd-ren").innerHTML = ic("pencil");
+    pdEl.querySelector(".pd-ren").title = pdT("proj.rename");
+    pdEl.querySelector(".pd-ren").onclick = function () {
+      if (!projChiTiet) return;
+      renameProject(projChiTiet).then(function () {
+        var p = projById(projChiTiet.id);
+        if (p) projChiTiet.name = p.name;
+        veDrawer();
+      });
+    };
+    return pdEl;
+  }
+
+  /** Cả tấm ngăn kéo là một vùng thả, không riêng cái ô gạch đứt.
+   *
+   *  Trước đây chỉ nút .pd-drop bắt sự kiện, mà thả xong nó KHÔNG chặn nổi bọt lên window -
+   *  app.js có một tay bắt drop toàn cục đẩy mọi file vào khung chat. Kết quả: kéo file vào
+   *  ô "kéo thả vào đây" thì file nhảy sang khung chat, đúng lỗi chủ repo báo 03/09. Nay
+   *  panel mang cờ data-localdrop để app.js biết đây là vùng tự lo, và tự nó chặn bọt. */
+  function noiThaFile(panel) {
+    if (!panel) return;
+    var coFile = function (e) {
+      var t = e.dataTransfer && e.dataTransfer.types;
+      return !!t && [].indexOf.call(t, "Files") >= 0;
+    };
+    panel.addEventListener("dragover", function (e) {
+      if (!coFile(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      panel.classList.add("tha-file");
+    });
+    panel.addEventListener("dragleave", function (e) {
+      if (!panel.contains(e.relatedTarget)) panel.classList.remove("tha-file");
+    });
+    panel.addEventListener("drop", function (e) {
+      panel.classList.remove("tha-file");
+      if (!coFile(e)) return;
+      e.preventDefault();
+      e.stopPropagation();          // không để app.js đẩy tiếp vào khung chat
+      var fs = e.dataTransfer.files;
+      if (fs && fs.length) nhanThaFile(fs);
+    });
+  }
+
+  /** Thả file xuống bất cứ đâu trên ngăn kéo = gắn tài liệu vào thứ đang mở (project HOẶC
+   *  cuộc trò chuyện). Tự mở tab File ở chế độ tải lên rồi đẩy qua đúng đường tải sẵn có.
+   *
+   *  Trước 0.55 chế độ cuộc nhường file cho khung chat vì cuộc chưa có chỗ chứa tài liệu.
+   *  Nay nó có, và ngăn kéo đang MỞ che gần hết màn hình - thả trúng nó mà file nhảy sang ô
+   *  chat là đúng cái phản xạ bị phụ đã sửa cho project hôm 03/09. */
+  async function nhanThaFile(files) {
+    var p = pdDuLieu();
+    if (!p || p.dangTai || p.loi) return;
+    projTab = "files"; pdFormFile = true; pdFileMode = "upload";
+    veDrawer();
+    var pane = pdEl.querySelector('[data-pane="files"]');
+    var drop = pane && pane.querySelector(".pd-drop");
+    if (drop) await taiLenNhieu(files, drop);
+  }
+
+  // ── Chế độ CUỘC TRÒ CHUYỆN: file & link của cuộc đang mở ────────────────────
+  // Dùng lại đúng vỏ ngăn kéo của project (đầu khung, tab, thân) chứ không dựng khung thứ
+  // hai: hai danh sách này trông giống nhau, hành xử giống nhau, chỉ khác nguồn dữ liệu.
+  //
+  // Danh sách của cuộc trộn HAI nguồn: phần Javis tự dò ra từ tin nhắn (`manual: false`,
+  // không gỡ/ghim được vì nó không phải một bản ghi) và phần người dùng TỰ GẮN (`manual:
+  // true`, có id nên đủ nút như bên project). Server lo phần trộn; ở đây chỉ chia nhóm.
+  var cuocTS = null;      // {files, links, dangTai, loi} của cuộc đang xem
+
+  function pdLaCuoc() { return pdCheDo === "cuoc"; }
+  function pdLaAgent() { return pdCheDo === "agent"; }
+  function pdDuLieu() { return pdLaCuoc() ? cuocTS : pdLaAgent() ? agentTS : projChiTiet; }
+
+  /** Gốc URL của thứ đang mở. Ba chế độ có ba bộ route giống hệt nhau về hình dạng
+   *  (.../files, .../files/<id>/pin, .../links...), nên mọi hàm thêm/gỡ/ghim bên dưới chỉ
+   *  cần đổi đúng cái gốc này thay vì phải rẽ nhánh ở từng chỗ. */
+  function pdApi() {
+    if (pdLaAgent()) return "/agents/" + encodeURIComponent((agentTS || {}).slug || "") + "/assets";
+    return pdLaCuoc()
+      ? "/sessions/" + encodeURIComponent(currentId() || "") + "/assets"
+      : "/projects/" + encodeURIComponent((projChiTiet || {}).id || "");
+  }
+
+  /** Trường ĐI KÈM mọi lời gọi ghi của chế độ đang mở.
+   *
+   *  Trợ lý là một FILE trong brain, nên server không tự tra ra nó thuộc brain nào như với
+   *  project và hội thoại (hai thứ đó nằm trong DB). Thiếu `brain` là mọi thao tác rơi vào
+   *  brain mặc định - im lặng và sai. */
+  function pdKem() { return pdLaAgent() ? { brain: brain() } : {}; }
+
+  function pdPost(duoi, fields) {
+    var body = pdKem();
+    Object.keys(fields || {}).forEach(function (k) { body[k] = fields[k]; });
+    return post(pdApi() + duoi, body);
+  }
+
+  /** Khoá từ điển theo chế độ: ba chế độ dùng CHUNG một ngăn kéo nhưng nói về ba thứ khác
+   *  nhau ("gỡ khỏi project" / "khỏi cuộc này" / "khỏi trợ lý"). Mọi khoá gọi qua đây phải
+   *  có đủ ở cả ba tiền tố, không thì chữ trên màn hình là chính cái mã khoá. */
+  function pdK(ten) { return (pdLaCuoc() ? "cts." : pdLaAgent() ? "ags." : "proj.") + ten; }
+
+  async function napLaiChiTiet() {
+    if (pdLaCuoc()) await napCuocTS();
+    else if (pdLaAgent()) await napAgentTS((agentTS || {}).slug || "", (agentTS || {}).name || "");
+    else await napProjChiTiet((projChiTiet || {}).id || "");
+  }
+
+  /** Số file/link của project hiện trên chip, nên chỉ project mới cần nạp lại danh sách. */
+  function napLaiChip() { if (pdCheDo === "project") loadProjects(); }
+
+  function tabsHienTai() {
+    var p = pdDuLieu() || {};
+    var tabFile = { k: "files", ico: "file-text", nhan: pdT("proj.tab_files"), n: (p.files || []).length };
+    var tabLink = { k: "links", ico: "link", nhan: pdT("proj.tab_links"), n: (p.links || []).length };
+    // Hướng dẫn chỉ có ở project. Trợ lý đã có system prompt riêng trong trình sửa của nó,
+    // bày thêm một ô hướng dẫn ở đây là hai chỗ nói cùng một việc.
+    if (pdLaCuoc() || pdLaAgent()) return [tabFile, tabLink];
+    return [{ k: "instr", ico: "scroll-text", nhan: pdT("proj.tab_instr"), n: 0 }, tabFile, tabLink];
+  }
+
+  function veThanhTab() {
+    var ds = tabsHienTai();
+    if (ds.map(function (t) { return t.k; }).indexOf(projTab) < 0) projTab = ds[0].k;
+    var host = pdEl.querySelector(".pd-tabs");
+    host.innerHTML = ds.map(function (t) {
+      return '<button class="pd-tab' + (t.k === projTab ? " on" : "") + '" data-tab="' + t.k +
+             '" type="button">' + ic(t.ico) + " " + esc(t.nhan) +
+             (t.n ? ' <span class="pd-tab-n">' + t.n + "</span>" : "") + "</button>";
+    }).join("");
+    host.querySelectorAll(".pd-tab").forEach(function (b) {
+      b.onclick = function () { showProjTab(b.dataset.tab); };
+    });
+  }
+
+  async function openCuocDrawer(giuCongSu) {
+    var sid = currentId();
+    if (!sid) return;
+    pdDung();
+    if (!giuCongSu) pdCongSu = null;
+    pdCheDo = "cuoc";
+    pdOnboard = false;
+    // Reset y như openProjDrawer: form tìm/tải còn mở từ lần trước là mở khung ra đã thấy
+    // một ô nhập lạ, không rõ nó thuộc về cái gì.
+    pdFormFile = false; pdFormLink = false; pdFileMode = "search";
+    pdEl.classList.add("on");
+    document.body.classList.add("pd-open");
+    cuocTS = { files: [], links: [], dangTai: true };
+    veDrawer();
+    await napCuocTS();
+    veDrawer();
+  }
+
+  async function napCuocTS() {
+    var sid = currentId();
+    if (!sid) { cuocTS = { files: [], links: [], loi: true }; return; }
+    try {
+      var d = await (await fetch("/sessions/" + encodeURIComponent(sid) + "/assets?brain=" +
+                                 encodeURIComponent(brain()))).json();
+      cuocTS = (d && d.ok) ? { files: d.files || [], links: d.links || [] }
+                           : { files: [], links: [], loi: true };
+    } catch (e) { cuocTS = { files: [], links: [], loi: true }; }
+  }
+
+  function ghiChuCuoc() {
+    return '<div class="pd-note">' + ic("info") + "<span>" + esc(pdT("cts.note")) + "</span></div>";
+  }
+
+  // ── Chế độ TRỢ LÝ: file & link gắn vào một cộng sự ──────────────────────────
+  // Cùng vỏ ngăn kéo, cùng luật ghim, chỉ khác chỗ chứa: tài liệu của trợ lý nằm trong
+  // frontmatter của chính file trợ lý (server/agent_assets.py), nên nó đi theo trợ lý khi
+  // xuất ra hay copy brain. Phạm vi cũng khác project và cuộc: mọi lần trợ lý này làm việc
+  // đều thấy, kể cả khi nó chạy như một bước quy trình.
+  var agentTS = null;      // {slug, name, files, links, dangTai, loi} của trợ lý đang xem
+
+  async function openAgentDrawer(slug, ten, giuCongSu) {
+    if (!slug) return;
+    pdDung();
+    if (!giuCongSu) pdCongSu = null;
+    pdCheDo = "agent";
+    pdOnboard = false;
+    pdFormFile = false; pdFormLink = false; pdFileMode = "search";
+    // Trợ lý không có tab Hướng dẫn, mà projTab có thể còn đứng ở "instr" từ lần mở project
+    // trước. veThanhTab() tự nắn lại, nhưng nắn SAU khi veDrawer đã vẽ thân theo tab cũ.
+    projTab = "files";
+    pdEl.classList.add("on");
+    document.body.classList.add("pd-open");
+    agentTS = { slug: slug, name: ten || slug, files: [], links: [], dangTai: true };
+    veDrawer();
+    await napAgentTS(slug, ten);
+    veDrawer();
+  }
+
+  async function napAgentTS(slug, ten) {
+    if (!slug) { agentTS = { slug: "", name: ten || "", files: [], links: [], loi: true }; return; }
+    var co = { slug: slug, name: ten || (agentTS && agentTS.name) || slug };
+    try {
+      var d = await (await fetch("/agents/" + encodeURIComponent(slug) + "/assets?brain=" +
+                                 encodeURIComponent(brain()))).json();
+      agentTS = (d && d.ok)
+        ? { slug: slug, name: d.name || co.name, files: d.files || [], links: d.links || [] }
+        : { slug: slug, name: co.name, files: [], links: [], loi: true };
+    } catch (e) { agentTS = { slug: slug, name: co.name, files: [], links: [], loi: true }; }
+  }
+
+  /** Câu cuối mỗi ngăn: nói rõ thứ đang xem thuộc về ĐÂU. Project không cần - tên project
+   *  đã nằm ngay trên đầu khung - nhưng cuộc và trợ lý thì cần, vì cả hai trông giống hệt
+   *  nhau và gắn nhầm chỗ là tài liệu biến mất khỏi nơi người dùng tưởng nó có. */
+  function ghiChuCuoi() {
+    // Mở từ trang Cộng sự thì công tắc phạm vi trên đầu đã nói rõ thuộc về đâu; nhắc lại ở
+    // cuối là hai câu nói cùng một việc.
+    if (pdCongSu) return "";
+    return pdLaCuoc() ? ghiChuCuoc() : pdLaAgent() ? ghiChuAgent() : "";
+  }
+
+  function ghiChuAgent() {
+    return '<div class="pd-note">' + ic("info") + "<span>" + esc(pdT("ags.note")) + "</span></div>";
+  }
+
+  // ── Trang Cộng sự: MỘT ngăn kéo tài liệu, công tắc phạm vi ở đầu ─────────────────
+  // Trước 0.64.19 trang Cộng sự có HAI lối vào trông giống hệt nhau: nút "File & link" trên
+  // thanh đầu (tài liệu của CUỘC đang mở) và nút "Tài liệu" trong Cài đặt (tài liệu của TRỢ
+  // LÝ). Cùng một khung, cùng hai tab File/Link, chỉ khác một câu ghi chú nhỏ ở cuối - chủ
+  // repo báo 23/09 là dùng nhầm lẫn, gắn một chỗ rồi đi tìm ở chỗ kia. Nay cả hai nút mở
+  // cùng một ngăn, trên đầu là công tắc hai phạm vi kèm số lượng, bấm là chuyển.
+  var pdCongSu = null;     // {slug, name} khi ngăn kéo mở từ trang Cộng sự; null = không bày công tắc
+  var KHOA_PHAM_VI = "javis_pd_pham_vi";
+
+  function phamViDaNho() {
+    try { return localStorage.getItem(KHOA_PHAM_VI) === "cuoc" ? "cuoc" : "agent"; } catch (e) { return "agent"; }
+  }
+
+  /** Mở tài liệu cho một trợ lý ở trang Cộng sự. `phamVi`: "agent" | "cuoc" | bỏ trống =
+   *  phạm vi lần trước người dùng chọn (mặc định: của trợ lý, vì đó là chỗ tài liệu SỐNG LÂU,
+   *  còn tài liệu của một cuộc mất tăm khi mở cuộc mới). */
+  async function openTaiLieuCongSu(slug, ten, phamVi) {
+    if (!slug) return;
+    pdCongSu = { slug: slug, name: ten || slug };
+    var pv = phamVi || phamViDaNho();
+    if (pv === "cuoc" && !currentId()) pv = "agent";   // chưa có cuộc thì chưa có chỗ gắn
+    // Nạp phạm vi KIA song song để công tắc hiện đúng số ngay từ đầu.
+    if (pv === "agent") {
+      if (currentId()) napCuocTS().then(function () { if (pdCongSu) veThanhPhamVi(); });
+      else cuocTS = null;
+      await openAgentDrawer(slug, ten, true);
+    } else {
+      napAgentTS(slug, ten).then(function () { if (pdCongSu) veThanhPhamVi(); });
+      await openCuocDrawer(true);
+    }
+  }
+
+  function doiPhamVi(pv) {
+    if (!pdCongSu || (pv === "cuoc" ? pdLaCuoc() : pdLaAgent())) return;
+    if (pv === "cuoc" && !currentId()) return;
+    try { localStorage.setItem(KHOA_PHAM_VI, pv); } catch (e) {}
+    if (pv === "agent") openAgentDrawer(pdCongSu.slug, pdCongSu.name, true);
+    else openCuocDrawer(true);
+  }
+
+  function soTaiLieu(d) { return d && !d.dangTai && !d.loi ? (d.files || []).length + (d.links || []).length : null; }
+
+  function veThanhPhamVi() {
+    if (!pdEl) return;
+    var host = pdEl.querySelector(".pd-scope");
+    if (!host) return;
+    if (!pdCongSu || !(pdLaAgent() || pdLaCuoc())) { host.hidden = true; host.innerHTML = ""; return; }
+    host.hidden = false;
+    var coCuoc = !!currentId();
+    var nut = function (pv, ico, nhan, phu, n, tat) {
+      var on = pv === "agent" ? pdLaAgent() : pdLaCuoc();
+      return '<button type="button" class="pd-sc' + (on ? " on" : "") + '" data-pv="' + pv + '"' +
+        (tat ? ' disabled title="' + esc(pdT("pds.chat_none")) + '"' : "") + ' aria-pressed="' + on + '">' +
+        '<span class="pd-sc-ico">' + ic(ico) + "</span>" +
+        '<span class="pd-sc-txt"><b>' + esc(nhan) + (n != null ? ' <span class="pd-sc-n">' + n + "</span>" : "") +
+        "</b><small>" + esc(phu) + "</small></span></button>";
+    };
+    host.innerHTML =
+      '<div class="pd-sc-row" role="group">' +
+        nut("agent", "bot", pdT("pds.agent"), pdT("pds.agent_sub"), soTaiLieu(agentTS && agentTS.slug === pdCongSu.slug ? agentTS : null), false) +
+        nut("cuoc", "message-circle", pdT("pds.chat"), coCuoc ? pdT("pds.chat_sub") : pdT("pds.chat_none_short"), coCuoc ? soTaiLieu(cuocTS) : null, !coCuoc) +
+      "</div>" +
+      '<div class="pd-sc-hint">' + esc(pdT(pdLaAgent() ? "pds.hint_agent" : "pds.hint_chat")) + "</div>";
+    host.querySelectorAll(".pd-sc").forEach(function (b) {
+      b.onclick = function () { doiPhamVi(b.dataset.pv); };
+    });
+  }
+
+  async function openProjDrawer(pid) {
+    var id = pid || (projChiTiet && projChiTiet.id) || "";
+    if (!id) return;
+    pdDung();
+    pdCheDo = "project";
+    pdCongSu = null;      // project không có công tắc phạm vi của trang Cộng sự
+    pdFormFile = false; pdFormLink = false; pdFileMode = "search";
+    pdEl.classList.add("on");
+    document.body.classList.add("pd-open");
+    projChiTiet = { id: id, name: (projById(id) || {}).name || "", icon: (projById(id) || {}).icon || "", files: [], links: [], instructions: "", dangTai: true };
+    veDrawer();
+    await napProjChiTiet(id);
+    veDrawer();
+  }
+
+  function closeProjDrawer() {
+    // Lưu ngay cái đang gõ dở. Debounce 800ms nghĩa là đóng nhanh tay là mất chữ vừa gõ,
+    // và người dùng không có cách nào biết đã mất.
+    xaLuuHuongDan();
+    if (pdEl) pdEl.classList.remove("on");
+    document.body.classList.remove("pd-open");
+    pdOnboard = false;
+    pdCongSu = null;
+  }
+
+  async function napProjChiTiet(id) {
+    try {
+      var r = await fetch("/projects/" + encodeURIComponent(id));
+      var d = await r.json();
+      if (d && d.project) { projChiTiet = d.project; return; }
+    } catch (e) {}
+    projChiTiet = { id: id, name: (projById(id) || {}).name || "", loi: true, files: [], links: [] };
+  }
+
+  function showProjTab(tab) {
+    xaLuuHuongDan();              // rời tab cũng là rời ô nhập
+    projTab = (tab === "files" || tab === "links") ? tab
+            : (pdCheDo === "cuoc" ? "files" : "instr");
+    pdFormFile = false; pdFormLink = false;
+    veDrawer();
+  }
+
+  function veDrawer() {
+    if (!pdEl) return;
+    var laCuoc = pdLaCuoc();
+    var p = pdDuLieu();
+    if (!p) return;
+    // Cả ba chế độ đều nhận file thả vào (cuộc trò chuyện và trợ lý giờ cũng có chỗ chứa tài
+    // liệu), nên cờ này luôn bật để app.js biết đây là vùng tự lo, đừng đẩy file sang khung chat.
+    pdEl.querySelector(".pd-panel").setAttribute("data-localdrop", "1");
+    pdEl.querySelector(".pd-ico").innerHTML =
+      laCuoc ? ic("files") : pdLaAgent() ? ic("bot") : projIcon(projById(p.id) || p);
+    // Mở từ trang Cộng sự thì đầu khung luôn là TÊN TRỢ LÝ; còn "của trợ lý hay của cuộc này"
+    // nói bằng công tắc ngay bên dưới, không bằng tiêu đề đổi qua đổi lại.
+    if (pdCongSu) pdEl.querySelector(".pd-ico").innerHTML = ic("bot");
+    pdEl.querySelector(".pd-name").textContent = pdCongSu ? pdCongSu.name
+      : laCuoc ? pdT("cts.title") : (p.name || "");
+    veThanhPhamVi();
+    // Đổi tên chỉ có nghĩa với project. Cuộc trò chuyện đổi tên ở cột trái, trợ lý đổi tên
+    // trong trình sửa của nó; bày lại ở đây là hai chỗ làm cùng một việc.
+    pdEl.querySelector(".pd-ren").style.display = (laCuoc || pdLaAgent()) ? "none" : "";
+    veThanhTab();
+    veNutGhimPhien();
+    var body = pdEl.querySelector(".pd-body");
+    if (p.dangTai) { body.innerHTML = '<div class="pd-empty">' + esc(pdT("proj.loading")) + "…</div>"; return; }
+    if (p.loi) { body.innerHTML = '<div class="pd-empty">' + esc(pdT(pdK("err_load"))) + "</div>"; return; }
+    body.innerHTML =
+      (pdOnboard
+        ? '<div class="pd-onboard">' + ic("sparkles") + "<span>" + esc(pdT("proj.onboard")) + "</span>" +
+          '<button class="pd-ob-x" type="button">' + esc(pdT("proj.onboard_close")) + "</button></div>"
+        : "") +
+      (projTab === "instr" ? paneHuongDan(p) : projTab === "files" ? paneFile(p) : paneLink(p));
+    var obx = body.querySelector(".pd-ob-x");
+    if (obx) obx.onclick = function () { pdOnboard = false; veDrawer(); };
+    if (projTab === "instr") noiHuongDan();
+    else if (projTab === "files") noiFile();
+    else noiLink();
+  }
+
+  // Nút ghim ở đầu ngăn kéo ghim HỘI THOẠI đang mở lên đầu danh sách - đó là chức năng ghim
+  // toàn cục đã có, chỉ bày lại ở đây. Không có phiên đã lưu thì không có gì để ghim, nên ẩn
+  // hẳn nút thay vì để nó bấm ra lỗi 404 im lặng.
+  function veNutGhimPhien() {
+    var b = pdEl.querySelector(".pd-pin");
+    var sid = currentId();
+    var s = null;
+    // Chế độ trợ lý nói về một cộng sự, không về cuộc đang mở - ghim hội thoại ở đây là một
+    // nút làm chuyện của màn hình khác.
+    if (pdLaAgent()) { b.style.display = "none"; return; }
+    if (sid && cached && cached.items) {
+      for (var i = 0; i < cached.items.length; i++) if (cached.items[i].id === sid) s = cached.items[i];
+    }
+    if (!s) { b.style.display = "none"; return; }
+    b.style.display = "";
+    b.innerHTML = ic("pin");
+    b.classList.toggle("on", !!s.pinned);
+    b.title = pdT("proj.pin_session");
+    b.onclick = function () { togglePin(s); b.classList.toggle("on"); };
+  }
+
+  // ── Tab Hướng dẫn ────────────────────────────────────────────────────────────
+  function paneHuongDan(p) {
+    var txt = p.instructions || "";
+    return '<div class="pd-pane">' +
+      '<textarea class="pd-instr" maxlength="' + PROJ_INSTR_MAX + '" placeholder="' +
+        esc(pdT("proj.instr_ph")) + '">' + esc(txt) + "</textarea>" +
+      '<div class="pd-instr-foot">' +
+        '<span class="pd-hint">' + esc(pdT("proj.instr_hint")) + "</span>" +
+        '<span class="pd-save"></span>' +
+      "</div>" +
+      '<div class="pd-count"></div>' +
+      "</div>";
+  }
+
+  function noiHuongDan() {
+    var ta = pdEl.querySelector(".pd-instr");
+    if (!ta) return;
+    demChu();
+    ta.oninput = function () {
+      demChu();
+      datTrangThaiLuu("saving");
+      clearTimeout(pdLuuTimer);
+      pdLuuTimer = setTimeout(function () { luuHuongDan(ta.value); }, 800);
+    };
+    ta.onblur = function () { xaLuuHuongDan(); };
+  }
+
+  function demChu() {
+    var ta = pdEl && pdEl.querySelector(".pd-instr");
+    var box = pdEl && pdEl.querySelector(".pd-count");
+    if (!ta || !box) return;
+    var n = ta.value.length;
+    var day = n >= PROJ_INSTR_MAX;
+    box.className = "pd-count" + (day ? " day" : "");
+    box.textContent = day ? pdT("proj.instr_full") : n + "/" + PROJ_INSTR_MAX;
+  }
+
+  /** Đẩy ngay cái đang chờ debounce. Gọi khi đóng ngăn kéo / rời tab / rời ô nhập. */
+  function xaLuuHuongDan() {
+    if (!pdLuuTimer) return;
+    clearTimeout(pdLuuTimer); pdLuuTimer = null;
+    var ta = pdEl && pdEl.querySelector(".pd-instr");
+    if (ta) luuHuongDan(ta.value);
+  }
+
+  function datTrangThaiLuu(tt) {
+    var s = pdEl && pdEl.querySelector(".pd-save");
+    if (!s) return;
+    s.className = "pd-save " + tt;
+    s.textContent = tt === "saved" ? pdT("proj.instr_saved")
+                  : tt === "err" ? pdT("proj.instr_err")
+                  : pdT("proj.instr_saving") + "…";
+  }
+
+  async function luuHuongDan(v) {
+    pdLuuTimer = null;
+    if (!projChiTiet) return;
+    var r = await post("/projects/" + encodeURIComponent(projChiTiet.id) + "/update",
+                       { instructions: v });
+    if (r && r.ok) {
+      projChiTiet.instructions = v;
+      datTrangThaiLuu("saved");
+      // Chip đọc `has_instructions` từ danh sách, nên phải nạp lại thì chấm báo mới đúng.
+      loadProjects();
+    } else {
+      datTrangThaiLuu("err");
+    }
+  }
+
+  // ── Tab File ─────────────────────────────────────────────────────────────────
+  // Trả về TÊN icon, không phải chuỗi <svg>: chỗ gọi lo dữ liệu, chỗ vẽ mới gọi ic().
+  function icoFile(ten) {
+    var e = (String(ten).split(".").pop() || "").toLowerCase();
+    if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].indexOf(e) >= 0) return "image";
+    if (["md", "txt", "csv", "json", "yaml", "yml", "log"].indexOf(e) >= 0) return "file-text";
+    return "file";
+  }
+
+  /** Nút CHÉP ĐƯỜNG DẪN của một hàng. Có ở MỌI hàng, kể cả hàng tự dò và hàng file đã mất:
+   *  chủ dự án hay cần đúng chuỗi đường dẫn để dán sang chỗ khác làm tiếp, và với file đã đổi
+   *  chỗ thì đường dẫn CŨ chính là thứ cần chép đi tra. Đường dẫn nằm sẵn ở dòng mô tả nhưng
+   *  dòng đó cắt đuôi bằng ba chấm, nên bôi đen bằng chuột là chép thiếu.
+   *  `o.sao` là chuỗi sẽ chép (đường dẫn file, hoặc URL với hàng link). */
+  function nutSao(o) {
+    if (!o.sao) return "";
+    var title = o.saoTitle || pdT("common.copy_path");
+    return '<button class="pd-row-act pd-sao" type="button" data-sao="' + esc(o.sao) + '" title="' +
+      esc(title + ": " + o.sao) + '">' + ic("copy") + "</button>";
+  }
+
+  function hangMuc(o) {
+    // Hàng TỰ DÒ (chỉ có ở chế độ cuộc): Javis suy ra từ tin nhắn chứ không phải một bản ghi,
+    // nên không có id để gỡ hay ghim. Vẫn mở ra đọc được - đó mới là việc chính của nó.
+    if (o.tuDong) {
+      return '<div class="pd-row' + (o.mat ? " mat" : "") + '" data-path="' + esc(o.duong || "") + '">' +
+        '<span class="pd-row-ico">' + ic(o.icon) + "</span>" +
+        (o.moDuoc
+          ? '<button class="pd-row-body mo-duoc" type="button" title="' +
+              esc(pdT("proj.open_file")) + '">'
+          : '<span class="pd-row-body">') +
+          '<span class="pd-row-name">' + (o.tenHtml || esc(o.ten)) + "</span>" +
+          '<span class="pd-row-sub">' + (o.subHtml || esc(o.sub || "")) + "</span>" +
+        (o.moDuoc ? "</button>" : "</span>") +
+        nutSao(o) +
+      "</div>";
+    }
+    return '<div class="pd-row' + (o.mat ? " mat" : "") + '" data-id="' + esc(o.id) + '">' +
+        '<span class="pd-row-ico">' + ic(o.icon) + "</span>" +
+        // File: cả khối tên+đường dẫn là NÚT mở. Bấm vào tên một tài liệu mà không mở được nó
+        // ra đọc là phản xạ bị phụ - danh sách này chính là chỗ người ta đi tìm tài liệu.
+        // Link thì phải là <span>: phần mô tả của nó đã là một thẻ <a>, mà <a> lồng trong
+        // <button> là HTML sai và trình duyệt nuốt mất cú bấm vào link.
+        (o.moDuoc
+          ? '<button class="pd-row-body mo-duoc" type="button" title="' +
+              esc(pdT("proj.open_file")) + '">'
+          : '<span class="pd-row-body">') +
+          '<span class="pd-row-name">' + esc(o.ten) + "</span>" +
+          '<span class="pd-row-sub">' + (o.subHtml || esc(o.sub || "")) + "</span>" +
+        (o.moDuoc ? "</button>" : "</span>") +
+        nutSao(o) +
+        '<button class="pd-row-act pd-ghim' + (o.pinned ? " on" : "") + '" type="button" title="' +
+          esc(o.pinned ? pdT("proj.pin_off") : o.ghimTitle) + '">' + ic("pin") + "</button>" +
+        '<button class="pd-row-act pd-go" type="button" title="' + esc(pdT(pdK("remove"))) + '">' +
+          ic("x") + "</button>" +
+        // Xoá HẲN chỉ có ở file. Link thì gỡ khỏi project đã là xoá, không có bản thứ hai
+        // nào ở đâu để mà xoá tiếp.
+        (o.xoaDuoc
+          ? '<button class="pd-row-act pd-xoa" type="button" title="' +
+              esc(pdT("proj.delete_file")) + '">' + ic("trash-2") + "</button>"
+          : "") +
+      "</div>";
+  }
+
+  /** Mở một file của project ra đọc. Đường dẫn lưu theo TRẦN duyệt, đúng thứ JavisOpenNoteAt
+   *  nhận, nên gọi thẳng chứ không ghép tiền tố lần nữa. Ba nấc y như chip "file đang mở"
+   *  dưới khung chat (app.js reopenPinnedNote): trình sửa đính -> khung sửa bung giữa màn
+   *  (điện thoại) -> trang Tệp tin. */
+  function moFile(f) {
+    var ten = f.name || String(f.path || "").split("/").pop();
+    closeProjDrawer();          // trình sửa hiện ra SAU ngăn kéo, không đóng thì che mất
+    try {
+      if (typeof window.JavisOpenNoteAt === "function" && window.JavisOpenNoteAt(f.path, ten)) return;
+    } catch (e) {}
+    if (typeof window.JavisEditFile === "function") { window.JavisEditFile(f.path); return; }
+    if (typeof window.JavisOpenFiles === "function") window.JavisOpenFiles(f.path);
+  }
+
+  function dsFileHtml(p) {
+    var fs = p.files || [];
+    var laCuoc = pdLaCuoc();
+    // Chế độ cuộc: file người dùng GẮN TAY (có id) đứng trên, file Javis tự dò ra đứng dưới.
+    // Thứ mình chủ động gắn vào thì phải nằm chỗ mắt nhìn trước, và chỉ nó mới có nút.
+    var tuDong = laCuoc ? fs.filter(function (f) { return !f.manual; }) : [];
+    var tay = laCuoc ? fs.filter(function (f) { return f.manual; }) : fs;
+    var ghim = tay.filter(function (f) { return f.pinned; });
+    var thuong = tay.filter(function (f) { return !f.pinned; });
+    var ve = function (f) {
+      // Ở chế độ cuộc, file đã dời/đổi tên vẫn ở lại danh sách - chỉ mờ đi và nói rõ. Im lặng
+      // bỏ đi thì người dùng tưởng thao tác gắn của mình bị nuốt.
+      var con = !laCuoc || f.exists !== false;
+      return hangMuc({ id: f.id, ten: f.label || f.name || f.path,
+                       sub: con ? (laCuoc ? (f.brain_path || f.path) : f.path) : pdT("cts.file_gone"),
+                       // Chép đường dẫn TRONG BRAIN (brain_path), không phải đường dẫn tuyệt
+                       // đối trên máy chủ: đó mới là chuỗi mọi nơi khác của Javis nhận vào
+                       // (chat, wikilink, tool đọc file).
+                       sao: f.brain_path || f.path,
+                       icon: f.image ? "image" : icoFile(f.name || f.path), pinned: !!f.pinned,
+                       ghimTitle: pdT("proj.pin_on"), moDuoc: con, xoaDuoc: con, mat: !con });
+    };
+    var veTuDong = function (f) {
+      return hangMuc({ tuDong: true, duong: f.path, ten: f.label || f.name,
+                       sub: f.exists ? f.brain_path : pdT("cts.file_gone"),
+                       sao: f.brain_path || f.path,
+                       icon: f.image ? "image" : icoFile(f.name),
+                       moDuoc: !!f.exists, mat: !f.exists });
+    };
+    if (!fs.length) return '<div class="pd-empty">' + esc(pdT(pdK("files_empty"))) + "</div>";
+    var ds = "";
+    if (ghim.length) ds += nhomHtml(pdT("proj.pinned_group")) + ghim.map(ve).join("");
+    if (thuong.length) ds += (ghim.length || laCuoc
+      ? nhomHtml(pdT(laCuoc ? "cts.added_group" : "proj.other_group")) : "") + thuong.map(ve).join("");
+    if (tuDong.length) ds += nhomHtml(pdT("cts.auto_group")) + tuDong.map(veTuDong).join("");
+    return ds;
+  }
+
+  function nhomHtml(nhan) { return '<div class="pd-group">' + esc(nhan) + "</div>"; }
+
+  /** Có hàng nào GHIM được không (tức là có nút ghim để mà giải thích)? Chế độ cuộc lúc chưa
+   *  gắn gì thì chưa có, và bày sẵn chú thích ghim ở đó là hai đoạn chữ nhỏ chồng nhau ngay
+   *  lần mở đầu tiên. Project thì luôn có, vì mọi file trong đó đều gắn tay. */
+  function coGhimDuoc(p) {
+    if (!pdLaCuoc()) return true;
+    return ((p || {}).files || []).some(function (f) { return f.manual; });
+  }
+
+  function paneFile(p) {
+    // Danh sách nằm trong hộp RIÊNG (.pd-list) để thêm xong chỉ vẽ lại nó. Vẽ lại cả khung là
+    // form tìm kiếm dựng lại từ đầu: mất chữ đã gõ, mất kết quả, muốn thêm file thứ hai phải
+    // gõ lại từ đầu - đúng lỗi chủ repo báo 01/09.
+    return '<div class="pd-pane" data-pane="files">' +
+      '<div class="pd-list">' + dsFileHtml(p) + "</div>" +
+      '<button class="pd-add" type="button">' + ic("plus") + " " + esc(pdT("proj.add_file")) + "</button>" +
+      (pdFormFile ? formFile() : "") +
+      (coGhimDuoc(p)
+        ? '<div class="pd-note">' + ic("info") + "<span>" + esc(pdT(pdK("pin_note"))) + "</span></div>"
+        : "") +
+      ghiChuCuoi() +
+      "</div>";
+  }
+
+  /** Vẽ lại RIÊNG danh sách + số trên tab, giữ nguyên form tìm kiếm đang mở. */
+  function veLaiDanhSach() {
+    var p = pdDuLieu();
+    if (!pdEl || !p) return;
+    var pane = pdEl.querySelector('[data-pane="files"], [data-pane="links"]');
+    var box = pane && pane.querySelector(".pd-list");
+    if (!box) { veDrawer(); return; }
+    var laFile = pane.dataset.pane === "files";
+    box.innerHTML = laFile ? dsFileHtml(p) : dsLinkHtml(p);
+    noiHang(pane, laFile);
+    veSoTab();
+  }
+
+  function veSoTab() {
+    var p = pdDuLieu() || {};
+    // Chỉ project có tab Hướng dẫn đứng đầu, nên bảng đếm phải lệch đi một ô cho khớp thứ
+    // tự tab (xem tabsHienTai).
+    var dem = (pdLaCuoc() || pdLaAgent()) ? [(p.files || []).length, (p.links || []).length]
+                                          : ["", (p.files || []).length, (p.links || []).length];
+    pdEl.querySelectorAll(".pd-tab").forEach(function (b, i) {
+      var n = b.querySelector(".pd-tab-n");
+      if (!dem[i]) { if (n) n.remove(); return; }
+      if (n) { n.textContent = String(dem[i]); return; }
+      b.insertAdjacentHTML("beforeend", ' <span class="pd-tab-n">' + dem[i] + "</span>");
+    });
+  }
+
+  /** Gắn hành vi cho từng hàng trong danh sách. Dùng chung cho lần vẽ đầu và mọi lần vẽ lại. */
+  function noiHang(pane, laFile) {
+    var p = pdDuLieu() || {};
+    pane.querySelectorAll(".pd-row").forEach(function (row) {
+      // Nút chép nối TRƯỚC nhánh rẽ bên dưới: hàng tự dò cũng có nút này, mà nhánh đó thoát
+      // sớm nên nối sau là hàng tự dò có nút bấm không ăn.
+      var sao = row.querySelector(".pd-sao");
+      if (sao) sao.onclick = function (ev) {
+        ev.stopPropagation();
+        if (window.JavisCopy) window.JavisCopy(sao.dataset.sao, sao);
+      };
+      // Hàng TỰ DÒ chỉ mang đường dẫn, không có bản ghi nào phía sau để gỡ hay ghim.
+      if (!row.dataset.id) {
+        var mo = row.querySelector(".pd-row-body.mo-duoc");
+        if (mo) mo.onclick = function () { moFile({ path: row.dataset.path }); };
+        return;
+      }
+      var ds = laFile ? (p.files || []) : (p.links || []);
+      var m = ds.filter(function (x) { return x.id === row.dataset.id; })[0];
+      if (!m) return;
+      var moBtn = row.querySelector(".pd-row-body.mo-duoc");
+      if (moBtn) moBtn.onclick = function () { moFile(m); };
+      row.querySelector(".pd-ghim").onclick = function () { laFile ? ghimFile(m) : ghimLink(m); };
+      row.querySelector(".pd-go").onclick = function () { laFile ? goFile(m) : goLink(m); };
+      var xoa = row.querySelector(".pd-xoa");
+      if (xoa) xoa.onclick = function () { xoaHanFile(m); };
+    });
+  }
+
+  function formFile() {
+    return '<div class="pd-form">' +
+      '<div class="pd-modes">' +
+        '<button class="pd-mode' + (pdFileMode === "search" ? " on" : "") + '" data-mode="search" type="button">' +
+          ic("search") + " " + esc(pdT("proj.mode_search")) + "</button>" +
+        '<button class="pd-mode' + (pdFileMode === "upload" ? " on" : "") + '" data-mode="upload" type="button">' +
+          ic("upload-cloud") + " " + esc(pdT("proj.mode_upload")) + "</button>" +
+      "</div>" +
+      (pdFileMode === "search"
+        ? '<input class="pd-in pd-fsearch" placeholder="' + esc(pdT("proj.search_ph")) + '">' +
+          '<div class="pd-results"><div class="pd-empty">' + esc(pdT("proj.search_hint")) + "</div></div>"
+        : '<input type="file" class="pd-file" multiple hidden>' +
+          '<button class="pd-drop" type="button">' + ic("upload-cloud") + " " + esc(pdT("proj.dropzone")) + "</button>" +
+          '<div class="pd-note pd-up-note">' + ic("info") + "<span>" + esc(pdT("proj.upload_dest")) + "</span></div>") +
+      "</div>";
+  }
+
+  function noiFile() {
+    var pane = pdEl.querySelector('[data-pane="files"]');
+    if (!pane) return;
+    pane.querySelector(".pd-add").onclick = function () { pdFormFile = !pdFormFile; veDrawer(); };
+    noiHang(pane, true);
+    pane.querySelectorAll(".pd-mode").forEach(function (b) {
+      b.onclick = function () { pdFileMode = b.dataset.mode; veDrawer(); };
+    });
+    var o = pane.querySelector(".pd-fsearch");
+    if (o) {
+      o.focus();
+      var timer = null;
+      o.oninput = function () {
+        clearTimeout(timer);
+        var q = o.value.trim();
+        timer = setTimeout(function () { timFile(q, pane); }, 280);
+      };
+    }
+    var drop = pane.querySelector(".pd-drop");
+    var inp = pane.querySelector(".pd-file");
+    if (drop && inp) {
+      // Kéo-thả do CẢ tấm ngăn kéo lo (noiThaFile), nút này chỉ còn việc mở hộp chọn file.
+      // Để hai chỗ cùng bắt drop là thả trúng nút thì tải lên hai lần.
+      drop.onclick = function () { inp.click(); };
+      inp.onchange = function () {
+        if (inp.files && inp.files.length) taiLenNhieu(inp.files, drop);
+        inp.value = "";           // chọn lại đúng file vừa chọn vẫn phải nổ onchange
+      };
+    }
+  }
+
+  async function timFile(q, pane) {
+    var box = pane.querySelector(".pd-results");
+    if (!box) return;
+    if (!q) { box.innerHTML = '<div class="pd-empty">' + esc(pdT("proj.search_hint")) + "</div>"; return; }
+    box.innerHTML = '<div class="pd-empty">' + esc(pdT("proj.searching")) + "…</div>";
+    var items = [];
+    try {
+      var d = await (await fetch("/files/search?brain=" + encodeURIComponent(brain()) +
+                                 "&mode=name&limit=20&q=" + encodeURIComponent(q))).json();
+      items = d.items || [];
+    } catch (e) {}
+    if (!items.length) { box.innerHTML = '<div class="pd-empty">' + esc(pdT("proj.search_none")) + "</div>"; return; }
+    box.innerHTML = items.map(function (it) {
+      return '<div class="pd-res" data-path="' + esc(it.path) + '" data-name="' + esc(it.name) + '">' +
+        '<span class="pd-res-ico">' + ic(icoFile(it.name)) + "</span>" +
+        '<span class="pd-res-n"><b>' + esc(it.name) + "</b><i>" + esc(it.path) + "</i></span>" +
+        '<button class="pd-res-add" type="button"></button></div>';
+    }).join("");
+    veNutKetQua();
+  }
+
+  /** Nút bên phải mỗi kết quả tìm kiếm: chưa có thì "Thêm", có rồi thì "Gỡ".
+   *
+   *  Trước đây file đã thêm hiện chữ "Đã thêm" và tắt nút, nên muốn bỏ một file vừa thêm
+   *  nhầm là phải đóng form, tìm nó trong danh sách trên, rồi mới gỡ. Chủ repo báo 03/09:
+   *  thêm và gỡ nên nằm ngay tại chỗ tìm. Trạng thái luôn ĐỌC LẠI từ dữ liệu đang mở nên gọi
+   *  hàm này sau mỗi lần thêm/gỡ/tải lên là đủ, không cần tìm lại từ server. */
+  function veNutKetQua() {
+    var p = pdDuLieu();
+    var box = pdEl && pdEl.querySelector(".pd-results");
+    if (!box || !p) return;
+    var theoDuong = {};
+    // Chỉ file GẮN TAY mới đối chiếu được: file Javis tự dò ra không có id nên không gỡ được,
+    // và người dùng vẫn có quyền gắn tay chính nó để ghim hoặc giữ lại.
+    (p.files || []).forEach(function (f) { if (f.id) theoDuong[f.path] = f; });
+    box.querySelectorAll(".pd-res").forEach(function (r) {
+      var b = r.querySelector(".pd-res-add");
+      if (!b) return;
+      var f = theoDuong[r.dataset.path];
+      b.disabled = false;
+      b.classList.toggle("go", !!f);
+      b.textContent = f ? pdT("proj.remove_short") : pdT("proj.add");
+      b.title = f ? pdT("proj.remove") : "";
+      b.onclick = f
+        ? function () { goNhanhFile(f, b); }
+        : function () { themFile(r.dataset.path, r.dataset.name, b); };
+    });
+  }
+
+  async function themFile(duong, ten, nut) {
+    if (nut) nut.disabled = true;
+    var r = await pdPost("/files", { path: duong, name: ten || "" });
+    if (!r || !r.ok) {
+      alert(pdT("proj.err_add_file") + ": " + ((r && r.error) || ""));
+      if (nut) nut.disabled = false;
+      return;
+    }
+    await napLaiChiTiet();
+    napLaiChip();
+    veLaiDanhSach();          // KHÔNG veDrawer: form tìm kiếm phải sống để thêm file tiếp
+    veNutKetQua();
+  }
+
+  /** Gỡ khỏi project ngay tại danh sách tìm kiếm: KHÔNG hỏi lại như nút gỡ ở danh sách
+   *  trên, vì bấm nhầm thì cái nút vừa bấm đã quay về "Thêm" ngay dưới ngón tay. */
+  async function goNhanhFile(f, nut) {
+    if (nut) nut.disabled = true;
+    await pdPost("/files/" + encodeURIComponent(f.id) + "/delete", {});
+    await napLaiChiTiet();
+    napLaiChip();
+    veLaiDanhSach();
+    veNutKetQua();
+  }
+
+  /** Tải file của project vào SOURCES, không phải attachments.
+   *
+   *  attachments/ là VÙNG CACHE: media_gc dọn nó theo tuổi (mặc định 30 ngày) và theo trần
+   *  dung lượng. Tài liệu của một project thì ngược lại - nó là thứ người dùng gắn vào để
+   *  dùng lâu dài, mất đi là project trỏ vào hư không. Chủ repo báo đúng chuyện này 02/09.
+   *
+   *  Tên thư mục do SERVER tìm (`folder: "sources"`), không đoán bằng chuỗi cứng: brain có
+   *  thể đặt "01 - Sources", và trần duyệt có thể cao hơn gốc brain. Server trả về đúng
+   *  đường dẫn đã dùng nên ở đây khỏi ghép lại. */
+  async function taiLenNhieu(files, drop) {
+    var ds = [].slice.call(files);
+    if (!ds.length) return;
+    var cu = drop.innerHTML;
+    drop.disabled = true;
+    var loi = [];
+    for (var i = 0; i < ds.length; i++) {
+      // Đếm n/tổng chứ không chỉ "Đang tải lên…": thả 10 file thì im lặng một phút là
+      // người dùng tưởng treo.
+      drop.innerHTML = ic("loader") + " " + esc(pdT("proj.uploading")) + "… " +
+                       (i + 1) + "/" + ds.length;
+      var e = await taiLenMot(ds[i]);
+      if (e) loi.push(ds[i].name + ": " + e);
+    }
+    drop.disabled = false; drop.innerHTML = cu;
+    // Một file hỏng không được làm hỏng cả mẻ: những file kia đã lên rồi, chỉ báo phần trượt.
+    if (loi.length) alert(pdT("proj.err_upload") + ":\n" + loi.join("\n"));
+  }
+
+  /** Tải một file, trả về chuỗi lỗi ("" là xong). */
+  async function taiLenMot(file) {
+    var up = null;
+    try {
+      var fd = new FormData();
+      fd.append("file", file); fd.append("brain", brain()); fd.append("folder", "sources");
+      up = await (await fetch("/files/upload", { method: "POST", body: fd })).json();
+    } catch (e) {}
+    if (!up || !up.ok) return (up && up.error) || "?";
+    await themFile(up.path, up.name, null);
+    return "";
+  }
+
+  async function ghimFile(f) {
+    await pdPost("/files/" + encodeURIComponent(f.id) + "/pin",
+                 { pinned: f.pinned ? "0" : "1" });
+    await napLaiChiTiet();
+    veLaiDanhSach();
+  }
+
+  /** Xoá HẲN file khỏi brain, rồi gỡ luôn khỏi project.
+   *
+   *  Để lại hàng trong project sau khi file đã biến mất là để lại một dòng trỏ vào hư không:
+   *  ghim nó thì prompt nạp rỗng, bấm mở thì báo không thấy file. Hai bước, một cú bấm.
+   */
+  async function xoaHanFile(f) {
+    var ten = f.name || f.path;
+    if (!confirm(pdT("proj.confirm_delete_file", { ten: ten }))) return;
+    var r = await post("/files/delete", { brain: brain(), path: f.path });
+    if (!r || !r.ok) { alert(pdT("proj.err_delete_file") + ": " + ((r && r.error) || "")); return; }
+    await pdPost("/files/" + encodeURIComponent(f.id) + "/delete", {});
+    await napLaiChiTiet();
+    napLaiChip();
+    veLaiDanhSach();
+  }
+
+  async function goFile(f) {
+    if (!confirm(pdT(pdK("confirm_remove_file"), { ten: f.label || f.name || f.path }))) return;
+    await pdPost("/files/" + encodeURIComponent(f.id) + "/delete", {});
+    await napLaiChiTiet();
+    napLaiChip();
+    veLaiDanhSach();
+  }
+
+  // ── Tab Link ─────────────────────────────────────────────────────────────────
+  function dsLinkHtml(p) {
+    var ls = p.links || [];
+    var laCuoc = pdLaCuoc();
+    var tuDong = laCuoc ? ls.filter(function (l) { return !l.manual; }) : [];
+    var tay = laCuoc ? ls.filter(function (l) { return l.manual; }) : ls;
+    var aHtml = function (l) {
+      return '<a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+             esc(l.url) + "</a>";
+    };
+    var ve = function (l) {
+      return hangMuc({ id: l.id, ten: l.label || l.url, icon: "link", pinned: !!l.pinned,
+                       ghimTitle: pdT("proj.pin_link_on"), subHtml: aHtml(l),
+                       sao: l.url, saoTitle: pdT("common.copy_link") });
+    };
+    var veTuDong = function (l) {
+      return hangMuc({ tuDong: true, icon: "link", tenHtml: aHtml(l),
+                       sub: l.vai === "user" ? pdT("cts.from_you") : pdT("cts.from_javis"),
+                       sao: l.url, saoTitle: pdT("common.copy_link") });
+    };
+    if (!ls.length) return '<div class="pd-empty">' + esc(pdT(pdK("links_empty"))) + "</div>";
+    var ds = "";
+    if (tay.length) ds += (laCuoc ? nhomHtml(pdT("cts.added_group")) : "") + tay.map(ve).join("");
+    if (tuDong.length) ds += nhomHtml(pdT("cts.auto_links_group")) + tuDong.map(veTuDong).join("");
+    return ds;
+  }
+
+  function paneLink(p) {
+    return '<div class="pd-pane" data-pane="links">' +
+      '<div class="pd-list">' + dsLinkHtml(p) + "</div>" +
+      '<button class="pd-add" type="button">' + ic("plus") + " " + esc(pdT("proj.add_link")) + "</button>" +
+      (pdFormLink
+        ? '<div class="pd-form">' +
+            '<input class="pd-in pd-lurl" placeholder="' + esc(pdT("proj.link_url_ph")) + '">' +
+            '<input class="pd-in pd-llabel" placeholder="' + esc(pdT("proj.link_label_ph")) + '">' +
+            '<div class="pd-frow">' +
+              '<button class="pd-ok" type="button">' + esc(pdT("proj.add")) + "</button>" +
+              '<button class="pd-huy" type="button">' + esc(pdT("proj.cancel")) + "</button>" +
+            "</div></div>"
+        : "") +
+      '<div class="pd-note">' + ic("info") + "<span>" + esc(pdT("proj.link_note")) + "</span></div>" +
+      ghiChuCuoi() +
+      "</div>";
+  }
+
+  function noiLink() {
+    var pane = pdEl.querySelector('[data-pane="links"]');
+    if (!pane) return;
+    pane.querySelector(".pd-add").onclick = function () { pdFormLink = !pdFormLink; veDrawer(); };
+    noiHang(pane, false);
+    var u = pane.querySelector(".pd-lurl");
+    if (!u) return;
+    u.focus();
+    var lb = pane.querySelector(".pd-llabel");
+    var them = function () { themLink(u.value, lb.value); };
+    pane.querySelector(".pd-ok").onclick = them;
+    pane.querySelector(".pd-huy").onclick = function () { pdFormLink = false; veDrawer(); };
+    [u, lb].forEach(function (o) {
+      o.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); them(); } };
+    });
+  }
+
+  async function themLink(url, nhan) {
+    var u = (url || "").trim();
+    if (!u) return;
+    var r = await pdPost("/links", { url: u, label: (nhan || "").trim() });
+    if (!r || !r.ok) { alert(pdT("proj.err_add_link") + ": " + ((r && r.error) || "")); return; }
+    await napLaiChiTiet();
+    napLaiChip();
+    // Giữ form và dọn ô trống thay vì đóng lại: dán link thứ hai là chuyện thường, cùng lý do
+    // với ô tìm file. Con trỏ về ô URL để dán tiếp là xong.
+    veLaiDanhSach();
+    var pane = pdEl.querySelector('[data-pane="links"]');
+    var u = pane && pane.querySelector(".pd-lurl");
+    var lb = pane && pane.querySelector(".pd-llabel");
+    if (u) { u.value = ""; u.focus(); }
+    if (lb) lb.value = "";
+  }
+
+  async function ghimLink(l) {
+    await pdPost("/links/" + encodeURIComponent(l.id) + "/pin",
+                 { pinned: l.pinned ? "0" : "1" });
+    await napLaiChiTiet();
+    veLaiDanhSach();
+  }
+
+  async function goLink(l) {
+    if (!confirm(pdT(pdK("confirm_remove_link"), { ten: l.label || l.url }))) return;
+    await pdPost("/links/" + encodeURIComponent(l.id) + "/delete", {});
+    await napLaiChiTiet();
+    napLaiChip();
+    veLaiDanhSach();
+  }
+
+  // ===== Popover dùng chung cho menu project và bộ chọn icon =====
+  var menuEl = null;
+  function closeMenu() {
+    if (menuEl && menuEl.parentNode) menuEl.parentNode.removeChild(menuEl);
+    menuEl = null;
+  }
+  function placeMenu(anchor) {
+    document.body.appendChild(menuEl);
+    var rc = anchor.getBoundingClientRect();
+    var w = menuEl.offsetWidth, h = menuEl.offsetHeight;
+    menuEl.style.left = Math.max(8, Math.min(rc.left, window.innerWidth - w - 8)) + "px";
+    var top = rc.bottom + 4;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, rc.top - h - 4);
+    menuEl.style.top = top + "px";
+  }
+  function openMenu(anchor, rows) {
+    closeMenu();
+    menuEl = document.createElement("div");
+    menuEl.className = "cs-menu";
+    rows.forEach(function (r) {
+      if (r.sep) { menuEl.appendChild(el('<div class="cs-menu-sep"></div>')); return; }
+      // r.icon là TÊN icon Lucide, đi qua iconHtml (thẻ <svg>); r.label là chữ nên phải escape.
+      var iHtml = r.icon ? iconHtml(r.icon) : "";
+      var row = el('<div class="cs-menu-row' + (r.on ? " on" : "") + '">' +
+        '<button class="cs-menu-main" type="button">' +
+        (iHtml ? '<span class="cs-menu-ico">' + iHtml + '</span>' : '') +
+        '<span class="cs-menu-lbl' + (r.wrap ? " nhieu-dong" : "") + '">' + esc(r.label) + '</span>' +
+        // Dấu ghim đứng ở phần luôn hiện, KHÔNG nằm trong hàng nút (hàng đó chỉ hiện khi rê
+        // chuột). Ghim mà chỉ thấy được lúc rê chuột thì nhìn danh sách không biết vì sao
+        // thứ tự lại như vậy.
+        (r.pinIcon ? '<span class="cs-menu-pin">' + ic(r.pinIcon) + '</span>' : '') +
+        (r.right ? '<span class="cs-menu-right">' + esc(r.right) + '</span>' : '') + '</button>' +
+        '<span class="cs-menu-acts"></span></div>');
+      row.querySelector(".cs-menu-main").onclick = function () { closeMenu(); r.run(); };
+      var acts = row.querySelector(".cs-menu-acts");
+      (r.acts || []).forEach(function (a) {
+        var b = el('<button class="cs-menu-act" type="button" title="' + esc(a.title) + '">' + ic(a.icon) + '</button>');
+        b.onclick = function (ev) { ev.stopPropagation(); if (!a.giuMo) closeMenu(); a.run(); };
+        acts.appendChild(b);
+      });
+      menuEl.appendChild(row);
+    });
+    placeMenu(anchor);
+  }
+
+  // Bộ chọn icon dùng CHÍNH bộ icon Lucide app đã vendor, không phải emoji. Vì sao:
+  // icon Lucide vẽ bằng stroke="currentColor" nên tự đổi màu theo tông SÁNG/TỐI và theo màu
+  // chữ chỗ nó đứng, lại giống hệt nhau trên mọi máy - hai thứ emoji không bao giờ làm được
+  // (mỗi hệ điều hành vẽ một kiểu, và emoji màu cứng nên tông tối nhìn chói). Cả dashboard
+  // đã bỏ emoji vì đúng lý do đó; để riêng chỗ này dùng emoji là lệch khỏi phần còn lại.
+  // Giá trị lưu vào DB là TÊN icon (vd "star"), không phải ký tự.
+  function tenIcon() {
+    try { return (window.Icons && window.Icons.names && window.Icons.names()) || []; }
+    catch (e) { return []; }
+  }
+  // Icon người dùng chọn -> HTML. Tên lạ (bộ icon đổi giữa hai phiên bản, hay ai đó sửa tay
+  // DB) thì trả rỗng chứ không để ic() vẽ dấu hỏi kèm cảnh báo console mỗi lần render.
+  function iconHtml(name) {
+    var n = String(name || "").trim();
+    if (!n) return "";
+    try { if (!(window.Icons && window.Icons.has(n))) return ""; } catch (e) { return ""; }
+    return ic(n, { title: n });
+  }
+  function pickIcon(anchor, cur, onPick) {
+    closeMenu();
+    menuEl = document.createElement("div");
+    menuEl.className = "cs-menu cs-ico";
+    var head = el('<div class="cs-ico-head">' +
+      '<input class="cs-ico-in" placeholder="' + esc(window.t("sess.icon_ph")) + '">' +
+      '<button class="cs-ico-clear" type="button">' + esc(window.t("sess.icon_clear")) + '</button></div>');
+    var grid = el('<div class="cs-ico-grid"></div>');
+    var tenAll = tenIcon();
+
+    function ve(loc) {
+      var q = String(loc || "").trim().toLowerCase();
+      var ds = q ? tenAll.filter(function (n) { return n.indexOf(q) !== -1; }) : tenAll;
+      grid.innerHTML = "";
+      if (!ds.length) {
+        grid.appendChild(el('<div class="cs-ico-empty">' + esc(window.t("sess.icon_none", { q: q })) + '</div>'));
+        return;
+      }
+      ds.forEach(function (n) {
+        var b = el('<button class="cs-ico-b' + (n === cur ? " on" : "") + '" type="button" title="' +
+                   esc(n) + '">' + ic(n) + "</button>");
+        b.onclick = function () { closeMenu(); onPick(n); };
+        grid.appendChild(b);
+      });
+    }
+
+    head.querySelector(".cs-ico-in").oninput = function (ev) { ve(ev.currentTarget.value); };
+    head.querySelector(".cs-ico-clear").onclick = function () { closeMenu(); onPick(""); };
+    menuEl.appendChild(head);
+    menuEl.appendChild(grid);
+    ve("");
+    placeMenu(anchor);
+    try { head.querySelector(".cs-ico-in").focus(); } catch (e) {}
+  }
+
+  // Bấm ra ngoài thì đóng. Dùng pha CAPTURE để chạy trước handler của chính hàng hội thoại
+  // (nếu không, bấm ra ngoài vừa đóng menu vừa mở nhầm một hội thoại).
+  document.addEventListener("mousedown", function (e) {
+    if (menuEl && !menuEl.contains(e.target)) closeMenu();
+  }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(); });
+
+  // Danh sách chỉ hiện PAGE mục đầu, bấm "Xem thêm" mở thêm PAGE nữa.
+  // shown = số mục đang hiện; giữ nguyên qua các lần refresh, chỉ reset khi đổi brain.
+  var PAGE = 20, shown = PAGE, lastBrain = null;
+  // Kết quả /sessions gần nhất. Prefetch lúc app load để bấm Lịch sử là danh sách hiện
+  // NGAY từ cache (fetch mới vẫn chạy nền đè lên sau) - trước đây mở panel mới bắt đầu
+  // debounce 150ms + fetch nên user thấy "Đang tải…" delay rõ.
+  var cached = null;   // {brain, items}
+
+  async function fetchList() {
+    var b = brain(), p = kenhLoc ? "" : curProject();
+    var r = await fetch("/sessions?brain=" + encodeURIComponent(b) + "&limit=" + (shown + 1) +
+                        (p ? "&project=" + encodeURIComponent(p) : "") +
+                        (kenhLoc ? "&channel=" + encodeURIComponent(kenhLoc) : ""));
+    var data = await r.json();
+    // `kenh` nằm trong khoá cache: thiếu nó thì lần mở trang Cộng sự kế tiếp vẽ tạm bằng danh
+    // sách hội thoại thường của trang Trò chuyện, rồi mới thay - một nhịp nháy nội dung sai.
+    cached = { brain: b, project: p, kenh: kenhLoc, items: data.sessions || [] };
+    return cached;
+  }
+
+  /** Gắn cột lịch sử vào một khung.
+   *
+   * `opts.kenh`      - chỉ hiện hội thoại của kênh này (trang Cộng sự: "agent:<slug>").
+   * `opts.chiHoiThoai` - bỏ hàng tab Hội thoại|Thư mục và thanh project. Cột phải trang Cộng
+   *                    sự đã có tab riêng bao ngoài rồi, lồng thêm một tầng tab nữa là rối;
+   *                    còn project là cách gom hội thoại của NGƯỜI DÙNG, không áp cho hội
+   *                    thoại của một trợ lý.
+   * `opts.onNew`     - thay hành vi nút "Hội thoại mới" (kênh cộng sự phải mở đúng kênh).
+   * `opts.trangTri`  - hàm (s) -> {dau, meta}: HTML chèn thêm vào một hàng (xem hamTrangTri).
+   */
+  function mount(container, opts) {
+    if (!container) return;
+    var o = opts || {};
+    side = container;
+    shown = PAGE;
+    lastBrain = brain();
+    kenhLoc = o.kenh || "";
+    hamTaoMoi = typeof o.onNew === "function" ? o.onNew : null;
+    hamTrangTri = typeof o.trangTri === "function" ? o.trangTri : null;
+    var gonNhe = !!o.chiHoiThoai;
+    if (gonNhe) {
+      side.classList.add("cside-gon");
+      side.innerHTML =
+        '<div class="cside-pane on" data-pane="chat">' +
+          '<button class="cside-new" type="button" data-i18n="sess.new_chat">' + esc(window.t("sess.new_chat")) + '</button>' +
+          // Câu mời khác của trang Trò chuyện: ở đây ô tìm CHỈ soi hội thoại của cộng sự đang
+          // mở, hứa "mọi hội thoại" là hứa sai.
+          '<input class="cside-search" data-i18n-ph="sess.search_ph_kenh" placeholder="' + esc(window.t("sess.search_ph_kenh")) + '">' +
+          '<div class="cside-list"></div>' +
+        '</div>';
+      listEl = side.querySelector(".cside-list");
+      searchEl = side.querySelector(".cside-search");
+      projBar = null;
+      cayEl = null;
+      noiODoTimVaNutMoi();
+      loadList();
+      return;
+    }
+    side.classList.remove("cside-gon");
+    side.innerHTML =
+      '<div class="cside-tabs">' +
+        // Icon ở đầu mỗi tab: hai tab đứng cạnh nhau và chỉ khác nhau bằng chữ, nên liếc qua
+        // phải đọc mới biết đang ở đâu. Dùng đúng icon rail đang dùng cho hai thứ đó
+        // (message-circle cho Trò chuyện, folder-tree cho Tệp tin) để cả app nói cùng một
+        // ngôn ngữ hình, chứ không đặt icon mới chỉ riêng chỗ này.
+        '<button class="cside-tab" data-tab="chat" type="button">' + ic("message-circle") + ' <span data-i18n="sess.tab_chat">' + esc(window.t("sess.tab_chat")) + '</span></button>' +
+        '<button class="cside-tab" data-tab="files" type="button">' + ic("folder-tree") + ' <span data-i18n="sess.tab_files">' + esc(window.t("sess.tab_files")) + '</span></button>' +
+      '</div>' +
+      '<div class="cside-pane" data-pane="chat">' +
+        '<button class="cside-new" type="button" data-i18n="sess.new_chat">' + esc(window.t("sess.new_chat")) + '</button>' +
+        '<div class="cside-proj"></div>' +
+        '<input class="cside-search" data-i18n-ph="sess.search_ph" placeholder="' + esc(window.t("sess.search_ph")) + '">' +
+        '<div class="cside-list"></div>' +
+      '</div>' +
+      '<div class="cside-pane" data-pane="files"></div>';
+    listEl = side.querySelector(".cside-list");
+    searchEl = side.querySelector(".cside-search");
+    projBar = side.querySelector(".cside-proj");
+    cayEl = side.querySelector('[data-pane="files"]');
+    noiODoTimVaNutMoi();
+    side.querySelectorAll(".cside-tab").forEach(function (b) {
+      b.onclick = function () { chonTab(b.dataset.tab); };
+    });
+    renderProjBar();   // vẽ ngay từ localStorage, khỏi nháy thanh trống trong lúc chờ /projects
+    loadProjects();
+    loadList();   // lần đầu mở panel: nạp THẲNG, không qua debounce 150ms của refresh()
+    chonTab(tabDaLuu());
+  }
+
+  // Hai dây nối giống nhau ở cả hai chế độ gắn, tách ra cho khỏi chép đôi.
+  function noiODoTimVaNutMoi() {
+    var nut = side.querySelector(".cside-new");
+    if (nut) nut.onclick = function () {
+      if (hamTaoMoi) { hamTaoMoi(); return; }
+      if (window.JavisSessions) window.JavisSessions.new();
+      closeDrawerIfNarrow();
+    };
+    if (!searchEl) return;
+    searchEl.oninput = function () {
+      clearTimeout(searchTimer);
+      var q = searchEl.value.trim();
+      searchTimer = setTimeout(function () { q ? doSearch(q) : loadList(); }, 280);
+    };
+  }
+
+  /**
+   * Đổi tab. Tab "Thư mục" MƯỢN chính panel Vault ở cột trái màn chính chứ không dựng cây
+   * riêng - cùng một cây, chỉ đổi chỗ đứng. Nhờ vậy mọi thứ cây đó đã có (tìm theo tên và
+   * theo nội dung, tạo file, tạo thư mục, làm mới, tô sáng file đang mở) đi theo luôn, và
+   * không có bản thứ hai để trôi lệch.
+   *
+   * Trả về ngay khi bấm sang tab Hội thoại: node chỉ có một, để nó nằm trong pane đang ẩn thì
+   * màn chính mất panel Vault.
+   */
+  function chonTab(tab) {
+    if (!side || !side.querySelector(".cside-tab")) return;   // chế độ gọn: không có hàng tab
+    tabHienTai = tab === "files" ? "files" : "chat";
+    try { localStorage.setItem(TAB_KEY, tabHienTai); } catch (e) {}
+    side.querySelectorAll(".cside-tab").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.tab === tabHienTai);
+    });
+    side.querySelectorAll(".cside-pane").forEach(function (p) {
+      p.classList.toggle("on", p.dataset.pane === tabHienTai);
+    });
+    if (!window.JavisVaultPanel) return;
+    if (tabHienTai === "files" && cayEl) window.JavisVaultPanel.borrow(cayEl);
+    else window.JavisVaultPanel.giveBack();
+  }
+
+  function refresh() {
+    if (!side) return;
+    var b = brain();
+    if (b !== lastBrain) {
+      lastBrain = b; shown = PAGE;
+      // Project gắn theo brain, nên đổi brain là danh sách project đổi theo. Không nạp lại thì
+      // thanh trên đầu còn treo tên project của brain cũ mà bộ lọc lại đang trỏ vào id lạ.
+      if (projBar) { renderProjBar(); loadProjects(); }
+      // Cây Vault tự dựng lại khi đổi brain (console.js theo dõi #graphSource), nên ở đây
+      // không phải làm gì thêm - đó chính là cái lợi của việc mượn node thay vì nuôi bản hai.
+    }
+    // debounce nhẹ: response + notifySessions có thể bắn sát nhau
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function () {
+      var q = searchEl && searchEl.value.trim();
+      q ? doSearch(q) : loadList();
+    }, 150);
+  }
+
+  // Màn hẹp: cột lịch sử là drawer trượt đè lên khung chat, nên chọn xong phải tự đóng.
+  // Mốc 860px khớp @media của trang Trò chuyện (console.js _injectChatCss); lớp nổi
+  // .chat-stage cũ dùng mốc 900 đã bỏ cùng lớp đó.
+  function closeDrawerIfNarrow() {
+    if (window.innerWidth >= 860) return;
+    var page = document.getElementById("chatPage");
+    if (page) page.classList.remove("side-open");
+  }
+
+  function openSession(id) {
+    if (window.JavisSessions) window.JavisSessions.open(id);
+    closeDrawerIfNarrow();
+  }
+
+  async function loadList() {
+    if (!listEl) return;
+    // Khung đang trống: vẽ ngay từ cache prefetch (nếu đúng brain) cho hết cảm giác delay;
+    // không có cache mới hiện "Đang tải…". Các lần sau giữ danh sách cũ cho khỏi nháy.
+    if (!listEl.querySelector(".cside-item")) {
+      if (cached && cached.brain === brain() && cached.kenh === kenhLoc &&
+          cached.project === (kenhLoc ? "" : curProject()) && cached.items.length) {
+        renderList(cached.items.slice(0, shown), cached.items.length > shown);
+      } else {
+        listEl.innerHTML = '<div class="cside-empty">' + esc(window.t("sess.loading")) + '</div>';
+      }
+    }
+    try {
+      // Lấy dư 1 mục để biết còn hội thoại phía sau hay không.
+      var c = await fetchList();
+      renderList(c.items.slice(0, shown), c.items.length > shown);
+    } catch (e) {
+      // Lỗi mạng thoáng qua: còn danh sách (từ cache) thì giữ nguyên, đừng đập đi
+      if (!listEl.querySelector(".cside-item")) listEl.innerHTML = '<div class="cside-empty">' + esc(window.t("sess.load_err")) + '</div>';
+    }
+  }
+
+  function renderList(items, hasMore) {
+    if (!items.length) {
+      listEl.innerHTML = '<div class="cside-empty">' + esc(window.t("sess.empty1")) + '<br>' + esc(window.t("sess.empty2")) + '</div>';
+      return;
+    }
+    // Bấm "Xem thêm" render lại từ đầu → giữ chỗ cuộn để không bị nhảy lên trên.
+    var keepScroll = listEl.scrollTop;
+    listEl.innerHTML = "";
+    var cur = currentId(), lastGroup = null;
+    items.forEach(function (s) {
+      // Mục ghim gom thành MỘT nhóm trên đầu, không xếp theo thời gian nữa - ghim chính là để
+      // thoát khỏi thứ tự thời gian. Server đã sắp pinned trước nên chỉ cần đổi nhãn nhóm.
+      var g = s.pinned ? window.t("sess.grp_pinned") : groupOf(s.updated_at || 0);
+      if (g !== lastGroup) {
+        listEl.appendChild(el('<div class="cside-group">' + g + '</div>'));
+        lastGroup = g;
+      }
+      var eng = (s.engine || "").toString().slice(0, 10);
+      // Kênh sinh ra hội thoại: web là mặc định nên khỏi ghi, Telegram thì gắn nhãn để
+      // khỏi lẫn với cuộc tự mở trên dashboard.
+      // Đang LỌC theo kênh thì nhãn kênh là thừa: mọi hàng đều cùng một kênh, in ra chỉ tổ
+      // chiếm chỗ của giờ và số tin trong một cột hẹp ("agent:ng" trên từng dòng).
+      var ch = kenhLoc ? "" : (s.channel || "").toString();
+      var chLabel = ch === "telegram" ? "TG" : (ch && ch !== "web" ? ch.slice(0, 8) : "");
+      var isRun = !!(window.JavisRunning && window.JavisRunning.has(s.id));
+      // KHÔNG có icon riêng cho từng hội thoại. Hàng nào cũng là một cuộc trò chuyện nên icon
+      // ở đây không phân loại được gì, chỉ thêm một nút phải bấm và một hàng nút chật thêm.
+      // Icon để PHÂN LOẠI thì nằm ở Project - xem openProjMenu.
+      // Trang trí do nơi gắn cột cấp (trang Cộng sự: avatar các trợ lý + trạng thái lần chạy).
+      // Bọc try: một hàm của bên ngoài ném lỗi thì chỉ mất phần trang trí, không được phép
+      // làm cụt cả danh sách hội thoại.
+      var tt = {};
+      if (hamTrangTri) { try { tt = hamTrangTri(s) || {}; } catch (e) { tt = {}; } }
+      // Lớp `ghim` cho hàng ĐÃ GHIM: nhóm "Đã ghim" trên đầu nói được thứ tự, nhưng cuộn
+      // xuống giữa danh sách thì không còn thấy cái nhãn ấy nữa. Vạch màu bên trái và dấu ghim
+      // luôn hiện đi theo từng hàng, đúng khuôn danh sách trợ lý / quy trình của trang Cộng sự
+      // (chủ dự án chốt 16/09 sau khi dùng bản 0.59.20).
+      var item = el('<div class="cside-item' + (s.id === cur ? " active" : "") + (isRun ? " running" : "") + (s.pinned ? " ghim" : "") + '">' +
+        '<div class="ci-title">' + (isRun ? '<span class="ci-run" title="' + esc(window.t("sess.running")) + '">' + ic("loader", { cls: "ic-spin" }) + '</span> ' : '') +
+        (tt.dau || "") +
+        esc(s.title || s.preview || window.t("sess.untitled")) + '</div>' +
+        '<div class="ci-meta"><span>' + fmtT(s.updated_at) + '</span>' + (tt.meta || "") +
+        (chLabel ? '<span class="ci-badge">' + esc(chLabel) + '</span>' : '') +
+        (eng ? '<span class="ci-badge">' + esc(eng) + '</span>' : '') +
+        '<span>' + esc(window.t("sess.msgs", { count: s.msg_count || 0 })) + '</span>' +
+        '<span class="act">' +
+          '<span class="pin' + (s.pinned ? " on" : "") + '" title="' + esc(s.pinned ? window.t("proj.pin_off") : window.t("sess.pin_top")) + '">' + ic("pin") + '</span>' +
+          // "Xếp vào nhóm" chỉ có nghĩa với hội thoại của NGƯỜI DÙNG. Hội thoại của một trợ
+          // lý đã thuộc về trợ lý đó rồi, nhét thêm vào một project là hai cách xếp chồng lên
+          // nhau mà cột này không hiện project nào cả.
+          (kenhLoc ? "" : '<span class="mov" title="' + esc(window.t("sess.move_to")) + '">' + ic("folder") + '</span>') +
+          '<span class="ren" title="' + esc(window.t("cs.fm_rename_title")) + '">' + ic("pencil") + '</span>' +
+          '<span class="del" title="' + esc(window.t("common.delete")) + '">' + ic("trash-2") + '</span>' +
+        '</span>' +
+        '</div></div>');
+      // Hai nút mới gắn handler RIÊNG kèm stopPropagation, không nhét thêm nhánh vào
+      // item.onclick bên dưới. Handler đó là thứ test_chat_side_actions.js bóc ra chạy thật
+      // với đúng năm tham số của nó; thêm tên hàm lạ vào là test nổ ReferenceError.
+      item.querySelector(".pin").onclick = function (ev) { ev.stopPropagation(); togglePin(s); };
+      var nutXep = item.querySelector(".mov");
+      if (nutXep) nutXep.onclick = function (ev) { ev.stopPropagation(); moveMenu(ev.currentTarget, s); };
+      // Bấm phải dò theo TỔ TIÊN, không so class của đúng node bị bấm. Nội dung .ren/.del là
+      // một <svg> (ic() trả chuỗi SVG), nên chạm vào icon thì e.target LÀ cái svg chứ không
+      // phải cái span - so classList kiểu cũ luôn trượt và click rơi xuống openSession.
+      // Đó chính là lỗi "hover vào không xoá/đổi tên được": nút có hiện, bấm lại mở hội thoại.
+      item.onclick = function (e) {
+        var hit = e.target && e.target.closest ? e.target.closest(".ren, .del") : null;
+        if (hit && hit.classList.contains("del")) { e.stopPropagation(); delSession(s); return; }
+        if (hit && hit.classList.contains("ren")) { e.stopPropagation(); renSession(s); return; }
+        openSession(s.id);
+      };
+      listEl.appendChild(item);
+    });
+    if (hasMore) {
+      var more = el('<button class="cside-more" type="button">' + esc(window.t("sess.more", { so: PAGE })) + '</button>');
+      more.onclick = function () { shown += PAGE; loadList(); };
+      listEl.appendChild(more);
+    }
+    listEl.scrollTop = keepScroll;
+  }
+
+  async function doSearch(q) {
+    if (!listEl) return;
+    listEl.innerHTML = '<div class="cside-empty">' + esc(window.t("sess.searching")) + '</div>';
+    try {
+      var r = await fetch("/sessions/search?q=" + encodeURIComponent(q) + "&brain=" + encodeURIComponent(brain()) +
+                          (kenhLoc ? "&channel=" + encodeURIComponent(kenhLoc) : "") + "&limit=40");
+      var data = await r.json();
+      var hits = data.results || [];
+      if (!hits.length) { listEl.innerHTML = '<div class="cside-empty">' + esc(window.t("sess.no_result")) + '</div>'; return; }
+      listEl.innerHTML = "";
+      hits.forEach(function (h) {
+        var snip = esc(h.snippet || "").replace(/&gt;&gt;&gt;/g, "<b>").replace(/&lt;&lt;&lt;/g, "</b>");
+        var item = el('<div class="cside-item">' +
+          '<div class="ci-title">' + esc(h.title || window.t("sess.untitled")) + '</div>' +
+          '<div class="ci-snip">' + snip + '</div>' +
+          '<div class="ci-meta"><span>' + fmtT(h.ts) + '</span></div></div>');
+        item.onclick = function () { openSession(h.session_id); };
+        listEl.appendChild(item);
+      });
+    } catch (e) { listEl.innerHTML = '<div class="cside-empty">' + esc(window.t("sess.search_err")) + '</div>'; }
+  }
+
+  async function delSession(s) {
+    if (!confirm(window.t("sess.del_q", { ten: s.title || s.preview || window.t("sess.untitled") }))) return;
+    try { await fetch("/sessions/" + encodeURIComponent(s.id) + "/delete", { method: "POST" }); } catch (e) {}
+    if (s.id === currentId() && window.JavisSessions) window.JavisSessions.new();
+    refresh();
+  }
+
+  async function renSession(s) {
+    var t = prompt(window.t("sess.rename_q"), s.title || s.preview || "");
+    if (t == null) return;
+    try {
+      var fd = new FormData(); fd.append("title", t);
+      await fetch("/sessions/" + encodeURIComponent(s.id) + "/rename", { method: "POST", body: fd });
+    } catch (e) {}
+    refresh();
+  }
+
+  async function togglePin(s) {
+    await post("/sessions/" + encodeURIComponent(s.id) + "/pin", { pinned: s.pinned ? "0" : "1" });
+    cached = null;   // thứ tự vừa đổi → cache cũ vẽ ra danh sách sai thứ tự
+    loadList();
+  }
+
+  function moveMenu(anchor, s) {
+    var rows = [{
+      label: window.t("sess.move_none"), on: !s.project_id,
+      run: function () { moveTo(s, ""); },
+    }];
+    if (projects.length) rows.push({ sep: true });
+    projects.forEach(function (p) {
+      rows.push({
+        label: p.name,
+        icon: p.icon || "folder",
+        on: s.project_id === p.id,
+        run: function () { moveTo(s, p.id); },
+      });
+    });
+    if (!projects.length) {
+      rows.push({ sep: true });
+      rows.push({ label: window.t("sess.proj_new"), run: function () { newProject(); } });
+    }
+    openMenu(anchor, rows);
+  }
+
+  async function moveTo(s, pid) {
+    await post("/sessions/" + encodeURIComponent(s.id) + "/project",
+               { project_id: pid, brain: brain() });
+    await loadProjects();      // số hội thoại của project vừa đổi
+    quenPhienProj();
+    renderProjChip();
+    cached = null;
+    loadList();
+  }
+
+  window.JavisChatSide = { mount: mount, refresh: refresh, tab: chonTab,
+                           chip: renderProjChip, moKhung: openProjDrawer,
+                           moKhungCuoc: openCuocDrawer,
+                           // Trang Cộng sự mở đúng ngăn kéo này cho MỘT trợ lý (nút "File &
+                           // link" trong Cài đặt trợ lý).
+                           moKhungAgent: openAgentDrawer,
+                           // Trang Cộng sự (0.64.19): một ngăn kéo, công tắc "của trợ lý / chỉ
+                           // cuộc này" ở đầu. Cả nút trên thanh đầu lẫn nút trong Cài đặt đi đây.
+                           moTaiLieu: openTaiLieuCongSu,
+                           // Bảng nổi (menu project) cho trang khác mượn - trang Cộng sự dùng
+                           // đúng khuôn này cho bộ chọn nhóm, để hai chỗ nhìn và bấm y nhau.
+                           menu: openMenu, dongMenu: closeMenu };
+  // Cầu nối cho app.js: hội thoại VỪA được mint id trong lúc đang mở một project thì tự rơi
+  // vào project đó. Phải gắn nhãn ngay tại lúc bấm gửi vì id sinh ở phía client, còn hàng
+  // trong DB thì tới lượt server xử lý mới có - endpoint tự tạo hàng khi nhận kèm brain.
+  window.JavisProjects = {
+    current: curProject,
+    claim: function (sid) {
+      var p = curProject();
+      if (!sid || !p || p === "none") return;
+      post("/sessions/" + encodeURIComponent(sid) + "/project",
+           { project_id: p, brain: brain() });
+    },
+  };
+
+  // Cập nhật khi có lượt chat mới / đổi phiên / đổi brain
+  window.addEventListener("javis:sessions-changed", refresh);
+  // Chip phải tự sống KHÔNG phụ thuộc cột trái: refresh() thoát sớm khi chưa mount sidebar,
+  // mà chip còn đứng ở màn Javis nơi cột đó chưa bao giờ mount. Đổi phiên là đổi project có
+  // hiệu lực, nên bỏ cache rồi vẽ lại.
+  window.addEventListener("javis:sessions-changed", function () {
+    quenPhienProj();
+    renderProjChip();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && pdEl && pdEl.classList.contains("on")) closeProjDrawer();
+  });
+  // Đổi ngôn ngữ giao diện: phần khung dựng MỘT lần (nút đóng, nút đổi tên) không tự vẽ lại
+  // như thân khung, nên bỏ hẳn node đi để lần mở sau dựng lại bằng từ điển mới.
+  window.addEventListener("javis:i18n", function () {
+    // Sidebar có thể đã dựng trước khi từ điển tải xong. Các nhãn cố định mang data-i18n
+    // được applyDom cập nhật; project và danh sách là dữ liệu động nên vẽ lại tại đây.
+    if (side) {
+      renderProjBar();
+      var q = searchEl && searchEl.value.trim();
+      if (q) doSearch(q);
+      else loadList();
+    }
+    var dangMo = !!(pdEl && pdEl.classList.contains("on"));
+    var laCuoc = pdLaCuoc();
+    var ag = pdLaAgent() ? { slug: (agentTS || {}).slug, name: (agentTS || {}).name } : null;
+    var id = projChiTiet && projChiTiet.id;
+    if (pdEl && pdEl.parentNode) pdEl.parentNode.removeChild(pdEl);
+    pdEl = null;
+    document.body.classList.remove("pd-open");
+    // Mở lại ĐÚNG chế độ đang xem. Trước đây chỉ mở lại project, nên đổi ngôn ngữ trong lúc
+    // đang xem file của cuộc là khung biến mất không lý do.
+    if (dangMo && laCuoc) openCuocDrawer();
+    else if (dangMo && ag && ag.slug) openAgentDrawer(ag.slug, ag.name);
+    else if (dangMo && id) openProjDrawer(id);
+    renderProjChip();
+  });
+
+  function bindGlobal() {
+    var gs = document.getElementById("graphSource");
+    if (gs) gs.addEventListener("change", refresh);
+    // Nút "Lịch sử" → mở thẳng workspace với sidebar. Đặt INLINE trong hàng nút header
+    // (.hud-actions) để không đè lên nút Cài đặt/Reset; fallback về body nếu chưa có header.
+    var btn = el('<div id="jv-sess-btn">' + ic("history") + ' <span class="jv-sess-lbl"></span></div>');
+    // Nút này dựng NGAY lúc tải trang, có thể trước khi từ điển về, mà t() lúc đó trả về
+    // chính cái khoá. Nên vẽ nhãn qua một hàm và vẽ lại khi từ điển sẵn sàng/đổi ngôn ngữ.
+    function veNhanBtn() {
+      btn.title = window.t("sess.hist_title");
+      var lbl = btn.querySelector(".jv-sess-lbl");
+      if (lbl) lbl.textContent = window.t("sess.hist");
+    }
+    veNhanBtn();
+    window.addEventListener("javis:i18n", veNhanBtn);
+    btn.onclick = function () { if (window.JavisChatStage) window.JavisChatStage.showSide(); };
+    var host = document.querySelector(".hud-actions");
+    (host || document.body).appendChild(btn);
+    // Prefetch danh sách sau khi cockpit đã yên: bấm Lịch sử lần đầu là có sẵn dữ liệu.
+    // Kèm danh sách project vì chip ở thanh tiêu đề khung chat cần tên + số file/link ngay,
+    // trong khi cột trái (nơi vẫn gọi loadProjects) chỉ mount khi mở trang Trò chuyện.
+    setTimeout(function () {
+      fetchList().catch(function () {});
+      loadProjects();
+    }, 1500);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bindGlobal);
+  else bindGlobal();
+})();

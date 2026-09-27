@@ -1,0 +1,76 @@
+# -*- coding: utf-8 -*-
+# ^ DÒNG TRÊN KHÔNG PHẢI TRANG TRÍ, ĐỪNG XOÁ. pip đọc file này bằng auto_decode(): không có
+# BOM và không có khai báo encoding kiểu PEP-263 ở HAI DÒNG ĐẦU thì nó decode bằng
+# locale.getpreferredencoding() - trên Windows tiếng Việt là cp1252/cp1258, và mọi chú thích
+# tiếng Việt bên dưới làm `pip install -r requirements.txt` NỔ UnicodeDecodeError ngay bước
+# cài đặt (setup.bat [2/3]). chcp 65001 KHÔNG cứu được: nó đổi codepage của console, còn
+# locale.getpreferredencoding() đọc ANSI codepage của hệ thống.
+# fastapi + starlette: TỪ 0.59.19 KHÔNG CÒN KHOÁ CẶP. fastapi 0.141.1 khai `starlette>=0.46.0`
+# KHÔNG có trần trên, khác hẳn fastapi 0.115.0 (cần starlette<0.39, nên đổi một cái là phải
+# đổi cả cặp kẻo pip resolve gãy). Vì không còn ai chặn trần, CHÍNH FILE NÀY phải ghim
+# starlette một con số cụ thể: để hở thì mỗi lần cài mới lại rơi vào một bản 1.x khác nhau,
+# và một ngày nào đó là bản có regression, không ai biết vì sao.
+#
+# claude-agent-sdk 0.2.116 KHÔNG ràng buộc starlette một chữ nào (chỉ cần anyio, mcp,
+# sniffio); mcp 1.30 chỉ cần starlette>=0.27. Đã kiểm lại bằng pip install --dry-run khi nâng:
+# cả hai đi cùng starlette 1.6.0 không xung đột.
+#
+# VÌ SAO NÂNG (issue #267): starlette 0.38.6 có 7 advisory. Đã soi từng cái xem Javis có chạm
+# tới, và hai cái chạm thật:
+#   - PYSEC-2026-1943 (vá 0.40.0): field form không phải file bị đệm KHÔNG giới hạn, đẩy vài
+#     request song song là ăn hết RAM. Javis nhận Form(...) ở rất nhiều endpoint, và code
+#     Javis KHÔNG tự vá được. Đây là lý do chính của lần nâng này.
+#   - PYSEC-2026-2281 (vá 1.1.0) CHỈ TRÊN WINDOWS: StaticFiles gặp đường UNC là lộ NTLM.
+#     Javis có mount /static nên máy Windows mở ra Internet bị ảnh hưởng thật.
+#   - PYSEC-2026-1941 (vá 0.47.2) chạm nhẹ: upload lớn nghẽn event loop. Chậm, không hở.
+#   - PYSEC-2026-161 (vá 1.0.1) chạm THẬT và nặng (url.path bị header Host bẻ được, lách hẳn
+#     cổng đăng nhập) nhưng Javis đã TỰ vá ở 0.59.16 (duong_dan_router + host_hop_le). Bản vá
+#     đó GIỮ NGUYÊN sau khi nâng: hàng rào đọc scope["path"] là đúng ở mọi phiên bản.
+#   - PYSEC-2026-248 / 2280 / 249: không chạm (248 bị uvicorn trả 400 trước khi vào app, đã
+#     thử bằng socket thô; không dùng HTTPEndpoint lớp; không đặt max_fields/max_part_size).
+#
+# CÒN NỢ SAU KHI NÂNG: 6 chỗ `@app.on_event("startup")` và 1 chỗ "shutdown" trong main.py là
+# API đã bỏ. Starlette 1.x xoá on_startup/on_shutdown, fastapi 0.141 còn đỡ giúp bằng danh
+# sách riêng nên vẫn CHẠY, chỉ kêu DeprecationWarning. Chuyển sang lifespan là việc riêng:
+# nó gộp 7 hàm vào một chỗ và thứ tự chạy giữa chúng là phần dễ làm sai nhất.
+fastapi==0.141.1
+uvicorn[standard]==0.51.0
+httpx==0.27.2
+claude-agent-sdk==0.2.116
+starlette==1.6.0
+sse-starlette>=1.6.1,<3
+# python-dotenv 1.0.1 có PYSEC-2026-2270, vá ở 1.2.2.
+python-dotenv==1.2.2
+websockets==13.1
+edge-tts>=7.0.0
+# python-multipart: nhận file upload (form-data). Giữ SÀN cao vì đây là đường nhận dữ liệu
+# từ ngoài vào: 0.0.18 có CVE-2026-24486 (path traversal, ghi file ra thư mục bất kỳ),
+# 0.0.30 có PYSEC-2026-3040. Vá ở 0.0.31.
+python-multipart==0.0.31
+pyyaml>=6.0
+cryptography>=42.0
+jsonschema>=4.20,<5
+# segno: vẽ mã QR cho việc bật xác thực 2 lớp (2FA). Thuần Python, KHÔNG kéo theo dependency
+# nào - chọn nó thay vì `qrcode` (cần Pillow) vì Pillow là một khối biên dịch nặng chỉ để vẽ
+# một ô vuông đen trắng. Thiếu segno thì màn bật 2FA lui về cho nhập tay secret, không vỡ.
+segno>=1.6,<2
+# uv: KHÔNG phải thư viện app import, mà là runner cho các connector MCP khai `command: uvx`
+# trong system/mcp-catalog.json (google-keep, google-sheets, google-search-console, google-ads,
+# tiktok-ads). Cài qua đây là đủ cho cả Docker lẫn máy cá nhân - `pip install uv` sinh ra sẵn
+# lệnh `uvx`. ĐỪNG gỡ dòng này, mấy connector đó sẽ chết lặng lẽ.
+uv>=0.5
+# gpsoauth: đổi Google App Password -> master token NGAY TRÊN UI (server/cred_exchange.py), để
+# connector google-keep khỏi bắt user mở terminal chạy lệnh. Kéo theo pycryptodomex/requests/
+# urllib3; đã kiểm bằng `pip install --dry-run`: KHÔNG đụng tới pin fastapi/starlette ở trên.
+gpsoauth>=1.0
+
+# yt-dlp: quân dự bị cho việc đọc phụ đề YouTube (server/youtube_read.py). Sáu client
+# InnerTube tự viết lo phần lớn ca; khi YouTube siết và chặn sạch chúng thì nhánh này gánh,
+# vì yt-dlp cập nhật theo từng đợt siết còn code trong repo thì không. Thuần Python, không
+# biên dịch, không kéo theo dependency nào đụng tới pin fastapi/starlette ở trên (đã kiểm
+# bằng pip install). Thiếu nó app VẪN chạy: nhánh yt-dlp tự tắt và chỉ ghi một dòng note.
+# SÀN PHIÊN BẢN QUAN TRỌNG: yt-dlp giữ danh sách client InnerTube và phải theo kịp từng đợt
+# YouTube siết. Bản 2025.x không biết client `visionos` (mặc định số một của 2026) và còn ghim
+# `tv_embedded` - cái tên đã bị xoá. Cài bản cũ thì quân dự bị coi như không có. Máy nào cập
+# nhật Javis từ trước 0.41.1 nên chạy thẳng: pip install -U yt-dlp
+yt-dlp>=2026.8.19

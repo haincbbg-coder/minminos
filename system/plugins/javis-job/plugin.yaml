@@ -1,0 +1,10 @@
+name: Việc chạy nền
+slug: javis-job
+version: 1.0.0
+description: Theo dõi lệnh chạy ngầm engine bỏ lại (render, build, tải về). Dặn trước "xong thì làm tiếp gì", xem việc đang chạy, dừng một việc. Xong là Javis tự báo về đúng khung chat và tự làm tiếp.
+author: Javis (bundled)
+enabled: true
+min_mode: safe
+tools:
+  - javis_job
+hooks: []
