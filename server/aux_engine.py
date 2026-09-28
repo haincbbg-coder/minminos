@@ -556,6 +556,7 @@ def _build_codex(spec, claude_cli_obj, mode, tag, codex_profile=None):
     # `codex_sandbox_cho_mode` còn đọc cờ JAVIS_CODEX_SANDBOX: trong Docker, bubblewrap không
     # chạy nổi nên rào đó không phải "chặt hơn" mà là "chết hẳn", và cờ là đường thoát.
     cc.sandbox = codex_sandbox_cho_mode(mode or getattr(claude_cli_obj, "javis_mode", None) or "full")
+    cc.vault_root = getattr(claude_cli_obj, "javis_vault", None)   # ảnh Codex vẽ về đúng brain
     if codex_profile:
         try:
             cc.profile = codex_profile()   # profile javis = thấy MCP của Javis (POS, connector...)

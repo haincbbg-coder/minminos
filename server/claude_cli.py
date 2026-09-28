@@ -1311,6 +1311,9 @@ class CodexCLI:
         # Việc nền đặt 'read-only' / 'workspace-write' để khớp mode suggest/auto của loop -
         # Codex KHÔNG có allowlist per-call như Claude nên đây là lớp chặn thật sự duy nhất.
         self.sandbox = None
+        # Brain nhận ảnh Codex tự vẽ (anh_codex). None = dùng cwd. Phiên trang Coding có cwd là
+        # repo nên caller phải đặt rõ, kẻo ảnh rơi vào cây mã nguồn thay vì brain.
+        self.vault_root = None
 
     def is_available(self) -> bool:
         return self.cli_path is not None
@@ -1345,6 +1348,7 @@ class CodexCLI:
             yield {"type": "error", "content": "Không tìm thấy Codex CLI (cần ChatGPT login qua codex)."}
             return
         resume_requested = bool(self.session_id)
+        t_bat_dau = time.time()
         args = self._build_args()
         # Codex exec không nhận system-prompt riêng → gộp instructions (vai trò agent) vào đầu prompt.
         # Prompt bơm qua STDIN (positional "-") thay vì argv - né trần command line 32767 ký tự
@@ -1522,6 +1526,16 @@ class CodexCLI:
                 # phải đi sửa ở tầng container.
                 if sandbox_hong:
                     final_text = (final_text + "\n\n" if final_text else "") + _NOTE_SANDBOX_HONG
+                # Ảnh Codex vẽ bằng skill imagegen riêng nằm ở ~/.codex/generated_images, ngoài
+                # brain: chép về attachments/ và nhúng lại để khung chat, Telegram hiện được.
+                # Làm ở đây thì mọi đường gọi Codex (chat, Telegram, workflow, việc nền) cùng có.
+                try:
+                    import anh_codex
+                    final_text, _ = anh_codex.dua_anh_ve_brain(
+                        final_text, self.session_id or "", t_bat_dau,
+                        self.vault_root or self.cwd)
+                except Exception as e:
+                    print(f"[anh codex] {type(e).__name__}: {e}", file=sys.stderr)
                 yield {"type": "final", "content": final_text, "session_id": self.session_id,
                        # Codex đã tính cached_input_tokens trong input_tokens.
                        "tokens_in": u.get("input_tokens") or 0,

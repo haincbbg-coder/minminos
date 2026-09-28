@@ -3427,6 +3427,8 @@ def _apply_antigravity_hub(cli, vault_root=None, mode="full"):
 def _apply_codex_hub(cli, vault_root=None):
     """Gắn profile MCP và brain hiện tại vào riêng tiến trình Codex."""
     cli.profile = _write_codex_profile()
+    # Ảnh Codex tự vẽ về đúng brain, kể cả phiên trang Coding đang chạy trong repo (anh_codex).
+    cli.vault_root = vault_root
     if _hub_enabled():
         # THAY override brain cũ chứ không nối thêm: engine Telegram giữ một CodexCLI qua nhiều
         # lượt, và nối thêm thì đổi brain qua lại để Codex dùng giá trị brain đứng sau.
