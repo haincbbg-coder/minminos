@@ -4,6 +4,11 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.74] - 2026-09-28
+### Sửa lỗi
+- **Groq Whisper bịa câu thì giữ câu trình duyệt đã nghe:** khi audio thiếu tiếng, Groq hay tự đẻ ra lời kết video ("Cảm ơn các bạn đã theo dõi", "nhận thêm thông tin trong phần bình luận") và đè lên câu đúng. Nay câu Groq lệch hẳn với câu trình duyệt thì bị bỏ.
+- Muốn câu trong bong bóng nháp vào thẳng khung chat (nhanh hơn, không chờ Groq): chọn **Nghe bằng: Trình duyệt** trong Cài đặt, mục Giọng nói.
+
 ## [0.64.73] - 2026-09-27
 ### Sửa lỗi
 - **Chọn Groq Whisper thì câu gửi đi là chữ Groq nghe được**, như trước bản 0.64.32. Từ 0.64.32, chữ Groq chỉ được dùng để đối chiếu, câu gửi đi vẫn là chữ của trình duyệt, nên tiếng Anh xen tiếng Việt bị chép thành "clash", "cloud Play" dù đã chọn Groq. Chữ của trình duyệt vẫn hiện tạm trong lúc đang nói.

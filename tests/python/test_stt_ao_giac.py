@@ -43,6 +43,10 @@ AO = [
     "Các bạn nhớ subscribe kênh nhé",
     "Subscribe to my channel for more videos",
     "Thanks for watching!",
+    # 0.64.74, gặp thật 28/09 (Groq thay bản nháp đúng của trình duyệt bằng câu này):
+    "Cảm ơn các bạn đã theo dõi và",
+    "Cảm ơn các bạn đã xem video",
+    "Các bạn có thể nhận thêm thông tin về các bài hát của mình trong phần bình luận.",
     "[Music]",
     "♪♪♪",
 ]
@@ -74,7 +78,24 @@ THAT = [
     "Kênh của mình tháng này ra bao nhiêu đơn?",
     "Các bạn bên kho báo hết hàng rồi",
     "Soạn giúp mình tin nhắn cảm ơn khách đã ủng hộ shop nhé",
+    # Đối ứng với hai mẫu 0.64.74: lời thật có "cảm ơn các bạn", "thông tin", "bình luận".
+    "Cảm ơn các bạn đã giúp mình xử lý đơn hôm qua",
+    "Gửi thêm thông tin sản phẩm cho khách giúp mình",
+    "Xem phần bình luận trên bài đăng mới nhất có gì",
+    "Nhận thêm thông tin đơn hàng qua Zalo nhé",
 ]
+# Hàm đối chiếu với bản nháp Web Speech (stt.khop_ban_nhap, 0.64.74), đo trên cặp thật.
+for nhap, nghe in [("clash là dịch vụ như chưa đám mây", "Cloudflare là dịch vụ lưu trữ đám mây"),
+                   ("Quốc cơ ford plat form", "Workers for Platforms"),
+                   ("cave là gì", "KV là gì"),
+                   ("today How are you I'm fine thank you", "Today, how are you? I'm fine, thank you.")]:
+    check(f"khớp bản nháp (Groq sửa đúng): {nhap!r}", stt.khop_ban_nhap(nhap, nghe)[0])
+for nhap, nghe in [("today How are you I'm fine thank you chào em nhé", "Cảm ơn các bạn đã theo dõi và"),
+                   ("mở trang cài đặt giúp anh", "Cảm ơn các bạn đã xem video"),
+                   ("anh đang tìm hiểu gói 5 đô của Cloudflare", "Hẹn gặp lại các bạn trong những video tiếp theo"),
+                   ("cho anh hỏi về GitHub Actions", "Các bạn có thể nhận thêm thông tin về các bài hát")]:
+    check(f"lệch bản nháp (Groq bịa): {nghe!r}", not stt.khop_ban_nhap(nhap, nghe)[0])
+check("không có bản nháp thì không chặn", stt.khop_ban_nhap("", "bất kỳ")[0])
 for s in THAT:
     check(f"giữ nguyên lời thật: {s[:40]!r}", L(s) == s)
 

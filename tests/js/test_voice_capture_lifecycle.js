@@ -85,6 +85,18 @@ test('selected Groq transcript replaces the browser draft', async () => {
   await voice._quaStt('clash là dịch vụ như chưa đám mây', t => { received = t; });
   assert.equal(received, 'Cloudflare là dịch vụ lưu trữ đám mây');
 });
+// 0.64.74: bản nháp đi kèm để server đối chiếu (Groq bịa câu kết video thì giữ bản nháp).
+test('browser draft is uploaded with the audio for cross-checking', async () => {
+  const { voice, context } = setup(() => {});
+  voice.sttUpload = true; voice._recComplete = true;
+  voice._stopRecorder = async () => new Blob(['x'.repeat(3000)]);
+  let sent;
+  context.fetch = async (url, init) => { sent = init.body.get('draft'); return {ok: true, json: async () => ({ok: false, ly_do: 'lech_ban_nhap'})}; };
+  let received;
+  await voice._quaStt('today How are you chào em nhé', t => { received = t; });
+  assert.equal(sent, 'today How are you chào em nhé');
+  assert.equal(received, 'today How are you chào em nhé');
+});
 test('Groq failure keeps the browser draft', async () => {
   const { voice, context } = setup(() => {});
   voice.sttUpload = true; voice._recComplete = true;

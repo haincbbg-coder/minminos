@@ -238,6 +238,9 @@ class JavisVoice {
         const ext = blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm";
         fd.append("file", blob, "voice." + ext);
         fd.append("lang", lang);
+        // Bản nháp của Web Speech đi kèm: server đối chiếu, Groq BỊA câu kết video (audio thiếu
+        // tiếng) thì trả ok=false và ta giữ bản nháp (0.64.74, stt.khop_ban_nhap).
+        fd.append("draft", text);
         const r = await fetch(url, { method: "POST", body: fd, signal: ctl.signal });
         const d = await r.json();
         return r.ok && d && d.ok && String(d.text || "").trim() ? String(d.text).trim() : text;

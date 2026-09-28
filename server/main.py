@@ -12040,7 +12040,7 @@ async def tts(
 # Voice V2 - nghe bằng Groq, tuỳ chọn giọng nói, nghe nói thẳng (Live)
 # ============================================
 @app.post("/stt")
-async def stt_route(file: UploadFile = File(...), lang: str = Form("")):
+async def stt_route(file: UploadFile = File(...), lang: str = Form(""), draft: str = Form("")):
     """Dashboard gửi file ghi âm (webm/opus) sau khi hết câu -> chữ qua Groq Whisper.
 
     Dùng lại đúng `stt.groq_nghe` của kênh Telegram/Zalo. Trả `{"ok": true, "text": ...}` hoặc
@@ -12061,6 +12061,16 @@ async def stt_route(file: UploadFile = File(...), lang: str = Form("")):
     res = await stt.groq_nghe(data, file.filename or "voice.webm", key, v.get("stt_model") or "", ngon_ngu,
                               hotwords=nghe_sua.goi_y_whisper(_tv))
     _text = nghe_sua.sua(res.get("text", ""), _tv) if res.get("ok") else res.get("text", "")
+    # Đối chiếu với bản nháp của trình duyệt (stt.khop_ban_nhap): Groq nhận audio thiếu tiếng
+    # thì BỊA câu kết video, lệch hẳn bản nháp. Lệch thì trả ok=false để trình duyệt giữ bản
+    # nháp. Log chỉ ghi SỐ ĐO (độ dài, độ giống), không ghi lời người dùng, để lần sau lần ra
+    # vì sao audio thiếu tiếng.
+    if res.get("ok") and draft.strip():
+        _dung, _tu, _am = stt.khop_ban_nhap(draft, _text)
+        print(f"[stt] audio={len(data)//1024}KB nhap={len(draft.split())}tu groq={len(_text.split())}tu "
+              f"giong_tu={_tu} giong_am={_am} -> {'groq' if _dung else 'GIU NHAP'}", file=sys.stderr)
+        if not _dung:
+            return {"ok": False, "text": "", "ly_do": "lech_ban_nhap", "model": res.get("model", "")}
     return {"ok": bool(res.get("ok")), "text": _text, "ly_do": res.get("ly_do", ""),
             "model": res.get("model", "")}
 

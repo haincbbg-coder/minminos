@@ -46,6 +46,10 @@ _AO_GIAC = [re.compile(p, re.I) for p in (
     # "Cảm ơn các bạn đã theo dõi và hẹn gặp lại" - phải có ĐỦ ba mảnh mới bắt, vì riêng
     # "cảm ơn" hay "theo dõi" thì người dùng nói suốt.
     r"c[aả]m\s*[oơ]n\s+c[aá]c\s+b[aạ]n[^.!?]{0,40}theo\s*d[oõ]i[^.!?]{0,40}h[eẹ]n\s+g[aặ]p\s+l[aạ]i",
+    # 0.64.74, gặp thật 28/09: hai câu kết video không có "hẹn gặp lại" đi kèm.
+    r"c[aả]m\s*[oơ]n\s+c[aá]c\s+b[aạ]n\s+đ[aã]\s+(theo\s*d[oõ]i|xem)(\s+video)?",
+    r"(c[aá]c\s+b[aạ]n\s+)?(c[oó]\s+th[eể]\s+)?nh[aậ]n\s+th[eê]m\s+th[oô]ng\s+tin[^.!?]{0,60}"
+    r"ph[aầ]n\s+b[iì]nh\s+lu[aậ]n",
     r"subscribe\s+to\s+(my|our|the|this)\s+channel",
     r"thanks?\s+(you\s+)?for\s+watching",
     r"h[eẹ]n\s+g[aặ]p\s+l[aạ]i[^.!?]{0,40}video\s+(ti[eế]p\s+theo|sau)",
@@ -114,6 +118,42 @@ def loc_ao_giac(text) -> str:
         out = re.sub(r"[ \t]{2,}", " ", out)       # dọn khoảng trống ngay vết cắt, chừa xuống dòng
     out = out.strip()
     return out if _CO_CHU.search(out) else ""
+
+
+# ---- Đối chiếu chữ Groq với bản nháp của trình duyệt (0.64.74) ----
+# Dashboard chạy song song hai bộ nghe: Web Speech cho chữ tạm (bản nháp), MediaRecorder gửi
+# Groq. 0.64.73 cho chữ Groq thay bản nháp. Chủ dự án 28/09 gửi ảnh: bản nháp đúng 100%
+# ("today How are you I'm fine thank you chào em nhé"), còn tin lưu vào hội thoại là "Cảm ơn
+# các bạn đã theo dõi và", "Các bạn có thể nhận thêm thông tin về các bài hát của mình trong
+# phần bình luận" - Whisper BỊA vì audio nó nhận thiếu tiếng nói. Groq sửa đúng thì hai bản
+# vẫn gần nhau về ÂM ("clash là dịch vụ" / "Cloudflare là dịch vụ"); Groq bịa thì không.
+# Đo trên cặp thật: sửa đúng giống âm 0,80 tới 1,0; câu bịa 0,06 tới 0,44.
+NGUONG_KHOP_AM = 0.6
+NGUONG_KHOP_TU = 0.4
+
+
+def khop_ban_nhap(nhap, nghe) -> tuple:
+    """(có dùng được chữ Groq không, độ giống theo chữ, độ giống theo âm).
+
+    Bản nháp rỗng thì không có gì để đối chiếu: dùng Groq như cũ.
+    """
+    import difflib
+    a, b = str(nhap or "").strip(), str(nghe or "").strip()
+    if not a or not b:
+        return True, 1.0, 1.0
+    wa = [w.casefold() for w in _CHU_THUONG.findall(a)]
+    wb = [w.casefold() for w in _CHU_THUONG.findall(b)]
+    tu = difflib.SequenceMatcher(None, wa, wb, autojunk=False).ratio() if wa and wb else 0.0
+    am = 0.0
+    try:
+        import nghe_sua
+        import phien_am
+        ka = nghe_sua.khoa_am("".join(phien_am.doc_cum(a).split()))
+        kb = nghe_sua.khoa_am("".join(phien_am.doc_cum(b).split()))
+        am = difflib.SequenceMatcher(None, ka, kb, autojunk=False).ratio() if ka and kb else 0.0
+    except Exception:
+        pass
+    return (tu >= NGUONG_KHOP_TU or am >= NGUONG_KHOP_AM), round(tu, 2), round(am, 2)
 
 
 _CHU_THUONG = re.compile(r"[^\W_]+", re.U)
