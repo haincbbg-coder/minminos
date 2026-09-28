@@ -89,6 +89,9 @@ class _CodexGia:
         return True
 
     async def query(self, prompt):
+        # Codex tự thử lại giữa lượt (bug 2026-09-28): phải thành dòng trạng thái, không lỗi.
+        yield {"type": "retry", "content": "Reconnecting... 2/5 (stream disconnected before "
+               "completion: websocket closed by server before response.completed)"}
         yield {"type": "text", "content": "Vâng anh, Javis đây."}
         # Gói 'final' CÓ tokens_in chính là gói kích hoạt dòng `_ctx_in += ...`.
         yield {"type": "final", "content": "Vâng anh, Javis đây.",
@@ -172,6 +175,10 @@ def main_test(monkeypatch, tmp_path):
     check("thread Codex được ghi lại để lượt sau resume",
           (store.get_session("phien-codex") or {}).get("codex_thread_id") == "thread-codex-1")
     check("có stream chữ ra trước khi chốt", "stream" in loai)
+    # 4. Tin "Reconnecting... 2/5" của Codex là trạng thái tạm, không phải bong bóng lỗi.
+    check("tin Codex tự kết nối lại hiện thành dòng trạng thái (lần 2/5)",
+          any(g.get("type") == "status" and "kết nối lại" in (g.get("content") or "")
+              and "2/5" in (g.get("content") or "") for g in ws.sent))
 
 
 def test_luot_chat_codex_khong_no(monkeypatch, tmp_path):

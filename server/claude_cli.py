@@ -1296,6 +1296,94 @@ def codex_sandbox_cho_mode(mode: str) -> Optional[str]:
     return {"suggest": "read-only", "auto": "workspace-write", "full": None}.get(mode or "full")
 
 
+# Đường truyền của Codex tới ChatGPT (bug 2026-09-28 trên VPS). Codex mặc định mở WebSocket
+# `wss://chatgpt.com/backend-api/codex/responses`. Ở môi trường mà WebSocket bị đóng giữa chừng
+# ("websocket closed by server before response.completed"), MỖI lượt Codex thử lại 5 lần rồi
+# mới tự lùi về HTTPS, và mỗi lần thử lại in một sự kiện `error` "Reconnecting... n/5". Mà
+# `codex exec` là tiến trình mới mỗi lượt, nên nó không nhớ đã lùi: lượt nào cũng chịu lại.
+#
+# Không có cờ nào tắt được: `features.responses_websockets` đã bị gỡ, `prefer_websockets` do máy
+# chủ OpenAI khai theo model, còn provider dựng sẵn `openai` thì cấm ghi đè. Lối ra là khai một
+# provider RIÊNG cùng địa chỉ ChatGPT, cùng đăng nhập (requires_openai_auth) nhưng
+# supports_websockets=false. Đã thử thật với 0.147: trả lời được, resume thread tạo từ provider
+# `openai` vẫn giữ đủ ngữ cảnh.
+#
+# JAVIS_CODEX_TRANSPORT: auto (mặc định) = WebSocket như Codex, trừ khi máy này vừa thấy
+# WebSocket hỏng thì đi HTTPS một thời gian; http = luôn HTTPS; ws = luôn để Codex tự quyết.
+CODEX_HTTP_PROVIDER = "javis-chatgpt-http"
+_WS_HONG_FILE = "codex_ws_hong.json"
+_WS_HONG_TTL = 3 * 86400        # hết hạn thì thử lại WebSocket: lỗi phía mạng hay phía OpenAI đều có lúc hết
+_RECONNECT_RE = re.compile(r"^\s*(Reconnecting\.\.\.|Falling back from WebSockets)", re.I)
+
+
+def _codex_home() -> Path:
+    home = os.getenv("CODEX_HOME")
+    return Path(home) if home else _home_dir() / ".codex"
+
+
+def _codex_dung_provider_rieng() -> bool:
+    """Người dùng tự trỏ Codex sang provider khác (proxy, Ollama...) trong config.toml thì
+    Javis không được giành lấy: provider HTTPS của Javis chỉ thay cho `openai` mặc định."""
+    try:
+        import tomllib
+        with open(_codex_home() / "config.toml", "rb") as f:
+            prov = str((tomllib.load(f) or {}).get("model_provider") or "").strip()
+    except Exception:
+        return False
+    return bool(prov) and prov not in ("openai", CODEX_HTTP_PROVIDER)
+
+
+def ghi_codex_ws_hong(ly_do: str = "") -> None:
+    """Nhớ rằng WebSocket của Codex vừa hỏng trên máy này (ghi đè mốc cũ)."""
+    try:
+        f = _state_dir() / _WS_HONG_FILE
+        f.write_text(json.dumps({"ts": time.time(), "ly_do": str(ly_do)[:300]},
+                                ensure_ascii=False), encoding="utf-8")
+    except Exception as e:
+        print(f"[codex ws] không ghi được dấu hỏng: {e}", file=sys.stderr)
+
+
+def codex_transport() -> str:
+    """'http' hoặc 'ws' cho lượt Codex sắp chạy."""
+    chon = str(os.getenv("JAVIS_CODEX_TRANSPORT", "auto")).strip().lower()
+    if chon in ("http", "https", "sse"):
+        return "http" if not _codex_dung_provider_rieng() else "ws"
+    if chon in ("ws", "websocket", "websockets", "off"):
+        return "ws"
+    try:
+        d = json.loads((_state_dir() / _WS_HONG_FILE).read_text(encoding="utf-8"))
+        moi = time.time() - float(d.get("ts") or 0) < _WS_HONG_TTL
+    except Exception:
+        moi = False
+    return "http" if moi and not _codex_dung_provider_rieng() else "ws"
+
+
+def codex_http_config() -> list:
+    """Các `-c` khai provider HTTPS của Javis và chọn nó."""
+    p = f"model_providers.{CODEX_HTTP_PROVIDER}"
+    return [f'{p}.name="OpenAI"',
+            f'{p}.base_url="https://chatgpt.com/backend-api/codex"',
+            f'{p}.wire_api="responses"',
+            f"{p}.requires_openai_auth=true",
+            f"{p}.supports_websockets=false",
+            f'model_provider="{CODEX_HTTP_PROVIDER}"']
+
+
+def la_thong_bao_ket_noi_lai(msg: str) -> bool:
+    """Dòng Codex tự thử lại / tự lùi đường truyền: tin tạm thời, KHÔNG phải lỗi của lượt."""
+    return bool(_RECONNECT_RE.match(str(msg or "")))
+
+
+def cau_ket_noi_lai(msg: str) -> str:
+    """Dòng trạng thái tiếng Việt cho một tin thử lại của Codex (hiện tạm, không thành bong bóng)."""
+    s = str(msg or "")
+    if s.lower().lstrip().startswith("falling back"):
+        return "Codex chuyển sang đường HTTPS để tới ChatGPT…"
+    m = re.search(r"(\d+)\s*/\s*(\d+)", s)
+    lan = f" (lần {m.group(1)}/{m.group(2)})" if m else ""
+    return f"Kết nối tới ChatGPT bị ngắt, Codex đang tự kết nối lại{lan}…"
+
+
 class CodexCLI:
     def __init__(self, cwd: Optional[str] = None, tag: str = "chat", model: Optional[str] = None,
                  instructions: Optional[str] = None):
@@ -1314,6 +1402,8 @@ class CodexCLI:
         # Brain nhận ảnh Codex tự vẽ (anh_codex). None = dùng cwd. Phiên trang Coding có cwd là
         # repo nên caller phải đặt rõ, kẻo ảnh rơi vào cây mã nguồn thay vì brain.
         self.vault_root = None
+        # 'http' / 'ws' ép đường truyền; None = codex_transport() tự chọn mỗi lượt.
+        self.transport = None
 
     def is_available(self) -> bool:
         return self.cli_path is not None
@@ -1337,6 +1427,9 @@ class CodexCLI:
             args += ["-p", self.profile]
         for c in (self.extra_config or []):
             args += ["-c", c]
+        if (self.transport or codex_transport()) == "http":
+            for c in codex_http_config():
+                args += ["-c", c]
         args += ["exec", "--json", "--skip-git-repo-check"]
         if self.session_id:
             args += ["resume", self.session_id]
@@ -1515,6 +1608,13 @@ class CodexCLI:
                     # khuôn còn đổi theo bản CLI. Caller tự moi (channel_context
                     # .candidate_paths_from_tool) thay vì tầng này đoán một khuôn cố định.
                     yield {"type": "tool_call", "name": str(name)[:80], "item": it}
+                elif itype == "error" and la_thong_bao_ket_noi_lai(it.get("message")):
+                    # Cùng loại tin với nhánh `error` ở dưới, chỉ khác khuôn (bản CLI in cảnh báo
+                    # dạng item). Không đẩy lên thành bước tool.
+                    msg = str(it.get("message") or "")
+                    if "websocket" in msg.lower():
+                        ghi_codex_ws_hong(msg)
+                    yield {"type": "retry", "content": msg}
                 elif itype:
                     # Item lạ (vd bản vá file) - KHÔNG dựng thành "đang gọi tool" để khỏi ồn,
                     # nhưng vẫn đẩy payload lên cho caller moi đường dẫn file vừa ghi.
@@ -1540,6 +1640,14 @@ class CodexCLI:
                        # Codex đã tính cached_input_tokens trong input_tokens.
                        "tokens_in": u.get("input_tokens") or 0,
                        "tokens_out": u.get("output_tokens") or 0}
+            elif t in ("error", "stream.error") and la_thong_bao_ket_noi_lai(ev.get("message")):
+                # "Reconnecting... 2/5 (...)": Codex đang tự thử lại, lượt CHƯA hỏng. Đẩy lên thành
+                # lỗi là người dùng thấy năm bong bóng đỏ cho một lượt rồi vẫn có câu trả lời.
+                # WebSocket hỏng thì nhớ lại để lượt sau đi thẳng HTTPS (codex_transport).
+                msg = str(ev.get("message") or "")
+                if "websocket" in msg.lower():
+                    ghi_codex_ws_hong(msg)
+                yield {"type": "retry", "content": msg}
             elif t in ("error", "turn.failed", "thread.error", "stream.error"):
                 msg = ev.get("message") or (ev.get("error") or {}).get("message") or json.dumps(ev)[:200]
                 yield {"type": "error", "content": "Codex: " + str(msg),

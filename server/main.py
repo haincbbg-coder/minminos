@@ -13119,6 +13119,11 @@ async def websocket_endpoint(ws: WebSocket):
                                 usage_store.record("codex", actual_model, ev.get("tokens_in", 0), ev.get("tokens_out", 0))
                                 _CONTEXT_RUNTIME.record_usage(
                                     runtime_trace, ev.get("tokens_in", 0), ev.get("tokens_out", 0))
+                            elif et == "retry":
+                                # Codex tự thử lại: dòng trạng thái tạm, không phải bong bóng lỗi.
+                                await ws.send_text(json.dumps({
+                                    "type": "status",
+                                    "content": claude_cli.cau_ket_noi_lai(ev.get("content"))}))
                             elif et == "error":
                                 if ev.get("resume_failed"):
                                     resume_failed = True
@@ -17753,6 +17758,8 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
                 elif et == "text":
                     out += ev.get("content") or ""
                     await _p("✍ Đang soạn câu trả lời…")
+                elif et == "retry":
+                    await _p("↻ " + claude_cli.cau_ket_noi_lai(ev.get("content")))
                 elif et == "final":
                     out = ev.get("content") or out
                     usage_store.record(

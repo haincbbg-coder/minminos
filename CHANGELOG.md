@@ -4,6 +4,11 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.76] - 2026-09-28
+### Sửa lỗi
+- **Chat bằng ChatGPT không còn hiện liền mấy bong bóng "Codex: Reconnecting... 2/5".** Đó là Codex tự kết nối lại chứ chưa phải lỗi, nay chỉ hiện thành một dòng trạng thái mờ trong lúc chờ.
+- **Máy mà kết nối WebSocket tới ChatGPT hay bị ngắt (thường gặp trên VPS) giờ tự chuyển sang đường HTTPS** từ lượt sau, khỏi mất năm lần thử lại mỗi lượt. Sau 3 ngày Javis tự thử lại đường cũ.
+
 ## [0.64.75] - 2026-09-28
 ### Sửa lỗi
 - **Nhờ Javis vẽ ảnh khi đang dùng ChatGPT (Codex), ảnh hiện ngay trong khung chat.** Trước đây Codex vẽ bằng công cụ riêng rồi cất ảnh ngoài brain, nên link bấm vào không mở được, kèm dòng "không tìm thấy trong brain", và phải tự đi lưu ảnh về.
