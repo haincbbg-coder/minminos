@@ -23,10 +23,46 @@ MAX_VET_TOOL = 6        # số tên công cụ hiện trên dòng vết, dư th�
 RE_TEN_TOOL = re.compile(r"^⚙[^:]*:\s*(.+)$")
 
 
+MAX_TEN_TOOL = 40       # một tên trên dòng vết; dài hơn là đã lọt thứ không phải tên
+
+# Loại việc → nhãn người đọc được. Cùng họ tên với LOAI trong dashboard/chat-steps.js.
+_NHAN_LOAI = (
+    (re.compile(r"^(bash|shell|command_execution|local_shell_call|run_shell_command|"
+                r"run_terminal_command|run_command|exec)$"), "Chạy lệnh"),
+    (re.compile(r"^(websearch|web_search|web_search_call|google_search|search_web)$"),
+     "Tìm trên web"),
+    (re.compile(r"^(webfetch|web_fetch|read_url_content|fetch_url)$"), "Đọc web"),
+)
+# Thứ trông như CÂU LỆNH chứ không phải tên công cụ: có khoảng trắng, hoặc là đường dẫn.
+_GIONG_LENH = re.compile(r"\s|^[/\\~.]")
+
+
+def nhan_ngan(ten) -> str:
+    """Tên công cụ → nhãn ngắn cho dòng trạng thái/dòng vết của bot.
+
+    Bug 2026-09-28 (Telegram, engine Codex): dòng vết in nguyên
+    `/bin/sh -lc "sed -n '1,260p' skills/..."` vì Codex lấy câu lệnh làm tên. Dòng vết nằm lại
+    vĩnh viễn trong chat nên chỉ được chứa TÊN việc; lệnh cụ thể không phải việc của nó.
+    Tên thường (pos_statistics, Read) giữ nguyên, tên MCP bỏ tiền tố máy chủ."""
+    t = str(ten or "").strip().strip("`").strip()
+    if not t:
+        return ""
+    m = re.match(r"^mcp__.+?__(.+)$", t)
+    if m:
+        t = m.group(1)
+    for mau, nhan in _NHAN_LOAI:
+        if mau.match(t.lower()):
+            return nhan
+    if _GIONG_LENH.search(t):
+        return "Chạy lệnh"
+    return t if len(t) <= MAX_TEN_TOOL else t[:MAX_TEN_TOOL - 1] + "…"
+
+
 def ten_tool(txt) -> str:
-    """Bóc tên công cụ từ một chuỗi tiến trình. "" nếu chuỗi đó không nói về công cụ nào."""
+    """Bóc tên công cụ từ một chuỗi tiến trình, đã rút thành nhãn ngắn (`nhan_ngan`).
+    "" nếu chuỗi đó không nói về công cụ nào."""
     m = RE_TEN_TOOL.match(str(txt or "").strip())
-    return m.group(1).strip().strip("`").strip() if m else ""
+    return nhan_ngan(m.group(1)) if m else ""
 
 
 def dong_vet(tools, giay) -> str:

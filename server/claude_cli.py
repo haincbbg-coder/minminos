@@ -1602,7 +1602,11 @@ class CodexCLI:
                         yield {"type": "text", "content": txt}
                 elif itype in ("mcp_tool_call", "command_execution", "function_call",
                                "tool_call", "local_shell_call", "web_search_call"):
-                    name = it.get("name") or it.get("server") or it.get("command") or itype
+                    # Tên = LOẠI việc, không phải nguyên câu lệnh. Trước 0.64.77 lệnh shell lấy
+                    # `command` làm tên, nên Telegram in nguyên `/bin/sh -lc "sed -n ..."` lên dòng
+                    # vết. Câu lệnh vẫn đi kèm trong `item` để tool_label.chi_tiet rút ra khi cần.
+                    # mcp_tool_call của Codex có `server` + `tool`: tên tool mới nói việc gì.
+                    name = it.get("tool") or it.get("name") or it.get("server") or itype
                     # Kèm `item` THÔ. Codex không có trường file_path chuẩn hoá như Claude:
                     # đường dẫn nằm rải trong changes[]/arguments/command tuỳ loại item, và
                     # khuôn còn đổi theo bản CLI. Caller tự moi (channel_context

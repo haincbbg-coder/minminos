@@ -4,6 +4,11 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.77] - 2026-09-28
+### Sửa lỗi
+- **Telegram và Zalo không còn in nguyên câu lệnh máy** kiểu `/bin/sh -lc "sed -n ..."` vào dòng trạng thái khi dùng ChatGPT. Dòng đó nay chỉ ghi gọn việc đã làm, ví dụ "⚙ Chạy lệnh · pos_statistics · 2m39s".
+- Trên trang Chat, bước chạy lệnh của ChatGPT hiện đúng nhãn "Chạy lệnh: ..." như các bộ não khác.
+
 ## [0.64.76] - 2026-09-28
 ### Sửa lỗi
 - **Chat bằng ChatGPT không còn hiện liền mấy bong bóng "Codex: Reconnecting... 2/5".** Đó là Codex tự kết nối lại chứ chưa phải lỗi, nay chỉ hiện thành một dòng trạng thái mờ trong lúc chờ.

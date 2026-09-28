@@ -730,7 +730,10 @@ class TelegramBot(HangLuot):
                 return
             _last[0] = now
             await self._typing(client, chat)
-            await self._edit_status(client, chat, status_mid, "⏳ " + (txt or "Đang xử lý…"))
+            # Chuỗi nói về công cụ thì hiện NHÃN đã rút gọn, không hiện nguyên chuỗi engine gửi
+            # (Codex từng gửi cả câu lệnh shell dài vài dòng làm "tên").
+            await self._edit_status(client, chat, status_mid,
+                                    "⏳ " + (f"⚙ {ten}…" if ten else (txt or "Đang xử lý…")))
 
         try:
             try:
