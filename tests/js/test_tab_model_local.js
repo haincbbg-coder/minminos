@@ -132,7 +132,7 @@ check("nói thẳng VPS chạy model local sẽ chậm",
 check("model không chat được thì NÓI RÕ lý do, không lặng lẽ bỏ nút",
   /ol-row-note/.test(OL) && /ol\.embed_note/.test(OL) && !!VI["ol.embed_note"]);
 check("và câu đó nói cả việc Javis chưa dùng tới loại này",
-  /Javis chưa dùng/.test(VI["ol.embed_note"] || ""));
+  /MinMin chưa dùng/.test(VI["ol.embed_note"] || ""));
 // Quyết định "chat được hay không" phải do SERVER chốt: chỉ nó mới hỏi được Ollama qua
 // /api/show. Đoán qua tên ở giao diện trượt đúng những cái phổ biến nhất (all-minilm, bge-m3).
 check("giao diện đọc cờ của server chứ không tự đoán",
