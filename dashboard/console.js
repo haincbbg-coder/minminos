@@ -6471,7 +6471,7 @@
         <div class="qs-field">
           <label class="qs-lbl" for="v2Hotwords">${esc(t("settings.v2_hotwords"))}</label>
           <input class="js-input" id="v2Hotwords" value="${esc(v.hotwords || "")}" placeholder="${esc(t("settings.v2_hotwords_ph"))}">
-          <div class="gcard-meta">${esc(t("settings.v2_hotwords_note", { goc: (o.hotwords_goc || ["Javis"]).join(", ") }))}</div>
+          <div class="gcard-meta">${esc(t("settings.v2_hotwords_note", { goc: (o.hotwords_goc || ["MinMin"]).join(", ") }))}</div>
         </div>
           <div class="qs-hint">${esc(t("settings.v2_loc_tap_am_note"))}</div>
           <div id="v2AdvancedEnd"></div>
