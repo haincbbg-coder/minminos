@@ -72,7 +72,7 @@ check("thiếu cả tên lẫn content: không lòi undefined", trong.indexOf("u
 
 // ---- 4. Sự kiện KHÔNG phải tool_call thì không sinh bước ---------------------------------
 check("status không sinh bước",
-  S.nhan(null, { type: "status", content: "Javis đang suy nghĩ..." }).ds.length === 0);
+  S.nhan(null, { type: "status", content: "MinMin đang suy nghĩ..." }).ds.length === 0);
 check("stream không sinh bước",
   S.nhan(null, { type: "stream", content: "Doanh thu" }).ds.length === 0);
 

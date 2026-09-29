@@ -12688,7 +12688,7 @@ async def websocket_endpoint(ws: WebSocket):
 
             await ws.send_text(json.dumps({
                 "type": "status",
-                "content": "Javis đang suy nghĩ..."
+                "content": "MinMin đang suy nghĩ..."
             }))
 
             # Dựng prompt cũ theo nhu cầu. Fast Path không đọc/nạp memory hoặc lịch sử cũ.
