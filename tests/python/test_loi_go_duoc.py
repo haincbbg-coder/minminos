@@ -131,7 +131,7 @@ with tempfile.TemporaryDirectory() as td:
 
             mc = {o["id"]: o for o in mcp_store.orphans()}
             check("orphans() nêu đúng cái lạ", set(mc) == {"c-la"})
-            check("và nói rõ nó KHÔNG có trong kho (phải cài từ Javis Store, không phải cài lại)",
+            check("và nói rõ nó KHÔNG có trong kho (phải cài từ MinMin Store, không phải cài lại)",
                   mc["c-la"]["co_trong_kho"] is False)
 
             # Gỡ composio -> kết nối theo nó thành mồ côi và phải IM.
@@ -204,8 +204,8 @@ check("và có băng báo kết nối đang dừng vì thiếu dịch vụ", "ba
 # Kết nối mồ côi vì khuôn đã dọn sang kho (0.55.36 dọn 16 cái) phải được chỉ ĐÚNG đường về.
 # Câu cũ xui người dùng nâng cấp app hoặc bỏ kết nối đi. Từ nay câu đó vừa sai (nâng cấp
 # không mọc lại khuôn nữa) vừa nguy hiểm (bỏ kết nối là vứt luôn credential đã đấu).
-check("mồ côi vì khuôn ra kho thì chỉ sang Javis Store, không xui xoá kết nối",
-      "Javis Store" in src_js and "data-mocoi" in src_js)
+check("mồ côi vì khuôn ra kho thì chỉ sang MinMin Store, không xui xoá kết nối",
+      "MinMin Store" in src_js and "data-mocoi" in src_js)
 check("CANARY: không còn xui người dùng xoá kết nối để chữa mồ côi",
       "cập nhật app, hoặc xoá kết nối" not in src_js)
 check("thẻ 'Tự thêm' không có nút gỡ", 'con.id === "custom" ? ""' in src_js)
