@@ -69,18 +69,29 @@ check("và chuỗi dài không dấu cách cũng ngắt được", /overflow-wra
 // trong file mới thắng (hai bên cùng độ ưu tiên 0,1,0).
 check("luật của khung đứng sau .code-block nên thắng được luật chung",
       CSS.indexOf(".jv-ap-code {") > CSS.indexOf(".code-block {"));
-check("tắt nút thì quay về cuộn ngang như cũ",
-      /\.jv-artpanel\.jv-ap-nowrap \.jv-ap-code \{[^}]*white-space:\s*pre[;\s}]/.test(CSS));
-check("có nút gạt xuống dòng, bật sẵn", /var wrapMa = true;/.test(JS)
-      && /data-act="wrap" aria-pressed="true"/.test(JS));
-check("bấm nút chỉ lật một lớp trên khung, KHÔNG vẽ lại nội dung",
-      /act === "wrap"\) \{ wrapMa = !wrapMa; syncWrap\(\); \}/.test(JS));
-check("nút chỉ hiện khi đang nhìn mã",
-      /classList\.toggle\("jv-ap-oncode"/.test(JS)
-      && /\.jv-artpanel:not\(\.jv-ap-oncode\) \.jv-ap-tog \{[^}]*display:\s*none/.test(CSS));
-["crender.ap_wrap", "crender.ap_wrap_hint", "crender.art_lines_n"].forEach((k) => {
+// Nút "Xuống dòng" đã bỏ 0.64.79 (chủ repo không hiểu nó để làm gì). Canary: đừng ai dựng lại nửa vời.
+check("CANARY: không còn nút bật/tắt xuống dòng",
+      !/data-act="wrap"/.test(JS) && !/wrapMa/.test(JS) && !/jv-ap-tog|jv-ap-nowrap/.test(CSS));
+check("khoá i18n của nút cũ đã dọn", !VI["crender.ap_wrap"] && !EN["crender.ap_wrap"]);
+check("dòng nhắc dưới khung chỉ hiện khi xem mã",
+      /\.jv-artpanel\.jv-ap-oncode \.jv-ap-foot \{[^}]*display:\s*block/.test(CSS)
+      && /\.jv-ap-foot \{[^}]*display:\s*none/.test(CSS)
+      && /classList\.toggle\("jv-ap-oncode"/.test(JS));
+["crender.ap_edit_hint", "crender.art_lines_n"].forEach((k) => {
   check("khoá " + k + " có ở cả vi và en", !!VI[k] && !!EN[k]);
 });
+
+// ============================================================
+// 2b. Mã SỬA ĐƯỢC ngay trong khung (chủ repo báo 29/09: "mở file không có chỗ edit")
+// ============================================================
+check("khối mã trong khung là contenteditable",
+      /setAttribute\("contenteditable", "plaintext-only"\)/.test(JS));
+check("sửa xong thì đọc lại bằng textContent (span tô màu bị xẻ lẻ không ảnh hưởng)",
+      /art\.code = pre\.textContent/.test(JS));
+check("khung làm việc trên BẢN SAO, không đụng registry (tin nhắn gốc và lần mở sau giữ nguyên)",
+      /curArt = \{ type: art\.type, lang: art\.lang, code: art\.code \};/.test(JS));
+check("Copy và Tải xuống đọc curArt.code nên lấy đúng bản đã sửa",
+      /copyText\(curArt\.code, t\)/.test(JS) && /downloadArt\(curArt\)/.test(JS));
 
 // ============================================================
 // 3. Bấm ra ngoài là đóng

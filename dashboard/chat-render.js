@@ -690,13 +690,9 @@
   // Chu repo bao 21/09: mo mot khoi ma trong file .md thi khung nam dinh mep phai, chu chay
   // thang sang phai vo han va phai keo ngang tung dong de doc. Ba thu doi cung luc:
   //   - .jv-artpanel thanh LOP PHU (overlay) toan man, hop that la .jv-ap-box o giua.
-  //   - Ma XUONG DONG theo be ngang hop (nut "Xuong dong" tat di neu can doc nguyen dong).
+  //   - Ma XUONG DONG theo be ngang hop (luon xuong dong; nut bat/tat da bo 0.64.79).
   //   - Bam ra ngoai hop la dong, dung thoi quen cua moi hop thoai khac trong app.
   var panel = null, elTitle = null, elBody = null, elSub = null, curArt = null, curTab = "preview";
-  // Xuong dong BAT san: mot khoi ma trong note thuong la van ban de doc, khong phai file
-  // nguon dang sua. Nguoi can doc nguyen dong (bang log, cot canh nhau) tat no o nut.
-  var wrapMa = true;
-
   function buildPanel() {
     if (panel) return panel;
     panel = document.createElement("div");
@@ -713,17 +709,15 @@
             '<button class="jv-ap-tab" data-tab="code">' + esc(tw("crender.ap_source")) + "</button>" +
           "</span>" +
           '<span class="jv-ap-actions">' +
-            // Nut XUONG DONG mang CHU chu khong phai icon: bo icon dong goi san khong co
-            // "wrap-text", ma them icon moi phai chay gen_icons (can mang). Mot cai nhan
-            // hai chu con ro nghia hon bat ky icon muon tam nao.
-            '<button class="jv-ap-tog" data-act="wrap" aria-pressed="true" title="' +
-              esc(tw("crender.ap_wrap_hint")) + '">' + esc(tw("crender.ap_wrap")) + "</button>" +
             '<button class="jv-ap-btn" data-act="copy" title="' + esc(tw("crender.ap_copy")) + '">' + ic("copy") + "</button>" +
             '<button class="jv-ap-btn" data-act="download" title="' + esc(tw("common.download")) + '">' + ic("download") + "</button>" +
             '<button class="jv-ap-btn jv-ap-close" data-act="close" title="' + esc(tw("crender.close_esc")) + '">' + ic("x") + '</button>' +
           "</span>" +
         "</div>" +
         '<div class="jv-ap-body"></div>' +
+        // Dong nhac chi hien khi dang nhin MA (xem .jv-ap-oncode): noi ro cho sua o dau va sua
+        // xong dung vao dau, de nguoi dung khong tuong sua la luu duoc vao tin nhan.
+        '<div class="jv-ap-foot">' + esc(tw("crender.ap_edit_hint")) + "</div>" +
       "</div>";
     document.body.appendChild(panel);
     elTitle = panel.querySelector(".jv-ap-title");
@@ -737,9 +731,8 @@
     panel.querySelectorAll(".jv-ap-tab").forEach(function (b) {
       b.classList.toggle("active", b.dataset.tab === curTab);
     });
-    // Nut "Xuong dong" chi hien khi dang nhin MA (the loai "code" khong co tab nao khac).
-    // O tab xem truoc no khong doi duoc gi, ma mot nut bam vao khong thay gi xay ra con te
-    // hon la khong co nut.
+    // Lop nay chi dung de hien dong nhac "bam vao ma de sua" va cho hop om lay noi dung: chi
+    // co nghia khi dang nhin MA (the loai "code" khong co tab nao khac).
     panel.classList.toggle("jv-ap-oncode",
                            curTab === "code" || (curArt && curArt.type === "code"));
   }
@@ -747,7 +740,9 @@
     var art = registry[id];
     if (!art) return;
     buildPanel();
-    curArt = art;
+    // Ban SAO: nguoi dung sua ma ngay trong khung, ma registry giu ban goc de tin nhan va lan
+    // mo sau khong bi lech. Dong khung la bo phan sua (Sao chep/Tai xuong da lay roi).
+    curArt = { type: art.type, lang: art.lang, code: art.code };
     elTitle.textContent = artTitle(art.type, art.lang);
     // Dong phu nhac lai dung so dong ghi tren the vua bam, de nguoi mo biet minh mo trung
     // cai minh dinh mo - mot note co the co nam sau khoi ma giong het nhau ve tieu de.
@@ -756,7 +751,6 @@
     panel.classList.toggle("no-preview", !hasPreview);
     curTab = hasPreview ? "preview" : "code";
     syncTabs();
-    syncWrap();
     renderTab();
     panel.classList.add("open");
     document.body.classList.add("jv-artpanel-open");
@@ -770,14 +764,6 @@
     if (elBody) elBody.innerHTML = "";   // don iframe/srcdoc
     curArt = null;
   }
-  /** Nut "Xuong dong": chi doi mot lop tren than, khong ve lai noi dung. Ve lai mot khoi ma
-   *  dai chi de doi cach ngat dong la nhay mat cho cuon dang doc. */
-  function syncWrap() {
-    if (!panel) return;
-    panel.classList.toggle("jv-ap-nowrap", !wrapMa);
-    var b = panel.querySelector(".jv-ap-tog");
-    if (b) b.setAttribute("aria-pressed", wrapMa ? "true" : "false");
-  }
   function frame(sandbox, srcdoc) {
     var f = document.createElement("iframe");
     f.className = "jv-ap-frame";
@@ -789,7 +775,21 @@
   function renderTab() {
     var art = curArt; if (!art || !elBody) return;
     if (curTab === "code" || art.type === "code") {
-      elBody.innerHTML = '<pre class="jv-ap-code code-block">' + highlight(art.code, art.lang) + "</pre>";
+      // SUA DUOC (chu repo bao 29/09: "mo file khong co cho edit"). Van to mau nhu cu; sua
+      // xong thi doc lai bang textContent, nen cac <span> to mau bi xe le khong anh huong gi.
+      // plaintext-only de dan tu noi khac vao khong keo theo dinh dang; trinh duyet cu khong
+      // biet gia tri nay thi rot ve "true" (van doc bang textContent nen van dung).
+      elBody.innerHTML = '<pre class="jv-ap-code code-block" spellcheck="false">' +
+        highlight(art.code, art.lang) + "</pre>";
+      var pre = elBody.firstChild;
+      pre.setAttribute("contenteditable", "plaintext-only");
+      if (pre.contentEditable !== "plaintext-only") pre.setAttribute("contenteditable", "true");
+      pre.addEventListener("input", function () {
+        if (curArt === art) {
+          art.code = pre.textContent;
+          if (elSub) elSub.textContent = tw("crender.art_lines_n", { count: art.code.split("\n").length });
+        }
+      });
       return;
     }
     if (art.type === "html") {
@@ -819,7 +819,6 @@
     if (t.dataset.tab) { curTab = t.dataset.tab; syncTabs(); renderTab(); return; }
     var act = t.dataset.act;
     if (act === "close") closePanel();
-    else if (act === "wrap") { wrapMa = !wrapMa; syncWrap(); }
     else if (act === "copy" && curArt) copyText(curArt.code, t);
     else if (act === "download" && curArt) downloadArt(curArt);
   }

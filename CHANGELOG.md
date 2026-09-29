@@ -4,6 +4,11 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.79] - 2026-09-29
+### Cải thiện
+- **Khung xem mã dài trong chat giờ sửa được ngay tại chỗ.** Bấm vào mã rồi gõ, sửa xong bấm Copy hoặc Tải xuống là lấy đúng bản đã sửa. Chỗ sửa không đổi tin nhắn gốc, đóng khung là về nguyên bản, có dòng nhắc ngay bên dưới.
+- **Bỏ nút "Xuống dòng".** Mã luôn tự xuống dòng cho vừa khung nên nút đó không còn tác dụng gì.
+
 ## [0.64.78] - 2026-09-29
 ### Sửa lỗi
 - **Model Claude mới (như Sonnet 5.5, Opus 5.5) giờ tự hiện trong Javis.** Trước đây Claude Code trên máy không tự lên bản mới khi chỉ được Javis gọi chạy ngầm, nên danh sách model đứng yên hàng tháng trời.

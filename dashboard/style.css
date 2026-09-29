@@ -2279,16 +2279,6 @@ body.jv-artpanel-open { overflow: hidden; }
 .jv-ap-tab.active { color: var(--accent); border-color: var(--accent); }
 .jv-artpanel.no-preview .jv-ap-tabs { display: none; }
 .jv-ap-actions { display: flex; align-items: center; gap: 6px; flex: none; }
-/* Nút gạt "Xuống dòng": mang CHỮ chứ không icon (bộ icon đóng gói sẵn không có wrap-text),
-   và bật sáng khi đang bật để nhìn là biết mã đang ngắt dòng hay đang cuộn ngang. */
-.jv-ap-tog { background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
-  border-radius: 8px; padding: 5px 11px; font: inherit; font-size: 12.5px; cursor: pointer;
-  white-space: nowrap; }
-.jv-ap-tog[aria-pressed="true"] { color: var(--accent); border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent); }
-/* Nút này chỉ có nghĩa khi đang nhìn MÃ. Ở tab xem trước (trang HTML, sơ đồ) nó không đổi
-   được gì, mà một cái nút bấm vào không thấy gì xảy ra còn tệ hơn là không có nút. */
-.jv-artpanel:not(.jv-ap-oncode) .jv-ap-tog { display: none; }
 .jv-ap-btn { display: inline-flex; align-items: center; justify-content: center;
   background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
   width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 14px; }
@@ -2301,11 +2291,15 @@ body.jv-artpanel-open { overflow: hidden; }
 .jv-ap-mermaid svg { max-width: 100%; height: auto; }
 /* MẶC ĐỊNH XUỐNG DÒNG. `overflow-wrap: anywhere` để một chuỗi dài không có dấu cách (URL,
    chuỗi base64, đường dẫn) cũng ngắt được - thiếu nó thì "xuống dòng" vẫn đẩy ngang một dòng
-   duy nhất ra ngoài hộp. Tắt nút thì quay về `pre` và có cuộn ngang như cũ. */
+   duy nhất ra ngoài hộp. Không còn nút tắt (bỏ 0.64.79): chủ repo không hiểu nó để làm gì. */
 .jv-ap-code { margin: 0; border: 0; border-radius: 0; min-height: 100%; box-sizing: border-box;
   padding: 16px 18px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;
   tab-size: 2; }
-.jv-artpanel.jv-ap-nowrap .jv-ap-code { white-space: pre; overflow-wrap: normal; }
+.jv-ap-code { outline: none; cursor: text; }
+/* Dòng nhắc dưới khung, chỉ hiện khi xem MÃ (mã sửa được ngay trong khung). */
+.jv-ap-foot { display: none; flex: none; padding: 7px 14px; font-size: 12px; color: var(--text3);
+  border-top: 1px solid var(--border); background: var(--bg2); }
+.jv-artpanel.jv-ap-oncode .jv-ap-foot { display: block; }
 .jv-ap-note { color: var(--text3); font-size: 13px; padding: 10px 12px; }
 /* Điện thoại: hộp chiếm gần trọn màn, bỏ bo góc dưới cho đỡ phí chỗ. Đầu khung xếp hai hàng
    vì bốn nút cộng hai tab không đứng vừa một hàng ở bề ngang đó. */
