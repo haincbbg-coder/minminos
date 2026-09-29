@@ -8,18 +8,23 @@
 //
 // Thao tác: kéo chuột trái để XOAY, lăn chuột để PHÓNG TO / THU NHỎ, kéo chuột phải để DỜI,
 // nắm một chấm để KÉO THẢ, chỉ chuột vào chấm để xem THẺ GHI CHÚ, bấm chấm để mở note.
-// Chế độ: localStorage "mm.galaxy" = "3d" (mặc định) | "2d" | "off".
+// Chế độ: localStorage "mm.galaxy" = "3d" (mặc định) | "2d" | "off", đọc MỖI lần dựng đồ thị
+// nên nút chuyển đổi được tại chỗ (xem MinMinGalaxy.dat trong minmin-galaxy.js).
+// Tông sáng của app: hạt vẽ chồng thường (cộng sáng trên nền trắng sẽ mất hút), màu đậm hơn.
 // ============================================================================
 (function () {
   "use strict";
   if (typeof window === "undefined" || !window.JavisGraph || !window.MinMinGalaxyColors) return;
 
   var KEY = "mm.galaxy";
-  var cheDo = "3d";
-  try { cheDo = localStorage.getItem(KEY) || "3d"; } catch (e) {}
-  if (cheDo !== "3d") return;
-
-  var MAU = window.MinMinGalaxyColors;
+  function cheDo() {
+    var v = "3d";
+    try { v = localStorage.getItem(KEY) || "3d"; } catch (e) {}
+    return v;
+  }
+  function sang() { return window.MinMinGalaxyIsLight ? window.MinMinGalaxyIsLight() : false; }
+  function bang() { return window.MinMinGalaxyPalette ? window.MinMinGalaxyPalette() : window.MinMinGalaxyColors; }
+  function mauCum(i) { var M = bang(); return M[(i || 0) % M.length]; }
   var VENDOR = typeof window.MinMinVendorBase === "string" ? window.MinMinVendorBase : "/static/vendor/";
   var THU_VIEN = VENDOR + "minmin-3d-bundle-1.80.0.min.js?v=1";
   var TAU = Math.PI * 2;
@@ -63,23 +68,32 @@
   // ---------- Hạt sáng: một texture quầng tròn cho mỗi màu ----------
   var _tex = {};
   function texQuang(mau) {
-    if (_tex[mau]) return _tex[mau];
+    var L = sang(), key = mau + (L ? "|L" : "|D");
+    if (_tex[key]) return _tex[key];
     var T = window.MinMinTHREE, s = 64, cv = document.createElement("canvas");
     cv.width = cv.height = s;
     var c = cv.getContext("2d");
     var g = c.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-    g.addColorStop(0, "rgba(255,255,255,1)");
-    g.addColorStop(0.16, mau);
-    g.addColorStop(0.42, mau + "55");
+    if (L) {
+      g.addColorStop(0, mau);
+      g.addColorStop(0.2, mau + "ee");
+      g.addColorStop(0.42, mau + "38");
+    } else {
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(0.16, mau);
+      g.addColorStop(0.42, mau + "55");
+    }
     g.addColorStop(1, mau + "00");
     c.fillStyle = g; c.fillRect(0, 0, s, s);
     var t = new T.CanvasTexture(cv);
     try { t.colorSpace = T.SRGBColorSpace; } catch (e) {}
-    return (_tex[mau] = t);
+    return (_tex[key] = t);
   }
+  // Bundle 3D chỉ xuất AdditiveBlending; NormalBlending của three là hằng số 1 cố định.
+  function tron() { var T = window.MinMinTHREE; return sang() ? (T.NormalBlending != null ? T.NormalBlending : 1) : T.AdditiveBlending; }
   function vatLieu(mau, doMo) {
     var T = window.MinMinTHREE;
-    return new T.SpriteMaterial({ map: texQuang(mau), blending: T.AdditiveBlending,
+    return new T.SpriteMaterial({ map: texQuang(mau), blending: tron(),
       transparent: true, depthWrite: false, opacity: doMo == null ? 1 : doMo });
   }
   function coHat(n) { return 11 + Math.sqrt(Math.min(55, n.links || 0)) * 3.6; }
@@ -123,6 +137,7 @@
     var T = window.MinMinTHREE, sc = self.graph.scene();
     if (self.__mmCanh) { sc.remove(self.__mmCanh); }
     var R = self.__mmR, g = new T.Group(), r = rng(Math.round(R * 7919));
+    var L = sang(), MAU = bang();
 
     function dam(so, viTri, mauHat, co, doMo) {
       var pos = new Float32Array(so * 3), col = new Float32Array(so * 3), c = new T.Color();
@@ -134,7 +149,8 @@
       geo.setAttribute("position", new T.Float32BufferAttribute(pos, 3));
       geo.setAttribute("color", new T.Float32BufferAttribute(col, 3));
       var m = new T.PointsMaterial({ size: co, vertexColors: true, transparent: true, opacity: doMo,
-        blending: T.AdditiveBlending, depthWrite: false, sizeAttenuation: true, map: texQuang("#ffffff") });
+        blending: tron(), depthWrite: false, sizeAttenuation: true,
+        map: texQuang("#ffffff") });
       return new T.Points(geo, m);
     }
     function trenCau(rr) {
@@ -143,10 +159,10 @@
     }
     // Sao xa bao quanh
     g.add(dam(giamChuyenDong ? 700 : 1800, function () { return trenCau(R * (4 + r() * 6)); },
-      function () { return r() < 0.8 ? "#cfd6ff" : MAU[(r() * MAU.length) | 0]; }, 2.2, 0.55));
+      function () { return r() < 0.8 ? (L ? "#b8b0c8" : "#cfd6ff") : MAU[(r() * MAU.length) | 0]; }, 2.2, L ? 0.45 : 0.55));
     // Vỏ cầu hạt quay chậm
     var vo = dam(giamChuyenDong ? 500 : 1400, function () { return trenCau(R * (1.55 + r() * 0.3)); },
-      function () { return r() < 0.5 ? "#e9e4ff" : MAU[(r() * MAU.length) | 0]; }, 2.6, 0.5);
+      function () { return r() < 0.5 ? (L ? "#a99cc4" : "#e9e4ff") : MAU[(r() * MAU.length) | 0]; }, 2.6, L ? 0.42 : 0.5);
     g.add(vo);
     // Mây hạt quanh mỗi neo cụm
     var neo = self.__mmNeo, idx = window.__javisCatIdx || {}, ds = [];
@@ -156,14 +172,14 @@
     });
     if (ds.length) {
       var may = dam(ds.length, function (i) { return [ds[i].x, ds[i].y, ds[i].z]; },
-        function (i) { return MAU[(idx[ds[i].cat] || 0) % MAU.length]; }, 3.2, 0.42);
+        function (i) { return MAU[(idx[ds[i].cat] || 0) % MAU.length]; }, 3.2, L ? 0.32 : 0.42);
       g.add(may);
     }
     // Lõi trắng rực
-    var loi = new T.Sprite(vatLieu("#d9c8ff", 1));
+    var loi = new T.Sprite(vatLieu(L ? "#f59a62" : "#d9c8ff", L ? 0.55 : 1));
     loi.scale.set(R * 0.75, R * 0.75, 1);
     g.add(loi);
-    var loiTrong = new T.Sprite(vatLieu("#ffffff", 1));
+    var loiTrong = new T.Sprite(vatLieu(L ? "#e8622a" : "#ffffff", L ? 0.9 : 1));
     loiTrong.scale.set(R * 0.28, R * 0.28, 1);
     g.add(loiTrong);
     // Hai vòng quỹ đạo nghiêng
@@ -173,8 +189,8 @@
       for (var i = 0; i < n; i++) { var t = i / n * TAU; pts.push(Math.cos(t) * a1, 0, Math.sin(t) * b1 * 2.2); }
       var geo = new T.BufferGeometry();
       geo.setAttribute("position", new T.Float32BufferAttribute(pts, 3));
-      var ln = new T.LineLoop(geo, new T.LineBasicMaterial({ color: 0xe6e1ff, transparent: true, opacity: 0.35,
-        blending: T.AdditiveBlending, depthWrite: false }));
+      var ln = new T.LineLoop(geo, new T.LineBasicMaterial({ color: L ? 0x7a6aa8 : 0xe6e1ff, transparent: true,
+        opacity: L ? 0.4 : 0.35, blending: tron(), depthWrite: false }));
       ln.rotation.x = v ? 0.9 : -0.35; ln.rotation.z = v ? 0.4 : -0.2;
       g.add(ln); vong.push(ln);
     }
@@ -191,9 +207,12 @@
       var o = n.__mmObj; if (!o) return;
       var laH = n.id === self._hoverId, laN = hov && self._nbrs.has(n.id);
       var mo = (hov && !laH && !laN) || (self._catFilter && n.__cat !== self._catFilter && !laH && !laN);
-      var mau = laH ? "#ffffff" : MAU[(n.__catIdx || 0) % MAU.length];
-      if (o.material.map !== texQuang(mau)) { o.material.map = texQuang(mau); o.material.needsUpdate = true; }
-      o.material.opacity = mo ? 0.12 : 1;
+      var mau = laH ? (sang() ? "#e8622a" : "#ffffff") : mauCum(n.__catIdx);
+      var bl = tron();
+      if (o.material.map !== texQuang(mau) || o.material.blending !== bl) {
+        o.material.map = texQuang(mau); o.material.blending = bl; o.material.needsUpdate = true;
+      }
+      o.material.opacity = mo ? (sang() ? 0.16 : 0.12) : 1;
       n.__mmTo = laH ? 1.9 : (laN ? 1.25 : 1);
     });
     try { self.graph.linkColor(self.graph.linkColor()); } catch (e) {}
@@ -243,7 +262,7 @@
     if (lan < 12 && self._hoverId === id) setTimeout(function () { doVaoThe(self, id, lan + 1); }, 120);
   }
   function theGhiChu(self, n) {
-    var mau = MAU[(n.__catIdx || 0) % MAU.length];
+    var mau = mauCum(n.__catIdx);
     var soNbr = 0;
     self.graph.graphData().links.forEach(function (l) {
       var s = idCua(l.source), t = idCua(l.target);
@@ -272,18 +291,20 @@
       .nodeRelSize(4)
       .nodeVal(function (n) { var r = coHat(n) * 0.5; return r * r / 16; })
       .nodeThreeObject(function (n) {
-        var sp = new window.MinMinTHREE.Sprite(vatLieu(MAU[(n.__catIdx || 0) % MAU.length], 1));
+        var sp = new window.MinMinTHREE.Sprite(vatLieu(mauCum(n.__catIdx), 1));
         var s = coHat(n); sp.scale.set(s, s, 1);
         n.__mmObj = sp; n.__mmCo = s; n.__mmTo = 1; n.__mmHien = 1;
         return sp;
       })
       .nodeLabel(function (n) { return theGhiChu(self, n); })
       .linkColor(function (l) {
+        var L = sang();
         if (self._hoverId != null) {
           var s = idCua(l.source), t = idCua(l.target);
-          return (s === self._hoverId || t === self._hoverId) ? "#ffffff" : "#1a1830";
+          if (s === self._hoverId || t === self._hoverId) return L ? "#e8622a" : "#ffffff";
+          return L ? "#ece6f2" : "#1a1830";
         }
-        return "#6d63b8";
+        return L ? "#b3a9cc" : "#6d63b8";
       })
       .linkOpacity(0.28)
       .linkWidth(0)
@@ -294,7 +315,7 @@
       })
       .linkDirectionalParticleWidth(1.6)
       .linkDirectionalParticleSpeed(0.008)
-      .linkDirectionalParticleColor(function () { return "#ffffff"; })
+      .linkDirectionalParticleColor(function () { return sang() ? "#e8622a" : "#ffffff"; })
       .warmupTicks(30)
       .cooldownTime(6000)
       .onNodeHover(function (n) {
@@ -331,12 +352,13 @@
       ctl.dampingFactor = 0.08;
       ctl.autoRotate = !giamChuyenDong;
       ctl.autoRotateSpeed = 0.45;
-      var hen = null;
+      var hen = null, the = self.__mmThe;
       ctl.addEventListener("start", function () { ctl.autoRotate = false; clearTimeout(hen); });
       // Thả chấm xong, thư viện phát một cú "pointerup" chạm giả để nhả OrbitControls. Với
       // three r183 cú đó đọc toạ độ/pointer không có -> lỗi đỏ trong console. Chặn cú giả đó
       // và tự nhả bộ điều khiển (bundle khoá cứng phiên bản nên các trường nội bộ ổn định).
-      document.addEventListener("pointerup", function (e) {
+      document.addEventListener("pointerup", function chanChamGia(e) {
+        if (self.__mmThe !== the) { document.removeEventListener("pointerup", chanChamGia, true); return; }
         if (e.isTrusted || e.pointerType !== "touch" || !Array.isArray(ctl._pointers)) return;
         e.stopImmediatePropagation();
         ctl._pointers.length = 0;
@@ -351,7 +373,7 @@
       }, true);
       ctl.addEventListener("end", function () {
         clearTimeout(hen);
-        if (!giamChuyenDong) hen = setTimeout(function () { ctl.autoRotate = true; }, 8000);
+        if (!giamChuyenDong) hen = setTimeout(function () { if (self.__mmThe === the) ctl.autoRotate = true; }, 8000);
       });
     }
 
@@ -374,8 +396,9 @@
 
   // ---------- Nhịp khung hình: lõi đập, vỏ quay, hạt thở và nảy sinh ----------
   function batNhip(self) {
-    var loc = null;
+    var loc = null, the = self.__mmThe;
     function khung() {
+      if (self.__mmThe !== the) return;                               // đồ thị đã bị gỡ để đổi chế độ
       requestAnimationFrame(khung);
       if (self._mmDung || document.hidden || !self.graph || !self.__mmVatThe) return;
       var t = now() / 1000, vt = self.__mmVatThe, R = self.__mmR || 120;
@@ -414,7 +437,7 @@
     try { if (typeof _mapFromIdx === "function") window.__javisCatMap = _mapFromIdx(this._catMap); } catch (e) {}
     var links = (data.edges || []).map(function (e) { return { source: e.source, target: e.target }; });
     datNeo(this, nodes);
-    if (!this.graph) taoDoThi(this);
+    if (!this.graph) { this.__mmKieu = "3d"; taoDoThi(this); }
     this._fitted = false;
     this._hoverId = null; this._nbrs = new Set();
     this._t0 = now();
@@ -431,9 +454,10 @@
   var P = window.JavisGraph.prototype;
   var load2d = P.load;
   P.load = async function (query) {
-    var q = query || "source=all";
+    var q = query || this.__mmTruyVan || "source=all";
+    this.__mmTruyVan = q;
     if (this._is3d) return load3d.call(this, q);
-    if (!this.graph && coWebGL() && await napThuVien()) {
+    if (!this.graph && cheDo() === "3d" && coWebGL() && await napThuVien() && !this.graph) {
       try { return await load3d.call(this, q); }
       catch (e) {
         if (this._is3d) throw e;                                      // lỗi dữ liệu thì báo như bản gốc
@@ -442,6 +466,13 @@
     }
     return load2d.apply(this, arguments);
   };
+
+  // Đổi tông khi đang ở 3D: tô lại hạt, dây và dựng lại cảnh nền, giữ nguyên góc nhìn.
+  window.addEventListener("javis-theme-change", function () {
+    var g = window.__javisGraph;
+    if (!g || !g._is3d || !g.graph) return;
+    try { dungCanh(g); capNhatSang(g); } catch (e) { console.warn("[MinMin 3D] đổi tông lỗi:", e); }
+  });
 
   window.MinMinGalaxy3D = { on: true };
 })();

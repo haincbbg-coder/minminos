@@ -1,6 +1,7 @@
 /* ==========================================================================
    MinMin OS - Thiên hà thần kinh (khoang não) + Bảng điều hành (cột trái).
-   Nạp SAU style.css / console.css. Khoang não luôn nền vũ trụ tối, kể cả tông sáng.
+   Nạp SAU style.css / console.css. Khoang não và bảng theo tông của app: tông tối là nền
+   vũ trụ, tông sáng (data-theme="light") là nền giấy ấm - khối cuối file.
    ========================================================================== */
 
 /* ---------- Khoang não: nền vũ trụ ---------- */
@@ -42,6 +43,7 @@ html.mm-galaxy .orb-interim { color: #ece8ff; }
 .mm-galaxy-off { top: 14px !important; right: 58px !important; font-size: 15px; line-height: 1; }
 
 /* HUD chữ kiểu ODIN */
+html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none; }
 .mm-hud {
   position: absolute; top: 18px; left: 22px; z-index: 4; pointer-events: none;
   font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
@@ -201,3 +203,74 @@ html.mm-galaxy .orb-interim { color: #ece8ff; }
 .mm-ntip-tx.cho { color: #7f79a3; font-style: italic; }
 .mm-ntip-f { margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(190, 170, 255, 0.14);
   font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #7f79a3; }
+
+/* ==========================================================================
+   TÔNG SÁNG - khớp giao diện sáng của app (nền --bg ấm, nhấn cam --accent).
+   ========================================================================== */
+html[data-theme="light"].mm-galaxy .hud-center {
+  background:
+    radial-gradient(ellipse 46% 50% at 50% 50%, rgba(255, 170, 120, 0.20) 0%, rgba(170, 140, 240, 0.08) 42%, transparent 66%),
+    radial-gradient(ellipse 95% 85% at 50% 50%, #ffffff 0%, #fbf9f7 55%, #f3eee8 100%);
+}
+html[data-theme="light"].mm-galaxy .hud-center::after {
+  background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 55%, rgba(120, 90, 60, 0.07) 100%);
+}
+html[data-theme="light"].mm-galaxy #starfield { opacity: 0.25; }
+html[data-theme="light"].mm-galaxy .concept-label .cl-name {
+  color: #3a3544; text-shadow: 0 0 8px rgba(255, 255, 255, 0.95), 0 0 2px #fff;
+}
+html[data-theme="light"].mm-galaxy .concept-label .cl-meta { color: #8a8398; }
+html[data-theme="light"].mm-galaxy .hud-center .brain-overlay-toggle {
+  color: #55505f; background: rgba(255, 255, 255, 0.85);
+  border-color: var(--border, #e7e1da); box-shadow: 0 4px 14px rgba(60, 42, 24, 0.08);
+}
+html[data-theme="light"].mm-galaxy .hud-center .brain-stats {
+  background: rgba(255, 255, 255, 0.82); border-color: var(--border, #e7e1da);
+  box-shadow: 0 6px 20px rgba(60, 42, 24, 0.08);
+}
+html[data-theme="light"].mm-galaxy .hud-center .bstat-num { color: #1c1a24; }
+html[data-theme="light"].mm-galaxy .hud-center .bstat-lbl { color: #8a8398; }
+html[data-theme="light"].mm-galaxy .hud-center .bstat-sep { background: var(--border, #e7e1da); }
+html[data-theme="light"].mm-galaxy .orb-state { color: #8a8398; }
+html[data-theme="light"].mm-galaxy .orb-interim { color: #1c1a24; }
+html[data-theme="light"] .mm-hud-l1 { color: #9a93a8; }
+html[data-theme="light"] .mm-hud-l2 { color: #55505f; }
+html[data-theme="light"] .mm-hud-l2 b { color: #1c1a24; }
+html[data-theme="light"] .mm-hud-l3 { color: #0f9e80; text-shadow: none; }
+html[data-theme="light"] .mm-hud-foot { color: #a39cb0; }
+
+/* Bảng điều hành: thẻ trắng như các khung khác của app */
+html[data-theme="light"] .mm-dash {
+  --mm-surface: #ffffff; --mm-card: var(--surface-1, rgba(60, 42, 24, 0.035));
+  --mm-brd: var(--border, #e7e1da);
+  --mm-t1: var(--text, #1c1a24); --mm-t2: var(--text2, #55505f); --mm-t3: #8a8398;
+  background: var(--bg2, #ffffff); border-color: var(--border, #e7e1da);
+  box-shadow: 0 1px 2px rgba(60, 42, 24, 0.04);
+}
+html[data-theme="light"] .mm-title { color: #55505f; }
+html[data-theme="light"] .mm-empty code { color: #6e57d8; }
+html[data-theme="light"] .mm-axis { stroke: rgba(60, 42, 24, 0.14); }
+html[data-theme="light"] .mm-cross { stroke: rgba(60, 42, 24, 0.35); }
+html[data-theme="light"] .mm-dot { stroke: #ffffff; }
+html[data-theme="light"] .mm-tip { background: #ffffff; box-shadow: 0 6px 18px rgba(60, 42, 24, 0.14); }
+html[data-theme="light"] .mm-bar { background: rgba(60, 42, 24, 0.08); }
+html[data-theme="light"] .mm-bar i { background: var(--accent, #e85d1f); }
+html[data-theme="light"] .mm-kpi-d.up, html[data-theme="light"] .mm-pill-good { color: #0a8f0a; }
+html[data-theme="light"] .mm-kpi-d.down, html[data-theme="light"] .mm-pill-critical,
+html[data-theme="light"] .mm-bad { color: #c62f2f; }
+html[data-theme="light"] .mm-pill-warning { color: #b27a00; }
+html[data-theme="light"] .mm-pill-serious { color: #c7582c; }
+html[data-theme="light"] .mm-proj { border-bottom-color: var(--border, #e7e1da); }
+html[data-theme="light"] .mm-foot { border-top-color: var(--border, #e7e1da); }
+html[data-theme="light"] .mm-link { color: var(--accent, #e85d1f); }
+
+/* Thẻ ghi chú 3D */
+html[data-theme="light"] .mm-ntip {
+  background: rgba(255, 255, 255, 0.97); border-color: var(--border, #e7e1da);
+  box-shadow: 0 10px 30px rgba(60, 42, 24, 0.16); color: #1c1a24;
+}
+html[data-theme="light"] .mm-ntip-h { color: #1c1a24; }
+html[data-theme="light"] .mm-ntip-m { color: #8a8398; }
+html[data-theme="light"] .mm-ntip-tx { color: #55505f; }
+html[data-theme="light"] .mm-ntip-tx.cho, html[data-theme="light"] .mm-ntip-f { color: #a39cb0; }
+html[data-theme="light"] .mm-ntip-f { border-top-color: var(--border, #e7e1da); }

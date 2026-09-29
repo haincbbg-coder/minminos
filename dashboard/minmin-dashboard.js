@@ -283,14 +283,20 @@
     });
     var gt = $("mmGalaxyToggle");
     // Vòng chế độ đồ thị: 3D -> 2D -> đồ thị gốc -> 3D (cùng khoá với minmin-galaxy.js).
+    // Đổi tại chỗ qua MinMinGalaxy.dat, không tải lại trang.
     var CD = ["3d", "2d", "off"], TEN_CD = { "3d": "Xem 3D", "2d": "Xem 2D", off: "Đồ thị gốc" };
-    var cd = "3d"; try { cd = localStorage.getItem("mm.galaxy") || "3d"; } catch (e) {}
-    if (CD.indexOf(cd) < 0) cd = "3d";
-    var cdSau = CD[(CD.indexOf(cd) + 1) % CD.length];
-    gt.textContent = "Chuyển: " + TEN_CD[cdSau];
+    function cdHien() {
+      var v = "3d"; try { v = localStorage.getItem("mm.galaxy") || "3d"; } catch (e) {}
+      return CD.indexOf(v) < 0 ? "3d" : v;
+    }
+    function cdSau() { return CD[(CD.indexOf(cdHien()) + 1) % CD.length]; }
+    function veNut() { gt.textContent = "Chuyển: " + TEN_CD[cdSau()]; }
+    veNut();
+    window.addEventListener("mm-galaxy-mode", veNut);
     gt.addEventListener("click", function () {
-      try { localStorage.setItem("mm.galaxy", cdSau); } catch (e) {}
-      location.reload();
+      if (window.MinMinGalaxy && window.MinMinGalaxy.dat) { window.MinMinGalaxy.dat(cdSau()); return; }
+      try { localStorage.setItem("mm.galaxy", cdSau()); } catch (e) {}
+      location.reload();                                             // chỉ khi thiếu minmin-galaxy.js
     });
     var t0 = "dash"; try { t0 = localStorage.getItem(KEY_TAB) || "dash"; } catch (e) {}
     chon(t0);
