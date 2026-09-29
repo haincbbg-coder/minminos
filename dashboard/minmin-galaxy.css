@@ -178,3 +178,26 @@ html.mm-galaxy .orb-interim { color: #ece8ff; }
 .mm-link:hover { text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) { .mm-tabs button { transition: none; } }
+
+/* ---------- Bản 3D: thẻ ghi chú khi chỉ chuột vào một chấm sáng ---------- */
+.mm-galaxy-off svg { width: 16px; height: 16px; }
+.mm-3d #graph2d { cursor: grab; }
+.mm-3d .float-tooltip-kap, .mm-3d .scene-tooltip {
+  background: transparent !important; padding: 0 !important; border: 0 !important;
+  box-shadow: none !important; z-index: 20;
+}
+.mm-ntip {
+  width: 280px; padding: 12px 14px 10px; border-radius: 12px;
+  background: rgba(10, 8, 24, 0.92); border: 1px solid rgba(190, 170, 255, 0.28);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(140, 110, 255, 0.18);
+  color: #ece9ff; font: 13px/1.45 var(--font, 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif);
+  backdrop-filter: blur(6px); white-space: normal; text-align: left;
+}
+.mm-ntip-h { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #fff; }
+.mm-ntip-h i { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; }
+.mm-ntip-m { margin-top: 3px; font-size: 11.5px; color: #a9a3c8; }
+.mm-ntip-m span { font-weight: 600; }
+.mm-ntip-tx { margin-top: 8px; color: #d8d4ef; font-size: 12.5px; }
+.mm-ntip-tx.cho { color: #7f79a3; font-style: italic; }
+.mm-ntip-f { margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(190, 170, 255, 0.14);
+  font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #7f79a3; }

@@ -133,7 +133,9 @@
     el.querySelector(".mm-hit").addEventListener("pointerleave", an);
   }
 
-  var ICON = { good: "✓", warning: "!", serious: "▲", critical: "✕", info: "i" };
+  // Icon Lucide của repo (không dùng emoji: test_icons chặn). Thiếu window.ic thì để trống.
+  function icon(ten) { return window.ic ? window.ic(ten) : ""; }
+  var ICON = { good: "circle-check", warning: "triangle-alert", serious: "triangle-alert", critical: "circle-x", info: "info" };
   var TRANG_THAI = {
     running: ["Đang chạy", "good"], done: ["Xong", "good"], blocked: ["Kẹt", "critical"],
     review: ["Chờ duyệt", "warning"], planned: ["Kế hoạch", "info"], paused: ["Tạm dừng", "serious"],
@@ -144,7 +146,7 @@
     var cls = d == null ? "" : (d >= 0 ? (k.lower_is_better ? "down" : "up") : (k.lower_is_better ? "up" : "down"));
     return '<div class="mm-kpi"><div class="mm-kpi-l">' + esc(k.label) + '</div>' +
       '<div class="mm-kpi-v">' + esc(so(k.value, k.unit)) + '</div>' +
-      (d == null ? "" : '<div class="mm-kpi-d ' + cls + '">' + (d >= 0 ? "▲ " : "▼ ") + Math.abs(d).toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + "% " + '<span>' + esc(k.compare || "") + '</span></div>') +
+      (d == null ? "" : '<div class="mm-kpi-d ' + cls + '">' + icon(d >= 0 ? "trending-up" : "trending-down") + " " + Math.abs(d).toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + "% " + '<span>' + esc(k.compare || "") + '</span></div>') +
       '</div>';
   }
 
@@ -168,13 +170,13 @@
         '<div class="mm-fc-v">' + tien(fc.month_end) + '</div>' +
         '<div class="mm-fc-s">khoảng ' + tien(fc.low) + ' - ' + tien(fc.high) + '</div>' +
         (tt == null ? "" : '<div class="mm-bar"><i style="width:' + Math.min(100, tt) + '%;background:' + C[mucTT] + '"></i></div>' +
-          '<div class="mm-fc-s"><span class="mm-st mm-st-' + mucTT + '">' + ICON[mucTT] + '</span> ' + tt + '% mục tiêu ' + tien(d.target_month) + '</div>') +
+          '<div class="mm-fc-s"><span class="mm-st mm-st-' + mucTT + '">' + icon(ICON[mucTT]) + '</span> ' + tt + '% mục tiêu ' + tien(d.target_month) + '</div>') +
         '<div class="mm-fc-n">' + esc(fc.note || "") + '</div></div>';
     }
     if ((d.alerts || []).length) {
       h += '<div class="mm-sec-t">Cần chú ý</div><ul class="mm-alerts">' + d.alerts.slice(0, 5).map(function (a) {
         var lv = ICON[a.level] ? a.level : "info";
-        return '<li><span class="mm-st mm-st-' + lv + '">' + ICON[lv] + '</span><span>' + esc(a.text) + '</span></li>';
+        return '<li><span class="mm-st mm-st-' + lv + '">' + icon(ICON[lv]) + '</span><span>' + esc(a.text) + '</span></li>';
       }).join("") + '</ul>';
     }
     box.innerHTML = h;
@@ -190,7 +192,7 @@
       var st = TRANG_THAI[p.status] || [p.status || "-", "info"];
       var pc = Math.max(0, Math.min(100, +p.progress || 0));
       return '<div class="mm-proj"><div class="mm-proj-h"><span class="mm-proj-n">' + esc(p.name) + '</span>' +
-        "<span class=\"mm-pill mm-pill-" + st[1] + "\">" + (p.status === "running" ? "▶" : ICON[st[1]]) + " " + esc(st[0]) + '</span></div>' +
+        "<span class=\"mm-pill mm-pill-" + st[1] + "\">" + icon(p.status === "running" ? "play" : ICON[st[1]]) + " " + esc(st[0]) + '</span></div>' +
         '<div class="mm-bar"><i style="width:' + pc + '%"></i></div>' +
         '<div class="mm-proj-m"><span>' + pc + '%</span>' + (p.due ? '<span>hạn ' + esc(p.due) + '</span>' : "") + '</div>' +
         (p.next ? '<div class="mm-proj-x">→ ' + esc(p.next) + '</div>' : "") + '</div>';
@@ -215,7 +217,7 @@
     var chay = ((kb && kb.operations && kb.operations.active) || []).concat((kb && kb.operations && kb.operations.attention) || []).slice(0, 4);
     if (chay.length) h += '<ul class="mm-tasks">' + chay.map(function (t) {
       var st = TRANG_THAI[t.status] || [t.status, "info"];
-      return '<li><span class="mm-st mm-st-' + st[1] + '">' + (t.status === "running" ? "▶" : ICON[st[1]]) + '</span><span class="mm-t">' + esc(t.title || t.intent || t.id) + '</span></li>';
+      return '<li><span class="mm-st mm-st-' + st[1] + '">' + icon(t.status === "running" ? "play" : ICON[st[1]]) + '</span><span class="mm-t">' + esc(t.title || t.intent || t.id) + '</span></li>';
     }).join("") + '</ul>';
     h += '<div class="mm-loops">Loop: <b>' + bat + '</b>/' + loops.length + ' bật' + (loi ? ' · <span class="mm-bad">' + loi + ' lỗi/tạm dừng</span>' : "") + '</div>';
     box.innerHTML = h;
@@ -280,10 +282,14 @@
       window.open("/files/raw?brain=" + encodeURIComponent(brain()) + "&path=" + encodeURIComponent(DATA_PATH), "_blank");
     });
     var gt = $("mmGalaxyToggle");
-    var galaxyBat = true; try { galaxyBat = localStorage.getItem("mm.galaxy") !== "off"; } catch (e) {}
-    gt.textContent = galaxyBat ? "Tắt thiên hà" : "Bật thiên hà";
+    // Vòng chế độ đồ thị: 3D -> 2D -> đồ thị gốc -> 3D (cùng khoá với minmin-galaxy.js).
+    var CD = ["3d", "2d", "off"], TEN_CD = { "3d": "Xem 3D", "2d": "Xem 2D", off: "Đồ thị gốc" };
+    var cd = "3d"; try { cd = localStorage.getItem("mm.galaxy") || "3d"; } catch (e) {}
+    if (CD.indexOf(cd) < 0) cd = "3d";
+    var cdSau = CD[(CD.indexOf(cd) + 1) % CD.length];
+    gt.textContent = "Chuyển: " + TEN_CD[cdSau];
     gt.addEventListener("click", function () {
-      try { localStorage.setItem("mm.galaxy", galaxyBat ? "off" : "on"); } catch (e) {}
+      try { localStorage.setItem("mm.galaxy", cdSau); } catch (e) {}
       location.reload();
     });
     var t0 = "dash"; try { t0 = localStorage.getItem(KEY_TAB) || "dash"; } catch (e) {}

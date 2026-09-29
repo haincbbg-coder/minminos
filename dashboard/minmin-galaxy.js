@@ -5,17 +5,42 @@
 //   - gom note cùng thư mục thành từng CỤM sáng xếp vòng quanh một LÕI trắng rực,
 //   - vẽ bụi sao, vỏ cầu hạt, vòng quỹ đạo, tia sao chổi bắn ra từ lõi (kiểu ODIN),
 //   - giữ nguyên mọi tương tác cũ: rê chuột rọi sáng, bấm mở note, timelapse.
-// Tắt: localStorage "mm.galaxy" = "off" rồi F5 (hoặc nút ✦ góc khoang não).
+// Chế độ: localStorage "mm.galaxy" = "3d" (mặc định, xem minmin-galaxy3d.js) | "2d" | "off".
+// Nút tròn góc khoang não chuyển vòng 3D -> 2D -> tắt -> 3D.
 // ============================================================================
 (function () {
   "use strict";
   if (typeof window === "undefined" || !window.JavisGraph) return;
 
   var KEY = "mm.galaxy";
-  function batGalaxy() {
-    try { return localStorage.getItem(KEY) !== "off"; } catch (e) { return true; }
+  var CHE_DO = ["3d", "2d", "off"];
+  var TEN = { "3d": "Thiên hà 3D", "2d": "Thiên hà 2D", off: "Đồ thị gốc" };
+  function cheDo() {
+    var v = "3d";
+    try { v = localStorage.getItem(KEY) || "3d"; } catch (e) {}
+    return CHE_DO.indexOf(v) >= 0 ? v : "3d";
   }
-  if (!batGalaxy()) return;
+  // Nút chuyển chế độ: luôn có, kể cả khi đang ở đồ thị gốc, để quay lại được.
+  function nutCheDo() {
+    var c = document.querySelector(".hud-center");
+    if (!c || c.querySelector(".mm-galaxy-off")) return;
+    var hien = cheDo(), sau = CHE_DO[(CHE_DO.indexOf(hien) + 1) % CHE_DO.length];
+    var nut = document.createElement("button");
+    nut.className = "brain-overlay-toggle mm-galaxy-off";
+    nut.type = "button";
+    nut.title = "Đang xem: " + TEN[hien] + ". Bấm để chuyển sang " + TEN[sau];
+    nut.innerHTML = window.ic ? window.ic(hien === "off" ? "sparkles" : (hien === "3d" ? "layers" : "sparkle")) : "";
+    nut.addEventListener("click", function () {
+      try { localStorage.setItem(KEY, sau); } catch (e) {}
+      location.reload();
+    });
+    c.appendChild(nut);
+  }
+  if (cheDo() === "off") {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", nutCheDo);
+    else nutCheDo();
+    return;
+  }
 
   var giamChuyenDong = false;
   try { giamChuyenDong = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
@@ -348,16 +373,7 @@
     f.className = "mm-hud-foot";
     f.innerHTML = 'REFLEX online · <span id="mmHudNodes">-</span> nodes · <span id="mmHudCats">-</span> cụm';
     c.appendChild(f);
-    var nut = document.createElement("button");
-    nut.className = "brain-overlay-toggle mm-galaxy-off";
-    nut.type = "button";
-    nut.title = "Tắt giao diện thiên hà (về đồ thị cũ)";
-    nut.textContent = "✦";
-    nut.addEventListener("click", function () {
-      try { localStorage.setItem(KEY, "off"); } catch (e) {}
-      location.reload();
-    });
-    c.appendChild(nut);
+    nutCheDo();
 
     var orb = document.getElementById("orbState");
     function capNhat() {
@@ -381,6 +397,7 @@
 
   window.MinMinGalaxy = {
     on: true,
-    off: function () { try { localStorage.setItem(KEY, "off"); } catch (e) {} location.reload(); },
+    cheDo: cheDo,
+    dat: function (v) { try { localStorage.setItem(KEY, v); } catch (e) {} location.reload(); },
   };
 })();
