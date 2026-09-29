@@ -42,6 +42,17 @@ jobs:
           echo "CODEX_CLI_VERSION=$version" >> "$GITHUB_ENV"
           echo "Codex CLI: $version" >> "$GITHUB_STEP_SUMMARY"
 
+      # Cùng lý do với Codex ở trên: `@latest` trong Dockerfile là chuỗi KHÔNG đổi, nên cache
+      # gha giữ nguyên lớp npm cũ mãi và ảnh mới vẫn mang Claude Code cũ. Model mới (Sonnet 5.5)
+      # vì thế không bao giờ tới VPS. Truyền số phiên bản thật thì lớp đổi khi có bản mới.
+      - name: Resolve current Claude Code version
+        shell: bash
+        run: |
+          version="$(npm view @anthropic-ai/claude-code@latest version)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid Claude Code version: $version"; exit 1; }
+          echo "CLAUDE_CLI_VERSION=$version" >> "$GITHUB_ENV"
+          echo "Claude Code: $version" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -56,6 +67,7 @@ jobs:
           push: true
           build-args: |
             CODEX_CLI_VERSION=${{ env.CODEX_CLI_VERSION }}
+            CLAUDE_CLI_VERSION=${{ env.CLAUDE_CLI_VERSION }}
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}

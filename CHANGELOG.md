@@ -4,6 +4,12 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.78] - 2026-09-29
+### Sửa lỗi
+- **Model Claude mới (như Sonnet 5.5, Opus 5.5) giờ tự hiện trong Javis.** Trước đây Claude Code trên máy không tự lên bản mới khi chỉ được Javis gọi chạy ngầm, nên danh sách model đứng yên hàng tháng trời.
+- Javis nay tự cập nhật Claude Code mỗi ngày một lần. Thẻ Claude Code trên trang **Models** ghi đang ở bản nào, lần cuối xét khi nào, kèm nút **Cập nhật Claude Code** để chạy ngay và báo model nào vừa có thêm.
+- **Bản Docker/VPS** nhận Claude Code mới nhất theo mỗi bản cập nhật Javis. Trước đây ảnh Docker vô tình giữ mãi một bản Claude Code cũ.
+
 ## [0.64.77] - 2026-09-28
 ### Sửa lỗi
 - **Telegram và Zalo không còn in nguyên câu lệnh máy** kiểu `/bin/sh -lc "sed -n ..."` vào dòng trạng thái khi dùng ChatGPT. Dòng đó nay chỉ ghi gọn việc đã làm, ví dụ "⚙ Chạy lệnh · pos_statistics · 2m39s".

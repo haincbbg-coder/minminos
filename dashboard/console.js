@@ -3919,6 +3919,7 @@
           </div>
           ${cliWarn("claude")}
           <div class="prov-action" id="cliAction"></div>
+          <div class="prov-note" id="cliUpd" style="margin-top:8px;line-height:1.6"></div>
           <div class="prov-auth">
             <div class="prov-auth-title">${esc(t("models.auth_title"))}</div>
             <div class="prov-auth-note">${esc(t("models.auth_note"))}</div>
@@ -4278,6 +4279,7 @@
     let d;
     try { d = await (await fetch("/claude/status" + (ep ? "?refresh=1" : ""))).json(); }
     catch (e) { st.textContent = t("models.cant_check"); return; }
+    veCapNhatClaude(el, d);
     // KHÔNG hỏi được KHÁC hẳn "chưa đăng nhập", và trước bản này hai thứ đó vẽ y như nhau: một
     // lần hết giờ (hay gặp lúc đổi Main Model, khi trang cùng lúc gọi mấy tiến trình con) là
     // thẻ bày ra nút Đăng nhập, người dùng tưởng mất tài khoản rồi đi nối lại - trong khi
@@ -4320,6 +4322,39 @@
       el.querySelector("#cliLogin").onclick = () => startClaudeLogin(el);
       el.querySelector("#cliRecheck").onclick = () => refreshClaudeCard(el, true);
     }
+  }
+
+  // Dòng "Claude Code bản nào + nút Cập nhật". Danh sách model của gói Claude đọc từ chính
+  // binary `claude`, nên CLI cũ là model mới (Sonnet 5.5) không hiện - Claude Code không tự
+  // cập nhật khi chỉ được Javis gọi chạy ngầm. Server tự chạy `claude update` mỗi ngày; nút
+  // này là để khỏi phải chờ.
+  function veCapNhatClaude(el, d) {
+    const box = el.querySelector("#cliUpd");
+    if (!box) return;
+    if (d.cap_nhat_docker) { box.textContent = t("models.cc_upd_docker"); return; }
+    const cn = d.cap_nhat || {};
+    let dong = cn.sau ? t("models.cc_upd_ver", { v: cn.sau }) + " · " : "";
+    dong += t("models.cc_upd_auto");
+    if (cn.ts) dong += " · " + t("models.cc_upd_last", { luc: new Date(cn.ts * 1000).toLocaleString(LOC()) });
+    box.innerHTML = `<span>${esc(dong)}</span>
+      <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="gcard-btn ghost" id="cliUpdBtn">${esc(t("models.cc_upd_btn"))}</button>
+        <span id="cliUpdMsg" class="gcard-meta"></span>
+      </div>`;
+    const btn = box.querySelector("#cliUpdBtn"), msg = box.querySelector("#cliUpdMsg");
+    btn.onclick = async () => {
+      btn.disabled = true;
+      msg.textContent = t("models.cc_upd_running");
+      let r;
+      try { r = await (await fetch("/claude/update", { method: "POST" })).json(); }
+      catch (e) { btn.disabled = false; msg.textContent = t("common.net_err"); return; }
+      btn.disabled = false;
+      if (!r.ok) { msg.innerHTML = Icons.warn(t("models.cc_upd_fail") + " " + (r.error || "")); return; }
+      if (!r.doi) { msg.textContent = t("models.cc_upd_same", { v: r.sau || "" }); return; }
+      const moi = (r.model_moi || []).join(", ");
+      msg.innerHTML = CHECK_ICON + " " + esc(t("models.cc_upd_done", { truoc: r.truoc || "?", sau: r.sau })
+        + (moi ? " " + t("models.cc_upd_new", { ds: moi }) : ""));
+    };
   }
 
   async function startClaudeLogin(el) {

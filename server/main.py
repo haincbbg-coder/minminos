@@ -55,6 +55,7 @@ _update_outcome = update_state.update_outcome
 import git_brain
 import engine
 import openai_oauth
+import claude_update   # tự chạy `claude update` hằng ngày để model mới hiện ra
 import claude_models   # model Claude LIVE cho provider anthropic-cli (hỏi bằng API key, nếu có)
 import winproc         # chạy lệnh con câm lặng trên Windows (không nháy console đen)
 import md_repair       # chữa file .md bị vòng lưu WYSIWYG của bản <= 0.33.3 làm hỏng
@@ -1610,7 +1611,8 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
     # rồi tới id đầy đủ để `_claude_api_model` dịch được alias sang tên thật.
     {"id": "anthropic-cli", "label": "Anthropic OAuth (Claude Code)", "kind": "cli", "key_field": None,          "catalog_key": "claude",
      "default_models": ["fable", "opus", "sonnet", "haiku",
-                        "claude-fable-5-1", "claude-opus-5", "claude-sonnet-5",
+                        "claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1",
+                        "claude-opus-5", "claude-sonnet-5",
                         "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"]},
     {"id": "openai-oauth",  "label": "OpenAI OAuth (ChatGPT)",  "kind": "oauth", "key_field": None,             "catalog_key": "openai-oauth",
      "default_models": []},  # model/list của Codex app-server là nguồn chân lý; không ghim version ở đây
@@ -1633,7 +1635,8 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
     {"id": "openrouter",    "label": "OpenRouter",              "kind": "api", "key_field": "openrouter_key",    "catalog_key": "openrouter",
      "default_models": ["openai/gpt-4o-mini"]},
     {"id": "anthropic-api", "label": "Anthropic (API)",         "kind": "api", "key_field": "anthropic_api_key", "catalog_key": "anthropic-api",
-     "default_models": ["claude-fable-5-1", "claude-opus-5", "claude-sonnet-5",
+     "default_models": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1",
+                        "claude-opus-5", "claude-sonnet-5",
                         "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"]},
     {"id": "openai",        "label": "OpenAI (ChatGPT API)",    "kind": "api", "key_field": "openai_api_key",    "catalog_key": "openai",
      "default_models": ["gpt-4o", "gpt-4o-mini", "o3-mini"]},
@@ -3547,7 +3550,60 @@ def claude_status(refresh: bool = False):
     # (kể cả đèn đỏ do lượt chạy cũ bật), đừng bắt người dùng chờ vòng probe 10 phút.
     if refresh and d.get("connected"):
         connect_health.engine_reconnected("claude")
+    # Lần tự cập nhật gần nhất, để thẻ nói được "đang ở bản nào, xét lần cuối khi nào". Đọc
+    # file trạng thái chứ không chạy `claude --version`: trang Models vẽ thẻ này mỗi lần mở.
+    d = dict(d)
+    d["cap_nhat"] = claude_update.doc_trang_thai()
+    d["cap_nhat_docker"] = deploy_info.deploy_mode() == "docker"
     return d
+
+
+async def _cap_nhat_claude(ly_do: str) -> dict:
+    """Chạy `claude update` ở worker, rồi báo model nào MỚI hiện ra nhờ bản vừa lên."""
+    cu = set(claude_cli.list_models() or [])
+    kq = await asyncio.to_thread(claude_update.cap_nhat, ly_do)
+    if kq.get("doi"):
+        _PROV_MODELS_CACHE.pop("anthropic-cli", None)
+        try:
+            ds = (await provider_models_index("anthropic-cli", refresh=True)).get("models") or []
+        except Exception:
+            ds = claude_cli.list_models() or []
+        kq["model_moi"] = [x for x in ds if x not in cu and x.startswith("claude-")]
+        print(f"[claude update] {kq.get('truoc')} -> {kq.get('sau')} ({ly_do}); model mới: "
+              f"{', '.join(kq['model_moi']) or 'không có'}", file=sys.stderr)
+    elif not kq.get("ok") and not kq.get("docker"):
+        print(f"[claude update] không cập nhật được ({ly_do}): {kq.get('error')}", file=sys.stderr)
+    return kq
+
+
+@app.post("/claude/update")
+async def claude_update_now():
+    """Nút "Cập nhật Claude Code" trên trang Models: chạy ngay, không chờ vòng hằng ngày."""
+    return await _cap_nhat_claude("tay")
+
+
+@app.on_event("startup")
+async def _tu_cap_nhat_claude():
+    """Mỗi giờ xem đã tới hạn chưa; tới hạn (24 giờ) thì chạy `claude update` một lần.
+
+    Không có vòng này thì máy chỉ dùng Claude qua Javis kẹt ở bản CLI cũ mãi, và model mới
+    (Sonnet 5.5, 29/09/2026) không bao giờ hiện trong trình chọn. Chờ 2 phút sau khi khởi
+    động cho server nhẹ tay đã.
+    """
+    if not claude_update.bat() or deploy_info.deploy_mode() == "docker":
+        return
+
+    async def _vong():
+        await asyncio.sleep(120)
+        while True:
+            try:
+                if claude_update.den_han() and claude_cli.find_claude_cli():
+                    await _cap_nhat_claude("tu_dong")
+            except Exception as e:
+                print(f"[claude update] vòng tự cập nhật lỗi: {type(e).__name__}: {e}",
+                      file=sys.stderr)
+            await asyncio.sleep(3600)
+    asyncio.create_task(_vong())
 
 
 @app.get("/antigravity/status")
