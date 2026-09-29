@@ -301,7 +301,7 @@ check("CANARY: gói CÓ MÃ thì công tắc mặc định tắt",
 check("nói thẳng gói chạy mã thật, không làm mềm",
       "store.inspect.code.title" in src_js
       and "chạy Python thật" in _VI.get("store.inspect.code.title", "")
-      and "máy chủ Javis" in _VI.get("store.inspect.code.title", ""))
+      and "máy chủ MinMin" in _VI.get("store.inspect.code.title", ""))
 
 src_c = (DASHBOARD / "console.js").read_text(encoding="utf-8")
 check("trang Gói đăng ký trong rail", '"packs"' in src_c and "JavisPacks" in src_c)

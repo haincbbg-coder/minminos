@@ -534,7 +534,7 @@ check("CANARY: thông báo tan sau khi hiện, không dính lại mãi",
 check("số đang gõ dở trong form không bị xoá khi trang vẽ lại",
       "function nhoForm(" in _USAGE and "state.nsForm" in _USAGE)
 check("nói rõ chỉ đếm lượt của Javis",
-      "usage.tk.qua_luot" in _USAGE and "lượt của Javis" in _VI.get("usage.tk.qua_luot", ""))
+      "usage.tk.qua_luot" in _USAGE and "lượt của MinMin" in _VI.get("usage.tk.qua_luot", ""))
 
 # Việc nền chạy bằng API key phải ghi mức dùng, không thì trần tiền không thấy chính khoản
 # chi mà nó sinh ra để chặn.
