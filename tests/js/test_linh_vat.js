@@ -112,9 +112,9 @@ check("tắt dấu ấn thì trả lại thẻ <img> nguyên bản", /o\.innerHT
 // con .brand-mark, và index.html phải có sẵn ô con đó.
 check("dấu ấn thay ruột ô .brand-mark, không thay cả khối thương hiệu",
   /var LO_DAU_AN = "\.rail-brand \.brand-mark, \.brand \.brand-icon";/.test(pet));
-check("index.html: .rail-brand có ô dấu ấn riêng và chữ JAVIS OS",
+check("index.html: .rail-brand có ô dấu ấn riêng và chữ MinMin OS",
   /<div class="rail-brand"><span class="brand-mark">/.test(html)
-  && /<span class="rail-brand-text">JAVIS <i>OS<\/i><\/span>/.test(html));
+  && /<span class="rail-brand-text">MinMin <i>OS<\/i><\/span>/.test(html));
 check("css: thu gọn thanh bên thì giấu chữ, chỉ còn dấu ấn",
   /\.rail\.collapsed \.rail-brand-text \{ display: none; \}/.test(railCss));
 // Quầng sáng cam phải ở ô DẤU ẤN chứ không ở cả khối: filter của cha ăn xuống cả cây con và
