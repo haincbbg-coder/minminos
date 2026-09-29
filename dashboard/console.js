@@ -125,7 +125,7 @@
   // Trang CÓ THẬT nhưng KHÔNG hiện trên thanh bên. Bỏ hẳn khỏi `RAIL_ITEMS` thì không dùng
   // được, vì đó mới là nguồn icon và nhãn; nên chỗ ẩn nằm ở đây.
   //
-  // Rỗng từ 0.55.37. Trước đó Javis Store bị ẩn với lý do "nó không phải một chức năng ngang
+  // Rỗng từ 0.55.37. Trước đó MinMin Store bị ẩn với lý do "nó không phải một chức năng ngang
   // hàng với Trợ lý hay Kỹ năng, đường vào đúng là cái tab trên chính trang bạn đang đứng".
   // Lập luận đó đúng khi kho chỉ có vài gói và ai cũng tới nó từ một trang năng lực. Nó sai
   // ngay khi kho thành chỗ chứa PHẦN LỚN kết nối của Javis (0.55.36 dọn 16 khuôn ra kho):
@@ -556,7 +556,7 @@
     // hệt như "tab hỏng" chứ không giống "ai đó cướp handler".
     row.innerHTML = ds.map((x, i) =>
         `<button class="tab-kho${x.chon ? " on" : ""}" data-tab-cb="${i}">${esc(x.nhan)}</button>`).join("")
-      + `<button class="tab-kho" data-mo-kho="${kind}">${ic("package")} Javis Store</button>`;
+      + `<button class="tab-kho" data-mo-kho="${kind}">${ic("package")} MinMin Store</button>`;
     row.querySelectorAll("[data-tab-cb]").forEach(b => b.onclick = () => {
       const f = ds[Number(b.dataset.tabCb)];
       if (f && f.bam) f.bam();
@@ -5403,7 +5403,7 @@
     // Hai nguyên nhân, hai lối thoát khác hẳn nhau - trộn làm một là đẩy người dùng đi sai
     // đường ở đúng lúc họ đang hoảng:
     //   `co_trong_kho`  người dùng vừa tự gỡ dịch vụ đó → cài lại ở khu "Đã gỡ" ngay dưới.
-    //   không có        dịch vụ đã DỌN RA Javis Store (0.55.36 dọn 16 cái) → cài lại từ kho.
+    //   không có        dịch vụ đã DỌN RA MinMin Store (0.55.36 dọn 16 cái) → cài lại từ kho.
     //
     // Câu cũ ở nhánh thứ hai xui người dùng nâng cấp app hoặc bỏ kết nối đi. Từ 0.55.36 nó
     // vừa sai vừa nguy hiểm: nâng cấp không mọc lại dịch vụ nữa, còn bỏ kết nối là vứt luôn
@@ -5456,7 +5456,7 @@
       + 'padding:14px 16px;margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">'
       + '<span style="flex:1;min-width:240px">' + esc(window.t("cs.cn_more_services")) + '</span>'
       + '<button class="mp-btn" id="mcpDiSanCo">' + esc(window.t("cs.cn_tab_sanco")) + '</button>'
-      + '<button class="mp-btn primary" id="mcpDiKho">Javis Store</button></div>'
+      + '<button class="mp-btn primary" id="mcpDiKho">MinMin Store</button></div>'
       + '<details class="cview-section amb-details" id="ambWrap"><summary><h3 style="display:inline">◆ ' + esc(window.t("cs.cn_amb_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.cn_amb_hint")) + '</span></h3></summary>'
       + '<div class="gcard-meta" style="max-width:740px;margin-top:10px">' + esc(window.t("cs.cn_amb_desc_a")) + ' <code>codex mcp</code>' + esc(window.t("cs.cn_amb_desc_b")) + '</div>'
       + '<div class="prov-list" id="mcpAmbient" style="margin-top:12px"><div class="mp-empty">' + esc(window.t("cs.cn_amb_click")) + '</div></div>'

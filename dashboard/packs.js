@@ -979,7 +979,7 @@
         ? '<button class="kho-quaylai" id="pkQuayLai">← '
           + tw("store.back_to", { trang: esc(veTrang.nhan) }) + '</button>'
         : "")
-      + '<div class="cview-section kho-khoi"><h3>◆ Javis Store</h3>'
+      + '<div class="cview-section kho-khoi"><h3>◆ MinMin Store</h3>'
       + '<div class="gcard-meta" style="max-width:740px">' + tw("store.intro") + ' '
       + tw("store.intro_press", { nut: '<b>' + tw("store.btn.install") + '</b>' }) + '</div>'
       + (d.disabled
