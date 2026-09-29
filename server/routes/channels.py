@@ -119,17 +119,22 @@ def _tai_khoan_thong_nhat(brain: str = "") -> list:
             for a in m.tai_khoan():
                 key = f"{s.id}:{a['id']}"
                 tk = da_co.get(key) or {}
-                theo_doi = bool(a.get("theo_doi"))
+                # Bot đang trực tài khoản này (từ 0.64.80 Zalo cá nhân cũng gắn được bot). Có bot
+                # bật thì vòng đọc chạy dù công tắc Ghi hội thoại tắt, nên "đang chạy" phải tính cả.
+                b = bot_cua.get(a["id"]) or {}
+                theo_doi = bool(a.get("theo_doi")) or bool(b.get("enabled"))
                 out.append({
                     "id": a["id"], "account_key": key, "kind": "account",
                     "channel": s.id, "channel_label": s.nhan, "logo": s.logo, "mau": s.mau,
                     "label": a.get("label") or s.nhan, "external_id": "", "tien_to_ten": "",
                     "token_set": True, "meta": {},
-                    "bot_id": "", "bot_name": "", "bot_icon": "", "bot_enabled": False,
+                    "bot_id": b.get("id") or "", "bot_name": b.get("name") or "",
+                    "bot_icon": b.get("icon") or "", "bot_enabled": bool(b.get("enabled")),
+                    "bot_brain": b.get("brain") or "",
                     "brain": "",   # kết nối ở trang Kết nối, không thuộc brain nào
                     "state": ("error" if a.get("loi") else "running" if theo_doi else "off"),
                     "loi": a.get("loi") or "", "lan_cuoi": a.get("lan_cuoi") or 0,
-                    "watch": theo_doi, "ghi": theo_doi,
+                    "watch": bool(a.get("theo_doi")), "ghi": theo_doi,
                     "so_hoi_thoai": int(tk.get("so_hoi_thoai") or 0),
                     "chua_doc": int(tk.get("chua_doc") or 0),
                     "nang_luc": nl, "xoa_duoc": False, "sua_duoc": False,
@@ -288,7 +293,7 @@ async def verify_token(channel: str, token: str, account_id: str = "", bot_id: s
     s = channels.spec(kenh)
     m = channels.module(kenh)
     if not s or s.kind != "bot" or not m or not callable(getattr(m, "verify_token", None)):
-        return _400(f"Kênh '{kenh}' không nhận token bot. Kênh có: " + ", ".join(channels.bot_ids()))
+        return _400(f"Kênh '{kenh}' không nhận token bot. Kênh có: " + ", ".join(channels.bot_token_ids()))
     if kenh == "telegram" and _DEPS and _DEPS.main_bot_token() and _DEPS.main_bot_token() == tok:
         return {"ok": False, "error": "Đây là token bot chính của bạn. Bot chuyên trách phải "
                                       "dùng một bot Telegram RIÊNG (tạo thêm ở BotFather)."}

@@ -70,6 +70,8 @@ server/conversations.db.bak-*
 server/md_hong_da_soi.json
 server/conversations.db-wal
 server/conversations.db-shm
+# Kho hội thoại khách (Hộp thư bot). Dữ liệu của người dùng, không bao giờ lên git.
+server/customer_conversations.sqlite3*
 server/runtime.db
 server/runtime.db-wal
 server/runtime.db-shm

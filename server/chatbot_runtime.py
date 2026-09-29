@@ -154,6 +154,23 @@ TÀI LIỆU, nên lượt này hãy nói bạn chưa có thông tin thay vì tr�
 """
 
 
+# Zalo CÁ NHÂN của chủ (0.64.80). Khác Telegram/Zalo Bot ở chỗ người nhắn tới không chỉ là khách:
+# đây là nick chủ dùng hằng ngày nên bạn bè, người nhà, đồng nghiệp đều nhắn vào. Chủ đã chọn
+# (29/09) để bot TỰ QUYẾT có trả lời không thay vì bật công tắc từng người, nên quyết định đó phải
+# được nói cho model biết - và nó là chỉ dẫn duy nhất Javis thêm vào prompt bot, chỉ ở kênh này.
+IM_LANG = "[IM_LANG]"
+_CAU_ZALO_CA_NHAN = f"""
+## Kênh này là Zalo CÁ NHÂN của chủ
+
+Bạn đang trả lời tin nhắn ở tài khoản Zalo cá nhân của chủ, và câu bạn gửi đi mang TÊN CHỦ.
+Người nhắn tới có thể là khách, nhưng cũng có thể là bạn bè, người nhà, đồng nghiệp của chủ.
+Hãy tự quyết định có nên trả lời hay không: chỉ trả lời khi tin nhắn đúng là việc mà vai của bạn
+phụ trách. Nếu đó là chuyện riêng tư, chuyện gia đình bạn bè, một tin không cần hồi đáp, hoặc
+bạn không chắc có nên nhân danh chủ trả lời hay không, thì KHÔNG trả lời: viết đúng một dòng
+`{IM_LANG}` và không thêm chữ nào khác.
+"""
+
+
 def build_bot_prompt(bot: dict) -> str:
     """System prompt của một lượt bot = ĐÚNG file Agent, cộng tài liệu đã tra sẵn.
 
@@ -210,6 +227,9 @@ def build_bot_prompt(bot: dict) -> str:
             phan.append(_CO_TAI_LIEU.format(khoi=tl.get("khoi") or ""))
         elif bot.get("nguon_tra_loi") == "tai_lieu":
             phan.append(_KHONG_TAI_LIEU_CHAT)
+    # Kênh của LƯỢT này, do _make_answer_fn gắn vào. Chỉ Zalo cá nhân mới có thêm đoạn này.
+    if (bot or {}).get("_kenh_luot") == "zalo_personal":
+        phan.append(_CAU_ZALO_CA_NHAN)
     return "\n".join(phan)
 
 
@@ -658,6 +678,7 @@ def _make_answer_fn(bot_id: str):
         except Exception as e:
             print(f"[chatbot {bot_id}] tra tài liệu lỗi: {e}", file=sys.stderr)
         cfg["_tai_lieu"] = tl
+        cfg["_kenh_luot"] = kenh_luot
 
         # Bản ghi truyền xuống lõi phải có brain và slug - lõi dựa vào đó để đổi brain, đổi
         # khoá phiên và đổi nhãn kênh.
@@ -685,6 +706,21 @@ def _make_answer_fn(bot_id: str):
                    "files": []}
 
         dap = (out or {}).get("text") or ""
+        # Bot TỰ QUYẾT im lặng (chỉ được dạy ở Zalo cá nhân, xem _CAU_ZALO_CA_NHAN). Đây không phải
+        # lượt "bí" và cũng không phải lượt lỗi: bot hiểu tin nhắn và chọn không nhân danh chủ trả
+        # lời. Ghi vào nhật ký để chủ soi lại được, nhưng không gửi gì, không vào Hộp thư như một
+        # câu bot nói, không tính vào bộ đếm bí/gọi người.
+        if not loi_ky_thuat and IM_LANG.lower() in dap.lower():
+            _BI_LIEN_TIEP[(bot_id, chat_id)] = 0
+            chatbot_log.ghi(bot_id, {
+                "chat_id": chat_id, "chat_type": (meta or {}).get("chat_type"),
+                "user_name": (meta or {}).get("user_name"), "hoi": text,
+                "dap": "(bot chọn không trả lời)", "loi": "",
+                "co_tai_lieu": bool(tl.get("co")), "nguon": tl.get("nguon"),
+                "chuyen_nguoi": False, "bi": False,
+                "muc_quyen": cfg.get("muc_quyen") or "suggest",
+            })
+            return {"text": "", "files": [], "im_lang": True}
         # "Bí" đo bằng chính CÂU BOT VỪA NÓI, không bằng việc có tìm ra tài liệu hay không.
         #
         # Ở chế độ theo Agent thì không có tài liệu là chuyện thường - bot vẫn trả lời tốt bằng

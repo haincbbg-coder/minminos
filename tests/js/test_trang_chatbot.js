@@ -41,6 +41,7 @@ const SRV2 = fs.readFileSync(path.join(ROOT, "server", "ui_targets.py"), "utf8")
 // dung khoá thành câu ngược nghĩa vẫn xanh, chỉ kiểm từ điển thì gỡ hẳn dòng chữ khỏi giao diện
 // vẫn xanh. Chuỗi dùng để SO SÁNH và khoá tra cứu của object vẫn nằm nguyên trong .js.
 const VI = JSON.parse(fs.readFileSync(path.join(ROOT, "dashboard", "i18n", "vi.json"), "utf8"));
+const EN = JSON.parse(fs.readFileSync(path.join(ROOT, "dashboard", "i18n", "en.json"), "utf8"));
 // Vế 2 dùng chung: khoá `k` trong vi.json có chứa câu `chu` không.
 const tu = (k, chu) => String(VI[k] || "").includes(chu);
 // Cả hai vế cho ca thường: chatbots.js gọi khoá `k`, và khoá đó mang câu `chu`.
@@ -313,12 +314,16 @@ check("kênh lạ trả rỗng chứ không vẽ dấu hỏi", /if \(!k\) return
 // một trường của bot. Thẻ hiện một chip cho MỖI tài khoản; huy hiệu ở icon chỉ khi có đúng một.
 check("kênh hiện trên thẻ bot (huy hiệu ở icon khi một tài khoản + chip cho từng tài khoản)",
   /class="cb-ico-kenh"/.test(CB) && /function chipTK\(/.test(CB) && /\.map\(chipTK\)/.test(CB));
-check("form hỏi tài khoản NGAY Ở ĐẦU, trước cả tên bot",
-  tu("cb.lb_tai_khoan", "tài khoản") && tu("cb.lb_ten", "Tên bot") &&
+check("form hỏi KÊNH NGAY Ở ĐẦU, trước cả tên bot",
+  tu("cb.lb_tai_khoan", "kênh") && tu("cb.lb_ten", "Tên bot") &&
   CB.indexOf('window.t("cb.lb_tai_khoan")') > -1 &&
   CB.indexOf('window.t("cb.lb_tai_khoan")') < CB.indexOf('window.t("cb.lb_ten")'));
-check("tích được NHIỀU tài khoản (cùng một vai trực Telegram lẫn Zalo)",
-  /class="cb-tk-o"/.test(CB) && /account_ids: ids\.join\(","\)/.test(CB) && tu("cb.hint_tai_khoan", "nhiều tài khoản"));
+check("tích được NHIỀU kênh (cùng một vai trực Telegram, Zalo Bot lẫn Zalo cá nhân)",
+  /class="cb-tk-o"/.test(CB) && /account_ids: ids\.join\(","\)/.test(CB) && tu("cb.hint_tai_khoan", "nhiều kênh"));
+// 0.64.80: chọn Zalo cá nhân thì nói thẳng bot trả lời DƯỚI TÊN chủ. Đọc theo `kind` server khai.
+check("kênh kiểu tài khoản (Zalo cá nhân) có dòng lưu ý ngay lúc chọn",
+  /k\.kind === "account"/.test(CB) && /cb\.tk_ca_nhan_luu_y/.test(CB) &&
+  tu("cb.tk_ca_nhan_luu_y", "dưới tên bạn") && !!EN["cb.tk_ca_nhan_luu_y"]);
 // CANARY: giao diện KHÔNG đoán gì theo id kênh. Logo, nhãn, năng lực đều từ danh sách server;
 // thêm kênh ở server là trang này vẽ được ngay, không sửa một dòng nào ở đây.
 check("CANARY: không rẽ nhánh theo id kênh (logo qua kenhCua().logo, không Icons.kenh(kenh) trực tiếp)",
@@ -328,8 +333,8 @@ check("không tài khoản nào vào được nhóm thì ẨN cả khối nhóm,
   /cbKhongNhom/.test(CB) && /function coNhomForm\(/.test(CB) && /nhomBox\.style\.display = co \? "" : "none"/.test(CB));
 check("và KHÔNG gửi id nhóm thừa lên server",
   /var coNhomLuu = coNhomForm\(\)/.test(CB) && /coNhomLuu \? box\.querySelector\("#cbGroups"\)/.test(CB));
-check("thẻ bot nói thẳng khi chưa có tài khoản bot nào",
-  noi("cb.chua_token", "chưa có tài khoản bot"));
+check("thẻ bot nói thẳng khi chưa có kênh nào",
+  noi("cb.chua_token", "chưa có kênh"));
 check("mở form từ tab Tài khoản bot với tài khoản tích sẵn", /javis:chatbot-new/.test(CB) && /chonSan/.test(CB));
 check("cảnh báo riêng tư chỉ hiện khi bot có tài khoản Telegram",
   /a\.channel === "telegram"/.test(CB) && /coTelegram && duNhom/.test(CB));
@@ -402,10 +407,10 @@ check("agent để Mặc định thì nói rõ là theo model chính, không đ�
 // Tài khoản bot / Tạo chatbot. Nhãn nằm trong từ điển, nên canary soi từ điển.
 check("thanh bên gọi trang này là Chatbot", VI["page.conversations.label"] === "Chatbot");
 check("ba tab đúng tên mới",
-  VI["ht.tab_inbox"] === "Hòm thư bot" && VI["ht.tab_kenh"] === "Tài khoản bot" &&
+  VI["ht.tab_inbox"] === "Hòm thư bot" && VI["ht.tab_kenh"] === "Kênh của bot" &&
   VI["ht.tab_chatbot"] === "Tạo chatbot");
 check("nói tên mới cũng mở đúng trang",
-  SRV2.includes('"hom thu bot": "conversations"') && SRV2.includes('"tai khoan bot": "conversations"') &&
+  SRV2.includes('"hom thu bot": "conversations"') && SRV2.includes('"tai khoan bot": "conversations"') && SRV2.includes('"kenh cua bot": "conversations"') &&
   SRV2.includes('"tao chatbot": "chatbots"'));
 
 // ============================================================

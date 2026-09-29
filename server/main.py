@@ -18809,14 +18809,18 @@ async def chatbots_list(brain: str = ""):
     ], "kenh": [
         # Cùng lý do với mức quyền: giao diện KHÔNG giữ bản chép riêng. Từ 0.61.0 danh sách
         # kênh gắn được bot và năng lực của chúng đọc từ SỔ ĐĂNG KÝ KÊNH (server/channels).
-        k for k in channels.cho_giao_dien() if k.get("kind") == "bot"
+        k for k in channels.cho_giao_dien() if (k.get("nang_luc") or {}).get("bot")
     ], "tai_khoan": [
         # Tài khoản kênh chưa bot nào trực (0.61.0): form tạo bot cho CHỌN thay vì bắt dán token.
         # Lọc theo BRAIN đang mở (0.62.4) đúng như danh sách bot ngay trên: bot thuộc một brain,
         # nên nó chỉ được chọn tài khoản của brain đó. Không lọc thì form vẫn bày tài khoản của
         # brain khác, gắn vào là tạo ra một liên kết chéo brain mà tab Tài khoản bot không hiện.
         # `loc` rỗng (lời gọi nội bộ) thì trả hết như cũ.
-        a for a in channel_accounts.list_accounts(brain=loc)
+        #
+        # Cộng thêm Zalo cá nhân (0.64.80): kết nối ở trang Kết nối, không thuộc brain nào nên
+        # brain nào cũng thấy. Thiếu dòng này thì người dùng nối Zalo xong mở "Bot mới" và
+        # không thấy kênh nào để chọn (chủ repo báo 29/09).
+        a for a in (channel_accounts.list_accounts(brain=loc) + channel_accounts.tai_khoan_ao())
         if not chatbot_store.bots_using_account(a["id"])
     ]}
 

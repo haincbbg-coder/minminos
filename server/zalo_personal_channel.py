@@ -22,8 +22,14 @@ Ba quyết định đáng ghi lại:
 Gọi MCP đi THẲNG qua `mcp_client.pool` (không qua hub `_guard`): hub bọc quyền và audit cho
 model gọi; ở đây là vòng lặp hệ thống, tool đọc, và mỗi 20 giây một dòng audit chỉ là rác.
 
-Chưa có ở V1: bot tự trả lời qua Zalo cá nhân (gửi tin dưới danh tính CHỦ là chuyện phải cân
-nhắc riêng), và tải media. Tin ảnh/file ghi loại tin kèm mô tả, không tải về.
+Bot tự trả lời (0.64.80): tài khoản này gắn được Bot chuyên trách như Telegram hay Zalo Bot.
+Chủ quyết định 29/09/2026: bot TỰ TRẢ LỜI và TỰ QUYẾT có nên trả lời không, không cần công tắc
+từng người, vì nick này chủ tự quản lý và đã có Hộp thư để giám sát. Đây là chỗ đảo lại quyết
+định bỏ tự trả lời Zalo hồi 21/07 (bản khi đó dựa trên listener luật, nay là bot chuyên trách
+có Agent, mức quyền, giới hạn tần suất và Hộp thư). Xem "Bot trả lời" ở cuối file: chỉ trả lời
+chat RIÊNG dạng chữ, bỏ tin cũ, im khi chủ đang tự nhắn.
+
+Chưa có: tải media. Tin ảnh/file ghi loại tin kèm mô tả, không tải về, và bot không trả lời chúng.
 """
 from __future__ import annotations
 
@@ -308,12 +314,21 @@ async def doc_mot_lan(conn: dict) -> dict:
         ev = chuan_hoa_tin(conn, m, ten)
         if not ev:
             continue
+        if ev["sender_type"] == "human":
+            # Tin chủ gửi đi. Tiếng vọng của câu BOT vừa gửi thì bỏ (bot đã tự ghi câu đó vào
+            # Hộp thư, ghi thêm lần nữa là hiện hai lần, lần hai mang nhãn "người thật"). Còn
+            # lại là chủ tự tay nhắn: nhớ giờ để bot nhường cuộc chat đó.
+            if _la_tieng_vong(conn["id"], ev["external_chat_id"], ev["text"]):
+                trung += 1
+                continue
+            _TAY[(conn["id"], ev["external_chat_id"])] = float(ev.get("created_at") or time.time())
         kq = conversations.ghi_su_kien(ev)
         if kq.get("ok"):
             if kq.get("trung"):
                 trung += 1
             else:
                 moi += 1
+                _giao_cho_bot(conn, ev)
     nc = _lay(d, "nextCursor", "next_cursor", "cursor", mac_dinh="")
     if nc:
         conversations.ghi_trang_thai(khoa_cursor, str(nc))
@@ -328,7 +343,8 @@ async def _vong() -> None:
     while not _stop:
         try:
             cfg = _cau_hinh()
-            bat_ids = {k for k, v in cfg.items() if v}
+            # Có bot trực thì đọc dù công tắc Ghi hội thoại tắt: bot không đọc thì không trả lời được.
+            bat_ids = {k for k, v in cfg.items() if v} | set(_BOTS)
             if bat_ids:
                 for conn in _ket_noi():
                     if _stop or conn["id"] not in bat_ids:
@@ -381,3 +397,89 @@ def stop() -> None:
 def trang_thai() -> dict:
     return {"dang_chay": bool(_task and not _task.done()), "nhip": NHIP,
             "tai_khoan": tai_khoan()}
+
+
+# ============================================================
+# Bot trả lời (0.64.80)
+# ============================================================
+# Vòng đọc ở trên là NGUỒN tin duy nhất của tài khoản này (một con trỏ cursor, không được có
+# hai người đọc). Bot chuyên trách không tự đọc mà đăng ký ở đây; tin khách mới ghi xong thì
+# được đưa cho nó. Các rào để bot không nhắn bậy dưới tên chủ nằm ở `channels.zalo_personal.
+# Transport.xu_ly` và ở hằng số dưới.
+TUOI_TOI_DA = 180       # giây: tin cũ hơn thế thì KHÔNG trả lời. Lần đầu bật, bộ đệm của MCP
+                        # còn cả những tin từ trước; trả lời chúng là dội lại câu hỏi của hôm qua.
+TAY_IM = 600            # giây bot im sau khi chủ TỰ TAY nhắn cuộc chat đó (chủ đang nói chuyện rồi)
+ECHO_TTL = 900          # giây nhớ câu bot vừa gửi để nhận ra tiếng vọng của nó ở vòng đọc
+
+_BOTS: Dict[str, Any] = {}          # conn_id -> Transport đang trực
+_DA_GUI: Dict[tuple, list] = {}     # (conn_id, thread) -> [(ts, chữ đã chuẩn hoá)]
+_TAY: Dict[tuple, float] = {}       # (conn_id, thread) -> giờ tin chủ tự nhắn gần nhất
+_VIEC: set = set()                  # giữ tham chiếu task đang chạy, kẻo bị thu gom giữa chừng
+
+
+def dang_ky_bot(conn_id: str, tb: Any) -> None:
+    _BOTS[str(conn_id)] = tb
+    start()
+
+
+def huy_dang_ky_bot(conn_id: str, tb: Any = None) -> None:
+    cid = str(conn_id)
+    if tb is None or _BOTS.get(cid) is tb:
+        _BOTS.pop(cid, None)
+
+
+def co_bot(conn_id: str) -> bool:
+    return str(conn_id) in _BOTS
+
+
+def _chuan(text: str) -> str:
+    return " ".join(str(text or "").split())
+
+
+def ghi_da_gui(conn_id: str, thread: str, text: str) -> None:
+    """Bot vừa gửi `text`: nhớ lại để vòng đọc nhận ra tiếng vọng của nó."""
+    khoa = (str(conn_id), str(thread))
+    now = time.time()
+    ds = [x for x in _DA_GUI.get(khoa, []) if now - x[0] < ECHO_TTL]
+    ds.append((now, _chuan(text)))
+    _DA_GUI[khoa] = ds[-20:]
+    if len(_DA_GUI) > 500:      # trần thô: thà quên một tiếng vọng còn hơn phình mãi
+        for k in list(_DA_GUI)[:250]:
+            _DA_GUI.pop(k, None)
+
+
+def _la_tieng_vong(conn_id: str, thread: str, text: str) -> bool:
+    khoa = (str(conn_id), str(thread))
+    now = time.time()
+    ds = [x for x in _DA_GUI.get(khoa, []) if now - x[0] < ECHO_TTL]
+    if not ds:
+        _DA_GUI.pop(khoa, None)
+        return False
+    t = _chuan(text)
+    for i, (_, gui) in enumerate(ds):
+        # So bằng hoặc đầu-câu: Zalo có thể cắt/đổi chút ở đuôi tin dài.
+        if t and gui and (t == gui or t.startswith(gui[:80]) or gui.startswith(t[:80])):
+            del ds[i]
+            _DA_GUI[khoa] = ds
+            return True
+    _DA_GUI[khoa] = ds
+    return False
+
+
+def chu_vua_nhan_tay(conn_id: str, thread: str, now: Optional[float] = None) -> bool:
+    """Chủ vừa tự tay nhắn cuộc chat này (trong `TAY_IM` giây) - bot nhường."""
+    t = _TAY.get((str(conn_id), str(thread)))
+    return bool(t) and ((time.time() if now is None else now) - t) < TAY_IM
+
+
+def _giao_cho_bot(conn: dict, ev: dict) -> None:
+    tb = _BOTS.get(str(conn.get("id") or ""))
+    if not tb or ev.get("sender_type") != "customer":
+        return
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    t = loop.create_task(tb.xu_ly(ev))
+    _VIEC.add(t)
+    t.add_done_callback(_VIEC.discard)

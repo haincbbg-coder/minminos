@@ -100,7 +100,11 @@ def _nap() -> Dict[str, KenhSpec]:
         nl.update(spec.nang_luc or {})
         # Hai năng lực suy ra từ chính module, không tin lời khai: có hàm mới có năng lực.
         nl["tra_loi_tu_javis"] = bool(nl.get("gui_chu")) and callable(getattr(m, "gui", None))
-        nl["bot"] = spec.kind == "bot" and getattr(m, "Transport", None) is not None
+        # Kênh nào có lớp vận chuyển thì gắn được bot. Từ 0.64.80 gồm cả kind "account" (Zalo cá
+        # nhân): nó không có token nhưng tin đi vào qua vòng đọc của chính module, và bot trả lời
+        # bằng `gui`. Cái khác nhau giữa hai loại là NGUỒN tài khoản (token ở kho tài khoản, hay
+        # kết nối ở trang Kết nối), xem `bot_token_ids`.
+        nl["bot"] = spec.kind in ("bot", "account") and getattr(m, "Transport", None) is not None
         nl["ghi_theo_cong_tac"] = spec.kind == "account" and callable(getattr(m, "bat", None))
         spec.nang_luc = nl
         if not spec.logo:
@@ -133,6 +137,15 @@ def bot_ids() -> tuple:
     return tuple(k for k, s in _nap().items() if s.nl("bot"))
 
 
+def bot_token_ids() -> tuple:
+    """Kênh gắn được bot VÀ tài khoản là một token lưu ở kho tài khoản (Telegram, Zalo Bot).
+
+    Khác `bot_ids` ở đúng Zalo cá nhân: tài khoản của nó là kết nối ở trang Kết nối, không có
+    token để tạo/lưu, nên mọi đường "tạo tài khoản token" phải dùng danh sách này.
+    """
+    return tuple(k for k, s in _nap().items() if s.nl("bot") and s.kind == "bot")
+
+
 def nhan(kenh: str) -> str:
     s = spec(kenh)
     return s.nhan if s else str(kenh or "")
@@ -156,7 +169,9 @@ def cho_giao_dien() -> List[dict]:
             "lay_token": s.lay_token, "tom_tat": s.tom_tat, "tien_to_ten": s.tien_to_ten,
             "nang_luc": dict(s.nang_luc),
             # Hai cờ cũ giao diện Chatbot đang đọc; giữ để không đổi hai chỗ cùng lúc.
-            "co_nhom": s.nl("nhom"), "gui_tai_lieu": s.nl("gui_file"),
+            # `co_nhom` là câu hỏi của form BOT: bot có đứng được trong nhóm không. Zalo cá nhân
+            # ghi được tin nhóm nhưng bot ở đó chỉ trả lời chat riêng (0.64.80), nên không tính.
+            "co_nhom": s.nl("nhom") and s.kind == "bot", "gui_tai_lieu": s.nl("gui_file"),
         })
     return out
 

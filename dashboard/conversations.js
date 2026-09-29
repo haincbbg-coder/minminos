@@ -587,7 +587,8 @@
       else if (botBr && botBr !== brTK) nhanBrain = window.t("ht.tk_bot_brain_khac", { brain: tenBrain(botBr) });
       else if (_tkMoiBrain || brTK !== brNay) nhanBrain = window.t("ht.o_brain", { brain: tenBrain(brTK) });
     }
-    var botDong = a.kind === "bot"
+    // Có bot trực thì thẻ nói về bot dù kênh là kiểu "account" (Zalo cá nhân gắn được bot từ 0.64.80).
+    var botDong = (a.kind === "bot" || a.bot_id)
       ? (a.bot_id
           ? '<span>' + ic(a.bot_icon || "headset") + ' ' + esc(window.t("ht.tk_bot_truc")) + ' <b>' + esc(a.bot_name) + '</b>' +
             (a.bot_enabled ? "" : ' <span class="ht-warn">(' + esc(window.t("ht.bot_tat")) + ')</span>') + '</span>'
@@ -624,7 +625,7 @@
         '<div class="ht-acc-acts">' +
           congTac +
           '<button type="button" class="s-btn-ghost ht-acc-inbox">' + ic("messages-square") + ' ' + esc(window.t("ht.tab_inbox")) + '</button>' +
-          (a.kind === "bot" && !a.bot_id
+          (!a.bot_id
             ? '<button type="button" class="s-btn-ghost ht-acc-tao-bot">' + ic("headset") + ' ' + esc(window.t("ht.tk_tao_bot")) + '</button>' : "") +
           (a.sua_duoc ? '<button type="button" class="s-btn-ghost ht-acc-sua">' + esc(window.t("common.edit")) + '</button>' : "") +
           (a.kind === "bot"

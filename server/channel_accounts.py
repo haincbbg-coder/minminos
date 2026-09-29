@@ -15,6 +15,11 @@ khoản mà không phải sửa một dòng nào trong SQLite. Tài khoản tạ
 
 Tài khoản của kênh `kind == "account"` (Zalo cá nhân) KHÔNG ở đây: chúng sống ở trang Kết nối
 (`mcp_store`) và module kênh tự liệt kê. Kho này chỉ giữ thứ có token.
+
+Nhưng từ 0.64.80 một bot gắn được vào Zalo cá nhân, và bot lưu tài khoản của nó bằng id. Nên
+`get_account` / `get_token` / `tai_khoan_ao` cho tài khoản kiểu đó một bản ẢO dựng từ kết nối
+Zalo đang bật, mang đúng id kết nối (không đổi id, để hội thoại do vòng đọc ghi và hội thoại do
+bot ghi cùng khoá về một cuộc). Không ghi gì xuống kho.
 """
 from __future__ import annotations
 
@@ -65,7 +70,7 @@ def _save(d: dict) -> None:
 
 def _clean_kenh(v: Any) -> str:
     s = str(v or "").strip().lower()
-    return s if s in channels.bot_ids() else ""
+    return s if s in channels.bot_token_ids() else ""
 
 
 def _clean_label(v: Any) -> str:
@@ -115,20 +120,52 @@ def list_accounts(channel: str = "", brain: str = "") -> List[dict]:
     return out
 
 
+def _ao_cua(conn_id: str, label: str = "") -> dict:
+    """Bản ảo của một tài khoản kênh kiểu "account" (Zalo cá nhân), cùng hình với `_public`."""
+    s = channels.spec("zalo_personal")
+    return {
+        "id": conn_id, "channel": "zalo_personal", "label": label or (s.nhan if s else "Zalo"),
+        "external_id": "", "brain": "", "meta": {}, "token_set": True, "kind": "account",
+        "channel_label": s.nhan if s else "Zalo cá nhân", "logo": s.logo if s else "zalo",
+        "ao": True,
+    }
+
+
+def tai_khoan_ao() -> List[dict]:
+    """Tài khoản Zalo cá nhân đang có ở trang Kết nối, dưới dạng tài khoản kênh để CHỌN cho bot."""
+    try:
+        import zalo_personal_channel
+        return [_ao_cua(str(a["id"]), a.get("label") or "") for a in zalo_personal_channel.tai_khoan()]
+    except Exception:
+        return []
+
+
 def get_account(account_id: str) -> Optional[dict]:
     with _lock:
         for a in _load()["accounts"]:
             if a.get("id") == account_id:
                 return _public(a)
+    # Không có trong kho: có thể là kết nối Zalo cá nhân (chỉ tra khi trượt kho, để đường
+    # thường - id `bot_...`/`acc_...` - không phải đọc cấu hình kết nối).
+    for a in tai_khoan_ao():
+        if a["id"] == account_id:
+            return a
     return None
 
 
 def get_token(account_id: str) -> str:
-    """Token THẬT - chỉ cho mã nội bộ. TUYỆT ĐỐI không trả ra giao diện."""
+    """Token THẬT - chỉ cho mã nội bộ. TUYỆT ĐỐI không trả ra giao diện.
+
+    Tài khoản ảo (Zalo cá nhân) không có token: trả chính id kết nối làm "chìa" để bộ giám sát
+    coi là có thứ để chạy, và Transport dùng nó để tìm kết nối. Không phải bí mật gì.
+    """
     with _lock:
         for a in _load()["accounts"]:
             if a.get("id") == account_id:
                 return secrets_store.decrypt(a.get("token_enc", "")) or ""
+    for a in tai_khoan_ao():
+        if a["id"] == account_id:
+            return account_id
     return ""
 
 
@@ -165,7 +202,7 @@ def create_account(data: dict, account_id: str = "") -> tuple[Optional[str], str
     kenh = _clean_kenh(data.get("channel"))
     if not kenh:
         return None, (f"Kênh '{data.get('channel')}' không gắn được tài khoản token. Kênh có: "
-                      + ", ".join(channels.bot_ids()))
+                      + ", ".join(channels.bot_token_ids()))
     tok = str(data.get("token") or "").strip()
     if not tok:
         return None, f"Thiếu token {channels.nhan(kenh)}"
@@ -259,7 +296,7 @@ def ensure_from_bot(bot: dict) -> Optional[str]:
         for a in d["accounts"]:
             if a.get("id") == bid:
                 return bid
-        kenh = _clean_kenh(bot.get("channel")) or (channels.bot_ids() or ("telegram",))[0]
+        kenh = _clean_kenh(bot.get("channel")) or (channels.bot_token_ids() or ("telegram",))[0]
         d["accounts"].append({
             "id": bid, "channel": kenh,
             "label": _clean_label(bot.get("name")) or channels.nhan(kenh),

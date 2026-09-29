@@ -604,7 +604,11 @@
         (chon[a.id] ? " checked" : "") + ' data-k="' + esc(a.channel) + '" data-ten="' + esc(ten) + '">' +
         '<span class="cb-tk-logo">' + logoKenh(a.channel, "18px") + '</span>' +
         '<span class="cb-tk-text"><b>' + esc(ten) + '</b><small>' + esc(k.nhan) +
-        (a.external_id ? ' · ' + esc((k.tien_to_ten || "") + a.external_id) : "") + '</small></span></label>';
+        (a.external_id ? ' · ' + esc((k.tien_to_ten || "") + a.external_id) : "") + '</small>' +
+        // Kênh kiểu "account" (Zalo cá nhân) là nick của CHÍNH chủ: bot trả lời dưới tên chủ nên
+        // nói thẳng ngay lúc chọn. Đọc theo `kind` do server khai, không đoán theo id kênh.
+        (k.kind === "account" ? '<small class="cb-tk-luu-y">' + esc(window.t("cb.tk_ca_nhan_luu_y")) + '</small>' : "") +
+        '</span></label>';
     }).join("") + '</div>';
   }
 

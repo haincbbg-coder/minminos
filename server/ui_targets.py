@@ -60,6 +60,8 @@ ALIASES = {
     # Nhãn mới của trang và ba tab (0.62.5): thanh bên gọi trang này là "Chatbot", ba tab là
     # Hòm thư bot / Tài khoản bot / Tạo chatbot. Nói sao thấy vậy.
     "hom thu bot": "conversations", "tai khoan bot": "conversations",
+    # Tab đổi tên "Tài khoản bot" -> "Kênh của bot" (0.64.80); tên cũ giữ để lệnh quen tay không chết.
+    "kenh cua bot": "conversations", "kenh bot": "conversations",
     "tao chatbot": "chatbots",
     # Trang Trợ lý và Quy trình gộp thành Cộng sự ở 0.59.0, bí danh cũ giữ để lệnh nói quen tay
     # không chết.
