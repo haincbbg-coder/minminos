@@ -306,3 +306,33 @@ body.ar .cam { left: 0; }
 body.no-text .talk-log, body.no-text .stream { display: none !important; }
 body.solo .talk, body.solo .stream { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .slog li, .talk-st i, .stream h2 small::before { animation: none; } }
+
+/* ---------- DIEN THOAI (0.64.87): thanh cong cu nam ngang duoi day, khong con tran man ----------
+   Truoc day cot nut doc dai hon man iPhone nen nut Nhin, Camera bi day ra ngoai man hinh. */
+@media (max-width: 600px) {
+  :root { --gut: 14px; }
+  .tools { left: 0; right: 0; bottom: 0; top: auto; flex-direction: row; gap: 4px; max-height: none; overflow-x: auto; overflow-y: hidden;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(rgba(7, 4, 15, 0), rgba(7, 4, 15, .92) 35%);
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .tools button { flex: none; flex-direction: column; justify-content: center; gap: 3px; width: 58px; height: 54px; padding: 4px 2px; scroll-snap-align: start; }
+  .tools button svg { width: 20px; height: 20px; }
+  .tools button span, .tools:hover button span, .tools:focus-within button span { max-width: 56px; font-size: 9.5px; overflow: hidden; text-overflow: ellipsis; }
+  body.idle .tools:not(:hover), body.solo .tools:not(:hover) { opacity: 1; }
+  .clock { font-size: 40px; margin-top: 8px; }
+  .date { font-size: 12px; margin-top: 4px; }
+  .conn { margin-top: 6px; }
+  /* Tro chuyen: gon lai duoi dong ho, chi cong tac + trang thai + 2 dong chu */
+  .talk { top: calc(var(--gut) + 128px); bottom: auto; width: calc(100vw - 2 * var(--gut)); padding: 8px 10px; }
+  .talk-log { max-height: 40px; margin-top: 4px; }
+  .talk-lv, .talk-f { display: none; }
+  .talk-st { margin-top: 6px; font-size: 12.5px; }
+  .bottom { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: calc(100vw - 2 * var(--gut)); }
+  .reply { font-size: 16px; -webkit-line-clamp: 3; }
+  .hint { display: none; }
+  .eq { margin: 8px auto 0; }
+  .cam { left: var(--gut); right: auto; bottom: calc(215px + env(safe-area-inset-bottom, 0px)); width: 38vw; }
+  .ask { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); width: calc(100vw - 2 * var(--gut)); }
+  .guide, .guide.may { left: var(--gut); right: var(--gut); top: calc(var(--gut) + 8px); bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    width: auto; max-height: none; transform: none; }
+  .toast { top: calc(var(--gut) + 4px); max-width: calc(100vw - 2 * var(--gut)); }
+}
