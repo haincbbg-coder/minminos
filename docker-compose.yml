@@ -32,6 +32,9 @@ services:
       # Các mặc định cổng/state/brain đã nằm trong Docker image; compose chỉ giữ
       # token thật sự cần chia sẻ giữa app và Watchtower.
       WATCHTOWER_TOKEN: ${WATCHTOWER_TOKEN:-javis-update}   # để nút "Cập nhật" gọi được Watchtower
+      # Repo/ảnh RIÊNG TƯ: token GitHub quyền read:packages để app thấy bản mới và hiện nút Cập nhật
+      GHCR_TOKEN: ${GHCR_TOKEN:-}
+      GHCR_USER: ${GHCR_USER:-}
       # Tài khoản quản trị đặt SẴN lúc deploy. Điền hai dòng này vào file `.env` nằm cạnh
       # compose là xong: server boot lên đã có admin, không còn khoảng trống nào.
       # Bỏ trống thì lần đầu mở app sẽ ra màn tạo tài khoản, và trên server public ai mở link
@@ -108,6 +111,8 @@ services:
       WATCHTOWER_HTTP_API_PERIODIC_POLLS: ${JAVIS_AUTO_UPDATE:-false}
       WATCHTOWER_POLL_INTERVAL: ${JAVIS_AUTO_UPDATE_INTERVAL:-86400}
       WATCHTOWER_CLEANUP: "true"                            # dọn image cũ sau khi update
+      REPO_USER: ${GHCR_USER:-}                            # ảnh riêng tư: cùng token ở trên
+      REPO_PASS: ${GHCR_TOKEN:-}
     # Theo dõi ĐÚNG container của bản này. Để trống hay ghi cứng "javis" thì trên VPS nhiều bản,
     # Watchtower của bản này sẽ đi cập nhật (và restart) container của bản khác.
     command: ${JAVIS_NAME:-javis}

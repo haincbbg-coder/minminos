@@ -327,13 +327,19 @@ function renderKpi(list, updated) {
   if (updated) { const t = new Date(updated); $("kpiUpd").textContent = isNaN(t) ? "" : "· " + t.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }); }
 }
 
+// Mo tu nut "HUD man phu" (?fs=1): cu bam dau tien tren man bat dau dua HUD vao toan man hinh
+function toanManHinh() {
+  if (!params.has("fs") || document.fullscreenElement) return;
+  try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch (e) {}
+}
 $("gateBtn").onclick = async () => {
+  toanManHinh();
   $("gate").hidden = true;
   voiceOn = await voice.start();
   if (!voiceOn && voice.supported === false) voiceOn = true; // van doc duoc, chi khong nghe
   if (DEMO && !voiceOn) voiceOn = true;
 };
-$("gateQuiet").onclick = () => { $("gate").hidden = true; voice._audio(); };
+$("gateQuiet").onclick = () => { toanManHinh(); $("gate").hidden = true; voice._audio(); };
 // Che do kiosk: ?autostart=1 bo qua man bat dau (can co --autoplay-policy khi mo trinh duyet)
 if (params.get("autostart") === "1") { $("gate").hidden = true; voice.start().then(ok => { voiceOn = ok; }); }
 

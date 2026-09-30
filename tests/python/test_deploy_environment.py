@@ -97,9 +97,15 @@ vps_env = set((vps.get("environment") or {}).keys())
 # không có đường nào đặt sẵn admin: họ luôn phải `docker compose logs javis` đọc MÃ THIẾT LẬP
 # rồi dán vào trình duyệt. Hai biến admin là ĐẦU VÀO CỦA NGƯỜI DÙNG, cùng loại với ba trường
 # của Hostinger, không phải mặc định kỹ thuật của image - nên chúng thuộc về đây.
+# GHCR_USER/GHCR_TOKEN (0.64.82): cũng là ĐẦU VÀO của người dùng, dành cho repo/ảnh riêng tư -
+# token read:packages để /version thấy bản mới và Watchtower kéo được ảnh. Bỏ trống = như cũ.
 check(
-    "VPS production giữ token Watchtower + hai trường tài khoản quản trị",
-    vps_env == {"WATCHTOWER_TOKEN", "JAVIS_ADMIN_USER", "JAVIS_ADMIN_PASSWORD"},
+    "VPS production giữ token Watchtower + hai trường tài khoản quản trị + token GHCR",
+    vps_env == {"WATCHTOWER_TOKEN", "JAVIS_ADMIN_USER", "JAVIS_ADMIN_PASSWORD", "GHCR_TOKEN", "GHCR_USER"},
+)
+check(
+    "token GHCR đọc từ .env, mặc định rỗng",
+    "${GHCR_TOKEN:-}" in (ROOT / "docker-compose.yml").read_text(encoding="utf-8"),
 )
 check("VPS production vẫn không lặp lại biến kỹ thuật của image", not (vps_env & internal))
 check(
