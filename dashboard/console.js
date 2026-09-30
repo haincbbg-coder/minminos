@@ -7055,8 +7055,9 @@
           tts_provider: provSel.value,
           openai_tts_voice: document.getElementById("vpOaVoice").value,
           elevenlabs_voice: document.getElementById("vpElVoice").value.trim(),
-          elevenlabs_model: document.getElementById("vpElModel").value,
         };
+        const elModel = document.getElementById("vpElModel");
+        if (elModel && elModel.value) data.elevenlabs_model = elModel.value;
         const elKey = document.getElementById("vpElKey").value.trim();
         if (elKey) data.elevenlabs_key = elKey;
         const oaKey = document.getElementById("vpOaKey").value.trim();
