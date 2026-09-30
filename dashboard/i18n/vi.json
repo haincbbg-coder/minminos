@@ -376,6 +376,8 @@
   "settings.eleven_m_flash": "Flash v2.5 - nhanh, có tiếng Việt",
   "settings.eleven_m_v4": "v4 Turbo - 90+ thứ tiếng, có tiếng Việt",
   "settings.eleven_m_v3": "v3 - diễn cảm nhất, chậm hơn",
+  "settings.eleven_preset": "Gợi ý giọng trầm khàn",
+  "settings.eleven_preset_pick": "Chọn để điền Voice ID…",
   "settings.eleven_voice_ph": "Ví dụ: 21m00Tcm4TlvDq8ikWAM (Rachel)",
   "settings.save_provider": "Lưu nhà cung cấp",
   "settings.tts_using": "Đang dùng:",

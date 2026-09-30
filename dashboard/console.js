@@ -6915,6 +6915,18 @@
         <label class="js-lbl">Voice ID <span class="dim">${esc(t("settings.voice_id_hint"))}</span></label>
         <input class="js-input" id="vpElVoice" value="${esc(v.elevenlabs_voice || "")}" placeholder="${esc(t("settings.eleven_voice_ph"))}">
         <div class="qs-field">
+          <label class="qs-lbl" for="vpElGoiY">${esc(t("settings.eleven_preset"))}</label>
+          <select class="js-input" id="vpElGoiY">
+            <option value="">${esc(t("settings.eleven_preset_pick"))}</option>
+            <option value="N2lVS1w4EtoT3dr4eOWO">Callum - khàn, trung niên (giống kiểu Apex)</option>
+            <option value="JBFqnCBsd6RMkjVDRZzb">George - rè khàn, trầm ấm</option>
+            <option value="2EiwWnXFnvU5JabPnv8n">Clyde - cựu binh, gằn giọng</option>
+            <option value="t0jbNlBVZ17f02VDIeMI">Jessie - khàn, già dặn</option>
+            <option value="nPczCjzI2devNBz1zQrb">Brian - trầm, dày</option>
+            <option value="pNInz6obpgDQGcFmaJgB">Adam - trầm, rõ</option>
+          </select>
+        </div>
+        <div class="qs-field">
           <label class="qs-lbl" for="vpElModel">${esc(t("settings.eleven_model"))}</label>
           <select class="js-input" id="vpElModel">
             ${opt("auto", t("settings.eleven_m_auto"), v.elevenlabs_model === "eleven_multilingual_v2" ? "auto" : (v.elevenlabs_model || "auto"))}
@@ -7045,6 +7057,8 @@
         if (edgeVoice) edgeVoice.style.display = p === "edge" ? "" : "none";
       };
       provSel.onchange = showFields; showFields();
+      const goiY = document.getElementById("vpElGoiY");
+      if (goiY) goiY.onchange = () => { if (goiY.value) document.getElementById("vpElVoice").value = goiY.value; };
 
       // Dòng trạng thái nằm sẵn trong index.html (rỗng) nên câu mở đầu phải đặt từ đây.
       const st = document.getElementById("vpStatus");

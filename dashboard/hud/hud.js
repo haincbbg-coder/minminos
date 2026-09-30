@@ -3,7 +3,7 @@ import { MinMinScene } from "./scene.js";
 import { Constellation, DOMAINS, domainForTool } from "./constellation.js";
 import { VoiceIO } from "./voice.js";
 import { Bridge, fetchAgents, fetchKpi } from "./bridge.js";
-import { Vision } from "./vision.js";
+import { Vision, tenDoVat } from "./vision.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -41,12 +41,18 @@ function hudSession() {
 const HUD_SID = hudSession();
 
 // ---------- dung giao dien ----------
-let form = params.get("form") === "orb" ? "orb" : (localStorage.getItem("minmin.hud.form") || "portrait");
+const TEN_HINH = { robot: "ROBOT GIÁP", portrait: "NGƯỜI", orb: "QUẢ CẦU" };
+let form = (() => {
+  const p = params.get("form");
+  if (TEN_HINH[p]) return p;
+  try { const f = localStorage.getItem("minmin.hud.form2"); if (TEN_HINH[f]) return f; } catch (e) {}
+  return "robot";
+})();
 const scene = new MinMinScene($("scene"), {
   reducedMotion, form, quality: params.get("quality") || "high",
   onFps: (f) => { $("fps").textContent = f.toFixed(0) + " FPS"; watchFps(f); },
 });
-$("formText").textContent = form === "orb" ? "QUẢ CẦU" : "CHÂN DUNG";
+$("formText").textContent = TEN_HINH[form] || form;
 
 const web = new Constellation($("web"), { reducedMotion, onSelect: openCard });
 
@@ -226,20 +232,30 @@ function chime() {
 
 // ---------- gui lenh ----------
 // Cau hoi ve nhung gi truoc mat -> tu chup camera gui kem
-const HOI_NHIN = /(nh[iì]n|xem|th[aấ]y|camera|m[oô] t[aả]|tr[uư][oớ]c m[aặ]t|c[aá]i n[aà]y|c[aá]i g[iì] [dđ][aâ]y|[dđ][aâ]y l[aà] g[iì]|[dđ]ang c[aầ]m|[dđ][oọ]c gi[uú]p|n[eé]t v[eẽ]|h[iì]nh v[eẽ]|t[oô]i v[eẽ])/i;
+const HOI_NHIN = /(nh[iì]n|xem|th[aấ]y|camera|m[oô] t[aả]|tr[uư][oớ]c m[aặ]t|c[aá]i n[aà]y|c[aá]i g[iì]|l[aà] g[iì]|g[iì] [dđ][aâ]y|[dđ][aâ]y l[aà]|[dđ]ang c[aầ]m|c[aầ]m tr[eê]n tay|[dđ][oọ]c gi[uú]p|[dđ][oọ]c (ch[uữ]|tem|nh[aã]n)|n[eé]t v[eẽ]|h[iì]nh v[eẽ]|t[oô]i v[eẽ]|h[aã]ng (g[iì]|n[aà]o)|m[aà]u g[iì]|n[uú]t (n[aà]y|b[aấ]m)|d[uù]ng (th[eế] n[aà]o|l[aà]m g[iì])|c[aá]ch d[uù]ng|ai (đ|d)[aâ]y|ai (đ|d)ang)/i;
+// Cau ngan co tu hoi ma camera dang thay do vat / ban tay -> cung gui kem anh
+const HOI_NGAN = /(g[iì]|n[aà]o|sao|bao nhi[eê]u|h[aã]ng|m[aà]u|lo[aạ]i)/i;
+function nenGuiAnh(text) {
+  if (!vision) return false;
+  if (vision.hasInk() && HOI_NHIN.test(text)) return true;
+  if (!vision.on) return false;
+  if (HOI_NHIN.test(text)) return true;
+  const coVat = vision.objects.some(o => o.name !== "person") || vision._gesture;
+  return coVat && text.split(/\s+/).length <= 10 && HOI_NGAN.test(text);
+}
 
 async function ask(text, opts = {}) {
   text = String(text || "").trim();
   if (!text) return;
   voice.cancelSpeech();
   focusSid = HUD_SID;
-  const kemAnh = opts.image || (vision && (vision.on || vision.hasInk()) && HOI_NHIN.test(text));
+  const kemAnh = opts.image || nenGuiAnh(text);
   if (kemAnh && !DEMO) {
     showYou(text); replyText = ""; showReply("", true); setState("thinking");
     flash();
     const blob = await vision.snapshot();
     feedAdd("run", "Mắt nhìn", vision.on ? "Chụp camera gửi MinMin" : "Gửi nét vẽ cho MinMin", "…");
-    const ok = await bridge.sendWithImage(text, HUD_SID, blob);
+    const ok = await bridge.sendWithImage(text, HUD_SID, blob, vision.describeScene());
     const li = $("feed").firstChild;
     if (li) { li.className = ok ? "ok" : "bad"; li.querySelector(".s").textContent = ok ? "ĐÃ GỬI" : "LỖI"; }
     if (!ok) { toast(bridge.loi || "Không gửi được ảnh", true); setState("error"); setTimeout(() => setState("standby"), 2000); return; }
@@ -291,6 +307,8 @@ addEventListener("keydown", (e) => {
   else if (e.key === "x" || e.key === "X") $("tXoa").click();
   else if (e.key === "v" || e.key === "V") $("tNhin").click();
   else if (e.key === "r" || e.key === "R") $("tGoc").click();
+  else if (e.key === "m" || e.key === "M") $("tBatChuoc").click();
+  else if (e.key === "g" || e.key === "G") $("tGiong").click();
   else if (e.key === "Enter" && e.altKey) { document.documentElement.requestFullscreen?.(); }
 });
 $("ask").addEventListener("submit", (e) => { e.preventDefault(); const v = $("askInput").value; $("askInput").value = ""; $("ask").hidden = true; ask(v); });
@@ -300,8 +318,8 @@ $("scene").addEventListener("dblclick", () => document.documentElement.requestFu
 function doiHinh(f) {
   form = f || scene.toggleForm();
   if (f) scene.setForm(f);
-  try { localStorage.setItem("minmin.hud.form", form); } catch (e) {}
-  $("formText").textContent = form === "orb" ? "QUẢ CẦU" : "CHÂN DUNG";
+  try { localStorage.setItem("minmin.hud.form2", form); } catch (e) {}
+  $("formText").textContent = TEN_HINH[form] || form;
 }
 function nhoLai(k, v) { try { localStorage.setItem("minmin.hud." + k, v ? "1" : "0"); } catch (e) {} }
 function daNho(k) { try { return localStorage.getItem("minmin.hud." + k) === "1"; } catch (e) { return false; } }
@@ -328,6 +346,32 @@ const vision = new Vision({
   onGesture: (g) => { $("camGesture").textContent = g; },
   onStatus: (m, bad) => toast(m, bad),
   onForm: (f) => doiHinh(f),
+  // gio ca hai tay len = goi MinMin nghe
+  onWake: () => {
+    feedAdd("run", "Cử chỉ", "Giơ hai tay · MinMin nghe", "…");
+    if (voiceOn) voice.wakeManually(); else { $("ask").hidden = false; $("askInput").focus(); }
+  },
+  onScene: (objs) => {
+    const dem = {};
+    objs.filter(o => o.name !== "person").forEach(o => { const t = tenDoVat(o.name); dem[t] = (dem[t] || 0) + 1; });
+    const nguoi = objs.filter(o => o.name === "person").length;
+    const ds = Object.entries(dem).map(([t, n]) => (n > 1 ? `${n} ${t}` : t));
+    if (nguoi) ds.unshift(`${nguoi} người`);
+    $("rowEnv").hidden = !vision.on;
+    $("envText").textContent = ds.length ? ds.slice(0, 6).join(", ") : "—";
+  },
+  onOwner: (who, ten) => {
+    $("rowChu").hidden = !vision.on || !vision.owner();
+    const el = $("chuText");
+    el.className = who;
+    el.textContent = who === "owner" ? `CHỦ NHÂN · ${String(ten || "BỐ").toUpperCase()}` : who === "stranger" ? "NGƯỜI LẠ" : "—";
+    if (who === "owner" && !chaoRoi) {
+      chaoRoi = true;
+      feedAdd("ok", "Chủ nhân", `Nhận ra ${ten || "bố"}`, "XIN CHÀO");
+      if (voiceOn) voice.say(`Chào ${ten || "bố"}, con đây ạ.`);
+    }
+    if (who === "stranger") feedAdd("bad", "Trước camera", "Có người lạ, không phải chủ nhân", "LƯU Ý");
+  },
 });
 vision.attachMouseInk();
 
@@ -350,18 +394,59 @@ $("tVe").onclick = () => {
 };
 $("tXoa").onclick = () => vision.clearInk();
 $("tCam").onclick = async () => {
-  if (vision.on) { vision.stop(); $("cam").hidden = true; $("tFlip").hidden = true; batTat("tCam", null, false); return; }
+  if (vision.on) { vision.stop(); $("cam").hidden = true; $("tFlip").hidden = true; $("rowEnv").hidden = true; $("rowChu").hidden = true; batTat("tCam", null, false); return; }
   $("cam").hidden = false;
   const ok = await vision.start();
   if (!ok) { $("cam").hidden = true; return; }
   batTat("tCam", null, true);
+  $("rowEnv").hidden = false;
+  if (vision.owner()) { $("rowChu").hidden = false; vision.startOwnerWatch(); }
   // dien thoai / may co nhieu camera: cho doi camera truoc - sau
   try { const ds = await navigator.mediaDevices.enumerateDevices(); $("tFlip").hidden = ds.filter(d => d.kind === "videoinput").length < 2; } catch (e) {}
-  if (vision.ready) toast("Camera đã bật. Xòe tay: MinMin nhìn theo · chỉ 1 ngón: vẽ · nắm tay: xoay · chụm ngón: phóng to · chữ V: đổi hình.");
+  if (vision.ready) toast("Camera đã bật. Giơ đồ vật lên và hỏi “Min Min ơi, đây là gì”. Giơ hai tay: gọi MinMin · xòe tay: nhìn theo · 1 ngón: vẽ · nắm tay: xoay · chụm ngón: phóng to · chữ V: đổi hình.");
 };
+let chaoRoi = false;
+$("tChuNhan").onclick = async () => {
+  if (!vision.on) { toast("Bật Camera trước, ngồi đủ sáng và nhìn thẳng vào camera rồi bấm Chủ nhân.", true); return; }
+  const cu = vision.owner();
+  if (cu && !$("tChuNhan").dataset.xacNhan) {
+    $("tChuNhan").dataset.xacNhan = "1";
+    toast(`Đã có chủ nhân "${cu.ten}". Bấm Chủ nhân lần nữa trong 5 giây để đăng ký lại khuôn mặt.`);
+    setTimeout(() => { delete $("tChuNhan").dataset.xacNhan; }, 5000);
+    return;
+  }
+  delete $("tChuNhan").dataset.xacNhan;
+  toast("Đang tải bộ nhận diện khuôn mặt… Bố nhìn thẳng camera, xoay đầu nhẹ sang hai bên.");
+  try {
+    const n = await vision.enrollOwner("Bố", (k, tong) => toast(`Đang ghi nhớ khuôn mặt bố: ${k}/${tong}`));
+    chaoRoi = false;
+    batTat("tChuNhan", null, true);
+    toast(`Xong. MinMin đã ghi nhớ khuôn mặt bố (${n} mẫu). Dữ liệu chỉ nằm trong trình duyệt máy này.`);
+    feedAdd("ok", "Chủ nhân", "Đã đăng ký khuôn mặt", "XONG");
+  } catch (e) {
+    const m = String(e && e.message || "");
+    toast(/fetch|import|network|load/i.test(m) ? "Không tải được bộ nhận diện khuôn mặt (cần mạng tới cdn.jsdelivr.net). Kiểm tra mạng rồi thử lại."
+      : (m || "Không đăng ký được. Kiểm tra mạng và ánh sáng rồi thử lại."), true);
+  }
+};
+$("tBatChuoc").onclick = () => {
+  vision.mimic = $("tBatChuoc").getAttribute("aria-pressed") !== "true";
+  batTat("tBatChuoc", null, vision.mimic, "mimic");
+  if (!vision.mimic) scene.setArms(null, null);
+};
+$("tGiong").onclick = () => {
+  voice.robotFx = $("tGiong").getAttribute("aria-pressed") !== "true";
+  batTat("tGiong", null, voice.robotFx);
+  try { localStorage.setItem("minmin.hud.robotfx", voice.robotFx ? "1" : "0"); } catch (e) {}
+  toast(voice.robotFx ? "Giọng robot trầm khàn: BẬT" : "Giọng robot: TẮT (giọng gốc)");
+};
+batTat("tGiong", null, voice.robotFx);
+if (vision.owner()) batTat("tChuNhan", null, true);
+try { if (localStorage.getItem("minmin.hud.mimic") === "0") { vision.mimic = false; batTat("tBatChuoc", null, false); } } catch (e) {}
+
 $("tFlip").onclick = async () => { const f = await vision.flip(); toast(f === "user" ? "Camera trước" : "Camera sau: đưa camera vào vật cần MinMin xem"); };
 $("tNhin").onclick = () => {
-  const cau = vision.on ? "Bố đang cho con xem qua camera. Con nhìn thấy gì? Mô tả ngắn gọn, đọc chữ nếu có, và nói điều đáng chú ý."
+  const cau = vision.on ? "Bố đang cho con xem qua camera. Con nhìn thấy gì? Nếu bố đang cầm hay giơ một đồ vật thì cho bố biết đó là gì, hãng gì, màu gì, các nút và công dụng. Đọc chữ nếu có."
     : "Bố vừa vẽ trên màn hình. Con xem hình vẽ này là gì và mô tả ngắn gọn.";
   if (!vision.on && !vision.hasInk()) { toast("Bật Camera hoặc vẽ gì đó trước rồi bấm Nhìn."); return; }
   ask(cau, { image: true });

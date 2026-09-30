@@ -58,7 +58,7 @@ export class Bridge {
 
   // Gui kem MOT anh (khung hinh camera / net ve): tai len /upload nhu khung chat, roi gui
   // lenh kem duong dan de MinMin doc anh. Tra ve true/false; loi thi ly do trong this.loi.
-  async sendWithImage(text, sessionId, blob) {
+  async sendWithImage(text, sessionId, blob, goiY = "") {
     this.loi = "";
     try {
       const fd = new FormData();
@@ -71,7 +71,12 @@ export class Bridge {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.loi = "Mất kết nối tới MinMin"; return false; }
       const ctx = "[KÊNH: HUD màn phụ, người dùng nói bằng giọng. Trả lời ngắn gọn như đang nói, không bảng biểu.]\n" +
         `[Ảnh chụp từ CAMERA của HUD vừa xong (đường dẫn):\n- ${j.staged}\n` +
-        "Đây là cảnh THẬT trước camera của người dùng (có thể kèm nét vẽ tay màu cam). Xem ảnh rồi trả lời đúng câu hỏi. " +
+        "Đây là cảnh THẬT trước camera của người dùng (có thể kèm nét vẽ tay màu cam). Xem kỹ ảnh rồi trả lời đúng câu hỏi.\n" +
+        "Khi được hỏi một đồ vật là gì (thường người dùng đang cầm giơ lên camera): nói ngay nó là gì, rồi cho biết hãng / " +
+        "model nếu đọc được chữ hay logo, màu sắc, chất liệu, các nút bấm hoặc bộ phận nhìn thấy và công dụng từng cái, " +
+        "cách dùng, lưu ý nếu có. Không chắc thì nói mức độ chắc chắn và cần xoay góc nào để nhìn rõ hơn. " +
+        "Có chữ trên vật thì đọc nguyên văn. Nói liền mạch như đang nói chuyện, không gạch đầu dòng, khoảng 4 đến 8 câu.\n" +
+        (goiY ? `Nhận diện sơ bộ trên máy người dùng (chỉ tham khảo, có thể sai): ${goiY}.\n` : "") +
         "Chỉ đọc, KHÔNG tự lưu ảnh đi đâu.]";
       this.ws.send(JSON.stringify({ message: `${ctx}\n\n${text}`, brain: this.brain, session_id: sessionId, voice: true, voice_input: true }));
       return true;

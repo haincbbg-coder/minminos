@@ -177,3 +177,7 @@ body.no-text .tl, body.no-text .tr, body.no-text .kpi, body.no-text .feed, body.
 body.solo .tl, body.solo .tr, body.solo .kpi, body.solo .feed, body.solo .bottom { display: none !important; }
 body.solo .tools:not(:hover) { opacity: .12; }
 @media (max-width: 600px) { .tools { right: 10px; bottom: 90px; } .cam { right: 60px; bottom: 90px; } }
+
+.tr .row.env b { max-width: 190px; text-align: right; white-space: normal; line-height: 1.4; }
+#chuText.owner { color: var(--ok); } #chuText.stranger { color: var(--warn); }
+.tools { max-height: calc(100vh - 2 * var(--gut)); overflow-y: auto; scrollbar-width: none; }

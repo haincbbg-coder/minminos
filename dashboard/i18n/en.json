@@ -376,6 +376,8 @@
   "settings.eleven_m_flash": "Flash v2.5 - fast, includes Vietnamese",
   "settings.eleven_m_v4": "v4 Turbo - 90+ languages, includes Vietnamese",
   "settings.eleven_m_v3": "v3 - most expressive, slower",
+  "settings.eleven_preset": "Deep raspy voice ideas",
+  "settings.eleven_preset_pick": "Pick to fill the Voice ID…",
   "settings.eleven_voice_ph": "e.g. 21m00Tcm4TlvDq8ikWAM (Rachel)",
   "settings.save_provider": "Save provider",
   "settings.tts_using": "Using:",
