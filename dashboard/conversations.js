@@ -409,7 +409,10 @@
         if (!moi.length && vet === _dauVetTin) return;
         _dauVetTin = vet;
         _conv = d.conversation;
-        _msgs = _msgs.concat(moi);
+        // Chỉ nối tin CHƯA có: một nhịp chạy chậm, hay nhịp chạy trùng lúc vừa gửi tin, có thể
+        // mang về đúng những tin đã nối rồi.
+        var cuoi = idCuoi();
+        _msgs = _msgs.concat(moi.filter(function (t) { return t.id > cuoi; }));
       } else {
         _dauVetTin = JSON.stringify(d.conversation);
         _conv = d.conversation; _msgs = moi;
@@ -490,6 +493,8 @@
     else if (oDay) m.scrollTop = m.scrollHeight;
     else m.scrollTop = dinhCu;
     m.addEventListener("scroll", function () { if (m.scrollTop < 60) taiCu(); }, { passive: true });
+    // 40 tin chưa đầy khung thì không có gì để cuộn, nên tự tải thêm tin cũ cho tới khi đầy.
+    if (!_hetCu && m.scrollHeight <= m.clientHeight + 4) setTimeout(taiCu, 0);
     var ta = box.querySelector(".ht-compose textarea");
     if (ta) {
       ta.value = nhapDo;
@@ -532,8 +537,7 @@
     }
     _dangGui = false;
     ta.disabled = false; if (nut) nut.disabled = false;
-    _dauVetTin = "";
-    await taiTin(false);
+    await taiTin(true);
     tai(true);
     var ta2 = box && box.querySelector(".ht-compose textarea");
     if (ta2) ta2.focus();
@@ -567,7 +571,7 @@
       await api("/conversations/" + id + "/mode", { method: "POST", body: fd({ mode: mode }) });
     } catch (e) { alert(window.t("ht.loi_mode") + " " + e.message); return; }
     _dauVetTin = "";
-    taiTin(false);
+    taiTin(true);
     tai(true);
   }
 
