@@ -6914,6 +6914,15 @@
         <input class="js-input" id="vpElKey" type="password" placeholder="${esc(t("settings.eleven_ph"))}">
         <label class="js-lbl">Voice ID <span class="dim">${esc(t("settings.voice_id_hint"))}</span></label>
         <input class="js-input" id="vpElVoice" value="${esc(v.elevenlabs_voice || "")}" placeholder="${esc(t("settings.eleven_voice_ph"))}">
+        <div class="qs-field">
+          <label class="qs-lbl" for="vpElModel">${esc(t("settings.eleven_model"))}</label>
+          <select class="js-input" id="vpElModel">
+            ${opt("auto", t("settings.eleven_m_auto"), v.elevenlabs_model === "eleven_multilingual_v2" ? "auto" : (v.elevenlabs_model || "auto"))}
+            ${opt("eleven_flash_v2_5", t("settings.eleven_m_flash"), v.elevenlabs_model || "auto")}
+            ${opt("eleven_v4_turbo", t("settings.eleven_m_v4"), v.elevenlabs_model || "auto")}
+            ${opt("eleven_v3", t("settings.eleven_m_v3"), v.elevenlabs_model || "auto")}
+          </select>
+        </div>
       </div>`;
     el.innerHTML = `<div class="settings-page">
       <details class="settings-group" data-settings-section="general" open>
@@ -7046,6 +7055,7 @@
           tts_provider: provSel.value,
           openai_tts_voice: document.getElementById("vpOaVoice").value,
           elevenlabs_voice: document.getElementById("vpElVoice").value.trim(),
+          elevenlabs_model: document.getElementById("vpElModel").value,
         };
         const elKey = document.getElementById("vpElKey").value.trim();
         if (elKey) data.elevenlabs_key = elKey;

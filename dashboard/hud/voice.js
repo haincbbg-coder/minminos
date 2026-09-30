@@ -23,7 +23,14 @@ export function splitWake(text) {
 export class VoiceIO {
   constructor(opts = {}) {
     this.lang = opts.lang || "vi-VN";
-    this.ttsVoice = opts.ttsVoice || "vi-VN-HoaiMyNeural";
+    // Giong Edge: lay dung giong bo da chon o trang chinh (cung trang web nen chung localStorage).
+    // Nha cung cap (Edge / OpenAI / ElevenLabs) thi may chu tu chon theo Cai dat -> Giong noi.
+    let daChon = "", tocDo = "";
+    try { daChon = localStorage.getItem("javis.voice") || ""; tocDo = localStorage.getItem("javis.rate") || ""; } catch (e) {}
+    this.ttsVoice = opts.ttsVoice || (/^vi-/.test(daChon) ? daChon : "vi-VN-HoaiMyNeural");
+    const r = parseFloat(tocDo);
+    this.ttsRate = isFinite(r) && r > 0 ? `${r >= 1 ? "+" : ""}${Math.round((r - 1) * 100)}%` : "+5%";
+    this.onSpeakError = opts.onSpeakError || (() => {});
     this.onWake = opts.onWake || (() => {});
     this.onCommand = opts.onCommand || (() => {});
     this.onInterim = opts.onInterim || (() => {});
@@ -137,9 +144,15 @@ export class VoiceIO {
     this._beginSpeak();
     try {
       const ctx = this._audio();
-      const url = `${item.ttsUrl}?text=${encodeURIComponent(item.s)}&voice=${encodeURIComponent(this.ttsVoice)}`;
+      const url = `${item.ttsUrl}?text=${encodeURIComponent(item.s)}&voice=${encodeURIComponent(this.ttsVoice)}&rate=${encodeURIComponent(this.ttsRate)}`;
       const res = await fetch(url, { credentials: "same-origin" });
-      if (!res.ok) throw new Error("tts " + res.status);
+      if (!res.ok) {
+        let why = "";
+        try { const j = await res.json(); why = j.detail || ""; } catch (e) {}
+        const err = new Error(why || ("Máy chủ đọc giọng báo lỗi " + res.status));
+        err.fromServer = true;
+        throw err;
+      }
       const buf = await ctx.decodeAudioData(await res.arrayBuffer());
       const src = ctx.createBufferSource();
       src.buffer = buf; src.connect(this.outAnalyser);
@@ -147,18 +160,32 @@ export class VoiceIO {
       src.onended = () => this._next();
       src.start();
     } catch (e) {
-      // khong co may chu doc (vd ban xem truoc): dung giong cua trinh duyet
-      await this._browserSay(item.s);
+      // May chu doc loi: bao ro cho bo, KHONG tu doi sang giong trinh duyet. Giong trinh duyet
+      // tren Coc Coc/Chrome thuong khong co tieng Viet nen doc thanh giong tay (bo bao 30/09).
+      // Chi dung no khi may chu khong co (ban xem truoc) VA trinh duyet co giong tieng Viet.
+      if (e && e.fromServer) {
+        this.queue = [];
+        this.onSpeakError(e.message);
+        this._next();
+        return;
+      }
+      if (this._coGiongViet()) await this._browserSay(item.s);
+      else if (!this._baoThieuGiong) { this._baoThieuGiong = true; this.onSpeakError("Trình duyệt không có giọng tiếng Việt để đọc thử."); }
       this._next();
     }
+  }
+
+  _coGiongViet() {
+    try { return !!(window.speechSynthesis && speechSynthesis.getVoices().some(v => /^vi/i.test(v.lang || ""))); } catch (e) { return false; }
   }
 
   _browserSay(s) {
     return new Promise(res => {
       if (!window.speechSynthesis) return res();
       const u = new SpeechSynthesisUtterance(s); u.lang = this.lang; u.rate = 1.05;
-      const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith("vi"));
-      if (v) u.voice = v;
+      const v = speechSynthesis.getVoices().find(v => v.lang && /^vi/i.test(v.lang));
+      if (!v) return res();
+      u.voice = v;
       this._fakeTalk = true;
       u.onend = u.onerror = () => { this._fakeTalk = false; res(); };
       speechSynthesis.speak(u);

@@ -12048,6 +12048,30 @@ async def _tts_openai(text: str, rate: str, cfg: dict) -> bytes:
         return r.content
 
 
+# Chữ có dấu tiếng Việt (ă â đ ê ô ơ ư và các thanh) - đủ để biết câu cần đọc là tiếng Việt.
+_CHU_VIET = re.compile(r"[ăâđêôơưĂÂĐÊÔƠƯàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]")
+# Model ElevenLabs KHÔNG có tiếng Việt: đưa câu Việt vào là ra giọng đọc kiểu người nước ngoài.
+_ELEVEN_KHONG_VIET = {"", "auto", "eleven_multilingual_v2", "eleven_multilingual_v1",
+                      "eleven_monolingual_v1", "eleven_flash_v2", "eleven_turbo_v2"}
+
+
+def _eleven_model_cho(text: str, cau_hinh: str):
+    """(model_id, language_code) cho một câu.
+
+    Chủ repo báo 30/09: bật ElevenLabs mà HUD đọc ra giọng tây. Nguyên do: mặc định là
+    eleven_multilingual_v2, model này có 29 thứ tiếng nhưng KHÔNG có tiếng Việt. Câu tiếng Việt
+    mà model đang chọn không đọc được tiếng Việt (hoặc để Tự chọn) thì dùng eleven_flash_v2_5
+    (có tiếng Việt, độ trễ thấp) và ép language_code=vi. Model người dùng chọn có tiếng Việt
+    (flash v2.5, v3, v4 turbo...) thì giữ nguyên.
+    """
+    m = (cau_hinh or "").strip()
+    if _CHU_VIET.search(text or "") and m in _ELEVEN_KHONG_VIET:
+        return "eleven_flash_v2_5", "vi"
+    if m in ("", "auto"):
+        return "eleven_multilingual_v2", ""
+    return m, ("vi" if m == "eleven_flash_v2_5" and _CHU_VIET.search(text or "") else "")
+
+
 async def _tts_elevenlabs(text: str, cfg: dict) -> bytes:
     import httpx
     v = cfg.get("voice", {}) or {}
@@ -12055,7 +12079,10 @@ async def _tts_elevenlabs(text: str, cfg: dict) -> bytes:
     if not key:
         raise RuntimeError("Chưa có ElevenLabs API key.")
     voice_id = v.get("elevenlabs_voice") or "21m00Tcm4TlvDq8ikWAM"
-    payload = {"text": text, "model_id": v.get("elevenlabs_model") or "eleven_multilingual_v2"}
+    model_id, lang = _eleven_model_cho(text, v.get("elevenlabs_model") or "")
+    payload = {"text": text, "model_id": model_id}
+    if lang:
+        payload["language_code"] = lang
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     async with httpx.AsyncClient(timeout=60) as client:
         r = await client.post(url, headers={"xi-api-key": key, "accept": "audio/mpeg"},
