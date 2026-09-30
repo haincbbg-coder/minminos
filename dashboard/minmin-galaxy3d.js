@@ -17,7 +17,7 @@
   if (typeof window === "undefined" || !window.JavisGraph || !window.MinMinGalaxyColors) return;
 
   var KEY = "mm.galaxy";
-  function cheDo() { return "3d"; }  // 0.64.90: luôn 3D, xem minmin-galaxy.js
+  function cheDo() { return "off"; }  // 0.64.93: chỉ còn đồ thị gốc, xem minmin-galaxy.js
   function sang() { return window.MinMinGalaxyIsLight ? window.MinMinGalaxyIsLight() : false; }
   function bang() { return window.MinMinGalaxyPalette ? window.MinMinGalaxyPalette() : window.MinMinGalaxyColors; }
   function mauCum(i) { var M = bang(); return M[(i || 0) % M.length]; }
