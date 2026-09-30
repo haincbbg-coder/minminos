@@ -4,6 +4,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.89] - 2026-09-30
+### Sửa lỗi
+- (đang làm) tay phải thật, đổi camera trên điện thoại, Máy tính tự nối lại.
+
 ## [0.64.88] - 2026-09-30
 ### Sửa lỗi
 - **Mở được HUD trên điện thoại**: bấm nút menu (☰), mục **HUD** nằm cuối ngăn kéo. Trước đây điện thoại ẩn cả nhóm nút góc trên nên không có chỗ nào mở HUD.
