@@ -6,7 +6,8 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 ## [0.64.82] - 2026-09-30
 ### Cải thiện
-- (đang viết)
+- **Nút "HUD màn phụ" ngay trên thanh trên cùng.** Bấm là HUD mở thành cửa sổ riêng, trên Chrome/Edge tự đặt sang màn phụ; bấm "Bật MinMin" là vào toàn màn hình. Lần đầu trình duyệt hỏi quyền quản lý cửa sổ trên mọi màn hình, chọn Cho phép. Không cần file .bat nữa.
+- **Repo riêng tư vẫn có nút Cập nhật trong app.** Thêm `GHCR_USER` và `GHCR_TOKEN` (token GitHub quyền read:packages) vào file `.env` cạnh docker-compose rồi chạy lại một lần; từ đó trang Cập nhật tự thấy bản mới và bấm nút là cập nhật, khỏi SSH gõ lệnh.
 
 ## [0.64.81] - 2026-09-30
 ### Thêm mới

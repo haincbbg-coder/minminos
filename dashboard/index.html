@@ -86,6 +86,19 @@
         <!-- Cài Javis như app riêng (PWA). Ẩn mặc định: app.js chỉ hiện khi trình duyệt
              bắn beforeinstallprompt (Chrome/Edge desktop + Android) và chưa chạy standalone.
              Safari/iOS không có event này - bên đó vẫn là Share → Thêm vào MH chính. -->
+        <!-- HUD màn phụ (0.64.82): mở /hud thành cửa sổ riêng, đặt sẵn lên màn thứ hai nếu có
+             (Window Management API của Chrome/Edge). Logic ở hud-launch.js. -->
+        <button class="install-app-btn" id="hudLaunchBtn" type="button"
+                title="Mở HUD MinMin toàn màn hình trên màn phụ" data-i18n-title="top.hud_title"
+                aria-label="Mở HUD MinMin trên màn phụ" data-i18n-aria="top.hud">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="2" y="4" width="13" height="10" rx="1.5"/>
+            <rect x="17" y="7" width="5" height="10" rx="1"/>
+            <circle cx="8.5" cy="9" r="2.2"/>
+            <path d="M6 20h6"/>
+          </svg>
+          <span class="install-app-label" data-i18n="top.hud_label">HUD màn phụ</span>
+        </button>
         <button class="install-app-btn" id="installAppBtn" type="button" hidden
                 title="Cài Javis thành app riêng - mở từ Desktop/Dock, không lẫn giữa các tab" data-i18n-title="top.install_title"
                 aria-label="Cài Javis thành app riêng" data-i18n-aria="top.install">
@@ -869,6 +882,7 @@
   <!-- Voice V2: nghe nói thẳng (Live), app.js gọi lười khi bấm mic ở chế độ Live. -->
   <script src="/static/voice-live.js?v=3"></script>
   <script src="/static/app.js?v=119"></script>
+  <script src="/static/hud-launch.js?v=1"></script>
   <!-- Sau app.js: dải việc nền đọc window.JavisSessions (app.js dựng) để biết phiên + brain. -->
   <script src="/static/background-strip.js?v=3"></script>
   <!-- Thân bảng chọn model dùng chung: phải đứng TRƯỚC model-picker.js (thanh chat) và

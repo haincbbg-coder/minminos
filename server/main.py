@@ -11174,6 +11174,17 @@ async def _latest_remote_version(cur: str = ""):
             latest, err = top, None
     except Exception:
         pass
+    # Repo riêng tư (0.64.82): raw.githubusercontent trả 404 nên hai nguồn trên đều rỗng. Có
+    # GHCR_TOKEN thì đọc thẻ phiên bản của ảnh Docker. Xem ghcr_version.py.
+    try:
+        import ghcr_version
+        g, gerr = await ghcr_version.latest_from_ghcr(GITHUB_REPO)
+        if g and (not latest or _ver_newer(g, latest)):
+            latest, err = g, None
+        elif gerr and not latest:
+            err = gerr
+    except Exception:
+        pass
     return latest, err
 
 
