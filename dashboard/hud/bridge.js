@@ -56,6 +56,28 @@ export class Bridge {
     return true;
   }
 
+  // Gui kem MOT anh (khung hinh camera / net ve): tai len /upload nhu khung chat, roi gui
+  // lenh kem duong dan de MinMin doc anh. Tra ve true/false; loi thi ly do trong this.loi.
+  async sendWithImage(text, sessionId, blob) {
+    this.loi = "";
+    try {
+      const fd = new FormData();
+      const ten = `hud-camera-${new Date().toISOString().replace(/[:.]/g, "-")}.jpg`;
+      fd.append("file", blob, ten);
+      fd.append("brain", this.brain);
+      const r = await fetch("/upload", { method: "POST", body: fd, credentials: "same-origin" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) { this.loi = j.error || ("Tải ảnh lên lỗi " + r.status); return false; }
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { this.loi = "Mất kết nối tới MinMin"; return false; }
+      const ctx = "[KÊNH: HUD màn phụ, người dùng nói bằng giọng. Trả lời ngắn gọn như đang nói, không bảng biểu.]\n" +
+        `[Ảnh chụp từ CAMERA của HUD vừa xong (đường dẫn):\n- ${j.staged}\n` +
+        "Đây là cảnh THẬT trước camera của người dùng (có thể kèm nét vẽ tay màu cam). Xem ảnh rồi trả lời đúng câu hỏi. " +
+        "Chỉ đọc, KHÔNG tự lưu ảnh đi đâu.]";
+      this.ws.send(JSON.stringify({ message: `${ctx}\n\n${text}`, brain: this.brain, session_id: sessionId, voice: true, voice_input: true }));
+      return true;
+    } catch (e) { this.loi = e.message || String(e); return false; }
+  }
+
   stop(sessionId) {
     try { this.ws && this.ws.send(JSON.stringify({ action: "stop", session_id: sessionId })); } catch (e) {}
   }

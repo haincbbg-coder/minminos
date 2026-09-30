@@ -1,72 +1,22 @@
-// MinMin HUD - canh 3D: mot dam may hat co the bien hinh giua "Chan dung" (dau-vai) va "Qua cau".
-// Tat ca hinh khoi sinh bang toan hoc ngay trong trinh duyet, khong dung anh hay mo hinh cua ai.
+// MinMin HUD - canh 3D: dam may hat bien hinh giua "Chan dung" (hinh nguoi day du, xem
+// body.js) va "Qua cau". Dau nhin theo chuot (hoac theo mat bo qua camera), keo de xoay,
+// con lan de phong to thu nho. Moi hinh khoi sinh bang toan hoc tai cho.
 import * as THREE from "three";
+import { humanPoints } from "./body.js";
 
-const N = 26000;                       // so hat; may yeu tu giam xuong (xem quality)
-
-// ---------- Sinh diem ----------
-function rand(a, b) { return a + Math.random() * (b - a); }
-
-// Chan dung: cac lat cat ngang (nhu duong dong muc) qua dau, co, vai.
-// Tra ve Float32Array vi tri + Float32Array "vung" (0 = than, 1 = mat/loi nong).
-// Ban kinh ngang (rx), sau (rz), lech sau (cz) va do "mat" cua lat cat o do cao y.
-function sliceAt(y) {
-  let rx, rz, cz = 0, face = 0;
-  if (y > 0.42) {
-    // dau: elipsoid, dinh 1.62, cam 0.42; ham thu hep o phan duoi
-    const hy = (y - 1.02) / 0.6;
-    const k = Math.sqrt(Math.max(0, 1 - hy * hy));
-    rx = 0.46 * k * (y < 0.78 ? 0.82 + (y - 0.42) * 0.5 : 1);
-    rz = 0.56 * k;
-    face = Math.max(0, 1 - Math.abs(y - 0.98) / 0.42);
-  } else if (y > 0.08) {
-    const t = (0.42 - y) / 0.34;            // co
-    rx = 0.19 + t * 0.05; rz = 0.2; cz = -0.05;
-  } else {
-    // vai: loe nhanh ngay duoi co roi doc thoai xuong canh tay
-    const t = Math.min(1, (0.08 - y) / 0.42);
-    const e = 1 - Math.pow(1 - t, 3);
-    rx = 0.26 + e * 1.12 + Math.max(0, -0.34 - y) * 0.06;
-    rz = 0.24 + e * 0.24; cz = -0.06;
-  }
-  return { rx, rz, cz, face };
-}
-
-function portraitPoints(n) {
-  const pos = new Float32Array(n * 3), zone = new Float32Array(n);
-  const slices = 78;                   // so duong dong muc: it lat, moi lat day hat -> thay ro duong
-  const top = 1.62, bottom = -1.5;
-  for (let i = 0; i < n; i++) {
-    // chon lat cat theo chu vi (lat rong nhu vai can nhieu hat hon lat hep nhu co)
-    let y, sl;
-    for (let tries = 0; tries < 12; tries++) {
-      const s = Math.floor(Math.random() * slices);
-      y = top - (s / (slices - 1)) * (top - bottom);
-      sl = sliceAt(y);
-      if (Math.random() < Math.pow((sl.rx + sl.rz) / 1.9, 0.75)) break;
-    }
-    y += rand(-0.003, 0.003);
-    const a = Math.random() * Math.PI * 2;
-    let x = Math.cos(a) * sl.rx, z = Math.sin(a) * sl.rz;
-    if (y > 0.45 && z > 0) z *= 0.84;                 // mat phang hon gay
-    pos[i * 3] = x;
-    pos[i * 3 + 1] = y;
-    pos[i * 3 + 2] = z + sl.cz;
-    zone[i] = sl.face * Math.max(0, z / (sl.rz || 1));
-  }
-  return { pos, zone };
-}
+const N = 30000;                       // so hat; may yeu tu giam (quality=low)
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function spherePoints(n) {
   const pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
-    // mot phan tren vo, mot phan lop loi ben trong
     const shell = Math.random() < 0.72;
-    const r = shell ? 1.05 + rand(-0.02, 0.02) : Math.pow(Math.random(), 0.6) * 0.55;
+    const r = shell ? 1.3 + rand(-0.02, 0.02) : Math.pow(Math.random(), 0.6) * 0.7;
     const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2;
     const k = Math.sqrt(1 - u * u);
     pos[i * 3] = r * k * Math.cos(th);
-    pos[i * 3 + 1] = r * u + 0.1;
+    pos[i * 3 + 1] = r * u + 0.2;
     pos[i * 3 + 2] = r * k * Math.sin(th);
   }
   return pos;
@@ -83,48 +33,54 @@ function scatterPoints(n) {
 
 // ---------- Shader hat ----------
 const VERT = /* glsl */`
-uniform float uTime, uEnergy, uMorph, uAssemble, uState, uPixel, uSize;
+uniform float uTime, uEnergy, uMorph, uAssemble, uState, uPixel, uSize, uHeadYaw, uHeadPitch;
 attribute vec3 aPortrait, aSphere, aScatter;
-attribute float aZone, aSeed;
+attribute float aZone, aSeed, aFade, aHead;
 varying float vZone, vGlow, vAlpha;
 
-// nhieu gia re
 float hash(float n){ return fract(sin(n)*43758.5453); }
 vec3 wobble(vec3 p, float t, float s){
   return vec3(sin(p.y*6.0+t*1.3+s*6.2831), sin(p.x*5.0+t*1.1+s*3.1), cos(p.y*4.0+t*0.9+s*4.7))*0.5;
 }
+// quay dau quanh diem co (0, 0.78, 0): lac trai phai (yaw) va gat gu (pitch)
+vec3 quayDau(vec3 p, float w){
+  vec3 q = p - vec3(0.0, 0.78, 0.0);
+  float y = uHeadYaw * w, x = uHeadPitch * w;
+  float cy = cos(y), sy = sin(y);
+  q = vec3(cy*q.x + sy*q.z, q.y, -sy*q.x + cy*q.z);
+  float cx = cos(x), sx = sin(x);
+  q = vec3(q.x, cx*q.y - sx*q.z, sx*q.y + cx*q.z);
+  return q + vec3(0.0, 0.78, 0.0);
+}
 
 void main(){
-  vec3 target = mix(aPortrait, aSphere, uMorph);
+  vec3 nguoi = quayDau(aPortrait, aHead * (1.0 - uMorph));
+  vec3 target = mix(nguoi, aSphere, uMorph);
   float ease = smoothstep(0.0, 1.0, clamp(uAssemble*1.35 - aSeed*0.35, 0.0, 1.0));
   vec3 p = mix(aScatter, target, ease);
 
-  // tho nhe luc nghi
-  p += wobble(target, uTime, aSeed) * (0.006 + uEnergy*0.05);
+  p += wobble(target, uTime, aSeed) * (0.004 + uEnergy*0.04);
 
-  // STATE: 0 standby, 1 listening, 2 thinking, 3 speaking, 4 error
+  // STATE: 0 cho, 1 nghe, 2 nghi, 3 noi, 4 loi
   float listening = step(0.5, uState)*step(uState, 1.5);
   float thinking  = step(1.5, uState)*step(uState, 2.5);
   float speaking  = step(2.5, uState)*step(uState, 3.5);
 
-  // nghe: gon song lan ra tu tam
   float r = length(p.xz);
-  p.xz *= 1.0 + listening * 0.03 * sin(r*14.0 - uTime*6.0);
-  // nghi: vach quet chay len
+  p.xz *= 1.0 + listening * 0.025 * sin(r*14.0 - uTime*6.0);
   float scan = fract(uTime*0.35);
-  float band = 1.0 - smoothstep(0.0, 0.09, abs((p.y+1.6)/3.2 - scan));
-  // noi: hat vung mat bung ra theo nang luong giong
-  p += normalize(p + vec3(0.0001)) * aZone * speaking * uEnergy * 0.12;
+  float band = 1.0 - smoothstep(0.0, 0.07, abs((p.y+1.6)/3.6 - scan));
+  // noi: vung mat, mieng phap phong theo giong
+  p += normalize(p - vec3(0.0, 1.3, 0.0) + vec3(0.0001)) * aZone * speaking * uEnergy * 0.05 * (1.0 - uMorph);
 
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  float size = uSize * (0.75 + hash(aSeed*91.0)*0.6 + aZone*0.9*(0.4+uEnergy));
-  gl_PointSize = size * uPixel * (3.0 / -mv.z);
+  float size = uSize * (0.7 + hash(aSeed*91.0)*0.6 + aZone*1.1*(0.5+uEnergy));
+  gl_PointSize = size * uPixel * (3.2 / -mv.z);
 
   vZone = aZone;
-  vGlow = band * thinking + aZone * (0.35 + uEnergy*0.9) + speaking*uEnergy*0.25;
-  float lowFade = mix(smoothstep(-1.5, -0.35, aPortrait.y), 1.0, uMorph);
-  vAlpha = mix(0.35, 1.0, ease) * lowFade;
+  vGlow = band * thinking + aZone * (0.4 + uEnergy*0.9) + speaking*uEnergy*0.2;
+  vAlpha = mix(0.35, 1.0, ease) * mix(aFade, 1.0, uMorph);
 }`;
 
 const FRAG = /* glsl */`
@@ -176,8 +132,6 @@ export class MinMinScene {
     this.renderer.setPixelRatio(this.pixel);
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    this.camera.position.set(0, 0.95, 6.0);
-    this.camera.lookAt(0, 0.05, 0);
 
     // nen
     this.bgMat = new THREE.ShaderMaterial({
@@ -190,15 +144,17 @@ export class MinMinScene {
     this.scene.add(bg);
 
     // hat
-    const portrait = portraitPoints(this.count);
+    const human = humanPoints(this.count);
     const geo = new THREE.BufferGeometry();
     const seed = new Float32Array(this.count);
     for (let i = 0; i < this.count; i++) seed[i] = Math.random();
-    geo.setAttribute("position", new THREE.BufferAttribute(portrait.pos, 3)); // de tinh bounding
-    geo.setAttribute("aPortrait", new THREE.BufferAttribute(portrait.pos, 3));
+    geo.setAttribute("position", new THREE.BufferAttribute(human.pos, 3));
+    geo.setAttribute("aPortrait", new THREE.BufferAttribute(human.pos, 3));
     geo.setAttribute("aSphere", new THREE.BufferAttribute(spherePoints(this.count), 3));
     geo.setAttribute("aScatter", new THREE.BufferAttribute(scatterPoints(this.count), 3));
-    geo.setAttribute("aZone", new THREE.BufferAttribute(portrait.zone, 1));
+    geo.setAttribute("aZone", new THREE.BufferAttribute(human.zone, 1));
+    geo.setAttribute("aFade", new THREE.BufferAttribute(human.fade, 1));
+    geo.setAttribute("aHead", new THREE.BufferAttribute(human.head, 1));
     geo.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
     this.mat = new THREE.ShaderMaterial({
       vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false,
@@ -206,7 +162,8 @@ export class MinMinScene {
       uniforms: {
         uTime: { value: 0 }, uEnergy: { value: 0 }, uMorph: { value: opts.form === "orb" ? 1 : 0 },
         uAssemble: { value: this.reduced ? 1 : 0 }, uState: { value: 0 }, uPixel: { value: this.pixel },
-        uSize: { value: lowPower ? 3.2 : 2.4 }, uErr: { value: 0 },
+        uSize: { value: lowPower ? 3.0 : 2.2 }, uErr: { value: 0 },
+        uHeadYaw: { value: 0 }, uHeadPitch: { value: 0 },
         uCool: { value: new THREE.Color("#8f6bff") },
         uWarm: { value: new THREE.Color("#ff9a3c") },
         uHot: { value: new THREE.Color("#ffe2b0") },
@@ -214,9 +171,11 @@ export class MinMinScene {
     });
     this.points = new THREE.Points(geo, this.mat);
     this.points.frustumCulled = false;
-    this.scene.add(this.points);
+    this.body = new THREE.Group();          // xoay ca nguoi (keo chuot) + loi sang di cung
+    this.body.add(this.points);
+    this.scene.add(this.body);
 
-    // loi sang: vung nong o mat (chan dung) hoac tam qua cau
+    // loi sang: o nguc (chan dung) hoac tam qua cau
     const cv = document.createElement("canvas"); cv.width = cv.height = 128;
     const cg = cv.getContext("2d");
     const grd = cg.createRadialGradient(64, 64, 0, 64, 64, 64);
@@ -225,22 +184,31 @@ export class MinMinScene {
     cg.fillStyle = grd; cg.fillRect(0, 0, 128, 128);
     this.core = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true,
       depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
-    this.scene.add(this.core);
+    this.body.add(this.core);
 
-    // vong quy dao quanh qua cau / chan dung
+    // vong quy dao
     this.rings = new THREE.Group();
     const ringMat = (c, o) => new THREE.LineBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending });
-    [[1.55, "#ff9a3c", 0.35], [1.8, "#8f6bff", 0.22], [2.15, "#8f6bff", 0.12]].forEach(([r, c, o], i) => {
+    [[1.85, "#ff9a3c", 0.35], [2.15, "#8f6bff", 0.22], [2.55, "#8f6bff", 0.12]].forEach(([r, c, o], i) => {
       const pts = [];
       for (let k = 0; k <= 256; k++) { const a = k / 256 * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)); }
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat(c, o));
       line.rotation.x = Math.PI / 2 - 0.35 + i * 0.22;
       line.rotation.z = i * 0.6;
       line.userData.spin = (i % 2 ? -1 : 1) * (0.05 + i * 0.03);
+      line.userData.o = o;
       this.rings.add(line);
     });
-    this.rings.position.y = 0.1;
+    this.rings.position.y = 0.2;
     this.scene.add(this.rings);
+
+    // ---- tuong tac ----
+    this.look = { x: 0, y: 0 };           // muc tieu nhin (-1..1), tu chuot hoac camera
+    this.lookNow = { x: 0, y: 0 };
+    this.spin = 0; this.spinNow = 0;      // goc xoay ca nguoi do keo chuot / tay
+    this.zoom = 1; this.zoomNow = 1;      // 0.5 .. 2.4
+    this._lastInput = 0;
+    this.external = null;                 // camera dang dieu khien thi chuot tam nhuong
 
     this.state = "standby";
     this.energy = 0; this._energyTarget = 0;
@@ -250,17 +218,59 @@ export class MinMinScene {
     this.onFps = opts.onFps || null;
     this.resize();
     window.addEventListener("resize", () => this.resize());
+    if (opts.interactive !== false) this._ganChuot();
     this._loop = this._loop.bind(this);
     requestAnimationFrame(this._loop);
   }
+
+  // Chuot: di chuot = dau nhin theo; keo = xoay nguoi; con lan = phong to / thu nho.
+  // Nghe tren window vi lop chom sao nam tren canvas nay.
+  _ganChuot() {
+    let keo = null;
+    const laUI = (el) => el && el.closest && el.closest("button, input, form, .card, .tools, aside, a");
+    addEventListener("pointermove", (e) => {
+      this._lastInput = performance.now();
+      if (!this.external) {
+        this.look.x = clamp((e.clientX / innerWidth) * 2 - 1, -1, 1);
+        this.look.y = clamp((e.clientY / innerHeight) * 2 - 1, -1, 1);
+      }
+      if (keo) { this.spin = keo.spin + (e.clientX - keo.x) * 0.008; }
+    }, { passive: true });
+    addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || laUI(e.target) || document.body.classList.contains("drawing")) return;
+      keo = { x: e.clientX, spin: this.spin };
+      document.body.classList.add("drag");
+    });
+    const tha = () => { keo = null; document.body.classList.remove("drag"); };
+    addEventListener("pointerup", tha);
+    addEventListener("pointercancel", tha);
+    addEventListener("wheel", (e) => {
+      if (laUI(e.target)) return;
+      e.preventDefault();
+      this.zoomBy(Math.exp(-e.deltaY * 0.0012));
+    }, { passive: false });
+    // hai ngon tren dien thoai: chum / gian de phong to
+    let chum = null;
+    addEventListener("touchmove", (e) => {
+      if (e.touches.length !== 2) { chum = null; return; }
+      const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      if (chum) this.zoomBy(d / chum);
+      chum = d;
+    }, { passive: true });
+    addEventListener("touchend", () => { chum = null; });
+  }
+
+  zoomBy(f) { this.zoom = clamp(this.zoom * f, 0.5, 2.4); this._lastInput = performance.now(); }
+  resetView() { this.zoom = 1; this.spin = 0; this.look.x = this.look.y = 0; }
+  // Camera (vision.js) dieu khien: nx, ny trong -1..1
+  setLook(nx, ny) { this.look.x = clamp(nx, -1, 1); this.look.y = clamp(ny, -1, 1); this._lastInput = performance.now(); }
+  setSpin(rad) { this.spin = rad; }
 
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth, h = this.canvas.clientHeight || window.innerHeight;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    // man doc: lui camera cho du khung
-    this.camera.position.z = w / h < 1 ? 8.2 : 6.0;
-    this.camera.lookAt(0, 0.05, 0);
+    this._baseZ = w / h < 1 ? 9.4 : 6.6;
     this.camera.updateProjectionMatrix();
     this.bgMat.uniforms.uRes.value.set(w, h);
   }
@@ -270,7 +280,7 @@ export class MinMinScene {
     this.state = s;
     this.mat.uniforms.uState.value = STATES[s];
   }
-  setEnergy(v) { this._energyTarget = Math.max(0, Math.min(1, v)); }
+  setEnergy(v) { this._energyTarget = clamp(v, 0, 1); }
   setForm(form) { this.morphTarget = form === "orb" ? 1 : 0; }
   toggleForm() { this.setForm(this.morphTarget > 0.5 ? "portrait" : "orb"); return this.morphTarget > 0.5 ? "orb" : "portrait"; }
 
@@ -280,7 +290,6 @@ export class MinMinScene {
     const speed = this.reduced ? 0.25 : 1;
     u.uTime.value = t * speed;
     this.bgMat.uniforms.uTime.value = t * speed;
-    // nang luong: len nhanh, xuong cham
     const k = this._energyTarget > this.energy ? 0.35 : 0.08;
     this.energy += (this._energyTarget - this.energy) * k;
     const base = this.state === "thinking" ? 0.25 : this.state === "listening" ? 0.15 : 0;
@@ -290,19 +299,38 @@ export class MinMinScene {
     if (u.uAssemble.value < 1) u.uAssemble.value = Math.min(1, t / 2.6);
     u.uErr.value += ((this.state === "error" ? 0.6 : 0) - u.uErr.value) * 0.08;
 
-    this.points.rotation.y = Math.sin(t * 0.15 * speed) * 0.35 + u.uMorph.value * t * 0.12 * speed;
-    const ringSpeed = this.state === "thinking" ? 3 : 1;
-    this.rings.children.forEach(r => { r.rotation.z += r.userData.spin * 0.01 * ringSpeed * speed; });
-    this.rings.visible = u.uMorph.value > 0.05 || this.state !== "standby";
-    this.rings.children.forEach(r => { r.material.opacity = (r.userData.o ??= r.material.opacity) * (0.3 + u.uMorph.value * 0.7); });
+    // Khong ai dong vao 6 giay: dau tu nhin quanh nhe nhang
+    const ranh = now - this._lastInput > 6000;
+    const lx = ranh ? Math.sin(t * 0.3) * 0.35 : this.look.x;
+    const ly = ranh ? Math.sin(t * 0.21) * 0.15 : this.look.y;
+    this.lookNow.x += (lx - this.lookNow.x) * 0.08;
+    this.lookNow.y += (ly - this.lookNow.y) * 0.08;
+    u.uHeadYaw.value = this.lookNow.x * 0.55;
+    u.uHeadPitch.value = this.lookNow.y * 0.32;
+    this.spinNow += (this.spin - this.spinNow) * 0.12;
+    this.body.rotation.y = this.spinNow + this.lookNow.x * 0.16 + u.uMorph.value * t * 0.12 * speed;
 
-    // loi sang di theo hinh: mat -> tam qua cau; phong theo nang luong giong
+    this.zoomNow += (this.zoom - this.zoomNow) * 0.12;
+    const z = this._baseZ / this.zoomNow;
+    // phong to thi camera ha dan xuong ngang mat
+    const cy = 0.5 + (this.zoomNow - 1) * 0.35 * (1 - u.uMorph.value);
+    this.camera.position.set(0, cy + 0.35, z);
+    this.camera.lookAt(0, cy, 0);
+
+    const ringSpeed = this.state === "thinking" ? 3 : 1;
+    this.rings.children.forEach(r => {
+      r.rotation.z += r.userData.spin * 0.01 * ringSpeed * speed;
+      r.material.opacity = r.userData.o * (0.3 + u.uMorph.value * 0.7);
+    });
+    this.rings.visible = u.uMorph.value > 0.05 || this.state !== "standby";
+
+    // loi sang: o nguc (chan dung) -> tam qua cau; phong theo giong
     const m = u.uMorph.value, e = u.uEnergy.value;
     const pulse = this.state === "thinking" ? 0.12 * Math.sin(t * 5) : 0;
-    this.core.position.set(0, 0.98 * (1 - m) + 0.1 * m, 0.42 * (1 - m));
-    const sc = (0.55 + m * 0.7) * (1 + e * 1.3 + pulse);
+    this.core.position.set(0, 0.15 * (1 - m) + 0.2 * m, 0.3 * (1 - m));
+    const sc = (0.5 + m * 0.9) * (1 + e * 1.2 + pulse);
     this.core.scale.set(sc, sc, 1);
-    this.core.material.opacity = Math.min(1, 0.5 + e * 0.6 + pulse);
+    this.core.material.opacity = Math.min(1, 0.45 + e * 0.6 + pulse);
     this.core.material.color.set(this.state === "error" ? "#ff5d73" : this.state === "listening" ? "#bff5e8" : "#ffffff");
 
     this.renderer.render(this.scene, this.camera);

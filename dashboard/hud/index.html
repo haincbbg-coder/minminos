@@ -9,12 +9,34 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/hud/hud.css?v=1">
+<link rel="stylesheet" href="/static/hud/hud.css?v=2">
 <script type="importmap">{ "imports": { "three": "/static/hud/vendor/three.module.min.js" } }</script>
 </head>
 <body data-state="standby">
   <canvas id="scene" aria-hidden="true"></canvas>
   <canvas id="web" aria-label="Bản đồ các bộ phận MinMin đang điều phối"></canvas>
+  <canvas id="ink" aria-hidden="true"></canvas>
+
+  <div class="cam" id="cam" hidden>
+    <video id="camVideo" playsinline muted></video>
+    <canvas id="camDots" aria-hidden="true"></canvas>
+    <div class="cam-g mono" id="camGesture"></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <nav class="tools" id="tools" aria-label="Công cụ HUD">
+    <button type="button" id="tNhin" title="MinMin nhìn: chụp camera (kèm nét vẽ) rồi hỏi MinMin (phím V)"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Nhìn</span></button>
+    <button type="button" id="tCam" aria-pressed="false" title="Bật / tắt camera: nhìn theo mặt, điều khiển bằng tay (phím C)"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3"/></svg><span>Camera</span></button>
+    <button type="button" id="tFlip" title="Đổi camera trước / sau (điện thoại)" hidden><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16m0 5v-5h5"/></svg><span>Đổi cam</span></button>
+    <button type="button" id="tVe" aria-pressed="false" title="Vẽ bằng chuột (hoặc chỉ 1 ngón tay trước camera) (phím D)"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Vẽ</span></button>
+    <button type="button" id="tXoa" title="Xóa nét vẽ (phím X)"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><span>Xóa vẽ</span></button>
+    <button type="button" id="tChu" aria-pressed="false" title="Ẩn chữ, số liệu và nhật ký (phím H)"><svg viewBox="0 0 24 24"><path d="M4 7V5h16v2M9 19h6M12 5v14"/><path d="m3 3 18 18"/></svg><span>Ẩn chữ</span></button>
+    <button type="button" id="tBoPhan" aria-pressed="false" title="Ẩn bản đồ bộ phận (phím B)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><circle cx="4" cy="6" r="1.8"/><circle cx="20" cy="7" r="1.8"/><circle cx="6" cy="19" r="1.8"/><path d="M6 7l4 3.5M18 8l-4 3M7.5 17.5 10 14"/></svg><span>Bộ phận</span></button>
+    <button type="button" id="tChiNguoi" aria-pressed="false" title="Chỉ còn hình người, ẩn hết (phím O)"><svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="3.2"/><path d="M5 21c0-4.4 3.1-8 7-8s7 3.6 7 8"/></svg><span>Chỉ hình</span></button>
+    <button type="button" id="tHinh" title="Đổi hình người / quả cầu (phím F)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>Đổi hình</span></button>
+    <button type="button" id="tGoc" title="Đặt lại góc nhìn và độ phóng (phím R)"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg><span>Góc nhìn</span></button>
+    <button type="button" id="tFull" title="Toàn màn hình (bấm đúp nền cũng được)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Toàn màn</span></button>
+  </nav>
 
   <header class="tl">
     <div class="brand"><span class="mark"></span><b>MINMIN</b><span class="os">OS · HUD</span></div>
@@ -45,7 +67,7 @@
     <div class="you" id="you"></div>
     <div class="reply" id="reply"></div>
     <div class="eq" id="eq" aria-hidden="true"></div>
-    <div class="hint" id="hint">Nói <b>“Min Min ơi”</b><span class="long"> · nhấn <kbd>Space</kbd> để nói · <kbd>/</kbd> để gõ · <kbd>F</kbd> đổi hình</span></div>
+    <div class="hint" id="hint">Nói <b>“Min Min ơi”</b><span class="long"> · <kbd>Space</kbd> nói · <kbd>/</kbd> gõ · kéo chuột xoay · con lăn phóng to</span></div>
   </footer>
 
   <form class="ask" id="ask" hidden autocomplete="off">
@@ -70,6 +92,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/hud/hud.js?v=2"></script>
+  <script type="module" src="/static/hud/hud.js?v=3"></script>
 </body>
 </html>

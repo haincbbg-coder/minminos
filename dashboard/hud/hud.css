@@ -21,8 +21,11 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--sans); }
 body { -webkit-font-smoothing: antialiased; user-select: none; }
 .mono { font-family: var(--mono); }
-#scene, #web { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+#scene, #web, #ink { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
 #web { z-index: 1; }
+#ink { z-index: 1; pointer-events: none; }
+body.drawing { cursor: crosshair; }
+body.drag { cursor: grabbing; }
 header, section, aside, footer, .ask, .card { position: fixed; z-index: 2; }
 
 /* ---------- goc trai tren ---------- */
@@ -143,3 +146,34 @@ kbd { font: 500 10px var(--mono); padding: 2px 6px; border: 1px solid var(--line
 }
 body.quiet-ui .kpi, body.quiet-ui .feed, body.quiet-ui .tr { opacity: .35; }
 @media (prefers-reduced-motion: reduce) { .feed li, .card { animation: none; } .reply .cur { animation: none; } }
+
+/* ---------- thanh cong cu ---------- */
+.tools { position: fixed; z-index: 3; right: var(--gut); bottom: var(--gut); display: flex; flex-direction: column; gap: 6px;
+  transition: opacity .4s ease; }
+.tools button { display: flex; align-items: center; gap: 8px; justify-content: flex-start; min-width: 40px; height: 36px; padding: 0 10px;
+  color: var(--ink-2); background: rgba(14, 8, 30, .62); border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
+  font: 500 12px var(--sans); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.tools button svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tools button span { white-space: nowrap; max-width: 0; overflow: hidden; transition: max-width .25s ease; }
+.tools:hover button span, .tools:focus-within button span { max-width: 90px; }
+.tools button:hover { color: var(--ink); border-color: rgba(255, 154, 60, .5); }
+.tools button[aria-pressed="true"] { color: #1a0d00; background: linear-gradient(180deg, #ffc27a, var(--amber)); border-color: transparent; }
+.tools button:focus-visible { outline: 2px solid var(--amber-hi); outline-offset: 2px; }
+body.idle .tools:not(:hover) { opacity: .25; }
+
+/* ---------- camera xem truoc ---------- */
+.cam { position: fixed; z-index: 3; right: calc(var(--gut) + 124px); bottom: var(--gut); width: min(260px, 38vw); aspect-ratio: 16 / 10;
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.cam video, .cam canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cam video.mirror { transform: scaleX(-1); }
+.cam-g { position: absolute; left: 8px; bottom: 6px; font-size: 10.5px; color: var(--amber-hi); text-shadow: 0 1px 4px #000; letter-spacing: .06em; }
+
+.toast { position: fixed; z-index: 4; left: 50%; top: var(--gut); transform: translateX(-50%); max-width: min(560px, 86vw); padding: 10px 14px;
+  border: 1px solid var(--line); border-radius: 10px; background: rgba(14, 8, 30, .9); color: var(--ink); font-size: 13px; line-height: 1.5; }
+.toast.bad { border-color: rgba(255, 93, 115, .6); }
+
+/* ---------- che do an ---------- */
+body.no-text .tl, body.no-text .tr, body.no-text .kpi, body.no-text .feed, body.no-text .hint { display: none !important; }
+body.solo .tl, body.solo .tr, body.solo .kpi, body.solo .feed, body.solo .bottom { display: none !important; }
+body.solo .tools:not(:hover) { opacity: .12; }
+@media (max-width: 600px) { .tools { right: 10px; bottom: 90px; } .cam { right: 60px; bottom: 90px; } }
