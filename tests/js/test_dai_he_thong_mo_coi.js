@@ -48,9 +48,12 @@ check("desktop mà moved rỗng vẫn dọn (ca để lại nhãn mồ côi)",
 // ---- 3. Màn hẹp: nhãn không được đứng một mình ----
 check("màn hẹp mà khung không còn nút nào thì cũng dọn",
   /sysHost && !sysHost\.querySelector\(/.test(place), place);
-// Dải VỪA GỌI (#sysBar) đã bỏ ở 0.64.15, nên chỉ còn hai thứ được mượn.
-check("soi đúng hai thứ được mượn vào khung",
-  /querySelector\("\.navbar-brain, #themeToggle"\)/.test(place), place);
+// Dải VỪA GỌI (#sysBar) đã bỏ ở 0.64.15. Từ 0.64.88 mượn thêm nút mở HUD (điện thoại ẩn
+// nhóm nút góc phải nên không còn chỗ nào mở HUD).
+check("soi đúng ba thứ được mượn vào khung",
+  /querySelector\("\.navbar-brain, #themeToggle, #hudLaunchBtn"\)/.test(place), place);
+check("mượn nút mở HUD vào ngăn kéo",
+  /moveEl\(document\.getElementById\("hudLaunchBtn"\), true\)/.test(place), place);
 check("dọn xong thì reset moved để lần sau mượn lại được",
   /!sysHost\.querySelector\([\s\S]{0,80}moved = \[\];/.test(place), place);
 

@@ -734,6 +734,9 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
   .rail-sys .graph-select { flex: 1 1 auto; min-width: 0; max-width: 100%; }
   .rail-sys-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .rail-sys-btns .hud-icon-btn { display: inline-flex; }
+  /* nut mo HUD trong ngan keo (0.64.88): hien ca chu cho de nhan ra */
+  .rail-sys-btns #hudLaunchBtn { width: auto; padding: 0 12px; }
+  .rail-sys-btns #hudLaunchBtn .install-app-label { display: inline; }
 
   /* Nền mờ khi mở ngăn kéo */
   .nav-backdrop { position: fixed; inset: 0; background: var(--scrim); z-index: 55; }

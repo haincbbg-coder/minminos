@@ -39,6 +39,12 @@
   }
 
   async function moHud() {
+    // Dien thoai / may tinh bang (0.64.88): khong co man phu, mo HUD ngay trong tab nay cho
+    // khoi lac tab; muon quay lai thi bam Quay lai cua trinh duyet.
+    if (window.matchMedia && window.matchMedia("(max-width: 860px), (pointer: coarse) and (max-width: 1100px)").matches) {
+      location.href = "/hud";
+      return;
+    }
     // Mo cua so NGAY trong luot bam (cho doi hop hoi quyen xong moi mo thi trinh duyet chan
     // cua so bat len), roi moi doi no sang man phu.
     var w = null;
