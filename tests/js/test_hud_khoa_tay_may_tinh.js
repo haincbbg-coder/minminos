@@ -22,11 +22,16 @@ function tay({ tro = false, giua = false, ap = false, ut = false, mo = 0.6, cai 
 
 (async () => {
   const { tayThat, chonTay, CHE_DO } = await import(hud("vision.js"));
-  // MediaPipe gia dinh anh da lat guong: webcam thuong (flip=false) thi nhan bi nguoc
-  assert.strictEqual(tayThat("Left", false), "Right");
-  assert.strictEqual(tayThat("Right", false), "Left");
-  assert.strictEqual(tayThat("Left", true), "Left");
-  assert.strictEqual(tayThat("", false), "");
+  // 0.64.89: nhan cua may chi dao khi bo da "Chinh tay" va may goi nguoc (dao = true)
+  assert.strictEqual(tayThat("Left", true), "Right");
+  assert.strictEqual(tayThat("Right", true), "Left");
+  assert.strictEqual(tayThat("Left", false), "Left");
+  assert.strictEqual(tayThat("Right", null), "Right");
+  assert.strictEqual(tayThat("", true), "");
+  // Nut Doi cam: phuong thuc rieng, khong con trung ten voi cai dat `flip` (bi che mat)
+  const { Vision } = await import(hud("vision.js"));
+  assert.strictEqual(typeof Vision.prototype.doiCam, "function");
+  assert.ok(!("flip" in Vision.prototype), "khong duoc co phuong thuc ten flip");
   assert.deepStrictEqual(Object.keys(CHE_DO), ["cuchi", "batchuoc", "maytinh"]);
 
   const lmA = tay({ x: 0.3 }), lmB = tay({ x: 0.7 });
@@ -136,5 +141,31 @@ function tay({ tro = false, giua = false, ap = false, ut = false, mo = 0.6, cai 
   assert.strictEqual(cmds.length, 2, "mot tu le khong tinh la lenh");
   assert.ok(nghe.some(n => n[2] === true), "bang Tro chuyen thay duoc cau co tu goi");
   clearTimeout(v._awakeTimer);
+
+  // Chinh tay (0.64.89): bo gio tay PHAI that. May goi la "Left" -> nhanDao = true; tay hien
+  // ben phai man hinh -> khong doi huong.
+  const luu = {}; global.localStorage = { getItem: (k) => luu[k] ?? null, setItem: (k, x) => { luu[k] = x; } };
+  const ketQua = [];
+  const gia = { facing: "user", flip: false, dangChinh: { t: 0 }, onChinh: (r) => ketQua.push(r) };
+  gia._sx = Vision.prototype._sx;
+  const motTay = (tho, x) => [{ lm: tay({ x }), tho, label: tho, score: 0.9 }];
+  Vision.prototype._buocChinh.call(gia, motTay("Left", 0.3), 1000);   // khung tho: x=0.3 -> man hinh 0.7 (ben phai)
+  Vision.prototype._buocChinh.call(gia, motTay("Left", 0.3), 1500);
+  assert.strictEqual(ketQua.length, 0, "chua du 1 giay");
+  Vision.prototype._buocChinh.call(gia, motTay("Left", 0.3), 2100);
+  assert.deepStrictEqual(ketQua[0], { nhanDao: true, doiHuong: false });
+  assert.strictEqual(luu["minmin.hud.nhandao"], "1");
+  assert.strictEqual(gia.dangChinh, null);
+  // Tay hien ben TRAI man hinh -> dao huong di chuyen
+  const gia2 = { facing: "user", flip: false, dangChinh: { t: 0 }, onChinh: (r) => ketQua.push(r), _sx: Vision.prototype._sx };
+  Vision.prototype._buocChinh.call(gia2, motTay("Right", 0.8), 10);
+  Vision.prototype._buocChinh.call(gia2, motTay("Right", 0.8), 1200);
+  assert.deepStrictEqual(ketQua[1], { nhanDao: false, doiHuong: true });
+  assert.strictEqual(gia2.flip, true);
+  // Hai tay cung luc: khong chinh
+  const gia3 = { facing: "user", flip: false, dangChinh: { t: 0 }, onChinh: (r) => ketQua.push(r), _sx: Vision.prototype._sx };
+  Vision.prototype._buocChinh.call(gia3, [...motTay("Right", 0.3), ...motTay("Left", 0.7)], 10);
+  Vision.prototype._buocChinh.call(gia3, [...motTay("Right", 0.3), ...motTay("Left", 0.7)], 2000);
+  assert.strictEqual(ketQua.length, 2);
   console.log("ok");
 })().catch((e) => { console.error(e); process.exit(1); });

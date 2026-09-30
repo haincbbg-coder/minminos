@@ -336,3 +336,16 @@ body.solo .talk, body.solo .stream { display: none !important; }
     width: auto; max-height: none; transform: none; }
   .toast { top: calc(var(--gut) + 4px); max-width: calc(100vw - 2 * var(--gut)); }
 }
+
+/* ---------- 0.64.89 ---------- */
+.g-set .dim, .guide .dim { color: var(--ink-3); font-size: 11px; line-height: 1.4; }
+.g-set + .g-set { margin-top: 6px; }
+.may-ma .btn.ghost { background: none; color: var(--ink-2); border: 1px solid var(--line); }
+.may-loi { margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.may-loi summary { cursor: pointer; color: var(--amber-hi); }
+.may-loi ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; line-height: 1.5; }
+#mayText.ok { color: var(--ok); } #mayText.cho { color: var(--warn); }
+@media (max-width: 600px) {
+  .cam { aspect-ratio: 3 / 4; width: 30vw; }
+  body.ar .cam { aspect-ratio: auto; width: 100vw; }
+}

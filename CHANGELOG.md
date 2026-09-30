@@ -6,7 +6,14 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 ## [0.64.89] - 2026-09-30
 ### Sửa lỗi
-- (đang làm) tay phải thật, đổi camera trên điện thoại, Máy tính tự nối lại.
+- **Nhận đúng tay phải thật của bố**: bảng Cử chỉ có nút **Chỉnh tay** (giơ tay phải lên 1 giây). Trước đây một số webcam làm MinMin nhận nhầm, chỉ ăn tay trái, tay phải giơ lên không vẽ được. Chưa chỉnh thì tay nào cũng điều khiển được, không khóa nhầm. Thêm lựa chọn "Tay nào cũng được".
+- **Nút Đổi cam trên điện thoại chạy được** (trước đây bấm không có tác dụng) và luôn hiện trên điện thoại.
+- **Máy tính tự nối lại**: tắt cửa sổ MinMin Tay rồi bật lại là HUD tự điều khiển tiếp, không phải bấm lại từ đầu. Góc phải có dòng MÁY TÍNH: ĐÃ NỐI / CHỜ.
+- MinMin báo khi đang thấy tay kia (tay bị bỏ qua) để bố biết vì sao cử chỉ không ăn.
+
+### Cải thiện
+- **Hướng dẫn điều khiển máy tính** rõ ràng hơn: điều khiển được mọi ứng dụng Windows (Chrome, Word, Excel, PDF…) trên màn hình chính, các bước cài, nút **Thử chuột**, mục "Không điều khiển được?".
+- **Điện thoại nhanh hơn**: camera khung dọc, độ phân giải vừa đủ, bớt bộ nhận diện nặng, ảnh gửi MinMin nhỏ gọn hơn; màn hình giữ chiều dọc khi toàn màn.
 
 ## [0.64.88] - 2026-09-30
 ### Sửa lỗi
