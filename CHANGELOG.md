@@ -4,6 +4,11 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.88] - 2026-09-30
+### Sửa lỗi
+- **Mở được HUD trên điện thoại**: bấm nút menu (☰), mục **HUD** nằm cuối ngăn kéo. Trước đây điện thoại ẩn cả nhóm nút góc trên nên không có chỗ nào mở HUD.
+- **HUD trên điện thoại**: thanh nút nằm ngang dưới đáy, vuốt ngang để xem hết. Trước đây cột nút dài hơn màn iPhone nên nút Nhìn, Camera bị đẩy ra ngoài, bấm không được.
+
 ## [0.64.87] - 2026-09-30
 ### Thêm mới
 - **Điều khiển máy tính bằng tay**: nút Máy tính trên HUD. Trỏ ngón để di chuột, chụm nhanh để bấm, chụm giữ rồi mở ra để phóng to, chữ L chụm lại để thu nhỏ, chữ V đưa lên xuống để cuộn, xòe tay vuốt để sang trang, nắm giữ để tạm dừng. Cần chạy MinMin Tay trên máy Windows (bấm Tải MinMin-Tay.bat, dán mã ghép nối).
@@ -18,7 +23,6 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 - **Bảng Cử chỉ có hình minh họa** từng động tác, chia hai tab: điều khiển MinMin và điều khiển máy tính, luyện được cả hai.
 - **Hạt sáng chuyển động liên tục**: nhấp nháy, trượt theo đường viền, sóng năng lượng chạy từ dưới lên, tàn lửa bay, xung sáng.
 - Camera xem trước chuyển sang góc trái dưới, không che chữ trả lời.
-- **Điện thoại**: thanh nút nằm ngang dưới đáy, vuốt ngang để xem hết. Trước đây cột nút dài hơn màn iPhone nên nút Nhìn, Camera bị đẩy ra ngoài, bấm không được.
 
 ### Sửa lỗi
 - **ElevenLabs báo rõ lỗi**: thay vì câu chung chung, HUD và Cài đặt nói đúng nguyên do (key sai, key thiếu quyền, gói Miễn phí bị chặn khi gọi từ VPS, giọng Thư viện cần gói trả phí, hết ký tự, sai Voice ID).
