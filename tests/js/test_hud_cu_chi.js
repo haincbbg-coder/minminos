@@ -30,6 +30,23 @@ const fs = require("fs");
   }
 
   // Goc canh tay tu diem khop: tha xuong = 0, dang ngang = +-90 do
+  const { ngonDuoi } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js"));
+  const bt = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 })); bt[0] = { x: 0.5, y: 0.9 };
+  bt[6] = { x: 0.5, y: 0.6 }; bt[8] = { x: 0.5, y: 0.35 };      // ngon tro duoi
+  bt[10] = { x: 0.52, y: 0.62 }; bt[12] = { x: 0.52, y: 0.66 };  // ngon giua co
+  assert.strictEqual(ngonDuoi(bt, 8, 6), true);
+  assert.strictEqual(ngonDuoi(bt, 12, 10), false);
+  // tuong ban than: du hat, co phap tuyen don vi, co vung mat am
+  const { bustPoints } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "bust.js"));
+  const bu = bustPoints(8000);
+  let nong = 0, lech = 0;
+  for (let i = 0; i < 8000; i++) {
+    if (bu.info[i * 3] > 0.4) nong++;
+    const L = Math.hypot(bu.nrm[i * 3], bu.nrm[i * 3 + 1], bu.nrm[i * 3 + 2]);
+    if (Math.abs(L - 1) > 1e-3) lech++;
+  }
+  assert.ok(nong > 200 && lech === 0 && !Array.from(bu.pos).some(Number.isNaN), JSON.stringify({ nong, lech }));
+
   const { gocTay, khoangCach, tenDoVat } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js"));
   const P = (x, y) => ({ x, y });
   const g0 = gocTay(P(.4, .4), P(.4, .6), P(.4, .8));

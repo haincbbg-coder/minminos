@@ -54,6 +54,12 @@ export function gocTay(vai, khuyu, co) {
   return [tren, cang];
 }
 
+// Ngon tay duoi thang: dau ngon xa co tay hon khop giua ro ret
+export function ngonDuoi(lm, dau, giua) {
+  if (!lm) return false;
+  return khoang(lm[0], lm[dau]) > khoang(lm[0], lm[giua]) * 1.12;
+}
+
 export function khoangCach(a, b) {
   let s = 0; for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; s += d * d; }
   return Math.sqrt(s);
@@ -62,10 +68,11 @@ export function khoangCach(a, b) {
 // Ten cu chi -> chu hien cho bo
 export const CU_CHI = {
   Open_Palm: "Xòe tay · nhìn theo",
-  Pointing_Up: "Chỉ tay · đang vẽ",
+  Pointing_Up: "Chỉ tay · con trỏ",
   Closed_Fist: "Nắm tay · xoay",
-  Victory: "Chữ V · đổi hình",
+  Victory: "Chữ V · giữ để đổi hình",
   Pinch: "Chụm ngón · phóng to",
+  Thumb_Up: "Ngón cái · giữ 1 giây để MinMin nhìn",
 };
 
 const khoang = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -92,6 +99,10 @@ export class Vision {
     this.onScene = opts.onScene || (() => {});     // danh sach do vat nhin thay
     this.onOwner = opts.onOwner || (() => {});     // "owner" | "stranger" | "" (khong co ai)
     this.mimic = true;                              // robot bat chuoc canh tay
+    this.onDetect = opts.onDetect || (() => {});   // cu chi dang thay (cho bang huong dan)
+    this.onLook = opts.onLook || (() => {});       // giu ngon cai = Nhin
+    this.drawMode = false; this.cursor = null;
+    try { this.flip = localStorage.getItem("minmin.hud.flip") === "1"; } catch (e) { this.flip = false; }
     this.objects = []; this.pose = null; this.who = ""; this._frame = 0;
     this.on = false;
     this.facing = "user";             // user = camera truoc, environment = camera sau
@@ -209,8 +220,9 @@ export class Vision {
     const mui = lm[0];
     const cao = ok(trai) && ok(phai) && trai[2].y < mui.y && phai[2].y < mui.y;
     if (cao) {
+      this.onDetect("TwoHands");
       this._tayCao = this._tayCao || performance.now();
-      if (performance.now() - this._tayCao > 600 && performance.now() - (this._wakeAt || 0) > 4000) {
+      if (!this.practice && performance.now() - this._tayCao > 600 && performance.now() - (this._wakeAt || 0) > 4000) {
         this._wakeAt = performance.now(); this.onWake();
       }
     } else this._tayCao = 0;
@@ -288,44 +300,89 @@ export class Vision {
   }
 
   // Toa do cua camera (0..1) -> toa do man hinh; camera truoc thi lat guong cho tu nhien
-  _sx(x) { return this.facing === "user" ? 1 - x : x; }
+  // Camera truoc: lat guong cho tu nhien. `flip` dao lai cho webcam da tu lat san (bo chinh
+  // bang buoc "Giơ tay phải" trong Luyện cử chỉ).
+  _sx(x) { const guong = (this.facing === "user") !== !!this.flip; return guong ? 1 - x : x; }
+
+  // Toa do man hinh cua ngon tro, loc rung (nhanh thi bam sat, cham thi em)
+  _loc(x, y) {
+    const p = this._tip;
+    if (!p) { this._tip = { x, y }; return this._tip; }
+    const v = Math.hypot(x - p.x, y - p.y);
+    const k = Math.min(0.85, 0.25 + v * 18);
+    p.x += (x - p.x) * k; p.y += (y - p.y) * k;
+    return p;
+  }
+
+  // Cu chi phai GIU on dinh mot luc moi tinh, tranh nhay lung tung khi tay dang chuyen
+  _giu(gest, now) {
+    if (gest !== this._gRaw) { this._gRaw = gest; this._gSince = now; }
+    return now - this._gSince;
+  }
 
   _apply(hand, gest, face) {
-    const s = this.scene;
-    if (gest !== this._gesture) { this._gesture = gest; this.onGesture(gest && CU_CHI[gest] ? CU_CHI[gest] : ""); }
-    if (gest !== "Pointing_Up" && this.stroke) this.stroke = null;
-    if (gest !== "Closed_Fist") this._fist = null;
-    if (gest !== "Pinch") this._pinch = null;
+    const s = this.scene, now = performance.now();
+    const giu = this._giu(gest, now);
+    // cu chi da on dinh 150 ms moi coi la cu chi hien tai
+    const on = giu > 150 ? gest : this._gesture;
+    if (on !== this._gesture) {
+      this._gesture = on;
+      this.onGesture(on && CU_CHI[on] ? CU_CHI[on] : "");
+    }
+    if (on) this.onDetect(on);
+    if (on !== "Closed_Fist") this._fist = null;
+    if (on !== "Pinch") this._pinch = null;
 
     if (hand) {
+      this._handAt = now;
       s.external = "hand";
-      const tip = hand[8], x = this._sx(tip.x), y = tip.y;
-      if (gest === "Pointing_Up") {
-        if (!this.stroke) { this.stroke = []; this.strokes.push(this.stroke); }
-        this.stroke.push([x * innerWidth, y * innerHeight, performance.now()]);
+      this.handX = this._sx(hand[9].x);
+      const tip = this._loc(this._sx(hand[8].x), hand[8].y);
+      const x = tip.x, y = tip.y;
+      this.cursor = this.drawMode ? [x * innerWidth, y * innerHeight] : null;
+
+      if (this.drawMode) {
+        // VE THUC TE: duoi ngon tro (ngon giua co lai) la ha but, co ngon tro / nam tay la nhac but
+        const but = ngonDuoi(hand, 8, 6) && !ngonDuoi(hand, 12, 10);
+        if (but) {
+          if (!this.stroke) { this.stroke = []; this.strokes.push(this.stroke); }
+          const last = this.stroke[this.stroke.length - 1];
+          const px = x * innerWidth, py = y * innerHeight;
+          if (!last || Math.hypot(px - last[0], py - last[1]) > 1.5) this.stroke.push([px, py, now]);
+        } else this.stroke = null;
         this._inkDraw();
-      } else if (gest === "Closed_Fist") {
+        return;                                  // dang ve thi khong xoay / phong to
+      }
+
+      if (on === "Closed_Fist") {
         const cx = this._sx(hand[9].x);
         if (!this._fist) this._fist = { x: cx, spin: s.spin };
         s.setSpin(this._fist.spin + (cx - this._fist.x) * 6);
-      } else if (gest === "Pinch") {
+      } else if (on === "Pinch") {
         const py = (hand[4].y + hand[8].y) / 2;
         if (!this._pinch) this._pinch = { y: py, zoom: s.zoom };
         s.zoom = Math.max(0.5, Math.min(2.4, this._pinch.zoom * Math.exp((this._pinch.y - py) * 3)));
-        s._lastInput = performance.now();
-      } else if (gest === "Victory" && performance.now() - this._vAt > 1500) {
-        this._vAt = performance.now();
-        this.onForm(s.toggleForm());
+        s._lastInput = now;
+      } else if (this.practice) {
+        // dang luyen cu chi: chi nhan dien, khong lam hanh dong that
+      } else if (gest === "Victory" && giu > 600 && now - this._vAt > 1800) {
+        this._vAt = now; this.onForm(s.toggleForm());
+      } else if (gest === "Thumb_Up" && giu > 1000 && now - (this._tAt || 0) > 4000) {
+        this._tAt = now; this.onLook();       // giu ngon cai 1 giay = MinMin nhin va noi
       }
-      if (gest !== "Closed_Fist") s.setLook(x * 2 - 1, y * 2 - 1);
-    } else if (face) {
-      // khong co tay: nhin theo mat bo
-      s.external = "face";
-      const vw = this.video.videoWidth || 1, vh = this.video.videoHeight || 1;
-      const fx = (face.originX + face.width / 2) / vw, fy = (face.originY + face.height / 2) / vh;
-      s.setLook(this._sx(fx) * 2 - 1, fy * 2 - 1);
+      if (on !== "Closed_Fist") s.setLook(x * 2 - 1, y * 2 - 1);
     } else {
-      s.external = null;
+      this.handX = null;
+      // mat tay qua 350 ms moi nhac but (camera hut vai khung hinh la chuyen thuong)
+      if (this.stroke && now - (this._handAt || 0) > 350) this.stroke = null;
+      if (this.drawMode) { this.cursor = null; this._inkDraw(); }
+      this._tip = null;
+      if (face) {
+        s.external = "face";
+        const vw = this.video.videoWidth || 1, vh = this.video.videoHeight || 1;
+        const fx = (face.originX + face.width / 2) / vw, fy = (face.originY + face.height / 2) / vh;
+        s.setLook(this._sx(fx) * 2 - 1, fy * 2 - 1);
+      } else s.external = null;
     }
   }
 
@@ -373,6 +430,14 @@ export class Vision {
     const c = this.ink; if (!c) return;
     const g = c.getContext("2d"), d = devicePixelRatio || 1;
     g.clearRect(0, 0, c.width, c.height);
+    if (this.cursor) {                               // dau but o dau ngon tro
+      const [cx, cy] = this.cursor, dang = !!this.stroke;
+      const r = (dang ? 9 : 14) * d;
+      const grd = g.createRadialGradient(cx * d, cy * d, 0, cx * d, cy * d, r * 2.2);
+      grd.addColorStop(0, dang ? "rgba(255,244,226,1)" : "rgba(111,224,200,.9)"); grd.addColorStop(1, "rgba(255,154,60,0)");
+      g.fillStyle = grd; g.beginPath(); g.arc(cx * d, cy * d, r * 2.2, 0, 7); g.fill();
+      if (!dang) { g.strokeStyle = "rgba(111,224,200,.9)"; g.lineWidth = 1.5 * d; g.beginPath(); g.arc(cx * d, cy * d, r, 0, 7); g.stroke(); }
+    }
     g.lineCap = g.lineJoin = "round";
     for (const s of this.strokes) {
       if (s.length < 2) continue;

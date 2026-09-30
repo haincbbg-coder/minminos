@@ -4,8 +4,9 @@
 import * as THREE from "three";
 import { humanPoints, SHOULDER, ELBOW } from "./body.js";
 import { robotPoints } from "./robot.js";
+import { bustPoints } from "./bust.js";
 
-const N = 30000;                       // so hat; may yeu tu giam (quality=low)
+const N = 60000;                       // so hat; may yeu tu giam (quality=low)
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -35,12 +36,12 @@ function scatterPoints(n) {
 // ---------- Shader hat ----------
 const VERT = /* glsl */`
 uniform float uTime, uEnergy, uAssemble, uState, uPixel, uSize, uHeadYaw, uHeadPitch;
-uniform vec3 uForm;                 // trong so: robot, nguoi, qua cau
+uniform vec4 uForm;                 // trong so: robot, nguoi, qua cau, tuong ban than
 uniform vec4 uArms;                 // canh tay trai (tren, cang), phai (tren, cang) - radian
-attribute vec3 aRobot, aHuman, aSphere, aScatter, aInfoR, aInfoH;
+attribute vec3 aRobot, aHuman, aBust, aSphere, aScatter, aInfoR, aInfoH, aInfoB, aNrmB;
 attribute vec2 aArmR, aArmH;
 attribute float aSeed;
-varying float vZone, vGlow, vAlpha;
+varying float vZone, vGlow, vAlpha, vRim;
 
 float hash(float n){ return fract(sin(n)*43758.5453); }
 vec3 wobble(vec3 p, float t, float s){
@@ -54,6 +55,13 @@ vec3 quayDau(vec3 p, float w){
   float cx = cos(x), sx = sin(x);
   q = vec3(q.x, cx*q.y - sx*q.z, sx*q.y + cx*q.z);
   return q + vec3(0.0, 0.78, 0.0);
+}
+vec3 quayHuong(vec3 d, float w){
+  float y = uHeadYaw * w, x = uHeadPitch * w;
+  float cy = cos(y), sy = sin(y);
+  d = vec3(cy*d.x + sy*d.z, d.y, -sy*d.x + cy*d.z);
+  float cx = cos(x), sx = sin(x);
+  return vec3(d.x, cx*d.y - sx*d.z, sx*d.y + cx*d.z);
 }
 vec3 quayZ(vec3 p, vec2 c, float a){
   vec2 d = p.xy - c; float ca = cos(a), sa = sin(a);
@@ -73,8 +81,9 @@ vec3 tay(vec3 p, vec2 arm){
 void main(){
   vec3 ro = quayDau(tay(aRobot, aArmR), aInfoR.z);
   vec3 h = quayDau(tay(aHuman, aArmH), aInfoH.z);
-  vec3 target = ro * uForm.x + h * uForm.y + aSphere * uForm.z;
-  vec3 info = aInfoR * uForm.x + aInfoH * uForm.y + vec3(0.0, 1.0, 0.0) * uForm.z;
+  vec3 bu = quayDau(aBust, aInfoB.z);
+  vec3 target = ro * uForm.x + h * uForm.y + aSphere * uForm.z + bu * uForm.w;
+  vec3 info = aInfoR * uForm.x + aInfoH * uForm.y + vec3(0.0, 1.0, 0.0) * uForm.z + aInfoB * uForm.w;
   float aZone = info.x;
   float uMorph = uForm.z;
   float ease = smoothstep(0.0, 1.0, clamp(uAssemble*1.35 - aSeed*0.35, 0.0, 1.0));
@@ -96,18 +105,22 @@ void main(){
 
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  float size = uSize * (0.7 + hash(aSeed*91.0)*0.6 + aZone*1.1*(0.5+uEnergy));
+  // sang vien (rim): hat nam o ria hinh nhin tu camera thi sang, quay thang ve camera thi mo
+  vec3 nv = normalize(normalMatrix * quayHuong(aNrmB, aInfoB.z));
+  float rim = 1.0 - abs(dot(nv, normalize(-mv.xyz)));
+  vRim = pow(rim, 1.8) * uForm.w;
+  float size = uSize * (0.7 + hash(aSeed*91.0)*0.6 + aZone*1.1*(0.5+uEnergy)) * (1.0 - 0.1*uForm.w + vRim*1.6);
   gl_PointSize = size * uPixel * (3.2 / -mv.z);
 
   vZone = aZone;
   vGlow = band * thinking + aZone * (0.4 + uEnergy*0.9) + speaking*uEnergy*0.2;
-  vAlpha = mix(0.35, 1.0, ease) * info.y;
+  vAlpha = mix(0.35, 1.0, ease) * info.y * mix(1.0, 0.55 + 0.45*max(vRim*1.4, aZone), uForm.w);
 }`;
 
 const FRAG = /* glsl */`
-uniform vec3 uCool, uWarm, uHot;
+uniform vec3 uCool, uWarm, uHot, uRim;
 uniform float uErr;
-varying float vZone, vGlow, vAlpha;
+varying float vZone, vGlow, vAlpha, vRim;
 void main(){
   vec2 c = gl_PointCoord - 0.5;
   float d = length(c);
@@ -115,8 +128,9 @@ void main(){
   float soft = smoothstep(0.5, 0.0, d);
   vec3 col = mix(uCool, uWarm, clamp(vZone*1.4, 0.0, 1.0));
   col = mix(col, uHot, clamp(vGlow - 0.35, 0.0, 1.0));
+  col = mix(col, uRim, clamp(vRim * 1.5, 0.0, 1.0));
   col = mix(col, vec3(1.0, 0.25, 0.3), uErr);
-  gl_FragColor = vec4(col * (0.75 + vGlow*0.9), soft * vAlpha * (0.55 + vGlow*0.45));
+  gl_FragColor = vec4(col * (0.75 + vGlow*0.9 + vRim*1.2), soft * vAlpha * (0.55 + vGlow*0.45));
 }`;
 
 // ---------- Nen plasma tim ----------
@@ -141,8 +155,8 @@ void main(){
 
 const STATES = { standby: 0, listening: 1, thinking: 2, speaking: 3, error: 4 };
 // Ba hinh: robot giap (mac dinh), nguoi, qua cau - trong so tron trong shader
-const FORMS = { robot: [1, 0, 0], portrait: [0, 1, 0], orb: [0, 0, 1] };
-const THU_TU = ["robot", "portrait", "orb"];
+const FORMS = { bust: [0, 0, 0, 1], robot: [1, 0, 0, 0], portrait: [0, 1, 0, 0], orb: [0, 0, 1, 0] };
+const THU_TU = ["bust", "robot", "portrait", "orb"];
 
 export class MinMinScene {
   constructor(canvas, opts = {}) {
@@ -168,7 +182,7 @@ export class MinMinScene {
     this.scene.add(bg);
 
     // hat
-    const human = humanPoints(this.count), robot = robotPoints(this.count);
+    const human = humanPoints(this.count), robot = robotPoints(this.count), bust = bustPoints(this.count);
     const geo = new THREE.BufferGeometry();
     const seed = new Float32Array(this.count);
     for (let i = 0; i < this.count; i++) seed[i] = Math.random();
@@ -176,6 +190,9 @@ export class MinMinScene {
     geo.setAttribute("position", A(robot.pos, 3));
     geo.setAttribute("aRobot", A(robot.pos, 3));
     geo.setAttribute("aHuman", A(human.pos, 3));
+    geo.setAttribute("aBust", A(bust.pos, 3));
+    geo.setAttribute("aInfoB", A(bust.info, 3));
+    geo.setAttribute("aNrmB", A(bust.nrm, 3));
     geo.setAttribute("aSphere", A(spherePoints(this.count), 3));
     geo.setAttribute("aScatter", A(scatterPoints(this.count), 3));
     geo.setAttribute("aInfoR", A(robot.info, 3));
@@ -187,7 +204,7 @@ export class MinMinScene {
       vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false,
       blending: THREE.AdditiveBlending,
       uniforms: {
-        uTime: { value: 0 }, uEnergy: { value: 0 }, uForm: { value: new THREE.Vector3(...FORMS[this._formOf(opts.form)]) },
+        uTime: { value: 0 }, uEnergy: { value: 0 }, uForm: { value: new THREE.Vector4(...FORMS[this._formOf(opts.form)]) },
         uArms: { value: new THREE.Vector4() },
         uAssemble: { value: this.reduced ? 1 : 0 }, uState: { value: 0 }, uPixel: { value: this.pixel },
         uSize: { value: lowPower ? 3.0 : 2.2 }, uErr: { value: 0 },
@@ -195,6 +212,7 @@ export class MinMinScene {
         uCool: { value: new THREE.Color("#8f6bff") },
         uWarm: { value: new THREE.Color("#ff9a3c") },
         uHot: { value: new THREE.Color("#ffe2b0") },
+        uRim: { value: new THREE.Color("#d9ccff") },
       },
     });
     this.points = new THREE.Points(geo, this.mat);
@@ -310,7 +328,7 @@ export class MinMinScene {
     this.mat.uniforms.uState.value = STATES[s];
   }
   setEnergy(v) { this._energyTarget = clamp(v, 0, 1); }
-  _formOf(f) { return FORMS[f] ? f : "robot"; }
+  _formOf(f) { return FORMS[f] ? f : "bust"; }
   setForm(form) { this.form = this._formOf(form); this._formTarget = FORMS[this.form]; }
   toggleForm() { this.setForm(THU_TU[(THU_TU.indexOf(this.form) + 1) % THU_TU.length]); return this.form; }
   // Canh tay bat chuoc (radian): trai/phai = phia man hinh; null = tha long
@@ -328,9 +346,12 @@ export class MinMinScene {
     u.uEnergy.value = Math.max(this.energy, base);
     this.bgMat.uniforms.uEnergy.value = u.uEnergy.value;
     const fv = u.uForm.value, ft = this._formTarget;
-    fv.x += (ft[0] - fv.x) * 0.05; fv.y += (ft[1] - fv.y) * 0.05; fv.z += (ft[2] - fv.z) * 0.05;
-    const av = u.uArms.value, at = this._arms;
-    av.x += (at[0] - av.x) * 0.25; av.y += (at[1] - av.y) * 0.25; av.z += (at[2] - av.z) * 0.25; av.w += (at[3] - av.w) * 0.25;
+    fv.x += (ft[0] - fv.x) * 0.05; fv.y += (ft[1] - fv.y) * 0.05; fv.z += (ft[2] - fv.z) * 0.05; fv.w += (ft[3] - fv.w) * 0.05;
+    // Canh tay: lo xo co giam chan (mem, co da, khong giat) thay cho noi suy thang
+    const av = u.uArms.value, at = this._arms, vv = this._armV || (this._armV = [0, 0, 0, 0]);
+    ["x", "y", "z", "w"].forEach((k, i) => {
+      vv[i] += (at[i] - av[k]) * 0.09; vv[i] *= 0.72; av[k] += vv[i];
+    });
     const uMorphV = fv.z;
     if (u.uAssemble.value < 1) u.uAssemble.value = Math.min(1, t / 2.6);
     u.uErr.value += ((this.state === "error" ? 0.6 : 0) - u.uErr.value) * 0.08;
@@ -347,9 +368,9 @@ export class MinMinScene {
     this.body.rotation.y = this.spinNow + this.lookNow.x * 0.16 + uMorphV * t * 0.12 * speed;
 
     this.zoomNow += (this.zoom - this.zoomNow) * 0.12;
-    const z = this._baseZ / this.zoomNow;
+    const z = this._baseZ * (1 - 0.1 * u.uForm.value.w) / this.zoomNow;
     // phong to thi camera ha dan xuong ngang mat
-    const cy = 0.5 + (this.zoomNow - 1) * 0.35 * (1 - uMorphV);
+    const cy = 0.5 + 0.2 * fv.w + (this.zoomNow - 1) * 0.35 * (1 - uMorphV);
     this.camera.position.set(0, cy + 0.35, z);
     this.camera.lookAt(0, cy, 0);
 
@@ -363,8 +384,9 @@ export class MinMinScene {
     // loi sang: o nguc (chan dung) -> tam qua cau; phong theo giong
     const m = uMorphV, e = u.uEnergy.value;
     const pulse = this.state === "thinking" ? 0.12 * Math.sin(t * 5) : 0;
-    this.core.position.set(0, 0.15 * (1 - m) + 0.2 * m, 0.44 * fv.x + 0.3 * fv.y);
-    const sc = (0.5 + m * 0.9) * (1 + e * 1.2 + pulse);
+    // loi sang: nguc (robot/nguoi), tam qua cau, trong mat (tuong)
+    this.core.position.set(Math.sin(u.uHeadYaw.value) * 0.2 * fv.w, 0.15 * (fv.x + fv.y) + 0.2 * m + 1.12 * fv.w, 0.44 * fv.x + 0.3 * fv.y + 0.3 * fv.w);
+    const sc = (0.5 + m * 0.9 - fv.w * 0.15) * (1 + e * 1.2 + pulse);
     this.core.scale.set(sc, sc, 1);
     this.core.material.opacity = Math.min(1, 0.45 + e * 0.6 + pulse);
     this.core.material.color.set(this.state === "error" ? "#ff5d73" : this.state === "listening" ? "#bff5e8" : "#ffffff");

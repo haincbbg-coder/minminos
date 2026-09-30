@@ -41,12 +41,12 @@ function hudSession() {
 const HUD_SID = hudSession();
 
 // ---------- dung giao dien ----------
-const TEN_HINH = { robot: "ROBOT GIÁP", portrait: "NGƯỜI", orb: "QUẢ CẦU" };
+const TEN_HINH = { bust: "TƯỢNG HẠT", robot: "ROBOT GIÁP", portrait: "NGƯỜI", orb: "QUẢ CẦU" };
 let form = (() => {
   const p = params.get("form");
   if (TEN_HINH[p]) return p;
-  try { const f = localStorage.getItem("minmin.hud.form2"); if (TEN_HINH[f]) return f; } catch (e) {}
-  return "robot";
+  try { const f = localStorage.getItem("minmin.hud.form3"); if (TEN_HINH[f]) return f; } catch (e) {}
+  return "bust";
 })();
 const scene = new MinMinScene($("scene"), {
   reducedMotion, form, quality: params.get("quality") || "high",
@@ -309,6 +309,7 @@ addEventListener("keydown", (e) => {
   else if (e.key === "r" || e.key === "R") $("tGoc").click();
   else if (e.key === "m" || e.key === "M") $("tBatChuoc").click();
   else if (e.key === "g" || e.key === "G") $("tGiong").click();
+  else if (e.key === "k" || e.key === "K") $("tCuChi").click();
   else if (e.key === "Enter" && e.altKey) { document.documentElement.requestFullscreen?.(); }
 });
 $("ask").addEventListener("submit", (e) => { e.preventDefault(); const v = $("askInput").value; $("askInput").value = ""; $("ask").hidden = true; ask(v); });
@@ -318,7 +319,7 @@ $("scene").addEventListener("dblclick", () => document.documentElement.requestFu
 function doiHinh(f) {
   form = f || scene.toggleForm();
   if (f) scene.setForm(f);
-  try { localStorage.setItem("minmin.hud.form2", form); } catch (e) {}
+  try { localStorage.setItem("minmin.hud.form3", form); } catch (e) {}
   $("formText").textContent = TEN_HINH[form] || form;
 }
 function nhoLai(k, v) { try { localStorage.setItem("minmin.hud." + k, v ? "1" : "0"); } catch (e) {} }
@@ -341,11 +342,84 @@ function flash() {
   document.body.appendChild(f); requestAnimationFrame(() => { f.style.opacity = "0"; }); setTimeout(() => f.remove(), 400);
 }
 
+// ---------- huong dan + luyen cu chi ----------
+const BUOC = [
+  { g: "Calib", hoi: "Giơ tay PHẢI lên, đưa sang phía bên phải của bố", giu: 900 },
+  { g: "Open_Palm", hoi: "Xòe bàn tay về phía camera", giu: 700 },
+  { g: "Pointing_Up", hoi: "Duỗi riêng ngón trỏ", giu: 700 },
+  { g: "Closed_Fist", hoi: "Nắm tay lại", giu: 700 },
+  { g: "Pinch", hoi: "Chụm đầu ngón cái vào đầu ngón trỏ", giu: 700 },
+  { g: "Victory", hoi: "Giơ chữ V", giu: 700 },
+  { g: "Thumb_Up", hoi: "Giơ ngón cái", giu: 700 },
+  { g: "TwoHands", hoi: "Giơ cả hai tay qua đầu", giu: 600 },
+];
+const guide = {
+  on: false, buoc: -1, t0: 0, lastG: "", lastAt: 0,
+  thay(g) {
+    this.lastG = g; this.lastAt = performance.now();
+    const li = document.querySelector(`#gList li[data-g="${g}"]`);
+    if (li) { li.classList.add("live"); clearTimeout(li._t); li._t = setTimeout(() => li.classList.remove("live"), 350); }
+  },
+  batDau() {
+    if (!vision.on) { toast("Bật Camera trước rồi luyện cử chỉ.", true); return; }
+    // luyen cu chi thi tam tat hanh dong that (khong doi hinh, khong goi MinMin)
+    this.on = true; this.buoc = -1; vision.practice = true;
+    document.querySelectorAll("#gList li").forEach(li => li.classList.remove("done", "now"));
+    $("gTrain").hidden = false; $("gStart").textContent = "Dừng luyện";
+    this.tiep();
+  },
+  dung(xong) {
+    this.on = false; vision.practice = false;
+    $("gTrain").hidden = !xong; $("gStart").textContent = "Luyện lại";
+    if (xong) { $("gStep").textContent = "HOÀN THÀNH"; $("gAsk").textContent = "Bố đã nắm hết cử chỉ. Đóng bảng này là dùng được ngay."; $("gBar").style.width = "100%"; }
+    document.querySelectorAll("#gList li").forEach(li => li.classList.remove("now"));
+  },
+  tiep() {
+    this.buoc++;
+    if (this.buoc >= BUOC.length) { this.dung(true); feedAdd("ok", "Luyện cử chỉ", "Hoàn thành 8 bước", "XONG"); return; }
+    const b = BUOC[this.buoc];
+    $("gStep").textContent = `BƯỚC ${this.buoc + 1}/${BUOC.length}`;
+    $("gAsk").textContent = b.hoi; $("gBar").style.width = "0%";
+    document.querySelectorAll("#gList li").forEach(li => li.classList.toggle("now", li.dataset.g === b.g));
+    this.giuTu = 0;
+  },
+  // goi moi khung hinh
+  tick(now) {
+    if (!this.on) return;
+    const b = BUOC[this.buoc];
+    let dung = false;
+    if (b.g === "Calib") {
+      // tay phai cua bo phai hien ben PHAI man hinh; hien ben trai nghia la webcam da tu lat -> dao lai
+      if (vision.handX != null) {
+        dung = true;
+        if (!this.giuTu) this.giuTu = now;
+        if (now - this.giuTu > b.giu) {
+          if (vision.handX < 0.5) { vision.flip = !vision.flip; $("gFlip").checked = vision.flip; try { localStorage.setItem("minmin.hud.flip", vision.flip ? "1" : "0"); } catch (e) {} toast("Đã chỉnh lại hướng trái phải cho webcam của bố."); }
+          else toast("Hướng trái phải đã đúng.");
+        }
+      }
+    } else dung = this.lastG === b.g && now - this.lastAt < 250;
+    if (!dung) { this.giuTu = 0; $("gBar").style.width = "0%"; return; }
+    if (!this.giuTu) this.giuTu = now;
+    const tl = Math.min(1, (now - this.giuTu) / b.giu);
+    $("gBar").style.width = Math.round(tl * 100) + "%";
+    if (tl >= 1) {
+      const li = document.querySelector(`#gList li[data-g="${b.g}"]`); if (li) li.classList.add("done");
+      chime();
+      this.tiep();
+    }
+  },
+};
+function guideLoop(now) { guide.tick(now); requestAnimationFrame(guideLoop); }
+requestAnimationFrame(guideLoop);
+
 const vision = new Vision({
   video: $("camVideo"), overlay: $("camDots"), ink: $("ink"), scene,
   onGesture: (g) => { $("camGesture").textContent = g; },
   onStatus: (m, bad) => toast(m, bad),
-  onForm: (f) => doiHinh(f),
+  onForm: (f) => { doiHinh(f); feedAdd("ok", "Cử chỉ", "Chữ V · đổi sang " + (TEN_HINH[f] || f).toLowerCase(), "XONG"); },
+  onLook: () => { feedAdd("run", "Cử chỉ", "Ngón cái · MinMin nhìn", "…"); $("tNhin").click(); },
+  onDetect: (g) => guide.thay(g),
   // gio ca hai tay len = goi MinMin nghe
   onWake: () => {
     feedAdd("run", "Cử chỉ", "Giơ hai tay · MinMin nghe", "…");
@@ -387,14 +461,33 @@ $("tChiNguoi").onclick = () => {
 $("tHinh").onclick = () => doiHinh();
 $("tGoc").onclick = () => scene.resetView();
 $("tFull").onclick = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {}); };
-$("tVe").onclick = () => {
-  vision.drawMode = $("tVe").getAttribute("aria-pressed") !== "true";
-  batTat("tVe", "drawing", vision.drawMode);
-  if (vision.drawMode) toast("Vẽ bằng chuột, hoặc giơ 1 ngón tay trước camera. Vẽ xong nói “Min Min ơi, đây là gì” hoặc bấm Nhìn.");
+// Ve thuc te: bat che do ve la tu mo camera, hien camera mo phia sau net ve (thay chinh minh
+// dang ve tren khong). Duoi ngon tro = ha but, co ngon lai = nhac but. Tat thi het ve.
+$("tVe").onclick = async () => {
+  const bat = $("tVe").getAttribute("aria-pressed") !== "true";
+  vision.drawMode = bat;
+  batTat("tVe", "drawing", bat);
+  if (!bat) { document.body.classList.remove("ar"); vision.cursor = null; vision.stroke = null; vision._inkDraw(); return; }
+  if (!vision.on) await $("tCam").onclick();
+  if (vision.on) {
+    document.body.classList.add("ar");
+    toast("Vẽ thực tế: duỗi ngón trỏ để vẽ, co ngón trỏ lại (hoặc nắm tay) để nhấc bút. Vẽ xong nói “Min Min ơi, đây là gì”. Bấm Vẽ lần nữa để thoát.");
+  } else toast("Không có camera: vẽ bằng chuột. Bấm Vẽ lần nữa để thoát.");
 };
 $("tXoa").onclick = () => vision.clearInk();
+$("tCuChi").onclick = () => {
+  const mo = $("guide").hidden;
+  $("guide").hidden = !mo;
+  batTat("tCuChi", null, mo);
+  if (mo && !vision.on) $("guideLead").textContent = "Bật Camera để MinMin thấy tay bố. Cử chỉ nào nhận ra sẽ sáng lên.";
+  if (!mo && guide.on) guide.dung(false);
+};
+$("guideX").onclick = () => $("tCuChi").click();
+$("gStart").onclick = () => (guide.on ? guide.dung(false) : guide.batDau());
+$("gFlip").checked = vision.flip;
+$("gFlip").onchange = () => { vision.flip = $("gFlip").checked; try { localStorage.setItem("minmin.hud.flip", vision.flip ? "1" : "0"); } catch (e) {} };
 $("tCam").onclick = async () => {
-  if (vision.on) { vision.stop(); $("cam").hidden = true; $("tFlip").hidden = true; $("rowEnv").hidden = true; $("rowChu").hidden = true; batTat("tCam", null, false); return; }
+  if (vision.on) { vision.stop(); document.body.classList.remove("ar"); $("cam").hidden = true; $("tFlip").hidden = true; $("rowEnv").hidden = true; $("rowChu").hidden = true; batTat("tCam", null, false); return; }
   $("cam").hidden = false;
   const ok = await vision.start();
   if (!ok) { $("cam").hidden = true; return; }

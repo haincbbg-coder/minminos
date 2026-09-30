@@ -181,3 +181,32 @@ body.solo .tools:not(:hover) { opacity: .12; }
 .tr .row.env b { max-width: 190px; text-align: right; white-space: normal; line-height: 1.4; }
 #chuText.owner { color: var(--ok); } #chuText.stranger { color: var(--warn); }
 .tools { max-height: calc(100vh - 2 * var(--gut)); overflow-y: auto; scrollbar-width: none; }
+
+/* ---------- luyen cu chi ---------- */
+.guide { position: fixed; z-index: 4; left: var(--gut); top: 50%; transform: translateY(-50%); width: min(360px, 88vw); max-height: 86vh; overflow: auto;
+  padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: rgba(14, 8, 30, .9); backdrop-filter: blur(12px); }
+.guide header { display: flex; justify-content: space-between; align-items: center; }
+.guide h2 { margin: 0; }
+.guide .x { background: none; border: 0; color: var(--ink-3); font-size: 20px; cursor: pointer; }
+.guide .lead { margin: 8px 0 12px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.g-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.g-list li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; transition: background .2s, border-color .2s; }
+.g-list li b { font-size: 13px; font-weight: 600; } .g-list li span { font-size: 11.5px; color: var(--ink-3); }
+.g-list li.live { border-color: var(--ok); background: rgba(111, 224, 200, .1); }
+.g-list li.done b::after { content: "  ✓"; color: var(--ok); }
+.g-list li.now { border-color: var(--amber); background: rgba(255, 154, 60, .1); }
+.g-train { margin-top: 12px; padding: 12px; border-radius: 10px; background: rgba(255, 154, 60, .08); border: 1px solid rgba(255, 154, 60, .35); }
+.g-step { font-size: 10.5px; letter-spacing: .16em; color: var(--amber-hi); }
+.g-ask { margin-top: 4px; font-size: 15px; font-weight: 600; }
+.g-bar { margin-top: 10px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.g-bar i { display: block; height: 100%; width: 0; background: var(--amber); transition: width .1s linear; }
+.guide footer { margin-top: 12px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.guide footer button { font: 600 13px var(--sans); color: #1a0d00; background: linear-gradient(180deg, #ffc27a, var(--amber)); border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+.g-flip { font-size: 12px; color: var(--ink-2); display: flex; gap: 6px; align-items: center; }
+
+/* ---------- ve thuc te: camera phu toan man sau net ve ---------- */
+body.ar .cam { inset: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; aspect-ratio: auto; border: 0; border-radius: 0; z-index: 1; opacity: .5; box-shadow: none; }
+body.ar .cam-g { left: 50%; bottom: 120px; transform: translateX(-50%); font-size: 13px; }
+body.ar #camDots { opacity: .6; }
+body.ar #ink { z-index: 2; }
+.guide header, .guide footer { position: static; z-index: auto; }
