@@ -15,15 +15,29 @@ const fs = require("fs");
   const m = src.match(/const HOI_NHIN = (\/.*\/i);/);
   assert.ok(m, "thieu HOI_NHIN");
   const re = eval(m[1]);
-  for (const c of ["con nhìn xem đây là gì", "mô tả cái này", "bố đang cầm gì", "đọc giúp bố tờ này", "cái gì đây"]) assert.ok(re.test(c), c);
+  for (const c of ["con nhìn xem đây là gì", "mô tả cái này", "bố đang cầm gì", "đọc giúp bố tờ này", "cái gì đây", "đây là cái gì", "hãng gì thế", "nút này dùng làm gì"]) assert.ok(re.test(c), c);
   for (const c of ["hôm nay có bao nhiêu đơn", "tắt camp HH214"]) assert.ok(!re.test(c), c);
 
-  // Hinh nguoi co du bo phan va dung so hat
+  // Hinh nguoi va robot co du bo phan, co gan canh tay de bat chuoc
   const { humanPoints } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "body.js"));
-  const h = humanPoints(5000);
-  assert.strictEqual(h.pos.length, 15000);
-  let dau = 0, nong = 0, tay2 = 0;
-  for (let i = 0; i < 5000; i++) { if (h.head[i] > 0.5) dau++; if (h.zone[i] > 0.4) nong++; if (Math.abs(h.pos[i * 3]) > 0.85) tay2++; }
-  assert.ok(dau > 1000 && nong > 50 && tay2 > 500, JSON.stringify({ dau, nong, tay2 }));
+  const { robotPoints } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "robot.js"));
+  for (const [ten, b] of [["nguoi", humanPoints(5000)], ["robot", robotPoints(5000)]]) {
+    assert.strictEqual(b.pos.length, 15000, ten);
+    assert.ok(!Array.from(b.pos).some(Number.isNaN), ten + " NaN");
+    let dau = 0, nong = 0, tay = 0;
+    for (let i = 0; i < 5000; i++) { if (b.info[i * 3 + 2] > 0.5) dau++; if (b.info[i * 3] > 0.4) nong++; if (b.arm[i * 2]) tay++; }
+    assert.ok(dau > 600 && nong > 50 && tay > 400, ten + JSON.stringify({ dau, nong, tay }));
+  }
+
+  // Goc canh tay tu diem khop: tha xuong = 0, dang ngang = +-90 do
+  const { gocTay, khoangCach, tenDoVat } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js"));
+  const P = (x, y) => ({ x, y });
+  const g0 = gocTay(P(.4, .4), P(.4, .6), P(.4, .8));
+  assert.ok(Math.abs(g0[0]) < 1e-9 && Math.abs(g0[1]) < 1e-9);
+  const g1 = gocTay(P(.4, .4), P(.2, .4), P(.2, .2));
+  assert.ok(Math.abs(g1[0] + Math.PI / 2) < 1e-9 && Math.abs(g1[1] + Math.PI / 2) < 1e-9);
+  assert.strictEqual(khoangCach([0, 3], [4, 0]), 5);
+  assert.strictEqual(tenDoVat("remote"), "điều khiển");
+  assert.strictEqual(tenDoVat("zebra"), "zebra");
   console.log("ok");
 })().catch(e => { console.error(e); process.exit(1); });

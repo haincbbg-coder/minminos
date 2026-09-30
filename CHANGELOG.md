@@ -6,7 +6,11 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 ## [0.64.85] - 2026-09-30
 ### Thêm mới
-- (đang viết)
+- **MinMin thành robot giáp**: mũ giáp có kính visor sáng, mào và anten, giáp ngực có lõi năng lượng, giáp vai nhiều lớp, găng tay giáp và thanh kiếm đeo sau lưng. Phím `F` hoặc nút Đổi hình chuyển Robot → Người → Quả cầu.
+- **Giơ đồ vật lên hỏi là biết**: bật Camera, cầm vật lên và nói "Min Min ơi, đây là cái gì" - MinMin tự chụp, trả lời bằng giọng: là gì, hãng, màu, chất liệu, các nút và công dụng, cách dùng, đọc chữ trên vật.
+- **Nhận diện toàn thân và môi trường**: robot bắt chước cánh tay bố theo camera, giơ cả hai tay lên là gọi MinMin nghe; góc phải hiện đồ vật MinMin đang thấy (người, điện thoại, cốc, ghế…).
+- **Nhận ra chủ nhân**: bấm Chủ nhân để MinMin ghi nhớ khuôn mặt bố (lưu ngay trong trình duyệt máy này), lần sau MinMin chào bố và báo khi có người lạ trước camera.
+- **Giọng robot trầm khàn** trên HUD (bật sẵn, nút Giọng robot để tắt). Cài đặt → Giọng nói có sẵn danh sách giọng ElevenLabs trầm khàn để chọn.
 
 ## [0.64.84] - 2026-09-30
 ### Thêm mới

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/hud/hud.css?v=2">
+<link rel="stylesheet" href="/static/hud/hud.css?v=3">
 <script type="importmap">{ "imports": { "three": "/static/hud/vendor/three.module.min.js" } }</script>
 </head>
 <body data-state="standby">
@@ -28,6 +28,9 @@
     <button type="button" id="tNhin" title="MinMin nhìn: chụp camera (kèm nét vẽ) rồi hỏi MinMin (phím V)"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Nhìn</span></button>
     <button type="button" id="tCam" aria-pressed="false" title="Bật / tắt camera: nhìn theo mặt, điều khiển bằng tay (phím C)"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3"/></svg><span>Camera</span></button>
     <button type="button" id="tFlip" title="Đổi camera trước / sau (điện thoại)" hidden><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16m0 5v-5h5"/></svg><span>Đổi cam</span></button>
+    <button type="button" id="tChuNhan" title="Đăng ký khuôn mặt chủ nhân để MinMin nhận ra bố (cần bật Camera)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"/><path d="m16.5 4.5 1.5 1.5 3-3"/></svg><span>Chủ nhân</span></button>
+    <button type="button" id="tBatChuoc" aria-pressed="true" title="Robot bắt chước cánh tay bố qua camera (phím M)"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M5 6l7 4 7-4M8 21l4-6 4 6"/></svg><span>Bắt chước</span></button>
+    <button type="button" id="tGiong" aria-pressed="true" title="Giọng robot trầm khàn (phím G)"><svg viewBox="0 0 24 24"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10v4"/></svg><span>Giọng robot</span></button>
     <button type="button" id="tVe" aria-pressed="false" title="Vẽ bằng chuột (hoặc chỉ 1 ngón tay trước camera) (phím D)"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Vẽ</span></button>
     <button type="button" id="tXoa" title="Xóa nét vẽ (phím X)"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg><span>Xóa vẽ</span></button>
     <button type="button" id="tChu" aria-pressed="false" title="Ẩn chữ, số liệu và nhật ký (phím H)"><svg viewBox="0 0 24 24"><path d="M4 7V5h16v2M9 19h6M12 5v14"/><path d="m3 3 18 18"/></svg><span>Ẩn chữ</span></button>
@@ -51,6 +54,8 @@
     <div class="row"><span>CÔNG CỤ ĐÃ GỌI</span><b id="toolCount">0</b></div>
     <div class="row"><span>HÌNH</span><b id="formText">CHÂN DUNG</b></div>
     <div class="row dim"><span>KHUNG HÌNH</span><b id="fps">—</b></div>
+    <div class="row" id="rowChu" hidden><span>TRƯỚC CAMERA</span><b id="chuText">—</b></div>
+    <div class="row env" id="rowEnv" hidden><span>MÔI TRƯỜNG</span><b id="envText">—</b></div>
   </section>
 
   <aside class="kpi" id="kpiBox" hidden>
@@ -92,6 +97,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/hud/hud.js?v=3"></script>
+  <script type="module" src="/static/hud/hud.js?v=4"></script>
 </body>
 </html>

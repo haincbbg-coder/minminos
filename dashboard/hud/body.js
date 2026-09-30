@@ -42,24 +42,36 @@ const PHAN = [
   ["co", 0.03], ["than", 0.33], ["tay", 0.23], ["bantay", 0.07],
 ];
 
-export function humanPoints(n) {
-  const pos = new Float32Array(n * 3), zone = new Float32Array(n), fade = new Float32Array(n), head = new Float32Array(n);
-  let i = 0;
-  const put = (x, y, z, zn = 0, hd = 0) => {
-    if (i >= n) return;
-    pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
-    zone[i] = zn; head[i] = hd;
-    // phan than duoi mo dan; tay va ban tay (|x| lon) giu sang
-    fade[i] = Math.abs(x) > 0.72 ? 1 : Math.min(1, Math.max(0, (y + 1.55) / 0.75));
-    i++;
+// Bo dem chung cho moi hinh: vi tri + info (zone, fade, head) + arm (ben -1/0/1, doan 1 = canh
+// tay tren, 2 = cang tay + ban tay). `arm` cho phep canh tay bat chuoc tay bo qua camera.
+export function makeBuffer(n) {
+  const b = { pos: new Float32Array(n * 3), info: new Float32Array(n * 3), arm: new Float32Array(n * 2), n, i: 0 };
+  b.put = (x, y, z, zn = 0, hd = 0, ben = 0, doan = 0, fd = null) => {
+    if (b.i >= n) return;
+    const i = b.i++;
+    b.pos[i * 3] = x; b.pos[i * 3 + 1] = y; b.pos[i * 3 + 2] = z;
+    // phan than duoi mo dan; tay (ben != 0) va vu khi (fd = 1) giu sang
+    const f = fd != null ? fd : (ben ? 1 : Math.min(1, Math.max(0, (y + 1.55) / 0.75)));
+    b.info[i * 3] = zn; b.info[i * 3 + 1] = f; b.info[i * 3 + 2] = hd;
+    b.arm[i * 2] = ben; b.arm[i * 2 + 1] = doan;
   };
-  const tong = PHAN.reduce((a, b) => a + b[1], 0);
-  for (const [ten, tl] of PHAN) {
-    const m = Math.round(n * tl / tong);
-    for (let k = 0; k < m; k++) sinh[ten](put);
+  return b;
+}
+
+export function fill(b, parts, gen, filler) {
+  const tong = parts.reduce((a, p) => a + p[1], 0);
+  for (const [ten, tl] of parts) {
+    const m = Math.round(b.n * tl / tong);
+    for (let k = 0; k < m; k++) gen[ten](b.put);
   }
-  while (i < n) sinh.than(put);        // bu phan le do lam tron
-  return { pos, zone, fade, head };
+  while (b.i < b.n) gen[filler](b.put);
+  return b;
+}
+
+export const SHOULDER = [0.9, 0.42], ELBOW = [1.04, -0.42];
+
+export function humanPoints(n) {
+  return fill(makeBuffer(n), PHAN, sinh, "than");
 }
 
 const sinh = {
@@ -152,7 +164,7 @@ const sinh = {
     const t = Math.round(Math.random() / 0.055) * 0.055;
     const c = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
     const r = r0 + (r1 - r0) * t, a = Math.random() * Math.PI * 2;
-    put(c[0] + Math.cos(a) * r, c[1] + rnd(-0.004, 0.004), c[2] + Math.sin(a) * r * 0.92, 0, 0);
+    put(c[0] + Math.cos(a) * r, c[1] + rnd(-0.004, 0.004), c[2] + Math.sin(a) * r * 0.92, 0, 0, ben, tren ? 1 : 2);
   },
   // Ban tay: long ban tay + 4 ngon + ngon cai
   bantay(put) {
@@ -162,14 +174,14 @@ const sinh = {
     if (k < 0.45) {
       const a = Math.random() * Math.PI * 2, b = rnd(-1, 1);
       const s = Math.sqrt(1 - b * b);
-      put(cx + Math.cos(a) * s * 0.035, cy + b * 0.1, cz + Math.sin(a) * s * 0.07, 0.2, 0);
+      put(cx + Math.cos(a) * s * 0.035, cy + b * 0.1, cz + Math.sin(a) * s * 0.07, 0.2, 0, ben, 2);
     } else if (k < 0.88) {
       const f = Math.floor(Math.random() * 4), t = Math.random();
       const fz = cz - 0.05 + f * 0.034;
-      put(cx + ben * 0.004 * f, cy - 0.1 - t * (0.1 + (f === 1 || f === 2 ? 0.02 : 0)), fz, 0.25, 0);
+      put(cx + ben * 0.004 * f, cy - 0.1 - t * (0.1 + (f === 1 || f === 2 ? 0.02 : 0)), fz, 0.25, 0, ben, 2);
     } else {
       const t = Math.random();
-      put(cx - ben * 0.01, cy - 0.02 - t * 0.09, cz + 0.08 + t * 0.03, 0.25, 0);
+      put(cx - ben * 0.01, cy - 0.02 - t * 0.09, cz + 0.08 + t * 0.03, 0.25, 0, ben, 2);
     }
   },
 };

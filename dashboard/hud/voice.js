@@ -31,6 +31,8 @@ export class VoiceIO {
     const r = parseFloat(tocDo);
     this.ttsRate = isFinite(r) && r > 0 ? `${r >= 1 ? "+" : ""}${Math.round((r - 1) * 100)}%` : "+5%";
     this.onSpeakError = opts.onSpeakError || (() => {});
+    let fx = null; try { fx = localStorage.getItem("minmin.hud.robotfx"); } catch (e) {}
+    this.robotFx = fx !== "0";          // mac dinh BAT: giong tram khan kieu robot
     this.onWake = opts.onWake || (() => {});
     this.onCommand = opts.onCommand || (() => {});
     this.onInterim = opts.onInterim || (() => {});
@@ -155,7 +157,9 @@ export class VoiceIO {
       }
       const buf = await ctx.decodeAudioData(await res.arrayBuffer());
       const src = ctx.createBufferSource();
-      src.buffer = buf; src.connect(this.outAnalyser);
+      src.buffer = buf;
+      if (this.robotFx) { src.playbackRate.value = 0.9; src.connect(this._fxChain()); }
+      else src.connect(this.outAnalyser);
       this._playing = src;
       src.onended = () => this._next();
       src.start();
@@ -173,6 +177,29 @@ export class VoiceIO {
       else if (!this._baoThieuGiong) { this._baoThieuGiong = true; this.onSpeakError("Trình duyệt không có giọng tiếng Việt để đọc thử."); }
       this._next();
     }
+  }
+
+  // Hieu ung "giong robot tram khan" (0.64.85): ha giong ~2 cung (phat cham 10%), mot chut
+  // meo tieng (waveshaper) cho do khan, day tram, cat bot tieng xi, them tieng vang kim loai
+  // rat ngan. Ap len moi nha cung cap giong (Edge, OpenAI, ElevenLabs).
+  _fxChain() {
+    if (this._fx) return this._fx;
+    const c = this.ctx;
+    const khan = c.createWaveShaper();
+    const n = 1024, cur = new Float32Array(n), k = 6;
+    for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; cur[i] = (1 + k) * x / (1 + k * Math.abs(x)); }
+    khan.curve = cur; khan.oversample = "4x";
+    const tram = c.createBiquadFilter(); tram.type = "lowshelf"; tram.frequency.value = 220; tram.gain.value = 5;
+    const giua = c.createBiquadFilter(); giua.type = "peaking"; giua.frequency.value = 1400; giua.Q.value = 0.9; giua.gain.value = 3;
+    const xi = c.createBiquadFilter(); xi.type = "highshelf"; xi.frequency.value = 6500; xi.gain.value = -8;
+    const vang = c.createDelay(0.05); vang.delayTime.value = 0.018;
+    const vangG = c.createGain(); vangG.gain.value = 0.22;
+    const nho = c.createGain(); nho.gain.value = 0.8;
+    khan.connect(tram); tram.connect(giua); giua.connect(xi);
+    xi.connect(nho); nho.connect(this.outAnalyser);
+    xi.connect(vang); vang.connect(vangG); vangG.connect(this.outAnalyser);
+    this._fx = khan;
+    return khan;
   }
 
   _coGiongViet() {
