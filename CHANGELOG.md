@@ -4,6 +4,13 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.81] - 2026-09-30
+### Thêm mới
+- **HUD màn phụ MinMin.** Mở `/hud` (hoặc bấm đúp `MinMin HUD.bat`) để có màn hình toàn khung trên màn phụ: chân dung hạt tông cam, tím phản ứng theo lúc MinMin nghe, nghĩ và nói. Phím `F` đổi sang dạng quả cầu.
+- **Gọi bằng giọng "Hey Min Min" hoặc "Min Min ơi"**, nói luôn câu lệnh cũng được. MinMin trả lời bằng giọng ngay trên HUD. Phím `Space` để nói, `/` để gõ, `Esc` để dừng.
+- **Bản đồ bộ phận sáng theo việc thật**: MinMin gọi Pancake, quảng cáo, fanpage hay kế toán thì bộ phận đó sáng lên và ghi vào nhật ký hành động. Số liệu và cảnh báo lấy đúng file của bảng điều hành.
+- `"MinMin HUD.bat" install` để HUD tự mở trên màn phụ mỗi khi bật máy.
+
 ## [0.64.80] - 2026-09-29
 ### Thêm mới
 - **Bot tự trả lời trên Zalo cá nhân.** Nối Zalo ở trang Kết nối, rồi bấm Tạo bot trực (hoặc Bot mới và chọn kênh Zalo cá nhân). Bot tự quyết có nên trả lời hay không, chuyện riêng tư hay tin không cần hồi đáp thì nó im. Không cần bật công tắc từng người.

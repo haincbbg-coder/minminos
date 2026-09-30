@@ -304,7 +304,15 @@ async function loadKpi() {
   const j = await fetchKpi(BRAIN);
   const list = (j && (j.kpis || [])) || [];
   renderKpi(list, j && j.updated);
+  // khoi "Can chu y" cua bang dieu hanh -> nhat ky, moi canh bao chi hien mot lan
+  ((j && j.alerts) || []).forEach(a => {
+    if (seenAlerts.has(a.text)) return;
+    seenAlerts.add(a.text);
+    const bad = a.level === "critical" || a.level === "serious";
+    feedAdd(bad ? "bad" : a.level === "good" ? "ok" : "run", "Cần chú ý", a.text, bad ? "GẤP" : "LƯU Ý");
+  });
 }
+const seenAlerts = new Set();
 function renderKpi(list, updated) {
   $("kpiBox").hidden = !list.length;
   const box = $("kpiTiles"); box.innerHTML = "";
