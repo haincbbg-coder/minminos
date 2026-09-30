@@ -2,8 +2,15 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  // Nhúng trong trang MinMin (0.64.98): bỏ mũi tên "về MinMin" (đã đứng trong MinMin rồi).
+  if (new URLSearchParams(location.search).get("nhung") === "1") {
+    document.documentElement.classList.add("nhung");
+    const lui = document.querySelector("a.back"); if (lui) lui.remove();
+  }
   const TEN_LOAI = { nguoi: "Người", xe: "Xe", con_vat: "Con vật", vat: "Đồ vật", giong: "Giọng nói", khac: "Khác" };
   const ICON = { nguoi: "👤", xe: "🚗", con_vat: "🐾", vat: "📦", giong: "🔊", khac: "•" };
+  // Canh rào (0.64.98): mức cảnh báo cầu nối suy ra từ vùng vẽ trong Frigate (rao_..., trong_...).
+  const TEN_CANH_BAO = { tien_sat: "Tiến sát hàng rào", lang_vang: "Lảng vảng sát rào", vao_khu: "Vào khu cấm", vuot_rao: "VƯỢT RÀO" };
   let loc = "hom-nay";
   let camChon = "";
 
@@ -61,6 +68,7 @@
     if (loc !== "tat-ca") q.set("tu", String(dauHomNay()));
     if (loc === "tat-ca") q.set("tu", String(dauHomNay() - 6 * 86400));
     if (loc === "nguoi-la") { q.set("chi_nguoi_la", "true"); q.set("tu", String(dauHomNay() - 6 * 86400)); }
+    if (loc === "canh-bao") { q.set("chi_canh_bao", "true"); q.set("tu", String(dauHomNay() - 6 * 86400)); }
     if (loc === "xe" || loc === "bien-so") q.set("loai", "xe");
     if (loc === "giong") q.set("loai", "giong");
     if (camChon) q.set("camera", camChon);
@@ -73,7 +81,7 @@
     const ul = $("ds"); ul.textContent = "";
     $("trong").hidden = ds.length > 0;
     ds.forEach((e) => {
-      const li = el("li");
+      const li = el("li", e.canh_bao ? "cb cb-" + e.canh_bao : "");
       if (e.anh) {
         const img = el("img"); img.loading = "lazy"; img.alt = TEN_LOAI[e.loai] || ""; img.src = e.anh;
         img.onclick = () => { $("xemAnh").src = e.anh; $("xem").hidden = false; };
@@ -91,6 +99,7 @@
       }
       if (e.bien_so) { dong.appendChild(document.createTextNode(" ")); dong.appendChild(el("span", "bien", e.bien_so)); }
       nd.appendChild(dong);
+      if (e.canh_bao) nd.appendChild(el("div", "canh", "⚠ " + (TEN_CANH_BAO[e.canh_bao] || e.canh_bao) + (e.vung && e.vung.length ? " · " + e.vung.join(" → ") : "")));
       nd.appendChild(el("div", "meta", gio(e.bat_dau) + " · " + e.camera + (e.diem ? " · " + Math.round(e.diem * 100) + "%" : "")));
       if (e.chu) nd.appendChild(el("div", "chu", "“" + e.chu + "”"));
       li.appendChild(nd);

@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0e1116">
 <title>Mắt Nhà - MinMin</title>
 <link rel="icon" href="/static/favicon.png">
-<link rel="stylesheet" href="/static/mat-nha/mat-nha.css">
+<link rel="stylesheet" href="/static/mat-nha/mat-nha.css?v=2">
 </head>
 <body>
 <header class="top">
@@ -21,6 +21,7 @@
   <nav class="loc" aria-label="Lọc sự kiện">
     <button type="button" data-loc="hom-nay" aria-pressed="true">Hôm nay</button>
     <button type="button" data-loc="nguoi-la" aria-pressed="false">Người lạ</button>
+    <button type="button" data-loc="canh-bao" aria-pressed="false">Vượt rào</button>
     <button type="button" data-loc="xe" aria-pressed="false">Xe</button>
     <button type="button" data-loc="bien-so" aria-pressed="false">Biển số</button>
     <button type="button" data-loc="giong" aria-pressed="false">Giọng nói</button>
@@ -59,6 +60,13 @@
         rồi hỏi <b>mã ghép nối</b> ở trên. Cần khởi động lại máy thì nó báo, xong bấm đúp lại.</li>
       <li>Mở Frigate trên máy ở nhà (<code>http://localhost:5000</code>) &rarr; <b>Face Library</b> &rarr;
         thêm 1-5 ảnh rõ mặt của từng người nhà. Biển số quen thì thêm ở mục <code>known_plates</code>.</li>
+      <li><b>Canh rào</b> (tuỳ chọn): trong Frigate &rarr; <b>Settings</b> &rarr; <b>Masks / Zones</b> &rarr; chọn camera
+        &rarr; <b>Add Zone</b>, vẽ hai vùng và đặt tên đúng quy ước:
+        <code>rao_...</code> là dải sát hàng rào hay cổng, <code>trong_...</code> là sân trong hay khu cấm
+        (vd <code>rao_sau</code>, <code>trong_san</code>). Ở mỗi vùng chọn đối tượng <b>person</b>.
+        MinMin sẽ báo <b>tiến sát</b>, <b>lảng vảng</b> (ở dải rào từ 30 giây), <b>vào khu cấm</b> và
+        <b>VƯỢT RÀO</b> (đi từ dải rào vào trong). Hai mức sau nhắn ngay vào chuông MinMin và Telegram của bạn,
+        mỗi camera tối đa một tin mỗi 2 phút.</li>
     </ol>
     <p class="phu">Tệp trong bộ cài (tải riêng nếu cần):
       <a href="/static/mat-nha/kit/CaiMatNha.ps1" download>CaiMatNha.ps1</a> ·
@@ -74,6 +82,6 @@
 </main>
 
 <div class="xem" id="xem" hidden><img id="xemAnh" alt="Ảnh sự kiện"></div>
-<script src="/static/mat-nha/mat-nha.js"></script>
+<script src="/static/mat-nha/mat-nha.js?v=2"></script>
 </body>
 </html>

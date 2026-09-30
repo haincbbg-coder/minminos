@@ -19428,7 +19428,13 @@ hud_routes.register(app, hud_routes.HudDeps(
 
 # MinMin Mắt Nhà (camera ở nhà qua Frigate + cầu nối) - routes/mat_nha.py. Cũng đăng ký ở cuối.
 import routes.mat_nha as mat_nha_routes   # noqa: E402
-mat_nha_routes.register(app, mat_nha_routes.MatNhaDeps(dashboard_dir=Path(DASHBOARD_PATH)))
+async def _mat_nha_bao_chu(text: str):
+    """Cảnh báo canh rào của Mắt Nhà: vào hòm thư (chuông + thông báo đẩy) và Telegram chủ."""
+    await _notify_owner("", text, kind="system", label="Mắt Nhà", source="mat-nha")
+
+
+mat_nha_routes.register(app, mat_nha_routes.MatNhaDeps(dashboard_dir=Path(DASHBOARD_PATH),
+                                                       bao_chu=_mat_nha_bao_chu))
 assert mat_nha_routes.LOI_VAO_CONG_KHAI == _MAT_NHA_CONG_KHAI
 
 

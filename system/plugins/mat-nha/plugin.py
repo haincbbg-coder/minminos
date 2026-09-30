@@ -30,6 +30,7 @@ def _tra(args, ctx):
         ds = mat_nha.tim(tu=tu, den=args.get("den"), camera=args.get("camera"),
                          loai=args.get("loai"), ten=args.get("ten"), bien_so=args.get("bien_so"),
                          chi_nguoi_la=bool(args.get("chi_nguoi_la")),
+                         chi_canh_bao=bool(args.get("chi_canh_bao")),
                          limit=args.get("limit") or 200)
     except ValueError as e:
         return f"ERROR: {e}"
@@ -47,7 +48,8 @@ def register(ctx):
         description=("Sự kiện camera ở nhà: ai đến (tên người nhà đã học mặt, hoặc người lạ), xe và "
                      "biển số, con vật, giọng nói chép lại. Lọc: tu/den (YYYY-MM-DD hoặc ISO, mặc định "
                      "hôm nay), camera, loai (nguoi|xe|con_vat|vat|giong), ten, bien_so (khớp một phần), "
-                     "chi_nguoi_la. Trả tóm tắt tiếng Việt, mới nhất trước."),
+                     "chi_nguoi_la, chi_canh_bao (canh rào: tiến sát / lảng vảng / vào khu cấm / vượt rào). "
+                     "Trả tóm tắt tiếng Việt, mới nhất trước."),
         handler=_tra, min_mode="readonly", check_fn=_check,
         schema={"type": "object", "properties": {
             "tu": {"type": "string", "description": "Từ lúc (YYYY-MM-DD hoặc ISO). Bỏ trống = đầu hôm nay"},
@@ -57,6 +59,7 @@ def register(ctx):
             "ten": {"type": "string", "description": "Tên người nhà (khớp một phần)"},
             "bien_so": {"type": "string", "description": "Biển số, vd 29B1 hoặc 29-B1 123.45 (khớp một phần)"},
             "chi_nguoi_la": {"type": "boolean", "description": "Chỉ người không nhận ra mặt"},
+            "chi_canh_bao": {"type": "boolean", "description": "Chỉ cảnh báo canh rào (vượt rào, vào khu cấm...)"},
             "limit": {"type": "integer", "description": "Tối đa bao nhiêu sự kiện (mặc định 200)"},
         }},
     )

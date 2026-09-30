@@ -2273,3 +2273,9 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 }
 .ht-msgs-top { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .ht-msgs-top svg { width: 14px; height: 14px; }
+
+/* 0.64.98 Mắt Nhà nhúng trong khung trang */
+.mn-nhung { display: flex; flex-direction: column; gap: 10px; height: calc(100dvh - var(--topbar-h) - 150px); min-height: 480px; }
+.mn-nhung-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text2); }
+.mn-nhung-bar a { flex: none; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.mn-nhung-frame { flex: 1 1 auto; width: 100%; border: 0; border-radius: 16px; background: var(--bg2); box-shadow: var(--shadow-1); }

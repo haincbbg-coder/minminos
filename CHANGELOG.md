@@ -5,8 +5,12 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
 ## [0.64.98] - 2026-10-01
+### Thêm mới
+- **Mắt Nhà có lối vào trên thanh bên** (nhóm Vận hành): xem ai ra vào, xe, biển số, người lạ ngay trong MinMin, không phải gõ đường dẫn nữa.
+- **Canh rào cho camera**: vẽ vùng `rao_...` (sát hàng rào) và `trong_...` (sân trong) trong Frigate, MinMin phân biệt tiến sát, lảng vảng, vào khu cấm và **VƯỢT RÀO**. Vượt rào và vào khu cấm nhắn ngay vào chuông MinMin và Telegram, lúc người đó còn đang ở đó. Có nút lọc "Vượt rào".
 ### Cải thiện
-- (đang viết)
+- **Tông tối mới "Đêm ngọc"**: nền xanh ngọc thẫm, nhấn tím và hổ phách, không còn đen tím cam như Javis.
+- **Linh vật mới: Bé Ngọc**, hình giọt ngọc màu tím MinMin, mắt trắng. Ai đang để con sao cam cũ sẽ tự đổi sang Bé Ngọc; ai đã tự chọn diện mạo thì giữ nguyên.
 
 ## [0.64.97] - 2026-10-01
 ### Cải thiện

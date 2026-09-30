@@ -8,14 +8,14 @@ trang / custom kèm `eyeColor`) và hệ số cỡ mắt (`eyeSize`). Các khoá
 import re
 import secrets
 
-SHAPES = ("circle", "square", "triangle", "cloud", "pentagon", "star")
+SHAPES = ("circle", "square", "triangle", "cloud", "pentagon", "star", "giot")
 # 12 màu ĐẦU là bộ gốc và là bộ bốc mặc định theo slug. Đừng đổi thứ tự hay chèn vào giữa:
 # trợ lý cũ chưa lưu avatar lấy màu bằng `seed % 12`, đổi ở đây là cả danh sách đổi màu.
 PALETTES_MAC_DINH = ("amber", "pearl", "clay", "rose", "honey", "sage", "jade", "blue",
                      "lavender", "pink", "slate", "cocoa")
 # Tám màu thêm ở 0.59.36 trước đây THIẾU ở đây, nên chọn "Cam" cho trợ lý là máy chủ trả 400.
 PALETTES = PALETTES_MAC_DINH + ("cam", "nang", "chanh", "bacha", "thanhthien", "cham", "tim",
-                                "ruby", "custom")
+                                "ruby", "minmin", "custom")
 EYES = ("den", "trang", "custom")
 EYE_SIZE_MIN, EYE_SIZE_MAX = 0.8, 1.5
 _HEX = re.compile(r"#[0-9a-fA-F]{6}")

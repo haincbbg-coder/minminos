@@ -37,6 +37,22 @@ DONG_TOI_DA = 4096                 # một dòng sự kiện tối đa 4KB sau k
 CHU_TOI_DA = 1000                  # lời nói chép lại tối đa 1000 ký tự
 GIOI_HAN_TRA = 500                 # một lần đọc trả tối đa 500 sự kiện
 LOAI_HOP_LE = ("nguoi", "xe", "con_vat", "vat", "giong", "khac")
+
+# CANH RÀO (0.64.98), học từ các bản demo "fence-line intrusion": theo dõi một người qua các
+# vùng vẽ trên ảnh camera, không chỉ "có người". Vùng vẽ trong Frigate trên máy ở nhà, đặt tên
+# theo quy ước: `rao_...` = dải sát hàng rào / cổng, `trong_...` = bên trong sân, khu cấm.
+# Cầu nối tự suy ra mức cảnh báo từ các vùng người đó đã đi qua:
+#   tien_sat  chỉ vào dải rào rồi đi (tiến sát hàng rào)
+#   lang_vang ở dải rào lâu (>= 30 giây) mà không vào trong
+#   vao_khu   xuất hiện thẳng trong khu `trong_` (không đi qua dải rào nào)
+#   vuot_rao  đi từ dải rào VÀO khu `trong_` - vượt rào, mức nặng nhất
+MUC_CANH_BAO = ("tien_sat", "lang_vang", "vao_khu", "vuot_rao")
+MUC_BAO_CHU = ("vuot_rao", "vao_khu")          # hai mức này nhắn ngay cho chủ
+TEN_CANH_BAO = {"tien_sat": "tiến sát hàng rào", "lang_vang": "lảng vảng sát rào",
+                "vao_khu": "vào khu cấm", "vuot_rao": "VƯỢT RÀO"}
+BAO_CHU_CACH_GIAY = 120                        # một camera nhắn chủ tối đa 1 lần / 2 phút
+_VUNG_RE = re.compile(r"^[a-z0-9_-]{1,40}$")
+_BAO_LUC = {}                                  # camera -> mốc lần nhắn chủ gần nhất
 _ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 _CAM_RE = re.compile(r"[^a-z0-9_-]+")
 _KHOA = threading.Lock()
@@ -159,6 +175,18 @@ def chuan_hoa(raw: dict) -> dict:
         "chu": _chu(raw.get("chu"), CHU_TOI_DA),
         "nhan_luc": round(time.time(), 3),
     }
+    muc = str(raw.get("canh_bao") or "").strip().lower()
+    if muc in MUC_CANH_BAO:
+        ev["canh_bao"] = muc
+    vung = raw.get("vung")
+    if isinstance(vung, list):
+        ds = []
+        for v in vung[:8]:
+            v = str(v or "").strip().lower()
+            if _VUNG_RE.match(v) and v not in ds:
+                ds.append(v)
+        if ds:
+            ev["vung"] = ds
     if ev["ten"]:
         ev["la_nguoi_la"] = False
     return ev
@@ -205,7 +233,10 @@ def _da_co(eid: str, ngay: str) -> bool:
 
 
 def luu_su_kien(raw: dict) -> dict:
-    """Lưu một sự kiện (và ảnh nếu có). Trùng id thì bỏ qua, trả {"trung": True}."""
+    """Lưu một sự kiện (và ảnh nếu có). Trùng id thì bỏ qua, trả {"trung": True}.
+
+    Sự kiện mới đáng nhắn chủ ngay (xem `nen_bao_chu`) thì kết quả mang thêm `bao_chu`: câu
+    nhắn sẵn, để lớp HTTP gửi đi mà module này khỏi phải biết Telegram hay hòm thư."""
     ev = chuan_hoa(raw)
     anh = _giai_anh(raw.get("anh_b64") or raw.get("anh"))
     ngay = _ngay_cua(ev["bat_dau"])
@@ -226,7 +257,12 @@ def luu_su_kien(raw: dict) -> dict:
             fh.write(dong + "\n")
         _cap_nhat_trang_thai(ev=ev)
     don_dep()
-    return {"ok": True, "id": ev["id"]}
+    ra = {"ok": True, "id": ev["id"]}
+    # `da_bao`: cầu nối đã gửi cảnh báo sớm cho chính người này lúc đang vượt rào (id `cb-...`),
+    # bản ghi lúc kết thúc chỉ để lưu, không nhắn chủ lần hai.
+    if not (isinstance(raw, dict) and raw.get("da_bao")) and nen_bao_chu(ev):
+        ra["bao_chu"] = cau_bao_chu(ev)
+    return ra
 
 
 def ghi_nhip(raw: dict) -> dict:
@@ -363,7 +399,7 @@ def dau_hom_nay() -> float:
 
 
 def tim(tu=None, den=None, camera=None, loai=None, ten=None, bien_so=None,
-        chi_nguoi_la: bool = False, limit: int = 100) -> list:
+        chi_nguoi_la: bool = False, limit: int = 100, chi_canh_bao: bool = False) -> list:
     """Sự kiện khớp bộ lọc, MỚI NHẤT TRƯỚC. `ten`, `bien_so` so khớp một phần, không phân biệt hoa."""
     t0 = _moc(tu)
     t1 = _moc(den, cuoi_ngay=True)
@@ -412,7 +448,14 @@ def tim(tu=None, den=None, camera=None, loai=None, ten=None, bien_so=None,
                 continue
             if chi_nguoi_la and not ev.get("la_nguoi_la"):
                 continue
+            if chi_canh_bao and not ev.get("canh_bao"):
+                continue
             trong_ngay.append(ev)
+        # Cảnh báo sớm `cb-<id>` đã có bản đầy đủ `<id>` (lúc sự kiện kết thúc) thì chỉ hiện bản
+        # đầy đủ, không để một lần vượt rào thành hai dòng.
+        co_id = {e.get("id") for e in trong_ngay}
+        trong_ngay = [e for e in trong_ngay
+                      if not (str(e.get("id") or "").startswith("cb-") and str(e["id"])[3:] in co_id)]
         trong_ngay.sort(key=lambda e: e.get("bat_dau") or 0, reverse=True)
         ra.extend(trong_ngay[: limit - len(ra)])
     return ra
@@ -449,7 +492,35 @@ def mo_ta(ev: dict) -> str:
         phan.append(("giọng nói: \"" + ev["chu"][:160] + "\"") if ev.get("chu") else (ev.get("nhan") or "âm thanh"))
     else:
         phan.append(ev.get("nhan") or _TEN_LOAI.get(ev.get("loai"), "?"))
+    if ev.get("canh_bao"):
+        phan.append("CẢNH BÁO: " + TEN_CANH_BAO.get(ev["canh_bao"], ev["canh_bao"])
+                    + (f" (vùng {', '.join(ev['vung'])})" if ev.get("vung") else ""))
     return " - ".join(phan)
+
+
+def nen_bao_chu(ev: dict, bay_gio: Optional[float] = None) -> bool:
+    """Sự kiện này có đáng NHẮN NGAY cho chủ không: chỉ vượt rào / vào khu cấm, và mỗi camera
+    tối đa một tin mỗi BAO_CHU_CACH_GIAY giây (một người lượn qua lại không thành chục tin)."""
+    if (ev or {}).get("canh_bao") not in MUC_BAO_CHU:
+        return False
+    now = bay_gio or time.time()
+    cam = ev.get("camera") or ""
+    with _KHOA:
+        if now - _BAO_LUC.get(cam, 0) < BAO_CHU_CACH_GIAY:
+            return False
+        _BAO_LUC[cam] = now
+        if len(_BAO_LUC) > 200:
+            _BAO_LUC.clear()
+    return True
+
+
+def cau_bao_chu(ev: dict) -> str:
+    ai = ev.get("ten") or ("Người lạ" if ev.get("la_nguoi_la") or ev.get("loai") == "nguoi" else
+                          (ev.get("nhan") or "Đối tượng"))
+    muc = TEN_CANH_BAO.get(ev.get("canh_bao"), "cảnh báo")
+    vung = f" Vùng: {', '.join(ev['vung'])}." if ev.get("vung") else ""
+    return (f"Mắt Nhà: {ai} {muc} ở camera {ev.get('camera')} lúc {gio(ev.get('bat_dau'))}.{vung}"
+            " Xem ảnh ở trang Mắt Nhà, video trên máy ở nhà (Frigate).")
 
 
 def tom_tat(ds: list, toi_da_dong: int = 30) -> str:
@@ -461,6 +532,12 @@ def tom_tat(ds: list, toi_da_dong: int = 30) -> str:
     xe = [e for e in ds if e.get("loai") == "xe"]
     bien = sorted({e["bien_so"] for e in xe if e.get("bien_so")})
     dau = [f"{len(ds)} sự kiện" + (" (đã cắt bớt)" if len(ds) >= GIOI_HAN_TRA else "") + "."]
+    cb = [e for e in ds if e.get("canh_bao")]
+    if cb:
+        dem = {}
+        for e in cb:
+            dem[e["canh_bao"]] = dem.get(e["canh_bao"], 0) + 1
+        dau.append("Cảnh báo canh rào: " + ", ".join(f"{TEN_CANH_BAO.get(k, k)} {n} lần" for k, n in dem.items()) + ".")
     if nguoi:
         dau.append(f"Người: {len(nguoi)} lần" + (f", nhận ra: {', '.join(quen)}" if quen else "")
                    + (f", người lạ (không nhận ra mặt): {la} lần" if la else "") + ".")

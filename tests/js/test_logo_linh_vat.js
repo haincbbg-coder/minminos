@@ -23,8 +23,9 @@ const svg = read("dashboard/logo.svg");
 const dSao = (/star:\s+\{ key: "pet\.shape\.star",\s+d: "([^"]+)"/.exec(pet) || [])[1] || "";
 const cam = /cam:\s+\{ key: "pet\.color\.cam",\s+sun: \["(#\w{6})", "(#\w{6})"/.exec(pet) || [];
 
-check("linh vật mặc định là NGÔI SAO", /var MAC_DINH = \{[^}]*shape: "star"/.test(pet));
-check("linh vật mặc định màu CAM", /var MAC_DINH = \{[^}]*palette: "cam"/.test(pet));
+// 0.64.98: linh vật chính thức đổi thành BÉ NGỌC (giọt ngọc tím). Sao và cam vẫn còn để chọn.
+check("linh vật mặc định là GIỌT NGỌC", /var MAC_DINH = \{[^}]*shape: "giot"/.test(pet));
+check("linh vật mặc định màu TÍM MINMIN", /var MAC_DINH = \{[^}]*palette: "minmin"/.test(pet));
 check("nút Đặt lại trả về đúng ngôi sao cam",
   /P\.setCfg\(\{ shape: "star", palette: "cam",/.test(read("dashboard/console.js")));
 check("logo.svg vẽ ĐÚNG đường ngôi sao của linh vật", dSao.length > 50 && svg.split(dSao).length - 1 === 2,

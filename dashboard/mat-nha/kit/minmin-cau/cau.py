@@ -30,7 +30,7 @@ import time
 import urllib.error
 import urllib.request
 
-PHIEN_BAN = "1.0.0"
+PHIEN_BAN = "1.1.0"
 ANH_TOI_DA = 280 * 1024
 HANG_DOI_TOI_DA = 3000
 IM_LANG_GIAY = 15.0
@@ -45,6 +45,38 @@ LOAI_THEO_NHAN = {
 NHAN_AM_THANH = {"speech", "bark", "yell", "scream", "fire_alarm", "smoke_detector", "crying",
                  "baby_cry", "doorbell", "knock", "glass", "shatter", "siren", "car_alarm",
                  "honk", "meow", "laughter", "whistle", "music"}
+
+
+# CANH RAO (1.1.0): vung ve trong Frigate dat ten theo quy uoc
+#   rao_...   = dai sat hang rao / cong (ben ngoai hoac ngay tai rao)
+#   trong_... = ben trong san, khu cam
+# Cau noi suy ra muc canh bao tu thu tu cac vung mot nguoi da di qua (entered_zones).
+LANG_VANG_GIAY = 30.0
+MUC_BAO_NGAY = ("vuot_rao", "vao_khu")
+
+
+def muc_canh_bao(vung, bat_dau=None, ket_thuc=None, xong=False):
+    """Tra "vuot_rao" | "vao_khu" | "lang_vang" | "tien_sat" | None tu danh sach vung da vao.
+
+    - vao dai rao ROI moi vao khu trong  -> vuot_rao (nang nhat)
+    - vao thang khu trong                -> vao_khu
+    - chi o dai rao, lau >= 30 giay      -> lang_vang (chi ket luan khi su kien da xong)
+    - chi o dai rao                      -> tien_sat (chi ket luan khi su kien da xong)
+    """
+    ds = [str(z or "").lower() for z in (vung or [])]
+    rao = [i for i, z in enumerate(ds) if z.startswith("rao")]
+    trong = [i for i, z in enumerate(ds) if z.startswith("trong")]
+    if trong:
+        if rao and rao[0] < trong[0]:
+            return "vuot_rao"
+        return "vao_khu"
+    if rao and xong:
+        try:
+            lau = float(ket_thuc or 0) - float(bat_dau or 0)
+        except (TypeError, ValueError):
+            lau = 0
+        return "lang_vang" if lau >= LANG_VANG_GIAY else "tien_sat"
+    return None
 
 
 def log(*a):
@@ -75,6 +107,7 @@ class Cau:
         self.nhan_dien = collections.OrderedDict()   # id -> {"ten":..., "bien_so":..., "ten_xe":...}
         self.da_gui = collections.OrderedDict()      # id -> 1  (5000 id gan nhat)
         self.loi_noi = {}                            # camera -> {"bat_dau", "cuoi", "chu"}
+        self.da_bao = collections.OrderedDict()      # id su kien da gui canh bao som (vuot rao)
         self.khoa = threading.Lock()
         self.gui_ham = gui_ham or self._gui_http
         self.lay_anh_ham = lay_anh_ham or self._lay_anh_http
@@ -132,7 +165,11 @@ class Cau:
             m = json.loads(payload)
         except Exception:
             return None
-        if not isinstance(m, dict) or m.get("type") != "end":
+        if not isinstance(m, dict):
+            return None
+        if m.get("type") in ("new", "update"):
+            return self._canh_bao_som(m.get("after") or {})
+        if m.get("type") != "end":
             return None
         a = m.get("after") or {}
         eid = str(a.get("id") or "")
@@ -162,9 +199,59 @@ class Cau:
             "diem": a.get("top_score") or a.get("score"),
             "chu": None,
         }
+        vung = [str(z) for z in (a.get("entered_zones") or []) if z][:8]
+        if vung:
+            ev["vung"] = vung
+        if loai == "nguoi":
+            muc = muc_canh_bao(vung, a.get("start_time"), a.get("end_time"), xong=True)
+            if muc:
+                ev["canh_bao"] = muc
+                with self.khoa:
+                    # Da nhan chu bang canh bao som roi: ban cuoi chi de luu, khong nhan lan hai.
+                    if self.da_bao.pop(eid, None):
+                        ev["da_bao"] = True
         if a.get("camera"):
             self.cameras.add(a["camera"])
         if self.gui_anh and a.get("has_snapshot"):
+            anh = self.lay_anh_ham(eid)
+            if anh:
+                ev["anh_b64"] = base64.b64encode(anh).decode("ascii")
+        return self.xep_hang(ev)
+
+    def _canh_bao_som(self, a):
+        """Nguoi VUOT RAO / VAO KHU CAM thi gui ngay luc dang dien ra, khong doi su kien ket thuc
+        (mot nguoi dung trong san 5 phut thi 5 phut sau moi biet la qua muon)."""
+        eid = str(a.get("id") or "")
+        if not eid or a.get("false_positive") or str(a.get("label") or "") != "person":
+            return None
+        vung = [str(z) for z in (a.get("entered_zones") or []) if z][:8]
+        muc = muc_canh_bao(vung)
+        if muc not in MUC_BAO_NGAY:
+            return None
+        with self.khoa:
+            if eid in self.da_bao:
+                return None
+            self.da_bao[eid] = 1
+            while len(self.da_bao) > 2000:
+                self.da_bao.popitem(last=False)
+            nd = dict(self.nhan_dien.get(eid, {}))
+        ten = nd.get("ten") or _ten_sub_label(a.get("sub_label"))
+        ev = {
+            "id": ("cb-" + eid)[:80],
+            "camera": a.get("camera") or "",
+            "loai": "nguoi",
+            "nhan": "person",
+            "ten": ten,
+            "bien_so": None,
+            "la_nguoi_la": not ten,
+            "bat_dau": a.get("start_time"),
+            "ket_thuc": None,
+            "diem": a.get("top_score") or a.get("score"),
+            "chu": None,
+            "canh_bao": muc,
+            "vung": vung,
+        }
+        if self.gui_anh:
             anh = self.lay_anh_ham(eid)
             if anh:
                 ev["anh_b64"] = base64.b64encode(anh).decode("ascii")

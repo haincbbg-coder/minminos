@@ -13,10 +13,13 @@ duy nhất là nhà đẩy lên.
 - `GET  /mat-nha/anh/{id}.jpg`, `POST /mat-nha/ma` (tạo/đổi mã ghép nối), `GET /mat-nha/trang-thai`,
   `GET /mat-nha` (trang dashboard).
 """
+import asyncio
 import json
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Awaitable, Callable, Optional
 
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -34,6 +37,11 @@ _SAI_CUA_SO = 600
 @dataclass
 class MatNhaDeps:
     dashboard_dir: Path
+    # Nhắn chủ (hòm thư + Telegram) khi có cảnh báo canh rào. main.py nối vào _notify_owner.
+    bao_chu: Optional[Callable[[str], Awaitable]] = None
+
+
+_VIEC_BAO = set()   # giữ tham chiếu task nhắn chủ cho tới khi xong
 
 
 def _ip(request: Request) -> str:
@@ -76,17 +84,31 @@ def register(app: FastAPI, deps: MatNhaDeps) -> None:
         try:
             if isinstance(raw, dict) and raw.get("loai") == "nhip":
                 return mat_nha.ghi_nhip(raw)
-            return mat_nha.luu_su_kien(raw)
+            ra = mat_nha.luu_su_kien(raw)
+            cau = ra.pop("bao_chu", None)
+            if cau and deps.bao_chu:
+                # KHÔNG chờ: cầu nối ở nhà đang đợi trả lời, nhắn Telegram chậm cỡ nào cũng
+                # không được giữ chân nó. Lỗi nhắn chỉ ghi log, sự kiện đã lưu xong rồi.
+                async def _nhan():
+                    try:
+                        await deps.bao_chu(cau)
+                    except Exception as ex:
+                        print(f"[mat-nha] nhắn chủ lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)
+                t = asyncio.create_task(_nhan())
+                _VIEC_BAO.add(t)
+                t.add_done_callback(_VIEC_BAO.discard)
+            return ra
         except ValueError as e:
             return JSONResponse({"error": str(e)}, status_code=400)
 
     @app.get("/mat-nha/su-kien")
     def mat_nha_doc(tu: str = Query(None), den: str = Query(None), camera: str = Query(None),
                     loai: str = Query(None), ten: str = Query(None), bien_so: str = Query(None),
-                    chi_nguoi_la: bool = Query(False), limit: int = Query(100)):
+                    chi_nguoi_la: bool = Query(False), limit: int = Query(100),
+                    chi_canh_bao: bool = Query(False)):
         try:
             ds = mat_nha.tim(tu=tu, den=den, camera=camera, loai=loai, ten=ten, bien_so=bien_so,
-                             chi_nguoi_la=chi_nguoi_la, limit=limit)
+                             chi_nguoi_la=chi_nguoi_la, limit=limit, chi_canh_bao=chi_canh_bao)
         except ValueError as e:
             return JSONResponse({"error": str(e)}, status_code=400)
         for ev in ds:

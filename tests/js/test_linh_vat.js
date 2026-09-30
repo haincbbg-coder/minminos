@@ -237,7 +237,8 @@ check("ws.onclose gọi baoDutMang", /ws\.onclose = \(\) => \{[\s\S]{0,200}baoDu
     /var MAU_MAT = \{\s*\n\s*den:\s*\{ key: "pet\.eye\.den",\s*mau: "#201e1e" \},/.test(pet));
   check("đen và trắng vẫn còn nguyên",
     /trang:\s*\{ key: "pet\.eye\.trang",\s*mau: "#ffffff" \}/.test(pet));
-  check("mặc định là ĐEN", /size: 72, eye: "den", eyeSize: 1,/.test(pet));
+  // 0.64.98: Bé Ngọc thân tím nên mắt mặc định là TRẮNG (đen chìm trên tím).
+  check("mặc định là TRẮNG (Bé Ngọc)", /size: 72, eye: "trang", eyeSize: 1,/.test(pet));
   check("khoá lạ rơi về mặc định", /if \(!MAU_MAT\[c\.eye\] && c\.eye !== "custom"\) c\.eye = MAC_DINH\.eye;/.test(pet));
   check("con pet đeo màu mắt ĐÃ CHỌN, không suy từ thân nữa",
     /setProperty\("--pet-eye", mauMatCfg\(\)\)/.test(pet));

@@ -2553,12 +2553,13 @@ let _thinkingActive = false;
 // MỰC SẪM chồng thường lên giấy ngà. Không đảo màu được - "lighter" trên nền
 // trắng cho ra trắng bệt, còn sao trắng thì biến mất hẳn.
 const SKY_DARK = {
-  stars: ["#ffffff", "#c9b3ff", "#b8a3ff", "#d6c9ff"],
+  // 0.64.98 "Đêm ngọc": sao trắng ngà xen ngọc lam và tím oải hương, quầng giữa tím pha lam.
+  stars: ["#ffffff", "#bfe9e2", "#c4b3ff", "#ffe2b0"],
   starOp: "lighter",          // cộng sáng: sao chồng nhau càng rực
   starMax: 0.85,
-  haloIn: [140, 90, 230],     // quầng giữa - thở theo giọng nói
-  haloMid: [90, 60, 170],
-  haloOut: "rgba(8,6,20,0)",
+  haloIn: [124, 98, 240],     // quầng giữa - thở theo giọng nói
+  haloMid: [40, 120, 130],
+  haloOut: "rgba(4,16,15,0)",
   haloBase: 0.10, haloGain: 0.12,
   grid: [165, 115, 230], gridBase: 0.13, gridGain: 0.10,
   ring: [70, 200, 255], ringGain: 1,

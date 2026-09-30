@@ -149,4 +149,21 @@ cameras:
           input_args: preset-rtsp-restream
           roles:
             - detect
+    # CANH RAO (tuy chon): ve vung trong giao dien Frigate (Settings > Masks / Zones > Add Zone)
+    # de Frigate tu ghi vao day. Dat ten theo quy uoc MinMin:
+    #   rao_...   = dai sat hang rao / cong      trong_... = san trong / khu cam
+    # Cau noi minmin-cau doc thu tu vung nguoi da di qua: rao_ roi trong_ = VUOT RAO (nhan chu
+    # ngay), thang vao trong_ = vao khu cam, chi o rao_ = tien sat / lang vang (>= 30 giay).
+    # Vi du (toa do tuong doi 0-1, x,y theo chieu kim dong ho):
+    # zones:
+    #   rao_sau:
+    #     coordinates: 0.05,0.55,0.95,0.55,0.95,0.70,0.05,0.70
+    #     objects:
+    #       - person
+    #     inertia: 3
+    #   trong_san:
+    #     coordinates: 0.05,0.70,0.95,0.70,0.95,1,0.05,1
+    #     objects:
+    #       - person
+    #     inertia: 3
 # <<< CAMERAS
