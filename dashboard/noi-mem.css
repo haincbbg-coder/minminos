@@ -1,7 +1,9 @@
 /* ============================================================================
    MinMin OS - Giao diện NỔI MỀM (neumorphism) - 0.64.90
    ----------------------------------------------------------------------------
-   Chủ repo gửi mẫu 30/09: nền xám xanh nhạt, nút và thẻ nổi lên bằng hai bóng (sáng phía
+   0.64.94: đổi bảng màu sang KEM ẤM + TÍM + ÁNH CAM cho đồng bộ với đồ thị não quả cầu
+   (giấy ngà, quầng tím, mực tím đậm). Trước đó (0.64.92) là xám xanh + xanh dương.
+   Chủ repo gửi mẫu 30/09: nền nhạt, nút và thẻ nổi lên bằng hai bóng (sáng phía
    trên trái, tối phía dưới phải), ô nhập và nút đang chọn lõm xuống, điểm nhấn màu xanh.
    Đây là TÔNG SÁNG MỚI và là tông mặc định. Tông tối cũ giữ nguyên (nút đổi tông).
    File nạp SAU style.css / console.css / minmin-galaxy.css nên chỉ cần đè token + bề mặt
@@ -10,56 +12,56 @@
    ========================================================================== */
 
 :root[data-theme="light"] {
-  --nm-bg: #e4e9f0;
+  --nm-bg: #efe9e2;
   --nm-hi: rgba(255, 255, 255, 0.95);
-  --nm-lo: rgba(152, 166, 190, 0.55);
+  --nm-lo: rgba(178, 160, 140, 0.50);
   --nm-out: 7px 7px 16px var(--nm-lo), -7px -7px 16px var(--nm-hi);
   --nm-out-sm: 4px 4px 9px var(--nm-lo), -4px -4px 9px var(--nm-hi);
   --nm-out-xs: 2px 2px 5px var(--nm-lo), -2px -2px 5px var(--nm-hi);
   --nm-in: inset 5px 5px 11px var(--nm-lo), inset -5px -5px 11px var(--nm-hi);
   --nm-in-sm: inset 3px 3px 7px var(--nm-lo), inset -3px -3px 7px var(--nm-hi);
-  --nm-blue: linear-gradient(145deg, #5a86ff, #2f5fe0);
-  --nm-blue-glow: 4px 4px 12px rgba(47, 95, 224, 0.35), -4px -4px 10px var(--nm-hi);
+  --nm-blue: linear-gradient(145deg, #8a6cf0, #5b3fd0);
+  --nm-blue-glow: 4px 4px 12px rgba(91, 63, 208, 0.32), -4px -4px 10px var(--nm-hi);
 
   color-scheme: light;
   --bg: var(--nm-bg);
   --bg2: var(--nm-bg);
   --bg3: var(--nm-bg);
-  --border: rgba(152, 166, 190, 0.30);
-  --accent: #3d6df2;
-  --accent2: #6b5cf0;
-  --text: #2a3140;
-  --text2: #505a6c;
-  --text3: #5f6a7d;
-  --text-hi: #151a24;
-  --accent-ink: #2a55c9;
-  --accent2-ink: #5443d6;
-  --accent-solid: #2f5fe0;
+  --border: rgba(178, 160, 140, 0.30);
+  --accent: #6a4bd6;
+  --accent2: #c2621c;
+  --text: #2a2234;
+  --text2: #564b63;
+  --text3: #675d72;
+  --text-hi: #17111f;
+  --accent-ink: #5335be;
+  --accent2-ink: #a54f12;
+  --accent-solid: #5b3fd0;
   --on-accent: #ffffff;
-  --link-ink: #2a55c9;
+  --link-ink: #5335be;
 
   --surface-1: rgba(255, 255, 255, 0.22);
   --surface-2: rgba(255, 255, 255, 0.34);
-  --surface-3: rgba(152, 166, 190, 0.18);
-  --hairline: rgba(152, 166, 190, 0.26);
-  --sunken: rgba(152, 166, 190, 0.12);
+  --surface-3: rgba(178, 160, 140, 0.18);
+  --hairline: rgba(178, 160, 140, 0.26);
+  --sunken: rgba(178, 160, 140, 0.12);
   --shadow-1: var(--nm-out-sm);
   --shadow-2: var(--nm-out);
   --shadow-3: 12px 12px 30px var(--nm-lo), -10px -10px 26px var(--nm-hi);
-  --shadow-veil: rgba(60, 72, 96, 0.22);
+  --shadow-veil: rgba(76, 58, 48, 0.22);
 
-  --accent-wash: rgba(61, 109, 242, 0.08);
-  --accent-wash-2: rgba(61, 109, 242, 0.14);
-  --accent-line: rgba(61, 109, 242, 0.38);
-  --accent-ring: 0 0 0 3px rgba(61, 109, 242, 0.18);
-  --accent2-wash: rgba(107, 92, 240, 0.09);
-  --accent2-wash-2: rgba(107, 92, 240, 0.15);
-  --accent2-line: rgba(107, 92, 240, 0.36);
+  --accent-wash: rgba(106, 75, 214, 0.08);
+  --accent-wash-2: rgba(106, 75, 214, 0.14);
+  --accent-line: rgba(106, 75, 214, 0.38);
+  --accent-ring: 0 0 0 3px rgba(106, 75, 214, 0.18);
+  --accent2-wash: rgba(194, 98, 28, 0.09);
+  --accent2-wash-2: rgba(194, 98, 28, 0.15);
+  --accent2-line: rgba(194, 98, 28, 0.36);
 
   --field-bg: var(--nm-bg);
   --panel-bg: var(--nm-bg);
   --panel-solid: var(--nm-bg);
-  --scrim: rgba(40, 50, 72, 0.30);
+  --scrim: rgba(52, 38, 56, 0.30);
 
   /* console.css */
   --rail-bg: var(--nm-bg);
@@ -117,7 +119,7 @@
   background: var(--nm-blue); color: #fff; border: 0; border-radius: 12px; box-shadow: var(--nm-blue-glow);
 }
 :root[data-theme="light"] :is(.s-btn, .send-btn):hover { opacity: 1; filter: brightness(1.05); }
-:root[data-theme="light"] :is(.s-btn, .send-btn):active { box-shadow: inset 3px 3px 7px rgba(20, 50, 140, .45); }
+:root[data-theme="light"] :is(.s-btn, .send-btn):active { box-shadow: inset 3px 3px 7px rgba(50, 30, 120, .45); }
 
 /* ---------- Thẻ, khối, bảng nổi ---------- */
 :root[data-theme="light"] :is(.gcard, .settings-card, .qs-block, .wz-card, .uz-card, .aux-card, .prov-card, .kn-panel,
@@ -145,7 +147,7 @@
   color: var(--text);
 }
 :root[data-theme="light"] :is(.js-input, .voice-input, textarea, input, select):focus {
-  outline: none; border-color: var(--accent-line); box-shadow: var(--nm-in-sm), 0 0 0 3px rgba(61, 109, 242, .12);
+  outline: none; border-color: var(--accent-line); box-shadow: var(--nm-in-sm), 0 0 0 3px rgba(106, 75, 214, .12);
 }
 /* ô nhập trong thanh soạn trên điện thoại vẫn trong suốt như cũ */
 @media (max-width: 860px) {
@@ -172,10 +174,10 @@
 /* ---------- Trò chuyện ---------- */
 :root[data-theme="light"] .msg-user .bubble { background: var(--nm-bg); border: 0; box-shadow: var(--nm-out-sm); color: var(--text); }
 :root[data-theme="light"] .msg-javis .bubble { background: var(--nm-bg); border: 0; box-shadow: var(--nm-in-sm); }
-:root[data-theme="light"] .msg-javis .bubble code { background: rgba(152, 166, 190, .16); color: var(--accent2-ink); }
+:root[data-theme="light"] .msg-javis .bubble code { background: rgba(178, 160, 140, .16); color: var(--accent2-ink); }
 
 /* ---------- Thanh cuộn mảnh ---------- */
-:root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(152, 166, 190, .45); border-radius: 8px; }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(178, 160, 140, .45); border-radius: 8px; }
 :root[data-theme="light"] ::-webkit-scrollbar-track { background: transparent; }
 
 @media (prefers-reduced-motion: reduce) {

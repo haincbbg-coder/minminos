@@ -4,6 +4,11 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.94] - 2026-09-30
+### Cải thiện
+- **Màu cả app đồng bộ với đồ thị não quả cầu**: giao diện nổi mềm đổi sang nền kem ấm, chữ và nút chính màu tím, điểm nhấn cam, cùng tông với khoang đồ thị (giấy ngà, quầng tím).
+- **Quả cầu tri thức rõ liên kết hơn**: dây nối giữa các ghi chú đậm và dày hơn nên thấy rõ kiến thức nối với nhau. Lăn chuột để phóng to thu nhỏ, kéo để di chuyển, rê chuột vào một chấm để xem các chấm liên quan.
+
 ## [0.64.93] - 2026-09-30
 ### Sửa lỗi
 - **Đồ thị não đúng mẫu**: chỉ còn một bản là đồ thị gốc (quả cầu chấm có đường nối, tên thư mục chữ tím đậm, "SẴN SÀNG" trên lưới). Bản 0.64.92 giữ nhầm Thiên hà 3D (lõi cam, vòng quỹ đạo). Hai bản Thiên hà đã bỏ.
