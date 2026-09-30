@@ -18,6 +18,14 @@ thuế lên lượt chat nào cả.
   `origin/main`; sau khi merge, xác nhận luồng build/phát hành bản cập nhật thành công.
   Không coi việc merge code là đã phát hành xong nếu bản mới chưa được xuất bản.
 
+## Số phiên bản theo lịch (từ 26.10.1)
+
+Chủ repo chốt 2026-10-01: bỏ dòng 0.x, đánh số `năm.tháng.lần` - `26.10.1` là bản thứ nhất của
+tháng 10 năm 2026, bản sau trong tháng là `26.10.2`, sang tháng 11 thì về `26.11.1`. Vẫn là ba số
+nên mọi chỗ so phiên bản (thẻ ảnh GHCR, `/version`, nút Cập nhật) vẫn chạy, và 26.x lớn hơn mọi
+bản 0.x cũ. Nhật ký các bản 0.x đã xoá khỏi CHANGELOG.md theo ý chủ repo (lịch sử vẫn còn trong git).
+Chốt tương thích của gói trong kho coi bản đánh số lịch như 0.99.0 (xem `packs._hop_compat`).
+
 ## Đặt xí chỗ số phiên bản TRƯỚC khi code
 
 Chủ repo yêu cầu 2026-09-22, sau ba lần trùng số liên tiếp: 0.63.3, 0.63.8 và 0.63.10 đều bị

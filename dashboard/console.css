@@ -2279,3 +2279,56 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 .mn-nhung-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text2); }
 .mn-nhung-bar a { flex: none; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .mn-nhung-frame { flex: 1 1 auto; width: 100%; border: 0; border-radius: 16px; background: var(--bg2); box-shadow: var(--shadow-1); }
+
+/* 26.10.1 Ứng dụng MinMin trong Chợ MinMin */
+.ud-khoi { margin-top: 16px; }
+.ud-khoi h4 { margin: 0 0 10px; font-size: 14px; }
+.ud-luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.ud-the { display: flex; gap: 12px; padding: 14px; border-radius: 16px; background: var(--surface-2); box-shadow: var(--shadow-1); }
+.ud-ic { flex: none; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  background: var(--accent-wash-2); color: var(--accent-ink, var(--accent)); }
+.ud-ic svg { width: 22px; height: 22px; }
+.ud-nd { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ud-nd p { margin: 2px 0 6px; font-size: 13px; color: var(--text2); line-height: 1.45; }
+.ud-tt { font-size: 11.5px; color: var(--text3); }
+.ud-tt.on { color: var(--green, #2f9d62); font-weight: 600; }
+.ud-nut { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* 26.10.1 Nút Cập nhật trên thanh bên + thẻ báo + hộp thoại */
+.rail-capnhat {
+  display: flex; align-items: center; gap: 10px; width: 100%; margin: 6px 0 4px;
+  padding: 8px 10px 8px 14px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--surface-2); color: var(--text2); font-family: var(--font-ui); font-size: 13px;
+}
+.rail-capnhat:hover { color: var(--text); background: var(--surface-3); }
+.rail-capnhat .cn-ic { position: relative; display: flex; }
+.rail-capnhat .cn-ic svg { width: 18px; height: 18px; }
+.rail-capnhat .cn-cham { display: none; position: absolute; top: -3px; right: -4px; width: 9px; height: 9px;
+  border-radius: 50%; background: #e5484d; box-shadow: 0 0 0 2px var(--rail-bg); }
+.rail-capnhat.co-moi { color: #fff; background: linear-gradient(145deg, #8a6cf0, #5b3fd0); font-weight: 600; }
+.rail-capnhat.co-moi .cn-cham { display: block; }
+.rail.collapsed .rail-capnhat { justify-content: center; padding: 9px 0; }
+.rail.collapsed .rail-capnhat .cn-chu { display: none; }
+.cn-bao {
+  position: fixed; left: 200px; bottom: 20px; z-index: 900; display: flex; gap: 12px; max-width: 360px;
+  padding: 14px 16px; border-radius: 16px; background: var(--panel-solid, #fff); color: var(--text);
+  box-shadow: var(--shadow-3); border: 1px solid var(--accent-line); animation: cnVao .3s ease;
+}
+@keyframes cnVao { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.cn-bao-ic { flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  background: var(--accent-wash-2); color: var(--accent-ink, var(--accent)); }
+.cn-bao-nd { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.cn-bao-nut { display: flex; gap: 8px; margin-top: 6px; }
+.cn-hop-nen { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+  background: var(--scrim); padding: 16px; }
+.cn-hop { width: min(440px, 100%); border-radius: 18px; background: var(--panel-solid, #fff); color: var(--text);
+  box-shadow: var(--shadow-3); padding: 18px 20px; }
+.cn-hop-dau { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+.cn-hop-than p { margin: 8px 0; line-height: 1.5; font-size: 14px; }
+.cn-hop-than svg { width: 16px; height: 16px; vertical-align: -3px; }
+.cn-phu { color: var(--text3); font-size: 12.5px !important; }
+.cn-canh { color: var(--warn-ink, #c47a14); }
+.cn-lenh { display: block; padding: 8px 10px; border-radius: 8px; background: var(--code-bg); color: var(--code-ink); font-size: 12.5px; }
+.cn-hop-chan { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+@media (max-width: 860px) { .cn-bao { left: 12px; right: 12px; bottom: 84px; max-width: none; } }
+.rail-capnhat .cn-chu { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }

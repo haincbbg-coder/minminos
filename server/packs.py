@@ -135,11 +135,19 @@ def _hop_compat(dai: str) -> tuple[bool, str]:
         print("[packs] không đọc được VERSION, bỏ qua chốt tương thích", file=sys.stderr)
         return True, ""
     hien = _ver(ban)
+    # Từ 26.10.1 MinMin đánh số theo LỊCH (năm.tháng.lần). Gói trong kho vẫn ghi dải theo số cũ
+    # 0.x ('>=0.57.0 <2.0.0'), nên so thẳng 26.10.1 thì mọi dải có trần sẽ trượt. Bản đánh số
+    # lịch được tính như bản cuối của dòng 0.x để các dải cũ vẫn khớp.
+    hien_that = hien
+    if hien[0] >= 26:
+        hien = (0, 99, 0)
     for phan in dai.split():
         m = re.match(r"^(>=|<=|>|<|==|=)?\s*v?([0-9][0-9.\-+a-zA-Z]*)$", phan.strip())
         if not m:
             continue
         op, moc = m.group(1) or ">=", _ver(m.group(2))
+        # Mốc cũng đã theo lịch (gói viết sau 26.10.1) thì so với số thật.
+        hien = hien_that if moc[0] >= 26 else (hien if hien_that[0] < 26 else (0, 99, 0))
         ok = {">=": hien >= moc, "<=": hien <= moc, ">": hien > moc,
               "<": hien < moc, "==": hien == moc, "=": hien == moc}[op]
         if not ok:

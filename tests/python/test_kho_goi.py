@@ -342,7 +342,8 @@ check("bật/tắt tạm chuyển lên thẻ chứ không mất",
 # Nút chọn tệp nằm TRONG thanh công cụ của lưới, tức trên đầu - không phải cuối trang.
 check("nút cài từ tệp .zip nằm trên thanh công cụ của lưới",
       src_js.index('id="pkChon2"') < src_js.index('id="pkGrid"'))
-check("tên hiển thị là Javis Store", "◆ MinMin Store" in src_js)
+# 26.10.1: tiêu đề kho lấy từ từ điển (nhãn trang, "Chợ MinMin").
+check("tên hiển thị của kho lấy theo nhãn trang", "◆ ' + tw(\"page.packs.label\")" in src_js)
 
 # Mục trong danh mục trỏ vào tệp NGAY TRONG REPO thì tệp đó phải có thật và đúng dấu vân tay.
 # Đây là lỗi khó thấy nhất của một kho: index đã trỏ sang bản mới mà tệp thì quên chưa đẩy,

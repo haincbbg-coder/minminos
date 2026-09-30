@@ -115,9 +115,9 @@
     // Hộp thư khách về nhóm Kết nối & khách, đứng cạnh Kênh nhắn (cùng là chuyện khách nhắn tới).
     // Chợ MinMin vẫn cạnh Nguồn dữ liệu vì phần lớn gói trong chợ là kết nối (xem 0.55.37).
     { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON["Bộ não"],   ids: ["home", "chat", "files", "learn"] },
-    { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["kanban", "selfimprove", "matnha"] },
+    { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["kanban", "selfimprove"] },
     { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON["Năng lực"], ids: ["workspace", "skills", "plugins"] },
-    { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["mcp", "packs", "channels", "conversations", "models"] },
+    { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["mcp", "packs", "channels", "conversations", "models", "matnha"] },
     { id: "code", get label() { return t("nav.group.code"); },        icon: GICON["Code"],     ids: ["terminal", "coding"] },
     { id: "he_thong", get label() { return t("nav.group.he_thong"); },    icon: GICON["Hệ thống"], ids: ["settings", "share", "account"], foot: true },
   ];
@@ -143,12 +143,43 @@
   let _hienXuongCode = false;
   try { _hienXuongCode = localStorage.getItem("mm.hien_xuong_code") === "1"; } catch (e) {}
   if (!_hienXuongCode) { RAIL_AN.add("terminal"); RAIL_AN.add("coding"); }
+  // 26.10.1: Kho tài liệu ẩn khỏi thanh bên theo ý chủ repo (trang vẫn mở được bằng lệnh nói,
+  // bấm link file trong chat vẫn tới đúng chỗ).
+  RAIL_AN.add("files");
+
+  // ỨNG DỤNG trong Chợ MinMin (26.10.1). Mỗi ứng dụng là một trang có sẵn trong app, "cài" =
+  // hiện lên thanh bên, "gỡ" = ẩn đi. Trạng thái lưu ở máy chủ (settings.dashboard.apps) để
+  // theo người chứ không theo máy. Mặc định đã cài.
+  const APP_MINMIN = ["matnha"];
+  const APP_AN = new Set();
+  function _apDungApp(apps) {
+    APP_AN.clear();
+    APP_MINMIN.forEach(id => { if (apps && apps[id] === false) APP_AN.add(id); });
+    try { const nav = window.Alpine && Alpine.store("nav"); if (nav) nav.i18nTick++; } catch (e) {}
+  }
+  if (typeof window !== "undefined") window.JavisApps = {
+    ds: () => APP_MINMIN.slice(),
+    daCai: (id) => !APP_AN.has(id),
+    async dat(id, on) {
+      if (!APP_MINMIN.includes(id)) return false;
+      const apps = {}; APP_MINMIN.forEach(a => { apps[a] = !APP_AN.has(a); });
+      apps[id] = !!on;
+      const f = new FormData();
+      f.append("section", "dashboard");
+      f.append("data", JSON.stringify({ apps }));
+      const r = await fetch("/settings", { method: "POST", body: f }).catch(() => null);
+      if (!r || !r.ok) return false;
+      _apDungApp(apps);
+      return true;
+    },
+  };
+  if (typeof fetch === "function") fetch("/settings").then(r => r.json()).then(j => _apDungApp(((j || {}).dashboard || {}).apps)).catch(() => {});
   // Trả về [{label, foot, items:[...]}], bỏ id không tồn tại. Mục nào chưa xếp nhóm → dồn vào "Khác".
   function railGroups() {
     const seen = new Set();
     const groups = RAIL_GROUPS.map(g => {
       const items = (g.ids || [])
-        .map(id => { seen.add(id); return RAIL_AN.has(id) ? null : RAIL_BY_ID[id]; })
+        .map(id => { seen.add(id); return (RAIL_AN.has(id) || APP_AN.has(id)) ? null : RAIL_BY_ID[id]; })
         .filter(Boolean);
       return { label: g.label, icon: g.icon || "", foot: !!g.foot, items };
     }).filter(g => g.items.length);
@@ -157,7 +188,7 @@
     // nào, nên `seen` không bao giờ chứa nó, nên nó rơi vào nhánh "dồn vào nhóm cuối" và
     // hiện ra ở cuối nhóm Hệ thống - đúng chỗ chẳng ai ngờ (chủ repo thấy 21/09). Chú thích
     // của RAIL_AN thì vẫn khẳng định nó đã bị ẩn.
-    const rest = RAIL_ITEMS.filter(i => !seen.has(i.id) && !RAIL_AN.has(i.id));
+    const rest = RAIL_ITEMS.filter(i => !seen.has(i.id) && !RAIL_AN.has(i.id) && !APP_AN.has(i.id));
     if (rest.length) {
       const foot = groups.find(g => g.foot);
       if (foot) foot.items.push(...rest); else groups.push({ label: t("nav.group.khac"), foot: false, items: rest });
