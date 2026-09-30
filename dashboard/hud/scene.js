@@ -89,7 +89,26 @@ void main(){
   float ease = smoothstep(0.0, 1.0, clamp(uAssemble*1.35 - aSeed*0.35, 0.0, 1.0));
   vec3 p = mix(aScatter, target, ease);
 
-  p += wobble(target, uTime, aSeed) * (0.004 + uEnergy*0.04);
+  // ---- SONG DONG LIEN TUC (0.64.87): hat khong con dung im ----
+  float h1 = hash(aSeed*13.0), h2 = hash(aSeed*7.3), h3 = hash(aSeed*29.1);
+  // 1) troi nhe quanh vi tri (tho), manh hon khi co giong
+  p += wobble(target, uTime*0.8, aSeed) * (0.009 + uEnergy*0.04);
+  // 2) chay doc duong dong muc: hat truot qua lai theo vong ngang cua hinh
+  float truot = 0.05 * sin(uTime*(0.35 + h1*0.5) + aSeed*40.0) * (1.0 - uForm.z);
+  float ct = cos(truot), st = sin(truot);
+  p.xz = vec2(ct*p.x - st*p.z, st*p.x + ct*p.z);
+  // 3) song nang luong di tu duoi len tren, hat trong song phong ra ngoai mot chut
+  float quet = fract(uTime*0.16);
+  float song = 1.0 - smoothstep(0.0, 0.045, abs((p.y+1.6)/3.6 - quet));
+  p += normalize(vec3(p.x, 0.0001, p.z)) * song * 0.018;
+  // 4) tan lua: 3% so hat bay len roi tat, lap lai
+  float tanLua = step(0.97, h2);
+  float bay = fract(uTime*(0.05 + h3*0.06) + aSeed*3.0);
+  p += vec3(sin(uTime*0.7 + aSeed*9.0)*0.05, bay*0.55, cos(uTime*0.5 + aSeed*5.0)*0.05) * tanLua * ease;
+  // 5) nhap nhay: moi hat co nhip rieng
+  float nhay = 0.5 + 0.5*sin(uTime*(1.2 + h1*3.3) + aSeed*62.83);
+  // 6) xung than kinh: vai hat loe sang chop nhoang
+  float xung = pow(max(0.0, sin(uTime*(0.8 + h3*1.6) + aSeed*97.0)), 40.0) * step(0.9, h1);
 
   // STATE: 0 cho, 1 nghe, 2 nghi, 3 noi, 4 loi
   float listening = step(0.5, uState)*step(uState, 1.5);
@@ -109,12 +128,17 @@ void main(){
   vec3 nv = normalize(normalMatrix * quayHuong(aNrmB, aInfoB.z));
   float rim = 1.0 - abs(dot(nv, normalize(-mv.xyz)));
   vRim = pow(rim, 1.8) * uForm.w;
+  // vien sang lung linh: gon song chay vong quanh dau va vai
+  vRim *= 0.72 + 0.28*sin(atan(p.z, p.x)*3.0 - uTime*1.3 + p.y*5.0);
   float size = uSize * (0.7 + hash(aSeed*91.0)*0.6 + aZone*1.1*(0.5+uEnergy)) * (1.0 - 0.1*uForm.w + vRim*1.6);
+  size *= 0.82 + 0.36*nhay + xung*1.6 + song*0.5;
   gl_PointSize = size * uPixel * (3.2 / -mv.z);
 
   vZone = aZone;
-  vGlow = band * thinking + aZone * (0.4 + uEnergy*0.9) + speaking*uEnergy*0.2;
+  vGlow = band * thinking + aZone * (0.4 + uEnergy*0.9) + speaking*uEnergy*0.2 + song*0.45 + xung*1.4;
   vAlpha = mix(0.35, 1.0, ease) * info.y * mix(1.0, 0.55 + 0.45*max(vRim*1.4, aZone), uForm.w);
+  vAlpha *= 0.62 + 0.38*nhay;
+  vAlpha *= mix(1.0, (1.0 - bay) * smoothstep(0.0, 0.15, bay) * 1.6, tanLua);
 }`;
 
 const FRAG = /* glsl */`

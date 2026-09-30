@@ -39,6 +39,15 @@ export class VoiceIO {
     this.onStatus = opts.onStatus || (() => {});
     this.onSpeakStart = opts.onSpeakStart || (() => {});
     this.onSpeakEnd = opts.onSpeakEnd || (() => {});
+    this.onHeard = opts.onHeard || (() => {});     // moi cau may nghe duoc (ke ca khi chua goi)
+    this.onEngine = opts.onEngine || (() => {});   // doi bo nhan giong: "sr" | "whisper"
+    let ls = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    // Noi lien: moi cau noi deu la lenh, khong can "Min Min oi" (bat tat o bang Tro chuyen)
+    this.noiLien = ls("minmin.hud.noilien") === "1";
+    // Bo nhan giong: auto = trinh duyet, loi thi tu chuyen Whisper; sr; whisper
+    this.cheDoNghe = ["auto", "sr", "whisper"].includes(ls("minmin.hud.nghe")) ? ls("minmin.hud.nghe") : "auto";
+    this.engine = "";
+    this.loiSR = [];               // thoi diem cac lan nhan giong cua trinh duyet bao loi
     this.awake = false;            // da nghe tu goi, dang cho cau lenh
     this.speaking = false;
     this.enabled = false;
@@ -64,36 +73,136 @@ export class VoiceIO {
 
   async start() {
     this._audio();
-    if (!this.supported) { this.onStatus("no-sr"); return false; }
-    // mic rieng de do nang luong khi dang nghe (nhan dang giong cua trinh duyet khong cho do)
+    // mic rieng: do nang luong, va la nguon ghi am cho Whisper khi trinh duyet khong nghe duoc
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-      const src = this.ctx.createMediaStreamSource(stream);
-      this.inAnalyser = this.ctx.createAnalyser(); this.inAnalyser.fftSize = 512;
-      src.connect(this.inAnalyser);
+      if (!this.micStream || !this.micStream.active) {
+        this.micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        const src = this.ctx.createMediaStreamSource(this.micStream);
+        this.inAnalyser = this.ctx.createAnalyser(); this.inAnalyser.fftSize = 512;
+        src.connect(this.inAnalyser);
+      }
     } catch (e) { this.onStatus("no-mic"); return false; }
     this.enabled = true;
-    this._startRec();
+    const whisper = this.cheDoNghe === "whisper" || (!this.supported && this.cheDoNghe !== "sr");
+    if (!whisper && !this.supported) { this.onStatus("no-sr"); this.enabled = false; return false; }
+    this._dungEngine();
+    if (whisper) this._startWhisper(); else { this._setEngine("sr"); this._startRec(); }
     this.onStatus("listening-for-wake");
     return true;
   }
 
+  // Tat mic THAT SU (tra lai micro cho may, den mic tren trinh duyet tat)
   stop() {
     this.enabled = false;
-    try { this.rec && this.rec.abort(); } catch (e) {}
+    this._setAwake(false);
+    this._dungEngine();
+    try { this.micStream && this.micStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+    this.micStream = null; this.inAnalyser = null;
     this.onStatus("off");
   }
 
+  setCheDoNghe(m) {
+    this.cheDoNghe = ["auto", "sr", "whisper"].includes(m) ? m : "auto";
+    try { localStorage.setItem("minmin.hud.nghe", this.cheDoNghe); } catch (e) {}
+    if (this.enabled) { this.enabled = false; this._dungEngine(); this.start(); }
+  }
+  setNoiLien(v) {
+    this.noiLien = !!v;
+    try { localStorage.setItem("minmin.hud.noilien", v ? "1" : "0"); } catch (e) {}
+  }
+
+  _setEngine(e) { if (this.engine !== e) { this.engine = e; this.onEngine(e); } }
+  _dungEngine() {
+    const r = this.rec; this.rec = null;
+    try { r && r.abort(); } catch (e) {}
+    clearInterval(this._vad); this._vad = null;
+    if (this._recW) this._dungGhi(true);
+  }
+
   _startRec() {
-    if (!this.enabled || this.speaking) return;
+    if (!this.enabled || this.speaking || this.engine !== "sr") return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
     rec.lang = this.lang; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 3;
     rec.onresult = (e) => this._onResult(e);
-    rec.onerror = (e) => { if (e.error === "not-allowed") { this.enabled = false; this.onStatus("no-mic"); } };
+    rec.onerror = (e) => {
+      if (e.error === "not-allowed") { this.enabled = false; this.onStatus("no-mic"); return; }
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      // network / service-not-allowed / language-not-supported / audio-capture: trinh duyet
+      // (Coc Coc, Brave, Chrome khong co dich vu nghe) khong nghe duoc. Bao ro, va o che do Tu
+      // chon thi chuyen sang Whisper tren may chu MinMin.
+      this.onStatus("sr-error", e.error);
+      const now = performance.now();
+      this.loiSR = this.loiSR.filter(t => now - t < 30000).concat(now);
+      if (this.cheDoNghe === "auto" && (e.error !== "network" || this.loiSR.length >= 2)) {
+        this.rec = null; try { rec.abort(); } catch (x) {}
+        this._startWhisper();
+      }
+    };
     rec.onend = () => { if (this.rec === rec) setTimeout(() => this._startRec(), 250); };
     this.rec = rec;
     try { rec.start(); } catch (e) {}
+  }
+
+  // ---------- Whisper (0.64.87): tu ghi am khi co tieng noi, gui /stt cua may chu ----------
+  // Dung khi trinh duyet khong co nhan giong (hoac bo chon). Can Groq API key o trang Models.
+  _startWhisper() {
+    if (typeof MediaRecorder === "undefined" || !this.micStream) { this.onStatus("sr-error", "no-recorder"); return; }
+    this._setEngine("whisper");
+    this._nen = 0.01;
+    clearInterval(this._vad);
+    this._vad = setInterval(() => this._vadTick(), 50);
+  }
+
+  _vadTick() {
+    if (!this.enabled || !this.inAnalyser) return;
+    if (this.speaking) { if (this._recW) this._dungGhi(true); return; }
+    const lv = rms(this.inAnalyser, this._buf), now = performance.now();
+    // nen on cua phong: tang cham, giam nhanh
+    this._nen = lv < this._nen ? this._nen * 0.9 + lv * 0.1 : this._nen * 0.995 + lv * 0.005;
+    const to = lv > Math.max(0.03, this._nen * 2.6);
+    if (!this._recW) { if (to) this._batDauGhi(now); return; }
+    if (to) this._lanCuoi = now;
+    if (now - this._lanCuoi > 900 || now - this._wT0 > 12000) this._dungGhi(false);
+  }
+
+  _batDauGhi(now) {
+    const loai = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"].find(t => MediaRecorder.isTypeSupported?.(t)) || "";
+    let mr;
+    try { mr = new MediaRecorder(this.micStream, loai ? { mimeType: loai } : undefined); } catch (e) { return; }
+    const phan = [];
+    mr.ondataavailable = (e) => { if (e.data && e.data.size) phan.push(e.data); };
+    mr.onstop = () => { if (!mr._huy && now) this._guiWhisper(new Blob(phan, { type: mr.mimeType || "audio/webm" }), performance.now() - this._wT0); };
+    this._recW = mr; this._wT0 = now; this._lanCuoi = now;
+    mr.start();
+    this.onStatus("whisper-rec");
+  }
+
+  _dungGhi(huy) {
+    const mr = this._recW; this._recW = null;
+    if (!mr) return;
+    mr._huy = huy;
+    try { mr.stop(); } catch (e) {}
+    if (!huy) this.onStatus("whisper-stop");
+  }
+
+  async _guiWhisper(blob, dai) {
+    if (dai < 450 || blob.size < 3000) { this.onStatus("whisper-idle"); return; }   // tieng dong ngan
+    this.onStatus("whisper-send");
+    try {
+      const fd = new FormData();
+      fd.append("file", blob, "hud." + (/mp4/.test(blob.type) ? "m4a" : /ogg/.test(blob.type) ? "ogg" : "webm"));
+      fd.append("lang", "vi");
+      const r = await fetch("/stt", { method: "POST", body: fd, credentials: "same-origin" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) {
+        this.onStatus("whisper-error", j.ly_do || ("HTTP " + r.status));
+        return;
+      }
+      this.onStatus("whisper-idle");
+      const text = String(j.text || "").trim();
+      if (text) this._xuLy([text], true);
+    } catch (e) { this.onStatus("whisper-error", "mang"); }
   }
 
   // Nhan cau lenh truc tiep (bam loi / phim cach) khong can tu goi.
@@ -107,22 +216,29 @@ export class VoiceIO {
 
   _onResult(e) {
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      const r = e.results[i];
-      // thu moi phuong an nghe, phuong an nao co tu goi thi lay
-      let text = r[0].transcript, hit = null;
-      for (let k = 0; k < r.length && !hit; k++) { const h = splitWake(r[k].transcript); if (h) { hit = h; text = r[k].transcript; } }
-      if (!r.isFinal) {
-        if (hit && !this.awake) { this._setAwake(true); this.onWake(hit.rest); }
-        if (this.awake) this.onInterim(hit ? hit.rest : text);
-        continue;
-      }
-      if (hit) {
-        if (hit.rest && hit.rest.split(" ").length >= 2) { this._setAwake(false); this.onCommand(hit.rest); }
-        else { this._setAwake(true); this.onWake(hit.rest); }
-      } else if (this.awake && text.trim()) {
-        this._setAwake(false);
-        this.onCommand(text.trim());
-      }
+      const r = e.results[i], alts = [];
+      for (let k = 0; k < r.length; k++) alts.push(r[k].transcript);
+      this._xuLy(alts, r.isFinal);
+    }
+  }
+
+  // Mot cau nghe duoc (tu trinh duyet hoac Whisper): tim tu goi, hoac la lenh khi dang thuc /
+  // dang o che do Noi lien. `alts`: cac phuong an nghe, phuong an nao co tu goi thi lay.
+  _xuLy(alts, final) {
+    let text = alts[0] || "", hit = null;
+    for (const a of alts) { const h = splitWake(a); if (h) { hit = h; text = a; break; } }
+    this.onHeard(text, final, !!hit);
+    if (!final) {
+      if (hit && !this.awake) { this._setAwake(true); this.onWake(hit.rest); }
+      if (this.awake || this.noiLien) this.onInterim(hit ? hit.rest : text);
+      return;
+    }
+    if (hit) {
+      if (hit.rest && hit.rest.split(" ").length >= 2) { this._setAwake(false); this.onCommand(hit.rest); }
+      else { this._setAwake(true); this.onWake(hit.rest); }
+    } else if ((this.awake || this.noiLien) && text.trim() && text.trim().split(/\s+/).length >= 2) {
+      this._setAwake(false);
+      this.onCommand(text.trim());
     }
   }
 
@@ -243,6 +359,8 @@ export class VoiceIO {
     if (this.awake && this.inAnalyser) return rms(this.inAnalyser, this._buf) * 4;
     return 0;
   }
+  // Muc am micro 0..1 luc nao cung do (cho bang Tro chuyen va Luong phan tich)
+  micLevel() { return this.inAnalyser ? Math.min(1, rms(this.inAnalyser, this._buf) * 4) : 0; }
 }
 
 function rms(an, buf) {

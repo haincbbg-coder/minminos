@@ -5,8 +5,22 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
 ## [0.64.87] - 2026-09-30
+### Thêm mới
+- **Điều khiển máy tính bằng tay**: nút Máy tính trên HUD. Trỏ ngón để di chuột, chụm nhanh để bấm, chụm giữ rồi mở ra để phóng to, chữ L chụm lại để thu nhỏ, chữ V đưa lên xuống để cuộn, xòe tay vuốt để sang trang, nắm giữ để tạm dừng. Cần chạy MinMin Tay trên máy Windows (bấm Tải MinMin-Tay.bat, dán mã ghép nối).
+- **Bảng Trò chuyện** dưới đồng hồ: công tắc bật tắt micro, dòng trạng thái (đang chờ gọi, đang nghe, đang nói, lỗi gì), chữ MinMin nghe được và câu trả lời. Có chế độ Nói liền, không cần gọi "Min Min ơi".
+- **Luồng phân tích** góc phải dưới: khung hình, micro, giọng ra, tốc độ tay, độ tin cậy, độ trễ chạy liên tục, kèm dòng sự kiện.
+- **Nghe bằng Whisper**: trình duyệt không nhận được giọng (Cốc Cốc, Brave) thì HUD tự chuyển sang Whisper trên máy chủ (cần Groq key).
+- Cài đặt → Giọng nói có nút **Nghe thử**.
+
 ### Cải thiện
-- (đang làm) HUD: khóa tay điều khiển, điều khiển máy bằng cử chỉ, bảng trò chuyện, luồng phân tích, hạt sáng chuyển động, chẩn đoán ElevenLabs.
+- **Khóa một tay**: chỉ tay phải (hoặc tay trái, chọn ở bảng Cử chỉ) điều khiển, tay kia bị bỏ qua.
+- **Hết nhảy lung tung**: mỗi lúc chỉ một nguồn điều khiển. Tay trước, mất tay 0,8 giây mới nhìn theo mặt. Bắt chước toàn thân thành chế độ riêng, mặc định tắt. Góc phải có dòng ĐIỀU KHIỂN cho biết ai đang điều khiển.
+- **Bảng Cử chỉ có hình minh họa** từng động tác, chia hai tab: điều khiển MinMin và điều khiển máy tính, luyện được cả hai.
+- **Hạt sáng chuyển động liên tục**: nhấp nháy, trượt theo đường viền, sóng năng lượng chạy từ dưới lên, tàn lửa bay, xung sáng.
+- Camera xem trước chuyển sang góc trái dưới, không che chữ trả lời.
+
+### Sửa lỗi
+- **ElevenLabs báo rõ lỗi**: thay vì câu chung chung, HUD và Cài đặt nói đúng nguyên do (key sai, key thiếu quyền, gói Miễn phí bị chặn khi gọi từ VPS, giọng Thư viện cần gói trả phí, hết ký tự, sai Voice ID).
 
 ## [0.64.86] - 2026-09-30
 ### Cải thiện

@@ -59,4 +59,47 @@ try:
     assert sent["json"] == {"text": viet, "model_id": "eleven_flash_v2_5", "language_code": "vi"}
 finally:
     httpx.AsyncClient = _goc
+
+# Lỗi ElevenLabs phải ra câu tiếng Việt nói rõ nguyên do (0.64.87), không phải câu chung chung
+g = main._eleven_giai_thich
+assert "gói Miễn phí" in g(401, {"detail": {"status": "detected_unusual_activity", "message": "Unusual activity"}})
+assert "quyền Text to Speech" in g(401, {"detail": {"status": "missing_permissions"}})
+assert "sai hoặc đã bị xóa" in g(401, {"detail": {"status": "invalid_api_key"}})
+assert "sai hoặc đã bị xóa" in g(401, None)
+assert "Thư viện" in g(402, {"detail": {"status": "paid_plan_required"}})
+assert "Voice ID" in g(404, {"detail": {"status": "voice_not_found"}})
+assert "hết số ký tự" in g(401, {"detail": {"status": "quota_exceeded"}})
+assert g(500, {"detail": {"status": "boom", "message": "x" * 400}}).startswith("ElevenLabs báo lỗi 500: ")
+assert len(g(500, {"detail": {"message": "x" * 400}})) < 200
+
+
+class _RespLoi:
+    status_code = 401
+
+    def json(self):
+        return {"detail": {"status": "detected_unusual_activity", "message": "Free Tier usage disabled"}}
+
+
+class _ClientLoi(_Client):
+    async def post(self, *a, **k):
+        return _RespLoi()
+
+
+httpx.AsyncClient = _ClientLoi
+try:
+    try:
+        asyncio.run(main._tts_elevenlabs(viet, cfg))
+        raise AssertionError("phải báo lỗi")
+    except main._LoiGiong as e:
+        assert "gói Miễn phí" in str(e)
+    # /tts trả 502 kèm đúng câu giải thích
+    from fastapi import HTTPException
+    main.cfgmod.read_settings = lambda: {"voice": {"tts_provider": "elevenlabs", **cfg["voice"]}}
+    try:
+        asyncio.run(main.tts(text=viet, voice="x", rate="+0%"))
+        raise AssertionError("phải 502")
+    except HTTPException as e:
+        assert e.status_code == 502 and "gói Miễn phí" in e.detail
+finally:
+    httpx.AsyncClient = _goc
 print("ok")

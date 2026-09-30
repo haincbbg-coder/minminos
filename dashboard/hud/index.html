@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/hud/hud.css?v=4">
+<link rel="stylesheet" href="/static/hud/hud.css?v=5">
 <script type="importmap">{ "imports": { "three": "/static/hud/vendor/three.module.min.js" } }</script>
 </head>
 <body data-state="standby">
@@ -26,25 +26,54 @@
 
   <section class="guide" id="guide" hidden aria-label="Cử chỉ tay">
     <header><h2>CỬ CHỈ TAY</h2><button type="button" class="x" id="guideX" aria-label="Đóng">×</button></header>
+    <div class="g-tabs" role="tablist">
+      <button type="button" role="tab" data-tab="hud" aria-selected="true">Điều khiển MinMin</button>
+      <button type="button" role="tab" data-tab="may" aria-selected="false">Điều khiển máy tính</button>
+    </div>
     <p class="lead" id="guideLead">Giơ tay trước camera: cử chỉ nào MinMin nhận ra sẽ sáng lên.</p>
     <ol class="g-list" id="gList">
-      <li data-g="Open_Palm"><b>Xòe bàn tay</b><span>MinMin nhìn theo tay bố</span></li>
-      <li data-g="Pointing_Up"><b>Duỗi ngón trỏ</b><span>Con trỏ · trong chế độ Vẽ là ngòi bút</span></li>
-      <li data-g="Closed_Fist"><b>Nắm tay, kéo ngang</b><span>Xoay hình sang trái / phải</span></li>
-      <li data-g="Pinch"><b>Chụm ngón cái + trỏ, kéo lên / xuống</b><span>Phóng to / thu nhỏ</span></li>
-      <li data-g="Victory"><b>Chữ V, giữ nửa giây</b><span>Đổi hình</span></li>
-      <li data-g="Thumb_Up"><b>Giơ ngón cái, giữ 1 giây</b><span>MinMin nhìn vật trước camera và nói nó là gì</span></li>
-      <li data-g="TwoHands"><b>Giơ cả hai tay qua đầu</b><span>Gọi MinMin nghe, không cần nói từ gọi</span></li>
+      <li data-tab="hud" data-g="Open_Palm"><b>Xòe bàn tay</b><span>MinMin nhìn theo tay bố</span></li>
+      <li data-tab="hud" data-g="Pointing_Up"><b>Duỗi ngón trỏ</b><span>Con trỏ · trong chế độ Vẽ là ngòi bút</span></li>
+      <li data-tab="hud" data-g="Closed_Fist"><b>Nắm tay, kéo ngang</b><span>Xoay hình sang trái / phải</span></li>
+      <li data-tab="hud" data-g="Pinch"><b>Chụm cái + trỏ, kéo lên / xuống</b><span>Phóng to / thu nhỏ hình MinMin</span></li>
+      <li data-tab="hud" data-g="Victory"><b>Chữ V, giữ nửa giây</b><span>Đổi hình</span></li>
+      <li data-tab="hud" data-g="Thumb_Up"><b>Giơ ngón cái, giữ 1 giây</b><span>MinMin nhìn vật trước camera và nói nó là gì</span></li>
+      <li data-tab="hud" data-g="TwoHands"><b>Giơ cả hai tay qua đầu</b><span>Gọi MinMin nghe, không cần nói từ gọi</span></li>
+      <li data-tab="may" data-g="M_Move" hidden><b>Duỗi ngón trỏ, di tay</b><span>Di chuột trên màn hình chính</span></li>
+      <li data-tab="may" data-g="M_Click" hidden><b>Chụm nhanh cái + trỏ rồi thả</b><span>Bấm chuột (mở link, bấm nút)</span></li>
+      <li data-tab="may" data-g="M_ZoomIn" hidden><b>Chụm giữ nửa giây rồi mở ra</b><span>Phóng to trang web, Word, PDF, ảnh</span></li>
+      <li data-tab="may" data-g="M_ZoomOut" hidden><b>Mở chữ L (cái + trỏ) rồi chụm lại</b><span>Thu nhỏ</span></li>
+      <li data-tab="may" data-g="M_Scroll" hidden><b>Chữ V, đưa lên / xuống</b><span>Cuộn trang: đưa lên là đọc tiếp, như vuốt điện thoại</span></li>
+      <li data-tab="may" data-g="M_Swipe" hidden><b>Xòe tay, vuốt nhanh sang trái / phải</b><span>Trang, ảnh, slide tiếp theo / trước đó</span></li>
+      <li data-tab="may" data-g="M_Pause" hidden><b>Nắm tay, giữ 1,5 giây</b><span>Tạm dừng / tiếp tục (gãi đầu, uống nước không bấm nhầm)</span></li>
     </ol>
     <div class="g-train" id="gTrain" hidden>
       <div class="g-step mono" id="gStep"></div>
       <div class="g-ask" id="gAsk"></div>
       <div class="g-bar"><i id="gBar"></i></div>
     </div>
+    <div class="g-set">
+      <label>Tay điều khiển
+        <select id="gHand"><option value="Right">Tay phải</option><option value="Left">Tay trái</option></select>
+      </label>
+      <label class="g-flip"><input type="checkbox" id="gFlip"> Đảo trái phải</label>
+    </div>
     <footer>
       <button type="button" id="gStart">Luyện từng bước</button>
-      <label class="g-flip"><input type="checkbox" id="gFlip"> Đảo trái phải</label>
+      <button type="button" class="ghost" id="gMay">Bật điều khiển máy</button>
     </footer>
+  </section>
+
+  <section class="guide may" id="may" hidden aria-label="Điều khiển máy tính bằng tay">
+    <header><h2>ĐIỀU KHIỂN MÁY TÍNH</h2><button type="button" class="x" id="mayX" aria-label="Đóng">×</button></header>
+    <p class="lead">Dùng tay lướt web, đọc Word, xem PDF trên màn hình chính mà không cần chuột. Cần chạy <b>MinMin Tay</b> trên máy Windows này, mỗi lần bật máy chạy một lần.</p>
+    <ol class="steps">
+      <li><button type="button" class="btn" id="mayTai">Tải MinMin-Tay.bat</button> rồi bấm đúp tệp vừa tải. Windows hỏi thì chọn <b>Thông tin thêm → Vẫn chạy</b>. Máy chưa có Python sẽ tự cài.</li>
+      <li>Cửa sổ đen hiện <b>mã ghép nối</b> (đã chép sẵn). Dán vào ô dưới, bấm Kết nối.</li>
+    </ol>
+    <div class="may-ma"><input id="mayMa" placeholder="Dán mã ghép nối (Ctrl+V)" autocomplete="off" spellcheck="false"><button type="button" class="btn" id="mayNoi">Kết nối</button></div>
+    <div class="may-st" id="maySt" role="status"></div>
+    <footer><span class="dim">Chỉ nghe trong máy này, cần đúng mã mới điều khiển được.</span><a id="mayPy" href="/static/hud/tay/minmin-tay.py" download>Bản .py</a></footer>
   </section>
 
   <nav class="tools" id="tools" aria-label="Công cụ HUD">
@@ -52,7 +81,8 @@
     <button type="button" id="tCam" aria-pressed="false" title="Bật / tắt camera: nhìn theo mặt, điều khiển bằng tay (phím C)"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3"/></svg><span>Camera</span></button>
     <button type="button" id="tFlip" title="Đổi camera trước / sau (điện thoại)" hidden><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16m0 5v-5h5"/></svg><span>Đổi cam</span></button>
     <button type="button" id="tChuNhan" title="Đăng ký khuôn mặt chủ nhân để MinMin nhận ra bố (cần bật Camera)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"/><path d="m16.5 4.5 1.5 1.5 3-3"/></svg><span>Chủ nhân</span></button>
-    <button type="button" id="tBatChuoc" aria-pressed="true" title="Robot bắt chước cánh tay bố qua camera (phím M)"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M5 6l7 4 7-4M8 21l4-6 4 6"/></svg><span>Bắt chước</span></button>
+    <button type="button" id="tBatChuoc" aria-pressed="false" title="Chế độ Bắt chước: robot làm theo cánh tay bố, tắt cử chỉ tay (phím M)"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M5 6l7 4 7-4M8 21l4-6 4 6"/></svg><span>Bắt chước</span></button>
+    <button type="button" id="tMay" aria-pressed="false" title="Điều khiển máy tính bằng tay: di chuột, bấm, cuộn, phóng to, vuốt trang (phím P)"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M11 13V8.5a1 1 0 0 1 2 0V11l2 .5a1.5 1.5 0 0 1 1 1.6L15.6 15"/></svg><span>Máy tính</span></button>
     <button type="button" id="tGiong" aria-pressed="true" title="Giọng robot trầm khàn (phím G)"><svg viewBox="0 0 24 24"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10v4"/></svg><span>Giọng robot</span></button>
     <button type="button" id="tCuChi" title="Hướng dẫn và luyện cử chỉ tay (phím K)"><svg viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11.5v-2a1.5 1.5 0 0 1 3 0V12M14 10.5a1.5 1.5 0 0 1 3 0V12M17 11.5a1.5 1.5 0 0 1 3 0V16a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7L4.3 15a1.5 1.5 0 0 1 2.5-1.7L8 15"/></svg><span>Cử chỉ</span></button>
     <button type="button" id="tVe" aria-pressed="false" title="Vẽ thực tế: duỗi ngón trỏ trước camera để vẽ, co ngón lại để nhấc bút (phím D)"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Vẽ</span></button>
@@ -78,9 +108,34 @@
     <div class="row"><span>CÔNG CỤ ĐÃ GỌI</span><b id="toolCount">0</b></div>
     <div class="row"><span>HÌNH</span><b id="formText">CHÂN DUNG</b></div>
     <div class="row dim"><span>KHUNG HÌNH</span><b id="fps">—</b></div>
+    <div class="row" id="rowCtl" hidden><span>ĐIỀU KHIỂN</span><b id="ctlText">-</b></div>
     <div class="row" id="rowChu" hidden><span>TRƯỚC CAMERA</span><b id="chuText">—</b></div>
     <div class="row env" id="rowEnv" hidden><span>MÔI TRƯỜNG</span><b id="envText">—</b></div>
   </section>
+
+  <aside class="talk" id="talk" aria-label="Trò chuyện bằng giọng">
+    <div class="talk-h">
+      <h2>TRÒ CHUYỆN</h2>
+      <button type="button" class="sw" id="micSw" role="switch" aria-checked="false" title="Bật / tắt micro (phím T)"><i></i><span id="micSwText">MIC TẮT</span></button>
+    </div>
+    <div class="talk-st" id="talkSt" data-k="off"><i></i><span id="talkStText">Micro đang tắt · MinMin im lặng</span></div>
+    <div class="talk-lv" aria-hidden="true"><i id="talkLv"></i></div>
+    <ol class="talk-log" id="talkLog"><li class="dim">Nói “Min Min ơi” rồi nói lệnh. Chữ MinMin nghe được hiện ở đây.</li></ol>
+    <div class="talk-f">
+      <label><input type="checkbox" id="noiLien"> Nói liền, không cần gọi</label>
+      <select id="ngheSel" title="Bộ nhận giọng" aria-label="Bộ nhận giọng">
+        <option value="auto">Nghe: tự chọn</option>
+        <option value="sr">Nghe: trình duyệt</option>
+        <option value="whisper">Nghe: Whisper</option>
+      </select>
+    </div>
+  </aside>
+
+  <aside class="stream mono" id="stream" aria-label="Luồng phân tích">
+    <h2>LUỒNG PHÂN TÍCH <small id="streamT">LIVE</small></h2>
+    <div class="sp" id="spRows"></div>
+    <ol class="slog" id="slog"></ol>
+  </aside>
 
   <aside class="kpi" id="kpiBox" hidden>
     <h2>SỐ LIỆU KINH DOANH <small id="kpiUpd"></small></h2>
@@ -121,6 +176,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/hud/hud.js?v=5"></script>
+  <script type="module" src="/static/hud/hud.js?v=6"></script>
 </body>
 </html>
