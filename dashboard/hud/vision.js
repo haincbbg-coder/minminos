@@ -19,6 +19,8 @@
 // KHONG roi may, tru khi bo bam "Nhin" / ra lenh "Min Min nhin xem" - luc do MOT anh chup
 // duoc gui len MinMin cua chinh bo.
 
+import { CU_CHI_MAY } from "./dieukhien.js";
+
 const MP_VER = "1.0.1";
 const MP_CDN = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}`;
 const M_GESTURE = "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task";
@@ -77,6 +79,38 @@ export const CU_CHI = {
 
 const khoang = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
+// ---- Khoa mot tay (0.64.87) ----
+// Bo bao: dang giơ tay phai, camera bat duoc tay trai la MinMin nhay sang tay trai. Nay nhan ca
+// hai tay nhung CHI tay bo chon (mac dinh tay phai) duoc dieu khien, tay kia bo qua.
+// MediaPipe dat nhan Left/Right voi gia dinh anh DA LAT GUONG (camera selfie). Khung hinh tho
+// cua webcam KHONG lat nen nhan bi nguoc; webcam tu lat san (flip) thi nhan dung.
+export function tayThat(nhan, flip) {
+  if (nhan !== "Left" && nhan !== "Right") return "";
+  if (flip) return nhan;
+  return nhan === "Left" ? "Right" : "Left";
+}
+
+// hands: [{ lm, label (tay that), score }]; pref: "Right" | "Left"; prev: {x,y} tam ban tay luc truoc
+export function chonTay(hands, pref, prev) {
+  if (!hands || !hands.length) return null;
+  const gan = (h) => (prev ? Math.hypot(h.lm[9].x - prev.x, h.lm[9].y - prev.y) : 0);
+  if (pref === "Any") return hands.slice().sort((a, b) => gan(a) - gan(b))[0];
+  const dung = hands.filter(h => h.label === pref);
+  if (dung.length) return dung.sort((a, b) => gan(a) - gan(b))[0];
+  // Khong co tay dung ben: chi nhan khi may KHONG CHAC nhan (hay nhay nhan mot hai khung hinh)
+  // VA tay do nam dung cho tay dang dieu khien luc truoc.
+  const nghi = hands.filter(h => h.score < 0.7 && prev && gan(h) < 0.08);
+  return nghi[0] || null;
+}
+
+// Che do dieu khien: moi luc CHI MOT nguon dieu khien hinh, khong con nhay lung tung.
+//   cuchi ..... tay dieu khien HUD; khong thay tay 0,8 giay moi quay ve nhin theo mat
+//   batchuoc .. robot bat chuoc canh tay (toan than), dau nhin theo mat; cu chi tay tat
+//   maytinh ... tay dieu khien chuot / ban phim cua may tinh (qua MinMin Tay)
+export const CHE_DO = { cuchi: "CỬ CHỈ", batchuoc: "BẮT CHƯỚC", maytinh: "MÁY TÍNH" };
+export const TEN_TAY = { Right: "TAY PHẢI", Left: "TAY TRÁI" };
+export const GIU_TAY = 800;        // mat tay bao lau thi moi nhuong cho khuon mat (ms)
+
 // Chum ngon: dau ngon cai (4) sat dau ngon tro (8), so voi co ban tay (0 -> 9)
 export function laChum(lm) {
   if (!lm || lm.length < 21) return false;
@@ -86,6 +120,21 @@ export function laChum(lm) {
 
 export class Vision {
   get ready() { return !!this._g; }
+  // Robot bat chuoc canh tay chi o che do Bat chuoc (truoc 0.64.87 luc nao cung bat, gay nhay)
+  get mimic() { return this.mode === "batchuoc"; }
+  setMode(m) {
+    if (!CHE_DO[m]) return;
+    this.mode = m;
+    try { localStorage.setItem("minmin.hud.mode", m); } catch (e) {}
+    if (m !== "batchuoc") this.scene.setArms(null, null);
+    this.may && this.may.mat();
+    this._ctl = null;
+  }
+  setHand(h) {
+    this.handPref = h === "Left" ? "Left" : "Right";
+    try { localStorage.setItem("minmin.hud.hand", this.handPref); } catch (e) {}
+    this._prevHand = null;
+  }
 
   constructor(opts) {
     this.video = opts.video;          // <video> xem truoc (nho, lat guong)
@@ -98,7 +147,13 @@ export class Vision {
     this.onWake = opts.onWake || (() => {});
     this.onScene = opts.onScene || (() => {});     // danh sach do vat nhin thay
     this.onOwner = opts.onOwner || (() => {});     // "owner" | "stranger" | "" (khong co ai)
-    this.mimic = true;                              // robot bat chuoc canh tay
+    this.onControl = opts.onControl || (() => {}); // ai dang dieu khien (dong ĐIỀU KHIỂN)
+    this.may = opts.may || null;                    // DieuKhienMay (che do maytinh)
+    let ls = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    this.handPref = ls("minmin.hud.hand") === "Left" ? "Left" : "Right";
+    this.mode = CHE_DO[ls("minmin.hud.mode")] ? ls("minmin.hud.mode") : "cuchi";
+    if (this.mode === "maytinh") this.mode = "cuchi";   // may tinh phai bat lai moi lan (an toan)
+    this.stats = { ms: 0, tay: 0, conf: 0, toc: 0, mat: 0, vat: 0 };
     this.onDetect = opts.onDetect || (() => {});   // cu chi dang thay (cho bang huong dan)
     this.onLook = opts.onLook || (() => {});       // giu ngon cai = Nhin
     this.drawMode = false; this.cursor = null;
@@ -147,6 +202,7 @@ export class Vision {
     this.scene.external = null;
     this.scene.setArms(null, null);
     this.objects = []; this.onScene([]); this.who = ""; this.onOwner("");
+    this.may && this.may.mat(); this._ctl = null; this.onControl("");
     const c = this.overlay.getContext("2d"); c.clearRect(0, 0, this.overlay.width, this.overlay.height);
   }
 
@@ -162,7 +218,7 @@ export class Vision {
     const files = await mp.FilesetResolver.forVisionTasks(`${MP_CDN}/wasm`);
     const make = async (delegate) => {
       this._g = await mp.GestureRecognizer.createFromOptions(files, {
-        baseOptions: { modelAssetPath: M_GESTURE, delegate }, runningMode: "VIDEO", numHands: 1 });
+        baseOptions: { modelAssetPath: M_GESTURE, delegate }, runningMode: "VIDEO", numHands: 2 });
       this._f = await mp.FaceDetector.createFromOptions(files, {
         baseOptions: { modelAssetPath: M_FACE, delegate }, runningMode: "VIDEO" });
       // hai bo sau la phan them: hong thi van chay tay + mat
@@ -181,13 +237,31 @@ export class Vision {
     if (!this._g || v.readyState < 2 || v.currentTime === this._last) return;
     this._last = v.currentTime;
     let hand = null, gest = "", face = null;
+    const t0 = performance.now();
+    this.others = [];
     try {
       const r = this._g.recognizeForVideo(v, now);
-      hand = r.landmarks?.[0] || null;
-      gest = r.gestures?.[0]?.[0]?.categoryName || "";
+      const nhan = r.handedness || r.handednesses || [];
+      const ds = (r.landmarks || []).map((lm, i) => ({
+        lm, gest: r.gestures?.[i]?.[0]?.categoryName || "",
+        label: tayThat(nhan[i]?.[0]?.categoryName || "", this.flip), score: nhan[i]?.[0]?.score ?? 0,
+      }));
+      const c = chonTay(ds, this.anyHand ? "Any" : this.handPref, this._prevHand);
+      if (c) { hand = c.lm; gest = c.gest; this.stats.conf = c.score; }
+      this.others = ds.filter(d => d !== c).map(d => d.lm);
+      this.stats.tay = ds.length;
     } catch (e) {}
+    if (hand) {
+      const p = this._prevHand, n = { x: hand[9].x, y: hand[9].y, t: now };
+      if (p) this.stats.toc = this.stats.toc * 0.7 + 0.3 * Math.hypot(n.x - p.x, n.y - p.y) / Math.max(0.001, (now - p.t) / 1000);
+      this._prevHand = n;
+    } else {
+      this.stats.toc *= 0.8;
+      if (this._prevHand && now - this._prevHand.t > 1200) this._prevHand = null;
+    }
     this._frame++;
     try { face = this._f.detectForVideo(v, now).detections?.[0]?.boundingBox || null; } catch (e) {}
+    this.stats.mat = face ? 1 : 0;
     if (this._p && this._frame % 2 === 0) {
       try { this.pose = this._p.detectForVideo(v, now).landmarks?.[0] || null; } catch (e) { this.pose = null; }
       this._applyPose(this.pose);
@@ -204,6 +278,8 @@ export class Vision {
     if (hand && laChum(hand)) gest = "Pinch";
     this._apply(hand, gest, face);
     this._drawPreview(hand, face);
+    this.stats.ms = this.stats.ms * 0.8 + 0.2 * (performance.now() - t0);
+    this.stats.vat = this.objects.filter(o => o.name !== "person").length;
   }
 
   // ---- Toan than ----
@@ -320,14 +396,19 @@ export class Vision {
     return now - this._gSince;
   }
 
+  // Dong ĐIỀU KHIỂN: bao ai dang dieu khien hinh luc nay
+  _baoDieuKhien(t) { if (t !== this._ctl) { this._ctl = t; this.onControl(t); } }
+
   _apply(hand, gest, face) {
     const s = this.scene, now = performance.now();
+    // Che do Bat chuoc: tay KHONG dieu khien (tru khi dang Ve); dau nhin theo mat
+    if (this.mode === "batchuoc" && !this.drawMode) hand = null, gest = "";
     const giu = this._giu(gest, now);
     // cu chi da on dinh 150 ms moi coi la cu chi hien tai
     const on = giu > 150 ? gest : this._gesture;
     if (on !== this._gesture) {
       this._gesture = on;
-      this.onGesture(on && CU_CHI[on] ? CU_CHI[on] : "");
+      if (this.mode !== "maytinh" || this.drawMode) this.onGesture(on && CU_CHI[on] ? CU_CHI[on] : "");
     }
     if (on) this.onDetect(on);
     if (on !== "Closed_Fist") this._fist = null;
@@ -336,6 +417,7 @@ export class Vision {
     if (hand) {
       this._handAt = now;
       s.external = "hand";
+      const ten = TEN_TAY[this.handPref];
       this.handX = this._sx(hand[9].x);
       const tip = this._loc(this._sx(hand[8].x), hand[8].y);
       const x = tip.x, y = tip.y;
@@ -351,8 +433,21 @@ export class Vision {
           if (!last || Math.hypot(px - last[0], py - last[1]) > 1.5) this.stroke.push([px, py, now]);
         } else this.stroke = null;
         this._inkDraw();
+        this._baoDieuKhien(ten + " · VẼ");
         return;                                  // dang ve thi khong xoay / phong to
       }
+
+      if (this.mode === "maytinh" && this.may) {
+        // Dieu khien may tinh: hinh chi nhin theo tay, moi cu chi thanh lenh chuot / phim
+        const lmS = hand.map(p => ({ x: this._sx(p.x), y: p.y }));
+        const lam = this.may.capNhat(lmS, on, now);
+        if (lam) this.onDetect(lam);
+        if (lam !== this._lam) { this._lam = lam; this.onGesture(CU_CHI_MAY[lam] || ""); }
+        this._baoDieuKhien(ten + " · MÁY TÍNH" + (this.may.dung ? " · TẠM DỪNG" : ""));
+        s.setLook(x * 2 - 1, y * 2 - 1);
+        return;
+      }
+      this._baoDieuKhien(ten + " · CỬ CHỈ");
 
       if (on === "Closed_Fist") {
         const cx = this._sx(hand[9].x);
@@ -377,12 +472,20 @@ export class Vision {
       if (this.stroke && now - (this._handAt || 0) > 350) this.stroke = null;
       if (this.drawMode) { this.cursor = null; this._inkDraw(); }
       this._tip = null;
+      this.may && this.may.mat();
+      // UU TIEN: tay vua roi khoi khung (duoi 0,8 giay) thi hinh van giu huong tay, KHONG nhay
+      // sang mat ngay. Het 0,8 giay moi nhuong cho khuon mat.
+      if (this._handAt && now - this._handAt < GIU_TAY && this.mode !== "batchuoc") return;
       if (face) {
         s.external = "face";
         const vw = this.video.videoWidth || 1, vh = this.video.videoHeight || 1;
         const fx = (face.originX + face.width / 2) / vw, fy = (face.originY + face.height / 2) / vh;
         s.setLook(this._sx(fx) * 2 - 1, fy * 2 - 1);
-      } else s.external = null;
+        this._baoDieuKhien(this.mode === "batchuoc" && this.pose ? "TOÀN THÂN · BẮT CHƯỚC" : "KHUÔN MẶT");
+      } else {
+        s.external = null;
+        this._baoDieuKhien(this.mode === "batchuoc" && this.pose ? "TOÀN THÂN · BẮT CHƯỚC" : "CHUỘT");
+      }
     }
   }
 
@@ -412,6 +515,8 @@ export class Vision {
       g.strokeStyle = "rgba(255,207,90,.9)"; g.lineWidth = 1.5 * d; g.strokeRect(X, Y, W, Hh);
       g.fillStyle = "rgba(255,207,90,.95)"; g.font = `${11 * d}px system-ui`; g.fillText(tenDoVat(o.name), X + 3 * d, Y + 12 * d);
     }
+    g.fillStyle = "rgba(160,150,190,.45)";            // tay bi bo qua: mo, xam
+    for (const o of this.others || []) for (const p of o) { g.beginPath(); g.arc(this._sx(p.x) * w, p.y * h, 2 * d, 0, 7); g.fill(); }
     if (hand) {
       g.fillStyle = "#ffb066";
       for (const p of hand) { g.beginPath(); g.arc(this._sx(p.x) * w, p.y * h, 2.5 * (devicePixelRatio || 1), 0, 7); g.fill(); }

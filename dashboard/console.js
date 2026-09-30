@@ -7087,6 +7087,31 @@
       };
     }
 
+    // Nghe thử (0.64.87): đọc một câu bằng nhà cung cấp ĐÃ LƯU; lỗi thì hiện đúng câu máy chủ
+    // giải thích (key sai, gói Miễn phí bị chặn từ VPS, giọng Thư viện...), không đoán mò.
+    const testBtn = document.getElementById("vpTest");
+    if (testBtn) testBtn.onclick = async () => {
+      const st = document.getElementById("vpStatus");
+      if (!st) return;
+      st.textContent = t("settings.tts_testing");
+      let edge = "vi-VN-HoaiMyNeural";
+      try { const g = localStorage.getItem("javis.voice"); if (g) edge = g; } catch (e) {}
+      try {
+        const r = await fetch("/tts?text=" + encodeURIComponent(t("settings.tts_test_text")) + "&voice=" + encodeURIComponent(edge) + "&rate=%2B0%25", { credentials: "same-origin" });
+        if (!r.ok) {
+          let d = "";
+          try { d = (await r.json()).detail || ""; } catch (e) {}
+          st.innerHTML = WARN_ICON + " " + esc(d || ("HTTP " + r.status));
+          return;
+        }
+        const url = URL.createObjectURL(await r.blob());
+        const a = new Audio(url);
+        a.onended = () => URL.revokeObjectURL(url);
+        await a.play();
+        st.innerHTML = OK_ICON + " " + esc(t("settings.tts_test_ok"));
+      } catch (e) { st.innerHTML = WARN_ICON + " " + esc(String((e && e.message) || e)); }
+    };
+
     el.querySelectorAll("[data-settings-go]").forEach(btn => {
       btn.onclick = () => navigateTo(btn.dataset.settingsGo);
     });

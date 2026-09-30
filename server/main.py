@@ -366,6 +366,10 @@ async def _static_cache_headers(request: Request, call_next):
         resp.headers["Cache-Control"] = "no-cache"
     elif duong.startswith("/static/") and request.query_params.get("v"):
         resp.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+    elif duong.startswith("/static/hud/"):
+        # Module con của HUD (vision.js, voice.js...) được import KHÔNG kèm `?v=`: phải hỏi lại
+        # mỗi lần, kẻo bản cập nhật chạy hud.js mới với vision.js cũ (0.64.87).
+        resp.headers["Cache-Control"] = "no-cache"
     return resp
 
 CLAUDE_MD_PATH = Path(__file__).parent.parent / "CLAUDE.md"
@@ -12072,23 +12076,79 @@ def _eleven_model_cho(text: str, cau_hinh: str):
     return m, ("vi" if m == "eleven_flash_v2_5" and _CHU_VIET.search(text or "") else "")
 
 
+class _LoiGiong(RuntimeError):
+    """Lỗi giọng đọc có câu giải thích cho người dùng (hiện nguyên văn ở HUD và Cài đặt)."""
+
+
+# Mã lỗi ElevenLabs (detail.status) -> câu tiếng Việt nói rõ phải làm gì. Chủ repo báo 30/09:
+# "đã kết nối ElevenLabs nhưng không được", trong khi /tts chỉ trả câu chung chung nên không
+# ai biết vì sao. Lỗi hay gặp nhất: key thiếu quyền, gói Miễn phí bị chặn khi gọi từ VPS,
+# và giọng lấy từ Thư viện (gói Miễn phí không được dùng qua API).
+_ELEVEN_LOI = {
+    "invalid_api_key": "Key ElevenLabs sai hoặc đã bị xóa. Vào elevenlabs.io → Developers → API Keys tạo key mới rồi dán lại ở Cài đặt → Giọng nói.",
+    "missing_permissions": "Key ElevenLabs thiếu quyền Text to Speech. Tạo key mới, bật quyền Text to Speech (và Voices: Read) rồi dán lại.",
+    "detected_unusual_activity": "ElevenLabs chặn gói Miễn phí khi gọi từ máy chủ (VPS, VPN). Cần gói trả phí (Starter trở lên) để dùng từ MinMin, hoặc tạm chọn giọng Edge.",
+    "quota_exceeded": "Đã hết số ký tự trong tháng của gói ElevenLabs. Nâng gói hoặc chờ sang kỳ mới.",
+    "voice_not_found": "Không tìm thấy giọng theo Voice ID này. Giọng lấy từ Thư viện phải bấm \"Add to My Voices\" trước, rồi chép đúng Voice ID.",
+    "paid_plan_required": "Giọng này thuộc Thư viện giọng: ElevenLabs chỉ cho gói trả phí dùng qua API. Chọn giọng có sẵn (Adam, Brian, George...) hoặc nâng gói.",
+    "payment_required": "Tài khoản ElevenLabs cần thanh toán (thẻ lỗi hoặc gói hết hạn).",
+    "model_not_found": "Model ElevenLabs đã chọn không tồn tại. Ở Cài đặt → Giọng nói chọn lại model (Flash v2.5 có tiếng Việt).",
+    "too_many_concurrent_requests": "ElevenLabs đang bận vì quá nhiều câu đọc cùng lúc. Thử lại sau vài giây.",
+    "system_busy": "Máy chủ ElevenLabs đang quá tải. Thử lại sau ít phút.",
+}
+
+
+def _eleven_giai_thich(code: int, body) -> str:
+    """Câu lỗi cho người dùng từ mã HTTP + JSON lỗi của ElevenLabs. Không bao giờ chứa key."""
+    d = body.get("detail") if isinstance(body, dict) else None
+    if isinstance(d, list):
+        d = d[0] if d else None
+    status, msg = "", ""
+    if isinstance(d, dict):
+        status = str(d.get("status") or d.get("code") or "")
+        msg = str(d.get("message") or d.get("msg") or "")
+    elif isinstance(d, str):
+        msg = d
+    if status in _ELEVEN_LOI:
+        return _ELEVEN_LOI[status]
+    if code == 401:
+        return _ELEVEN_LOI["invalid_api_key"]
+    if code == 404:
+        return _ELEVEN_LOI["voice_not_found"]
+    if code == 402:
+        return _ELEVEN_LOI["payment_required"]
+    if code == 429:
+        return _ELEVEN_LOI["too_many_concurrent_requests"]
+    tail = (msg or status)[:160]
+    return f"ElevenLabs báo lỗi {code}" + (f": {tail}" if tail else ".")
+
+
 async def _tts_elevenlabs(text: str, cfg: dict) -> bytes:
     import httpx
     v = cfg.get("voice", {}) or {}
     key = v.get("elevenlabs_key", "")
     if not key:
-        raise RuntimeError("Chưa có ElevenLabs API key.")
+        raise _LoiGiong("Chưa có ElevenLabs API key. Dán key ở Cài đặt → Giọng nói rồi bấm Lưu.")
     voice_id = v.get("elevenlabs_voice") or "21m00Tcm4TlvDq8ikWAM"
     model_id, lang = _eleven_model_cho(text, v.get("elevenlabs_model") or "")
     payload = {"text": text, "model_id": model_id}
     if lang:
         payload["language_code"] = lang
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    async with httpx.AsyncClient(timeout=60) as client:
-        r = await client.post(url, headers={"xi-api-key": key, "accept": "audio/mpeg"},
-                              json=payload, params={"output_format": "mp3_44100_128"})
-        r.raise_for_status()
-        return r.content
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            r = await client.post(url, headers={"xi-api-key": key, "accept": "audio/mpeg"},
+                                  json=payload, params={"output_format": "mp3_44100_128"})
+    except httpx.HTTPError as e:
+        raise _LoiGiong("Máy chủ MinMin không kết nối được tới api.elevenlabs.io (" + type(e).__name__ + ").")
+    code = getattr(r, "status_code", 200)
+    if code >= 400:
+        try:
+            body = r.json()
+        except Exception:
+            body = None
+        raise _LoiGiong(_eleven_giai_thich(code, body))
+    return r.content
 
 
 @app.get("/tts")
@@ -12125,7 +12185,9 @@ async def tts(
         else:
             return await _edge_streaming()
     except Exception as e:
-        print(f"[TTS {provider}] {type(e).__name__}", file=sys.stderr)
+        print(f"[TTS {provider}] {type(e).__name__}: {e if isinstance(e, _LoiGiong) else ''}", file=sys.stderr)
+        if isinstance(e, _LoiGiong):
+            raise HTTPException(502, str(e))
         raise HTTPException(502, "Giọng đã chọn hiện không phát được. Vui lòng thử lại hoặc chọn giọng khác.")
     if not audio:
         raise HTTPException(502, "TTS không trả audio.")
