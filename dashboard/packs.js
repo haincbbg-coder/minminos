@@ -951,7 +951,11 @@
       return;
     }
     if (d && d.error) {
-      el.innerHTML = '<div class="cview-placeholder">' + esc(d.error) + '</div>';
+      // Kho ngoài lỗi (chưa đăng nhập, mạng...) thì Ứng dụng MinMin vẫn phải hiện: chúng có
+      // sẵn trong app, không phụ thuộc kho.
+      el.innerHTML = '<div class="cview-section kho-khoi">' + veUngDung()
+        + '<div class="cview-placeholder">' + esc(d.error) + '</div></div>';
+      noiUngDung(el);
       return;
     }
     // Bộ lọc loại thì lấy rồi XOÁ NGAY: nó là ý định của MỘT lần bấm tab. Giữ lại thì lần sau
@@ -972,13 +976,14 @@
         ? '<button class="kho-quaylai" id="pkQuayLai">← '
           + tw("store.back_to", { trang: esc(veTrang.nhan) }) + '</button>'
         : "")
-      + '<div class="cview-section kho-khoi"><h3>◆ MinMin Store</h3>'
+      + '<div class="cview-section kho-khoi"><h3>◆ ' + tw("page.packs.label") + '</h3>'
       + '<div class="gcard-meta" style="max-width:740px">' + tw("store.intro") + ' '
       + tw("store.intro_press", { nut: '<b>' + tw("store.btn.install") + '</b>' }) + '</div>'
       + (d.disabled
         ? '<div class="conn-guide" style="border-left:3px solid var(--warn,#e0a33e);padding-left:10px;margin-top:12px">'
           + tw("store.disabled_env", { bien: '<code>JAVIS_DISABLE_PACKS</code>' }) + '</div>'
         : "")
+      + veUngDung()
       + '<div id="pkKho" style="margin-top:12px"></div>'
       + '<div class="gcard-meta" style="margin-top:16px;opacity:.7">'
       + tw("store.dir_note", { duong: '<code>' + esc(d.dir || "") + '</code>' }) + ' '
@@ -993,6 +998,43 @@
     };
     const hostKho = document.getElementById("pkKho");
     if (hostKho) veKho(el, hostKho, false, loaiDau, timDau);
+    noiUngDung(el);
+  }
+
+  // ---- ỨNG DỤNG MINMIN (26.10.1) ----
+  // Ứng dụng là trang có sẵn trong app, không tải từ kho ngoài: "cài" = hiện lên thanh bên (nhóm
+  // Kết nối & khách), "gỡ" = ẩn đi. Trạng thái do console.js giữ (window.JavisApps).
+  const UNG_DUNG = [
+    { id: "matnha", icon: "eye", ten: "store.app.matnha.name", mo_ta: "store.app.matnha.desc" },
+  ];
+  function veUngDung() {
+    const A = window.JavisApps;
+    if (!A) return "";
+    const ic = (n) => (window.ic ? window.ic(n) : "");
+    return '<div class="ud-khoi"><h4>' + tw("store.app.title") + '</h4><div class="ud-luoi">'
+      + UNG_DUNG.map((u) => {
+        const cai = A.daCai(u.id);
+        return '<div class="ud-the" data-ud="' + esc(u.id) + '">'
+          + '<div class="ud-ic">' + ic(u.icon) + '</div>'
+          + '<div class="ud-nd"><b>' + tw(u.ten) + '</b>'
+          + '<span class="ud-tt' + (cai ? " on" : "") + '">' + tw(cai ? "store.app.installed" : "store.app.not_installed") + '</span>'
+          + '<p>' + tw(u.mo_ta) + '</p>'
+          + '<div class="ud-nut">'
+          + (cai ? '<button class="s-btn" data-ud-mo="' + esc(u.id) + '">' + tw("store.app.open") + '</button>'
+                 + '<button class="s-btn-ghost" data-ud-go="' + esc(u.id) + '">' + tw("store.app.remove") + '</button>'
+                 : '<button class="s-btn" data-ud-cai="' + esc(u.id) + '">' + tw("store.app.install") + '</button>')
+          + '</div></div></div>';
+      }).join("") + '</div></div>';
+  }
+  function noiUngDung(el) {
+    const A = window.JavisApps;
+    if (!A) return;
+    el.querySelectorAll("[data-ud-mo]").forEach((b) => b.onclick = () => {
+      const s = window.Alpine && Alpine.store("nav"); if (s && s.go) s.go(b.dataset.udMo);
+    });
+    const doi = (id, on) => async () => { if (await A.dat(id, on)) veLai(el); };
+    el.querySelectorAll("[data-ud-cai]").forEach((b) => b.onclick = doi(b.dataset.udCai, true));
+    el.querySelectorAll("[data-ud-go]").forEach((b) => b.onclick = doi(b.dataset.udGo, false));
   }
 
   // Mở kho với một loại đã lọc sẵn. Tab "Kho cài đặt" trên trang Trợ lý / Kỹ năng / Quy

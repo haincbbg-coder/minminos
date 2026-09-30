@@ -4494,6 +4494,13 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
             cfg["dashboard"]["graph_enabled"] = bool(patch["graph_enabled"])
         if "auto_resume" in patch:
             cfg["dashboard"]["auto_resume"] = bool(patch["auto_resume"])
+        if "apps" in patch and isinstance(patch.get("apps"), dict):
+            # Ứng dụng trong Chợ MinMin (26.10.1): chỉ nhận đúng các id đã biết, giá trị bool.
+            apps = dict(cfg["dashboard"].get("apps") or {})
+            for k in ("matnha",):
+                if k in patch["apps"]:
+                    apps[k] = bool(patch["apps"][k])
+            cfg["dashboard"]["apps"] = apps
         if "pet" in patch:
             # Linh vật góc màn hình (dashboard/pet.js). LỌC TỪNG KHOÁ chứ không nuốt cả
             # object: đây là thứ được ghi từ trình duyệt, và một object tự do trong

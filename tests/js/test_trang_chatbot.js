@@ -64,7 +64,7 @@ check("console vẫn biết id chatbots (nguồn icon, nhãn, bí danh)", /"chat
 // 0.62.4 nó rơi qua nhánh "mục chưa xếp nhóm" và hiện ra ở CUỐI nhóm Hệ thống - cạnh Tài
 // khoản, đúng chỗ chẳng ai ngờ (chủ repo thấy 21/09). Lọc phải áp cho cả nhánh đó.
 check("CANARY: mục chưa xếp nhóm cũng phải đi qua RAIL_AN",
-  /RAIL_ITEMS\.filter\(i => !seen\.has\(i\.id\) && !RAIL_AN\.has\(i\.id\)\)/.test(CON));
+  /RAIL_ITEMS\.filter\(i => !seen\.has\(i\.id\) && !RAIL_AN\.has\(i\.id\)( && !APP_AN\.has\(i\.id\))?\)/.test(CON));
 // Hidden items (including chatbots) are checked through railGroups in test_settings_tabs.js.
 check("console định tuyến sang trang Chatbot",
   /if \(id === "chatbots"\) return renderChatbots\(el\)/.test(CON));

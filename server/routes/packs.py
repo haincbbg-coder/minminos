@@ -121,7 +121,7 @@ def _connector_cua_app() -> list:
 
 
 def _tu_choi():
-    return JSONResponse({"ok": False, "error": "Cần đăng nhập vào Javis để quản lý gói."},
+    return JSONResponse({"ok": False, "error": "Cần đăng nhập vào MinMin để quản lý gói."},
                         status_code=401)
 
 
