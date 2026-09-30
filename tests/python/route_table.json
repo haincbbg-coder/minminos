@@ -3620,7 +3620,7 @@
   "trong": null
  },
  {
-  "order": 370,
+  "order": 364,
   "type": "APIRoute",
   "path": "/hud",
   "name": "hud_page",
@@ -3630,7 +3630,7 @@
   "trong": null
  },
  {
-  "order": 371,
+  "order": 365,
   "type": "APIRoute",
   "path": "/hud/kpi",
   "name": "hud_kpi",
