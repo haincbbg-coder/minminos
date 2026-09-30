@@ -443,7 +443,7 @@
     el.dataset.out = "0";
     el.dataset.menu = "0";
     el.innerHTML =
-      '<button type="button" class="pet-body" aria-label="Javis">' +
+      '<button type="button" class="pet-body" aria-label="MinMin">' +
         '<svg viewBox="0 0 320 320" aria-hidden="true">' +
           '<g class="pet-rig">' +
             '<path class="pet-ring" pathLength="360"></path>' +

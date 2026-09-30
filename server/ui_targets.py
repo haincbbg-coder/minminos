@@ -69,12 +69,20 @@ ALIASES = {
     # Id trang số nhiều cũ (trước 0.59.0) - prompt/bookmark cũ gọi thẳng "agents"/"workflows"
     # vẫn phải ra đúng trang, không chỉ id chuẩn "workspace".
     "agents": "workspace", "workflows": "workspace",
+    # Nhãn MinMin riêng (0.64.96): thanh bên đổi tên hết cho khác Javis, nói sao thấy vậy.
+    "qua cau": "home", "qua cau tri thuc": "home", "hoi minmin": "chat",
+    "kho tai lieu": "files", "tai lieu": "files", "hoc va ghi nho": "learn", "hoc & ghi nho": "learn",
+    "ghi nho": "learn", "lich tu chay": "selfimprove", "nhan su ai": "workspace", "nhan su": "workspace",
+    "bi kip": "skills", "do nghe": "plugins", "cho minmin": "packs",
+    "kenh nhan": "channels", "kenh nhan tin": "channels", "bo nao ai": "models",
+    "dong lenh": "terminal", "lap trinh cung ai": "coding", "tuy chinh": "settings",
+    "link cong khai": "share", "nhan vien tra loi khach": "chatbots",
 }
 
 # Nhóm trên thanh bên = RAIL_GROUPS trong dashboard/console.js (khoá `id`) và GROUPS trong
 # dashboard/ui-actions.js. Mở NHÓM khác mở TRANG: người dùng hay muốn bung phần đang gập để
 # nhìn xem trong đó có gì, chứ chưa chọn trang nào.
-GROUPS = ("bo_nao", "code", "nang_luc", "viec", "ket_noi", "he_thong")
+GROUPS = ("bo_nao", "viec", "nang_luc", "ket_noi", "code", "he_thong")
 
 GROUP_ALIASES = {
     # Nhóm "Trợ lý" đã bỏ ở 0.58.0 (gộp vào Bộ não); giữ bí danh cũ trỏ sang Bộ não để
@@ -86,6 +94,10 @@ GROUP_ALIASES = {
     "viec": "viec", "cong viec": "viec", "task": "viec",
     "ket noi": "ket_noi", "connect": "ket_noi", "ket noi va model": "ket_noi",
     "he thong": "he_thong", "system": "he_thong", "cai dat chung": "he_thong",
+    # Nhãn nhóm mới (0.64.96).
+    "trung tam": "bo_nao", "hub": "bo_nao", "van hanh": "viec", "doi ngu ai": "nang_luc",
+    "doi ngu": "nang_luc", "ket noi & khach": "ket_noi", "ket noi va khach": "ket_noi",
+    "khach hang": "ket_noi", "xuong code": "code", "thiet lap": "he_thong", "setup": "he_thong",
 }
 
 # Tiền tố người nói hay kèm theo. Lột LẶP LẠI: "mở trang kỹ năng" có hai lớp, lột một lớp thì

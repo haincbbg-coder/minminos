@@ -213,13 +213,13 @@
       '<div><b>' + hang + '</b><span>chờ</span></div>' +
       '<div><b>' + ((c.review || 0) + (c.blocked || 0)) + '</b><span>cần xem</span></div>' +
       '<div><b>' + ((kb && kb.completed_24h) || 0) + '</b><span>xong 24h</span></div></div>';
-    if (kb && kb.orchestration === "off") h += '<div class="mm-note"><span class="mm-st mm-st-warning">!</span> Điều phối đang TẮT - việc chỉ xếp hàng, bật "AI tự vận hành" ở trang Việc.</div>';
+    if (kb && kb.orchestration === "off") h += '<div class="mm-note"><span class="mm-st mm-st-warning">!</span> Điều phối đang TẮT - việc chỉ xếp hàng, bật "AI tự vận hành" ở trang Bảng việc.</div>';
     var chay = ((kb && kb.operations && kb.operations.active) || []).concat((kb && kb.operations && kb.operations.attention) || []).slice(0, 4);
     if (chay.length) h += '<ul class="mm-tasks">' + chay.map(function (t) {
       var st = TRANG_THAI[t.status] || [t.status, "info"];
       return '<li><span class="mm-st mm-st-' + st[1] + '">' + icon(t.status === "running" ? "play" : ICON[st[1]]) + '</span><span class="mm-t">' + esc(t.title || t.intent || t.id) + '</span></li>';
     }).join("") + '</ul>';
-    h += '<div class="mm-loops">Loop: <b>' + bat + '</b>/' + loops.length + ' bật' + (loi ? ' · <span class="mm-bad">' + loi + ' lỗi/tạm dừng</span>' : "") + '</div>';
+    h += '<div class="mm-loops">Vòng lặp: <b>' + bat + '</b>/' + loops.length + ' bật' + (loi ? ' · <span class="mm-bad">' + loi + ' lỗi/tạm dừng</span>' : "") + '</div>';
     box.innerHTML = h;
   }
 
@@ -255,15 +255,15 @@
     if (!left || left.querySelector(".mm-tabs")) return;
     var tabs = document.createElement("div");
     tabs.className = "mm-tabs";
-    tabs.innerHTML = '<button data-t="dash">Điều hành</button><button data-t="vault">Vault</button>';
+    tabs.innerHTML = '<button data-t="dash">Tổng quan</button><button data-t="vault">Ghi chú</button>';
     var dash = document.createElement("div");
     dash.className = "mm-dash";
     dash.innerHTML =
-      '<div class="mm-head"><span class="mm-title">BẢNG ĐIỀU HÀNH</span><button class="mini-btn" id="mmRefresh" title="Làm mới số liệu">⟳</button></div>' +
+      '<div class="mm-head"><span class="mm-title">Tổng quan hôm nay</span><button class="mini-btn" id="mmRefresh" title="Làm mới số liệu">⟳</button></div>' +
       '<div class="mm-upd" id="mmUpd">Đang tải…</div>' +
       '<section><div id="mmBiz"></div></section>' +
-      '<section><div class="mm-sec-t">Dự án MinMin đang làm</div><div id="mmProj"></div></section>' +
-      '<section><div class="mm-sec-t">Việc nền (sống)</div><div id="mmOps"></div></section>' +
+      '<section><div class="mm-sec-t">Dự án đang chạy</div><div id="mmProj"></div></section>' +
+      '<section><div class="mm-sec-t">MinMin đang làm ngầm</div><div id="mmOps"></div></section>' +
       '<div class="mm-foot"><button class="mm-link" id="mmOpenData">Mở file số liệu</button>' +
       '<button class="mm-link" id="mmGalaxyToggle"></button></div>';
     left.insertBefore(dash, left.firstChild);

@@ -13,7 +13,7 @@ self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener("push", (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: (event.data && event.data.text()) || "" }; }
-  const title = d.title || "Javis";
+  const title = d.title || "MinMin";
   const opts = {
     body: d.body || "",
     icon: "/static/icon-192.png",

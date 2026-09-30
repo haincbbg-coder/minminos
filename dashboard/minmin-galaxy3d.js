@@ -305,9 +305,12 @@
         var s = idCua(l.source), t = idCua(l.target);
         return (s === self._hoverId || t === self._hoverId) ? 3 : 0;
       })
-      .linkDirectionalParticleWidth(1.6)
-      .linkDirectionalParticleSpeed(0.008)
-      .linkDirectionalParticleColor(function () { return sang() ? "#e8622a" : "#ffffff"; })
+      .linkDirectionalParticleWidth(function () { return self._thinking ? 4 : 2; })
+      .linkDirectionalParticleSpeed(function () { return self._thinking ? 0.024 : 0.012; })
+      .linkDirectionalParticleColor(function () {
+        if (self._thinking) return sang() ? "#e8622a" : "#ffd27a";
+        return sang() ? "#e8622a" : "#ffffff";
+      })
       .warmupTicks(30)
       .cooldownTime(6000)
       .onNodeHover(function (n) {
@@ -344,8 +347,8 @@
     if (ctl) {
       ctl.enableDamping = true;
       ctl.dampingFactor = 0.08;
-      ctl.autoRotate = !giamChuyenDong;
-      ctl.autoRotateSpeed = 0.35;
+      ctl.autoRotate = !giamChuyenDong && tocDoQuay() > 0;
+      ctl.autoRotateSpeed = 0.35 * tocDoQuay();
       var hen = null, the = self.__mmThe;
       ctl.addEventListener("start", function () { ctl.autoRotate = false; clearTimeout(hen); });
       // Thả chấm xong, thư viện phát một cú "pointerup" chạm giả để nhả OrbitControls. Với
@@ -367,11 +370,22 @@
       }, true);
       ctl.addEventListener("end", function () {
         clearTimeout(hen);
-        if (!giamChuyenDong) hen = setTimeout(function () { if (self.__mmThe === the) ctl.autoRotate = true; }, 8000);
+        if (!giamChuyenDong) hen = setTimeout(function () { if (self.__mmThe === the) ctl.autoRotate = tocDoQuay() > 0; }, 8000);
       });
     }
 
+    self.__mmCtl = ctl;
+    thanhQuay(self);
+
     // Hàm riêng cho bản 3D (đè lên prototype chỉ ở đối tượng này).
+    // MinMin bắt đầu làm việc (nghĩ, gọi công cụ): các điểm sáng bắn tia cho nhau dọc dây nối.
+    var tkGoc = self.setThinking;
+    self.setThinking = function (bat) {
+      var truoc = !!self._thinking;
+      tkGoc.call(self, bat);
+      if (!truoc && self._thinking) banLoat(self, 3);
+    };
+    self.banSang = function (so) { banLoat(self, so || 3); };
     self._nhipVe = function () {};
     self._recolor = function () { capNhatSang(self); };
     self._fit = function (ms) {
@@ -386,6 +400,91 @@
       return tlGoc.apply(self, arguments);
     };
     batNhip(self);
+  }
+
+  // ---------- Bắn sáng: điểm này phóng tia theo dây sang điểm kia ----------
+  // Bảng kề dựng lại mỗi lần nạp dữ liệu. Tia đi hết dây thì điểm đích loé sáng và có thể bắn
+  // tiếp sang láng giềng của nó, thành chuỗi truyền tin lan qua quả cầu.
+  function dungKe(self) {
+    var ke = new Map();
+    self.graph.graphData().links.forEach(function (l) {
+      var s = idCua(l.source), t = idCua(l.target);
+      if (!ke.has(s)) ke.set(s, []);
+      if (!ke.has(t)) ke.set(t, []);
+      ke.get(s).push({ l: l, toi: t, xuoi: true });
+      ke.get(t).push({ l: l, toi: s, xuoi: false });
+    });
+    self.__mmKe = ke;
+    self.__mmNutTheoId = new Map(self.graph.graphData().nodes.map(function (n) { return [n.id, n]; }));
+  }
+  function chonGoc(self) {
+    var nodes = self.graph.graphData().nodes;
+    if (!nodes.length || !self.__mmKe) return null;
+    var hubs = nodes.filter(function (n) { return n.__hub; });
+    for (var i = 0; i < 8; i++) {
+      var n = (hubs.length && Math.random() < 0.45) ? hubs[(Math.random() * hubs.length) | 0] : nodes[(Math.random() * nodes.length) | 0];
+      if ((self.__mmKe.get(n.id) || []).length) return n;
+    }
+    return null;
+  }
+  function banTu(self, n, doSau, soTia) {
+    if (!self.graph || !n || giamChuyenDong) return;
+    var ds = (self.__mmKe && self.__mmKe.get(n.id)) || [];
+    if (!ds.length) return;
+    n.__flash = now();
+    var the = self.__mmThe;
+    var chon = ds.slice().sort(function () { return Math.random() - 0.5; }).slice(0, soTia);
+    chon.forEach(function (c) {
+      // emitParticle luôn chạy từ source sang target: dây ngược chiều thì tia chạy VỀ điểm này.
+      try { self.graph.emitParticle(c.l); } catch (e) { return; }
+      var toi = c.xuoi ? c.toi : n.id;
+      var tu = c.xuoi ? n : self.__mmNutTheoId.get(c.toi);
+      if (!c.xuoi && tu) tu.__flash = now();
+      var ms = self._thinking ? 700 : 1400;
+      setTimeout(function () {
+        if (self.__mmThe !== the || !self.graph) return;
+        var dich = self.__mmNutTheoId.get(toi);
+        if (!dich) return;
+        dich.__flash = now();
+        if (doSau > 0 && self._thinking && Math.random() < 0.7) banTu(self, dich, doSau - 1, 2);
+      }, ms);
+    });
+  }
+  function banLoat(self, so) {
+    if (!self.graph || !self.__mmKe) return;
+    for (var i = 0; i < so; i++) banTu(self, chonGoc(self), 2, 3);
+  }
+
+  // ---------- Thanh chỉnh tốc độ quay quả cầu (nhớ theo máy) ----------
+  var KHOA_QUAY = "mm.cau.quay";
+  function tocDoQuay() {
+    var v = NaN;
+    try { v = parseFloat(localStorage.getItem(KHOA_QUAY)); } catch (e) {}
+    return isFinite(v) ? Math.max(0, Math.min(6, v)) : 1;
+  }
+  function thanhQuay(self) {
+    var cha = self.container && self.container.parentElement;
+    if (!cha || cha.querySelector(".mm-cau-quay")) return;
+    var hop = document.createElement("div");
+    hop.className = "mm-cau-quay";
+    hop.innerHTML = '<span class="mm-cq-ic" aria-hidden="true">⟳</span>' +
+      '<input type="range" min="0" max="6" step="0.25" aria-label="Tốc độ quay quả cầu">' +
+      '<span class="mm-cq-so"></span>';
+    hop.title = "Tốc độ quay quả cầu (kéo về 0 để đứng yên)";
+    var o = hop.querySelector("input"), so = hop.querySelector(".mm-cq-so");
+    function ghi(v) { so.textContent = v === 0 ? "Dừng" : "x" + (Math.round(v * 100) / 100); }
+    o.value = String(tocDoQuay()); ghi(tocDoQuay());
+    o.addEventListener("input", function () {
+      var v = parseFloat(o.value) || 0;
+      try { localStorage.setItem(KHOA_QUAY, String(v)); } catch (e) {}
+      ghi(v);
+      var ctl = self.__mmCtl;
+      if (ctl) { ctl.autoRotateSpeed = 0.35 * v; ctl.autoRotate = v > 0 && !giamChuyenDong; }
+    });
+    ["pointerdown", "wheel", "touchstart"].forEach(function (ev) {
+      hop.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: true });
+    });
+    cha.appendChild(hop);
   }
 
   // ---------- Nhịp khung hình: lõi đập, vỏ quay, hạt thở và nảy sinh ----------
@@ -404,12 +503,21 @@
       }
       if (self._catFilter !== loc) { loc = self._catFilter; capNhatSang(self); }
       var tNow = now();
+      if (!giamChuyenDong) {
+        var nhip = self._thinking ? 320 : (am > 0.05 ? 700 : 2600);
+        if (tNow - (self.__mmLanBan || 0) > nhip) {
+          self.__mmLanBan = tNow;
+          banTu(self, chonGoc(self), self._thinking ? 2 : 0, self._thinking ? 3 : 1);
+        }
+      }
       self.graph.graphData().nodes.forEach(function (n) {
         var o = n.__mmObj; if (!o) return;
         var tho = giamChuyenDong ? 1 : 1 + 0.06 * Math.sin(t * 2.1 + (n.__ph || 0));
         var sinh = 1;
         if (n.__born) { var age = (tNow - n.__born) / 500; sinh = age < 1 ? Math.max(0.05, age) : 1; if (age >= 1) n.__born = 0; }
-        var s = (n.__mmCo || 8) * (n.__mmTo || 1) * tho * sinh;
+        var loe = 1;
+        if (n.__flash) { var ft = (tNow - n.__flash) / 650; if (ft < 1) loe = 1 + 1.3 * (1 - ft) * (1 - ft); else n.__flash = 0; }
+        var s = (n.__mmCo || 8) * (n.__mmTo || 1) * tho * sinh * loe;
         o.scale.set(s, s, 1);
       });
     }
@@ -436,6 +544,7 @@
     this._hoverId = null; this._nbrs = new Set();
     this._t0 = now();
     this.graph.graphData({ nodes: nodes, links: links });
+    dungKe(this);
     dungCanh(this);
     this.resize();
     // Canh khung sớm (không đợi mô phỏng nguội hẳn) để lúc mở đã thấy trọn quả cầu.

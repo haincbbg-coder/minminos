@@ -72,8 +72,8 @@ check("xoay may thi rai lai nhan (co cache + debounce)",
   /_catsCache/.test(APP) && /addEventListener\("resize"/.test(APP) && /_catsT/.test(APP));
 
 // ---- 3. San luoi khong an cho cua do thi tren khung thap ----
-check("chan troi tut xuong khi khoang nao thap",
-  /cssH \* \(cssH < 320 \? 0\.86 : 0\.72\)/.test(APP));
+// 0.64.96: bo han san luoi chan troi (qua giong Javis), nen khong con gi de de len do thi.
+check("khong con san luoi chan troi o day khoang nao", !/horizonY/.test(APP));
 
 // ---- 4. Dai so lieu mong lai: so va nhan cung mot dong ----
 const MOB = CONSOLE_CSS.slice(CONSOLE_CSS.indexOf("@media (max-width: 860px)"));
