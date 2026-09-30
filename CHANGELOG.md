@@ -4,6 +4,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.91] - 2026-09-30
+### Thêm mới
+- (đang làm) MinMin Mắt Nhà: xem camera EZVIZ ở nhà, ghi ai ra vào, xe, biển số.
+
 ## [0.64.89] - 2026-09-30
 ### Sửa lỗi
 - **Nhận đúng tay phải thật của bố**: bảng Cử chỉ có nút **Chỉnh tay** (giơ tay phải lên 1 giây). Trước đây một số webcam làm MinMin nhận nhầm, chỉ ăn tay trái, tay phải giơ lên không vẽ được. Chưa chỉnh thì tay nào cũng điều khiển được, không khóa nhầm. Thêm lựa chọn "Tay nào cũng được".
