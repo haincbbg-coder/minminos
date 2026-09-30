@@ -4,6 +4,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.97] - 2026-10-01
+### Cải thiện
+- (đang viết)
+
 ## [0.64.96] - 2026-10-01
 ### Cải thiện
 - **Quả cầu tri thức bắn sáng khi MinMin làm việc**: lúc MinMin đang nghĩ hay gọi công cụ, các điểm sáng phóng tia dọc dây nối sang nhau, điểm nhận tia loé lên rồi bắn tiếp, lan khắp quả cầu. Lúc rảnh thỉnh thoảng có một tia nhẹ.
