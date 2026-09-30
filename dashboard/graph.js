@@ -50,7 +50,10 @@ const INK_LIGHT = {
   // đậm ở tâm rồi thấm nhạt ra - cùng hue với node.
   glowCore: null,
   glowStops: [[0.0, 0.55], [0.30, 0.30], [0.62, 0.11]],
-  linkIdle: "rgba(120,100,170,0.16)",
+  // 0.64.94: dây nối RÕ hơn cho ra "khối cầu tri thức liên kết chặt" như mẫu chủ repo gửi
+  // (trước .16 và 0.4px thì trên giấy gần như chỉ thấy chấm).
+  linkIdle: "rgba(74,60,96,0.24)",
+  linkW: 0.75,
   linkOn: "rgba(96,60,180,0.55)",
   linkOff: "rgba(140,140,200,0.05)",
   labelHalo: "rgba(251,249,247,0.92)",
@@ -235,7 +238,7 @@ class JavisGraph {
             const s = (l.source && l.source.id) || l.source, t = (l.target && l.target.id) || l.target;
             if (s === self._hoverId || t === self._hoverId) return 1;   // hover cũng mảnh (trước 1.8)
           }
-          return 0.4;                               // dây mảnh hơn
+          return INK.linkW || 0.4;                  // tông tối mảnh, tông sáng rõ hơn
         })
         .nodeCanvasObjectMode(() => "replace")
         .nodeCanvasObject((n, ctx, scale) => self._drawNode(n, ctx, scale))
