@@ -4,6 +4,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.82] - 2026-09-30
+### Cải thiện
+- (đang viết)
+
 ## [0.64.81] - 2026-09-30
 ### Thêm mới
 - **HUD màn phụ MinMin.** Mở `/hud` (hoặc bấm đúp `MinMin HUD.bat`) để có màn hình toàn khung trên màn phụ: chân dung hạt tông cam, tím phản ứng theo lúc MinMin nghe, nghĩ và nói. Phím `F` đổi sang dạng quả cầu.
