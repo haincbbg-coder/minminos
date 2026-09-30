@@ -4,6 +4,12 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.92] - 2026-09-30
+### Cải thiện
+- **Giao diện nổi mềm** thành giao diện mặc định: nền xám xanh nhạt, nút và thẻ nổi lên bằng bóng đổ mềm, ô nhập và mục đang chọn lõm xuống, nút chính màu xanh. Tông tối cũ vẫn còn, bấm nút đổi tông (hình mặt trời/mặt trăng) để chuyển.
+- **Đồ thị não chỉ còn một bản**: Thiên hà 3D (hình cầu, nhãn thư mục quanh vòng). Bỏ nút chuyển 3D / 2D / đồ thị gốc. Máy không chạy được 3D thì tự hiện bản 2D.
+- HUD màn phụ giữ nguyên nền tối.
+
 ## [0.64.91] - 2026-09-30
 ### Thêm mới
 - **Mắt Nhà** (trang `/mat-nha`): MinMin xem camera EZVIZ ở nhà, ghi ai ra vào (người nhà hay **người lạ**), xe và biển số, con vật, lời nói. Lọc nhanh Hôm nay, Người lạ, Xe, Biển số, bấm ảnh để xem to.

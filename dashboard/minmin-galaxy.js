@@ -19,11 +19,10 @@
   var CHE_DO = ["3d", "2d", "off"];
   var TEN = { "3d": "Thiên hà 3D", "2d": "Thiên hà 2D", off: "Đồ thị gốc" };
   var ICON = { "3d": "layers", "2d": "sparkle", off: "sparkles" };
-  function cheDo() {
-    var v = "3d";
-    try { v = localStorage.getItem(KEY) || "3d"; } catch (e) {}
-    return CHE_DO.indexOf(v) >= 0 ? v : "3d";
-  }
+  // 0.64.90: chủ repo chốt MỘT bản duy nhất là Thiên hà 3D (mẫu 30/09). Bỏ vòng chuyển
+  // 3D -> 2D -> đồ thị gốc; bản 2D chỉ còn làm đường lùi tự động khi máy không có WebGL
+  // (minmin-galaxy3d.js tự trả về 2D). Giá trị cũ trong localStorage bị bỏ qua.
+  function cheDo() { return "3d"; }
   function cheDoSau(v) { return CHE_DO[(CHE_DO.indexOf(v) + 1) % CHE_DO.length]; }
   function sang() { return document.documentElement.getAttribute("data-theme") === "light"; }
   function danhDau() {
@@ -43,6 +42,7 @@
     try { window.dispatchEvent(new CustomEvent("mm-galaxy-mode", { detail: { mode: hien, next: sau } })); } catch (e) {}
   }
   function nutCheDo() {
+    return;                           // 0.64.90: không còn nút chuyển chế độ (một bản 3D)
     var c = document.querySelector(".hud-center");
     if (!c || c.querySelector(".mm-galaxy-off")) return;
     var nut = document.createElement("button");

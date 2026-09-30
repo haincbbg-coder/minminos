@@ -1,0 +1,202 @@
+/* ============================================================================
+   MinMin OS - Giao diện NỔI MỀM (neumorphism) - 0.64.90
+   ----------------------------------------------------------------------------
+   Chủ repo gửi mẫu 30/09: nền xám xanh nhạt, nút và thẻ nổi lên bằng hai bóng (sáng phía
+   trên trái, tối phía dưới phải), ô nhập và nút đang chọn lõm xuống, điểm nhấn màu xanh.
+   Đây là TÔNG SÁNG MỚI và là tông mặc định. Tông tối cũ giữ nguyên (nút đổi tông).
+   File nạp SAU style.css / console.css / minmin-galaxy.css nên chỉ cần đè token + bề mặt
+   của các thành phần hay gặp; mọi chỗ khác tự theo token.
+   HUD màn phụ (/hud) KHÔNG dùng file này: HUD giữ nền tối để hạt phát sáng.
+   ========================================================================== */
+
+:root[data-theme="light"] {
+  --nm-bg: #e4e9f0;
+  --nm-hi: rgba(255, 255, 255, 0.95);
+  --nm-lo: rgba(152, 166, 190, 0.55);
+  --nm-out: 7px 7px 16px var(--nm-lo), -7px -7px 16px var(--nm-hi);
+  --nm-out-sm: 4px 4px 9px var(--nm-lo), -4px -4px 9px var(--nm-hi);
+  --nm-out-xs: 2px 2px 5px var(--nm-lo), -2px -2px 5px var(--nm-hi);
+  --nm-in: inset 5px 5px 11px var(--nm-lo), inset -5px -5px 11px var(--nm-hi);
+  --nm-in-sm: inset 3px 3px 7px var(--nm-lo), inset -3px -3px 7px var(--nm-hi);
+  --nm-blue: linear-gradient(145deg, #5a86ff, #2f5fe0);
+  --nm-blue-glow: 4px 4px 12px rgba(47, 95, 224, 0.35), -4px -4px 10px var(--nm-hi);
+
+  color-scheme: light;
+  --bg: var(--nm-bg);
+  --bg2: var(--nm-bg);
+  --bg3: var(--nm-bg);
+  --border: rgba(152, 166, 190, 0.30);
+  --accent: #3d6df2;
+  --accent2: #6b5cf0;
+  --text: #2a3140;
+  --text2: #505a6c;
+  --text3: #5f6a7d;
+  --text-hi: #151a24;
+  --accent-ink: #2a55c9;
+  --accent2-ink: #5443d6;
+  --accent-solid: #2f5fe0;
+  --on-accent: #ffffff;
+  --link-ink: #2a55c9;
+
+  --surface-1: rgba(255, 255, 255, 0.22);
+  --surface-2: rgba(255, 255, 255, 0.34);
+  --surface-3: rgba(152, 166, 190, 0.18);
+  --hairline: rgba(152, 166, 190, 0.26);
+  --sunken: rgba(152, 166, 190, 0.12);
+  --shadow-1: var(--nm-out-sm);
+  --shadow-2: var(--nm-out);
+  --shadow-3: 12px 12px 30px var(--nm-lo), -10px -10px 26px var(--nm-hi);
+  --shadow-veil: rgba(60, 72, 96, 0.22);
+
+  --accent-wash: rgba(61, 109, 242, 0.08);
+  --accent-wash-2: rgba(61, 109, 242, 0.14);
+  --accent-line: rgba(61, 109, 242, 0.38);
+  --accent-ring: 0 0 0 3px rgba(61, 109, 242, 0.18);
+  --accent2-wash: rgba(107, 92, 240, 0.09);
+  --accent2-wash-2: rgba(107, 92, 240, 0.15);
+  --accent2-line: rgba(107, 92, 240, 0.36);
+
+  --field-bg: var(--nm-bg);
+  --panel-bg: var(--nm-bg);
+  --panel-solid: var(--nm-bg);
+  --scrim: rgba(40, 50, 72, 0.30);
+
+  /* console.css */
+  --rail-bg: var(--nm-bg);
+  --glass: var(--nm-bg);
+  --glass-brd: transparent;
+  --glow: var(--nm-out);
+}
+
+:root[data-theme="light"] body { background: var(--nm-bg); }
+
+/* ---------- Khung: thanh trên, rail, ba cột ---------- */
+:root[data-theme="light"] .hud-top { background: var(--nm-bg); border-bottom: 0; box-shadow: 0 6px 14px -8px var(--nm-lo); }
+:root[data-theme="light"] .rail { backdrop-filter: none; -webkit-backdrop-filter: none; border-right: 0; box-shadow: 6px 0 18px -8px var(--nm-lo); }
+:root[data-theme="light"] .hud-left { border-right: 0; }
+:root[data-theme="light"] .hud-right { border-left: 0; }
+:root[data-theme="light"] .hud-center { border-radius: 22px; box-shadow: var(--nm-in); margin: 10px 6px; overflow: hidden; }
+
+/* Mục điều hướng: đang chọn thì LÕM, rê chuột thì nổi nhẹ */
+:root[data-theme="light"] .rail-item { transition: box-shadow .18s, color .18s; }
+:root[data-theme="light"] .rail-item:hover { background: transparent; box-shadow: var(--nm-out-xs); }
+:root[data-theme="light"] .rail-item.active { background: var(--nm-bg); box-shadow: var(--nm-in-sm); color: var(--accent-ink); }
+:root[data-theme="light"] .rail-item.active::before { display: none; }
+
+/* ---------- Nút thường: nổi, bấm thì lõm ---------- */
+:root[data-theme="light"] :is(.gcard-btn, .s-btn-ghost, .mp-btn, .ws-btn, .mini-btn, .hud-icon-btn, .install-app-btn,
+  .graph-folder-btn, .notification-trigger, .conn-menu-btn, .theme-toggle, .attach-btn, .mic-big, .new-chat-btn,
+  .nav-toggle-btn, .brain-overlay-toggle, .graph-timelapse-btn, .brain-max-btn, .rail-collapse-btn, .studio-open-btn,
+  .cp-ico-btn, .pd-hbtn, .jvfe-btn, .term-btn, .wiz-copy-btn, .js-btn, .nm-btn, .jv-ap-btn, .chatcol-thu-btn) {
+  background: var(--nm-bg);
+  border: 0;
+  box-shadow: var(--nm-out-sm);
+  color: var(--text2);
+  border-radius: 12px;
+  transition: box-shadow .16s ease, color .16s ease, transform .16s ease;
+}
+:root[data-theme="light"] :is(.gcard-btn, .s-btn-ghost, .mp-btn, .ws-btn, .mini-btn, .hud-icon-btn, .install-app-btn,
+  .graph-folder-btn, .notification-trigger, .conn-menu-btn, .theme-toggle, .attach-btn, .mic-big, .new-chat-btn,
+  .nav-toggle-btn, .brain-overlay-toggle, .graph-timelapse-btn, .brain-max-btn, .rail-collapse-btn, .studio-open-btn,
+  .cp-ico-btn, .pd-hbtn, .jvfe-btn, .term-btn, .wiz-copy-btn, .js-btn, .nm-btn, .jv-ap-btn, .chatcol-thu-btn):hover {
+  background: var(--nm-bg); border-color: transparent; color: var(--accent-ink); box-shadow: var(--nm-out);
+}
+:root[data-theme="light"] :is(.gcard-btn, .s-btn-ghost, .mp-btn, .ws-btn, .mini-btn, .hud-icon-btn, .install-app-btn,
+  .graph-folder-btn, .notification-trigger, .conn-menu-btn, .theme-toggle, .attach-btn, .mic-big, .new-chat-btn,
+  .nav-toggle-btn, .brain-overlay-toggle, .graph-timelapse-btn, .brain-max-btn, .rail-collapse-btn, .studio-open-btn,
+  .cp-ico-btn, .pd-hbtn, .jvfe-btn, .term-btn, .wiz-copy-btn, .js-btn, .nm-btn, .jv-ap-btn, .chatcol-thu-btn):is(:active, [aria-pressed="true"], .on, .active) {
+  box-shadow: var(--nm-in-sm); color: var(--accent-ink);
+}
+:root[data-theme="light"] :is(.gcard-btn, .s-btn-ghost, .mp-btn, .ws-btn, .mini-btn):disabled,
+:root[data-theme="light"] :is(.gcard-btn, .s-btn-ghost, .mp-btn, .ws-btn, .mini-btn):disabled:hover {
+  box-shadow: var(--nm-out-xs); color: var(--text3); opacity: .7;
+}
+
+/* ---------- Nút chính: viên xanh nổi ---------- */
+:root[data-theme="light"] :is(.s-btn, .send-btn, .gcard.current .gcard-btn) {
+  background: var(--nm-blue); color: #fff; border: 0; border-radius: 12px; box-shadow: var(--nm-blue-glow);
+}
+:root[data-theme="light"] :is(.s-btn, .send-btn):hover { opacity: 1; filter: brightness(1.05); }
+:root[data-theme="light"] :is(.s-btn, .send-btn):active { box-shadow: inset 3px 3px 7px rgba(20, 50, 140, .45); }
+
+/* ---------- Thẻ, khối, bảng nổi ---------- */
+:root[data-theme="light"] :is(.gcard, .settings-card, .qs-block, .wz-card, .uz-card, .aux-card, .prov-card, .kn-panel,
+  .noti-card, .ag-card, .sk-card, .tk-row, .notification-panel, .settings-group, .run-drawer, .fm, .folder-modal,
+  .settings-modal, .card) {
+  background: var(--nm-bg);
+  border: 0;
+  border-radius: 18px;
+  box-shadow: var(--nm-out);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+:root[data-theme="light"] .gcard:hover { border-color: transparent; box-shadow: 10px 10px 22px var(--nm-lo), -9px -9px 20px var(--nm-hi); }
+:root[data-theme="light"] .gcard.current { box-shadow: var(--nm-out), 0 0 0 2px var(--accent-line); }
+/* thẻ lồng trong thẻ: lõm vào cho có tầng */
+:root[data-theme="light"] :is(.gcard, .settings-card, .qs-block, .settings-group) :is(.tk-row, .qs-block, .settings-card) { box-shadow: var(--nm-in-sm); }
+
+/* ---------- Ô nhập, chọn, vùng chữ: lõm ---------- */
+:root[data-theme="light"] :is(.js-input, .voice-input, .graph-select, textarea,
+  input:is([type="text"], [type="password"], [type="search"], [type="email"], [type="number"], [type="url"], [type="tel"], :not([type])),
+  select) {
+  background: var(--nm-bg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  box-shadow: var(--nm-in-sm);
+  color: var(--text);
+}
+:root[data-theme="light"] :is(.js-input, .voice-input, textarea, input, select):focus {
+  outline: none; border-color: var(--accent-line); box-shadow: var(--nm-in-sm), 0 0 0 3px rgba(61, 109, 242, .12);
+}
+/* ô nhập trong thanh soạn trên điện thoại vẫn trong suốt như cũ */
+@media (max-width: 860px) {
+  :root[data-theme="light"] .hud-voice { border: 0; background: var(--nm-bg); box-shadow: var(--nm-in-sm); }
+  :root[data-theme="light"] .hud-voice :is(.voice-input, .attach-btn, .mic-big) { box-shadow: none; background: transparent; }
+}
+
+/* ---------- Chip, nhãn, tab ---------- */
+:root[data-theme="light"] :is(.si-chip, .vs-chip, .mb-chip, .jv-ask-chip, .cb-kenh-chip, .chip-skill, .gcard-tag) {
+  background: var(--nm-bg); border: 0; box-shadow: var(--nm-out-xs); border-radius: 999px;
+}
+:root[data-theme="light"] .gcard-tag { color: var(--accent2-ink); }
+:root[data-theme="light"] :is(.noti-tab, .cside-tab, .jv-ap-tab, [role="tab"]) { border: 0; border-radius: 10px; }
+:root[data-theme="light"] :is(.noti-tab, .cside-tab, .jv-ap-tab, [role="tab"]):is(.active, .on, [aria-selected="true"]) {
+  background: var(--nm-bg); box-shadow: var(--nm-in-sm); color: var(--accent-ink);
+}
+
+/* ---------- Công tắc: rãnh lõm, núm nổi, bật thì xanh ---------- */
+:root[data-theme="light"] .toggle span { background: var(--nm-bg); border: 0; box-shadow: var(--nm-in-sm); }
+:root[data-theme="light"] .toggle span::before { background: var(--nm-bg); box-shadow: var(--nm-out-xs); }
+:root[data-theme="light"] .toggle input:checked + span { background: var(--nm-bg); }
+:root[data-theme="light"] .toggle input:checked + span::before { background: var(--nm-blue); }
+
+/* ---------- Trò chuyện ---------- */
+:root[data-theme="light"] .msg-user .bubble { background: var(--nm-bg); border: 0; box-shadow: var(--nm-out-sm); color: var(--text); }
+:root[data-theme="light"] .msg-javis .bubble { background: var(--nm-bg); border: 0; box-shadow: var(--nm-in-sm); }
+:root[data-theme="light"] .msg-javis .bubble code { background: rgba(152, 166, 190, .16); color: var(--accent2-ink); }
+
+/* ---------- Thanh cuộn mảnh ---------- */
+:root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(152, 166, 190, .45); border-radius: 8px; }
+:root[data-theme="light"] ::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="light"] :is(.gcard, .gcard-btn, .rail-item) { transition: none; }
+}
+
+/* ---------- Bảng điều hành cột trái (minmin-galaxy.css) ---------- */
+:root[data-theme="light"] .mm-tabs { background: var(--nm-bg); border: 0; box-shadow: var(--nm-in-sm); border-radius: 14px; padding: 5px; }
+:root[data-theme="light"] .mm-tabs button { color: var(--text2); border-radius: 10px; }
+:root[data-theme="light"] .mm-tabs button.active { background: var(--nm-bg); color: var(--accent-ink); box-shadow: var(--nm-out-sm); }
+:root[data-theme="light"] .mm-dash { background: var(--nm-bg); border: 0; box-shadow: none; --mm-card: var(--nm-bg); --mm-brd: transparent; }
+:root[data-theme="light"] :is(.mm-kpi, .mm-fc, .mm-ops div, .mm-proj) { background: var(--nm-bg); border: 0; box-shadow: var(--nm-out-sm); border-radius: 12px; }
+:root[data-theme="light"] .mm-empty { border: 0; box-shadow: var(--nm-in-sm); border-radius: 12px; }
+:root[data-theme="light"] .mm-bar { background: var(--nm-bg); box-shadow: var(--nm-in-sm); height: 6px; }
+:root[data-theme="light"] .mm-bar i { background: var(--nm-blue); }
+/* Dải Agents / Skills / Workflows dưới đồ thị */
+:root[data-theme="light"] .brain-stats { background: var(--nm-bg); border: 0; box-shadow: var(--nm-out); border-radius: 18px; }
+:root[data-theme="light"] .bstat:hover { background: transparent; box-shadow: var(--nm-in-sm); border-radius: 12px; }
+
+/* ---------- Việc (Kanban), thẻ số liệu, dải tab Cài đặt ---------- */
+:root[data-theme="light"] :is(.kn-kpi, .kn-task, .kn-detail-block, .kn-event) { background: var(--nm-bg); border: 0; box-shadow: var(--nm-out-sm); border-radius: 14px; }
+:root[data-theme="light"] .settings-tabs { background: var(--nm-bg); border: 0; box-shadow: var(--nm-in-sm); border-radius: 16px; }
+:root[data-theme="light"] .settings-tabs :is(button, a) { border: 0; border-radius: 12px; background: transparent; }
+:root[data-theme="light"] .settings-tabs :is(button, a):is(.active, [aria-selected="true"]) { background: var(--nm-bg); box-shadow: var(--nm-out-sm); color: var(--accent-ink); }

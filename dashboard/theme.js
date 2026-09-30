@@ -1,7 +1,8 @@
 // ============================================
 // JAVIS OS - Bộ đổi tông: TỐI ↔ SÁNG
 // ============================================
-// Tông lưu ở localStorage "javis.theme" với 2 giá trị: "dark" | "light".
+// Tông lưu ở localStorage "javis.theme" với 2 giá trị: "dark" | "light". Từ 0.64.90 tông
+// "light" là giao diện NỔI MỀM (noi-mem.css) và là mặc định khi chưa chọn gì.
 // Tông sáng đặt data-theme="light" trên <html>; tông tối gỡ hẳn thuộc tính
 // (nên mặc định của :root luôn là tối - trang vẫn đúng kể cả khi file này chưa tải).
 //
@@ -31,7 +32,7 @@
       m.setAttribute("name", "theme-color");
       document.head.appendChild(m);
     }
-    m.setAttribute("content", light ? "#ffffff" : "#181822");
+    m.setAttribute("content", light ? "#e4e9f0" : "#181822");
   }
 
   function syncButton(light) {
@@ -43,8 +44,8 @@
     var key = light ? "top.theme_light" : "top.theme_dark";
     var txt = window.t ? window.t(key) : key;
     if (txt === key) {
-      txt = light ? "Đang dùng tông sáng - bấm để chuyển sang tông tối"
-                  : "Đang dùng tông tối - bấm để chuyển sang tông sáng";
+      txt = light ? "Đang dùng giao diện nổi mềm - bấm để chuyển sang tông tối"
+                  : "Đang dùng tông tối - bấm để chuyển sang giao diện nổi mềm";
     }
     b.title = txt;
     b.setAttribute("aria-label", b.title);
@@ -89,8 +90,13 @@
 
   function init() {
     var saved = read();
-    if (saved === "dim") write("dark");          // quy đổi tông tối-nhạt cũ, chỉ chạy một lần
-    apply(saved === "light", false);
+    if (saved === "dim") { saved = "dark"; write("dark"); }   // quy đổi tông tối-nhạt cũ, chỉ chạy một lần
+    // 0.64.90: tông sáng giờ là giao diện NỔI MỀM và là MẶC ĐỊNH. Lần đầu mở bản này, ai cũng
+    // được chuyển sang nổi mềm một lần (cờ "mm.noimem"); sau đó bấm nút đổi tông vẫn về tối được.
+    try {
+      if (!localStorage.getItem("mm.noimem")) { localStorage.setItem("mm.noimem", "1"); saved = "light"; write("light"); }
+    } catch (e) {}
+    apply(saved !== "dark", false);
 
     var b = document.getElementById("themeToggle");
     if (b) b.addEventListener("click", toggle);
