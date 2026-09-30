@@ -39,7 +39,12 @@ export class Constellation {
     this.resize();
     window.addEventListener("resize", () => this.resize());
     canvas.addEventListener("pointermove", e => this._pick(e, false));
-    canvas.addEventListener("click", e => this._pick(e, true));
+    // keo chuot de xoay nguoi thi khong tinh la bam vao node
+    canvas.addEventListener("pointerdown", e => { this._down = [e.clientX, e.clientY]; });
+    canvas.addEventListener("click", e => {
+      if (this._down && Math.hypot(e.clientX - this._down[0], e.clientY - this._down[1]) > 6) return;
+      this._pick(e, true);
+    });
     this._loop = this._loop.bind(this);
     requestAnimationFrame(this._loop);
   }
@@ -93,6 +98,7 @@ export class Constellation {
     this.sparks.push({ n, t: 0 });
   }
   setThinking(v) { this.thinking = !!v; }
+  setVisible(v) { this.visible = !!v; this.c.style.pointerEvents = v ? "" : "none"; }
 
   _pick(e, click) {
     const r = this.c.getBoundingClientRect();
@@ -108,6 +114,7 @@ export class Constellation {
     const t = (now - this._t0) / 1000;
     const g = this.ctx;
     g.clearRect(0, 0, this.w, this.h);
+    if (this.visible === false) { requestAnimationFrame(this._loop); return; }
     const core = { x: this.cx, y: this.cy };
 
     // mach dan tu loi ra node: duong gap khuc kieu mach dien

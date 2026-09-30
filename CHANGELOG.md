@@ -6,7 +6,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 ## [0.64.84] - 2026-09-30
 ### Thêm mới
-- (đang viết)
+- **Hình người đầy đủ trên HUD**: mắt, lông mày, mũi, miệng, tai, cổ, thân, hai tay và bàn tay, vẫn bằng các chấm sáng. Đầu nhìn theo chuột, kéo chuột để xoay người, con lăn để phóng to thu nhỏ (điện thoại dùng hai ngón).
+- **Camera làm mắt cho MinMin**: bật Camera là MinMin nhìn theo mặt bố; điều khiển bằng tay không cần chạm: xòe tay để nhìn theo, chỉ 1 ngón để vẽ, nắm tay để xoay, chụm ngón để phóng to, chữ V để đổi hình. Nhận diện chạy ngay trong trình duyệt, hình không rời máy.
+- **Nút Nhìn**: chụp cảnh trước camera (kèm nét vẽ) gửi MinMin mô tả, đọc chữ, nhận ra đồ vật. Hỏi bằng giọng "Min Min ơi, đây là gì" khi camera bật cũng tự gửi kèm ảnh. Điện thoại đổi được camera sau để xem môi trường.
+- **Thanh công cụ bên phải**: Ẩn chữ, Ẩn bộ phận, Chỉ hình (chỉ còn hình người), Vẽ, Xóa vẽ, Đổi hình, Góc nhìn, Toàn màn. HUD nhớ lựa chọn cho lần mở sau.
 
 ## [0.64.83] - 2026-09-30
 ### Sửa lỗi

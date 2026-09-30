@@ -3,6 +3,7 @@ import { MinMinScene } from "./scene.js";
 import { Constellation, DOMAINS, domainForTool } from "./constellation.js";
 import { VoiceIO } from "./voice.js";
 import { Bridge, fetchAgents, fetchKpi } from "./bridge.js";
+import { Vision } from "./vision.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -224,11 +225,27 @@ function chime() {
 }
 
 // ---------- gui lenh ----------
-function ask(text) {
+// Cau hoi ve nhung gi truoc mat -> tu chup camera gui kem
+const HOI_NHIN = /(nh[iì]n|xem|th[aấ]y|camera|m[oô] t[aả]|tr[uư][oớ]c m[aặ]t|c[aá]i n[aà]y|c[aá]i g[iì] [dđ][aâ]y|[dđ][aâ]y l[aà] g[iì]|[dđ]ang c[aầ]m|[dđ][oọ]c gi[uú]p|n[eé]t v[eẽ]|h[iì]nh v[eẽ]|t[oô]i v[eẽ])/i;
+
+async function ask(text, opts = {}) {
   text = String(text || "").trim();
   if (!text) return;
   voice.cancelSpeech();
   focusSid = HUD_SID;
+  const kemAnh = opts.image || (vision && (vision.on || vision.hasInk()) && HOI_NHIN.test(text));
+  if (kemAnh && !DEMO) {
+    showYou(text); replyText = ""; showReply("", true); setState("thinking");
+    flash();
+    const blob = await vision.snapshot();
+    feedAdd("run", "Mắt nhìn", vision.on ? "Chụp camera gửi MinMin" : "Gửi nét vẽ cho MinMin", "…");
+    const ok = await bridge.sendWithImage(text, HUD_SID, blob);
+    const li = $("feed").firstChild;
+    if (li) { li.className = ok ? "ok" : "bad"; li.querySelector(".s").textContent = ok ? "ĐÃ GỬI" : "LỖI"; }
+    if (!ok) { toast(bridge.loi || "Không gửi được ảnh", true); setState("error"); setTimeout(() => setState("standby"), 2000); return; }
+    running.add(HUD_SID); updRunning();
+    return;
+  }
   if (DEMO) { demoAnswer(text); return; }
   if (!bridge.send(text, HUD_SID)) { feedAdd("bad", "Chưa gửi được", "Mất kết nối tới MinMin", "LỖI"); setState("error"); setTimeout(() => setState("standby"), 2000); return; }
   running.add(HUD_SID); updRunning();
@@ -265,12 +282,97 @@ addEventListener("keydown", (e) => {
   if (typing) return;
   if (e.key === "/") { e.preventDefault(); $("ask").hidden = false; $("askInput").focus(); }
   else if (e.code === "Space") { e.preventDefault(); if (voiceOn) voice.wakeManually(); else { $("ask").hidden = false; $("askInput").focus(); } }
-  else if (e.key === "f" || e.key === "F") { form = scene.toggleForm(); localStorage.setItem("minmin.hud.form", form); $("formText").textContent = form === "orb" ? "QUẢ CẦU" : "CHÂN DUNG"; }
-  else if (e.key === "h" || e.key === "H") { document.body.classList.toggle("quiet-ui"); }
+  else if (e.key === "f" || e.key === "F") doiHinh();
+  else if (e.key === "h" || e.key === "H") $("tChu").click();
+  else if (e.key === "b" || e.key === "B") $("tBoPhan").click();
+  else if (e.key === "o" || e.key === "O") $("tChiNguoi").click();
+  else if (e.key === "c" || e.key === "C") $("tCam").click();
+  else if (e.key === "d" || e.key === "D") $("tVe").click();
+  else if (e.key === "x" || e.key === "X") $("tXoa").click();
+  else if (e.key === "v" || e.key === "V") $("tNhin").click();
+  else if (e.key === "r" || e.key === "R") $("tGoc").click();
   else if (e.key === "Enter" && e.altKey) { document.documentElement.requestFullscreen?.(); }
 });
 $("ask").addEventListener("submit", (e) => { e.preventDefault(); const v = $("askInput").value; $("askInput").value = ""; $("ask").hidden = true; ask(v); });
 $("scene").addEventListener("dblclick", () => document.documentElement.requestFullscreen?.());
+
+// ---------- thanh cong cu, che do an, camera ----------
+function doiHinh(f) {
+  form = f || scene.toggleForm();
+  if (f) scene.setForm(f);
+  try { localStorage.setItem("minmin.hud.form", form); } catch (e) {}
+  $("formText").textContent = form === "orb" ? "QUẢ CẦU" : "CHÂN DUNG";
+}
+function nhoLai(k, v) { try { localStorage.setItem("minmin.hud." + k, v ? "1" : "0"); } catch (e) {} }
+function daNho(k) { try { return localStorage.getItem("minmin.hud." + k) === "1"; } catch (e) { return false; } }
+function batTat(id, cls, on, luu) {
+  $(id).setAttribute("aria-pressed", on ? "true" : "false");
+  if (cls) document.body.classList.toggle(cls, on);
+  if (luu) nhoLai(luu, on);
+}
+let _toastT = null;
+function toast(msg, bad) {
+  const t = $("toast");
+  if (!msg) { t.hidden = true; return; }
+  t.textContent = msg; t.className = "toast" + (bad ? " bad" : ""); t.hidden = false;
+  clearTimeout(_toastT); _toastT = setTimeout(() => { t.hidden = true; }, bad ? 7000 : 3500);
+}
+function flash() {
+  const f = document.createElement("div");
+  f.style.cssText = "position:fixed;inset:0;z-index:6;background:#fff;opacity:.35;pointer-events:none;transition:opacity .35s";
+  document.body.appendChild(f); requestAnimationFrame(() => { f.style.opacity = "0"; }); setTimeout(() => f.remove(), 400);
+}
+
+const vision = new Vision({
+  video: $("camVideo"), overlay: $("camDots"), ink: $("ink"), scene,
+  onGesture: (g) => { $("camGesture").textContent = g; },
+  onStatus: (m, bad) => toast(m, bad),
+  onForm: (f) => doiHinh(f),
+});
+vision.attachMouseInk();
+
+$("tChu").onclick = () => batTat("tChu", "no-text", $("tChu").getAttribute("aria-pressed") !== "true", "notext");
+$("tBoPhan").onclick = () => {
+  const an = $("tBoPhan").getAttribute("aria-pressed") !== "true";
+  batTat("tBoPhan", null, an, "noweb"); web.setVisible(!an);
+};
+$("tChiNguoi").onclick = () => {
+  const on = $("tChiNguoi").getAttribute("aria-pressed") !== "true";
+  batTat("tChiNguoi", "solo", on, "solo"); web.setVisible(!on && $("tBoPhan").getAttribute("aria-pressed") !== "true");
+};
+$("tHinh").onclick = () => doiHinh();
+$("tGoc").onclick = () => scene.resetView();
+$("tFull").onclick = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {}); };
+$("tVe").onclick = () => {
+  vision.drawMode = $("tVe").getAttribute("aria-pressed") !== "true";
+  batTat("tVe", "drawing", vision.drawMode);
+  if (vision.drawMode) toast("Vẽ bằng chuột, hoặc giơ 1 ngón tay trước camera. Vẽ xong nói “Min Min ơi, đây là gì” hoặc bấm Nhìn.");
+};
+$("tXoa").onclick = () => vision.clearInk();
+$("tCam").onclick = async () => {
+  if (vision.on) { vision.stop(); $("cam").hidden = true; $("tFlip").hidden = true; batTat("tCam", null, false); return; }
+  $("cam").hidden = false;
+  const ok = await vision.start();
+  if (!ok) { $("cam").hidden = true; return; }
+  batTat("tCam", null, true);
+  // dien thoai / may co nhieu camera: cho doi camera truoc - sau
+  try { const ds = await navigator.mediaDevices.enumerateDevices(); $("tFlip").hidden = ds.filter(d => d.kind === "videoinput").length < 2; } catch (e) {}
+  if (vision.ready) toast("Camera đã bật. Xòe tay: MinMin nhìn theo · chỉ 1 ngón: vẽ · nắm tay: xoay · chụm ngón: phóng to · chữ V: đổi hình.");
+};
+$("tFlip").onclick = async () => { const f = await vision.flip(); toast(f === "user" ? "Camera trước" : "Camera sau: đưa camera vào vật cần MinMin xem"); };
+$("tNhin").onclick = () => {
+  const cau = vision.on ? "Bố đang cho con xem qua camera. Con nhìn thấy gì? Mô tả ngắn gọn, đọc chữ nếu có, và nói điều đáng chú ý."
+    : "Bố vừa vẽ trên màn hình. Con xem hình vẽ này là gì và mô tả ngắn gọn.";
+  if (!vision.on && !vision.hasInk()) { toast("Bật Camera hoặc vẽ gì đó trước rồi bấm Nhìn."); return; }
+  ask(cau, { image: true });
+};
+if (daNho("notext")) batTat("tChu", "no-text", true);
+if (daNho("noweb")) { batTat("tBoPhan", null, true); web.setVisible(false); }
+if (daNho("solo")) { batTat("tChiNguoi", "solo", true); web.setVisible(false); }
+
+// thanh cong cu mo di khi khong dong chuot 4 giay
+let _idleT = null;
+addEventListener("pointermove", () => { document.body.classList.remove("idle"); clearTimeout(_idleT); _idleT = setTimeout(() => document.body.classList.add("idle"), 4000); }, { passive: true });
 
 // ---------- vong nang luong -> canh 3D + thanh song ----------
 function energyLoop() {
@@ -387,4 +489,4 @@ function demoAnswer(q) {
 }
 
 // Cua de kiem tra tu bang dieu khien trinh duyet (F12): MinMinHUD.setState("speaking") ...
-window.MinMinHUD = { scene, web, setState, ask, pulse: (k) => web.pulse(k) };
+window.MinMinHUD = { scene, web, vision, setState, ask, pulse: (k) => web.pulse(k) };
