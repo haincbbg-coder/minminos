@@ -53,6 +53,33 @@ MinMin giữ sự kiện và ảnh **30 ngày** rồi tự xoá (tối đa 500MB
 Địa chỉ camera dùng: `rtsp://admin:<MÃ>@<IP>:554/Streaming/Channels/101` (luồng chính, để ghi
 và nghe) và `/102` (luồng phụ, để nhận diện). Một số đời camera dùng `/ch1/main`.
 
+## Canh rào (vượt rào, vào khu cấm)
+
+Học từ các bản demo "fence-line intrusion detection": không chỉ báo "có người" mà theo dõi một
+người đi qua các VÙNG trên ảnh camera.
+
+1. Mở Frigate trên máy ở nhà (`http://localhost:5000`) → **Settings** → **Masks / Zones** →
+   chọn camera → **Add Zone**.
+2. Vẽ hai loại vùng, đặt tên đúng quy ước (chữ thường, không dấu):
+   - `rao_...`: dải sát hàng rào hoặc cổng, ví dụ `rao_sau`, `rao_cong`.
+   - `trong_...`: sân trong hoặc khu cấm, ví dụ `trong_san`, `trong_kho`.
+   Ở mỗi vùng chọn đối tượng **person**. Frigate tự ghi vùng vào `config.yml`.
+3. Cầu nối `minmin-cau` (bản 1.1.0) đọc thứ tự vùng người đó đã đi qua:
+
+| Đi qua | MinMin ghi | Nhắn chủ ngay |
+|---|---|---|
+| chỉ `rao_`, dưới 30 giây | Tiến sát hàng rào | không |
+| chỉ `rao_`, từ 30 giây | Lảng vảng sát rào | không |
+| thẳng vào `trong_` | Vào khu cấm | có |
+| `rao_` rồi `trong_` | **VƯỢT RÀO** | có |
+
+Hai mức nặng được gửi NGAY lúc đang diễn ra (không đợi người đó rời khung hình), nhắn vào chuông
+MinMin, thông báo đẩy và Telegram của chủ; mỗi camera tối đa một tin mỗi 2 phút. Trang Mắt Nhà
+có nút lọc **Vượt rào**, và hỏi MinMin "tối qua có ai vượt rào không" là nó tra được.
+
+Cập nhật cầu nối trên máy đã cài: tải lại `cau.py` ở trang Mắt Nhà vào
+`C:\MinMinMatNha\minmin-cau\`, rồi chạy `docker compose up -d --build minmin-cau`.
+
 ## Học mặt người nhà và biển số quen
 
 - **Khuôn mặt**: mở Frigate trên máy ở nhà (`http://localhost:5000`) → **Face Library** →

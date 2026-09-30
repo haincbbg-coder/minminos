@@ -23,6 +23,11 @@
 
   // ---- Hình dáng (path trong viewBox 320x320, tâm 160/160) ----
   var SHAPES = {
+    // GIỌT NGỌC - dáng của BÉ NGỌC, linh vật MinMin từ 0.64.98 (chủ repo muốn "hình khác màu khác
+    // tên khác", thôi dùng ngôi sao cam trùng dáng Javis). Thân tròn đầy phía dưới, vuốt lên một
+    // chóp bo mềm; tâm khối nằm hơi thấp nên cặp mắt ở 160/160 rơi vào phần trên của bụng giọt,
+    // đọc ra là một khuôn mặt ngước lên. Đáy 244 vẫn nằm trong khung chân dung (bán kính 118).
+    giot:     { key: "pet.shape.giot",     d: "M151 72 Q160 58 169 72 C194 108 240 142 240 182 C240 222 205 246 160 246 C115 246 80 222 80 182 C80 142 126 108 151 72 Z" },
     circle:   { key: "pet.shape.circle",   d: "M160 82 A78 78 0 1 1 160 238 A78 78 0 1 1 160 82 Z" },
     square:   { key: "pet.shape.square",   d: "M111 85 H209 Q235 85 235 111 V209 Q235 235 209 235 H111 Q85 235 85 209 V111 Q85 85 111 85 Z" },
     triangle: { key: "pet.shape.triangle", d: "M147 85 Q160 64 173 85 L244 211 Q256 234 230 234 H90 Q64 234 76 211 Z" },
@@ -82,6 +87,9 @@
     cham:       { key: "pet.color.cham",       sun: ["#4052C9", "#969FDF", "#D8DBEE"], moon: ["#6A77CC", "#9BA3D9", "#1D1F2D"] },
     tim:        { key: "pet.color.tim",        sun: ["#AD55C3", "#D3A6DE", "#E9D9ED"], moon: ["#BA7CCA", "#D0AAD9", "#2A1D2D"] },
     ruby:       { key: "pet.color.ruby",       sun: ["#D83137", "#E78E91", "#F1D5D6"], moon: ["#D76064", "#E09497", "#2D1D1D"] },
+    // TÍM MINMIN - màu thương hiệu từ 0.64.98, trùng màu nhấn của cả app (nút chính, mục đang
+    // chọn trên thanh bên). Tông tối giữ đúng sắc 251 độ, sáng lên cho khỏi chìm trên nền ngọc đêm.
+    minmin:     { key: "pet.color.minmin",     sun: ["#7C62F0", "#C4B3FF", "#E6DEFF"], moon: ["#9A85F3", "#C2B6F2", "#211D2D"] },
   };
 
   // Cỡ pet. Từ 0.64.39 cỡ là MỘT CON SỐ px do thanh trượt đặt (chủ dự án muốn kéo cho vừa ý
@@ -141,7 +149,19 @@
   // `color` / `eyeColor` là mã màu của ô TỰ CHỌN. Chúng nằm sẵn trong cấu hình kể cả khi đang
   // dùng màu có sẵn, để bấm lại ô tự chọn là ra đúng màu lần trước chứ không về một màu lạ.
   // Mặc định là LINH VẬT CHÍNH THỨC: ngôi sao màu cam, trùng logo (chủ dự án chốt 24/09, 0.64.47).
-  var MAC_DINH = { enabled: true, shape: "star", palette: "cam", side: "right", pos: 0.62, size: 72, eye: "den", eyeSize: 1, color: "#fd6100", eyeColor: "#2a62b0" };
+  // 0.64.98: linh vật chính thức đổi thành BÉ NGỌC - giọt ngọc màu tím MinMin, mắt trắng.
+  var MAC_DINH = { enabled: true, shape: "giot", palette: "minmin", side: "right", pos: 0.62, size: 72, eye: "trang", eyeSize: 1, color: "#7c62f0", eyeColor: "#2a62b0" };
+  // Ai còn đang mang linh vật CŨ (sao cam, mặc định trước 0.64.98) thì đổi sang Bé Ngọc một lần.
+  // Người đã tự tay chọn diện mạo ở trang Linh vật (cờ dưới) thì giữ nguyên lựa chọn của họ.
+  var KHOA_TU_CHON = "mm.linhvat.tu_chon";
+  function doiLinhVatCu(c) {
+    var tuChon = false;
+    try { tuChon = localStorage.getItem(KHOA_TU_CHON) === "1"; } catch (e) {}
+    if (tuChon || !c || c.shape !== "star" || c.palette !== "cam") return false;
+    c.shape = MAC_DINH.shape; c.palette = MAC_DINH.palette; c.color = MAC_DINH.color;
+    if (c.eye === "den") c.eye = MAC_DINH.eye;
+    return true;
+  }
 
   // DÁNG LIẾC - chữ ký của nhân vật. Linh vật KHÔNG nhìn thẳng lúc nghỉ: nó liếc chéo lên
   // phía trên bên phải, đúng như hình logo tĩnh. Nhìn thẳng thì ra một cái mặt cười vô hồn;
@@ -443,7 +463,7 @@
     el.dataset.out = "0";
     el.dataset.menu = "0";
     el.innerHTML =
-      '<button type="button" class="pet-body" aria-label="MinMin">' +
+      '<button type="button" class="pet-body" aria-label="Bé Ngọc">' +
         '<svg viewBox="0 0 320 320" aria-hidden="true">' +
           '<g class="pet-rig">' +
             '<path class="pet-ring" pathLength="360"></path>' +
@@ -944,6 +964,7 @@
   // từng cái là vài chục request. Lúc thả tay (sự kiện change) mới gọi lại không có `tam`.
   function setCfg(patch, tam) {
     cfg = chuanHoa(Object.assign({}, cfg, patch || {}));
+    if (patch && (patch.shape || patch.palette)) { try { localStorage.setItem(KHOA_TU_CHON, "1"); } catch (e) {} }
     if (!tam) { ghiLocal(); ghiServer(); }
     if (el) { apDung(); chay(); }
     veDauAn();
@@ -953,6 +974,7 @@
 
   function init() {
     cfg = chuanHoa(docLocal());
+    doiLinhVatCu(cfg);
     dung();
     veMenu();
     apDung();
@@ -973,6 +995,7 @@
       var petMayChu = (j.dashboard || {}).pet;
       if (petMayChu) {
         cfg = chuanHoa(Object.assign({}, cfg, petMayChu));
+        if (doiLinhVatCu(cfg)) ghiServer();
         ghiLocal(); apDung(); apDungTrangThai(); chay();
       }
       veDauAn();

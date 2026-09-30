@@ -20,7 +20,7 @@ import unicodedata
 PAGES = (
     "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
-    "packs", "logs", "account", "usage", "pet", "share",
+    "packs", "logs", "account", "usage", "pet", "share", "matnha",
 )
 
 # Bí danh người dùng hay nói, ánh xạ về id trang. Thường hoá không dấu trước khi tra, nên viết
@@ -77,6 +77,9 @@ ALIASES = {
     "kenh nhan": "channels", "kenh nhan tin": "channels", "bo nao ai": "models",
     "dong lenh": "terminal", "lap trinh cung ai": "coding", "tuy chinh": "settings",
     "link cong khai": "share", "nhan vien tra loi khach": "chatbots",
+    # Mắt Nhà (0.64.98 có lối trên thanh bên).
+    "mat nha": "matnha", "camera": "matnha", "cam": "matnha", "ezviz": "matnha",
+    "xem cam": "matnha", "camera nha": "matnha", "mat nha camera": "matnha", "mat nha (camera)": "matnha", "home eyes": "matnha",
 }
 
 # Nhóm trên thanh bên = RAIL_GROUPS trong dashboard/console.js (khoá `id`) và GROUPS trong

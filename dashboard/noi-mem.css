@@ -308,3 +308,76 @@
 .rail-grp-lbl { letter-spacing: 0.9px; font-size: 10px; }
 
 .hud-body > .hud-left > .mm-tabs { margin-left: 0; margin-right: 0; }
+
+/* ============================================================
+   0.64.98 - TÔNG TỐI "ĐÊM NGỌC" CỦA MINMIN (chủ repo: tông tối cũ vẫn y Javis gốc).
+   Javis tối = đen tím + cam. MinMin tối = xanh ngọc đêm (nền lam lục thẫm), nhấn TÍM oải
+   hương cùng hệ với tông sáng, điểm phụ màu HỔ PHÁCH. Không còn cam Javis ở đâu cả.
+   Chỉ áp khi KHÔNG ở tông sáng; HUD màn phụ có trang riêng nên không bị ảnh hưởng.
+   ============================================================ */
+:root:not([data-theme="light"]) {
+  --bg: #0b171c;
+  --bg2: #0f2027;
+  --bg3: #152b33;
+  --border: #22404a;
+  --accent: #a48bff;
+  --accent2: #f2a84a;
+  --text: #eaf3f0;
+  --text2: #b5cbc7;
+  --text3: #8aa6a2;
+  --text-hi: #ffffff;
+  --accent-ink: #c4b3ff;
+  --accent2-ink: #ffc98a;
+  --accent-solid: #7c62f0;
+  --on-accent: #ffffff;
+  --link-ink: #9fd4ff;
+
+  --surface-1: rgba(160, 230, 220, 0.025);
+  --surface-2: rgba(160, 230, 220, 0.05);
+  --surface-3: rgba(160, 230, 220, 0.085);
+  --hairline: rgba(160, 230, 220, 0.09);
+  --sunken: rgba(0, 8, 10, 0.3);
+  --shadow-veil: rgba(0, 6, 8, 0.55);
+
+  --accent-wash: rgba(164, 139, 255, 0.08);
+  --accent-wash-2: rgba(164, 139, 255, 0.15);
+  --accent-line: rgba(164, 139, 255, 0.38);
+  --accent-ring: 0 0 18px rgba(164, 139, 255, 0.22);
+  --accent2-wash: rgba(242, 168, 74, 0.10);
+  --accent2-wash-2: rgba(242, 168, 74, 0.18);
+  --accent2-line: rgba(242, 168, 74, 0.42);
+
+  --field-bg: rgba(8, 22, 27, 0.85);
+  --panel-bg: rgba(12, 30, 36, 0.8);
+  --panel-solid: rgba(10, 26, 32, 0.98);
+  --scrim: rgba(2, 10, 12, 0.8);
+  --code-bg: #08141a;
+
+  --rail-bg: rgba(12, 30, 36, 0.92);
+  --glass: rgba(14, 34, 41, 0.62);
+
+  --brain-bg: radial-gradient(ellipse 55% 55% at 50% 48%,
+    rgba(124, 98, 240, 0.22) 0%, rgba(40, 110, 120, 0.12) 34%,
+    rgba(8, 30, 36, 0.05) 58%, #04100f 80%);
+  --brain-vignette: radial-gradient(ellipse 70% 70% at 50% 46%,
+    transparent 45%, rgba(2, 10, 12, 0.6) 100%);
+  --brain-glass: rgba(10, 30, 36, 0.6);
+  --brain-glass-brd: rgba(164, 139, 255, 0.36);
+  --brain-ink: #d8ccff;
+  --brain-ink2: #7fa9a4;
+  --brain-ink-hot: #ffc27a;
+}
+:root:not([data-theme="light"]) body { background: var(--bg); }
+/* Bảng Tổng quan: kính tối tím-đen cũ đổi sang ngọc đêm */
+:root:not([data-theme="light"]) .mm-dash {
+  --mm-surface: #0f2027; --mm-brd: rgba(160, 230, 220, 0.14);
+  --mm-t1: #eaf3f0; --mm-t2: #b5cbc7; --mm-t3: #8aa6a2;
+  background: linear-gradient(180deg, #10232a 0%, #0b1a20 100%);
+}
+:root:not([data-theme="light"]) .mm-dot { stroke: #0f2027; }
+:root:not([data-theme="light"]) .mm-tabs button.active,
+:root:not([data-theme="light"]) .gcard.current { background-image: none; }
+:root:not([data-theme="light"]) .mm-tabs button.active { background: var(--accent-solid); }
+:root:not([data-theme="light"]) .gcard.current { box-shadow: 0 0 0 1px var(--accent), 0 8px 30px rgba(124, 98, 240, 0.2); }
+:root:not([data-theme="light"]) .rail-brand .brand-mark { filter: drop-shadow(0 0 8px rgba(164, 139, 255, 0.5)); }
+:root:not([data-theme="light"]) .hud-center .orb-state { background: rgba(12, 30, 36, 0.85); }

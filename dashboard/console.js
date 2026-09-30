@@ -53,6 +53,9 @@
     // "share-2" chu khong phai "link": nhan nhom "Ket noi" ngay trong cung mot rail da dung
     // ic("link"), nen de "link" o day la hai muc canh nhau deo y het nhau.
     share: "share-2",
+    // Mắt Nhà (camera EZVIZ ở nhà, 0.64.91). Trước 0.64.98 chỉ có đường /mat-nha gõ tay, không
+    // có lối nào trên thanh bên - chủ repo tìm mãi không thấy.
+    matnha: "eye",
   };
   // Cỡ icon rail do CSS lo (.rail-ico svg { width: 19px }), độ ưu tiên chọn tử
   // cao hơn .ic nên không cần truyền cỡ ở đây.
@@ -93,7 +96,7 @@
   const RAIL_ITEMS = [
     "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
-    "packs", "logs", "account", "usage", "pet", "share",
+    "packs", "logs", "account", "usage", "pet", "share", "matnha",
   ].map(id => ({ id, icon: ICON[id], get label() { return t(`page.${id}.label`); } }));
 
   // ---- Gom rail thành nhóm theo chức năng (dễ tìm hơn danh sách phẳng 18 mục) ----
@@ -112,7 +115,7 @@
     // Hộp thư khách về nhóm Kết nối & khách, đứng cạnh Kênh nhắn (cùng là chuyện khách nhắn tới).
     // Chợ MinMin vẫn cạnh Nguồn dữ liệu vì phần lớn gói trong chợ là kết nối (xem 0.55.37).
     { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON["Bộ não"],   ids: ["home", "chat", "files", "learn"] },
-    { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["kanban", "selfimprove"] },
+    { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["kanban", "selfimprove", "matnha"] },
     { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON["Năng lực"], ids: ["workspace", "skills", "plugins"] },
     { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["mcp", "packs", "channels", "conversations", "models"] },
     { id: "code", get label() { return t("nav.group.code"); },        icon: GICON["Code"],     ids: ["terminal", "coding"] },
@@ -169,7 +172,7 @@
   //
   // `page.<id>.title` cho phép tiêu đề trang KHÁC nhãn trên rail khi cần (rail chật nên
   // "Việc", trang rộng nên "Việc (Kanban)"); thiếu key đó thì tự rơi về `page.<id>.label`.
-  const VIEW_META = Object.fromEntries(["home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share"].map(id => [id, {
+  const VIEW_META = Object.fromEntries(["home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha"].map(id => [id, {
     icon: VIEW_ICON[id],
     get label() {
       const rieng = t(`page.${id}.title`);
@@ -497,6 +500,7 @@
     if (id === "settings") return renderSettingsPage(el);
     if (id === "pet") return renderPetPage(el);
     if (id === "share") return renderSharePage(el);
+    if (id === "matnha") return renderMatNha(el);
     if (id === "models")   return renderModels(el);
     if (id === "mcp")      return renderConnect(el);
     if (id === "plugins")  return renderPlugins(el);
@@ -520,6 +524,19 @@
     if (id === "logs")     return renderLogs(el);
     if (id === "usage")    return renderUsage(el);
     el.innerHTML = placeholder(id);
+  }
+
+  // Mắt Nhà: trang /mat-nha nhúng nguyên vào khung trang (cùng máy chủ, cùng phiên đăng nhập),
+  // kèm nút mở ra tab riêng cho ai muốn xem toàn màn hình.
+  function renderMatNha(el) {
+    el.innerHTML =
+      `<div class="mn-nhung">
+         <div class="mn-nhung-bar">
+           <span>${esc(window.t("matnha.intro"))}</span>
+           <a class="s-btn-ghost" href="/mat-nha" target="_blank" rel="noopener">${ic("external-link")} ${esc(window.t("matnha.mo_tab"))}</a>
+         </div>
+         <iframe class="mn-nhung-frame" src="/mat-nha?nhung=1" title="${esc(window.t("page.matnha.title"))}"></iframe>
+       </div>`;
   }
 
   // Loại trong kho tương ứng với từng trang năng lực. Trang nào có mặt ở đây thì được một
