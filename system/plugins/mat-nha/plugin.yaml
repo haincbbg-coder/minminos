@@ -1,0 +1,10 @@
+name: Mắt Nhà (camera ở nhà)
+slug: mat-nha
+version: 1.0.0
+description: Tra cứu sự kiện camera ở nhà (Frigate + cầu nối minmin-cau) - ai đến, người lạ, xe và biển số, giọng nói. Chỉ đọc sự kiện đã lưu, không mở camera.
+author: Javis (bundled)
+enabled: true
+min_mode: readonly
+tools:
+  - mat_nha_su_kien
+hooks: []

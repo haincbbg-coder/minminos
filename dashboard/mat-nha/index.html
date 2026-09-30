@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<title>Mắt Nhà - MinMin</title>
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/mat-nha/mat-nha.css">
+</head>
+<body>
+<header class="top">
+  <a class="back" href="/" aria-label="Về MinMin">&larr;</a>
+  <h1>Mắt Nhà</h1>
+  <span class="cau" id="cau" title="Cầu nối ở nhà">…</span>
+</header>
+
+<main>
+  <section class="cams" id="cams" aria-label="Camera"></section>
+
+  <nav class="loc" aria-label="Lọc sự kiện">
+    <button type="button" data-loc="hom-nay" aria-pressed="true">Hôm nay</button>
+    <button type="button" data-loc="nguoi-la" aria-pressed="false">Người lạ</button>
+    <button type="button" data-loc="xe" aria-pressed="false">Xe</button>
+    <button type="button" data-loc="bien-so" aria-pressed="false">Biển số</button>
+    <button type="button" data-loc="giong" aria-pressed="false">Giọng nói</button>
+    <button type="button" data-loc="tat-ca" aria-pressed="false">7 ngày</button>
+  </nav>
+  <div class="tim">
+    <input id="timBien" type="search" placeholder="Tìm biển số, vd 29B1" autocomplete="off">
+    <input id="timTen" type="search" placeholder="Tìm tên người nhà" autocomplete="off">
+  </div>
+
+  <ul class="ds" id="ds" aria-live="polite"></ul>
+  <p class="trong" id="trong" hidden>Chưa có sự kiện nào khớp.</p>
+
+  <section class="hop" id="ghepNoi">
+    <h2>Ghép nối máy ở nhà</h2>
+    <p id="maTT">…</p>
+    <button type="button" class="btn" id="taoMa">Tạo mã ghép nối</button>
+    <div class="ma" id="maHop" hidden>
+      <code id="ma"></code>
+      <button type="button" class="btn nho" id="chepMa">Chép</button>
+      <p class="nhac">Mã chỉ hiện <b>một lần</b>. Tạo mã mới thì mã cũ hết hiệu lực, máy ở nhà phải dán lại.</p>
+    </div>
+  </section>
+
+  <section class="hop" id="caiDat">
+    <h2>Cách cài</h2>
+    <ol>
+      <li><b>Bật RTSP cho từng camera</b> trong app EZVIZ (điện thoại cùng Wi-Fi với camera):
+        Cài đặt &rarr; Xem trực tiếp qua mạng LAN (LAN Live View) &rarr; chọn camera &rarr; bánh răng &rarr;
+        Cài đặt dịch vụ cục bộ (Local Service Settings) &rarr; bật <b>RTSP</b>.
+        Camera dùng pin không có RTSP, chỉ camera cắm điện (C6N, dòng H...) mới được.</li>
+      <li>Ghi lại <b>mã xác minh 6 chữ</b> in trên tem dưới đáy mỗi camera (Verification Code).</li>
+      <li>Trên máy Windows ở nhà: bấm <button type="button" class="btn nho" id="taiBat">Tải CaiMatNha.bat</button>
+        rồi bấm đúp tệp vừa tải. Windows hỏi thì chọn <b>Thông tin thêm &rarr; Vẫn chạy</b>.</li>
+      <li>Bộ cài tự cài Docker Desktop (nếu thiếu), quét tìm camera, hỏi tên và mã từng cái,
+        rồi hỏi <b>mã ghép nối</b> ở trên. Cần khởi động lại máy thì nó báo, xong bấm đúp lại.</li>
+      <li>Mở Frigate trên máy ở nhà (<code>http://localhost:5000</code>) &rarr; <b>Face Library</b> &rarr;
+        thêm 1-5 ảnh rõ mặt của từng người nhà. Biển số quen thì thêm ở mục <code>known_plates</code>.</li>
+    </ol>
+    <p class="phu">Tệp trong bộ cài (tải riêng nếu cần):
+      <a href="/static/mat-nha/kit/CaiMatNha.ps1" download>CaiMatNha.ps1</a> ·
+      <a href="/static/mat-nha/kit/docker-compose.yml" download>docker-compose.yml</a> ·
+      <a href="/static/mat-nha/kit/config.yml" download>config.yml</a> ·
+      <a href="/static/mat-nha/kit/minmin-cau/cau.py" download>cau.py</a> ·
+      <a href="/static/mat-nha/kit/minmin-cau/Dockerfile" download>Dockerfile</a></p>
+    <p class="phu rieng"><b>Riêng tư:</b> video, khuôn mặt đã học và mã camera chỉ nằm trên máy ở nhà.
+      MinMin chỉ nhận dòng tóm tắt (ai, lúc nào, camera nào) và ảnh chụp nhỏ, giữ 30 ngày.
+      Mẫu khuôn mặt là dữ liệu nhạy cảm theo Luật Bảo vệ dữ liệu cá nhân 2025: chỉ học mặt người
+      đã đồng ý, và nên dán thông báo có camera ở cổng.</p>
+  </section>
+</main>
+
+<div class="xem" id="xem" hidden><img id="xemAnh" alt="Ảnh sự kiện"></div>
+<script src="/static/mat-nha/mat-nha.js"></script>
+</body>
+</html>

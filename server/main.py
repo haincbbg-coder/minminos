@@ -205,6 +205,8 @@ _AUTH_PUBLIC_EXACT = ("/", "/favicon.ico", "/auth/status", "/auth/login", "/auth
 # bằng chat trả 401 câm. /reminders/delete CỐ Ý không có ở đây: xoá hẳn thì để dashboard (có
 # session) làm, chat chỉ cần huỷ.
 _AUTH_LOCAL_EXACT = ("/telegram/send-file", "/reminders", "/reminders/cancel", "/reminders/update")
+# Mắt Nhà: (đường, phương thức) duy nhất được miễn đăng nhập - xem routes/mat_nha.py.
+_MAT_NHA_CONG_KHAI = ("/mat-nha/su-kien", "POST")
 
 
 def duong_dan_router(request) -> str:
@@ -267,7 +269,11 @@ async def _auth_guard(request: Request, call_next):
                   # Đường HTTP của plugin mà CHÍNH plugin khai là công khai (0.64.26). Chỉ hỏi
                   # khi đúng tiền tố, để request thường không phải đi tra danh sách plugin.
                   or ((path.startswith("/ext/") or path.startswith("/.well-known/"))
-                      and plugins_host.http_cong_khai(path, request.method)))
+                      and plugins_host.http_cong_khai(path, request.method))
+                  # Mắt Nhà (0.64.91): cầu nối ở nhà đẩy sự kiện camera lên, không có cookie.
+                  # Miễn ĐÚNG một cặp (đường, POST); endpoint tự kiểm header x-mat-nha-token.
+                  # GET cùng đường (đọc sự kiện) vẫn phải đăng nhập.
+                  or (path, request.method) == _MAT_NHA_CONG_KHAI)
         if not public and not cfgmod.valid_session(request.cookies.get("javis_session", "")):
             # Client ngoài trình duyệt (CLI, script, cron) không có cookie. Nhánh token là
             # đường DUY NHẤT của chúng - xem docs/dev/2026-08-cli-spec.md. Đặt SAU nhánh
@@ -19419,6 +19425,11 @@ hud_routes.register(app, hud_routes.HudDeps(
     dashboard_dir=Path(DASHBOARD_PATH),
     brain_root=lambda b: _brain_root(b),
 ))
+
+# MinMin Mắt Nhà (camera ở nhà qua Frigate + cầu nối) - routes/mat_nha.py. Cũng đăng ký ở cuối.
+import routes.mat_nha as mat_nha_routes   # noqa: E402
+mat_nha_routes.register(app, mat_nha_routes.MatNhaDeps(dashboard_dir=Path(DASHBOARD_PATH)))
+assert mat_nha_routes.LOI_VAO_CONG_KHAI == _MAT_NHA_CONG_KHAI
 
 
 @app.on_event("shutdown")

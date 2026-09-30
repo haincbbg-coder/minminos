@@ -1,0 +1,152 @@
+# MinMin Mat Nha - cau hinh Frigate (0.17.x). CaiMatNha.ps1 sinh ra tu mau nay:
+#   - thay khoi DETECTORS (danh dau >>> / <<< ben duoi) theo GPU NVIDIA hay CPU,
+#   - thay khoi CAMERAS (danh dau >>> / <<< ben duoi) bang camera tim thay trong mang nha.
+# Ma camera (6 chu in tren tem) chi nam trong file nay, tren may nay. KHONG gui len MinMin.
+# Tai lieu: https://docs.frigate.video/configuration/reference
+# CHUA KIEM TREN MAY THAT: cac khoa duoi day doi chieu voi docs.frigate.video (2026-09),
+# nhung chua chay tren camera EZVIZ that. Frigate bao loi cau hinh thi xem: docker logs frigate
+
+mqtt:
+  enabled: true
+  host: mosquitto
+  port: 1883
+  topic_prefix: frigate
+  client_id: frigate
+
+# >>> DETECTORS
+# GPU NVIDIA: anh -tensorrt tu chay model ONNX tren GPU. Model YOLOv9 do CaiMatNha.ps1 tu dung
+# (lenh docker build trong docs "object_detectors" > YOLOv9) va dat vao config/model_cache/.
+detectors:
+  onnx_0:
+    type: onnx
+model:
+  model_type: yolo-generic
+  width: 320
+  height: 320
+  input_tensor: nchw
+  input_dtype: float
+  path: /config/model_cache/yolov9-s-320.onnx
+  labelmap_path: /labelmap/coco-80.txt
+# <<< DETECTORS
+
+ffmpeg:
+  # Giai ma video bang GPU NVIDIA. May khong co GPU thi CaiMatNha.ps1 doi thanh "auto".
+  hwaccel_args: preset-nvidia
+  output_args:
+    # Ghi kem tieng (doi sang AAC de file mp4 chua duoc tieng G.711 cua camera).
+    record: preset-record-generic-audio-aac
+
+detect:
+  enabled: true
+  fps: 5
+
+objects:
+  # Nhan trong bang COCO-80 (/labelmap/coco-80.txt). Them/bot tuy y.
+  track:
+    - person
+    - car
+    - motorcycle
+    - bicycle
+    - truck
+    - bus
+    - dog
+    - cat
+    - bird
+    - backpack
+    - handbag
+    - suitcase
+    - umbrella
+  filters:
+    person:
+      min_score: 0.5
+      threshold: 0.7
+
+# Nhan mat nguoi nha. Chi hoc mat NGUOI DA DONG Y (Luat BVDLCN 91/2025: mau khuon mat la du
+# lieu nhay cam). Hoc mat trong giao dien Frigate > Face Library (Thu vien khuon mat).
+# model_size large can GPU; khong co GPU thi CaiMatNha.ps1 doi sang small (chay CPU).
+face_recognition:
+  enabled: true
+  model_size: large
+
+# Doc bien so. Model large doc duoc bien 2 dong (xe may VN), chi ky tu Latin - du cho bien VN.
+# format: bien VN dang 30A-123.45 / 30A-1234 / 51LD-123.45 / 29-B1 123.45 (2 dong).
+# PHAI THU TREN VIDEO THAT: sai dinh dang la Frigate bo luon lan doc. Thay format bang dong
+# chu thich ben duoi (format: null) neu thay bien so bi bo sot.
+lpr:
+  enabled: true
+  device: GPU
+  model_size: large
+  min_plate_length: 6
+  format: '^[0-9]{2}[- ]?[A-Z]{1,2}[0-9]?[- .]?[0-9]{3}[.]?[0-9]{1,2}$'
+  # format: null
+  # Bien so quen: ten hien thi -> danh sach bien. Vi du:
+  # known_plates:
+  #   Xe cua bo:
+  #     - "29B112345"
+  known_plates: {}
+
+# Nghe am thanh: tieng noi, cho sua, la het, bao chay (nhan tu bang YAMNet cua Frigate).
+audio:
+  enabled: true
+  listen:
+    - speech
+    - bark
+    - yell
+    - fire_alarm
+
+# Chep loi noi. model_size large = Whisper (chay GPU CUDA), co tuy chon ngon ngu.
+# "vi" la ma tieng Viet cua Whisper; CHUA KIEM do chinh xac tieng Viet tren camera that.
+# Model small (sherpa-onnx) chi tieng Anh, nen may khong co GPU thi CaiMatNha.ps1 tat muc nay.
+audio_transcription:
+  enabled: true
+  device: GPU
+  model_size: large
+  language: vi
+
+snapshots:
+  enabled: true
+  bounding_box: true
+  quality: 70
+  retain:
+    default: 30
+
+record:
+  enabled: true
+  continuous:
+    days: 0
+  motion:
+    days: 3
+  alerts:
+    retain:
+      days: 7
+      mode: motion
+  detections:
+    retain:
+      days: 7
+      mode: motion
+
+# >>> CAMERAS
+# Vi du mot camera (CaiMatNha.ps1 thay ca khoi nay). EZVIZ: /Streaming/Channels/101 = luong
+# chinh (ghi hinh + tieng), /102 = luong phu (nhan dien, nhe hon).
+go2rtc:
+  streams:
+    vi_du:
+      - rtsp://admin:ABCDEF@192.168.1.50:554/Streaming/Channels/101
+    vi_du_sub:
+      - rtsp://admin:ABCDEF@192.168.1.50:554/Streaming/Channels/102
+
+cameras:
+  vi_du:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/vi_du
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+            - audio
+        - path: rtsp://127.0.0.1:8554/vi_du_sub
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+# <<< CAMERAS
