@@ -442,7 +442,7 @@ function flash() {
 
 // ---------- huong dan + luyen cu chi ----------
 const BUOC = [
-  { g: "Calib", hoi: "Giơ tay PHẢI lên, đưa sang phía bên phải của bố", giu: 900 },
+  { g: "Calib", hoi: "Giơ tay PHẢI của bố lên (tay phải thật), đưa sang phía tay phải, giữ yên 1 giây", giu: 1 },
   { g: "Open_Palm", hoi: "Xòe bàn tay về phía camera", giu: 700 },
   { g: "Pointing_Up", hoi: "Duỗi riêng ngón trỏ", giu: 700 },
   { g: "Closed_Fist", hoi: "Nắm tay lại", giu: 700 },
@@ -505,7 +505,8 @@ const guide = {
     const ds = this.ds;
     if (this.buoc >= ds.length) { this.dung(true); feedAdd("ok", "Luyện cử chỉ", `Hoàn thành ${ds.length} bước`, "XONG"); return; }
     const b = ds[this.buoc];
-    vision.anyHand = b.g === "Calib";        // buoc chinh huong: tay nao cung nhan
+    vision.anyHand = b.g === "Calib";        // buoc chinh tay: tay nao cung nhan
+    if (b.g === "Calib") { this._chinhXong = false; vision.chinhTay(); }
     $("gStep").textContent = `BƯỚC ${this.buoc + 1}/${ds.length}`;
     $("gAsk").textContent = b.hoi; $("gBar").style.width = "0%";
     document.querySelectorAll("#gList li").forEach(li => li.classList.toggle("now", li.dataset.g === b.g));
@@ -516,17 +517,8 @@ const guide = {
     if (!this.on) return;
     const b = this.ds[this.buoc];
     let dung = false;
-    if (b.g === "Calib") {
-      // tay phai cua bo phai hien ben PHAI man hinh; hien ben trai nghia la webcam da tu lat -> dao lai
-      if (vision.handX != null) {
-        dung = true;
-        if (!this.giuTu) this.giuTu = now;
-        if (now - this.giuTu > b.giu) {
-          if (vision.handX < 0.5) { vision.flip = !vision.flip; vision._prevHand = null; $("gFlip").checked = vision.flip; try { localStorage.setItem("minmin.hud.flip", vision.flip ? "1" : "0"); } catch (e) {} toast("Đã chỉnh lại hướng trái phải cho webcam của bố."); }
-          else toast("Hướng trái phải đã đúng.");
-        }
-      }
-    } else dung = this.lastG === b.g && now - this.lastAt < 250;
+    if (b.g === "Calib") dung = !!this._chinhXong;    // vision.js bao qua onChinh
+    else dung = this.lastG === b.g && now - this.lastAt < 250;
     if (!dung) { this.giuTu = 0; $("gBar").style.width = "0%"; return; }
     if (!this.giuTu) this.giuTu = now;
     const tl = Math.min(1, (now - this.giuTu) / b.giu);
@@ -562,6 +554,20 @@ const vision = new Vision({
   onForm: (f) => { doiHinh(f); feedAdd("ok", "Cử chỉ", "Chữ V · đổi sang " + (TEN_HINH[f] || f).toLowerCase(), "XONG"); },
   onLook: () => { feedAdd("run", "Cử chỉ", "Ngón cái · MinMin nhìn", "…"); $("tNhin").click(); },
   onDetect: (g) => { guide.thay(g); dem.cuChi++; },
+  // Chinh tay xong: tu nay "tay phai" la dung tay phai that cua bo
+  onChinh: ({ doiHuong }) => {
+    guide._chinhXong = true;
+    $("gFlip").checked = vision.flip;
+    chime();
+    const chu = vision.handPref === "Any" ? "tay nào cũng điều khiển được" : `chỉ ${vision.handPref === "Left" ? "tay TRÁI" : "tay PHẢI"} điều khiển, tay kia bỏ qua`;
+    toast(`Đã nhận tay phải của bố${doiHuong ? ", đã sửa luôn hướng di chuyển" : ""}. Từ giờ ${chu}.`);
+    feedAdd("ok", "Chỉnh tay", "Đã nhận đúng tay phải", "XONG");
+    streamLog("a", "CHỈNH TAY", "xong" + (doiHuong ? " · đảo hướng" : ""));
+  },
+  onBoQua: (nhan) => {
+    const ben = nhan === "Left" ? "TRÁI" : "PHẢI", can = vision.handPref === "Left" ? "TRÁI" : "PHẢI";
+    toast(`MinMin đang thấy tay ${ben}, chỉ nghe tay ${can}. Giơ tay ${can}, hoặc đổi ở bảng Cử chỉ → Tay điều khiển. Sai tay thì bấm Chỉnh tay.`);
+  },
   // gio ca hai tay len = goi MinMin nghe
   onWake: () => {
     feedAdd("run", "Cử chỉ", "Giơ hai tay · MinMin nghe", "…");
@@ -603,7 +609,7 @@ $("tChiNguoi").onclick = () => {
 };
 $("tHinh").onclick = () => doiHinh();
 $("tGoc").onclick = () => scene.resetView();
-$("tFull").onclick = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {}); };
+$("tFull").onclick = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(khoaDoc).catch(() => {}); };
 // Ve thuc te: bat che do ve la tu mo camera, hien camera mo phia sau net ve (thay chinh minh
 // dang ve tren khong). Duoi ngon tro = ha but, co ngon lai = nhac but. Tat thi het ve.
 $("tVe").onclick = async () => {
@@ -640,7 +646,10 @@ $("tCam").onclick = async () => {
   $("rowEnv").hidden = false;
   if (vision.owner()) { $("rowChu").hidden = false; vision.startOwnerWatch(); }
   // dien thoai / may co nhieu camera: cho doi camera truoc - sau
-  try { const ds = await navigator.mediaDevices.enumerateDevices(); $("tFlip").hidden = ds.filter(d => d.kind === "videoinput").length < 2; } catch (e) {}
+  // dien thoai luon co nut Doi cam (iOS co luc chi liet ke 1 camera truoc khi doi lan dau)
+  try { const ds = await navigator.mediaDevices.enumerateDevices(); $("tFlip").hidden = !vision.nhe && ds.filter(d => d.kind === "videoinput").length < 2; } catch (e) { $("tFlip").hidden = !vision.nhe; }
+  // chua chinh tay: nhac mot lan (khong chinh van dung duoc, tay nao cung dieu khien)
+  if (!vision.daChinh && vision.ready) setTimeout(() => toast("Mẹo: mở bảng Cử chỉ, bấm Chỉnh tay để MinMin nhận đúng tay phải của bố."), 6000);
   if (vision.ready) toast(`Camera đã bật. Chỉ ${vision.handPref === "Left" ? "tay TRÁI" : "tay PHẢI"} điều khiển (đổi ở bảng Cử chỉ). Giơ đồ vật lên và hỏi “Min Min ơi, đây là gì”.`);
 };
 let chaoRoi = false;
@@ -685,8 +694,33 @@ let _kiemMay = null;
 function tatMay(baoLoi) {
   clearInterval(_kiemMay); _kiemMay = null;
   if (vision.mode === "maytinh") vision.setMode("cuchi");
-  capNhatCheDo();
+  capNhatCheDo(); trangMay("");
   if (baoLoi) { toast(baoLoi, true); feedAdd("bad", "Máy tính", baoLoi, "TẮT"); }
+}
+// Dong MÁY TÍNH o goc phai: da noi / dang cho MinMin Tay
+function trangMay(k) {
+  $("rowMay").hidden = !k;
+  const b = $("mayText"); b.className = k === "ok" ? "ok" : k ? "cho" : "";
+  b.textContent = k === "ok" ? "ĐÃ NỐI" : k === "cho" ? "CHỜ MINMIN TAY…" : "-";
+}
+// Dang o che do May tinh ma MinMin Tay tat: KHONG tat che do, cu thu noi lai moi 3 giay.
+// Bo bat lai cua so MinMin Tay la tu dieu khien duoc tiep (truoc 0.64.89 phai bam lai tu dau).
+function kiemMayDinhKy() {
+  clearInterval(_kiemMay);
+  let mat = false;
+  _kiemMay = setInterval(async () => {
+    if (vision.mode !== "maytinh") { clearInterval(_kiemMay); _kiemMay = null; return; }
+    const k = await tayMay.ping();
+    if (k.ok && mat) {
+      mat = false; trangMay("ok");
+      toast("Đã nối lại MinMin Tay, điều khiển máy tiếp tục.");
+      feedAdd("ok", "Máy tính", "Nối lại MinMin Tay", "NỐI LẠI");
+    } else if (!k.ok && !mat) {
+      mat = true; trangMay("cho");
+      toast(k.ly_do === "sai_ma" ? "MinMin Tay báo sai mã (có thể đã tạo mã mới). Bấm Máy tính, dán mã mới." : "Mất kết nối MinMin Tay (cửa sổ đen đã tắt?). Bật lại MinMin-Tay.bat, HUD tự nối lại.", true);
+      feedAdd("bad", "Máy tính", "Mất kết nối MinMin Tay, đang chờ", "CHỜ");
+    }
+  }, 3000);
 }
 const LY_DO_MAY = {
   khong_chay: "Chưa thấy MinMin Tay chạy trên máy này. Làm bước 1 (tải và bấm đúp MinMin-Tay.bat). Trình duyệt hỏi “cho phép truy cập thiết bị trong mạng” thì bấm Cho phép.",
@@ -708,11 +742,9 @@ async function batMay() {
   feedAdd("ok", "Máy tính", "Đã nối MinMin Tay · " + (r.man || "màn chính"), "BẬT");
   streamLog("a", "MÁY TÍNH", "đã nối MinMin Tay · " + (r.man || ""));
   toast("Điều khiển máy: BẬT. Trỏ = di chuột · chụm nhanh = bấm · chụm giữ rồi mở = phóng to · chữ L chụm lại = thu nhỏ · chữ V lên xuống = cuộn · xòe vuốt = trang tiếp · nắm giữ = tạm dừng.");
-  clearInterval(_kiemMay);
-  _kiemMay = setInterval(async () => {
-    const k = await tayMay.ping();
-    if (!k.ok) tatMay(k.ly_do === "sai_ma" ? "MinMin Tay đổi mã ghép nối, bấm Máy tính để nối lại." : "Mất kết nối MinMin Tay (cửa sổ đen đã đóng?). Đã tắt điều khiển máy.");
-  }, 5000);
+  trangMay("ok");
+  kiemMayDinhKy();
+  if (!vision.daChinh) { vision.chinhTay(); toast("Lần đầu: giơ tay PHẢI của bố lên, đưa sang phía tay phải, giữ 1 giây để MinMin nhận đúng tay.", false); }
   return true;
 }
 $("tMay").onclick = async () => { if (vision.mode === "maytinh") { tatMay(); toast("Điều khiển máy: TẮT."); } else await batMay(); };
@@ -732,7 +764,30 @@ $("mayTai").onclick = () => {
   $("maySt").className = "may-st"; $("maySt").textContent = "Đã tải. Mở thư mục Tải xuống, bấm đúp MinMin-Tay.bat, rồi dán mã vào ô trên.";
 };
 $("gHand").value = vision.handPref;
-$("gHand").onchange = () => { vision.setHand($("gHand").value); toast(`Chỉ ${$("gHand").value === "Left" ? "tay TRÁI" : "tay PHẢI"} điều khiển, tay kia MinMin bỏ qua.`); };
+$("gHand").onchange = () => {
+  vision.setHand($("gHand").value);
+  const h = $("gHand").value;
+  toast(h === "Any" ? "Tay nào cũng điều khiển được (hai tay cùng giơ thì theo tay giơ trước)."
+    : `Chỉ ${h === "Left" ? "tay TRÁI" : "tay PHẢI"} điều khiển, tay kia MinMin bỏ qua.` + (vision.daChinh ? "" : " Bấm Chỉnh tay một lần để MinMin nhận đúng tay."));
+};
+$("gChinh").onclick = () => {
+  if (!vision.on) { toast("Bật Camera trước rồi bấm Chỉnh tay.", true); return; }
+  vision.chinhTay();
+  toast("Giơ tay PHẢI của bố lên (một tay thôi), đưa sang phía tay phải, giữ yên 1 giây…");
+};
+// Thu di chuot: ve mot vong tron nho quanh giua man chinh - thay chuot chay la da noi dung
+$("mayThu").onclick = async () => {
+  const r = await tayMay.ping();
+  const st = $("maySt");
+  if (!r.ok) { st.className = "may-st bad"; st.textContent = LY_DO_MAY[r.ly_do] || "Chưa nối được MinMin Tay."; return; }
+  st.className = "may-st ok"; st.textContent = "Nhìn màn hình chính: chuột đang chạy một vòng tròn.";
+  for (let i = 0; i <= 36; i++) {
+    const a = i / 36 * Math.PI * 2;
+    tayMay.gui({ t: "move", x: +(0.5 + Math.cos(a) * 0.12).toFixed(4), y: +(0.5 + Math.sin(a) * 0.18).toFixed(4) });
+    await new Promise(res => setTimeout(res, 35));
+  }
+};
+tayMay.onGui = (l, ok) => { if (l.t !== "move" || !ok) streamLog(ok ? "g" : "a", "GỬI MÁY", `${l.t}${l.n != null ? " " + l.n : l.d != null ? " " + l.d : l.k ? " " + l.k : ""} ${ok ? "✓" : "lỗi"}`); };
 $("tGiong").onclick = () => {
   voice.robotFx = $("tGiong").getAttribute("aria-pressed") !== "true";
   batTat("tGiong", null, voice.robotFx);
@@ -743,7 +798,7 @@ batTat("tGiong", null, voice.robotFx);
 if (vision.owner()) batTat("tChuNhan", null, true);
 capNhatCheDo();
 
-$("tFlip").onclick = async () => { const f = await vision.flip(); toast(f === "user" ? "Camera trước" : "Camera sau: đưa camera vào vật cần MinMin xem"); };
+$("tFlip").onclick = async () => { const f = await vision.doiCam(); toast(f === "user" ? "Camera trước" : "Camera sau: đưa camera vào vật cần MinMin xem"); };
 $("tNhin").onclick = () => {
   const cau = vision.on ? "Bố đang cho con xem qua camera. Con nhìn thấy gì? Nếu bố đang cầm hay giơ một đồ vật thì cho bố biết đó là gì, hãng gì, màu gì, các nút và công dụng. Đọc chữ nếu có."
     : "Bố vừa vẽ trên màn hình. Con xem hình vẽ này là gì và mô tả ngắn gọn.";
@@ -890,8 +945,10 @@ function renderKpi(list, updated) {
 // Mo tu nut "HUD man phu" (?fs=1): cu bam dau tien tren man bat dau dua HUD vao toan man hinh
 function toanManHinh() {
   if (!params.has("fs") || document.fullscreenElement) return;
-  try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch (e) {}
+  try { document.documentElement.requestFullscreen?.().then(khoaDoc).catch(() => {}); } catch (e) {}
 }
+// Dien thoai: giu man DOC khi toan man hinh (Android Chrome cho khoa; iOS bo qua im lang)
+function khoaDoc() { if (vision.nhe && innerHeight >= innerWidth) screen.orientation?.lock?.("portrait").catch(() => {}); }
 $("gateBtn").onclick = async () => {
   toanManHinh();
   $("gate").hidden = true;

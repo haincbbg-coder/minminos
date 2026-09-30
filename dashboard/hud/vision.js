@@ -84,9 +84,13 @@ const khoang = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 // hai tay nhung CHI tay bo chon (mac dinh tay phai) duoc dieu khien, tay kia bo qua.
 // MediaPipe dat nhan Left/Right voi gia dinh anh DA LAT GUONG (camera selfie). Khung hinh tho
 // cua webcam KHONG lat nen nhan bi nguoc; webcam tu lat san (flip) thi nhan dung.
-export function tayThat(nhan, flip) {
+// 0.64.89: bo bao "chi nhan tay trai, tay phai gio len khong ve duoc" - quy uoc tren khong dung
+// voi moi webcam (co webcam tu lat hinh san). Nay KHONG doan nua: bo "Chinh tay" mot lan (gio
+// tay PHAI that), MinMin ghi lai may dang goi tay do la gi -> `dao`. Chua chinh thi dao = null
+// va tay nao cung duoc (khong khoa), tranh khoa nham tay.
+export function tayThat(nhan, dao) {
   if (nhan !== "Left" && nhan !== "Right") return "";
-  if (flip) return nhan;
+  if (!dao) return nhan;
   return nhan === "Left" ? "Right" : "Left";
 }
 
@@ -108,7 +112,7 @@ export function chonTay(hands, pref, prev) {
 //   batchuoc .. robot bat chuoc canh tay (toan than), dau nhin theo mat; cu chi tay tat
 //   maytinh ... tay dieu khien chuot / ban phim cua may tinh (qua MinMin Tay)
 export const CHE_DO = { cuchi: "CỬ CHỈ", batchuoc: "BẮT CHƯỚC", maytinh: "MÁY TÍNH" };
-export const TEN_TAY = { Right: "TAY PHẢI", Left: "TAY TRÁI" };
+export const TEN_TAY = { Right: "TAY PHẢI", Left: "TAY TRÁI", Any: "TAY" };
 export const GIU_TAY = 800;        // mat tay bao lau thi moi nhuong cho khuon mat (ms)
 
 // Chum ngon: dau ngon cai (4) sat dau ngon tro (8), so voi co ban tay (0 -> 9)
@@ -130,8 +134,11 @@ export class Vision {
     this.may && this.may.mat();
     this._ctl = null;
   }
+  // "Tay phai" = tay phai THAT cua bo, khong phai ben phai khung camera
+  get daChinh() { return this.nhanDao !== null; }
+  chinhTay() { this.dangChinh = { t: 0, n: 0 }; }
   setHand(h) {
-    this.handPref = h === "Left" ? "Left" : "Right";
+    this.handPref = h === "Left" || h === "Any" ? h : "Right";
     try { localStorage.setItem("minmin.hud.hand", this.handPref); } catch (e) {}
     this._prevHand = null;
   }
@@ -150,7 +157,14 @@ export class Vision {
     this.onControl = opts.onControl || (() => {}); // ai dang dieu khien (dong ĐIỀU KHIỂN)
     this.may = opts.may || null;                    // DieuKhienMay (che do maytinh)
     let ls = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
-    this.handPref = ls("minmin.hud.hand") === "Left" ? "Left" : "Right";
+    const tay = ls("minmin.hud.hand");
+    this.handPref = tay === "Left" || tay === "Any" ? tay : "Right";
+    const d = ls("minmin.hud.nhandao");
+    this.nhanDao = d === "1" ? true : d === "0" ? false : null;   // null = chua chinh tay
+    this.onBoQua = opts.onBoQua || (() => {});     // chi thay tay kia (bi bo qua) mot luc
+    this.onChinh = opts.onChinh || (() => {});     // ket qua Chinh tay
+    // Dien thoai / may yeu: camera nho hon, bot bo nhan dien de tra loi nhanh hon
+    this.nhe = !!(window.matchMedia && matchMedia("(pointer: coarse)").matches) || innerWidth < 900;
     this.mode = CHE_DO[ls("minmin.hud.mode")] ? ls("minmin.hud.mode") : "cuchi";
     if (this.mode === "maytinh") this.mode = "cuchi";   // may tinh phai bat lai moi lan (an toan)
     this.stats = { ms: 0, tay: 0, conf: 0, toc: 0, mat: 0, vat: 0 };
@@ -175,7 +189,7 @@ export class Vision {
     this.onStatus("Đang mở camera…");
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: this.facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        video: { facingMode: this.facing, ...this._khung() }, audio: false });
     } catch (e) {
       const bi = e && (e.name === "NotAllowedError" || e.name === "SecurityError");
       this.onStatus(bi ? "Bố chưa cho phép camera. Bấm biểu tượng ổ khóa cạnh địa chỉ web → Camera → Cho phép." : "Không mở được camera: " + (e.message || e.name), true);
@@ -206,7 +220,16 @@ export class Vision {
     const c = this.overlay.getContext("2d"); c.clearRect(0, 0, this.overlay.width, this.overlay.height);
   }
 
-  async flip() {
+  // Kich thuoc camera: may tinh 1280x720; dien thoai nho hon (nhan dien nhanh gap doi) va
+  // theo chieu dang cam: cam doc thi xin khung DOC.
+  _khung() {
+    if (!this.nhe) return { width: { ideal: 1280 }, height: { ideal: 720 } };
+    return innerHeight > innerWidth ? { width: { ideal: 480 }, height: { ideal: 640 } } : { width: { ideal: 640 }, height: { ideal: 480 } };
+  }
+
+  // Doi camera truoc / sau. Ten cu `flip()` trung voi cai dat `this.flip` (dao trai phai) nen
+  // bam nut Doi cam chua bao gio chay (0.64.89).
+  async doiCam() {
     this.facing = this.facing === "user" ? "environment" : "user";
     if (this.on) { this.stop(); await this.start(); }
     return this.facing;
@@ -235,6 +258,9 @@ export class Vision {
     requestAnimationFrame(this._tick);
     const v = this.video;
     if (!this._g || v.readyState < 2 || v.currentTime === this._last) return;
+    // dien thoai: toi da ~15 lan / giay, du muot ma khong nong may, tra loi nhanh hon
+    if (this.nhe && now - (this._xuLyAt || 0) < 66) return;
+    this._xuLyAt = now;
     this._last = v.currentTime;
     let hand = null, gest = "", face = null;
     const t0 = performance.now();
@@ -243,10 +269,17 @@ export class Vision {
       const r = this._g.recognizeForVideo(v, now);
       const nhan = r.handedness || r.handednesses || [];
       const ds = (r.landmarks || []).map((lm, i) => ({
-        lm, gest: r.gestures?.[i]?.[0]?.categoryName || "",
-        label: tayThat(nhan[i]?.[0]?.categoryName || "", this.flip), score: nhan[i]?.[0]?.score ?? 0,
+        lm, gest: r.gestures?.[i]?.[0]?.categoryName || "", tho: nhan[i]?.[0]?.categoryName || "",
+        label: tayThat(nhan[i]?.[0]?.categoryName || "", this.nhanDao), score: nhan[i]?.[0]?.score ?? 0,
       }));
-      const c = chonTay(ds, this.anyHand ? "Any" : this.handPref, this._prevHand);
+      if (this.dangChinh) this._buocChinh(ds, now);
+      const pref = this.anyHand || this.dangChinh || !this.daChinh ? "Any" : this.handPref;
+      const c = chonTay(ds, pref, this._prevHand);
+      // Chi thay tay kia hon 1,5 giay: bao bo biet MinMin dang bo qua tay do
+      if (ds.length && !c) {
+        this._boQuaTu = this._boQuaTu || now;
+        if (now - this._boQuaTu > 1500 && now - (this._boQuaBao || 0) > 8000) { this._boQuaBao = now; this.onBoQua(ds[0].label); }
+      } else this._boQuaTu = 0;
       if (c) { hand = c.lm; gest = c.gest; this.stats.conf = c.score; }
       this.others = ds.filter(d => d !== c).map(d => d.lm);
       this.stats.tay = ds.length;
@@ -260,13 +293,19 @@ export class Vision {
       if (this._prevHand && now - this._prevHand.t > 1200) this._prevHand = null;
     }
     this._frame++;
-    try { face = this._f.detectForVideo(v, now).detections?.[0]?.boundingBox || null; } catch (e) {}
+    if (!this.nhe || this._frame % 3 === 0 || !this._matCu) {
+      try { face = this._f.detectForVideo(v, now).detections?.[0]?.boundingBox || null; } catch (e) {}
+      this._matCu = face;
+    } else face = this._matCu;
     this.stats.mat = face ? 1 : 0;
-    if (this._p && this._frame % 2 === 0) {
+    // Toan than: che do Bat chuoc thi moi khung chan; con lai chi de nhan "gio hai tay" nen thua
+    // hon, dien thoai thi tat han (nang nhat trong cac bo nhan dien)
+    const chuKy = this.mode === "batchuoc" ? 2 : this.nhe ? 0 : 3;
+    if (this._p && chuKy && this._frame % chuKy === 0) {
       try { this.pose = this._p.detectForVideo(v, now).landmarks?.[0] || null; } catch (e) { this.pose = null; }
       this._applyPose(this.pose);
     }
-    if (this._o && this._frame % 12 === 0) {
+    if (this._o && this._frame % (this.nhe ? 30 : 12) === 0) {
       try {
         const r = this._o.detectForVideo(v, now).detections || [];
         this.objects = r.map(d => ({ name: d.categories?.[0]?.categoryName || "", score: d.categories?.[0]?.score || 0, box: d.boundingBox }))
@@ -274,12 +313,34 @@ export class Vision {
         this.onScene(this.objects);
       } catch (e) {}
     }
-    if (this._fa && now - (this._faAt || 0) > 1500) { this._faAt = now; this._nhanChu(); }
+    if (this._fa && now - (this._faAt || 0) > (this.nhe ? 4000 : 1500)) { this._faAt = now; this._nhanChu(); }
     if (hand && laChum(hand)) gest = "Pinch";
     this._apply(hand, gest, face);
     this._drawPreview(hand, face);
     this.stats.ms = this.stats.ms * 0.8 + 0.2 * (performance.now() - t0);
     this.stats.vat = this.objects.filter(o => o.name !== "person").length;
+  }
+
+  // ---- Chinh tay: bo gio tay PHAI that, dua sang phia tay phai, giu 1 giay ----
+  // Ghi lai (1) may goi tay do la Left hay Right -> nhanDao; (2) tay do hien ben nao man hinh
+  // -> co can dao huong di chuyen (flip) khong. Hai viec doc lap, khong con lan nhau.
+  _buocChinh(ds, now) {
+    const c = this.dangChinh;
+    if (ds.length !== 1) { c.t = 0; return; }
+    const h = ds[0];
+    if (!c.t || h.tho !== c.tho) { c.t = now; c.tho = h.tho; return; }
+    if (now - c.t < 1000) return;
+    this.dangChinh = null;
+    this.nhanDao = h.tho !== "Right";
+    let doiHuong = false;
+    const x = this._sx(h.lm[9].x);
+    if (Math.abs(x - 0.5) > 0.1 && x < 0.5) { this.flip = !this.flip; doiHuong = true; }
+    try {
+      localStorage.setItem("minmin.hud.nhandao", this.nhanDao ? "1" : "0");
+      localStorage.setItem("minmin.hud.flip", this.flip ? "1" : "0");
+    } catch (e) {}
+    this._prevHand = null;
+    this.onChinh({ nhanDao: this.nhanDao, doiHuong });
   }
 
   // ---- Toan than ----
@@ -417,7 +478,7 @@ export class Vision {
     if (hand) {
       this._handAt = now;
       s.external = "hand";
-      const ten = TEN_TAY[this.handPref];
+      const ten = this.daChinh ? TEN_TAY[this.handPref] : "TAY";
       this.handX = this._sx(hand[9].x);
       const tip = this._loc(this._sx(hand[8].x), hand[8].y);
       const x = tip.x, y = tip.y;
@@ -575,7 +636,10 @@ export class Vision {
   // Chup khung hinh camera (kem net ve) thanh Blob JPEG de gui MinMin
   async snapshot() {
     const v = this.video;
-    const W = this.on && v.videoWidth ? v.videoWidth : innerWidth, Hh = this.on && v.videoHeight ? v.videoHeight : innerHeight;
+    let W = this.on && v.videoWidth ? v.videoWidth : innerWidth, Hh = this.on && v.videoHeight ? v.videoHeight : innerHeight;
+    // anh gui MinMin: canh dai toi da 1280 (dien thoai 1024) - gui nhanh hon, doc chu van ro
+    const toiDa = this.nhe ? 1024 : 1280, k = Math.min(1, toiDa / Math.max(W, Hh));
+    W = Math.round(W * k); Hh = Math.round(Hh * k);
     const c = document.createElement("canvas"); c.width = W; c.height = Hh;
     const g = c.getContext("2d");
     if (this.on && v.videoWidth) {
@@ -586,6 +650,6 @@ export class Vision {
       g.fillStyle = "#07040f"; g.fillRect(0, 0, W, Hh);
     }
     if (this.hasInk()) g.drawImage(this.ink, 0, 0, W, Hh);
-    return await new Promise(r => c.toBlob(r, "image/jpeg", 0.86));
+    return await new Promise(r => c.toBlob(r, "image/jpeg", 0.82));
   }
 }

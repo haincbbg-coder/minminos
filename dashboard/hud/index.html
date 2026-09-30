@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/hud/hud.css?v=6">
+<link rel="stylesheet" href="/static/hud/hud.css?v=7">
 <script type="importmap">{ "imports": { "three": "/static/hud/vendor/three.module.min.js" } }</script>
 </head>
 <body data-state="standby">
@@ -54,9 +54,13 @@
     </div>
     <div class="g-set">
       <label>Tay điều khiển
-        <select id="gHand"><option value="Right">Tay phải</option><option value="Left">Tay trái</option></select>
+        <select id="gHand"><option value="Right">Tay phải</option><option value="Left">Tay trái</option><option value="Any">Tay nào cũng được</option></select>
       </label>
-      <label class="g-flip"><input type="checkbox" id="gFlip"> Đảo trái phải</label>
+      <button type="button" class="btn ghost" id="gChinh" title="Giơ tay phải thật của bố lên 1 giây để MinMin nhận đúng tay">Chỉnh tay</button>
+    </div>
+    <div class="g-set">
+      <span class="dim">“Tay phải” là tay phải của bố, không phải bên phải khung camera.</span>
+      <label class="g-flip" title="Chỉ bật khi di tay sang phải mà hình chạy sang trái"><input type="checkbox" id="gFlip"> Đảo hướng</label>
     </div>
     <footer>
       <button type="button" id="gStart">Luyện từng bước</button>
@@ -66,14 +70,25 @@
 
   <section class="guide may" id="may" hidden aria-label="Điều khiển máy tính bằng tay">
     <header><h2>ĐIỀU KHIỂN MÁY TÍNH</h2><button type="button" class="x" id="mayX" aria-label="Đóng">×</button></header>
-    <p class="lead">Dùng tay lướt web, đọc Word, xem PDF trên màn hình chính mà không cần chuột. Cần chạy <b>MinMin Tay</b> trên máy Windows này, mỗi lần bật máy chạy một lần.</p>
+    <p class="lead">Dùng tay điều khiển <b>mọi ứng dụng trên máy Windows này</b> (Chrome, Cốc Cốc, Word, Excel, PDF, ảnh, PowerPoint…), không riêng MinMin. MinMin Tay bấm chuột và phím thật của Windows nên ứng dụng nào đang mở trên <b>màn hình chính</b> cũng nhận.</p>
     <ol class="steps">
-      <li><button type="button" class="btn" id="mayTai">Tải MinMin-Tay.bat</button> rồi bấm đúp tệp vừa tải. Windows hỏi thì chọn <b>Thông tin thêm → Vẫn chạy</b>. Máy chưa có Python sẽ tự cài.</li>
-      <li>Cửa sổ đen hiện <b>mã ghép nối</b> (đã chép sẵn). Dán vào ô dưới, bấm Kết nối.</li>
+      <li><button type="button" class="btn" id="mayTai">Tải MinMin-Tay.bat</button> rồi bấm đúp tệp vừa tải. Windows hỏi thì chọn <b>Thông tin thêm → Vẫn chạy</b>. Máy chưa có Python sẽ tự cài (1-2 phút, xong bấm đúp lại).</li>
+      <li>Cửa sổ đen hiện <b>mã ghép nối</b> (đã tự chép). Dán vào ô dưới, bấm <b>Kết nối</b>. Trình duyệt hỏi quyền truy cập thiết bị / mạng nội bộ thì bấm <b>Cho phép</b>.</li>
+      <li>Bấm <b>Thử chuột</b>: thấy chuột chạy vòng tròn trên màn chính là đã nối đúng.</li>
+      <li>Giơ tay trước camera (tay phải, hoặc tay đã chọn ở bảng Cử chỉ) và dùng cử chỉ ở tab <b>Điều khiển máy tính</b>.</li>
     </ol>
-    <div class="may-ma"><input id="mayMa" placeholder="Dán mã ghép nối (Ctrl+V)" autocomplete="off" spellcheck="false"><button type="button" class="btn" id="mayNoi">Kết nối</button></div>
+    <div class="may-ma"><input id="mayMa" placeholder="Dán mã ghép nối (Ctrl+V)" autocomplete="off" spellcheck="false"><button type="button" class="btn" id="mayNoi">Kết nối</button><button type="button" class="btn ghost" id="mayThu">Thử chuột</button></div>
     <div class="may-st" id="maySt" role="status"></div>
-    <footer><span class="dim">Chỉ nghe trong máy này, cần đúng mã mới điều khiển được.</span><a id="mayPy" href="/static/hud/tay/minmin-tay.py" download>Bản .py</a></footer>
+    <details class="may-loi">
+      <summary>Không điều khiển được?</summary>
+      <ul>
+        <li><b>Cửa sổ đen phải luôn mở</b> (thu nhỏ được, đừng tắt). Tắt rồi bật lại thì HUD tự nối lại sau vài giây, không cần dán mã lại.</li>
+        <li>Dòng <b>MÁY TÍNH</b> góc phải báo CHỜ = MinMin Tay chưa chạy. Báo ĐÃ NỐI mà tay không ăn: xem dòng <b>ĐIỀU KHIỂN</b>, nếu MinMin nhận nhầm tay thì mở bảng Cử chỉ bấm <b>Chỉnh tay</b>.</li>
+        <li>Nắm tay giữ 1,5 giây là <b>tạm dừng</b>; nắm giữ lần nữa để chạy tiếp.</li>
+        <li>Ứng dụng chạy bằng quyền quản trị (Admin) sẽ không nhận chuột từ MinMin Tay, trừ khi chạy MinMin-Tay.bat bằng quyền quản trị.</li>
+      </ul>
+    </details>
+    <footer><span class="dim">Chỉ nhận lệnh từ trang MinMin này, cần đúng mã.</span><a id="mayPy" href="/static/hud/tay/minmin-tay.py" download>Bản .py</a></footer>
   </section>
 
   <nav class="tools" id="tools" aria-label="Công cụ HUD">
@@ -109,6 +124,7 @@
     <div class="row"><span>HÌNH</span><b id="formText">CHÂN DUNG</b></div>
     <div class="row dim"><span>KHUNG HÌNH</span><b id="fps">—</b></div>
     <div class="row" id="rowCtl" hidden><span>ĐIỀU KHIỂN</span><b id="ctlText">-</b></div>
+    <div class="row" id="rowMay" hidden><span>MÁY TÍNH</span><b id="mayText">-</b></div>
     <div class="row" id="rowChu" hidden><span>TRƯỚC CAMERA</span><b id="chuText">—</b></div>
     <div class="row env" id="rowEnv" hidden><span>MÔI TRƯỜNG</span><b id="envText">—</b></div>
   </section>
@@ -176,6 +192,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/hud/hud.js?v=6"></script>
+  <script type="module" src="/static/hud/hud.js?v=7"></script>
 </body>
 </html>

@@ -165,13 +165,22 @@ export class TayMay {
     this.url = url;
     try { this.ma = localStorage.getItem(KEY_MA) || ""; } catch (e) { this.ma = ""; }
     this.ok = false; this._dang = false; this._cho = null; this.loi = "";
+    this.onGui = () => {};          // (lenh, ok) - cho Luong phan tich
+  }
+  // Moi lan goi co han: MinMin Tay tat giua chung (hoac trinh duyet dang treo hop hoi quyen)
+  // thi fetch khong duoc treo mai. Truoc 0.64.89 mot fetch treo la khoa cung hang doi: bat lai
+  // MinMin Tay cung khong dieu khien duoc nua (bo bao 30/09).
+  _fetch(duong, init = {}, ms = 2000) {
+    const ac = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const t = ac ? setTimeout(() => ac.abort(), ms) : null;
+    return fetch(this.url + duong, { ...init, cache: "no-store", signal: ac ? ac.signal : undefined }).finally(() => clearTimeout(t));
   }
   datMa(ma) { this.ma = String(ma || "").trim(); try { localStorage.setItem(KEY_MA, this.ma); } catch (e) {} }
 
   // Kiem tra: tra { ok, ly_do } - ly_do: "khong_chay" | "sai_ma" | ""
   async ping() {
     try {
-      const r = await fetch(this.url + "/ping", { headers: { "x-minmin-token": this.ma }, cache: "no-store" });
+      const r = await this._fetch("/ping", { headers: { "x-minmin-token": this.ma } }, 3000);
       if (r.status === 401) { this.ok = false; return { ok: false, ly_do: "sai_ma" }; }
       const j = await r.json().catch(() => ({}));
       this.ok = !!j.ok;
@@ -184,9 +193,9 @@ export class TayMay {
     if (!this.ok) return;
     if (this._dang) { if (lenh.t === "move") this._cho = lenh; else (this._hang ||= []).push(lenh); return; }
     this._dang = true;
-    fetch(this.url + "/act", { method: "POST", headers: { "content-type": "application/json", "x-minmin-token": this.ma }, body: JSON.stringify(lenh) })
-      .then(r => { if (r.status === 401) { this.ok = false; this.loi = "sai_ma"; } })
-      .catch(() => { this.ok = false; this.loi = "khong_chay"; })
+    this._fetch("/act", { method: "POST", headers: { "content-type": "application/json", "x-minmin-token": this.ma }, body: JSON.stringify(lenh) })
+      .then(r => { if (r.status === 401) { this.ok = false; this.loi = "sai_ma"; } this.onGui(lenh, r.ok); })
+      .catch(() => { this.ok = false; this.loi = "khong_chay"; this.onGui(lenh, false); this._hang = []; this._cho = null; })
       .finally(() => {
         this._dang = false;
         const tiep = (this._hang && this._hang.shift()) || this._cho;
