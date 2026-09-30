@@ -1,5 +1,10 @@
 // ============================================================================
-// MinMin OS - "Thiên hà thần kinh" bản 3D cho khoang não.
+// MinMin OS - QUẢ CẦU TRI THỨC 3D cho khoang não (0.64.95).
+//
+// Chủ repo 30/09: muốn đồ thị là MỘT KHỐI CẦU 3D thật (như ảnh mẫu): ghi chú phủ thành quả cầu,
+// dây nối xuyên qua lòng cầu cho thấy kiến thức liên kết chặt, xoay / phóng to được. KHÔNG còn
+// kiểu "thiên hà" (lõi cam, vòng quỹ đạo, sao nền, mây cụm). File này giữ tên cũ để không đổi
+// index.html; phần dưới là mô tả gốc về cách bọc JavisGraph.
 //
 // Nạp SAU graph.js và minmin-galaxy.js. Không sửa graph.js: chỉ bọc JavisGraph.prototype.load,
 // nếu máy có WebGL và tải được thư viện 3D thì dựng đồ thị bằng ForceGraph3D, không thì trả
@@ -17,9 +22,13 @@
   if (typeof window === "undefined" || !window.JavisGraph || !window.MinMinGalaxyColors) return;
 
   var KEY = "mm.galaxy";
-  function cheDo() { return "off"; }  // 0.64.93: chỉ còn đồ thị gốc, xem minmin-galaxy.js
+  // 0.64.95: luôn dựng quả cầu 3D (máy không có WebGL thì tự lùi về đồ thị gốc 2D).
+  function cheDo() { return "3d"; }
   function sang() { return window.MinMinGalaxyIsLight ? window.MinMinGalaxyIsLight() : false; }
-  function bang() { return window.MinMinGalaxyPalette ? window.MinMinGalaxyPalette() : window.MinMinGalaxyColors; }
+  // Bảng màu theo ảnh mẫu: phần lớn chấm nâu mực, xen xanh ngọc, đỏ gạch, tím, cam, lục.
+  var MAU_SANG = ["#4b3a2f", "#1f6f78", "#b8432f", "#6a4bd6", "#c47a14", "#2f7d4a", "#8c3d8f", "#3d5a99", "#7a5a3a", "#a13c5a"];
+  var MAU_TOI = ["#e8dccf", "#5fd3c8", "#ff8a6b", "#b39bff", "#ffc36b", "#7fe0a0", "#e79be8", "#8fb0ff", "#d9b48a", "#ff8fb0"];
+  function bang() { return sang() ? MAU_SANG : MAU_TOI; }
   function mauCum(i) { var M = bang(); return M[(i || 0) % M.length]; }
   var VENDOR = typeof window.MinMinVendorBase === "string" ? window.MinMinVendorBase : "/static/vendor/";
   var THU_VIEN = VENDOR + "minmin-3d-bundle-1.80.0.min.js?v=1";
@@ -71,9 +80,10 @@
     var c = cv.getContext("2d");
     var g = c.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
     if (L) {
+      // Chấm mực đặc, viền mềm (không phải quầng sáng) - giống chấm trên giấy của ảnh mẫu
       g.addColorStop(0, mau);
-      g.addColorStop(0.2, mau + "ee");
-      g.addColorStop(0.42, mau + "38");
+      g.addColorStop(0.5, mau);
+      g.addColorStop(0.72, mau + "70");
     } else {
       g.addColorStop(0, "rgba(255,255,255,1)");
       g.addColorStop(0.16, mau);
@@ -92,7 +102,9 @@
     return new T.SpriteMaterial({ map: texQuang(mau), blending: tron(),
       transparent: true, depthWrite: false, opacity: doMo == null ? 1 : doMo });
   }
-  function coHat(n) { return 11 + Math.sqrt(Math.min(55, n.links || 0)) * 3.6; }
+  function coHat(n) { return 5 + Math.sqrt(Math.min(60, n.links || 0)) * 1.9; }
+  // Băm ổn định theo id -> số 0..1 (để cùng một note luôn nằm cùng chỗ trong cầu)
+  function bam(id) { var s = String(id), h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 10007) / 10007; }
 
   // ---------- Neo cụm: mỗi thư mục một điểm trên mặt cầu quanh lõi (Fibonacci) ----------
   function datNeo(self, nodes) {
@@ -101,13 +113,13 @@
       if (!(n.__cat in dem)) { dem[n.__cat] = 0; cats.push(n.__cat); }
       dem[n.__cat]++;
     });
-    var R = 80 + 12 * Math.sqrt(nodes.length);
+    var R = 60 + 7.5 * Math.sqrt(nodes.length);
     var neo = {}, k = Math.max(1, cats.length), vang = Math.PI * (3 - Math.sqrt(5));
     cats.forEach(function (c, i) {
       var y = k === 1 ? 0 : 1 - (i / (k - 1)) * 2;
       var rr = Math.sqrt(Math.max(0, 1 - y * y)), th = vang * i;
-      var xa = R * (0.85 + 0.25 * Math.min(1, dem[c] / 20));
-      neo[c] = { x: Math.cos(th) * rr * xa, y: y * xa * 0.8, z: Math.sin(th) * rr * xa, n: dem[c] };
+      var xa = R;                                                    // neo nằm TRÊN mặt cầu
+      neo[c] = { x: Math.cos(th) * rr * xa, y: y * xa, z: Math.sin(th) * rr * xa, n: dem[c] };
     });
     self.__mmNeo = neo;
     self.__mmR = R;
@@ -119,80 +131,56 @@
       for (var i = 0; i < nodes.length; i++) {
         var n = nodes[i], a = neo[n.__cat];
         if (!a) continue;
-        n.vx += (a.x - n.x) * 0.08 * alpha;
-        n.vy += (a.y - n.y) * 0.08 * alpha;
-        n.vz += (a.z - (n.z || 0)) * 0.08 * alpha;
+        n.vx += (a.x - n.x) * 0.012 * alpha;                        // cùng thư mục thì gom về một vùng
+        n.vy += (a.y - n.y) * 0.012 * alpha;
+        n.vz += (a.z - (n.z || 0)) * 0.012 * alpha;
+      }
+    }
+    f.initialize = function (ns) { nodes = ns; };
+    return f;
+  }
+  // Lực QUẢ CẦU: kéo mỗi note về bán kính riêng của nó. Phần lớn nằm sát vỏ (mặt cầu dày chấm
+  // như ảnh mẫu), khoảng 1/4 nằm rải trong lòng cầu; dây nối vắt qua lòng cầu thành mạng.
+  function lucCau(self) {
+    var nodes = [];
+    function f(alpha) {
+      var R = self.__mmR || 120;
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i], z = n.z || 0;
+        var r = Math.sqrt(n.x * n.x + n.y * n.y + z * z) || 1;
+        if (n.__rCau == null) { var h = bam(n.id); n.__rCau = h < 0.26 ? 0.25 + h * 2.4 : 0.97 + (h - 0.26) * 0.08; }
+        var k = (R * n.__rCau - r) / r * 0.22 * alpha;
+        n.vx += n.x * k; n.vy += n.y * k; n.vz += z * k;
       }
     }
     f.initialize = function (ns) { nodes = ns; };
     return f;
   }
 
-  // ---------- Cảnh nền: sao xa, vỏ cầu hạt, mây cụm, lõi trắng, vòng quỹ đạo ----------
+  // ---------- Cảnh nền quả cầu: quầng tím nhạt ở tâm + bụi chấm li ti trên vỏ ----------
   function dungCanh(self) {
     var T = window.MinMinTHREE, sc = self.graph.scene();
     if (self.__mmCanh) { sc.remove(self.__mmCanh); }
     var R = self.__mmR, g = new T.Group(), r = rng(Math.round(R * 7919));
-    var L = sang(), MAU = bang();
-
-    function dam(so, viTri, mauHat, co, doMo) {
-      var pos = new Float32Array(so * 3), col = new Float32Array(so * 3), c = new T.Color();
-      for (var i = 0; i < so; i++) {
-        var p = viTri(i); pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2];
-        c.set(mauHat(i)); col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
-      }
-      var geo = new T.BufferGeometry();
-      geo.setAttribute("position", new T.Float32BufferAttribute(pos, 3));
-      geo.setAttribute("color", new T.Float32BufferAttribute(col, 3));
-      var m = new T.PointsMaterial({ size: co, vertexColors: true, transparent: true, opacity: doMo,
-        blending: tron(), depthWrite: false, sizeAttenuation: true,
-        map: texQuang("#ffffff") });
-      return new T.Points(geo, m);
+    var L = sang();
+    // quầng tím mềm ở lòng cầu (giống vệt lavender giữa ảnh mẫu)
+    var quang = new T.Sprite(vatLieu(L ? "#8a6cf0" : "#6d4bd8", L ? 0.16 : 0.22));
+    quang.scale.set(R * 2.1, R * 2.1, 1);
+    g.add(quang);
+    // bụi chấm li ti bám mặt cầu: viền quả cầu rõ hơn, nhất là mép dưới như ảnh mẫu
+    var so = giamChuyenDong ? 500 : 1400, pos = new Float32Array(so * 3);
+    for (var i = 0; i < so; i++) {
+      var u = r() * 2 - 1, th = r() * TAU, sn = Math.sqrt(1 - u * u), rr = R * (0.99 + r() * 0.05);
+      pos[i * 3] = Math.cos(th) * sn * rr; pos[i * 3 + 1] = u * rr; pos[i * 3 + 2] = Math.sin(th) * sn * rr;
     }
-    function trenCau(rr) {
-      var u = r() * 2 - 1, th = r() * TAU, s = Math.sqrt(1 - u * u);
-      return [Math.cos(th) * s * rr, u * rr, Math.sin(th) * s * rr];
-    }
-    // Sao xa bao quanh
-    g.add(dam(giamChuyenDong ? 700 : 1800, function () { return trenCau(R * (4 + r() * 6)); },
-      function () { return r() < 0.8 ? (L ? "#b8b0c8" : "#cfd6ff") : MAU[(r() * MAU.length) | 0]; }, 2.2, L ? 0.45 : 0.55));
-    // Vỏ cầu hạt quay chậm
-    var vo = dam(giamChuyenDong ? 500 : 1400, function () { return trenCau(R * (1.55 + r() * 0.3)); },
-      function () { return r() < 0.5 ? (L ? "#a99cc4" : "#e9e4ff") : MAU[(r() * MAU.length) | 0]; }, 2.6, L ? 0.42 : 0.5);
-    g.add(vo);
-    // Mây hạt quanh mỗi neo cụm
-    var neo = self.__mmNeo, idx = window.__javisCatIdx || {}, ds = [];
-    Object.keys(neo).forEach(function (cat) {
-      var a = neo[cat], k = Math.max(60, Math.min(260, 50 + a.n * 12)), tr = 12 + Math.sqrt(a.n) * 7;
-      for (var i = 0; i < k; i++) ds.push({ cat: cat, x: a.x + gauss(r) * tr, y: a.y + gauss(r) * tr * 0.8, z: a.z + gauss(r) * tr });
-    });
-    if (ds.length) {
-      var may = dam(ds.length, function (i) { return [ds[i].x, ds[i].y, ds[i].z]; },
-        function (i) { return MAU[(idx[ds[i].cat] || 0) % MAU.length]; }, 3.2, L ? 0.32 : 0.42);
-      g.add(may);
-    }
-    // Lõi trắng rực
-    var loi = new T.Sprite(vatLieu(L ? "#f59a62" : "#d9c8ff", L ? 0.55 : 1));
-    loi.scale.set(R * 0.75, R * 0.75, 1);
-    g.add(loi);
-    var loiTrong = new T.Sprite(vatLieu(L ? "#e8622a" : "#ffffff", L ? 0.9 : 1));
-    loiTrong.scale.set(R * 0.28, R * 0.28, 1);
-    g.add(loiTrong);
-    // Hai vòng quỹ đạo nghiêng
-    var vong = [];
-    for (var v = 0; v < 2; v++) {
-      var pts = [], n = 96, a1 = R * (0.42 + v * 0.16), b1 = R * (0.2 + v * 0.08);
-      for (var i = 0; i < n; i++) { var t = i / n * TAU; pts.push(Math.cos(t) * a1, 0, Math.sin(t) * b1 * 2.2); }
-      var geo = new T.BufferGeometry();
-      geo.setAttribute("position", new T.Float32BufferAttribute(pts, 3));
-      var ln = new T.LineLoop(geo, new T.LineBasicMaterial({ color: L ? 0x7a6aa8 : 0xe6e1ff, transparent: true,
-        opacity: L ? 0.4 : 0.35, blending: tron(), depthWrite: false }));
-      ln.rotation.x = v ? 0.9 : -0.35; ln.rotation.z = v ? 0.4 : -0.2;
-      g.add(ln); vong.push(ln);
-    }
+    var geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.Float32BufferAttribute(pos, 3));
+    var bui = new T.Points(geo, new T.PointsMaterial({ size: 1.6, color: L ? 0x6b5c55 : 0xcfc4ff, transparent: true,
+      opacity: L ? 0.45 : 0.5, depthWrite: false, sizeAttenuation: true, map: texQuang(L ? "#6b5c55" : "#cfc4ff"), blending: tron() }));
+    g.add(bui);
     sc.add(g);
     self.__mmCanh = g;
-    self.__mmVatThe = { vo: vo, loi: loi, loiTrong: loiTrong, vong: vong };
+    self.__mmVatThe = { quang: quang, bui: bui };
   }
 
   // ---------- Độ sáng từng hạt theo hover / lọc cụm ----------
@@ -287,10 +275,18 @@
       .nodeRelSize(4)
       .nodeVal(function (n) { var r = coHat(n) * 0.5; return r * r / 16; })
       .nodeThreeObject(function (n) {
-        var sp = new window.MinMinTHREE.Sprite(vatLieu(mauCum(n.__catIdx), 1));
+        var T = window.MinMinTHREE;
+        var sp = new T.Sprite(vatLieu(mauCum(n.__catIdx), 1));
         var s = coHat(n); sp.scale.set(s, s, 1);
         n.__mmObj = sp; n.__mmCo = s; n.__mmTo = 1; n.__mmHien = 1;
-        return sp;
+        if (!n.__hub) return sp;
+        // Note trung tâm (nhiều liên kết nhất): thêm quầng vàng như các điểm sáng trong ảnh mẫu
+        var nhom = new T.Group();
+        var quang = new T.Sprite(new T.SpriteMaterial({ map: texQuang("#ffb43c"), transparent: true, depthWrite: false,
+          blending: sang() ? (T.NormalBlending != null ? T.NormalBlending : 1) : T.AdditiveBlending, opacity: 0.7 }));
+        quang.scale.set(s * 3.4, s * 3.4, 1);
+        nhom.add(quang); nhom.add(sp);
+        return nhom;
       })
       .nodeLabel(function (n) { return theGhiChu(self, n); })
       .linkColor(function (l) {
@@ -300,9 +296,9 @@
           if (s === self._hoverId || t === self._hoverId) return L ? "#e8622a" : "#ffffff";
           return L ? "#ece6f2" : "#1a1830";
         }
-        return L ? "#b3a9cc" : "#6d63b8";
+        return L ? "#7a727e" : "#8f86d8";
       })
-      .linkOpacity(0.28)
+      .linkOpacity(sang() ? 0.28 : 0.3)
       .linkWidth(0)
       .linkDirectionalParticles(function (l) {
         if (self._hoverId == null) return 0;
@@ -336,9 +332,11 @@
       });
     self.graph = g;
 
-    try { g.d3Force("charge").strength(-34); } catch (e) {}
-    try { var lf = g.d3Force("link"); if (lf) lf.distance(22).strength(0.05); } catch (e) {}
+    try { g.d3Force("charge").strength(-18); } catch (e) {}
+    try { var lf = g.d3Force("link"); if (lf) lf.distance(34).strength(0.03); } catch (e) {}
+    try { g.d3Force("center", null); } catch (e) {}
     try { g.d3Force("cluster", lucCum(self)); } catch (e) {}
+    try { g.d3Force("cau", lucCau(self)); } catch (e) {}
 
     // Tự xoay chậm như video; người dùng đụng chuột thì dừng, rảnh 8 giây thì quay tiếp.
     var ctl = null;
@@ -347,7 +345,7 @@
       ctl.enableDamping = true;
       ctl.dampingFactor = 0.08;
       ctl.autoRotate = !giamChuyenDong;
-      ctl.autoRotateSpeed = 0.45;
+      ctl.autoRotateSpeed = 0.35;
       var hen = null, the = self.__mmThe;
       ctl.addEventListener("start", function () { ctl.autoRotate = false; clearTimeout(hen); });
       // Thả chấm xong, thư viện phát một cú "pointerup" chạm giả để nhả OrbitControls. Với
@@ -400,18 +398,15 @@
       var t = now() / 1000, vt = self.__mmVatThe, R = self.__mmR || 120;
       var am = self.level || 0, nghi = self._thinking ? 1 : 0;
       if (!giamChuyenDong) {
-        vt.vo.rotation.y = t * 0.035;
-        vt.vong[0].rotation.y = t * 0.12;
-        vt.vong[1].rotation.y = -t * 0.09;
-        var dap = 1 + 0.05 * Math.sin(t * 1.6) + 0.25 * am + 0.12 * nghi * Math.sin(t * 5);
-        vt.loi.scale.set(R * 0.75 * dap, R * 0.75 * dap, 1);
-        vt.loiTrong.scale.set(R * 0.28 * dap, R * 0.28 * dap, 1);
+        // quầng tím thở nhẹ; đang nghĩ / đang nói thì sáng hơn
+        var dap = 1 + 0.04 * Math.sin(t * 1.3) + 0.15 * am + 0.08 * nghi * Math.sin(t * 5);
+        vt.quang.scale.set(R * 2.1 * dap, R * 2.1 * dap, 1);
       }
       if (self._catFilter !== loc) { loc = self._catFilter; capNhatSang(self); }
       var tNow = now();
       self.graph.graphData().nodes.forEach(function (n) {
         var o = n.__mmObj; if (!o) return;
-        var tho = giamChuyenDong ? 1 : 1 + 0.12 * Math.sin(t * 2.1 + (n.__ph || 0));
+        var tho = giamChuyenDong ? 1 : 1 + 0.06 * Math.sin(t * 2.1 + (n.__ph || 0));
         var sinh = 1;
         if (n.__born) { var age = (tNow - n.__born) / 500; sinh = age < 1 ? Math.max(0.05, age) : 1; if (age >= 1) n.__born = 0; }
         var s = (n.__mmCo || 8) * (n.__mmTo || 1) * tho * sinh;
@@ -432,6 +427,9 @@
     window.__javisCatIdx = this._catMap;
     try { if (typeof _mapFromIdx === "function") window.__javisCatMap = _mapFromIdx(this._catMap); } catch (e) {}
     var links = (data.edges || []).map(function (e) { return { source: e.source, target: e.target }; });
+    // 6 note nhiều liên kết nhất = điểm sáng vàng
+    nodes.slice().sort(function (a, b) { return (b.links || 0) - (a.links || 0); }).slice(0, 6)
+      .forEach(function (n) { if ((n.links || 0) >= 3) n.__hub = true; });
     datNeo(this, nodes);
     if (!this.graph) { this.__mmKieu = "3d"; taoDoThi(this); }
     this._fitted = false;
