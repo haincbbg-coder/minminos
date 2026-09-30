@@ -137,6 +137,12 @@
   // lệnh nói / bookmark cũ đi tới đúng tab, nhưng không còn là một mục trên thanh bên.
   // Các id cũ vẫn dùng được qua lệnh UI và lối tắt, nhưng mở tab trong Cài đặt.
   const RAIL_AN = new Set(["chatbots", "usage", "pet", "logs"]);
+  // 0.64.99: chủ repo không dùng Xưởng code (Dòng lệnh, Lập trình cùng AI), nên cả nhóm ẩn khỏi
+  // thanh bên (nhóm hết mục thì railGroups tự bỏ). Trang vẫn sống: lệnh nói, đường dẫn cũ vẫn mở
+  // được. Muốn hiện lại: đặt localStorage "mm.hien_xuong_code" = "1" rồi tải lại trang.
+  let _hienXuongCode = false;
+  try { _hienXuongCode = localStorage.getItem("mm.hien_xuong_code") === "1"; } catch (e) {}
+  if (!_hienXuongCode) { RAIL_AN.add("terminal"); RAIL_AN.add("coding"); }
   // Trả về [{label, foot, items:[...]}], bỏ id không tồn tại. Mục nào chưa xếp nhóm → dồn vào "Khác".
   function railGroups() {
     const seen = new Set();

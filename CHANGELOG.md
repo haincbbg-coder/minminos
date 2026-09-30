@@ -4,6 +4,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.99] - 2026-10-01
+### Cải thiện
+- **Ẩn nhóm Xưởng code** (Dòng lệnh, Lập trình cùng AI) khỏi thanh bên cho gọn, vì không dùng tới. Hai trang vẫn còn, không mất gì; cần lại thì bảo MinMin bật.
+
 ## [0.64.98] - 2026-10-01
 ### Thêm mới
 - **Mắt Nhà có lối vào trên thanh bên** (nhóm Vận hành): xem ai ra vào, xe, biển số, người lạ ngay trong MinMin, không phải gõ đường dẫn nữa.
