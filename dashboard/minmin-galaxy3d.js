@@ -17,11 +17,7 @@
   if (typeof window === "undefined" || !window.JavisGraph || !window.MinMinGalaxyColors) return;
 
   var KEY = "mm.galaxy";
-  function cheDo() {
-    var v = "3d";
-    try { v = localStorage.getItem(KEY) || "3d"; } catch (e) {}
-    return v;
-  }
+  function cheDo() { return "3d"; }  // 0.64.90: luôn 3D, xem minmin-galaxy.js
   function sang() { return window.MinMinGalaxyIsLight ? window.MinMinGalaxyIsLight() : false; }
   function bang() { return window.MinMinGalaxyPalette ? window.MinMinGalaxyPalette() : window.MinMinGalaxyColors; }
   function mauCum(i) { var M = bang(); return M[(i || 0) % M.length]; }

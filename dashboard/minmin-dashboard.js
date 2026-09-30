@@ -282,6 +282,8 @@
       window.open("/files/raw?brain=" + encodeURIComponent(brain()) + "&path=" + encodeURIComponent(DATA_PATH), "_blank");
     });
     var gt = $("mmGalaxyToggle");
+    // 0.64.90: một bản đồ thị 3D duy nhất, ẩn nút chuyển; phần dưới giữ để không vỡ khi thiếu nút
+    if (gt) { gt.hidden = true; gt.style.display = "none"; }
     // Vòng chế độ đồ thị: 3D -> 2D -> đồ thị gốc -> 3D (cùng khoá với minmin-galaxy.js).
     // Đổi tại chỗ qua MinMinGalaxy.dat, không tải lại trang.
     var CD = ["3d", "2d", "off"], TEN_CD = { "3d": "Xem 3D", "2d": "Xem 2D", off: "Đồ thị gốc" };
