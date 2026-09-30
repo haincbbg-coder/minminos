@@ -4,6 +4,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.96] - 2026-10-01
+### Cải thiện
+- (đang viết)
+
 ## [0.64.95] - 2026-09-30
 ### Cải thiện
 - **Đồ thị não thành QUẢ CẦU TRI THỨC 3D thật**: các ghi chú phủ thành khối cầu, dây nối xuyên qua lòng cầu cho thấy kiến thức liên kết với nhau, các ghi chú nhiều liên kết nhất phát sáng vàng. Kéo chuột để xoay, lăn chuột để phóng to thu nhỏ, rê vào một chấm để xem ghi chú và các liên kết của nó. Quả cầu tự xoay chậm khi không đụng tới.
