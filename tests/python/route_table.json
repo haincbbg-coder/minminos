@@ -3618,5 +3618,25 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 370,
+  "type": "APIRoute",
+  "path": "/hud",
+  "name": "hud_page",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 371,
+  "type": "APIRoute",
+  "path": "/hud/kpi",
+  "name": "hud_kpi",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]

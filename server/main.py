@@ -19312,6 +19312,15 @@ async def _warm_mcp_hub():
     asyncio.create_task(_w())
 
 
+# HUD màn phụ MinMin (GET /hud + GET /hud/kpi) - routes/hud.py. Đăng ký ở cuối để không đẩy
+# thứ tự các route có sẵn (tests/python/route_table.json khoá thứ tự).
+import routes.hud as hud_routes   # noqa: E402
+hud_routes.register(app, hud_routes.HudDeps(
+    dashboard_dir=Path(DASHBOARD_PATH),
+    brain_root=lambda b: _brain_root(b),
+))
+
+
 @app.on_event("shutdown")
 async def _shutdown_mcp_pool():
     """Đóng các session MCP sống lâu (stdio subprocess, httpx client) khi server tắt."""

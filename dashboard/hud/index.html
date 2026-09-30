@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07040f">
+<title>MinMin HUD</title>
+<link rel="icon" href="/static/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/hud/hud.css?v=1">
+<script type="importmap">{ "imports": { "three": "/static/hud/vendor/three.module.min.js" } }</script>
+</head>
+<body data-state="standby">
+  <canvas id="scene" aria-hidden="true"></canvas>
+  <canvas id="web" aria-label="Bản đồ các bộ phận MinMin đang điều phối"></canvas>
+
+  <header class="tl">
+    <div class="brand"><span class="mark"></span><b>MINMIN</b><span class="os">OS · HUD</span></div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="date" id="date"></div>
+    <div class="conn" id="conn"><i></i><span>Đang kết nối…</span></div>
+  </header>
+
+  <section class="tr mono">
+    <div class="row"><span>TRẠNG THÁI</span><b id="stateText">CHỜ LỆNH</b></div>
+    <div class="row"><span>VIỆC ĐANG CHẠY</span><b id="running">0</b></div>
+    <div class="row"><span>CÔNG CỤ ĐÃ GỌI</span><b id="toolCount">0</b></div>
+    <div class="row"><span>HÌNH</span><b id="formText">CHÂN DUNG</b></div>
+    <div class="row dim"><span>KHUNG HÌNH</span><b id="fps">—</b></div>
+  </section>
+
+  <aside class="kpi" id="kpiBox" hidden>
+    <h2>SỐ LIỆU KINH DOANH <small id="kpiUpd"></small></h2>
+    <div class="tiles" id="kpiTiles"></div>
+  </aside>
+
+  <aside class="feed" id="feedBox">
+    <h2>NHẬT KÝ HÀNH ĐỘNG</h2>
+    <ol id="feed"><li class="empty">Chưa có hành động nào trong phiên này.</li></ol>
+  </aside>
+
+  <footer class="bottom">
+    <div class="you" id="you"></div>
+    <div class="reply" id="reply"></div>
+    <div class="eq" id="eq" aria-hidden="true"></div>
+    <div class="hint" id="hint">Nói <b>“Min Min ơi”</b><span class="long"> · nhấn <kbd>Space</kbd> để nói · <kbd>/</kbd> để gõ · <kbd>F</kbd> đổi hình</span></div>
+  </footer>
+
+  <form class="ask" id="ask" hidden autocomplete="off">
+    <input id="askInput" placeholder="Bố muốn MinMin làm gì?" aria-label="Gõ lệnh cho MinMin">
+    <button type="submit">Gửi</button>
+  </form>
+
+  <div class="card" id="card" hidden role="dialog" aria-modal="false">
+    <button class="x" id="cardX" aria-label="Đóng">×</button>
+    <div class="k mono" id="cardKind"></div>
+    <h3 id="cardTitle"></h3>
+    <p id="cardBody"></p>
+    <div class="asks" id="cardAsks"></div>
+  </div>
+
+  <div class="gate" id="gate">
+    <div class="gate-in">
+      <div class="brand big"><span class="mark"></span><b>MINMIN</b></div>
+      <p id="gateMsg">Trợ lý kinh doanh của bố. Bật để MinMin nghe từ gọi <b>“Hey Min Min”</b> và trả lời bằng giọng.</p>
+      <button id="gateBtn">Bật MinMin</button>
+      <button id="gateQuiet" class="ghost">Chỉ xem, không bật mic</button>
+    </div>
+  </div>
+
+  <script type="module" src="/static/hud/hud.js?v=1"></script>
+</body>
+</html>
