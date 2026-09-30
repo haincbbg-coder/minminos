@@ -6,7 +6,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 ## [0.64.91] - 2026-09-30
 ### Thêm mới
-- (đang làm) MinMin Mắt Nhà: xem camera EZVIZ ở nhà, ghi ai ra vào, xe, biển số.
+- **Mắt Nhà** (trang `/mat-nha`): MinMin xem camera EZVIZ ở nhà, ghi ai ra vào (người nhà hay **người lạ**), xe và biển số, con vật, lời nói. Lọc nhanh Hôm nay, Người lạ, Xe, Biển số, bấm ảnh để xem to.
+- **Bộ cài một chạm** cho máy Windows ở nhà: tải CaiMatNha.bat, bấm đúp là nó cài Docker, tìm camera trong nhà, hỏi mã từng cái và nối với MinMin. Có GPU NVIDIA thì nhận diện nhanh hơn.
+- Hỏi MinMin "hôm nay ai đến nhà", "xe biển 29-B1 về lúc nào", "có người lạ không" là nó tra được.
+- **Riêng tư**: video và khuôn mặt đã học nằm yên trên máy ở nhà. MinMin chỉ nhận dòng tóm tắt và ảnh nhỏ, tự xoá sau 30 ngày. Chỉ học mặt người đã đồng ý.
 
 ## [0.64.89] - 2026-09-30
 ### Sửa lỗi

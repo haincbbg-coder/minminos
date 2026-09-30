@@ -3638,5 +3638,65 @@
    "GET"
   ],
   "trong": null
+ },
+ {
+  "order": 366,
+  "type": "APIRoute",
+  "path": "/mat-nha",
+  "name": "mat_nha_page",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 367,
+  "type": "APIRoute",
+  "path": "/mat-nha/su-kien",
+  "name": "mat_nha_nhan",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 368,
+  "type": "APIRoute",
+  "path": "/mat-nha/su-kien",
+  "name": "mat_nha_doc",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 369,
+  "type": "APIRoute",
+  "path": "/mat-nha/anh/{eid}.jpg",
+  "name": "mat_nha_anh",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 370,
+  "type": "APIRoute",
+  "path": "/mat-nha/ma",
+  "name": "mat_nha_tao_ma",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 371,
+  "type": "APIRoute",
+  "path": "/mat-nha/trang-thai",
+  "name": "mat_nha_trang_thai",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]

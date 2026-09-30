@@ -1,0 +1,54 @@
+# MinMin Mat Nha - chay tren may Windows o nha (Docker Desktop + WSL2).
+# CaiMatNha.ps1 sinh ra file nay tu mau (thay dong danh dau GPU ben duoi bang khoi GPU NVIDIA).
+# Sua tay duoc; chay lai bang:  docker compose up -d   (trong C:\MinMinMatNha)
+#
+# Rieng tu: video, anh, mat nguoi nha da hoc va ma camera deu nam o C:\MinMinMatNha tren may nay.
+# Chi minmin-cau gui LEN MinMin mot dong tom tat + anh chup nho moi su kien.
+name: minmin-mat-nha
+
+services:
+  frigate:
+    container_name: frigate
+    # Anh -tensorrt: tu dung GPU NVIDIA khi cau hinh model ONNX (docs.frigate.video,
+    # "object_detectors"). May khong co GPU NVIDIA thi CaiMatNha.ps1 doi sang :stable.
+    image: ghcr.io/blakeblackshear/frigate:stable-tensorrt
+    restart: unless-stopped
+    stop_grace_period: 30s
+    shm_size: "512mb"
+    #__GPU__
+    volumes:
+      - ./config:/config
+      - ./storage:/media/frigate
+      - type: tmpfs
+        target: /tmp/cache
+        tmpfs:
+          size: 1000000000
+    ports:
+      # 8971: giao dien CO dang nhap (mat khau admin in trong log lan dau: docker logs frigate).
+      - "8971:8971"
+      # 5000: giao dien KHONG dang nhap - chi mo cho chinh may nay.
+      - "127.0.0.1:5000:5000"
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    # MQTT noi bo: KHONG mo cong ra ngoai, chi frigate va minmin-cau noi vao qua mang docker.
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    command: mosquitto -c /mosquitto-no-auth.conf
+
+  minmin-cau:
+    build: ./minmin-cau
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MQTT_HOST=mosquitto
+      - FRIGATE_URL=http://frigate:5000
+      - THU_MUC=/data
+    volumes:
+      - ./cau-data:/data
+    depends_on:
+      - mosquitto
+      - frigate
