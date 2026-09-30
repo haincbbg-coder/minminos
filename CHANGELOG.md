@@ -18,6 +18,7 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 - **Bảng Cử chỉ có hình minh họa** từng động tác, chia hai tab: điều khiển MinMin và điều khiển máy tính, luyện được cả hai.
 - **Hạt sáng chuyển động liên tục**: nhấp nháy, trượt theo đường viền, sóng năng lượng chạy từ dưới lên, tàn lửa bay, xung sáng.
 - Camera xem trước chuyển sang góc trái dưới, không che chữ trả lời.
+- **Điện thoại**: thanh nút nằm ngang dưới đáy, vuốt ngang để xem hết. Trước đây cột nút dài hơn màn iPhone nên nút Nhìn, Camera bị đẩy ra ngoài, bấm không được.
 
 ### Sửa lỗi
 - **ElevenLabs báo rõ lỗi**: thay vì câu chung chung, HUD và Cài đặt nói đúng nguyên do (key sai, key thiếu quyền, gói Miễn phí bị chặn khi gọi từ VPS, giọng Thư viện cần gói trả phí, hết ký tự, sai Voice ID).
