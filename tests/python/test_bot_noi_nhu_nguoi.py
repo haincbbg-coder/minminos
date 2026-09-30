@@ -319,7 +319,8 @@ def t_precheck_hop_dong():
           "if chan is not None:" in dong_ma and "if chan:" not in dong_ma)
     cb = (Path(SERVER) / "chatbot_runtime.py").read_text(encoding="utf-8")
     check("bot chuyên trách vẫn dùng {} để nói 'chặn mà không nói gì'",
-          "return {}       # không ai gọi tên" in cb)
+          # 0.64.97: nhánh "không ai gọi tên" ghi câu đó vào Hộp thư làm ngữ cảnh rồi mới chặn.
+          "ghi_tin_khach(cfg, meta or {}, text, khong_chua_doc=True)\n            return {}" in cb)
 
 
 # ============================================================

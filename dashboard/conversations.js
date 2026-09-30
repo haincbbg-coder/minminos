@@ -51,7 +51,14 @@
   }
 
   var NHIP = 5000;          // nhịp tự làm mới, như trang Chatbot
-  var TRANG = 60;           // số hội thoại một trang
+  // 0.64.97 - TẢI DẦN: danh sách tải 40 dòng, cuộn xuống đáy mới tải thêm 40; khung tin tải 40
+  // tin mới nhất, cuộn lên đỉnh mới tải tin cũ hơn; nhịp 5 giây chỉ hỏi tin MỚI hơn tin cuối.
+  // Trước đó mỗi nhịp tải lại 60 hội thoại và 200 tin rồi vẽ lại cả khung, đang đọc tin cũ là
+  // bị kéo về đáy.
+  var TRANG = 40;           // số hội thoại mỗi lần tải thêm
+  var TIN_TRANG = 40;       // số tin mỗi lần tải (khung tin)
+  var _soDong = TRANG, _hetDS = false, _locCu = "", _dangTaiThem = false;
+  var _hetCu = false, _dangTaiCu = false, _giuNhom = 100;
   var TABS = ["inbox", "kenh", "chatbot"];
   var _host = null, _timer = null, _tab = "inbox";
   var _items = [], _stats = {}, _dauVet = "";
@@ -245,12 +252,16 @@
   async function tai(im) {
     var box = _host && _host.querySelector(".ht-list");
     if (!box) return;
-    var url = "/conversations?limit=" + TRANG +
+    // Đổi bộ lọc / ô tìm thì quay về trang đầu, không giữ số dòng đã cuộn của bộ lọc cũ.
+    var loc = [_kenhLoc, _botLoc, _tkLoc, _q].join("|");
+    if (loc !== _locCu) { _locCu = loc; _soDong = TRANG; }
+    var url = "/conversations?limit=" + _soDong +
       "&channel=" + encodeURIComponent(_kenhLoc) + "&bot_id=" + encodeURIComponent(_botLoc) +
       "&account_id=" + encodeURIComponent(_tkLoc) + "&q=" + encodeURIComponent(_q);
     try {
       var d = await api(url);
       _items = d.items || [];
+      _hetDS = _items.length < _soDong;
       _stats = d.stats || {};
       if (d.channels) _kenhDS = d.channels;
       var vet = JSON.stringify([_items, _stats]);
@@ -337,15 +348,30 @@
           '</span>' +
         '</span></button>';
     }).join("");
+    if (!_hetDS) box.insertAdjacentHTML("beforeend",
+      '<div class="ht-more">' + esc(window.t("ht.tai_them")) + '</div>');
     box.querySelectorAll(".ht-item").forEach(function (x) {
       x.onclick = function () { mo(parseInt(x.dataset.id, 10)); };
     });
+    // Cuộn gần đáy thì tải thêm một trang. Gắn MỘT lần vào khung (khung giữ nguyên, chỉ nội
+    // dung bên trong được vẽ lại).
+    if (!box.dataset.cuon) {
+      box.dataset.cuon = "1";
+      box.addEventListener("scroll", function () {
+        if (_hetDS || _dangTaiThem) return;
+        if (box.scrollHeight - box.scrollTop - box.clientHeight > 120) return;
+        _dangTaiThem = true;
+        _soDong += TRANG;
+        tai(true).then(function () { _dangTaiThem = false; }, function () { _dangTaiThem = false; });
+      }, { passive: true });
+    }
   }
 
   // ---------------------------------------------------------------- một hội thoại
   async function mo(id) {
     _chon = id;
     _dauVetTin = "";
+    _msgs = []; _hetCu = false;
     _host.querySelector(".ht-wrap").classList.add("thread-on");
     veDanhSach();
     await taiTin(false);
@@ -363,18 +389,32 @@
     veDanhSach();
   }
 
+  function idCuoi() { return _msgs.length ? _msgs[_msgs.length - 1].id : 0; }
+
+  // `im` = nhịp tự động: chỉ hỏi tin MỚI hơn tin cuối đang có rồi nối vào, không tải lại cả khung.
   async function taiTin(im) {
     if (!_chon) return;
     var id = _chon;
     var box = _host.querySelector(".ht-thread");
     if (!box) return;
+    var noi = im && _msgs.length > 0;
     try {
-      var d = await api("/conversations/" + id + "/messages?limit=200");
+      var d = await api("/conversations/" + id + "/messages?limit=" + (noi ? 200 : TIN_TRANG) +
+                        (noi ? "&after=" + idCuoi() : ""));
       if (_chon !== id) return;
-      var vet = JSON.stringify([d.conversation, d.messages]);
-      if (im && vet === _dauVetTin) return;
-      _dauVetTin = vet;
-      _conv = d.conversation; _msgs = d.messages || [];
+      if (d.giu_nhom) _giuNhom = d.giu_nhom;
+      var moi = d.messages || [];
+      if (noi) {
+        var vet = JSON.stringify(d.conversation);
+        if (!moi.length && vet === _dauVetTin) return;
+        _dauVetTin = vet;
+        _conv = d.conversation;
+        _msgs = _msgs.concat(moi);
+      } else {
+        _dauVetTin = JSON.stringify(d.conversation);
+        _conv = d.conversation; _msgs = moi;
+        _hetCu = moi.length < TIN_TRANG;
+      }
     } catch (e) {
       if (!im) box.innerHTML = '<div class="ht-empty">' + esc(window.t("ht.loi_tai")) + ' ' + esc(e.message) + '</div>';
       return;
@@ -382,7 +422,37 @@
     veThread();
   }
 
-  function veThread() {
+  // Cuộn lên đỉnh khung tin: tải thêm TIN_TRANG tin cũ hơn tin đầu, giữ nguyên chỗ đang đọc.
+  async function taiCu() {
+    if (!_chon || _hetCu || _dangTaiCu || !_msgs.length) return;
+    var id = _chon;
+    _dangTaiCu = true;
+    try {
+      var d = await api("/conversations/" + id + "/messages?limit=" + TIN_TRANG + "&before=" + _msgs[0].id);
+      if (_chon !== id) return;
+      var cu = d.messages || [];
+      _hetCu = cu.length < TIN_TRANG;
+      if (!cu.length) { veThread(); return; }
+      var m = _host.querySelector(".ht-msgs");
+      var cao = m ? m.scrollHeight : 0, dinh = m ? m.scrollTop : 0;
+      _msgs = cu.concat(_msgs);
+      veThread({ cao: cao, dinh: dinh });
+    } catch (e) {
+      /* mạng hỏng: để lần cuộn sau thử lại */
+    } finally {
+      _dangTaiCu = false;
+    }
+  }
+
+  function dauKhung(c) {
+    if (!_msgs.length) return "";
+    if (!_hetCu) return '<div class="ht-msgs-top">' + esc(window.t("ht.cuon_xem_cu")) + '</div>';
+    if (c.chat_type === "group" && _msgs.length >= _giuNhom)
+      return '<div class="ht-msgs-top">' + ic("info") + ' ' + esc(window.t("ht.nhom_giu", { n: _giuNhom })) + '</div>';
+    return "";
+  }
+
+  function veThread(giu) {
     var box = _host.querySelector(".ht-thread");
     if (!box) return;
     var c = _conv || {};
@@ -392,6 +462,7 @@
     var guiDuoc = nangLuc(c.channel, "tra_loi_tu_javis");
     var cuon = box.querySelector(".ht-msgs");
     var oDay = !cuon || (cuon.scrollHeight - cuon.scrollTop - cuon.clientHeight < 80);
+    var dinhCu = cuon ? cuon.scrollTop : 0;   // đang đọc tin cũ: vẽ lại xong đứng nguyên chỗ đó
     // Giữ chữ đang gõ dở khi nhịp tự làm mới vẽ lại khung.
     var oCu = box.querySelector(".ht-compose textarea");
     var nhapDo = oCu ? oCu.value : "";
@@ -408,14 +479,17 @@
           : "") +
       '</div>' +
       (human ? '<div class="ht-note warn">' + ic("hand") + ' ' + esc(window.t("ht.dang_tiep_quan")) + '</div>' : "") +
-      '<div class="ht-msgs">' + _msgs.map(veTin).join("") + '</div>' +
+      '<div class="ht-msgs">' + dauKhung(c) + _msgs.map(veTin).join("") + '</div>' +
       (guiDuoc ? veCompose(c, laBot, human) :
         '<div class="ht-foot">' + esc(window.t("ht.kenh_khong_gui", { kenh: nhanKenh(c.channel) })) + '</div>');
     box.querySelector(".ht-back").onclick = dongThread;
     var mb = box.querySelector(".ht-mode-btn");
     if (mb) mb.onclick = function () { doiMode(c.id, human ? "ai" : "human"); };
     var m = box.querySelector(".ht-msgs");
-    if (oDay) m.scrollTop = m.scrollHeight;
+    if (giu) m.scrollTop = m.scrollHeight - giu.cao + giu.dinh;     // vừa chèn tin cũ lên trên
+    else if (oDay) m.scrollTop = m.scrollHeight;
+    else m.scrollTop = dinhCu;
+    m.addEventListener("scroll", function () { if (m.scrollTop < 60) taiCu(); }, { passive: true });
     var ta = box.querySelector(".ht-compose textarea");
     if (ta) {
       ta.value = nhapDo;

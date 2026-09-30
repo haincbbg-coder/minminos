@@ -6,7 +6,9 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 ## [0.64.97] - 2026-10-01
 ### Cải thiện
-- (đang viết)
+- **Nhóm chat trong Hộp thư khách chỉ giữ 100 tin gần nhất**, nên kho không phình theo độ ồn của nhóm. Chat riêng với khách vẫn lưu hết. Lần đầu sau cập nhật, MinMin sao lưu file kho rồi mới cắt các nhóm cũ, bản sao lưu tự xoá sau 14 ngày.
+- **Bot trong nhóm đọc 30 tin gần nhất** trước khi trả lời, nên hiểu mọi người đang nói chuyện gì chứ không chỉ thấy mỗi câu gọi nó. Những câu không gọi bot vẫn vào Hộp thư làm ngữ cảnh nhưng không bật chấm chưa đọc.
+- **Hộp thư tải dần, đỡ nặng máy**: danh sách tải 40 cuộc, cuộn xuống tự tải thêm; khung tin tải 40 tin mới nhất, cuộn lên thì tải tin cũ hơn. Đang đọc tin cũ mà có tin mới về thì không còn bị kéo về đáy.
 
 ## [0.64.96] - 2026-10-01
 ### Cải thiện

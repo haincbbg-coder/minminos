@@ -171,6 +171,36 @@ bạn không chắc có nên nhân danh chủ trả lời hay không, thì KHÔN
 """
 
 
+_NGU_CANH_MOI_TIN = 300     # cắt mỗi tin ngữ cảnh: 30 tin x 300 ký tự là trần của khối này
+
+
+def khoi_ngu_canh_nhom(tin) -> str:
+    """Khối "nhóm vừa nói gì" cho prompt bot: mỗi tin một dòng `Tên: nội dung`, cũ trước.
+
+    Nói rõ đây là NGỮ CẢNH chứ không phải yêu cầu: người trong nhóm nói với nhau, bot chỉ
+    trả lời câu đang gọi nó. Không có tin nào thì trả chuỗi rỗng (không chèn khối trống)."""
+    if not isinstance(tin, list) or not tin:
+        return ""
+    dong = []
+    for t in tin:
+        if not isinstance(t, dict):
+            continue
+        chu = " ".join(str(t.get("text") or "").split())
+        if not chu:
+            continue
+        if len(chu) > _NGU_CANH_MOI_TIN:
+            chu = chu[:_NGU_CANH_MOI_TIN] + "..."
+        loai = t.get("sender_type")
+        ten = ("Bạn (bot)" if loai == "ai" else "Chủ shop" if loai == "human"
+               else str(t.get("sender_name") or "Khách"))
+        dong.append(f"- {ten}: {chu}")
+    if not dong:
+        return ""
+    return ("\n## Tin gần đây trong nhóm (cũ tới mới)\n\n"
+            "Đây là những gì mọi người vừa nói trong nhóm, chỉ để bạn hiểu ngữ cảnh. Không trả "
+            "lời từng câu ở đây; chỉ trả lời tin nhắn đang gọi bạn.\n\n" + "\n".join(dong))
+
+
 def build_bot_prompt(bot: dict) -> str:
     """System prompt của một lượt bot = ĐÚNG file Agent, cộng tài liệu đã tra sẵn.
 
@@ -227,6 +257,10 @@ def build_bot_prompt(bot: dict) -> str:
             phan.append(_CO_TAI_LIEU.format(khoi=tl.get("khoi") or ""))
         elif bot.get("nguon_tra_loi") == "tai_lieu":
             phan.append(_KHONG_TAI_LIEU_CHAT)
+    # Những gì nhóm vừa nói (0.64.97), do _make_answer_fn gắn vào khi lượt ở trong NHÓM.
+    khoi_nhom = khoi_ngu_canh_nhom((bot or {}).get("_ngu_canh_nhom"))
+    if khoi_nhom:
+        phan.append(khoi_nhom)
     # Kênh của LƯỢT này, do _make_answer_fn gắn vào. Chỉ Zalo cá nhân mới có thêm đoạn này.
     if (bot or {}).get("_kenh_luot") == "zalo_personal":
         phan.append(_CAU_ZALO_CA_NHAN)
@@ -382,7 +416,11 @@ def _make_precheck_fn(bot_id: str):
         if not ly_do:
             return None
         if ly_do != "nhom_chua_bat":
-            return {}       # không ai gọi tên: im tuyệt đối, và không có gì để chủ duyệt
+            # Không ai gọi tên: im tuyệt đối, không có gì để chủ duyệt. Từ 0.64.97 câu đó vẫn
+            # vào Hộp thư (không bật chấm chưa đọc) làm NGỮ CẢNH: lần sau có người gọi bot, nó
+            # đọc được mọi người vừa nói gì. Nhóm chỉ giữ 100 tin nên không phình.
+            ghi_tin_khach(cfg, meta or {}, text, khong_chua_doc=True)
+            return {}
         # Nhóm chưa bật, nhưng lượt này có phải một lần GỌI BOT thật không? Hỏi lại chính luật
         # trên với giả định nhóm đã được bật: nếu vẫn im thì đây chỉ là hai người nói chuyện
         # với nhau, không có gì để chủ duyệt và tuyệt đối không được chen vào. Hỏi lại luật cũ
@@ -612,17 +650,22 @@ def _su_kien_bot(cfg: dict, meta: dict, **phan) -> dict:
     return ev
 
 
-def ghi_tin_khach(cfg: dict, meta: dict, text: str) -> None:
-    """Tin KHÁCH gửi tới bot. Nuốt mọi lỗi: kho hỏng không được làm gãy câu trả lời."""
+def ghi_tin_khach(cfg: dict, meta: dict, text: str, khong_chua_doc: bool = False) -> None:
+    """Tin KHÁCH gửi tới bot. Nuốt mọi lỗi: kho hỏng không được làm gãy câu trả lời.
+
+    `khong_chua_doc`: tin trong nhóm không gọi bot, chỉ lưu làm ngữ cảnh."""
     try:
         meta = meta or {}
+        md = {"username": meta.get("username") or ""}
+        if khong_chua_doc:
+            md["ngu_canh"] = True
         conversations.ghi_su_kien(_su_kien_bot(
             cfg, meta, sender_type="customer",
             sender_id=str(meta.get("user_id") or meta.get("username") or ""),
             sender_name=meta.get("user_name") or meta.get("username") or "",
             message_type=conversations.loai_tin_tu_chu(text), text=text,
             external_message_id=str(meta.get("message_id") or ""),
-            metadata={"username": meta.get("username") or ""}))
+            khong_chua_doc=khong_chua_doc, metadata=md))
     except Exception as e:
         print(f"[chatbot conversations] {type(e).__name__}: {e}", file=sys.stderr)
 
@@ -659,12 +702,22 @@ def _make_answer_fn(bot_id: str):
         if _qua_han_muc(bot_id, chat_id, cfg.get("rate_limit")):
             return {"text": "Anh chị nhắn hơi nhanh, em xin phép trả lời lại sau ít phút ạ.",
                     "files": []}
+        aid_luot, kenh_luot = _tai_khoan_cua(cfg, meta or {})
+        # Bot trong NHÓM đọc 30 tin gần nhất trước khi trả lời (0.64.97). Đọc TRƯỚC khi ghi tin
+        # đang gọi, để khối ngữ cảnh không lặp lại chính câu hỏi.
+        ngu_canh = []
+        if str((meta or {}).get("chat_type") or "private") != "private" and chat_id:
+            ngu_canh = conversations.tin_gan_day(kenh_luot, aid_luot, chat_id)
+            # Kênh nào ghi tin vào kho TRƯỚC khi tới đây (Zalo cá nhân đọc qua poller) thì câu
+            # đang gọi đã nằm cuối danh sách: bỏ đi, nó đã là tin nhắn của lượt này rồi.
+            if ngu_canh and ngu_canh[-1].get("sender_type") == "customer" \
+                    and str(ngu_canh[-1].get("text") or "").strip() == str(text or "").strip():
+                ngu_canh = ngu_canh[:-1]
         # Hộp thư hội thoại: ghi tin khách TRƯỚC khi gọi engine, để lượt gãy vẫn còn tin khách.
         ghi_tin_khach(cfg, meta or {}, text)
         # Người thật đã TIẾP QUẢN cuộc chat này ở trang Hội thoại thì bot im: tin khách vẫn vào
         # kho (dòng trên), chỉ không gọi engine. Lượt đang chạy dở lúc bấm Tiếp quản vẫn trả
         # lời nốt - chấp nhận ở V1, vì cắt ngang một câu đang gửi còn khó hiểu hơn với khách.
-        aid_luot, kenh_luot = _tai_khoan_cua(cfg, meta or {})
         if conversations.che_do(kenh_luot, aid_luot, chat_id) == "human":
             return {"text": "", "files": [], "im_lang": True}
 
@@ -679,6 +732,7 @@ def _make_answer_fn(bot_id: str):
             print(f"[chatbot {bot_id}] tra tài liệu lỗi: {e}", file=sys.stderr)
         cfg["_tai_lieu"] = tl
         cfg["_kenh_luot"] = kenh_luot
+        cfg["_ngu_canh_nhom"] = ngu_canh
 
         # Bản ghi truyền xuống lõi phải có brain và slug - lõi dựa vào đó để đổi brain, đổi
         # khoá phiên và đổi nhãn kênh.

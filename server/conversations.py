@@ -55,8 +55,20 @@ CHE_DO_DEFAULT = "ai"
 
 MAX_CHU = 8_000          # trần độ dài một tin lưu lại
 MAX_TEN = 120
-MAX_DANH_SACH = 200      # trần một trang danh sách hội thoại
+MAX_DANH_SACH = 1000     # trần một lần đọc danh sách (trang Hộp thư tải dần 40 một, xem 0.64.97)
 MAX_TIN_MOT_LAN = 500    # trần một trang tin nhắn
+
+# 0.64.97 - NHÓM CHỈ GIỮ 100 TIN GẦN NHẤT. Nhóm là nơi người ta nói với nhau suốt ngày (và từ bản
+# này bot còn ghi cả câu không gọi nó, để làm ngữ cảnh), nên kho phình theo độ ồn của nhóm chứ
+# không theo số khách. Chat RIÊNG với khách vẫn giữ hết: đó là lịch sử mua bán, mất là mất thật.
+# Cắt ngay sau mỗi lần ghi, trong cùng giao dịch, nên kho không bao giờ vượt quá con số này.
+GIU_TIN_NHOM = 100
+# Bot trong nhóm đọc bấy nhiêu tin gần nhất trước khi trả lời (xem `tin_gan_day`).
+TIN_NGU_CANH_NHOM = 30
+# Lần đầu cắt các nhóm cũ: sao lưu nguyên file kho trước, giữ bản sao lưu bấy nhiêu ngày.
+GIU_SAO_LUU_NGAY = 14
+_KHOA_DA_CAT = "cat_nhom_%d_v1" % GIU_TIN_NHOM
+_TIEN_TO_SAO_LUU = "customer_conversations-truoc-cat-nhom-"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS channel_accounts(
@@ -154,7 +166,85 @@ def _conn() -> sqlite3.Connection:
         db.executescript(_SCHEMA)
         db.commit()
         _db, _db_path = db, path
+        _cat_nhom_lan_dau(db, path)
         return db
+
+
+def _thu_muc_sao_luu(path: Path) -> Path:
+    return Path(path).parent / "backups"
+
+
+def _cat_mot_nhom(db: sqlite3.Connection, conv_id: int) -> int:
+    """Xoá mọi tin cũ hơn GIU_TIN_NHOM tin mới nhất của MỘT hội thoại. Trả số tin đã xoá.
+
+    Tìm ranh giới bằng chỉ mục (conversation_id, id) rồi xoá một khoảng, nên rẻ dù gọi mỗi lần
+    ghi. Người gọi lo giao dịch."""
+    r = db.execute("SELECT id FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 1 OFFSET ?",
+                   (int(conv_id), GIU_TIN_NHOM)).fetchone()
+    if not r:
+        return 0
+    cur = db.execute("DELETE FROM messages WHERE conversation_id=? AND id<=?", (int(conv_id), int(r[0])))
+    return int(cur.rowcount or 0)
+
+
+def _don_sao_luu(path: Path) -> None:
+    """Xoá bản sao lưu trước-khi-cắt đã quá GIU_SAO_LUU_NGAY ngày."""
+    try:
+        thu_muc = _thu_muc_sao_luu(path)
+        if not thu_muc.is_dir():
+            return
+        han = _now() - GIU_SAO_LUU_NGAY * 86400
+        for f in thu_muc.glob(_TIEN_TO_SAO_LUU + "*.sqlite3"):
+            try:
+                if f.stat().st_mtime < han:
+                    f.unlink()
+            except OSError:
+                pass
+    except Exception as ex:
+        print(f"[conversations] dọn sao lưu lỗi: {ex}", file=sys.stderr)
+
+
+def _cat_nhom_lan_dau(db: sqlite3.Connection, path: Path) -> None:
+    """Chạy MỘT lần cho mỗi kho: cắt các nhóm đã phình từ trước bản 0.64.97.
+
+    Có nhóm nào vượt ngưỡng thì SAO LƯU nguyên file kho trước (API backup của SQLite, chép
+    nhất quán kể cả khi đang WAL), rồi mới xoá. Xong ghi khoá vào `sync_state` để lần khởi
+    động sau không làm lại. Mọi lỗi nuốt vào stderr: kho vẫn mở được như thường, lần sau thử lại.
+    """
+    try:
+        _don_sao_luu(path)
+        if db.execute("SELECT 1 FROM sync_state WHERE key=?", (_KHOA_DA_CAT,)).fetchone():
+            return
+        nhom = [int(r[0]) for r in db.execute(
+            "SELECT c.id FROM conversations c WHERE c.chat_type='group' AND"
+            " (SELECT COUNT(*) FROM messages m WHERE m.conversation_id=c.id) > ?",
+            (GIU_TIN_NHOM,)).fetchall()]
+        if nhom:
+            thu_muc = _thu_muc_sao_luu(path)
+            thu_muc.mkdir(parents=True, exist_ok=True)
+            dich = thu_muc / (_TIEN_TO_SAO_LUU + datetime.now().strftime("%Y%m%d-%H%M%S") + ".sqlite3")
+            bk = sqlite3.connect(str(dich))
+            try:
+                db.backup(bk)
+            finally:
+                bk.close()
+            xoa = 0
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                for cid in nhom:
+                    xoa += _cat_mot_nhom(db, cid)
+                db.execute("COMMIT")
+            except Exception:
+                db.execute("ROLLBACK")
+                raise
+            print(f"[conversations] cắt {len(nhom)} nhóm về {GIU_TIN_NHOM} tin gần nhất, xoá {xoa} tin cũ."
+                  f" Sao lưu trước khi cắt: {dich.name} (tự xoá sau {GIU_SAO_LUU_NGAY} ngày)", file=sys.stderr)
+        db.execute("INSERT INTO sync_state(key, value, updated_at) VALUES(?,?,?)"
+                   " ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                   (_KHOA_DA_CAT, str(len(nhom)), _now()))
+        db.commit()
+    except Exception as ex:
+        print(f"[conversations] cắt nhóm lần đầu lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)
 
 
 def close() -> None:
@@ -260,6 +350,9 @@ def chuan_hoa(ev: dict) -> dict:
         "external_message_id": _s(ev.get("external_message_id"), 200).strip(),
         "created_at": ts,
         "metadata": meta,
+        # Tin khách KHÔNG gọi bot trong nhóm (ghi làm ngữ cảnh): vào kho nhưng không tính là
+        # chưa đọc, không thì mọi câu tán gẫu trong nhóm đều bật chấm đỏ.
+        "khong_chua_doc": bool(ev.get("khong_chua_doc")),
     }
 
 
@@ -328,7 +421,7 @@ def ghi_su_kien(ev: dict) -> dict:
                     (tk_id, customer_id, e["bot_id"], e["external_chat_id"], e["chat_type"],
                      tieu_de, now, now))
                 conv = db.execute(
-                    "SELECT id, unread_count, message_count FROM conversations"
+                    "SELECT id, unread_count, message_count, chat_type FROM conversations"
                     " WHERE channel_account_id=? AND external_chat_id=?",
                     (tk_id, e["external_chat_id"])).fetchone()
                 conv_id = int(conv["id"])
@@ -352,12 +445,15 @@ def ghi_su_kien(ev: dict) -> dict:
 
                 # 5. Cập nhật hội thoại: tin cuối, số tin, chưa đọc (chỉ đếm tin KHÁCH)
                 tom = e["text"].strip().replace("\n", " ")[:200] or f"[{e['message_type']}]"
-                them_chua_doc = 1 if e["sender_type"] == "customer" else 0
+                them_chua_doc = 1 if e["sender_type"] == "customer" and not e["khong_chua_doc"] else 0
                 db.execute(
                     "UPDATE conversations SET last_message=?, last_message_at=?, last_sender_type=?,"
                     " unread_count=unread_count+?, message_count=message_count+1, updated_at=?"
                     " WHERE id=?",
                     (tom, ts, e["sender_type"], them_chua_doc, now, conv_id))
+                # 6. Nhóm chỉ giữ GIU_TIN_NHOM tin gần nhất (0.64.97)
+                if (conv["chat_type"] or "") == "group":
+                    _cat_mot_nhom(db, conv_id)
                 db.execute("COMMIT")
             except Exception:
                 db.execute("ROLLBACK")
@@ -433,25 +529,52 @@ def chi_tiet(conversation_id: int) -> Optional[dict]:
     return d
 
 
-def tin_nhan(conversation_id: int, limit: int = 100, before_id: int = 0) -> List[dict]:
+def tin_nhan(conversation_id: int, limit: int = 100, before_id: int = 0,
+             after_id: int = 0) -> List[dict]:
     """Tin của một hội thoại, CŨ TRƯỚC MỚI SAU trong cửa sổ trả về (cửa sổ lấy từ cuối lên).
 
     `before_id` > 0: lấy các tin CŨ HƠN id đó (cuộn ngược để xem thêm).
+    `after_id` > 0: chỉ các tin MỚI HƠN id đó, tính từ tin kế tiếp (nhịp làm mới của Hộp thư
+    chỉ hỏi phần mới thay vì tải lại cả khung).
     """
     n = max(1, min(int(limit or 100), MAX_TIN_MOT_LAN))
     args: list = [int(conversation_id)]
     sql = "SELECT * FROM messages WHERE conversation_id=?"
-    if before_id and int(before_id) > 0:
-        sql += " AND id<?"; args.append(int(before_id))
-    sql += " ORDER BY id DESC LIMIT ?"; args.append(n)
+    if after_id and int(after_id) > 0:
+        sql += " AND id>? ORDER BY id ASC LIMIT ?"; args += [int(after_id), n]
+    else:
+        if before_id and int(before_id) > 0:
+            sql += " AND id<?"; args.append(int(before_id))
+        sql += " ORDER BY id DESC LIMIT ?"; args.append(n)
     with _lock:
         rows = _conn().execute(sql, args).fetchall()
+    if after_id and int(after_id) > 0:
+        rows = list(reversed(rows))
     out = []
     for r in reversed(rows):
         d = _row(r)
         d["metadata"] = _loads(d.pop("metadata_json", "{}"), {})
         out.append(d)
     return out
+
+
+def tin_gan_day(channel: str, account_id: str, external_chat_id: str,
+                n: int = TIN_NGU_CANH_NHOM) -> List[dict]:
+    """N tin gần nhất của một cuộc chat, cũ trước mới sau, tra theo khoá phía kênh.
+
+    Dùng cho bot trong NHÓM: đọc những gì mọi người vừa nói để trả lời đúng ngữ cảnh, thay vì
+    chỉ thấy mỗi câu đang gọi nó. Không có cuộc chat thì trả rỗng."""
+    try:
+        with _lock:
+            r = _conn().execute(
+                "SELECT id FROM conversations WHERE channel_account_id=? AND external_chat_id=?",
+                (_tai_khoan_id(str(channel), str(account_id)), str(external_chat_id))).fetchone()
+        if not r:
+            return []
+        return tin_nhan(int(r[0]), limit=max(1, int(n or TIN_NGU_CANH_NHOM)))
+    except Exception as ex:
+        print(f"[conversations] đọc ngữ cảnh lỗi: {ex}", file=sys.stderr)
+        return []
 
 
 def danh_dau_da_doc(conversation_id: int) -> bool:
