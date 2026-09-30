@@ -6,7 +6,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 ## [0.64.86] - 2026-09-30
 ### Cải thiện
-- (đang viết)
+- **Hình mặc định mới: tượng bán thân bằng hạt sáng** (đầu, cổ, vai) dày gấp đôi số điểm, viền ngoài phát sáng rõ, trong mặt có vùng sáng cam, cổ có sợi thần kinh cam. Robot, Người, Quả cầu vẫn chọn được bằng nút Đổi hình.
+- **Vẽ thực tế**: bấm Vẽ là camera tự bật và hiện mờ phía sau, duỗi ngón trỏ để vẽ liên tục theo ngón tay, co ngón lại để nhấc bút. Nét không còn đứt khi camera hụt vài khung hình.
+- **Cử chỉ chắc tay hơn**: chỉ ngón tay ngoài chế độ Vẽ không còn tự vẽ; cử chỉ phải giữ ổn định mới tính; chữ V giữ nửa giây, ngón cái giữ 1 giây (MinMin nhìn và nói vật trước camera).
+- **Bảng Cử chỉ + Luyện từng bước**: cử chỉ nào MinMin nhận ra sẽ sáng lên; luyện 8 bước có thanh tiến độ, bước đầu tự chỉnh hướng trái phải cho webcam (sửa lỗi giơ tay phải mà MinMin nhìn sang trái). Cánh tay robot chuyển động mềm hơn.
 
 ## [0.64.85] - 2026-09-30
 ### Thêm mới
