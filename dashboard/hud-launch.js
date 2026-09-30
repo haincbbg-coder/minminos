@@ -23,29 +23,33 @@
     return khac.find(function (s) { return !s.isPrimary; }) || khac[0] || null;
   }
 
-  async function vitriManPhu() {
-    if (!("getScreenDetails" in window)) return "";
+  // Toa do man phu, hoac null. Co han 4 giay: lan dau trinh duyet hien hop hoi quyen, bo
+  // chua bam thi dung de cua so HUD dung cho.
+  async function manPhu() {
+    if (!("getScreenDetails" in window)) return null;
     try {
-      // Đã từ chối quyền thì đừng hỏi lại mỗi lần bấm.
       if (navigator.permissions) {
         var st = await navigator.permissions.query({ name: "window-management" }).catch(function () { return null; });
-        if (st && st.state === "denied") return "";
+        if (st && st.state === "denied") return null;   // da tu choi: dung hoi lai moi lan bam
       }
-      var sd = await window.getScreenDetails();
-      var s = chonManPhu(sd);
-      if (!s) return "";
-      return ",left=" + s.availLeft + ",top=" + s.availTop + ",width=" + s.availWidth + ",height=" + s.availHeight;
-    } catch (e) { return ""; }
+      var sd = await Promise.race([window.getScreenDetails(),
+        new Promise(function (r) { setTimeout(function () { r(null); }, 4000); })]);
+      return sd ? chonManPhu(sd) : null;
+    } catch (e) { return null; }
   }
 
   async function moHud() {
-    var viTri = await vitriManPhu();
+    // Mo cua so NGAY trong luot bam (cho doi hop hoi quyen xong moi mo thi trinh duyet chan
+    // cua so bat len), roi moi doi no sang man phu.
     var w = null;
-    try { w = window.open(HUD_URL, WIN_NAME, "popup" + viTri); } catch (e) {}
+    try { w = window.open(HUD_URL, WIN_NAME, "popup,width=1280,height=760"); } catch (e) {}
     if (!w) {
-      var msg = t("top.hud_blocked", "Trình duyệt chặn cửa sổ HUD. Bấm lại nút HUD, hoặc cho phép cửa sổ bật lên cho trang này.");
-      alert(msg);
+      alert(t("top.hud_blocked", "Trình duyệt chặn cửa sổ HUD. Bấm lại nút HUD, hoặc cho phép cửa sổ bật lên cho trang này."));
       return;
+    }
+    var s = await manPhu();
+    if (s) {
+      try { w.moveTo(s.availLeft, s.availTop); w.resizeTo(s.availWidth, s.availHeight); } catch (e) {}
     }
     try { w.focus(); } catch (e) {}
   }
