@@ -80,12 +80,15 @@ def register(app, deps: ConversationsDeps):
         return {"ok": True, "conversation": d} if d else _404()
 
     @router.get("/conversations/{conv_id}/messages")
-    async def conversations_messages(conv_id: int, limit: int = 100, before: int = 0):
+    async def conversations_messages(conv_id: int, limit: int = 100, before: int = 0, after: int = 0):
+        """Tin của một hội thoại. `before` = cuộn lên xem tin cũ hơn, `after` = chỉ tin mới
+        hơn (nhịp làm mới của Hộp thư). `giu_nhom` cho giao diện biết nhóm chỉ giữ bấy nhiêu tin."""
         d = conversations.chi_tiet(conv_id)
         if not d:
             return _404()
-        return {"ok": True, "conversation": d,
-                "messages": conversations.tin_nhan(conv_id, limit=limit, before_id=before)}
+        return {"ok": True, "conversation": d, "giu_nhom": conversations.GIU_TIN_NHOM,
+                "messages": conversations.tin_nhan(conv_id, limit=limit, before_id=before,
+                                                   after_id=after)}
 
     @router.post("/conversations/{conv_id}/read")
     async def conversations_read(conv_id: int):

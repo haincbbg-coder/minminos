@@ -2266,3 +2266,10 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
   .cd-menu button { font-size: 16px; padding: 9px 10px; }
   .cd-menu button small { font-size: 14px; }
 }
+
+/* 0.64.97 Hộp thư tải dần: dòng "tải thêm" cuối danh sách, dòng báo đầu khung tin */
+.ht-more, .ht-msgs-top {
+  text-align: center; font-size: 12px; color: var(--text3); padding: 10px 8px;
+}
+.ht-msgs-top { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.ht-msgs-top svg { width: 14px; height: 14px; }
