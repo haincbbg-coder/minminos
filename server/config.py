@@ -56,7 +56,7 @@ _DEFAULT = {
         "openai_tts_model": "gpt-4o-mini-tts",        # hoặc tts-1 / tts-1-hd
         "elevenlabs_key": "",
         "elevenlabs_voice": "21m00Tcm4TlvDq8ikWAM",   # Rachel (premade, đa ngôn ngữ) - đổi được
-        "elevenlabs_model": "eleven_multilingual_v2",
+        "elevenlabs_model": "auto",                   # auto = câu tiếng Việt đi eleven_flash_v2_5 (xem main._eleven_model_cho)
         # --- Voice V2 (docs/dev/2026-09-voice-v2-spec.md) ---
         # standard | fast | live. Mặc định Làn nhanh (chủ dự án chốt 17/09). Chưa chọn bộ não
         # giọng thì tin từ mic vẫn đi bộ não chính y như chế độ chuẩn (xem _bao_lan_nhanh_bo_qua

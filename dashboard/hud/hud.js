@@ -206,6 +206,9 @@ const voice = new VoiceIO({
     if (s === "no-sr") { $("hint").innerHTML = "Trình duyệt này không nhận giọng nói. Dùng Chrome hoặc Edge, hoặc nhấn <kbd>/</kbd> để gõ."; }
   },
   onSpeakStart() { setState("speaking"); },
+  onSpeakError(msg) {
+    feedAdd("bad", "Giọng đọc", clip(msg, 70) + " · kiểm tra Cài đặt → Giọng nói", "LỖI");
+  },
   onSpeakEnd() { setState(running.size ? "thinking" : "standby"); },
 });
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }

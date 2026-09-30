@@ -4,6 +4,12 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.64.83] - 2026-09-30
+### Sửa lỗi
+- **ElevenLabs đọc tiếng Việt đúng giọng Việt.** Trước đây model mặc định của ElevenLabs không có tiếng Việt nên câu trả lời bị đọc thành giọng tây. Nay câu tiếng Việt tự chuyển sang model có tiếng Việt, giữ nguyên giọng (Voice ID) bố chọn.
+- Trang **Cài đặt → Giọng nói** có thêm ô chọn **Model ElevenLabs**: Tự chọn (khuyên dùng), Flash v2.5, v4 Turbo hoặc v3.
+- **HUD đọc bằng đúng giọng đã chọn trong app**, và khi máy chủ đọc lỗi thì HUD báo rõ trong nhật ký thay vì tự đọc bằng giọng tiếng Anh của trình duyệt.
+
 ## [0.64.82] - 2026-09-30
 ### Cải thiện
 - **Nút "HUD màn phụ" ngay trên thanh trên cùng.** Bấm là HUD mở thành cửa sổ riêng, trên Chrome/Edge tự đặt sang màn phụ; bấm "Bật MinMin" là vào toàn màn hình. Lần đầu trình duyệt hỏi quyền quản lý cửa sổ trên mọi màn hình, chọn Cho phép. Không cần file .bat nữa.
