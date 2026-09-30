@@ -4,7 +4,7 @@
    Cockpit (.hud) giữ nguyên; layer này bọc thêm bên ngoài.
    ============================================ */
 :root {
-  --rail-w: 160px;
+  --rail-w: 190px;
   --rail-w-collapsed: 60px;
   --font-ui: var(--font);
   --rail-bg: rgba(14, 14, 22, 0.72);

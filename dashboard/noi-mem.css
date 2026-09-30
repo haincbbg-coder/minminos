@@ -202,3 +202,109 @@
 :root[data-theme="light"] .settings-tabs { background: var(--nm-bg); border: 0; box-shadow: var(--nm-in-sm); border-radius: 16px; }
 :root[data-theme="light"] .settings-tabs :is(button, a) { border: 0; border-radius: 12px; background: transparent; }
 :root[data-theme="light"] .settings-tabs :is(button, a):is(.active, [aria-selected="true"]) { background: var(--nm-bg); box-shadow: var(--nm-out-sm); color: var(--accent-ink); }
+
+/* ============================================================
+   0.64.96 - BỐ CỤC MINMIN RIÊNG (chủ repo: "không muốn nhìn nó như Javis")
+   - Thanh bên nổi thành một tấm bo tròn, tách khỏi mép màn hình.
+   - Nhãn nhóm thành tiêu đề nhỏ in hoa, mục đang chọn là viên thuốc tím đặc.
+   - Màn chính đảo cột: Hỏi MinMin bên TRÁI, quả cầu giữa, Tổng quan bên PHẢI.
+   - Trạng thái MinMin thành viên nhãn trên đỉnh quả cầu, thêm thanh tốc độ quay.
+   ============================================================ */
+@media (min-width: 861px) {
+  .rail {
+    top: 10px; left: 10px; bottom: 10px;
+    width: calc(var(--rail-w) - 16px);
+    border-radius: 22px; border: 0;
+    padding: 12px 8px;
+    box-shadow: var(--shadow-2);
+  }
+  :root[data-theme="light"] .rail { box-shadow: var(--nm-out); background: var(--nm-bg); }
+  :root:not([data-theme="light"]) .rail { border: 1px solid var(--glass-brd); }
+
+  /* Đảo cột màn chính. Nút thu từng cột vẫn đi theo cột của nó. */
+  .hud-body { grid-template-columns: 320px minmax(0, 1fr) 270px; }
+  .hud-body > .hud-right { order: -1; border-left: 0; border-right: 1px solid var(--border); }
+  .hud-body > .hud-left { order: 1; border-right: 0; border-left: 1px solid var(--border); }
+  :root[data-theme="light"] .hud-body > .hud-right,
+  :root[data-theme="light"] .hud-body > .hud-left { border: 0; }
+  body.vault-thu .hud-body { grid-template-columns: 320px minmax(0, 1fr) 44px; }
+  body.chatcol-thu .hud-body { grid-template-columns: 44px minmax(0, 1fr) 270px; }
+  body.vault-thu.chatcol-thu .hud-body { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .chatcol-thu-btn svg, .chatcol-expand svg { transform: none; }
+  #vtCollapse svg, .vault-expand svg { transform: scaleX(-1); }
+}
+
+/* Nhãn nhóm: tiêu đề nhỏ in hoa thay cho dòng chữ đậm kiểu cũ */
+.rail-grp-lbl {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase;
+  color: var(--text3); padding: 10px 8px 6px 6px;
+}
+.rail-grp-ico {
+  width: 24px; height: 24px; border-radius: 8px; justify-content: center; margin-right: 8px;
+  background: var(--accent-wash-2); color: var(--accent-ink, var(--accent)); opacity: 1;
+}
+.rail-grp-ico svg { width: 14px; height: 14px; }
+.rail-group.foot .rail-grp-lbl { border-top: 0; margin-top: 4px; }
+.rail-item { padding: 8px 10px 8px 14px; border-radius: 12px; }
+.rail-item.active,
+:root[data-theme="light"] .rail-item.active {
+  background: linear-gradient(145deg, #8a6cf0, #5b3fd0); color: #fff;
+  box-shadow: 0 6px 16px -6px rgba(91, 63, 208, 0.55);
+}
+.rail-item.active::before { display: none; }
+.rail-group.has-active:not(.open) > .rail-grp-lbl { color: var(--accent-ink, var(--accent)); }
+
+/* Trạng thái MinMin: viên nhãn trên đỉnh khoang quả cầu (thay dòng chữ dưới đáy) */
+.hud-center .orb-overlay { bottom: auto; top: 14px; }
+.hud-center .orb-state {
+  display: inline-block; padding: 6px 16px; border-radius: 999px;
+  font-size: 11px; letter-spacing: 2px; font-weight: 700;
+  background: var(--surface-2); box-shadow: var(--shadow-1);
+}
+:root[data-theme="light"] .hud-center .orb-state { background: var(--nm-bg); box-shadow: var(--nm-out-sm); }
+.hud-center .orb-state.thinking { color: #fff; background: linear-gradient(145deg, #f08a3c, #c2621c); }
+.hud-center .orb-interim { margin-top: 8px; }
+
+/* Thanh tốc độ quay quả cầu (minmin-galaxy3d.js dựng) */
+.mm-cau-quay {
+  position: absolute; left: 16px; bottom: 16px; z-index: 6;
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-radius: 999px;
+  background: var(--surface-2); box-shadow: var(--shadow-1);
+  font-size: 12px; color: var(--text2); user-select: none;
+}
+:root[data-theme="light"] .mm-cau-quay { background: var(--nm-bg); box-shadow: var(--nm-out-sm); }
+.mm-cau-quay .mm-cq-ic { font-size: 15px; line-height: 1; color: var(--accent-ink, var(--accent)); }
+.mm-cau-quay .mm-cq-so { min-width: 34px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.mm-cau-quay input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 110px; height: 6px; margin: 0;
+  border-radius: 999px; background: var(--sunken, rgba(127, 127, 127, 0.2)); outline: none; cursor: pointer;
+}
+:root[data-theme="light"] .mm-cau-quay input[type="range"] { box-shadow: var(--nm-in-sm); background: var(--nm-bg); }
+.mm-cau-quay input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; border: 0;
+  background: linear-gradient(145deg, #8a6cf0, #5b3fd0); box-shadow: 0 2px 6px rgba(91, 63, 208, 0.45);
+}
+.mm-cau-quay input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%; border: 0;
+  background: linear-gradient(145deg, #8a6cf0, #5b3fd0);
+}
+.hud-center.brain-overlays-hidden .mm-cau-quay { opacity: 0.35; }
+@media (max-width: 860px) {
+  .mm-cau-quay { left: 8px; bottom: auto; top: 8px; padding: 5px 9px; }
+  .mm-cau-quay input[type="range"] { width: 76px; }
+  .hud-center .orb-overlay { top: auto; bottom: 64px; }
+  .hud-body .hud-center .orb-overlay .orb-state { font-size: 9.5px; padding: 4px 11px; letter-spacing: 1.5px; }
+  /* Điện thoại: khoang quả cầu thấp, nhàn rỗi thì giấu viên nhãn cho khỏi che quả cầu. */
+  .hud-body .hud-center .orb-overlay .orb-state:not(.thinking):not(.listening):not(.speaking):not(.hearing) { display: none; }
+}
+
+/* Cột Tổng quan (bên phải): bỏ lề âm cũ (hợp khi cột nằm sát rail bên trái), chữ tiêu đề
+   dùng font giao diện thay cho kiểu mono "phòng điều khiển" cũ. */
+.hud-body > .hud-left .mm-dash { margin: 0; }
+.mm-title { font: 700 13px var(--font); letter-spacing: 0.3px; }
+.mm-sec-t { font: 700 10.5px var(--font); letter-spacing: 1.2px; }
+:root[data-theme="light"] .hud-center .orb-state.thinking { color: #fff; background: linear-gradient(145deg, #f08a3c, #c2621c); box-shadow: 0 6px 16px -6px rgba(194, 98, 28, 0.6); }
+.rail-grp-lbl { letter-spacing: 0.9px; font-size: 10px; }
+
+.hud-body > .hud-left > .mm-tabs { margin-left: 0; margin-right: 0; }

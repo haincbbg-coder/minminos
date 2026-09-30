@@ -6,7 +6,10 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 ## [0.64.96] - 2026-10-01
 ### Cải thiện
-- (đang viết)
+- **Quả cầu tri thức bắn sáng khi MinMin làm việc**: lúc MinMin đang nghĩ hay gọi công cụ, các điểm sáng phóng tia dọc dây nối sang nhau, điểm nhận tia loé lên rồi bắn tiếp, lan khắp quả cầu. Lúc rảnh thỉnh thoảng có một tia nhẹ.
+- **Thanh chỉnh tốc độ quay** ở góc dưới quả cầu: kéo từ Dừng tới x6, máy nhớ lựa chọn. Bỏ các đường kẻ chân trời phía dưới.
+- **Diện mạo MinMin riêng, khác hẳn Javis**: thanh bên nổi bo tròn, mục đang chọn là viên tím; màn chính đảo cột (Hỏi MinMin bên trái, Tổng quan bên phải); trạng thái MinMin thành viên nhãn trên đỉnh quả cầu.
+- **Đổi tên toàn bộ menu**: Trung tâm (Quả cầu tri thức, Hỏi MinMin, Kho tài liệu, Học & ghi nhớ), Vận hành (Bảng việc, Lịch tự chạy), Đội ngũ AI (Nhân sự AI, Bí kíp, Đồ nghề), Kết nối & khách (Nguồn dữ liệu, Chợ MinMin, Kênh nhắn, Hộp thư khách, Bộ não AI), Xưởng code, Thiết lập. Nói tên mới hay tên cũ đều mở đúng trang.
 
 ## [0.64.95] - 2026-09-30
 ### Cải thiện

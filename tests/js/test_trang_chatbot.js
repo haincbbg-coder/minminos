@@ -405,7 +405,8 @@ check("agent để Mặc định thì nói rõ là theo model chính, không đ�
 // ============================================================
 // Chủ repo chốt 21/09: thanh bên gọi trang này là "Chatbot", ba tab là Hòm thư bot /
 // Tài khoản bot / Tạo chatbot. Nhãn nằm trong từ điển, nên canary soi từ điển.
-check("thanh bên gọi trang này là Chatbot", VI["page.conversations.label"] === "Chatbot");
+// 0.64.96: đổi tên theo bộ nhãn MinMin riêng.
+check("thanh bên gọi trang này là Hộp thư khách", VI["page.conversations.label"] === "Hộp thư khách");
 check("ba tab đúng tên mới",
   VI["ht.tab_inbox"] === "Hòm thư bot" && VI["ht.tab_kenh"] === "Kênh của bot" &&
   VI["ht.tab_chatbot"] === "Tạo chatbot");

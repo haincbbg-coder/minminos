@@ -103,7 +103,8 @@ const orbState = document.getElementById("orbState");
 // nên mọi truy cập phải guard để trang không chết trắng nếu thiếu.
 fetch("/config").then(r => r.json()).then(cfg => {
   const wn = document.getElementById("workspaceName");
-  if (wn) wn.textContent = cfg.workspace_name || "Javis OS";
+  // Ten mac dinh cu "Javis OS" (luu san trong config) hien thanh MinMin OS.
+  if (wn) wn.textContent = (!cfg.workspace_name || cfg.workspace_name === "Javis OS") ? "MinMin OS" : cfg.workspace_name;
 }).catch(() => {});
 
 // ============================================
@@ -2649,25 +2650,7 @@ function initStarfield() {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, cssW, cssH);
 
-    // Grid floor phối cảnh (HUD command center) - đáy màn hình.
-    // Khoang não thấp (điện thoại: ~228px) thì 28% cuối là 64px sàn lưới đè lên đúng chỗ đồ
-    // thị cần. Panel càng thấp thì đẩy chân trời càng xuống - vẫn còn cảm giác chiều sâu,
-    // nhưng không cướp chỗ của thứ người dùng thật sự muốn nhìn.
-    const horizonY = cssH * (cssH < 320 ? 0.86 : 0.72);
-    const vpX = cssW / 2;
-    ctx.strokeStyle = rgba(sky.grid, sky.gridBase + lvl * sky.gridGain);
-    ctx.lineWidth = 1;
-    const cols = 18;
-    for (let i = 0; i <= cols; i++) {
-      const fx = (i / cols) * cssW;
-      ctx.beginPath(); ctx.moveTo(fx, cssH); ctx.lineTo(vpX, horizonY); ctx.stroke();
-    }
-    const rows = 9;
-    for (let j = 1; j <= rows; j++) {
-      const t = j / rows;
-      const y = horizonY + (cssH - horizonY) * (t * t);
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cssW, y); ctx.stroke();
-    }
+    // Bỏ sàn lưới chân trời (0.64.96): giống Javis cũ quá, quả cầu tri thức tự đứng giữa khoang.
 
     // Sóng nơron khi đang suy nghĩ - vòng lan toả CHẬM, dịu (bỏ tia nhấp nháy cho đỡ rối)
     if (_thinkingActive) {
@@ -3757,7 +3740,7 @@ if (document.getElementById("settingsBtn")) {
 
   document.getElementById("saveGeneral").addEventListener("click", (e) => {
     _saveSetting("general", { workspace_name: document.getElementById("setWsName").value.trim() }, e.target)
-      .then(() => { const wn = document.getElementById("workspaceName"); if (wn) wn.textContent = document.getElementById("setWsName").value.trim() || "Javis OS"; });
+      .then(() => { const wn = document.getElementById("workspaceName"); if (wn) wn.textContent = document.getElementById("setWsName").value.trim() || "MinMin OS"; });
   });
   document.getElementById("saveModel").addEventListener("click", (e) => {
     const sel = document.getElementById("setOrModelSel");

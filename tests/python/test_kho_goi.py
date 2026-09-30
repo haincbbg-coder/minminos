@@ -323,7 +323,9 @@ check("CANARY: vẽ lại sau khi cài/gỡ KHÔNG đi qua render (đường v�
 import re as _re
 _an = _re.search(r"const RAIL_AN = new Set\((.*?)\);", src_con)
 check("kho hiện trên thanh bên", _an is not None and '"packs"' not in _an.group(1))
-check("và nằm trong nhóm Kết nối", '"mcp", "packs", "channels", "models"' in src_con)
+# 0.64.96: nhóm đổi nhãn thành "Kết nối & khách" và nhận thêm Hộp thư khách; kho vẫn đứng ngay
+# sau Nguồn dữ liệu.
+check("và nằm trong nhóm Kết nối", '"mcp", "packs", "channels", "conversations", "models"' in src_con)
 check("vẫn giữ trong danh sách trang (nguồn icon và nhãn)",
       '"packs", "logs", "account", "usage",' in src_con)
 # VIEW_META thiếu "packs" từ đầu nên header trang kho ghi nhầm là tiêu đề Trang chủ.
