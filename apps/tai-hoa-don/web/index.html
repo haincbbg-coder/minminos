@@ -73,18 +73,75 @@
                 </select>
                 <button type="button" class="nut chinh" id="nutTraCuu">Tra cứu</button>
               </div>
-              <div class="hang thanh-cong-cu">
-                <button type="button" class="nut" id="nutTai">Tải XML</button>
-                <label class="tich"><input type="checkbox" id="banGoc" /> Kèm PDF gốc của hãng</label>
-                <span class="tach"></span>
+              <div class="hang thanh-cong-cu khoi">
+                <b class="nhom">Tải về kho</b>
+                <label class="tich"><input type="checkbox" data-tai="xml" checked disabled /> XML thuế</label>
+                <label class="tich"><input type="checkbox" data-tai="pdf" /> PDF Trống đồng (bản thể hiện cổng thuế)</label>
+                <label class="tich"><input type="checkbox" data-tai="goc" /> PDF gốc của nhà cung cấp</label>
+                <button type="button" class="nut chinh" id="nutTai">Tải</button>
+                <span class="nho" id="phamViTai"></span>
+              </div>
+              <div class="hang thanh-cong-cu khoi">
+                <b class="nhom">Xuất ra máy</b>
                 <button type="button" class="nut" data-xuat="excel">Excel</button>
-                <button type="button" class="nut" data-xuat="bang_ke">Bảng kê thuế GTGT</button>
+                <button type="button" class="nut" data-xuat="bang_ke">Bảng kê &amp; Tờ khai GTGT</button>
                 <button type="button" class="nut" data-xuat="chi_tiet">Chi tiết mặt hàng</button>
-                <button type="button" class="nut" data-xuat="zip">ZIP file</button>
+                <details class="menu">
+                  <summary class="nut">ZIP file ▾</summary>
+                  <div class="menu-than">
+                    <label class="tich"><input type="checkbox" data-zip="xml" checked /> XML thuế</label>
+                    <label class="tich"><input type="checkbox" data-zip="pdf" checked /> PDF Trống đồng</label>
+                    <label class="tich"><input type="checkbox" data-zip="goc" checked /> PDF gốc NCC</label>
+                    <label class="tich"><input type="checkbox" data-zip="html" /> HTML Trống đồng</label>
+                    <label class="tich"><input type="checkbox" data-zip="zip" /> ZIP gốc cổng thuế</label>
+                    <button type="button" class="nut chinh" id="nutZip">Tải ZIP</button>
+                  </div>
+                </details>
+                <button type="button" class="nut" data-xuat="html_zip">HTML Trống đồng (.zip)</button>
+                <details class="menu">
+                  <summary class="nut">Gộp PDF để in ▾</summary>
+                  <div class="menu-than">
+                    <label class="tich"><input type="radio" name="cheDoIn" value="goc_uu_tien" checked /> Bản gốc NCC, thiếu thì dùng Trống đồng</label>
+                    <label class="tich"><input type="radio" name="cheDoIn" value="goc" /> Chỉ bản gốc NCC</label>
+                    <label class="tich"><input type="radio" name="cheDoIn" value="conthue" /> Chỉ PDF Trống đồng</label>
+                    <button type="button" class="nut chinh" id="nutGopPdf">Tạo file gộp</button>
+                  </div>
+                </details>
+                <span class="tach"></span>
                 <button type="button" class="nut" id="nutCanhBao">Cảnh báo</button>
+                <button type="button" class="nut" id="nutCaiDat">Cài đặt tải</button>
                 <button type="button" class="nut phu" id="nutDangXuat">Đăng xuất</button>
               </div>
               <div class="tong" id="tong"></div>
+            </div>
+
+            <div class="the" id="hopCaiDat" hidden>
+              <h2>Cài đặt tải</h2>
+              <div class="luoi-cd">
+                <section>
+                  <h3>Tên file hoá đơn (XML, PDF, HTML)</h3>
+                  <p class="nho">Bấm các thành phần theo thứ tự muốn ghép. Bấm lại để bỏ.</p>
+                  <div class="chip" id="tokFile"></div>
+                  <label class="tich"><input type="checkbox" id="vietFile" /> Giữ dấu tiếng Việt</label>
+                  <p class="vi-du">Ví dụ: <code id="vdFile"></code></p>
+                </section>
+                <section>
+                  <h3>Tên file Excel xuất ra</h3>
+                  <div class="chip" id="tokExcel"></div>
+                  <label class="tich"><input type="checkbox" id="vietExcel" /> Giữ dấu tiếng Việt</label>
+                  <p class="vi-du">Ví dụ: <code id="vdExcel"></code></p>
+                </section>
+                <section>
+                  <h3>Lưu về đâu</h3>
+                  <p class="nho">File lưu trong kho của MinMin trên máy chủ, mỗi doanh nghiệp một thư mục, rồi Mua vào / Bán ra. Muốn có trên máy tính thì bấm ZIP file: cây thư mục được giữ nguyên.</p>
+                  <div id="xepThuMuc"></div>
+                  <p class="vi-du">Ví dụ: <code id="vdThuMuc"></code></p>
+                  <label class="tich"><input type="checkbox" id="giuZip" /> Giữ cả file ZIP gốc cổng thuế trả về</label>
+                  <label class="tich">Số luồng tải song song <input type="number" id="soLuong" min="1" max="8" style="width: 64px" /></label>
+                  <p class="nho" id="ghiChuTrinhDuyet"></p>
+                </section>
+              </div>
+              <div class="hang"><button type="button" class="nut chinh" id="luuCaiDat">Lưu cài đặt</button><span class="thong" id="thongCaiDat"></span></div>
             </div>
 
             <div class="the viec" id="hopViec" hidden>
@@ -173,6 +230,7 @@
             <span class="tach"></span>
             <button type="button" class="nut" id="gXuat">Excel</button>
             <button type="button" class="nut" id="gZip">ZIP file</button>
+            <button type="button" class="nut" id="gGhep" title="Ghép hoá đơn Gmail vào đúng hoá đơn trong Tải Hoá Đơn TCT">Ghép vào Tải Hoá Đơn</button>
           </div>
         </div>
         <div class="the viec" id="gViec" hidden>

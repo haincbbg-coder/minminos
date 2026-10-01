@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.11] - 2026-10-01
+### Thêm mới
+- **Tải Hoá Đơn TCT đầy đủ như bản PC**: tách rõ tải XML thuế, PDF Trống đồng (bản thể hiện cổng thuế), PDF gốc của nhà cung cấp; giữ ZIP gốc cổng thuế; tải nhiều luồng song song.
+- **Cài đặt tải**: tự ghép mẫu tên file hoá đơn và tên file Excel (có xem trước), chọn xếp thư mục theo tháng lập, theo nhà cung cấp hoặc theo ngày tải.
+- **Xuất ra máy**: ZIP chọn loại file (giữ nguyên cây thư mục), HTML Trống đồng (.zip), gộp PDF để in hàng loạt. Mọi nút xuất áp dụng cho các dòng đã tích, hoặc cả khoảng ngày nếu không tích dòng nào.
+- **Gmail ghép vào Tải Hoá Đơn TCT**: hoá đơn quét được trong Gmail tự gắn bản gốc PDF và XML vào đúng hoá đơn đã tra từ cổng thuế. Hoá đơn chưa có trong kho thì được thêm vào mục mua vào. Có nút Ghép lại khi vừa tra thêm kỳ mới.
+
 ## [26.10.10] - 2026-10-01
 ### Cải thiện
 - Ẩn Điều khiển máy tính khỏi Kết nối ngoài và danh sách chọn ứng dụng khi tạo mã kích hoạt.

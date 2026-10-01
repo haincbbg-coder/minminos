@@ -167,9 +167,58 @@ with TestClient(app) as c:
     z = zipfile.ZipFile(io.BytesIO(c.post(A + "/xuat", json={"mst": MST, "tu": "2026-01-01", "den": "2026-03-31", "kieu": "zip"}).content))
     check("ZIP chứa đúng các XML đã tải", sum(1 for n in z.namelist() if n.endswith(".xml")) == 3, z.namelist())
     r = c.post(A + "/xuat", json={"mst": MST, "tu": "2020-01-01", "den": "2020-01-31", "kieu": "excel"})
-    check("xuất khoảng ngày trống: báo lỗi dễ hiểu", r.status_code == 400 and "Tra cứu" in r.json()["error"])
+    check("xuất khoảng ngày trống: báo lỗi dễ hiểu", r.status_code == 400 and "tra cứu" in r.json()["error"].lower())
     r = c.get(A + f"/canh-bao?mst={MST}&tu=2026-01-01&den=2026-03-31").json()
     check("cảnh báo chạy được", r.get("ok") and isinstance(r["ds"], list))
+
+    # ---- cài đặt tải: tên file, thư mục, giữ zip, số luồng (như app PC)
+    cdat = c.get(A + "/cai-dat").json()
+    check("cài đặt mặc định: tên theo ngày lập + đối tác + ký hiệu + số", cdat["cai_dat"]["ten_file"]["tokens"]
+          == ["ngay_lap", "ten_doitac", "ky_hieu", "so_hd"] and cdat["vi_du_ten_file"].startswith("2026-09-15_"), cdat)
+    cdat = c.post(A + "/cai-dat", json={"ten_file": {"tokens": ["so_hd", "mst", "khong-co"], "keep_viet": True},
+                                        "xep_thu_muc": "ncc", "giu_zip": True, "luong": 99}).json()
+    check("đổi mẫu tên file: bỏ thành phần lạ, xem trước đúng",
+          cdat["cai_dat"]["ten_file"]["tokens"] == ["so_hd", "mst"] and cdat["vi_du_ten_file"] == "0000123_0312345678", cdat["vi_du_ten_file"])
+    check("số luồng bị chặn trong 1-8", cdat["cai_dat"]["luong"] == 8)
+    check("xếp theo nhà cung cấp, giữ dấu", "THỜI TRANG" in cdat["vi_du_thu_muc"], cdat["vi_du_thu_muc"])
+
+    # tải 2 hoá đơn mới với cài đặt mới + PDF Trống đồng + giữ ZIP
+    import shutil as _sh
+    chrome = next((p for p in ("/opt/pw-browsers/chromium-1194/chrome-linux/chrome",) if Path(p).is_file()),
+                  _sh.which("chromium") or _sh.which("google-chrome") or "")
+    hd.trinh_duyet_in_pdf = lambda: chrome
+    moi2 = [x["key"] for x in d["ds"] if not x["co_xml"]][:2]
+    r = c.post(A + "/tai", json={"mst": MST, "loai": "purchase", "keys": moi2, "kieu": ["pdf"]}).json()
+    v = doi_viec(c, r["viec"], 180)
+    check("tải kèm PDF Trống đồng chạy xong", v["trang_thai"] == "xong" and v["ket_qua"].get("ok") == 2, v.get("ket_qua") or v.get("loi"))
+    kho = hd.doc_kho(MST, "purchase")
+    a2 = [kho[k] for k in moi2]
+    check("tên file theo mẫu mới (số HĐ_MST)", all(Path(x["_xml_path"]).stem == f"{int(x['shdon']):07d}_{x['nbmst']}" for x in a2),
+          [x.get("_xml_path") for x in a2])
+    check("thư mục theo tên nhà cung cấp", all(Path(x["_xml_path"]).parent.name == x["nbten"][:60].strip() for x in a2),
+          [x.get("_xml_path") for x in a2])
+    check("giữ ZIP gốc khi bật", all(hd.tuyet_doi(x.get("_zip_path")) for x in a2))
+    if chrome:
+        check("có PDF Trống đồng thật", all((hd.tuyet_doi(x.get("_pdf_path")) or Path("/x")).read_bytes()[:4] == b"%PDF"
+                                            for x in a2 if hd.tuyet_doi(x.get("_pdf_path"))) and
+              all(hd.tuyet_doi(x.get("_pdf_path")) for x in a2), [x.get("_pdf_loi") for x in a2])
+        r = c.post(A + "/xuat", json={"mst": MST, "kieu": "pdf_gop", "che_do": "conthue", "loai": "purchase", "keys": moi2})
+        check("gộp PDF để in", r.status_code == 200 and r.content[:4] == b"%PDF", r.text[:200])
+    else:
+        print("skip PDF Trống đồng thật (máy test không có Chromium)")
+        check("không có trình duyệt: ghi lý do, vẫn tải XML", all(x.get("_pdf_loi") and x.get("_xml_path") for x in a2))
+    c.post(A + "/cai-dat", json={"ten_file": {"tokens": ["ngay_lap", "ten_doitac", "ky_hieu", "so_hd"], "keep_viet": False},
+                                 "xep_thu_muc": "thang_lap", "giu_zip": False, "luong": 3})
+    z = zipfile.ZipFile(io.BytesIO(c.post(A + "/xuat", json={"mst": MST, "kieu": "zip", "loai_tep": ["xml", "zip"],
+                                                              "loai": "purchase", "keys": moi2}).content))
+    check("ZIP theo loại file + chỉ dòng đã chọn, giữ cây thư mục MuaVao/...",
+          len([n for n in z.namelist() if n.endswith(".xml")]) == 2 and len([n for n in z.namelist() if n.endswith(".zip")]) == 2
+          and all(n.startswith("MuaVao/") for n in z.namelist()), z.namelist())
+    z = zipfile.ZipFile(io.BytesIO(c.post(A + "/xuat", json={"mst": MST, "kieu": "html_zip", "tu": "2026-01-01", "den": "2026-03-31"}).content))
+    check("HTML Trống đồng (.zip)", z.namelist() and all(n.endswith(".html") for n in z.namelist()), z.namelist())
+    r = c.post(A + "/xuat", json={"mst": MST, "kieu": "excel", "tu": "2026-01-01", "den": "2026-03-31"})
+    check("tên file Excel theo mẫu", "MuaBan_20260101_20260331_" + MST in __import__("urllib.parse").parse.unquote(
+        r.headers.get("content-disposition", "")), r.headers.get("content-disposition"))
 
     # ---- dừng việc
     r = c.post(A + "/tai", json={"mst": MST, "loai": "sold", "tu": "2026-01-01", "den": "2026-03-31"}).json()
@@ -221,6 +270,15 @@ with TestClient(app) as c:
     finally:
         gs.GmailScanner = goc_cls
     kq = c.get(A + "/gmail/ket-qua").json()["ds"]
+    hd0 = _mock_gdt.DATA["purchase"][0]
+    k0 = f"{hd0['nbmst']}_{hd0['khmshdon']}{hd0['khhdon']}_{hd0['shdon']}"
+    inv0 = hd.doc_kho(MST, "purchase").get(k0) or {}
+    check("hoá đơn Gmail được ghép vào đúng hoá đơn trong Tải Hoá Đơn TCT (có bản gốc từ Gmail)",
+          inv0.get("_goc_nguon") == "Gmail" and hd.tuyet_doi(inv0.get("_goc_path")) and hd.tuyet_doi(inv0.get("_xml_path")), inv0.keys())
+    check("bảng Tải Hoá Đơn hiện Gốc (Gmail)", any(x["key"] == k0 and x["co_goc"] and x["goc_nguon"] == "Gmail"
+                                                for x in c.get(A + f"/hoa-don?mst={MST}&loai=purchase").json()["ds"]))
+    check("kết quả quét báo số đã ghép", (v["ket_qua"].get("ghep", 0) + v["ket_qua"].get("them_vao_kho", 0)) == 1, v["ket_qua"])
+    check("email chỉ có link, không có file: không ghép bừa", not any(r.get("lien_ket") for r in kq if not r["co_xml"] and not r["co_pdf"]))
     co_xml = [r for r in kq if r["co_xml"]]
     check("kết quả Gmail: có hoá đơn kèm XML + PDF, đọc được người bán", co_xml and co_xml[0]["co_pdf"]
           and co_xml[0]["ban_ten"], kq)
