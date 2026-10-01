@@ -56,6 +56,8 @@
     // Mắt Nhà (camera EZVIZ ở nhà, 0.64.91). Trước 0.64.98 chỉ có đường /mat-nha gõ tay, không
     // có lối nào trên thanh bên - chủ repo tìm mãi không thấy.
     matnha: "eye",
+    // Kết nối ngoài (26.10.3): app của nhà phát hành, mở khoá bằng mã kích hoạt.
+    ketnoingoai: "rocket",
   };
   // Cỡ icon rail do CSS lo (.rail-ico svg { width: 19px }), độ ưu tiên chọn tử
   // cao hơn .ic nên không cần truyền cỡ ở đây.
@@ -96,7 +98,7 @@
   const RAIL_ITEMS = [
     "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
-    "packs", "logs", "account", "usage", "pet", "share", "matnha",
+    "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai",
   ].map(id => ({ id, icon: ICON[id], get label() { return t(`page.${id}.label`); } }));
 
   // ---- Gom rail thành nhóm theo chức năng (dễ tìm hơn danh sách phẳng 18 mục) ----
@@ -117,7 +119,7 @@
     { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON["Bộ não"],   ids: ["home", "chat", "files", "learn"] },
     { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["kanban", "selfimprove"] },
     { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON["Năng lực"], ids: ["workspace", "skills", "plugins"] },
-    { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["mcp", "packs", "channels", "conversations", "models", "matnha"] },
+    { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["mcp", "packs", "ketnoingoai", "channels", "conversations", "models", "matnha"] },
     { id: "code", get label() { return t("nav.group.code"); },        icon: GICON["Code"],     ids: ["terminal", "coding"] },
     { id: "he_thong", get label() { return t("nav.group.he_thong"); },    icon: GICON["Hệ thống"], ids: ["settings", "share", "account"], foot: true },
   ];
@@ -209,7 +211,7 @@
   //
   // `page.<id>.title` cho phép tiêu đề trang KHÁC nhãn trên rail khi cần (rail chật nên
   // "Việc", trang rộng nên "Việc (Kanban)"); thiếu key đó thì tự rơi về `page.<id>.label`.
-  const VIEW_META = Object.fromEntries(["home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha"].map(id => [id, {
+  const VIEW_META = Object.fromEntries(["home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai"].map(id => [id, {
     icon: VIEW_ICON[id],
     get label() {
       const rieng = t(`page.${id}.title`);
@@ -538,6 +540,11 @@
     if (id === "pet") return renderPetPage(el);
     if (id === "share") return renderSharePage(el);
     if (id === "matnha") return renderMatNha(el);
+    if (id === "ketnoingoai") {
+      if (window.MinMinKetNoiNgoai) return window.MinMinKetNoiNgoai.render(el);
+      el.innerHTML = placeholder("ketnoingoai", window.t("cs.mod_not_ready", { ten: "ket-noi-ngoai.js" }));
+      return;
+    }
     if (id === "models")   return renderModels(el);
     if (id === "mcp")      return renderConnect(el);
     if (id === "plugins")  return renderPlugins(el);

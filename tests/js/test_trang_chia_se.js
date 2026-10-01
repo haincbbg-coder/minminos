@@ -330,7 +330,7 @@ async function chay(items, opts) {
     // System menu membership is exercised in test_settings_tabs.js.
     check("console.js: bộ định tuyến biết trang share",
       /if \(id === "share"\) return renderSharePage\(el\);/.test(consoleSrc));
-    check("ui-actions.js khai trang share", /"pet", "share"(, "matnha")?\]/.test(ui));
+    check("ui-actions.js khai trang share", /"pet", "share"(, "[a-z]+")*\]/.test(ui));
     check("ui_targets.py khai trang share", /"pet", "share",/.test(py));
     check("ui_targets.py có tên gọi tiếng Việt để ra lệnh bằng lời",
       /"chia se": "share"/.test(py));
