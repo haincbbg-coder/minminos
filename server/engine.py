@@ -712,7 +712,7 @@ async def openai_compat_chat_with_mcp(api_key, model, messages, reasoning, mcp_t
     headers = {"Authorization": f"Bearer {api_key or 'none'}", "Content-Type": "application/json"}
     yield {"type": "meta", "model": model}
     async for ev in _cc_tool_loop(url, headers, model, messages,
-                                  mcp_tools, mcp_route, {}, "OpenAI Compatible"):
+                                  mcp_tools, mcp_route, {}, "OpenAI Compatible", giu_suy_nghi=True):
         yield ev
 
 
@@ -890,7 +890,7 @@ async def single_tool_plan(provider, api_key, model, messages, reasoning, tool_s
     url, actual_model = endpoints[provider]
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     if provider == "openrouter":
-        headers.update({"HTTP-Referer": "http://localhost:7777", "X-Title": "Javis OS"})
+        headers.update({"HTTP-Referer": "http://localhost:7777", "X-Title": "MinMin OS"})
     payload = {
         "model": actual_model, "messages": list(messages), "tools": [tool_spec],
         "tool_choice": {"type": "function", "function": {"name": fn}},
@@ -938,7 +938,7 @@ async def openrouter_stream(api_key, model, messages, reasoning="off"):
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "http://localhost:7777",
-        "X-Title": "Javis OS",
+        "X-Title": "MinMin OS",
     }
     if _is_claude_model(model):
         messages = _or_mark_system(messages)   # cache system ~26k cho model Claude qua OpenRouter
@@ -1513,8 +1513,27 @@ async def schedule_cancel_gateway(messages, mcp_tools, mcp_route):
     }
 
 
+# Trường "suy nghĩ" mà model trả kèm câu trả lời có gọi tool. Kimi K3 (Moonshot) và DeepSeek bản
+# suy nghĩ ĐÒI gửi lại nguyên phần này ở vòng sau trong cùng một lượt gọi tool; thiếu là lỗi 400
+# hoặc model lạc mạch. OpenRouter chuẩn hoá thành `reasoning` + `reasoning_details`, API gốc
+# của hai hãng dùng `reasoning_content`.
+_TRUONG_SUY_NGHI = ("reasoning_content", "reasoning", "reasoning_details")
+
+
+def _tin_goi_tool(msg: dict, tcs: list, giu_suy_nghi: bool = False) -> dict:
+    """Tin assistant gửi lại ở vòng sau. `giu_suy_nghi` chỉ bật cho nhà nhận các trường đó
+    (OpenRouter, OpenAI Compatible): Groq và vài nhà khác từ chối trường lạ trong messages."""
+    out = {"role": "assistant", "content": msg.get("content") or "", "tool_calls": tcs}
+    if giu_suy_nghi:
+        for k in _TRUONG_SUY_NGHI:
+            v = msg.get(k)
+            if v:
+                out[k] = v
+    return out
+
+
 async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, reasoning_extra, label,
-                        cache_system=False):
+                        cache_system=False, giu_suy_nghi=False):
     """Vòng Chat Completions + tool (OpenAI/OpenRouter). Non-stream từng vòng; yield tool_call + text cuối.
     cache_system=True (OpenRouter + model Claude): đánh cache_control lên system - OpenAI/Gemini
     tự cache nên không cần."""
@@ -1659,7 +1678,7 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
         tcs = msg.get("tool_calls") or []
         if tcs:
             requirement_pending = False
-            msgs.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": tcs})
+            msgs.append(_tin_goi_tool(msg, tcs, giu_suy_nghi))
             for tc in tcs:
                 fn = (tc.get("function") or {}).get("name")
                 try:
@@ -1827,13 +1846,13 @@ async def gemini_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools, m
 
 async def openrouter_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools, mcp_route):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
-               "HTTP-Referer": "http://localhost:7777", "X-Title": "Javis OS"}
+               "HTTP-Referer": "http://localhost:7777", "X-Title": "MinMin OS"}
     extra = {}
     if reasoning not in (None, "", "off"):
         extra["reasoning"] = {"effort": api_effort(reasoning)}
     yield {"type": "meta", "model": model}
     async for ev in _cc_tool_loop(OPENROUTER_URL, headers, model or "openai/gpt-4o-mini", messages, mcp_tools, mcp_route, extra, "OpenRouter",
-                                  cache_system=_is_claude_model(model)):
+                                  cache_system=_is_claude_model(model), giu_suy_nghi=True):
         yield ev
 
 
