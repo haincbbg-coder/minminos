@@ -201,6 +201,7 @@ def extract_link_info(provider: str, body: str) -> dict:
     """Lấy mã/token tra cứu từ nội dung email cho nhà cung cấp đã biết."""
     info = {"provider": provider}
     if provider == "easyinvoice":
+        from urllib.parse import quote, unquote
         mt = _RE_EASY_TOKEN.search(body)
         if mt:
             info["token"] = mt.group(1)
@@ -211,6 +212,11 @@ def extract_link_info(provider: str, body: str) -> dict:
                 hosts.append(h)
         if hosts:
             info["hosts"] = hosts
+        if info.get("token"):
+            valid = [h.replace("http://", "https://") for h in hosts
+                     if h.split("//", 1)[-1] not in ("easyinvoice.vn", "www.easyinvoice.vn")]
+            host = valid[0] if valid else "https://tracuu.easyinvoice.vn"
+            info["lookup_url"] = host + "/Invoice/ViewFromEmail?token=" + quote(unquote(info["token"]), safe="")
     elif provider == "sapo":
         m = _RE_SAPO_QR.search(body) or _RE_CODE_GENERIC.search(body)
         if m:
@@ -261,6 +267,8 @@ def extract_link_info(provider: str, body: str) -> dict:
         lk = _find_lookup_link(body)
         if lk:
             info["lookup_url"] = lk
+    if not info.get("lookup_url") and not info.get("link"):
+        info["lookup_url"] = _find_lookup_link(body) or ""
     return info
 
 
@@ -277,7 +285,13 @@ def fetch_from_link(info: dict, log: Callable[[str], None]) -> Optional[bytes]:
     if prov == "misa" and info.get("code"):
         from .providers import misa
         return misa.fetch_pdf_by_code(info["code"], log)
-    return None  # bkav/kkvat hoặc thiếu mã -> cần tải tay
+    if prov == "bkav" and info.get("code"):
+        from .providers import bkav
+        return bkav.fetch_pdf("", {"_code": info["code"]}, log)
+    if info.get("lookup_url") or info.get("link"):
+        from .providers import xmllink
+        return xmllink.fetch_pdf(info.get("lookup_url") or info["link"], {}, log)
+    return None
 
 
 def _body_text(msg) -> str:
@@ -534,7 +548,7 @@ class GmailScanner:
             # để bảng kết quả hiện được MTC và nút "Mở link tải (điền sẵn)".
             rec["lookup_url"] = info.get("lookup_url") or info.get("link") or ""
             rec["_mtc"] = info.get("code") or ""
-            if prov in PORTAL_CAPTCHA:
+            if prov in PORTAL_CAPTCHA and prov != "bkav":
                 # Hãng dùng captcha: CHỈ lấy nhanh mã + link ở đây (KHÔNG giải captcha trong
                 # vòng đọc email - việc đó chậm 15-40s/cái làm Gmail rớt kết nối). Giải captcha
                 # (nếu có API) để SANG pha riêng sau khi đọc xong, xem _auto_download_captcha().

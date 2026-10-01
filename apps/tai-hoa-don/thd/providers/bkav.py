@@ -101,14 +101,36 @@ def _try_download(s, path: str, bftype: str, log) -> bytes | None:
     return None
 
 
+def _direct_invoice(s, body: str, log):
+    """Follow the invoice opened by the portal, then its own PDF postback."""
+    import time
+    match = re.search(r"ViewInvoice\(\s*['\"]([0-9a-fA-F-]{36})['\"]", body)
+    if not match:
+        match = re.search(r"/Lookup\?InvoiceGUID=([0-9a-fA-F-]{36})", body)
+    if not match:
+        return None
+    url = HOST + "/Lookup?InvoiceGUID=" + match.group(1) + "&ViewATF="
+    r = s.get(url, timeout=60, headers={"Referer": HOST + SEARCH_PATH})
+    if r.status_code != 200:
+        return None
+    page = r.text
+    targets = re.findall(r"__doPostBack\(['\"]([^'\"]*(?:lbtnDownloadHtmlAsPdf|lbtDownloadAsPdf))['\"]", _htmllib.unescape(page))
+    for target in dict.fromkeys(targets):
+        fields = _hidden_fields(page)
+        fields.update({"__EVENTTARGET": target, "__EVENTARGUMENT": "",
+                       "UcHtmlPdfToolbar$txtLastTimeDownload_Cur": str(int(time.time()*10000000)+621355968000000000)})
+        result = s.post(url, data=fields, timeout=120, headers={"Referer": url})
+        if result.status_code == 200 and result.content.lstrip().startswith(b"%PDF-"):
+            log("BKAV: đã tải PDF gốc từ hoá đơn mở trực tiếp.")
+            return result.content
+    return None
+
+
 def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None) -> bytes:
     mtc = find_code(xml_text, inv)
     if not mtc:
         raise ProviderError("Không có Mã tra cứu (MTC) của BKAV trong XML - cần lấy MTC "
                             "từ email (quét Gmail).")
-    if not solver or not hasattr(solver, "recaptcha_v2"):
-        raise ProviderError("BKAV dùng reCAPTCHA - cần khai báo API 2Captcha trong Cài đặt "
-                            "để tự giải.")
     url = f"{HOST}{SEARCH_PATH}?MTC={quote(mtc)}"
     s = C.make_session()
     log(f"BKAV: mở cổng tra cứu MTC {mtc}...")
@@ -117,6 +139,11 @@ def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None)
         page0 = r0.text if hasattr(r0, "text") else r0.content.decode("utf-8", "ignore")
     except Exception as e:  # noqa
         raise ProviderError(f"BKAV không mở được cổng ({str(e)[:80]})")
+    direct = _direct_invoice(s, page0, log)
+    if direct:
+        return direct
+    if not solver or not hasattr(solver, "recaptcha_v2"):
+        raise ProviderError("BKAV chưa mở được hoá đơn trực tiếp. Kiểm tra mã tra cứu hoặc bật API captcha nếu trang yêu cầu.")
     hidden = _hidden_fields(page0)
     log("BKAV: giải reCAPTCHA v2 qua dịch vụ (có thể mất 15-40 giây)...")
     try:
@@ -146,6 +173,10 @@ def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None)
     except Exception as e:  # noqa
         raise ProviderError(f"BKAV tra cứu lỗi ({str(e)[:80]})")
     log(f"BKAV: tra cứu trả HTTP {getattr(r,'status_code','?')}, trang {len(body)} ký tự.")
+
+    direct = _direct_invoice(s, body, log)
+    if direct:
+        return direct
 
     # gom mọi (filePath, BFType) trên trang kết quả
     cands = []

@@ -37,7 +37,7 @@ from . import ProviderError
 from . import _common as C
 
 NAME = "EasyInvoice (Softdreams)"
-HOST_DEFAULT = "http://tracuu.easyinvoice.vn"
+HOST_DEFAULT = "https://tracuu.easyinvoice.vn"
 MSTTCGP_SOFTDREAMS = "0105987432"
 
 # Token tải trên TRANG KẾT QUẢ tra cứu, trong: downloadPdfAndFileAttachFromAvailableHtml('<token>')
@@ -143,7 +143,17 @@ def download_by_token(token_b64: str, log: Callable[[str], None], hosts=None) ->
     from urllib.parse import unquote
     token_b64 = unquote(token_b64).strip()  # bỏ %-encoding nếu email mã hóa URL
     s = C.make_session()
-    hosts = hosts or [HOST_DEFAULT]
+    # The corporate homepage is not an invoice server. Preserve tenant hosts,
+    # and always try the central lookup service for records saved by older versions.
+    from urllib.parse import urlsplit
+    clean = []
+    for host in (hosts or []) + [HOST_DEFAULT]:
+        name = (urlsplit(host).hostname or "").lower()
+        if name == "tracuu.easyinvoice.vn" or name.endswith(".easyinvoice.vn"):
+            value = "https://" + name
+            if value not in clean:
+                clean.append(value)
+    hosts = clean
     last = ""
     for host in hosts:
         pdf = _get_pdf(s, host, token_b64)
