@@ -293,7 +293,7 @@
   async function traCuu() {
     if (!$("#tu").value || !$("#den").value) { bao("Chọn khoảng ngày trước."); return; }
     try {
-      var r = await goi("tra-cuu", { json: { mst: dn, tu: $("#tu").value, den: $("#den").value, loai: "ca_hai", he: $("#he").value } });
+      var r = await goi("tra-cuu", { json: { mst: dn, tu: $("#tu").value, den: $("#den").value, loai: loai, he: $("#he").value } });
       theoDoi(r.viec, viecTai, function () { taiBang(); taiDn(); });
     } catch (e) { bao(e.message); }
   }
