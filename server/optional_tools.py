@@ -128,9 +128,8 @@ _BINARY_TRONG_BUILD = (
     "chrome-mac/headless_shell",
 )
 
-# TÊN file chạy. Đây mới là thứ bền: thư mục bọc ngoài đổi theo bản Playwright và theo kiến
-# trúc máy (`chrome-linux`, `chrome-linux64`, `chrome-linux-arm64`... - đọc thẳng trong
-# playwright-core mới thấy đủ), còn tên file thì không đổi.
+# Giữ cả tên Chromium cũ và Chrome for Testing mới của Playwright.
+# Nguồn: packages/playwright-core/src/server/registry/index.ts, EXECUTABLE_PATHS.
 _TEN_FILE_CHAY = ("chrome", "chrome.exe", "headless_shell", "headless_shell.exe", "Chromium",
                  "chrome-headless-shell", "chrome-headless-shell.exe", "Google Chrome for Testing")
 

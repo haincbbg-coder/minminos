@@ -46,7 +46,7 @@ from . import efy           # noqa: E402
 from . import xmllink       # noqa: E402
 
 # Thứ tự = thứ tự thử nhận diện. Thêm hãng mới: viết module rồi thêm vào đây.
-# xmllink đặt CUỐI: chỉ dùng khi không hãng nào nhận nhưng XML có sẵn link tải PDF.
+# xmllink đặt cuối để nhận link độc lập, đồng thời làm dự phòng khi hãng tải thất bại.
 PROVIDERS = [misa, sapo, easyinvoice, bkav, viettel, htinvoice, kkvat, efy, xmllink]
 
 

@@ -338,11 +338,12 @@ def _invoice_attachments(atts):
         return [(xmls[0][1], pdfs[0][1])]
     if xmls:
         pairs = []
+        stems = [str(PurePosixPath(n.replace("\\", "/")).with_suffix("")).casefold() for n, _ in xmls]
         for name, xml in xmls:
             stem = str(PurePosixPath(name.replace("\\", "/")).with_suffix("")).casefold()
             matches = [pdf for n, pdf in pdfs
                        if str(PurePosixPath(n.replace("\\", "/")).with_suffix("")).casefold() == stem]
-            pairs.append((xml, matches[0] if len(matches) == 1 else None))
+            pairs.append((xml, matches[0] if len(matches) == 1 and stems.count(stem) == 1 else None))
         return pairs
     return [(None, pdfs[0][1])] if len(pdfs) == 1 else []
 

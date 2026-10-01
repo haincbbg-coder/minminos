@@ -99,6 +99,8 @@ class Downloads(unittest.TestCase):
         self.assertEqual([p[1] for p in pairs], [PDF, PDF + b"two"])
         self.assertEqual(gmail._invoice_attachments([("one.xml", XML), ("two.xml", XML), ("other.pdf", PDF)]),
                          [(XML, None), (XML, None)])
+        self.assertEqual(gmail._invoice_attachments([("one.xml", XML), ("one.xml", XML), ("one.pdf", PDF)]),
+                         [(XML, None), (XML, None)])
 
     def test_retry_cached_xml_recovers_detail_and_counts_missing(self):
         with tempfile.TemporaryDirectory() as temp, patch.object(hd, "goc_du_lieu", return_value=Path(temp)):
