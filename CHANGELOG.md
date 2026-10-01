@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.10] - 2026-10-01
+### Cải thiện
+- Ẩn Điều khiển máy tính khỏi Kết nối ngoài và danh sách chọn ứng dụng khi tạo mã kích hoạt.
+
 ## [26.10.8] - 2026-10-01
 ### Thêm mới
 - **Quét hoá đơn Gmail: Đăng nhập bằng Google.** Tài khoản bật xác minh 2 bước kiểu g.co/sc, mã PIN, khoá bảo mật giờ quét được: bấm nút, đăng nhập ngay trên trang Google, MinMin chỉ nhận quyền đọc thư. Cài Google OAuth Client một lần, trang có hướng dẫn từng bước.
