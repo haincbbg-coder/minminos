@@ -659,6 +659,7 @@ def tai_ds(v: Viec, mst: str, loai: str, keys: list[str], kieu) -> dict:
               "cài 'Trình duyệt' một lần (miễn phí). Vẫn tải XML.")
     kho = doc_kho(mst, loai)
     ds = [k for k in keys if k in kho]
+    originals_before = sum(bool(tuyet_doi(kho[k].get("_goc_path"))) for k in ds)
     if "goc" in kieu and loai == "purchase":
         # One snapshot of all companies prevents a filtered selection hiding ambiguous matches.
         inventories = {m: doc_kho(m, "purchase") for m in doc_cau_hinh()["doanh_nghiep"]}
@@ -685,7 +686,8 @@ def tai_ds(v: Viec, mst: str, loai: str, keys: list[str], kieu) -> dict:
     def gan_phien():
         with khoa:
             phien_luong.client = clients.pop()
-    dem = {"ok": 0, "loi": 0, "goc": 0, "pdf": 0, "het_phien": False}
+    linked_originals = sum(bool(tuyet_doi(kho[k].get("_goc_path"))) for k in ds) - originals_before
+    dem = {"ok": 0, "loi": 0, "goc": linked_originals, "pdf": 0, "het_phien": False}
     v.log(f"Tải {len(ds)} hoá đơn ({', '.join(TEN_LOAI_TEP[x] for x in kieu)}) bằng {n_luong} luồng.")
 
     def mot(i_k):

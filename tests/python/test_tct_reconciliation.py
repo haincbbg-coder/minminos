@@ -85,7 +85,8 @@ class Reconciliation(unittest.TestCase):
         v = SimpleNamespace(huy=threading.Event(), log=lambda s: None, i=0, n=0)
         client = SimpleNamespace(clone=lambda: SimpleNamespace())
         with patch.object(identity, 'read_pdf', return_value=TEXT), patch.object(hd, '_can_dang_nhap', return_value=client), patch.object(hd, 'tai_mot', return_value={'thieu': [], 'goc': False, 'pdf': False}) as download:
-            hd.tai_ds(v, BUYER, 'purchase', ['one'], ['goc'])
+            result = hd.tai_ds(v, BUYER, 'purchase', ['one'], ['goc'])
+            self.assertEqual(result['goc'], 1)
         self.assertEqual(download.call_count, 1)
         rows = hd.doc_kho(BUYER, 'purchase')
         self.assertIn('_goc_path', rows['one'])
