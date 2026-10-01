@@ -7,6 +7,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.16] - 2026-10-02
 ### Sửa lỗi
 - BKAV: tải thêm mẫu hoá đơn dùng nút tải file PDF có sẵn trong trang tra cứu.
+- FAST/J&T: nhận đúng link PDF trong email, tránh nhầm link bảng kê vận đơn hoặc chỉ mở trang chủ. Quét lại email cũ để bổ sung link tải.
 
 ## [26.10.15] - 2026-10-02
 ### Sửa lỗi

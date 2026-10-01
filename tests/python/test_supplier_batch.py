@@ -63,6 +63,31 @@ class SupplierBatch(unittest.TestCase):
         self.assertEqual(info["token"],"YWJjfDE=")
         self.assertEqual(row["link"],"https://tracuu.easyinvoice.vn/Invoice/ViewFromEmail?token=YWJjfDE%3D")
 
+    def test_fast_email_keeps_pdf_link_not_waybill(self):
+        text = '<a href="https://einvoice.fast.com.vn">Portal</a>To download the PDF file<a href="http://url3815.hq.jtexpress.vn/ls/click?pdf=1">Click</a>To download the Waybill List file<a href="https://example.com/waybill">Click</a>'
+        self.assertEqual(gmail.provider_of("sender@hq.jtexpress.vn",text),"fast")
+        info=gmail.extract_link_info("fast",text)
+        self.assertEqual(info["lookup_url"],"http://url3815.hq.jtexpress.vn/ls/click?pdf=1")
+        row={"nha_cung_cap":"fast","link":info["lookup_url"]}
+        self.assertEqual(hd.thong_tin_tra_cuu_gmail(row)["lookup_url"],info["lookup_url"])
+
+    def test_fast_download_validates_redirect_and_pdf(self):
+        from unittest.mock import MagicMock
+        fast=hd.thd("providers.fast_email")
+        session=MagicMock(); session.__enter__.return_value=session
+        first=MagicMock(status_code=302,headers={"Location":"https://einvoice.fast.com.vn/index.aspx?type=3&c=TEST"})
+        first.__enter__.return_value=first
+        second=MagicMock(status_code=200); second.__enter__.return_value=second
+        second.iter_content.return_value=[PDF]
+        session.get.side_effect=[first,second]
+        with patch.object(fast.requests,"Session",return_value=session),patch.object(fast.xmllink,"_public_url"):
+            self.assertEqual(fast.fetch_pdf("http://url3815.hq.jtexpress.vn/ls/click?test=1",lambda s:None),PDF)
+        first.headers={"Location":"http://127.0.0.1/private"}
+        session.get.side_effect=[first]
+        with patch.object(fast.requests,"Session",return_value=session),patch.object(fast.xmllink,"_public_url"):
+            with self.assertRaises(hd.thd("providers").ProviderError):
+                fast.fetch_pdf("http://url3815.hq.jtexpress.vn/ls/click?test=1",lambda s:None)
+
     def test_batch_continues_after_failure_and_persists_status(self):
         with tempfile.TemporaryDirectory() as temp,patch.object(hd,"goc_du_lieu",return_value=Path(temp)),patch.object(hd,"tao_solver",return_value=None),patch.object(hd,"lien_ket_gmail"),patch.object(gmail,"fetch_from_link",side_effect=[ValueError("expired"),PDF]):
             rows=[{"id":"a","so":"1","nha_cung_cap":"easyinvoice","ma_tra_cuu":"YWJjfDE="},{"id":"b","so":"2","nha_cung_cap":"easyinvoice","ma_tra_cuu":"YWJjfDI="}]
