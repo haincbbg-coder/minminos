@@ -230,7 +230,7 @@
   }
   function phamViXuat(them) {
     var d = { mst: dn, tu: $("#tu").value, den: $("#den").value };
-    d.keys = chon.size ? Array.from(chon) : hdLoc.map(function(r) { return r.key; }); d.loai = loai;
+    d.keys = hdLoc.filter(function(r) { return !chon.size || chon.has(r.key); }).map(function(r) { return r.key; }); d.loai = loai;
     for (var k in them) d[k] = them[k];
     return d;
   }
@@ -298,7 +298,7 @@
     try {
       if (!hdLoc.length) throw new Error("Không có hoá đơn trong bộ lọc.");
       var kieu = Array.prototype.map.call(document.querySelectorAll("[data-tai]:checked"), function (c) { return c.dataset.tai; });
-      var r = await goi("tai", { json: { mst: dn, loai: loai, keys: chon.size ? Array.from(chon) : hdLoc.map(function(r) { return r.key; }),
+      var r = await goi("tai", { json: { mst: dn, loai: loai, keys: phamViXuat({}).keys,
         tu: $("#tu").value, den: $("#den").value, kieu: kieu } });
       bao("Đang tải " + r.so + " hoá đơn.");
       theoDoi(r.viec, viecTai, function () { chon.clear(); taiBang(); });
@@ -379,7 +379,7 @@
     $("#gmCount").textContent = "Đang lọc " + gmLoc.length + "/" + dsG.length + " · Đã chọn " + gChon.size + ". Tải/xuất/in dùng " + (gChon.size || gmLoc.length) + " dòng này.";
   }
   function gmailScope() {
-    var ids = gChon.size ? Array.from(gChon) : gmLoc.map(function(r) { return r.id; });
+    var ids = gmLoc.filter(function(r) { return !gChon.size || gChon.has(r.id); }).map(function(r) { return r.id; });
     if (!ids.length) throw new Error("Không có hoá đơn trong bộ lọc.");
     return {ids:ids};
   }
