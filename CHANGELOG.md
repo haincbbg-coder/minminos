@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.18] - 2026-10-02
+### Cải thiện
+- Nâng cấp bộ lọc chứng từ và vận hành Hóa đơn, Zalo Forwarder.
+
 ## [26.10.17] - 2026-10-02
 ### Cải thiện
 - Tra cứu đúng tab Mua vào hoặc Bán ra đang chọn; mặc định tra cả hoá đơn điện tử và máy tính tiền.
