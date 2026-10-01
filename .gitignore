@@ -173,3 +173,6 @@ server/.javis-agy/
 giay-phep/
 **/giay-phep/
 *.pem
+
+# Thư viện Node của app Kết nối ngoài
+node_modules/

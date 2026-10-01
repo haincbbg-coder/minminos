@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: file:; style-src 'self' 'unsafe-inline';"
+    />
+    <title>Zalo Forwarder · MinMin</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-theme="light">
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-logo">Z</div>
+          <div class="brand-text">
+            <div class="brand-title" id="app-name">Zalo Forwarder Pro</div>
+            <div class="brand-sub">
+              <span data-i18n="brand.sub">Chuyển tiếp Zalo tự động</span>
+              <span class="ver-chip" id="app-version">v2.0</span>
+            </div>
+          </div>
+        </div>
+
+        <a class="nav-item mm-back" href="/" title="Về MinMin OS" style="text-decoration: none"><span class="nav-ico">←</span><span>Về MinMin</span></a>
+        <nav class="nav">
+          <button class="nav-item active" data-panel="accounts">
+            <span class="nav-ico">👤</span><span data-i18n="nav.accounts">Tài khoản</span>
+          </button>
+          <button class="nav-item" data-panel="routes">
+            <span class="nav-ico">🔀</span><span data-i18n="nav.routes">Tuyến chuyển tiếp</span>
+          </button>
+          <button class="nav-item" data-panel="rules">
+            <span class="nav-ico">✏️</span><span data-i18n="nav.rules">Bộ biên tập</span>
+          </button>
+          <button class="nav-item" data-panel="ai">
+            <span class="nav-ico">🤖</span><span data-i18n="nav.ai">AI &amp; Soạn tin</span>
+          </button>
+          <button class="nav-item" data-panel="broadcast">
+            <span class="nav-ico">📢</span><span data-i18n="nav.broadcast">Đăng nhóm</span>
+          </button>
+          <button class="nav-item" data-panel="friends">
+            <span class="nav-ico">💬</span><span data-i18n="nav.friends">Nhắn bạn bè</span>
+          </button>
+          <button class="nav-item" data-panel="run">
+            <span class="nav-ico">▶️</span><span data-i18n="nav.run">Chạy &amp; Nhật ký</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="lic-badge" id="lic-badge">-</div>
+          <div class="toggle-row">
+            <button class="btn tiny ghost" id="btn-theme" title="Sáng/Tối">🌓 <span data-i18n="theme.toggle">Sáng / Tối</span></button>
+            <button class="btn tiny ghost" id="btn-lang" title="Ngôn ngữ">🌐 <span id="lang-label">EN</span></button>
+          </div>
+          <div class="warn-badge" data-i18n="foot.warn">⚠️ Nên dùng tài khoản phụ</div>
+          <div class="copyright">
+            © <span id="app-year">2026</span> <b id="app-author">Trung Kiên Hà</b><br />
+            <span data-i18n="foot.copyright">Bản quyền phần mềm</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="main">
+        <!-- ACCOUNTS -->
+        <section class="panel active" id="panel-accounts">
+          <div class="panel-head">
+            <div class="page-title">
+              <h1 data-i18n="acc.title">Tài khoản</h1>
+              <p class="page-sub" data-i18n="acc.sub">Đăng nhập Zalo bằng mã QR.</p>
+            </div>
+            <div class="head-actions">
+              <button class="btn ghost small" id="btn-export-config" title="Lưu cấu hình ra file">💾 Sao lưu</button>
+              <button class="btn ghost small" id="btn-import-config" title="Khôi phục cấu hình từ file">📂 Khôi phục</button>
+              <button class="btn primary" id="btn-add-account" data-i18n="acc.add">＋ Thêm tài khoản</button>
+            </div>
+          </div>
+          <div id="accounts-list" class="cards"></div>
+        </section>
+
+        <!-- ROUTES -->
+        <section class="panel" id="panel-routes">
+          <div class="panel-head">
+            <div class="page-title">
+              <h1 data-i18n="routes.title">Tuyến chuyển tiếp</h1>
+              <p class="page-sub" data-i18n="routes.sub">Chọn tài khoản, nhóm nguồn và nơi nhận.</p>
+            </div>
+            <div class="head-actions">
+              <button class="btn ghost" id="btn-save-routes" data-i18n="common.save">💾 Lưu</button>
+              <button class="btn primary" id="btn-add-route" data-i18n="routes.add">＋ Thêm tuyến</button>
+            </div>
+          </div>
+          <div id="routes-list"></div>
+        </section>
+
+        <!-- RULES -->
+        <section class="panel" id="panel-rules">
+          <div class="panel-head">
+            <div class="page-title">
+              <h1 data-i18n="rules.title">Bộ biên tập</h1>
+              <p class="page-sub" data-i18n="rules.sub">Đổi giá, xoá/thay link, đổi tên thương hiệu.</p>
+            </div>
+            <div class="head-actions">
+              <button class="btn ghost" id="btn-save-rules" data-i18n="common.save">💾 Lưu</button>
+              <button class="btn primary" id="btn-add-rule" data-i18n="rules.add">＋ Thêm bộ</button>
+            </div>
+          </div>
+          <div id="rules-list"></div>
+        </section>
+
+        <!-- AI -->
+        <section class="panel" id="panel-ai">
+          <div class="panel-head">
+            <div class="page-title">
+              <h1 data-i18n="ai.title">AI &amp; Soạn tin</h1>
+              <p class="page-sub" data-i18n="ai.sub">Kết nối ChatGPT / Claude / Gemini để biên tập tin thông minh và soạn nội dung.</p>
+            </div>
+          </div>
+          <div id="ai-body"></div>
+        </section>
+
+        <!-- BROADCAST -->
+        <section class="panel" id="panel-broadcast">
+          <div class="panel-head">
+            <div class="page-title">
+              <h1 data-i18n="bc.title">Đăng nhóm</h1>
+              <p class="page-sub" data-i18n="bc.sub">Đăng cùng một nội dung tới nhiều nhóm mình quản trị. Có thể để AI đổi nhẹ câu chữ cho tự nhiên.</p>
+            </div>
+          </div>
+          <div id="broadcast-body"></div>
+        </section>
+
+        <!-- FRIENDS -->
+        <section class="panel" id="panel-friends">
+          <div class="panel-head">
+            <div class="page-title">
+              <h1 data-i18n="fr.title">Nhắn bạn bè</h1>
+              <p class="page-sub" data-i18n="fr.sub">Gửi tin tới bạn bè / khách đã kết bạn với shop. Có thể để AI đổi nhẹ câu chữ cho tự nhiên.</p>
+            </div>
+          </div>
+          <div id="friends-body"></div>
+        </section>
+
+        <!-- RUN -->
+        <section class="panel" id="panel-run">
+          <div class="panel-head">
+            <div class="page-title">
+              <h1 data-i18n="run.title">Chạy &amp; Nhật ký</h1>
+              <p class="page-sub" data-i18n="run.sub">Bật/tắt từng tuyến, chạy nhiều tài khoản song song.</p>
+            </div>
+            <div class="head-actions">
+              <button class="btn success" id="btn-start-all" data-i18n="run.startAll">▶ Bật tất cả</button>
+              <button class="btn danger" id="btn-stop-all" data-i18n="run.stopAll">■ Dừng tất cả</button>
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="block-head" id="sending-head">
+              <span class="title" data-i18n="run.sending">⚙️ Cài đặt gửi &amp; chống spam</span>
+              <span class="mini chev">▸</span>
+            </div>
+            <div class="block-body" id="sending-body" style="display: none">
+              <div class="grid2">
+                <div class="field"><label>ms (min)</label><input type="number" id="s-mindelay" /></div>
+                <div class="field"><label>ms (max)</label><input type="number" id="s-maxdelay" /></div>
+                <div class="field"><label>tin/giờ · /hour (0=∞)</label><input type="number" id="s-perhour" /></div>
+                <div class="field"><label>tin/ngày · /day (0=∞)</label><input type="number" id="s-perday" /></div>
+              </div>
+              <button class="btn primary" id="btn-save-sending" data-i18n="common.save">💾 Lưu</button>
+            </div>
+          </div>
+
+          <div id="run-accounts"></div>
+
+          <div class="log-toolbar">
+            <span class="log-title" data-i18n="run.log">📜 Nhật ký hoạt động</span>
+            <button class="btn small ghost" id="btn-clear-log" data-i18n="run.clearLog">Xoá nhật ký</button>
+          </div>
+          <div id="log" class="log"></div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Modal: login QR -->
+    <div class="modal-backdrop" id="modal-login">
+      <div class="modal">
+        <h2>Zalo QR</h2>
+        <div id="login-step-name">
+          <label>Tên gợi nhớ · Account name (vd: shop1)</label>
+          <input type="text" id="login-name" placeholder="shop1" />
+          <label style="margin-top: 10px">Proxy riêng cho tài khoản này (không bắt buộc)</label>
+          <input type="text" id="login-proxy" placeholder="http://user:pass@ip:port" autocomplete="off" />
+          <p class="hint">Mỗi tài khoản đã có trình duyệt riêng cố định. Chạy nhiều tài khoản trên cùng một máy chủ thì nên cho mỗi tài khoản một proxy riêng để không chung địa chỉ mạng. Để trống khi đăng nhập lại là giữ proxy cũ.</p>
+          <div class="modal-actions">
+            <button class="btn" data-close-modal>Huỷ / Cancel</button>
+            <button class="btn primary" id="btn-start-login">QR</button>
+          </div>
+        </div>
+        <div id="login-step-qr" style="display: none">
+          <div class="qr-wrap"><img id="qr-img" alt="QR" /></div>
+          <div id="login-status" class="status-line">…</div>
+          <p class="hint center">Mở Zalo → quét QR · Open Zalo → scan QR</p>
+          <div class="modal-actions">
+            <button class="btn" data-close-modal>Đóng / Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: picker -->
+    <div class="modal-backdrop" id="modal-picker">
+      <div class="modal" style="width: 640px">
+        <h2 id="picker-title">Chọn</h2>
+        <div class="picker-toolbar">
+          <input type="text" id="picker-search" placeholder="🔎 Tìm theo tên hoặc ID…" style="flex: 1" />
+          <select id="picker-role" title="Lọc theo vai trò" style="width: 190px">
+            <option value="all">Tất cả nhóm</option>
+            <option value="owner">Tôi là Trưởng nhóm</option>
+            <option value="admin">Tôi là Phó nhóm</option>
+            <option value="manage">Trưởng + Phó nhóm</option>
+          </select>
+          <button class="btn small" id="picker-rescan" title="Quét lại từ Zalo">↻ Quét lại</button>
+        </div>
+        <div class="picker-bar">
+          <label class="check" style="gap: 8px">
+            <input type="checkbox" id="picker-selectall" /> <span>Chọn tất cả (đang lọc)</span>
+          </label>
+          <span id="picker-cacheinfo" class="mini"></span>
+        </div>
+        <div id="picker-list" class="picker-list"></div>
+        <div class="modal-actions">
+          <span id="picker-count" class="mini" style="margin-right: auto"></span>
+          <button class="btn" data-close-modal>Huỷ</button>
+          <button class="btn primary" id="picker-confirm">Chọn</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- License gate -->
+    <div class="gate" id="gate">
+      <div class="gate-box">
+        <button class="gate-close" id="gate-close" title="Đóng / Close" style="display: none">✕</button>
+        <div class="gate-logo">🔐</div>
+        <h2 data-i18n="gate.title">Kích hoạt bản quyền</h2>
+        <div id="gate-status" class="gate-status"></div>
+
+        <div class="gate-field">
+          <label data-i18n="gate.machine">Mã máy của bạn:</label>
+          <div class="machine-row">
+            <code id="gate-machine">-</code>
+            <button class="btn small" id="btn-copy-machine" data-i18n="gate.copy">Sao chép</button>
+          </div>
+        </div>
+
+        <div class="gate-field" id="gate-server-field" style="display: none">
+          <label data-i18n="gate.server">Địa chỉ máy chủ bản quyền</label>
+          <div class="machine-row">
+            <input type="text" id="gate-server" placeholder="https://..." />
+            <button class="btn small" id="btn-save-server" data-i18n="gate.serverSave">Lưu</button>
+          </div>
+        </div>
+
+        <div class="gate-field">
+          <label data-i18n="gate.key">Nhập key kích hoạt</label>
+          <div class="machine-row">
+            <input type="text" id="gate-key" placeholder="XXXX-XXXX-XXXX-XXXX" />
+            <button class="btn primary small" id="btn-activate" data-i18n="gate.activate">Kích hoạt</button>
+          </div>
+        </div>
+
+        <div id="gate-msg" class="gate-msg"></div>
+        <p class="gate-buy" data-i18n="gate.buy">Liên hệ người bán để mua key.</p>
+        <p class="gate-buy" data-i18n="gate.viewHint" style="margin-top: 4px"></p>
+      </div>
+    </div>
+    <script src="i18n.js"></script>
+    <script src="web-api.js"></script>
+    <script src="renderer.js"></script>
+  </body>
+</html>

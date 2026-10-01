@@ -99,6 +99,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # App source.
 COPY . .
 
+# Kết nối ngoài (26.10.4): thư viện Node của Zalo Forwarder. Cài ở đây (còn là root) vì lúc chạy
+# mã nguồn chỉ đọc. Có package-lock.json nên `npm ci` cài đúng bản đã thử.
+RUN cd apps/zalo-forwarder && npm ci --omit=dev --no-audit --no-fund && npm cache clean --force \
+    && node -e "require('./core/zalo-service.js')"
+
 # Non-root runtime user. Code stays root-owned + read-only; state on volumes.
 RUN useradd -u 10001 -m -d /home/javis javis \
     && mkdir -p /data/state /data/vault /brains /home/javis/.claude /home/javis/.codex \

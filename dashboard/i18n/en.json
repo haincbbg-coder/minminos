@@ -3187,7 +3187,7 @@
   "knn.da_co_ma": "Code active",
   "knn.han_den": "Valid until {ngay}",
   "knn.mo": "Open",
-  "knn.dang_chuyen": "This app is being moved to the browser and opens in the next update.",
+  "knn.dang_chuyen": "Opening the app in a new tab.",
   "knn.xem_dieu_khoan": "Terms of use",
   "knn.ph_tieu_de": "Create activation codes (publisher machine only)",
   "knn.ph_giai_thich": "This machine holds the publisher's private key, so every app is already unlocked. Fill in the customer and press Create code.",

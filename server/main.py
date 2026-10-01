@@ -19447,6 +19447,9 @@ assert mat_nha_routes.LOI_VAO_CONG_KHAI == _MAT_NHA_CONG_KHAI
 # Kết nối ngoài (26.10.3): app của nhà phát hành, mở khoá bằng mã kích hoạt + điều khoản sử dụng.
 import routes.ket_noi_ngoai as ket_noi_ngoai_routes   # noqa: E402
 ket_noi_ngoai_routes.register(app, Path(DASHBOARD_PATH))
+# Zalo Forwarder trên trình duyệt (26.10.4): app đầu tiên của Kết nối ngoài, chạy tiến trình Node riêng.
+import routes.zalo_forwarder as zalo_forwarder_routes   # noqa: E402
+zalo_forwarder_routes.register(app)
 
 
 @app.on_event("shutdown")
