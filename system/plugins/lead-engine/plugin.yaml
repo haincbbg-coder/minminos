@@ -1,0 +1,10 @@
+name: Lead Engine
+slug: lead-engine
+version: 0.1.0
+description: Kho lead theo brain, phân tích có dẫn chứng, soạn quảng cáo và chăm sóc, đối soát đơn và chi phí thật. Bản đầu chưa tự gửi tin hay chạy quảng cáo.
+author: MinMin OS
+enabled: true
+min_mode: readonly
+page: ""
+tools: [lead_report, lead_detail, lead_configure, lead_capture, lead_analyze, lead_stage, lead_outcome, lead_spend, lead_draft]
+hooks: []
