@@ -35,7 +35,8 @@ def serial(inv):
 
 
 def numbers(text):
-    header = re.split(r'don vi ban|nguoi ban|ho ten nguoi mua', text, maxsplit=1)[0]
+    # Some BKAV PDFs serialize their visual header after the footer in the text stream.
+    header = text
     found = re.findall(r'\bso\s*(?:\((?:invoice\s*)?no\.?\))?\s*:\s*0*(\d+)\b', header)
     found += re.findall(r'\b\d[ck]\d{2}[a-z]{3}\s+0*(\d+)\s+ky hieu\s*\(serial no\.\)', header)
     return {n.lstrip('0') for n in found}
@@ -52,7 +53,7 @@ def matches(text, inv, buyer):
         pattern = r'(?<!\d)' + r'\s*'.join(re.escape(c) for c in tax_id) + r'(?!\s*\d)'
         if not re.search(pattern, clean):
             return False
-    header = re.split(r'don vi ban|nguoi ban|ho ten nguoi mua', clean, maxsplit=1)[0]
+    header = clean
     sn = serial(inv).lower()
     if not sn or not re.search(r'(?<![a-z0-9])' + re.escape(sn) + r'(?![a-z0-9])', header):
         return False

@@ -49,6 +49,13 @@ class Reconciliation(unittest.TestCase):
         self.assertTrue(identity.matches(text, self.inv, BUYER))
         self.assertEqual(identity.numbers(text), {'123'})
 
+    def test_bkav_header_serialized_after_footer(self):
+        lines = TEXT.splitlines()
+        text = '\n'.join(lines[3:] + lines[:3])
+        self.assertEqual(identity.numbers(text), {'123'})
+        self.assertTrue(identity.matches(text, self.inv, BUYER))
+        self.assertFalse(identity.matches(text + '\nso (invoice no.): 456', self.inv, BUYER))
+
     def test_unique_pdf_only_match_ignores_email_guess(self):
         with patch.object(identity, 'read_pdf', return_value=TEXT):
             self.assertEqual(hd.tim_hd_gmail(None, self.ban, {BUYER: {'one': self.inv}}), (BUYER, 'one'))
