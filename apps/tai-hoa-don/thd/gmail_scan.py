@@ -19,6 +19,9 @@ from __future__ import annotations
 import email
 import imaplib
 import re
+import io
+import zipfile
+from pathlib import PurePosixPath
 from email.header import decode_header
 from typing import Callable, Optional
 
@@ -296,7 +299,7 @@ def _body_text(msg) -> str:
 
 
 def _attachments(msg):
-    """-> [(filename, bytes)] các tệp .xml / .pdf đính kèm."""
+    """XML/PDF đính kèm trực tiếp hoặc trong ZIP, không giải nén ra đĩa."""
     out = []
     if not msg.is_multipart():
         return out
@@ -305,14 +308,43 @@ def _attachments(msg):
         if not fn:
             continue
         low = fn.lower()
-        if low.endswith((".xml", ".pdf")):
+        if low.endswith((".xml", ".pdf", ".zip")):
             try:
                 data = p.get_payload(decode=True)
             except Exception:  # noqa
                 data = None
-            if data:
+            if data and low.endswith(".zip"):
+                try:
+                    with zipfile.ZipFile(io.BytesIO(data)) as z:
+                        entries = z.infolist()
+                        if len(entries) > 200 or sum(e.file_size for e in entries) > 25 * 1024 * 1024:
+                            continue
+                        for e in entries:
+                            if not e.is_dir() and e.filename.lower().endswith((".xml", ".pdf")):
+                                out.append((fn + "/" + e.filename, z.read(e)))
+                except (ValueError, RuntimeError, zipfile.BadZipFile):
+                    continue
+            elif data:
                 out.append((fn, data))
     return out
+
+
+def _invoice_attachments(atts):
+    xmls = [(n, b) for n, b in atts if n.lower().endswith(".xml")
+            and not _att_is_contract(n) and _is_invoice_xml(b)]
+    pdfs = [(n, b) for n, b in atts if n.lower().endswith(".pdf")
+            and not _att_is_contract(n) and b.lstrip().startswith(b"%PDF-")]
+    if len(xmls) == 1 and len(pdfs) == 1:
+        return [(xmls[0][1], pdfs[0][1])]
+    if xmls:
+        pairs = []
+        for name, xml in xmls:
+            stem = str(PurePosixPath(name.replace("\\", "/")).with_suffix("")).casefold()
+            matches = [pdf for n, pdf in pdfs
+                       if str(PurePosixPath(n.replace("\\", "/")).with_suffix("")).casefold() == stem]
+            pairs.append((xml, matches[0] if len(matches) == 1 else None))
+        return pairs
+    return [(None, pdfs[0][1])] if len(pdfs) == 1 else []
 
 
 class GmailScanner:
@@ -482,20 +514,18 @@ class GmailScanner:
                    "_so_hd": (m_so.group(1) if m_so else ""),
                    "_khhdon": kyhieu, "_khmshdon": mauso,
                    "_seller": seller}
-            # 1) tệp đính kèm - BỎ QUA tệp mang tên hợp đồng/báo giá; XML phải đúng là hóa đơn
-            for fn, blob in atts:
-                lowfn = fn.lower()
-                if _att_is_contract(fn):
-                    continue
-                if lowfn.endswith(".xml") and rec["xml"] is None:
-                    if _is_invoice_xml(blob) or hint:   # chỉ nhận XML hóa đơn thật
-                        rec["xml"] = blob
-                elif lowfn.endswith(".pdf") and rec["pdf"] is None:
-                    rec["pdf"] = blob
-            if rec["xml"] or rec["pdf"]:
-                rec["status"] = "Đính kèm: " + ", ".join(
-                    x for x in (["XML"] if rec["xml"] else []) + (["PDF"] if rec["pdf"] else []))
-                out.append(rec); continue
+            # Không lấy XML đầu và PDF đầu của email nhiều hoá đơn rồi ghép nhầm.
+            pairs = _invoice_attachments(atts)
+            if pairs:
+                for xml, pdf in pairs:
+                    item = dict(rec, xml=xml, pdf=pdf)
+                    item["needs_manual"] = not bool(pdf)
+                    item["status"] = "Đính kèm: " + ", ".join(
+                        (["XML"] if xml else []) + (["PDF"] if pdf else []))
+                    if not pdf:
+                        item["status"] += "; chưa có PDF khớp duy nhất"
+                    out.append(item)
+                continue
             # 2) chỉ có link -> cào PDF gốc
             info = extract_link_info(prov, text)
             rec["code"] = info.get("token") or info.get("code") or ""

@@ -229,10 +229,17 @@ def fetch_original_pdf(xml_bytes: bytes, inv: Optional[dict] = None,
         extra = f" [MSTTCGP={code}]" if code else ""
         raise NotSupported("Không nhận diện được nhà cung cấp hóa đơn" + extra +
                            " - hiện hỗ trợ: " + ", ".join(provider_names()))
-    try:
-        pdf = p.fetch_pdf(txt, inv or {}, log, solver=solver)
-    except TypeError:
-        pdf = p.fetch_pdf(txt, inv or {}, log)
-    if not pdf or not pdf.lstrip().startswith(b"%PDF"):
-        raise ProviderError(f"{p.NAME}: dữ liệu trả về không phải PDF")
-    return p.NAME, pdf
+    candidates = [p]
+    if not force and p is not xmllink and xmllink.detect(txt, inv or {}):
+        candidates.append(xmllink)
+    errors = []
+    for candidate in candidates:
+        try:
+            pdf = candidate.fetch_pdf(txt, inv or {}, log, solver=solver)
+            if not pdf or not pdf.lstrip().startswith(b"%PDF-"):
+                raise ProviderError("dữ liệu trả về không phải PDF")
+            return candidate.NAME, pdf
+        except Exception as e:
+            errors.append(f"{candidate.NAME}: {str(e)[:200]}")
+            log(f"Chưa lấy được PDF qua {candidate.NAME}; thử nguồn tiếp theo nếu có.")
+    raise ProviderError("; ".join(errors))

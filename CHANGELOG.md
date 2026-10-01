@@ -6,7 +6,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.12] - 2026-10-01
 ### Sửa lỗi
-- Cải thiện tải các định dạng hoá đơn và báo rõ file còn thiếu khi tải chưa đầy đủ.
+- Sửa nhận diện Chromium mới để tải được PDF Trống đồng; chỉ nhận file PDF mới tạo hợp lệ.
+- PDF gốc thử thêm link trong XML khi cách tải của hãng thất bại, đọc PDF trong ZIP/base64 và ghép từ Gmail đã quét.
+- Quét Gmail đọc cả ZIP đính kèm, ghép XML/PDF theo tên khi thư có nhiều hoá đơn và bổ sung file thiếu khi quét lại.
+- Kết quả tải báo rõ hoá đơn còn thiếu file; ZIP xuất ra kèm danh sách đối soát từng file.
 
 ## [26.10.11] - 2026-10-01
 ### Thêm mới

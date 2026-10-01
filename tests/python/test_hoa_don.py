@@ -108,7 +108,8 @@ with TestClient(app) as c:
     check("thêm doanh nghiệp", r.get("ok") and r["mst"] == MST, r)
     raw = (Path(_STATE) / "tai-hoa-don" / "cau-hinh.json").read_text(encoding="utf-8")
     check("mật khẩu cổng thuế không lưu dạng chữ thường", "123456" not in raw and '"mk"' in raw)
-    check("khoá mã hoá quyền 600", oct((Path(_STATE) / "tai-hoa-don" / ".khoa").stat().st_mode & 0o777) == "0o600")
+    if os.name != "nt":  # Windows dùng ACL, không có quyền POSIX 0600.
+        check("khoá mã hoá quyền 600", oct((Path(_STATE) / "tai-hoa-don" / ".khoa").stat().st_mode & 0o777) == "0o600")
     ds = c.get(A + "/doanh-nghiep").json()["ds"]
     check("danh sách có MST, chưa đăng nhập, có mật khẩu", ds and ds[0]["co_mk"] and not ds[0]["dang_nhap"], ds)
 
@@ -166,6 +167,8 @@ with TestClient(app) as c:
         check(f"xuất {kieu}", r.status_code == 200 and r.content[:2] == dau, r.text[:200] if r.status_code != 200 else "")
     z = zipfile.ZipFile(io.BytesIO(c.post(A + "/xuat", json={"mst": MST, "tu": "2026-01-01", "den": "2026-03-31", "kieu": "zip"}).content))
     check("ZIP chứa đúng các XML đã tải", sum(1 for n in z.namelist() if n.endswith(".xml")) == 3, z.namelist())
+    manifest = __import__("json").loads(z.read("doi-soat-file.json"))
+    check("ZIP kê rõ PDF gốc còn thiếu", any(x["loai_file"] == "goc" and x["trang_thai"] == "con_thieu" for x in manifest))
     r = c.post(A + "/xuat", json={"mst": MST, "tu": "2020-01-01", "den": "2020-01-31", "kieu": "excel"})
     check("xuất khoảng ngày trống: báo lỗi dễ hiểu", r.status_code == 400 and "tra cứu" in r.json()["error"].lower())
     r = c.get(A + f"/canh-bao?mst={MST}&tu=2026-01-01&den=2026-03-31").json()
@@ -186,13 +189,16 @@ with TestClient(app) as c:
     # Chỉ dùng Chromium của Playwright (cùng loại MinMin tải ở Công cụ). Chrome cài sẵn trên máy CI
     # có lúc in xong không tự thoát, làm test chập chờn vì lý do không thuộc MinMin.
     import glob as _gl
-    chrome = next(iter(sorted(_gl.glob("/opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell"))
+    chrome = next(iter(sorted(_gl.glob("/opt/pw-browsers/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell"))
+                       + sorted(_gl.glob("/opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell"))
                        + sorted(_gl.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome"))), "")
     hd.trinh_duyet_in_pdf = lambda: chrome
     moi2 = [x["key"] for x in d["ds"] if not x["co_xml"]][:2]
     r = c.post(A + "/tai", json={"mst": MST, "loai": "purchase", "keys": moi2, "kieu": ["pdf"]}).json()
     v = doi_viec(c, r["viec"], 180)
-    check("tải kèm PDF Trống đồng chạy xong", v["trang_thai"] == "xong" and v["ket_qua"].get("ok") == 2, v.get("ket_qua") or v.get("loi"))
+    check("tải kèm PDF: chỉ báo đủ file khi tạo được PDF", v["trang_thai"] == "xong" and
+          v["ket_qua"].get("ok") == (2 if chrome else 0) and
+          v["ket_qua"].get("loi") == (0 if chrome else 2), v.get("ket_qua") or v.get("loi"))
     kho = hd.doc_kho(MST, "purchase")
     a2 = [kho[k] for k in moi2]
     check("tên file theo mẫu mới (số HĐ_MST)", all(Path(x["_xml_path"]).stem == f"{int(x['shdon']):07d}_{x['nbmst']}" for x in a2),
@@ -215,9 +221,9 @@ with TestClient(app) as c:
                                                               "loai": "purchase", "keys": moi2}).content))
     check("ZIP theo loại file + chỉ dòng đã chọn, giữ cây thư mục MuaVao/...",
           len([n for n in z.namelist() if n.endswith(".xml")]) == 2 and len([n for n in z.namelist() if n.endswith(".zip")]) == 2
-          and all(n.startswith("MuaVao/") for n in z.namelist()), z.namelist())
+          and all(n.startswith("MuaVao/") or n == "doi-soat-file.json" for n in z.namelist()), z.namelist())
     z = zipfile.ZipFile(io.BytesIO(c.post(A + "/xuat", json={"mst": MST, "kieu": "html_zip", "tu": "2026-01-01", "den": "2026-03-31"}).content))
-    check("HTML Trống đồng (.zip)", z.namelist() and all(n.endswith(".html") for n in z.namelist()), z.namelist())
+    check("HTML Trống đồng (.zip)", z.namelist() and all(n.endswith(".html") or n == "doi-soat-file.json" for n in z.namelist()), z.namelist())
     r = c.post(A + "/xuat", json={"mst": MST, "kieu": "excel", "tu": "2026-01-01", "den": "2026-03-31"})
     check("tên file Excel theo mẫu", "MuaBan_20260101_20260331_" + MST in __import__("urllib.parse").parse.unquote(
         r.headers.get("content-disposition", "")), r.headers.get("content-disposition"))
@@ -282,6 +288,15 @@ with TestClient(app) as c:
     check("kết quả quét báo số đã ghép", (v["ket_qua"].get("ghep", 0) + v["ket_qua"].get("them_vao_kho", 0)) == 1, v["ket_qua"])
     check("email chỉ có link, không có file: không ghép bừa", not any(r.get("lien_ket") for r in kq if not r["co_xml"] and not r["co_pdf"]))
     co_xml = [r for r in kq if r["co_xml"]]
+    # Tải lại bản gốc lấy từ thư đã quét, không gọi nhà cung cấp hay quét thêm Gmail.
+    kho_retry = hd.doc_kho(MST, "purchase")
+    kho_retry[k0].pop("_goc_path", None)
+    hd.ghi_kho(MST, "purchase", kho_retry)
+    from unittest.mock import patch
+    with patch.object(hd.thd("providers"), "fetch_original_pdf", side_effect=AssertionError("Không cần gọi NCC")) as remote:
+        r_retry = c.post(A + "/tai", json={"mst": MST, "loai": "purchase", "keys": [k0], "kieu": ["goc"]}).json()
+        v_retry = doi_viec(c, r_retry["viec"])
+        check("Tải bản gốc tái sử dụng Gmail đã quét", v_retry.get("ket_qua", {}).get("ok") == 1 and not remote.called, v_retry)
     check("kết quả Gmail: có hoá đơn kèm XML + PDF, đọc được người bán", co_xml and co_xml[0]["co_pdf"]
           and co_xml[0]["ban_ten"], kq)
     check("link javascript: từ email bị bỏ", all(not r["link"].startswith("javascript") for r in kq))

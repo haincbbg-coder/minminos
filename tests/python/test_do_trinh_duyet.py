@@ -110,6 +110,9 @@ check("chỉ có bản rút gọn -> trang Công cụ vẫn Sẵn sàng",
 # rằng họ không bao giờ đổi nữa.
 
 for _ten_bo_cuc, _duong in (
+        ("Chrome for Testing Linux", "chrome-headless-shell-linux64/chrome-headless-shell"),
+        ("Chrome for Testing Windows", "chrome-headless-shell-win64/chrome-headless-shell.exe"),
+        ("Chrome for Testing macOS", "chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"),
         ("máy ARM64", "chrome-linux-arm64/headless_shell"),
         ("tên thư mục có hậu tố 64", "chrome-linux64/chrome"),
         ("bố cục chưa từng thấy", "build/v3/nested/deep/chrome"),

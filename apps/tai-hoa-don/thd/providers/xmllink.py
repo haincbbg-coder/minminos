@@ -7,13 +7,20 @@ bản PDF gốc vào XML - thường ở <TTKhac> dưới các trường Externa
 LinkTraCuu, PdfUrl, DownloadUrl... Chỉ cần đọc link đó rồi tải về, KHÔNG cần captcha,
 KHÔNG cần mã tra cứu.
 
-Đây là module DỰ PHÒNG, đặt CUỐI danh sách: chỉ dùng khi không hãng nào (MISA/Sapo/
-EasyInvoice/BKAV) nhận, nhưng trong XML có sẵn link PDF.
+Đây là module dự phòng: dùng link trong XML khi chưa nhận diện được hãng hoặc khi
+cách tải riêng của hãng thất bại.
 """
 from __future__ import annotations
 
 import html
 import re
+import base64
+import io
+import ipaddress
+import json
+import socket
+import zipfile
+from urllib.parse import urlsplit, urljoin
 from typing import Callable, Optional
 
 from . import ProviderError
@@ -77,20 +84,81 @@ def detect(xml_text: str, inv: dict) -> bool:
     return False
 
 
+MAX_BYTES = 25 * 1024 * 1024
+
+
+def _public_url(url: str):
+    p = urlsplit(url)
+    if p.scheme != "https" or not p.hostname or p.username or p.password or p.port not in (None, 443):
+        raise ProviderError("Link tải phải là HTTPS công khai, cổng 443")
+    addresses = socket.getaddrinfo(p.hostname, 443, proto=socket.IPPROTO_TCP)
+    if not addresses:
+        raise ProviderError("Không phân giải được địa chỉ tải")
+    for address in addresses:
+        ip = ipaddress.ip_address(address[4][0])
+        ip = getattr(ip, "ipv4_mapped", None) or ip
+        if not ip.is_global or ip.is_multicast:
+            raise ProviderError("Không tải link trỏ vào mạng nội bộ")
+
+
+def _pdf_payload(data: bytes, depth=0) -> Optional[bytes]:
+    """Nhận PDF hoặc gói chứa đúng một PDF; không đoán chọn giữa nhiều hoá đơn."""
+    if len(data) > MAX_BYTES or depth > 3:
+        return None
+    if data.lstrip().startswith(b"%PDF-"):
+        return data
+    if data.startswith(b"PK"):
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                entries = [x for x in z.infolist() if x.filename.lower().endswith(".pdf") and not x.is_dir()]
+                if len(entries) == 1 and entries[0].file_size <= MAX_BYTES:
+                    return _pdf_payload(z.read(entries[0]), depth + 1)
+        except (ValueError, RuntimeError, zipfile.BadZipFile):
+            return None
+        return None
+    try:
+        obj = json.loads(data)
+    except (ValueError, UnicodeError):
+        return None
+    def unpack(value, level):
+        if level > 3:
+            return None
+        if isinstance(value, str):
+            raw = value.split(",", 1)[1] if value.startswith("data:application/pdf;base64,") else value
+            try:
+                return _pdf_payload(base64.b64decode(raw, validate=True), depth + 1)
+            except (ValueError, TypeError):
+                return None
+        if isinstance(value, dict):
+            found = [unpack(v, level + 1) for k, v in value.items()
+                     if k.lower() in ("data", "pdf", "file", "content", "base64", "filecontent", "filedata", "result")]
+            found = [v for v in found if v]
+            return found[0] if len(found) == 1 else None
+        return None
+    return unpack(obj, 0)
+
+
 def _try_download(s, url: str, log: Callable[[str], None]) -> Optional[bytes]:
     try:
-        r = s.get(url, timeout=90, headers={"Accept": "application/pdf,*/*"})
-    except Exception as e:  # noqa
-        log(f"link lỗi ({str(e)[:50]})"); return None
-    if r.status_code != 200:
-        log(f"link trả HTTP {r.status_code}"); return None
-    data = r.content or b""
-    if data[:4] == b"%PDF":
-        return data
-    # có nơi trả JSON chứa base64 / hoặc redirect tới file - thử bóc base64 PDF
-    ctype = (r.headers.get("Content-Type") or "").lower()
-    if "pdf" in ctype and data[:4] != b"%PDF":
-        return data if data else None
+        for _ in range(4):
+            _public_url(url)
+            with s.get(url, timeout=(10, 30), allow_redirects=False, stream=True,
+                       headers={"Accept": "application/pdf,application/zip,application/json"}) as r:
+                if r.status_code in (301, 302, 303, 307, 308):
+                    url = urljoin(url, r.headers.get("Location", ""))
+                    continue
+                if r.status_code != 200:
+                    log(f"link trả HTTP {r.status_code}")
+                    return None
+                chunks, size = [], 0
+                for chunk in r.iter_content(65536):
+                    size += len(chunk)
+                    if size > MAX_BYTES:
+                        raise ProviderError("File tải vượt giới hạn 25 MB")
+                    chunks.append(chunk)
+                return _pdf_payload(b"".join(chunks))
+    except Exception as e:
+        log(f"Link chưa tải được ({type(e).__name__})")
     return None
 
 
@@ -98,20 +166,24 @@ def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None)
     urls = _candidate_urls(xml_text)
     if not urls:
         raise ProviderError("Không thấy link tải trong XML")
-    s = C.make_session()
-    tried = 0
-    for u in urls:
-        low = u.lower()
-        if not any(k in low for k in ("pdf", "download", "dowload", "query", "tracuu",
-                                      "lookup", "invoice", "hoadon", "einvoice")):
-            continue
-        tried += 1
-        log(f"thử link tải trong XML: {u[:90]}")
-        pdf = _try_download(s, u, log)
-        if pdf:
-            log("✓ tải được PDF gốc từ link trong XML.")
-            return pdf
-        if tried >= 6:
-            break
+    # Phiên riêng, không mang token/cookie cổng thuế sang URL trong XML.
+    import requests
+    with requests.Session() as s:
+        s.trust_env = False
+        s.headers["User-Agent"] = C.UA
+        tried = 0
+        for u in urls:
+            low = u.lower()
+            if not any(k in low for k in ("pdf", "download", "dowload", "query", "tracuu",
+                                          "lookup", "invoice", "hoadon", "einvoice")):
+                continue
+            tried += 1
+            log(f"thử link tải trong XML tại {urlsplit(u).hostname}")
+            pdf = _try_download(s, u, log)
+            if pdf:
+                log("✓ tải được PDF gốc từ link trong XML.")
+                return pdf
+            if tried >= 6:
+                break
     raise ProviderError("Có link trong XML nhưng tải về không phải PDF (link hết hạn/chặn IP?) - "
                         "thử tải tay bằng link trong email nhà cung cấp.")
