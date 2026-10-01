@@ -3698,5 +3698,65 @@
    "GET"
   ],
   "trong": null
+ },
+ {
+  "order": 372,
+  "type": "APIRoute",
+  "path": "/ket-noi-ngoai",
+  "name": "knn_danh_sach",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 373,
+  "type": "APIRoute",
+  "path": "/ket-noi-ngoai/kich-hoat",
+  "name": "knn_kich_hoat",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 374,
+  "type": "APIRoute",
+  "path": "/ket-noi-ngoai/go-ma",
+  "name": "knn_go_ma",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 375,
+  "type": "APIRoute",
+  "path": "/ket-noi-ngoai/tao-ma",
+  "name": "knn_tao_ma",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 376,
+  "type": "APIRoute",
+  "path": "/dieu-khoan.md",
+  "name": "dieu_khoan_md",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 377,
+  "type": "APIRoute",
+  "path": "/dieu-khoan/dong-y",
+  "name": "dieu_khoan_dong_y",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
  }
 ]

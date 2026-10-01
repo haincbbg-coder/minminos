@@ -19444,6 +19444,10 @@ mat_nha_routes.register(app, mat_nha_routes.MatNhaDeps(dashboard_dir=Path(DASHBO
                                                        bao_chu=_mat_nha_bao_chu))
 assert mat_nha_routes.LOI_VAO_CONG_KHAI == _MAT_NHA_CONG_KHAI
 
+# Kết nối ngoài (26.10.3): app của nhà phát hành, mở khoá bằng mã kích hoạt + điều khoản sử dụng.
+import routes.ket_noi_ngoai as ket_noi_ngoai_routes   # noqa: E402
+ket_noi_ngoai_routes.register(app, Path(DASHBOARD_PATH))
+
 
 @app.on_event("shutdown")
 async def _shutdown_mcp_pool():

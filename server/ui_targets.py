@@ -20,7 +20,7 @@ import unicodedata
 PAGES = (
     "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
-    "packs", "logs", "account", "usage", "pet", "share", "matnha",
+    "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai",
 )
 
 # Bí danh người dùng hay nói, ánh xạ về id trang. Thường hoá không dấu trước khi tra, nên viết
@@ -79,6 +79,9 @@ ALIASES = {
     "link cong khai": "share", "nhan vien tra loi khach": "chatbots",
     # Mắt Nhà (0.64.98 có lối trên thanh bên).
     "mat nha": "matnha", "camera": "matnha", "cam": "matnha", "ezviz": "matnha",
+    "ket noi ngoai": "ketnoingoai", "app ngoai": "ketnoingoai", "ung dung ngoai": "ketnoingoai",
+    "kich hoat": "ketnoingoai", "ma kich hoat": "ketnoingoai", "zalo forwarder": "ketnoingoai",
+    "tai hoa don": "ketnoingoai", "dieu khien may": "ketnoingoai", "dieu khien may tinh": "ketnoingoai",
     "xem cam": "matnha", "camera nha": "matnha", "mat nha camera": "matnha", "mat nha (camera)": "matnha", "home eyes": "matnha",
 }
 
