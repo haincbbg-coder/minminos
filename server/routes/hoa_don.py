@@ -177,6 +177,29 @@ def chon_gmail(d: dict) -> list[dict]:
     return [kho[i] for i in dict.fromkeys(ids)]
 
 
+def thong_tin_tra_cuu_gmail(r):
+    """Restore old email tokens as actionable lookup links without rescanning mail."""
+    from urllib.parse import quote, urlsplit
+    scan = thd("gmail_scan")
+    provider = r.get("nha_cung_cap") or ""
+    info = scan.extract_link_info(provider, r.get("link") or "")
+    code = r.get("ma_tra_cuu") or info.get("code") or ""
+    info["code"] = code
+    if provider == "bkav" and code:
+        info["lookup_url"] = "https://tchd.ehoadon.vn/TCHD?MTC=" + quote(code, safe="")
+    elif provider == "easyinvoice":
+        token = info.get("token") or code
+        if token:
+            info["token"] = token
+            host = urlsplit(r.get("link") or "").hostname or ""
+            if not host.endswith(".easyinvoice.vn"):
+                host = "tracuu.easyinvoice.vn"
+            info["hosts"] = ["https://" + host]
+            info["lookup_url"] = "https://" + host + "/Invoice/ViewFromEmail?token=" + quote(token, safe="")
+    r["link"] = link_an_toan(info.get("lookup_url") or info.get("link") or r.get("link"))
+    return info
+
+
 def tai_gmail_da_chon(v, records):
     prov = thd("providers")
     v.n = len(records)
@@ -185,22 +208,28 @@ def tai_gmail_da_chon(v, records):
         if v.huy.is_set():
             break
         try:
+            info = thong_tin_tra_cuu_gmail(r)
+            v.log(f"[{v.i + 1}/{v.n}] {r.get('nha_cung_cap') or 'Hãng khác'} · HĐ {r.get('so') or r['id']}")
             if not tuyet_doi(r.get("pdf")):
                 xml = tuyet_doi(r.get("xml"))
                 inv = {"_bkav_mtc": r.get("ma_tra_cuu"), "_code": r.get("ma_tra_cuu"),
                        "_ma_tra_cuu": r.get("ma_tra_cuu")}
                 solver = tao_solver(v.log)
+                pdf = None
+                xml_error = None
                 if xml:
-                    _, pdf = prov.fetch_original_pdf(xml.read_bytes(), inv, solver=solver, log=v.log)
-                elif r.get("nha_cung_cap") == "bkav" and r.get("ma_tra_cuu"):
-                    pdf = thd("providers.bkav").fetch_pdf("", inv, v.log, solver=solver)
-                else:
-                    scan = thd("gmail_scan")
-                    info = scan.extract_link_info(r.get("nha_cung_cap") or "", r.get("link") or "")
-                    info["code"] = r.get("ma_tra_cuu") or info.get("code")
-                    pdf = scan.fetch_from_link(info, v.log)
-                    if not pdf:
-                        raise ValueError("Chưa đủ XML/mã tra cứu hoặc hãng chưa hỗ trợ tải lại. Mở Trang tra cứu.")
+                    try:
+                        _, pdf = prov.fetch_original_pdf(xml.read_bytes(), inv, solver=solver, log=v.log)
+                    except Exception as e:
+                        xml_error = e
+                        v.log("Nguồn XML chưa tải được, thử link/mã từ email.")
+                if not pdf:
+                    if r.get("nha_cung_cap") == "bkav" and r.get("ma_tra_cuu"):
+                        pdf = thd("providers.bkav").fetch_pdf("", inv, v.log, solver=solver)
+                    else:
+                        pdf = thd("gmail_scan").fetch_from_link(info, v.log)
+                if not pdf:
+                    raise ValueError(str(xml_error) if xml_error else "Thiếu link/mã hoặc hãng chưa hỗ trợ tải tự động. Bổ sung nguồn tra cứu.")
                 if not pdf.lstrip().startswith(b"%PDF-"):
                     raise ValueError("Nguồn không trả PDF hợp lệ.")
                 folder = goc_du_lieu() / "gmail" / "tai-lai"
@@ -213,12 +242,18 @@ def tai_gmail_da_chon(v, records):
                 kho = _doc_json(_gmail_kho_path(), {})
                 # Giữ mã vừa sửa trên giao diện trong lúc việc nền chạy.
                 current = kho.get(r["id"], {})
-                current.update({k: r[k] for k in ("pdf", "trang_thai", "can_tai_tay") if k in r})
+                current.update({k: r[k] for k in ("pdf", "trang_thai", "can_tai_tay", "link") if k in r})
                 lien_ket_gmail(current)
                 kho[r["id"]] = current
                 _ghi_json(_gmail_kho_path(), kho)
         except Exception as e:
-            v.log(f"Hoá đơn {r.get('so') or r['id']}: {str(e)[:220]}")
+            error = str(e)[:220]
+            v.log(f"Hoá đơn {r.get('so') or r['id']}: {error}")
+            with _KHOA_GHI:
+                kho = _doc_json(_gmail_kho_path(), {})
+                if r["id"] in kho:
+                    kho[r["id"]].update(trang_thai="Chưa tải được: " + error, can_tai_tay=True, link=r.get("link") or "")
+                    _ghi_json(_gmail_kho_path(), kho)
         v.i += 1
     v.log(f"Xong: {done}/{v.n} hoá đơn có PDF; {v.n - done} chưa tải được.")
     return {"co_pdf": done, "thieu": v.n - done}
@@ -1745,6 +1780,7 @@ def register(app: FastAPI) -> None:
             return c
         ds = sorted(_doc_json(_gmail_kho_path(), {}).values(), key=lambda r: r.get("luc", 0), reverse=True)
         for r in ds:
+            thong_tin_tra_cuu_gmail(r)
             r["co_xml"] = bool(tuyet_doi(r.get("xml")))
             r["co_pdf"] = bool(tuyet_doi(r.get("pdf")))
         return {"ok": True, "ds": ds}

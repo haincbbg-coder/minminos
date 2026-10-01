@@ -6,7 +6,9 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.15] - 2026-10-02
 ### Sửa lỗi
-- Tải bản gốc theo hãng phát hành và xử lý hàng loạt chứng từ cần tải lại.
+- BKAV: tải PDF từ hoá đơn mở trực tiếp, không bắt khai báo captcha khi trang không yêu cầu.
+- EasyInvoice: sửa địa chỉ tải, khôi phục nút Trang tra cứu cho dữ liệu Gmail cũ.
+- Gmail: lọc hãng phát hành và chứng từ cần tải lại rồi tải cả danh sách bằng một nút. Báo kết quả từng hoá đơn và tiếp tục khi một hoá đơn lỗi.
 
 ## [26.10.14] - 2026-10-01
 ### Cải thiện

@@ -16,3 +16,11 @@ assert.equal(ui.filter(rows,{from:'2026-09-02',to:'2026-09-30',file:'pdf'}).leng
 assert.equal(ui.filter(rows,{from:'2027-01-01'}).length,0);
 assert.equal(rows[0].id,'a','filter must not reorder source rows');
 console.log('invoice date presets, filter intersections, amount/number sort: OK');
+
+// Publisher and manual filters intersect; unknown publishers remain selectable.
+{
+ const ui = require('../../apps/tai-hoa-don/web/invoice-ui.js');
+ const rows = [{so:'1',nha_cung_cap:'bkav',can_tai_tay:true},{so:'2',nha_cung_cap:'bkav',can_tai_tay:false},{so:'3',nha_cung_cap:'easyinvoice',can_tai_tay:true},{so:'4',can_tai_tay:true}];
+ require('assert').deepStrictEqual(ui.filter(rows,{publisher:'bkav',status:'manual'}).map(r=>r.so),['1']);
+ require('assert').deepStrictEqual(ui.filter(rows,{publisher:'unknown',status:'manual'}).map(r=>r.so),['4']);
+}

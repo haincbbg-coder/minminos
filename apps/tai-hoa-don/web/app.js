@@ -349,7 +349,10 @@
       $("#nutGoogle").classList.toggle("tat", !c.google.co_client);
       if (!c.google.co_client) $("#hopClient").open = true;
       var k = await goi("gmail/ket-qua");
-      dsG = k.ds; veGmail();
+      dsG = k.ds;
+      var pub = $("#gmPublisher"), chosen = pub.value;
+      pub.innerHTML = '<option value="">Tất cả hãng</option>' + Array.from(new Set(dsG.map(function(r){return r.nha_cung_cap || "unknown";}))).sort().map(function(v){return '<option value="'+esc(v)+'">'+esc(v === "unknown" ? "Chưa nhận diện" : v.toUpperCase())+'</option>';}).join('');
+      pub.value = chosen; veGmail();
     } catch (e) { bao(e.message); }
   }
 
@@ -388,12 +391,13 @@
   function readFilter(prefix) {
     function value(id) { return $("#" + prefix + id).value; }
     return {q:prefix === "hd" ? $("#loc").value : value("Query"),supplier:value("Supplier"),number:value("Number"),
-      min:value("Min"),max:value("Max"),file:value("File"),sort:value("Sort"),
+      min:value("Min"),max:value("Max"),file:value("File"),sort:value("Sort"),publisher:prefix === "gm" ? value("Publisher") : "",status:prefix === "gm" ? value("Status") : "",
       from:prefix === "gm" ? $("#gTu").value : "",to:prefix === "gm" ? $("#gDen").value : ""};
   }
   function buildFilters(prefix, table) {
     var box = document.createElement("div"); box.className = "invoice-filters";
     box.innerHTML = (prefix === "gm" ? '<label>Tìm kiếm<input id="gmQuery" type="search" placeholder="Tên, MST, số, ký hiệu" /></label>' : '') +
+      (prefix === "gm" ? '<label>Hãng phát hành<select id="gmPublisher"><option value="">Tất cả hãng</option></select></label><label>Trạng thái tải<select id="gmStatus"><option value="">Tất cả</option><option value="manual">Cần tải tay / tải lại</option><option value="done">Không cần tải lại</option></select></label>' : '') +
       '<label>Nhà cung cấp / MST<input id="' + prefix + 'Supplier" type="search" placeholder="Tên người bán hoặc MST" /></label>' +
       '<label>Số hoá đơn<input id="' + prefix + 'Number" type="search" /></label>' +
       '<label>Số tiền từ<input id="' + prefix + 'Min" type="number" step="any" /></label>' +
@@ -403,7 +407,7 @@
       '<button class="nut" type="button" data-reset>Đặt lại bộ lọc</button>' + (prefix === "gm" ? '<p id="gmCount" class="nho"></p>' : '');
     $(table).closest(".cuon").before(box);
     box.querySelectorAll("input,select").forEach(function(e) { e.oninput = e.onchange = prefix === "gm" ? veGmail : veBang; });
-    box.querySelector("[data-reset]").onclick = function() { box.querySelectorAll("input").forEach(function(e){e.value="";}); $("#"+prefix+"File").value=""; $("#"+prefix+"Sort").value="date-desc"; if(prefix === "hd") $("#loc").value=""; (prefix === "gm" ? veGmail : veBang)(); };
+    box.querySelector("[data-reset]").onclick = function() { box.querySelectorAll("input").forEach(function(e){e.value="";}); $("#"+prefix+"File").value=""; $("#"+prefix+"Sort").value="date-desc"; if(prefix === "hd") $("#loc").value=""; else { $("#gmPublisher").value=""; $("#gmStatus").value=""; } (prefix === "gm" ? veGmail : veBang)(); };
   }
   function buildPeriod(prefix, from, to, refresh) {
     var box=document.createElement("div"); box.className="hang period-filter";
