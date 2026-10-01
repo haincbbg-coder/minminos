@@ -178,7 +178,10 @@ with TestClient(app) as c:
     check("bấm Dừng thì việc dừng", v["trang_thai"] in ("huy", "xong"), v["trang_thai"])
 
     # ---- Gmail (bộ quét giả)
-    check("Gmail chưa cấu hình", c.get(A + "/gmail/cau-hinh").json()["email"] == "")
+    check("Gmail chưa cấu hình", c.get(A + "/gmail/cau-hinh").json()["ds"] == [])
+    r = c.post(A + "/gmail/cau-hinh", json={"email": "shop@gmail.com", "mat_khau": "MatKhauGmail@123"})
+    check("dán mật khẩu Gmail thường: từ chối + chỉ sang Đăng nhập bằng Google",
+          r.status_code == 400 and "Đăng nhập bằng Google" in r.json()["error"])
     check("Gmail sai địa chỉ bị từ chối", c.post(A + "/gmail/cau-hinh", json={"email": "abc"}).status_code == 400)
     c.post(A + "/gmail/cau-hinh", json={"email": "shop@gmail.com", "mat_khau": "abcd efgh ijkl mnop"})
     raw = (Path(_STATE) / "tai-hoa-don" / "cau-hinh.json").read_text(encoding="utf-8")
@@ -222,7 +225,105 @@ with TestClient(app) as c:
     check("kết quả Gmail: có hoá đơn kèm XML + PDF, đọc được người bán", co_xml and co_xml[0]["co_pdf"]
           and co_xml[0]["ban_ten"], kq)
     check("link javascript: từ email bị bỏ", all(not r["link"].startswith("javascript") for r in kq))
-    check("lưu mốc quét để lần sau chỉ quét email mới", c.get(A + "/gmail/cau-hinh").json()["co_moc"])
+    check("lưu mốc quét để lần sau chỉ quét email mới", c.get(A + "/gmail/cau-hinh").json()["ds"][0]["co_moc"])
+    check("kết quả ghi hộp thư nguồn", all(r.get("hop_thu") == "shop@gmail.com" for r in kq))
+    check("lỗi IMAP 'Application-specific password required' được giải thích dễ hiểu",
+          "Đăng nhập bằng Google" in hd._loi_gmail_de_hieu(Exception("b'[ALERT] Application-specific password required'")))
+
+    # ---- cấu hình cũ (1 Gmail) vẫn đọc được
+    ch = hd.doc_cau_hinh(); ch["gmail"] = {"email": "cu@gmail.com", "mk": hd.ma_hoa("abcdabcdabcdabcd")}; hd.ghi_cau_hinh(ch)
+    check("cấu hình Gmail cũ hiện thành một tài khoản", any(x["email"] == "cu@gmail.com" for x in c.get(A + "/gmail/cau-hinh").json()["ds"]))
+    c.delete(A + "/gmail/tai-khoan/cu@gmail.com")
+    check("gỡ tài khoản", not any(x["email"] == "cu@gmail.com" for x in c.get(A + "/gmail/cau-hinh").json()["ds"]))
+
+    # ---- Đăng nhập bằng Google (OAuth) với Google giả
+    r = c.get(A + "/gmail/google/bat-dau", follow_redirects=False)
+    check("chưa cài OAuth Client: báo cần cài", r.status_code == 403 and "OAuth Client" in r.text)
+    check("Client ID sai dạng bị từ chối", c.post(A + "/gmail/google/client", json={"client_id": "abc", "client_secret": "x"}).status_code == 400)
+    c.post(A + "/gmail/google/client", json={"client_id": "123-abc.apps.googleusercontent.com", "client_secret": "GOCSPX-bimat"})
+    check("client secret không lưu chữ thường", "GOCSPX-bimat" not in (Path(_STATE) / "tai-hoa-don" / "cau-hinh.json").read_text(encoding="utf-8"))
+    g = c.get(A + "/gmail/cau-hinh", headers={"x-forwarded-proto": "https", "x-forwarded-host": "minmin.vd.vn"}).json()["google"]
+    check("đường về đúng tên miền bố thấy (sau Caddy)", g["duong_ve"] == "https://minmin.vd.vn" + A + "/gmail/google/ve", g)
+    r = c.get(A + "/gmail/google/bat-dau", follow_redirects=False, headers={"x-forwarded-proto": "https", "x-forwarded-host": "minmin.vd.vn"})
+    from urllib.parse import urlparse, parse_qs
+    qg = parse_qs(urlparse(r.headers.get("location", "")).query)
+    check("chuyển sang trang Google, chỉ xin quyền ĐỌC thư, có state",
+          r.status_code == 302 and "accounts.google.com" in r.headers["location"]
+          and qg["scope"][0] == hd.GMAIL_SCOPE + " email" and qg["access_type"][0] == "offline" and qg.get("state"))
+    st = qg["state"][0]
+    check("state lạ bị từ chối", c.get(A + "/gmail/google/ve?state=gia&code=x").status_code == 403)
+
+    import requests as _rq
+
+    class _R:
+        def __init__(self, d, code=200):
+            self._d, self.status_code, self.content = d, code, b"x"
+
+        def json(self):
+            return self._d
+
+        def raise_for_status(self):
+            pass
+
+    goi = {}
+
+    def _post(url, data=None, timeout=None, **k):
+        goi.setdefault("post", []).append((url, dict(data or {})))
+        if data.get("grant_type") == "authorization_code":
+            return _R({"access_token": "at1", "refresh_token": "rt-bi-mat", "scope": hd.GMAIL_SCOPE + " openid"})
+        return _R({"access_token": "at2"})
+
+    def _get(url, headers=None, timeout=None, **k):
+        return _R({"emailAddress": "Halimi.Ketoan@gmail.com"})
+
+    p0, g0 = _rq.post, _rq.get
+    _rq.post, _rq.get = _post, _get
+    try:
+        r = c.get(A + f"/gmail/google/ve?state={st}&code=ma1", follow_redirects=False)
+    finally:
+        _rq.post, _rq.get = p0, g0
+    check("Google trả về: lưu tài khoản rồi quay lại tab Gmail",
+          r.status_code == 302 and "tab=gmail" in r.headers.get("location", ""), r.text[:200])
+    ex = [x for x in c.get(A + "/gmail/cau-hinh").json()["ds"] if x["email"] == "halimi.ketoan@gmail.com"]
+    check("tài khoản Google hiện trong danh sách", ex and ex[0]["kieu"] == "google", ex)
+    check("đổi mã lấy token đúng redirect_uri đã gửi",
+          goi["post"][0][1]["redirect_uri"] == "https://minmin.vd.vn" + A + "/gmail/google/ve")
+    check("refresh token lưu đã mã hoá", "rt-bi-mat" not in (Path(_STATE) / "tai-hoa-don" / "cau-hinh.json").read_text(encoding="utf-8"))
+    check("state chỉ dùng một lần", c.get(A + f"/gmail/google/ve?state={st}&code=ma1").status_code == 403)
+
+    # Bộ quét Gmail API: tìm thư theo ngày, đọc thư thô, mốc = thời điểm thư mới nhất
+    import base64 as _b64
+    tho = (b"From: hd@misa.vn\r\nSubject: Hoa don dien tu\r\nDate: x\r\nMIME-Version: 1.0\r\n"
+           b"Content-Type: multipart/mixed; boundary=B\r\n\r\n--B\r\nContent-Type: text/plain\r\n\r\nHoa don\r\n"
+           b"--B\r\nContent-Type: application/xml\r\nContent-Disposition: attachment; filename=hd.xml\r\n"
+           b"Content-Transfer-Encoding: base64\r\n\r\n" + _b64.b64encode(xml_bytes) + b"\r\n--B--\r\n")
+    hoi = []
+
+    class _S:
+        headers = {}
+
+        def get(self, url, params=None, timeout=None):
+            hoi.append((url, params))
+            if url.endswith("/messages"):
+                return _R({"messages": [{"id": "m2"}, {"id": "m1"}]})
+            return _R({"raw": _b64.urlsafe_b64encode(tho).decode().rstrip("="), "internalDate": "1767225600000"})
+
+        def close(self):
+            pass
+
+    p0 = _rq.post
+    _rq.post = _post
+    try:
+        bq = hd.tao_bo_quet_google("halimi.ketoan@gmail.com", "rt", lambda s: None)
+        bq._s = _S()
+        bq.connect()
+        recs = bq.scan(dt.date(2026, 1, 1), dt.date(2026, 1, 31))
+    finally:
+        _rq.post = p0
+    check("Gmail API: tìm theo khoảng ngày", hoi[0][1]["q"] == "after:2026/01/01 before:2026/02/01", hoi[0])
+    check("Gmail API: đọc thư mới nhất trước như bản IMAP", [h[0].rsplit("/", 1)[1] for h in hoi[1:]] == ["m2", "m1"])
+    check("Gmail API: nhận ra hoá đơn có XML đính kèm", recs and recs[0].get("xml"), recs)
+    check("Gmail API: mốc là thời điểm thư mới nhất", bq.last_uid == 1767225600)
     check("xem hoá đơn Gmail", c.get(A + f"/gmail/xem/{co_xml[0]['id']}").status_code == 200)
     check("tải PDF Gmail", c.get(A + f"/gmail/tep/{co_xml[0]['id']}/pdf").content.startswith(b"%PDF"))
     check("Excel Gmail", c.post(A + "/gmail/xuat").content[:2] == b"PK")

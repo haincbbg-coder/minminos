@@ -250,14 +250,38 @@
   }
 
   // ================= GMAIL =================
+  var dsTk = [];
+  function veChiMoi() {
+    var tk = dsTk.filter(function (x) { return x.email === $("#gTk").value; })[0];
+    $("#gChiMoi").disabled = !(tk && tk.co_moc);
+    if ($("#gChiMoi").disabled) $("#gChiMoi").checked = false;
+  }
   async function taiGmail() {
     try {
       var c = await goi("gmail/cau-hinh");
-      var f = $("#fGmail");
-      f.email.value = c.email || "";
-      f.mat_khau.placeholder = c.co_mk ? "Đã lưu mật khẩu ứng dụng (gõ để đổi)" : "Mật khẩu ứng dụng 16 ký tự";
-      $("#gChiMoi").disabled = !c.co_moc;
-      if (!c.co_moc) $("#gChiMoi").checked = false;
+      dsTk = c.ds;
+      $("#dsGmail").innerHTML = c.ds.map(function (x) {
+        return '<li><span>' + esc(x.email) + '</span><span class="nhan' + (x.kieu === "google" ? " ok" : "") + '">' +
+          (x.kieu === "google" ? "Google" : "Mật khẩu ứng dụng") + '</span><button type="button" class="xoa" data-xoa-tk="' +
+          esc(x.email) + '" title="Gỡ tài khoản">✕</button></li>';
+      }).join("") || '<li class="nho">Chưa có tài khoản nào.</li>';
+      $("#dsGmail").querySelectorAll("[data-xoa-tk]").forEach(function (b) {
+        b.onclick = async function () {
+          if (!confirm("Gỡ " + b.dataset.xoaTk + " khỏi MinMin? Hoá đơn đã quét vẫn giữ.")) return;
+          try { await goi("gmail/tai-khoan/" + encodeURIComponent(b.dataset.xoaTk), { method: "DELETE" }); } catch (e) { bao(e.message); }
+          taiGmail();
+        };
+      });
+      var cu = $("#gTk").value;
+      $("#gTk").innerHTML = c.ds.map(function (x) { return '<option value="' + esc(x.email) + '">' + esc(x.email) + '</option>'; }).join("");
+      if (cu && c.ds.some(function (x) { return x.email === cu; })) $("#gTk").value = cu;
+      $("#gTk").hidden = c.ds.length < 2;
+      veChiMoi();
+      $("#duongVe").textContent = c.google.duong_ve;
+      $("#fClient").client_id.value = c.google.client_id || "";
+      $("#fClient").client_secret.placeholder = c.google.co_client ? "Đã lưu (gõ để đổi)" : "Client secret";
+      $("#nutGoogle").classList.toggle("tat", !c.google.co_client);
+      if (!c.google.co_client) $("#hopClient").open = true;
       var k = await goi("gmail/ket-qua");
       $("#bangGmail").innerHTML = k.ds.map(function (r) {
         var id = encodeURIComponent(r.id);
@@ -266,9 +290,9 @@
           (r.link ? '<a href="' + esc(r.link) + '" target="_blank" rel="noopener noreferrer">Trang tra cứu</a>' : "") +
           (r.ma_tra_cuu ? '<span class="nhan">Mã ' + esc(r.ma_tra_cuu) + '</span>' : "");
         return '<tr><td class="ngay">' + esc(ngayVN(r.ngay_hd)) + "</td><td>" + esc(r.so) + '</td><td class="doi">' + esc(r.ban_ten || r.tu) +
-          '</td><td class="so">' + (r.tong ? tien(r.tong) : "") + "</td><td>" + esc(r.nha_cung_cap) + "</td><td>" +
+          "</td><td>" + esc(r.hop_thu || "") + '</td><td class="so">' + (r.tong ? tien(r.tong) : "") + "</td><td>" + esc(r.nha_cung_cap) + "</td><td>" +
           (r.can_tai_tay ? '<span class="nhan loi">Cần tải tay</span>' : "") + esc(r.trang_thai) + "</td><td>" + file + "</td></tr>";
-      }).join("") || '<tr><td colspan="7" class="nho">Chưa quét. Nhập Gmail, chọn khoảng ngày rồi bấm Quét.</td></tr>';
+      }).join("") || '<tr><td colspan="8" class="nho">Chưa quét. Thêm tài khoản Gmail, chọn khoảng ngày rồi bấm Quét.</td></tr>';
     } catch (e) { bao(e.message); }
   }
 
@@ -319,14 +343,32 @@
       var f = ev.target;
       try {
         await goi("gmail/cau-hinh", { json: { email: f.email.value, mat_khau: f.mat_khau.value } });
-        f.mat_khau.value = "";
-        $("#thongGmail").textContent = "Đã lưu."; $("#thongGmail").className = "thong ok";
+        f.reset();
+        $("#thongGmail").textContent = "Đã thêm."; $("#thongGmail").className = "thong ok";
         taiGmail();
       } catch (e) { $("#thongGmail").textContent = e.message; $("#thongGmail").className = "thong loi"; }
     };
+    $("#fClient").onsubmit = async function (ev) {
+      ev.preventDefault();
+      var f = ev.target;
+      try {
+        await goi("gmail/google/client", { json: { client_id: f.client_id.value, client_secret: f.client_secret.value } });
+        f.client_secret.value = "";
+        $("#thongGmail").textContent = "Đã lưu. Giờ bấm Đăng nhập bằng Google."; $("#thongGmail").className = "thong ok";
+        $("#hopClient").open = false;
+        taiGmail();
+      } catch (e) { $("#thongGmail").textContent = e.message; $("#thongGmail").className = "thong loi"; }
+    };
+    $("#chepVe").onclick = function () {
+      navigator.clipboard.writeText($("#duongVe").textContent).then(function () { bao("Đã chép."); }, function () {});
+    };
+    $("#nutGoogle").onclick = function (ev) {
+      if (this.classList.contains("tat")) { ev.preventDefault(); $("#hopClient").open = true; bao("Cài đặt Đăng nhập bằng Google trước (làm một lần)."); }
+    };
+    $("#gTk").onchange = veChiMoi;
     $("#nutQuet").onclick = async function () {
       try {
-        var r = await goi("gmail/quet", { json: { tu: $("#gTu").value, den: $("#gDen").value, chi_moi: $("#gChiMoi").checked } });
+        var r = await goi("gmail/quet", { json: { email: $("#gTk").value, tu: $("#gTu").value, den: $("#gDen").value, chi_moi: $("#gChiMoi").checked } });
         theoDoi(r.viec, viecGmail, taiGmail);
       } catch (e) { bao(e.message); }
     };
@@ -344,7 +386,9 @@
     document.querySelector('.tab [data-tab="tai"]').disabled = !tt.tai;
     document.querySelector('.tab [data-tab="gmail"]').disabled = !tt.gmail;
     if (!s.gia_lap_chrome) $("#ghiChuCffi").textContent = "Máy chủ thiếu thư viện curl_cffi nên cổng thuế dễ chặn (lỗi 403). Cập nhật MinMin bản mới.";
-    var muon = new URLSearchParams(location.search).get("tab") === "gmail" ? "gmail" : "tai";
+    var qs = new URLSearchParams(location.search);
+    var muon = qs.get("tab") === "gmail" ? "gmail" : "tai";
+    if (qs.get("them")) setTimeout(function () { bao("Đã thêm " + qs.get("them") + " bằng Google."); }, 300);
     moTab(muon);
   }
   batDau();

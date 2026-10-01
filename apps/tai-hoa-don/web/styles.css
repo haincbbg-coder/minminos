@@ -75,3 +75,11 @@ input:focus, select:focus { outline: 2px solid var(--chinh); outline-offset: 1px
 .bang td.ngay { white-space: nowrap; }
 #loc { width: min(100%, 340px); }
 #fGmail input { width: min(100%, 280px); }
+.ds-gmail { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.ds-gmail li { border: 1px solid var(--vien); border-radius: 999px; padding: 4px 6px 4px 12px; display: inline-flex; align-items: center; gap: 8px; }
+.ds-gmail li .xoa { border: 0; background: none; color: var(--nhat); cursor: pointer; font: inherit; }
+a.nut { text-decoration: none; display: inline-block; }
+code { background: var(--nen); border: 1px solid var(--vien); border-radius: 6px; padding: 2px 6px; word-break: break-all; }
+#hopClient ol, details.nho ol { padding-left: 18px; }
+.nut.tat { opacity: .55; }
+#fClient input { width: min(100%, 380px); }
