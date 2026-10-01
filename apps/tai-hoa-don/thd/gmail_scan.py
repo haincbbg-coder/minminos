@@ -58,6 +58,7 @@ SENDER_PROVIDER = {
     "minvoice.com.vn": "minvoice", "mobifoneinvoice.vn": "mobifone", "wininvoice.vn": "wininvoice",
     "hilo.com.vn": "hilo", "cyberlotus.com": "cyberlotus", "cyberbill.vn": "cyberlotus",
     "vin-invoice.com": "vininvoice", "vietinvoice.vn": "vietinvoice",
+    "fast.com.vn": "fast",
     # khác
     "asiainvoice.vn": "asiainvoice", "pancake.vn": "pancake",
 }
@@ -217,6 +218,15 @@ def extract_link_info(provider: str, body: str) -> dict:
                      if h.split("//", 1)[-1] not in ("easyinvoice.vn", "www.easyinvoice.vn")]
             host = valid[0] if valid else "https://tracuu.easyinvoice.vn"
             info["lookup_url"] = host + "/Invoice/ViewFromEmail?token=" + quote(unquote(info["token"]), safe="")
+    elif provider == "fast":
+        # Keep the explicitly labelled PDF link, not the first generic portal or
+        # the waybill list. Tracking wrappers otherwise hide the invoice URL.
+        import html
+        m = re.search(r"(?:To download the PDF file|tải tệp bản thể hiện của hóa đơn điện tử).*?<a\b[^>]*href=[\"']([^\"']+)", body, re.I | re.S)
+        if m:
+            info["lookup_url"] = html.unescape(m.group(1))
+        elif "fast.com.vn" in body and "type=3" in body:
+            info["lookup_url"] = _find_lookup_link(body)
     elif provider == "sapo":
         m = _RE_SAPO_QR.search(body) or _RE_CODE_GENERIC.search(body)
         if m:
@@ -279,6 +289,9 @@ def fetch_from_link(info: dict, log: Callable[[str], None]) -> Optional[bytes]:
         from .providers import easyinvoice
         hosts = info.get("hosts") or [easyinvoice.HOST_DEFAULT]
         return easyinvoice.download_by_token(info["token"], log, hosts=hosts)
+    if prov == "fast" and info.get("lookup_url"):
+        from .providers import fast_email
+        return fast_email.fetch_pdf(info["lookup_url"], log)
     if prov == "sapo" and info.get("code"):
         from .providers import sapo
         return sapo.fetch_pdf_by_code(info["code"], log)

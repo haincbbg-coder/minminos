@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.16] - 2026-10-02
+### Sửa lỗi
+- BKAV: tải thêm mẫu hoá đơn dùng nút tải file PDF có sẵn trong trang tra cứu.
+- FAST/J&T: nhận đúng link PDF trong email, tránh nhầm link bảng kê vận đơn hoặc chỉ mở trang chủ. Quét lại email cũ để bổ sung link tải.
+
 ## [26.10.15] - 2026-10-02
 ### Sửa lỗi
 - BKAV: tải PDF từ hoá đơn mở trực tiếp, không bắt khai báo captcha khi trang không yêu cầu.

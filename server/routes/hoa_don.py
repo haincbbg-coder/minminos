@@ -197,6 +197,7 @@ def thong_tin_tra_cuu_gmail(r):
             info["hosts"] = ["https://" + host]
             info["lookup_url"] = "https://" + host + "/Invoice/ViewFromEmail?token=" + quote(token, safe="")
     r["link"] = link_an_toan(info.get("lookup_url") or info.get("link") or r.get("link"))
+    info["lookup_url"] = r["link"]
     return info
 
 
