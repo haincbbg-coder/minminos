@@ -86,8 +86,8 @@ def _setup_agent(store):
 
 def register(ctx):
     for op in SCHEMAS:
-        def handler(args, context, operation=op):
-            return call(operation, args, context)
+        async def handler(args, context, operation=op):
+            return await asyncio.to_thread(call, operation, args, context)
         ctx.register_tool("lead_" + op, DESCRIPTIONS[op], handler,
                           schema=schema(op), min_mode="readonly" if op in ("report", "detail") else "safe")
 

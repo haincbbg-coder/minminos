@@ -52,7 +52,7 @@ class LeadStore:
             raise ValueError("Chưa xác định brain. Không tự chuyển sang brain mặc định.")
         self.root = Path(vault_root).resolve()
         key = hashlib.sha256(str(self.root).encode()).hexdigest()
-        self.path = Path(data_dir) / key / "leads.sqlite3"
+        self.path = Path(data_dir).resolve() / key / "leads.sqlite3"
 
     @contextmanager
     def db(self, readonly=False):
