@@ -1,7 +1,7 @@
 /* ket-noi-ngoai.js - trang KẾT NỐI NGOÀI và hộp ĐIỀU KHOẢN SỬ DỤNG (26.10.3).
  *
  * Kết nối ngoài: các app nhà phát hành tự làm (Zalo Forwarder, Tải Hoá Đơn, Quét hoá đơn
- * Gmail, Điều khiển máy tính). Mỗi app mở bằng MÃ KÍCH HOẠT ký số (server/giay_phep.py). Máy
+ * Gmail). Mỗi app mở bằng MÃ KÍCH HOẠT ký số (server/giay_phep.py). Máy
  * của nhà phát hành (có khoá riêng) thấy thêm khung tạo mã cho khách.
  *
  * Điều khoản: lần đầu mở MinMin (và mỗi khi điều khoản đổi phiên bản) hiện hộp điều khoản che
@@ -131,7 +131,7 @@
     var d;
     try { d = await api("/ket-noi-ngoai"); }
     catch (e) { el.innerHTML = '<div class="cview-placeholder">' + esc(e.message) + '</div>'; return; }
-    var uds = d.ung_dung || [];
+    var uds = (d.ung_dung || []).filter(function (u) { return u.id !== "dieu_khien_may"; });
     el.innerHTML =
       '<div class="cview-section knn">' +
         '<div class="knn-may">' +
