@@ -6,6 +6,8 @@ invoice_xml.py - Giải nén file zip cổng thuế trả về, bóc dữ liệu
 from __future__ import annotations
 
 import html
+import base64
+import re
 import io
 import os
 import zipfile
@@ -201,6 +203,37 @@ th{{background:#eef}} .meta td{{border:none;padding:2px 4px}} .tot td{{font-weig
 </body></html>"""
 
 
+def prepare_invoice_html(content: bytes, assets: dict) -> bytes:
+    """Bản thể hiện tự chứa ảnh từ ZIP, không chạy script của file tải về."""
+    text = content.decode("utf-8-sig", errors="replace")
+    images = {}
+    for name, data in assets.items():
+        if len(data) > 2 * 1024 * 1024:
+            continue
+        mime = "image/png" if data.startswith(b"\x89PNG\r\n\x1a\n") else "image/jpeg" if data.startswith(b"\xff\xd8\xff") else ""
+        if mime:
+            images[name.replace("\\", "/")] = "data:" + mime + ";base64," + base64.b64encode(data).decode("ascii")
+
+    def image_url(value):
+        key = value.strip().removeprefix("./")
+        return images.get(key, value)
+
+    text = re.sub(r'url\(\s*([\"\x27]?)([^)\"\x27]+)\1\s*\)',
+                  lambda m: 'url("' + image_url(m[2]) + '")', text, flags=re.I)
+    text = re.sub(r'(<img\b[^>]*\bsrc\s*=\s*)([\"\x27])([^\"\x27]+)\2',
+                  lambda m: m[1] + m[2] + image_url(m[3]) + m[2], text, flags=re.I)
+    text = re.sub(r'<script\b[^>]*>.*?</script\s*>', '', text, flags=re.I | re.S)
+    bg = images.get("viewinvoice-bg.jpg", "")
+    css = """<style data-minmin-print="2">
+    @media print {
+      .print-page, .main-page { max-width: 100% !important; min-height: 0 !important; box-shadow: none !important; }
+      .main-page { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .sign-box, .sign-box * { overflow-wrap: anywhere !important; word-break: break-word !important; white-space: normal !important; }
+      .sign-box { max-width: 100% !important; padding-bottom: 70px !important; background-position: right 10px bottom 5px !important; }
+    """ + ('.main-page { background-image: url("' + bg + '") !important; }' if bg else '') + "\n}</style>"
+    return (text.replace("</head>", css + "</head>", 1) if "</head>" in text else css + text).encode("utf-8")
+
+
 def save_invoice_files(folder: str, base: str, zip_bytes: bytes,
                        keep_zip: bool = False) -> dict:
     """Lưu XML (+ invoice.html) vào thư mục. -> {"xml": path, "html": path|None, "zip": path|None, "names": [...]}
@@ -221,6 +254,6 @@ def save_invoice_files(folder: str, base: str, zip_bytes: bytes,
     if parts["html"]:
         p = os.path.join(folder, base + ".html")
         with open(p, "wb") as f:
-            f.write(parts["html"])
+            f.write(prepare_invoice_html(parts["html"], parts["others"]))
         out["html"] = p
     return out

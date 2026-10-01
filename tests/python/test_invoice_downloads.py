@@ -30,6 +30,39 @@ def archive(files):
 
 
 class Downloads(unittest.TestCase):
+    def test_html_keeps_zip_images_and_wraps_signature_without_script(self):
+        ix = hd.thd("invoice_xml")
+        raw = b'<html><head><style>.main-page{background-image:url(viewinvoice-bg.jpg)}</style><script src="details.js"></script></head><body><img src="sign-check.jpg"></body></html>'
+        image = b'\xff\xd8\xffimage'
+        packed = archive([("invoice.xml", XML), ("invoice.html", raw), ("viewinvoice-bg.jpg", image),
+                          ("sign-check.jpg", image), ("details.js", b'alert(1)')])
+        with tempfile.TemporaryDirectory() as temp:
+            paths = ix.save_invoice_files(temp, "invoice", packed, keep_zip=True)
+            text = Path(paths["html"]).read_text(encoding="utf-8")
+            self.assertIn("data:image/jpeg;base64,", text)
+            self.assertIn("overflow-wrap: anywhere", text)
+            self.assertNotIn("<script", text)
+            self.assertEqual(Path(paths["xml"]).read_bytes(), XML)
+            self.assertEqual(Path(paths["zip"]).read_bytes(), packed)
+            self.assertFalse((Path(temp) / "details.js").exists())
+
+    def test_old_pdf_rebuilt_from_cached_zip_without_network(self):
+        ix = hd.thd("invoice_xml")
+        with tempfile.TemporaryDirectory() as temp, patch.object(hd, "goc_du_lieu", return_value=Path(temp)):
+            z = archive([("invoice.xml", XML), ("invoice.html", b'<html><head></head><body>Invoice</body></html>')])
+            files = ix.save_invoice_files(temp, "invoice", z, keep_zip=True)
+            old = Path(temp) / "invoice.pdf"
+            old.write_bytes(PDF)
+            inv = {"_xml_path": "invoice.xml", "_html_path": "invoice.html", "_zip_path": "invoice.zip", "_pdf_path": "invoice.pdf", "shdon": 1}
+            client = SimpleNamespace(download_xml_zip=lambda *a: self.fail("cached ZIP must not redownload"))
+            config = dict(hd.cai_dat_tai(), giu_zip=True)
+            with patch.object(exporter, "html_to_pdf", return_value=str(old)) as render:
+                result = hd.tai_mot(client, "1234567890", inv, ["pdf"], lambda s: None, config, "browser")
+                render.assert_called_once()
+            self.assertEqual(result["thieu"], [])
+            self.assertEqual(inv["_pdf_render_version"], 2)
+            self.assertTrue(inv["_html_assets"])
+
     def test_provider_failure_uses_embedded_link_without_mutating_xml(self):
         raw = b'<HDon><PdfUrl>https://example.com/invoice.pdf</PdfUrl></HDon>'
         provider = SimpleNamespace(NAME="Vendor", fetch_pdf=lambda *a, **k: (_ for _ in ()).throw(providers.ProviderError("offline")))

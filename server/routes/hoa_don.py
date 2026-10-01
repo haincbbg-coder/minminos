@@ -430,14 +430,19 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
     base = ten_file(inv, cd)
     kq = {"xml": False, "pdf": False, "goc": False}
     xp = tuyet_doi(inv.get("_xml_path"))
-    can_zip = cd["giu_zip"] and not tuyet_doi(inv.get("_zip_path"))
-    if not xp or can_zip:
+    zp = tuyet_doi(inv.get("_zip_path"))
+    can_zip = cd["giu_zip"] and not zp
+    can_anh = "pdf" in kieu and inv.get("_html_path") and not inv.get("_html_assets")
+    if not xp or can_zip or can_anh:
         folder = xp.parent if xp else _thu_muc_tai(mst, inv, cd)
-        z = c.download_xml_zip(inv)
+        dung_zip_cu = bool(xp and zp)
+        z = zp.read_bytes() if dung_zip_cu else c.download_xml_zip(inv)
         paths = ixml.save_invoice_files(str(folder), xp.stem if xp else base, z, keep_zip=cd["giu_zip"])
         for tr, k in (("_xml_path", "xml"), ("_html_path", "html"), ("_zip_path", "zip")):
             if paths.get(k):
                 inv[tr] = _tuong_doi(paths[k])
+        if paths.get("html"):
+            inv["_html_assets"] = True
         if paths["xml"] and not xp:
             try:
                 inv["_detail"] = ixml.parse_invoice(Path(paths["xml"]).read_bytes())
@@ -446,7 +451,8 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
             kq["xml"] = True
         elif not paths["xml"]:
             log(f"{base}: cổng thuế không trả XML, đã giữ file zip gốc.")
-        c.pause(c.delay_download)
+        if not dung_zip_cu:
+            c.pause(c.delay_download)
         xp = tuyet_doi(inv.get("_xml_path"))
     # XML có thể đã tải ở lần trước, khi ấy vẫn cần đọc lại để tạo bản thể hiện.
     if xp and not inv.get("_detail"):
@@ -454,7 +460,8 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
             inv["_detail"] = ixml.parse_invoice(xp.read_bytes())
         except Exception as e:
             log(f"Không đọc được XML {base}: {e}")
-    if "pdf" in kieu and not tuyet_doi(inv.get("_pdf_path")):
+    if "pdf" in kieu and (not tuyet_doi(inv.get("_pdf_path")) or inv.get("_pdf_render_version") != 2):
+        inv.pop("_pdf_path", None)  # file cũ vẫn ở đĩa; chỉ công bố bản in đã kiểm tra lại
         if not browser:
             inv["_pdf_loi"] = "Máy chủ chưa có trình duyệt để in PDF (cài ở Thiết lập > Công cụ)."
         else:
@@ -468,6 +475,7 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
                 try:
                     pdf = ex.html_to_pdf(str(nguon), str(thu_muc / (stem + ".pdf")), browser)
                     inv["_pdf_path"] = _tuong_doi(pdf)
+                    inv["_pdf_render_version"] = 2
                     inv.pop("_pdf_loi", None)
                     kq["pdf"] = True
                 except Exception as e:
