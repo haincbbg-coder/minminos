@@ -64,6 +64,12 @@ async function main() {
   assert.equal(service.forwarders.get('a').dropped,5);
   await service.stopForwarding('a');releaseQueue(1);await tick();
   assert.equal(sent.length,3,'stopped burst must not send');
+  let connected;
+  service.ensureApi=()=>new Promise(r=>connected=r);
+  const starting=service.startForwarding('a',cfg);
+  await service.stopAll(); connected(api);
+  await assert.rejects(starting,/huỷ khởi động/);
+  assert.equal(service.isForwarding('a'),false,'stop during connection must cancel the pending start');
   console.log('Zalo: duplicate replay, pause, restart, concurrent start, bounded queue, log filter/CSV: OK');
  } finally { await service.stopAll();fs.rmSync(tmp,{recursive:true,force:true}); }
 }

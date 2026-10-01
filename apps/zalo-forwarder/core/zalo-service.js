@@ -80,6 +80,7 @@ var ZaloService2 = class extends EventEmitter2 {
     this._sendLog = /* @__PURE__ */ new Map();
     this._loginAbort = null;
     this._startingAccounts = new Set();
+    this._startEpoch = new Map();
     this._seenMessages = new Map();
     this._cacheFile = path3.join(path3.dirname(this.sessionDir), "lists-cache.json");
     this._cache = { groups: {}, friends: {} };
@@ -514,12 +515,13 @@ var ZaloService2 = class extends EventEmitter2 {
   async startForwarding(account, config) {
     if (this._startingAccounts.has(account)) throw new Error("Tài khoản đang khởi động.");
     this._startingAccounts.add(account);
-    try { return await this._startForwarding(account, config); }
+    try { return await this._startForwarding(account, config, this._startEpoch.get(account) || 0); }
     finally { this._startingAccounts.delete(account); }
   }
-  async _startForwarding(account, config) {
+  async _startForwarding(account, config, epoch) {
     if (this.forwarders.has(account)) throw new Error(`Tai khoan "${account}" dang chay roi.`);
     const api = await this.ensureApi(account);
+    if ((this._startEpoch.get(account) || 0) !== epoch) throw new Error("Đã huỷ khởi động theo yêu cầu dừng.");
     const ruleSets = config.ruleSets || {};
     const limits = this.getLimits(config, account);
     const ALBUM_WINDOW_MS = config.albumWindowMs || 2500;
@@ -734,6 +736,7 @@ var ZaloService2 = class extends EventEmitter2 {
     this.emit("forwarding-status", this.forwardingStatus());
   }
   async stopForwarding(account) {
+    this._startEpoch.set(account, (this._startEpoch.get(account) || 0) + 1);
     const f = this.forwarders.get(account);
     if (!f) return;
     this.forwarders.delete(account); // invalidate queued work before stopping the listener
@@ -790,7 +793,7 @@ var ZaloService2 = class extends EventEmitter2 {
     return { started, errors };
   }
   async stopAll() {
-    for (const acc of Array.from(this.forwarders.keys())) await this.stopForwarding(acc);
+    for (const acc of new Set([...this.forwarders.keys(), ...this._startingAccounts])) await this.stopForwarding(acc);
   }
   forwardingStatus() {
     const running = Array.from(this.forwarders.keys());
