@@ -6,7 +6,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.6] - 2026-10-01
 ### Thêm mới
-- Lead Engine: quản lý nguồn khách, hồ sơ lead và kết quả bán hàng theo từng brain. Bản tích hợp đang phát triển.
+- Lead Engine: thêm hồ sơ doanh nghiệp, kho lead có dẫn chứng hội thoại và bản nháp quảng cáo/chăm sóc theo từng brain.
+- Có bảng theo dõi đơn giao thành công và chi phí đã nhập, chống cộng lặp khi đồng bộ lại. Bản đầu chưa tự gửi tin hoặc chạy quảng cáo.
 
 ## [26.10.5] - 2026-10-01
 ### Cải thiện
