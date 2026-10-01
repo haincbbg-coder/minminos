@@ -31,6 +31,17 @@ class SupplierBatch(unittest.TestCase):
         self.assertEqual(data["__EVENTTARGET"],"UcHtmlPdfToolbar$lbtnDownloadHtmlAsPdf")
         self.assertIn("InvoiceGUID="+GUID,session.post.call_args.args[0])
 
+    def test_bkav_existing_pdf_link_in_lookup_frame(self):
+        from unittest.mock import Mock
+        session=Mock()
+        session.get.side_effect=[response("ViewInvoice('"+GUID+"');"), response('<a onclick="DownloadFile(&#39;folder/invoice.pdf&#39;,1);">PDF</a>'), response(content=PDF)]
+        solver=Mock()
+        with patch.object(bkav.C,"make_session",return_value=session):
+            self.assertEqual(bkav.fetch_pdf("",{"_code":"TEST123"},lambda s:None,solver),PDF)
+        self.assertIn("FilePath=folder%2Finvoice.pdf&BFType=1",session.get.call_args.args[0])
+        solver.recaptcha_v2.assert_not_called()
+        session.post.assert_not_called()
+
     def test_bkav_no_invoice_does_not_claim_success(self):
         from unittest.mock import Mock
         session=Mock();session.get.return_value=response('<div>captcha</div>')

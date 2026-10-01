@@ -114,6 +114,15 @@ def _direct_invoice(s, body: str, log):
     if r.status_code != 200:
         return None
     page = r.text
+    # Older templates already have a PDF and expose DownloadFile inside Lookup.
+    # Newer templates generate it through the WebForms postback below.
+    for match in _RE_DLFUNC.finditer(_htmllib.unescape(page)):
+        if not match.group(1).lower().endswith(".pdf"):
+            continue
+        pdf = _try_download(s, match.group(1), match.group(2), log)
+        if pdf:
+            log("BKAV: đã tải PDF gốc có sẵn trong trang hoá đơn.")
+            return pdf
     targets = re.findall(r"__doPostBack\(['\"]([^'\"]*(?:lbtnDownloadHtmlAsPdf|lbtDownloadAsPdf))['\"]", _htmllib.unescape(page))
     for target in dict.fromkeys(targets):
         fields = _hidden_fields(page)
