@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.17] - 2026-10-02
+### Cải thiện
+- Tra cứu đúng tab Mua vào hoặc Bán ra đang chọn; mặc định tra cả hoá đơn điện tử và máy tính tiền.
+- Tải Hoá Đơn TCT tự đối chiếu cả bản gốc Gmail không kèm XML, kiểm tra MST hai bên, ký hiệu và số hoá đơn trước khi ghép.
+- Thêm lọc hãng phát hành và bản gốc còn thiếu; mặc định chọn XML, Trống đồng và bản gốc khi tải.
+- Giữ các hoá đơn đã chọn sau khi tải để xuất ZIP đúng phạm vi; file còn thiếu được liệt kê trong bản đối soát.
+
+
 ## [26.10.16] - 2026-10-02
 ### Sửa lỗi
 - BKAV: tải thêm mẫu hoá đơn dùng nút tải file PDF có sẵn trong trang tra cứu.

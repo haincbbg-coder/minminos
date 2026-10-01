@@ -188,6 +188,9 @@
     var d;
     try { d = await goi(q); } catch (e) { bao(e.message); return; }
     dsHd = d.ds;
+    var pub = $("#hdPublisher"), chosen = pub.value;
+    pub.innerHTML = '<option value="">Tất cả hãng</option>' + Array.from(new Set(dsHd.map(function(r){return r.nha_cung_cap || "unknown";}))).sort().map(function(v){return '<option value="'+esc(v)+'">'+esc(v === "unknown" ? "Chưa có XML / chưa nhận diện" : v)+'</option>';}).join('');
+    pub.value = chosen;
     var t = d.tong;
     $("#tong").innerHTML = "<span><b>" + t.so_hd + "</b> hoá đơn</span><span>Tiền hàng <b>" + tien(t.tien_hang) +
       "</b></span><span>Thuế <b>" + tien(t.thue) + "</b></span><span>Tổng <b>" + tien(t.tong) +
@@ -197,7 +200,7 @@
 
   function veBang() {
     var ds = hdLoc = InvoiceUI.filter(dsHd, readFilter("hd"));
-    var valid = new Set(ds.map(function(r) { return r.key; }));
+    var valid = new Set(dsHd.map(function(r) { return r.key; }));
     chon.forEach(function(k) { if (!valid.has(k)) chon.delete(k); });
     var base = "/" + encodeURIComponent(dn) + "/" + loai + "/";
     $("#bangHd").innerHTML = ds.slice(0, 2000).map(function (r) {
@@ -214,7 +217,7 @@
         '<td class="ngay">' + esc(ngayVN(r.ngay)) + '</td><td>' + esc(r.so) + '</td><td>' + esc(r.ky_hieu) + '</td>' +
         '<td class="doi">' + esc(r.doi_tac) + (r.may_tinh_tien ? ' <span class="nhan">MTT</span>' : "") + (r.tu_gmail ? ' <span class="nhan">Từ Gmail</span>' : "") + '</td><td>' + esc(r.mst_doi_tac) + '</td>' +
         '<td class="so">' + tien(r.tien_hang) + '</td><td class="so">' + tien(r.thue) + '</td><td class="so">' + tien(r.tong) + '</td>' +
-        '<td>' + esc(r.trang_thai) + '</td><td>' + file + '</td></tr>';
+        '<td>' + esc(r.trang_thai) + '<div class="nho">' + esc(r.nha_cung_cap || '') + '</div></td><td>' + file + '</td></tr>';
     }).join("") || '<tr><td colspan="11" class="nho">Chưa có hoá đơn trong khoảng ngày này. Đăng nhập rồi bấm Tra cứu.</td></tr>';
     $("#bangHd").querySelectorAll("input[data-k]").forEach(function (c) {
       c.onchange = function () { if (c.checked) chon.add(c.dataset.k); else chon.delete(c.dataset.k); demChon(); };
@@ -230,7 +233,7 @@
   }
   function phamViXuat(them) {
     var d = { mst: dn, tu: $("#tu").value, den: $("#den").value };
-    d.keys = hdLoc.filter(function(r) { return !chon.size || chon.has(r.key); }).map(function(r) { return r.key; }); d.loai = loai;
+    d.keys = (chon.size ? dsHd : hdLoc).filter(function(r) { return !chon.size || chon.has(r.key); }).map(function(r) { return r.key; }); d.loai = loai;
     for (var k in them) d[k] = them[k];
     return d;
   }
@@ -290,18 +293,18 @@
   async function traCuu() {
     if (!$("#tu").value || !$("#den").value) { bao("Chọn khoảng ngày trước."); return; }
     try {
-      var r = await goi("tra-cuu", { json: { mst: dn, tu: $("#tu").value, den: $("#den").value, loai: "ca_hai", he: $("#he").value } });
+      var r = await goi("tra-cuu", { json: { mst: dn, tu: $("#tu").value, den: $("#den").value, loai: loai, he: $("#he").value } });
       theoDoi(r.viec, viecTai, function () { taiBang(); taiDn(); });
     } catch (e) { bao(e.message); }
   }
   async function taiXml() {
     try {
-      if (!hdLoc.length) throw new Error("Không có hoá đơn trong bộ lọc.");
+      if (!hdLoc.length && !chon.size) throw new Error("Không có hoá đơn trong bộ lọc.");
       var kieu = Array.prototype.map.call(document.querySelectorAll("[data-tai]:checked"), function (c) { return c.dataset.tai; });
       var r = await goi("tai", { json: { mst: dn, loai: loai, keys: phamViXuat({}).keys,
         tu: $("#tu").value, den: $("#den").value, kieu: kieu } });
       bao("Đang tải " + r.so + " hoá đơn.");
-      theoDoi(r.viec, viecTai, function () { chon.clear(); taiBang(); });
+      theoDoi(r.viec, viecTai, function () { taiBang(); });
     } catch (e) { bao(e.message); }
   }
   async function canhBao() {
@@ -391,13 +394,13 @@
   function readFilter(prefix) {
     function value(id) { return $("#" + prefix + id).value; }
     return {q:prefix === "hd" ? $("#loc").value : value("Query"),supplier:value("Supplier"),number:value("Number"),
-      min:value("Min"),max:value("Max"),file:value("File"),sort:value("Sort"),publisher:prefix === "gm" ? value("Publisher") : "",status:prefix === "gm" ? value("Status") : "",
+      min:value("Min"),max:value("Max"),file:value("File"),sort:value("Sort"),publisher:value("Publisher"),status:value("Status"),
       from:prefix === "gm" ? $("#gTu").value : "",to:prefix === "gm" ? $("#gDen").value : ""};
   }
   function buildFilters(prefix, table) {
     var box = document.createElement("div"); box.className = "invoice-filters";
     box.innerHTML = (prefix === "gm" ? '<label>Tìm kiếm<input id="gmQuery" type="search" placeholder="Tên, MST, số, ký hiệu" /></label>' : '') +
-      (prefix === "gm" ? '<label>Hãng phát hành<select id="gmPublisher"><option value="">Tất cả hãng</option></select></label><label>Trạng thái tải<select id="gmStatus"><option value="">Tất cả</option><option value="manual">Cần tải tay / tải lại</option><option value="done">Không cần tải lại</option></select></label>' : '') +
+      ('<label>Hãng phát hành<select id="' + prefix + 'Publisher"><option value="">Tất cả hãng</option></select></label><label>Trạng thái bản gốc<select id="' + prefix + 'Status"><option value="">Tất cả</option><option value="manual">' + (prefix === 'hd' ? 'Chưa có bản gốc / tải lại' : 'Cần tải tay / tải lại') + '</option><option value="done">' + (prefix === 'hd' ? 'Đã có bản gốc' : 'Không cần tải lại') + '</option></select></label>') +
       '<label>Nhà cung cấp / MST<input id="' + prefix + 'Supplier" type="search" placeholder="Tên người bán hoặc MST" /></label>' +
       '<label>Số hoá đơn<input id="' + prefix + 'Number" type="search" /></label>' +
       '<label>Số tiền từ<input id="' + prefix + 'Min" type="number" step="any" /></label>' +
@@ -406,8 +409,8 @@
       '<label>Sắp xếp<select id="' + prefix + 'Sort">' + [['date-desc','Ngày mới trước'],['date-asc','Ngày cũ trước'],['amount-asc','Số tiền nhỏ → lớn'],['amount-desc','Số tiền lớn → nhỏ'],['name-asc','Tên A → Z'],['name-desc','Tên Z → A'],['number-asc','Số HĐ tăng dần'],['number-desc','Số HĐ giảm dần']].map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('') + '</select></label>' +
       '<button class="nut" type="button" data-reset>Đặt lại bộ lọc</button>' + (prefix === "gm" ? '<p id="gmCount" class="nho"></p>' : '');
     $(table).closest(".cuon").before(box);
-    box.querySelectorAll("input,select").forEach(function(e) { e.oninput = e.onchange = prefix === "gm" ? veGmail : veBang; });
-    box.querySelector("[data-reset]").onclick = function() { box.querySelectorAll("input").forEach(function(e){e.value="";}); $("#"+prefix+"File").value=""; $("#"+prefix+"Sort").value="date-desc"; if(prefix === "hd") $("#loc").value=""; else { $("#gmPublisher").value=""; $("#gmStatus").value=""; } (prefix === "gm" ? veGmail : veBang)(); };
+    box.querySelectorAll("input,select").forEach(function(e) { e.oninput = e.onchange = prefix === "gm" ? veGmail : function(){chon.clear(); veBang();}; });
+    box.querySelector("[data-reset]").onclick = function() { box.querySelectorAll("input").forEach(function(e){e.value="";}); $("#"+prefix+"File").value=""; $("#"+prefix+"Sort").value="date-desc"; $("#"+prefix+"Publisher").value=""; $("#"+prefix+"Status").value=""; if(prefix === "hd") $("#loc").value=""; (prefix === "gm" ? veGmail : veBang)(); };
   }
   function buildPeriod(prefix, from, to, refresh) {
     var box=document.createElement("div"); box.className="hang period-filter";
@@ -504,7 +507,7 @@
       catch (e) { bao(e.message); }
     };
     $("#nutDangXuat").onclick = async function () { await goi("dang-xuat/" + encodeURIComponent(dn), { method: "POST" }); taiDn(); };
-    $("#loc").oninput = veBang;
+    $("#loc").oninput = function(){chon.clear(); veBang();};
     $("#chonHet").onchange = function () {
       var bat = this.checked;
       hdLoc.forEach(function(r) { if(bat) chon.add(r.key); else chon.delete(r.key); }); veBang();

@@ -609,7 +609,19 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
                 inv["_pdf_loi"] = "Chưa có HTML hoặc chi tiết XML hợp lệ để tạo PDF."
     if "goc" in kieu and xp and not tuyet_doi(inv.get("_goc_path")):
         try:
-            ten, pdf = prov.fetch_original_pdf(xp.read_bytes(), inv, log=lambda s: log("   " + s), solver=tao_solver(log))
+            pdf = None
+            source = inv.get("_gmail_lookup")
+            if isinstance(source, dict):
+                try:
+                    info = thong_tin_tra_cuu_gmail(dict(source))
+                    pdf = thd("gmail_scan").fetch_from_link(info, log)
+                    ten = "Gmail"
+                except Exception:
+                    log("Link Gmail đã đối chiếu chưa trả PDF; thử nguồn XML và hãng phát hành.")
+            if not pdf:
+                ten, pdf = prov.fetch_original_pdf(xp.read_bytes(), inv, log=lambda s: log("   " + s), solver=tao_solver(log))
+            if not pdf.lstrip().startswith(b"%PDF-"):
+                raise prov.ProviderError("Nguồn không trả PDF hợp lệ.")
             g = xp.with_name(xp.stem + "_goc.pdf")
             g.write_bytes(pdf)
             inv["_goc_path"] = _tuong_doi(str(g))
@@ -647,32 +659,24 @@ def tai_ds(v: Viec, mst: str, loai: str, keys: list[str], kieu) -> dict:
               "cài 'Trình duyệt' một lần (miễn phí). Vẫn tải XML.")
     kho = doc_kho(mst, loai)
     ds = [k for k in keys if k in kho]
+    originals_before = sum(bool(tuyet_doi(kho[k].get("_goc_path"))) for k in ds)
     if "goc" in kieu and loai == "purchase":
-        # Dùng những thư đã quét trước, không đăng nhập/quét thêm hộp thư trong tác vụ tải.
+        # One snapshot of all companies prevents a filtered selection hiding ambiguous matches.
+        inventories = {m: doc_kho(m, "purchase") for m in doc_cau_hinh()["doanh_nghiep"]}
+        inventories[mst] = kho
+        linked = 0
         for ban in _doc_json(_gmail_kho_path(), {}).values():
-            pdf, xml = tuyet_doi(ban.get("pdf")), tuyet_doi(ban.get("xml"))
-            if not pdf or not xml:
-                continue
+            if v.huy.is_set():
+                break
             try:
-                det = thd("invoice_xml").parse_invoice(xml.read_bytes())
-                if str(det.get("mua_mst") or "") != mst:
-                    continue
-                hit = [k for k in ds if str(kho[k].get("nbmst") or "") == str(det.get("ban_mst") or "")
-                       and str(kho[k].get("khhdon") or "").upper() == str(det.get("khhdon") or "").upper()
-                       and str(kho[k].get("khmshdon") or "") == str(det.get("khmshdon") or "")
-                       and _so_hd(kho[k].get("shdon")) == _so_hd(det.get("shdon"))]
-                if len(hit) != 1 or tuyet_doi(kho[hit[0]].get("_goc_path")):
-                    continue
-                with pdf.open("rb") as f:
-                    if f.read(5) != b"%PDF-":
-                        continue
-                inv = kho[hit[0]]
-                inv["_goc_path"] = _chep_vao(inv, mst, pdf, "_goc.pdf")
-                inv["_goc_nguon"] = "Gmail"
-                inv.pop("_goc_loi", None)
-                v.log(f"Đã ghép PDF gốc từ Gmail đã quét: hoá đơn {inv.get('shdon')}.")
-            except Exception:
-                continue
+                hit = tim_hd_gmail(None, ban, inventories)
+                if hit and hit[0] == mst and hit[1] in ds:
+                    if ghep_chung_tu_gmail(kho[hit[1]], mst, ban):
+                        linked += 1
+                        v.log(f"Đã đối chiếu chứng từ Gmail: hoá đơn {kho[hit[1]].get('shdon')}.")
+            except Exception as e:
+                v.log(f"Không đối chiếu được một chứng từ Gmail: {type(e).__name__}.")
+        v.log(f"Đối chiếu Gmail đã quét: bổ sung {linked} hoá đơn; chỉ ghép khi khớp duy nhất.")
     v.n = len(ds)
     n_luong = max(1, min(cd["luong"], len(ds) or 1))
     clients = [c] + [c.clone() for _ in range(n_luong - 1)]
@@ -682,7 +686,8 @@ def tai_ds(v: Viec, mst: str, loai: str, keys: list[str], kieu) -> dict:
     def gan_phien():
         with khoa:
             phien_luong.client = clients.pop()
-    dem = {"ok": 0, "loi": 0, "goc": 0, "pdf": 0, "het_phien": False}
+    linked_originals = sum(bool(tuyet_doi(kho[k].get("_goc_path"))) for k in ds) - originals_before
+    dem = {"ok": 0, "loi": 0, "goc": linked_originals, "pdf": 0, "het_phien": False}
     v.log(f"Tải {len(ds)} hoá đơn ({', '.join(TEN_LOAI_TEP[x] for x in kieu)}) bằng {n_luong} luồng.")
 
     def mot(i_k):
@@ -750,6 +755,8 @@ def tom_tat(inv: dict) -> dict:
         "co_zip": bool(tuyet_doi(inv.get("_zip_path"))),
         "goc_loi": inv.get("_goc_loi") or "", "goc_link": link_an_toan(inv.get("_goc_link")),
         "ma_tra_cuu": inv.get("_ma_tra_cuu") or "",
+        "nha_cung_cap": thd("providers").issuer_name(inv),
+        "can_tai_tay": not bool(tuyet_doi(inv.get("_goc_path"))),
     }
 
 
@@ -907,13 +914,31 @@ def _so_hd(x):
         return t.lstrip("0")
 
 
-def tim_hd_gmail(det: Optional[dict], ban: dict) -> Optional[tuple]:
+def tim_hd_gmail(det: Optional[dict], ban: dict, inventories=None) -> Optional[tuple]:
     """Hoá đơn mua vào nào trong kho Tải Hoá Đơn TCT ứng với một email hoá đơn.
 
     Khớp theo số hoá đơn + MST người bán + ký hiệu (cái nào email có). Chỉ nhận khi khớp ĐÚNG
     MỘT hoá đơn, để không bao giờ gắn nhầm bản gốc của hoá đơn này sang hoá đơn khác."""
+    xml = tuyet_doi(ban.get("xml"))
+    if det is None and xml:
+        try:
+            det = thd("invoice_xml").parse_invoice(xml.read_bytes())
+        except Exception:
+            return None
+    inventories = inventories if inventories is not None else {
+        m: doc_kho(m, "purchase") for m in doc_cau_hinh()["doanh_nghiep"]}
+    pdf = tuyet_doi(ban.get("pdf"))
+    if not det and pdf:
+        identity = thd("invoice_identity")
+        text = identity.read_pdf(pdf)
+        numbers = identity.numbers(text)
+        if len(numbers) != 1:
+            return None
+        hits = [(m, k) for m, rows in inventories.items() for k, inv in rows.items()
+                if str(_so_hd(inv.get("shdon"))) in numbers and identity.matches(text, inv, m)]
+        return hits[0] if len(hits) == 1 else None
     det = det or {}
-    dsdn = list(doc_cau_hinh()["doanh_nghiep"])
+    dsdn = list(inventories)
     mua = str(det.get("mua_mst") or "").strip()
     ung = [mua] if mua in dsdn else ([] if mua else dsdn)
     nb = str(det.get("ban_mst") or ban.get("ban_mst") or "").strip()
@@ -923,13 +948,16 @@ def tim_hd_gmail(det: Optional[dict], ban: dict) -> Optional[tuple]:
         return None
     trung = []
     for m in ung:
-        for k, inv in doc_kho(m, "purchase").items():
+        for k, inv in inventories[m].items():
             if _so_hd(inv.get("shdon")) != so:
                 continue
             if nb and str(inv.get("nbmst") or "") != nb:
                 continue
-            if kh and str(inv.get("khhdon") or "").upper() != kh:
-                continue
+            if kh:
+                identity = thd("invoice_identity")
+                source_serial = identity.serial({"khhdon": kh, "khmshdon": det.get("khmshdon")})
+                if source_serial not in (str(inv.get("khhdon") or "").upper(), identity.serial(inv)):
+                    continue
             trung.append((m, k))
     return trung[0] if len(trung) == 1 else None
 
@@ -941,6 +969,41 @@ def _chep_vao(inv: dict, mst: str, nguon: Path, duoi: str) -> Optional[str]:
     dich = thu_muc / ((xp.stem if xp else ten_file(inv)) + duoi)
     dich.write_bytes(nguon.read_bytes())
     return _tuong_doi(str(dich))
+
+
+def ghep_chung_tu_gmail(inv, mst, ban, det=None):
+    """Only called after unique identity reconciliation; never overwrite an existing original."""
+    changed = False
+    code = str(ban.get("ma_tra_cuu") or "")
+    if code and not inv.get("_ma_tra_cuu"):
+        inv.update(_ma_tra_cuu=code, _code=code)
+        if ban.get("nha_cung_cap") == "bkav":
+            inv["_bkav_mtc"] = code
+        changed = True
+    url = link_an_toan(ban.get("link"))
+    if url and not inv.get("_goc_link"):
+        inv["_goc_link"] = url
+        changed = True
+    source = {k: ban.get(k) or "" for k in ("nha_cung_cap", "ma_tra_cuu")}
+    source["link"] = url
+    if (url or code) and source != inv.get("_gmail_lookup"):
+        inv["_gmail_lookup"] = source
+        changed = True
+    for src, dest, suffix in (("pdf", "_goc_path", "_goc.pdf"), ("xml", "_xml_path", ".xml")):
+        path = tuyet_doi(ban.get(src))
+        if path and not tuyet_doi(inv.get(dest)):
+            if src == "pdf":
+                with path.open("rb") as f:
+                    if f.read(5) != b"%PDF-":
+                        continue
+            inv[dest] = _chep_vao(inv, mst, path, suffix)
+            changed = True
+            if src == "pdf":
+                inv["_goc_nguon"] = "Gmail"
+                inv.pop("_goc_loi", None)
+            elif det:
+                inv["_detail"] = det
+    return changed
 
 
 def lien_ket_gmail(ban: dict, det: Optional[dict] = None) -> Optional[str]:
@@ -963,22 +1026,7 @@ def lien_ket_gmail(ban: dict, det: Optional[dict] = None) -> Optional[str]:
             mst, key = hit
             kho = doc_kho(mst, "purchase")
             inv = kho[key]
-            doi = False
-            if ban.get("ma_tra_cuu") and not inv.get("_ma_tra_cuu"):
-                inv["_ma_tra_cuu"] = ban["ma_tra_cuu"]
-                inv["_bkav_mtc"] = ban["ma_tra_cuu"]
-                inv["_code"] = ban["ma_tra_cuu"]
-                doi = True
-            if pdf and not tuyet_doi(inv.get("_goc_path")):
-                inv["_goc_path"] = _chep_vao(inv, mst, pdf, "_goc.pdf")
-                inv["_goc_nguon"] = "Gmail"
-                inv.pop("_goc_loi", None)
-                doi = True
-            if xml and not tuyet_doi(inv.get("_xml_path")):
-                inv["_xml_path"] = _chep_vao(inv, mst, xml, ".xml")
-                if det:
-                    inv["_detail"] = det
-                doi = True
+            doi = ghep_chung_tu_gmail(inv, mst, ban, det)
             if doi:
                 ghi_kho(mst, "purchase", kho)
             ban["lien_ket"] = {"mst": mst, "key": key}
