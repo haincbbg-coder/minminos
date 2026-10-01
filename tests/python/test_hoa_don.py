@@ -183,9 +183,11 @@ with TestClient(app) as c:
     check("xếp theo nhà cung cấp, giữ dấu", "THỜI TRANG" in cdat["vi_du_thu_muc"], cdat["vi_du_thu_muc"])
 
     # tải 2 hoá đơn mới với cài đặt mới + PDF Trống đồng + giữ ZIP
-    import shutil as _sh
-    chrome = next((p for p in ("/opt/pw-browsers/chromium-1194/chrome-linux/chrome",) if Path(p).is_file()),
-                  _sh.which("chromium") or _sh.which("google-chrome") or "")
+    # Chỉ dùng Chromium của Playwright (cùng loại MinMin tải ở Công cụ). Chrome cài sẵn trên máy CI
+    # có lúc in xong không tự thoát, làm test chập chờn vì lý do không thuộc MinMin.
+    import glob as _gl
+    chrome = next(iter(sorted(_gl.glob("/opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell"))
+                       + sorted(_gl.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome"))), "")
     hd.trinh_duyet_in_pdf = lambda: chrome
     moi2 = [x["key"] for x in d["ds"] if not x["co_xml"]][:2]
     r = c.post(A + "/tai", json={"mst": MST, "loai": "purchase", "keys": moi2, "kieu": ["pdf"]}).json()
