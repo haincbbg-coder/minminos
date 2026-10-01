@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.14] - 2026-10-01
+### Cải thiện
+- Hoá đơn: nhập API key 2Captcha/OmoCaptcha, kiểm tra số dư và bật giải captcha khi tải bản gốc. Xem, sao chép và bổ sung mã tra cứu ngay tại mỗi hoá đơn.
+- Gmail: tích chọn chứng từ để tải lại, xuất Excel/ZIP, ghép kho hoặc in gộp PDF. File còn thiếu được báo rõ.
+- Cả hai danh sách có kỳ tháng/quý/nửa năm, lọc nhà cung cấp, số hoá đơn, khoảng tiền và sắp xếp tăng/giảm. Tải và xuất dùng đúng danh sách đã chọn hoặc đang lọc.
+
+
 ## [26.10.13] - 2026-10-01
 ### Sửa lỗi
 - Giữ ảnh nền Trống đồng từ ZIP cổng thuế và ngắt dòng chữ ký dài khi in PDF.

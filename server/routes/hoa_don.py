@@ -38,7 +38,7 @@ import routes.ket_noi_ngoai as knn
 GOC = "/apps/tai-hoa-don"
 APP_DIR = Path(__file__).resolve().parents[2] / "apps" / "tai-hoa-don"
 WEB_DIR = APP_DIR / "web"
-WEB_FILES = {"index.html", "app.js", "styles.css"}
+WEB_FILES = {"index.html", "app.js", "invoice-ui.js", "styles.css"}
 APP_TAI, APP_GMAIL = "tai_hoa_don", "quet_hoa_don_gmail"
 LOAI = ("purchase", "sold")
 THU_MUC_LOAI = {"purchase": "MuaVao", "sold": "BanRa"}
@@ -134,6 +134,94 @@ def doc_cau_hinh() -> dict:
 def ghi_cau_hinh(d: dict) -> None:
     with _KHOA_GHI:
         _ghi_json(_cau_hinh_path(), d)
+
+
+def captcha_cong_khai() -> dict:
+    c = doc_cau_hinh().get("captcha", {})
+    return {"provider": c.get("provider", "2captcha"), "enabled": bool(c.get("enabled")),
+            "keys": {p: bool(giai_ma(c.get(p, ""))) for p in ("2captcha", "omocaptcha")}}
+
+
+def tao_solver(log=None):
+    c = doc_cau_hinh().get("captcha", {})
+    p = c.get("provider", "2captcha")
+    key = giai_ma(c.get(p, "")) if p in ("2captcha", "omocaptcha") else ""
+    if not c.get("enabled") or not key:
+        return None
+    return thd("captcha_solver").Solver(provider=p, api_key=key, log=log, local_first=False)
+
+
+def ma_tra_cuu_hd(inv: dict) -> dict:
+    """Không đoán mã từ số HĐ: chỉ dùng XML hoặc mã người dùng đã nhập."""
+    xml = tuyet_doi(inv.get("_xml_path"))
+    info = thd("providers").manual_download_info(xml.read_bytes(), inv) if xml else None
+    info = info or {}
+    code = str(inv.get("_ma_tra_cuu") or info.get("code") or "")
+    if code.startswith("("):
+        code = ""
+    return {"code": code, "url": link_an_toan(info.get("url") or inv.get("_goc_link")),
+            "provider": info.get("provider", "")}
+
+
+def chon_gmail(d: dict) -> list[dict]:
+    kho = _doc_json(_gmail_kho_path(), {})
+    if "ids" not in d:
+        return sorted(kho.values(), key=lambda r: r.get("luc", 0), reverse=True)
+    ids = d["ids"]
+    if not isinstance(ids, list) or len(ids) > 10000 or any(not isinstance(i, str) for i in ids):
+        raise ValueError("Danh sách hoá đơn không hợp lệ.")
+    if not ids:
+        raise ValueError("Chưa chọn hoá đơn nào.")
+    if any(i not in kho for i in ids):
+        raise ValueError("Danh sách đã thay đổi, tải lại trang rồi chọn lại.")
+    return [kho[i] for i in dict.fromkeys(ids)]
+
+
+def tai_gmail_da_chon(v, records):
+    prov = thd("providers")
+    v.n = len(records)
+    done = 0
+    for r in records:
+        if v.huy.is_set():
+            break
+        try:
+            if not tuyet_doi(r.get("pdf")):
+                xml = tuyet_doi(r.get("xml"))
+                inv = {"_bkav_mtc": r.get("ma_tra_cuu"), "_code": r.get("ma_tra_cuu"),
+                       "_ma_tra_cuu": r.get("ma_tra_cuu")}
+                solver = tao_solver(v.log)
+                if xml:
+                    _, pdf = prov.fetch_original_pdf(xml.read_bytes(), inv, solver=solver, log=v.log)
+                elif r.get("nha_cung_cap") == "bkav" and r.get("ma_tra_cuu"):
+                    pdf = thd("providers.bkav").fetch_pdf("", inv, v.log, solver=solver)
+                else:
+                    scan = thd("gmail_scan")
+                    info = scan.extract_link_info(r.get("nha_cung_cap") or "", r.get("link") or "")
+                    info["code"] = r.get("ma_tra_cuu") or info.get("code")
+                    pdf = scan.fetch_from_link(info, v.log)
+                    if not pdf:
+                        raise ValueError("Chưa đủ XML/mã tra cứu hoặc hãng chưa hỗ trợ tải lại. Mở Trang tra cứu.")
+                if not pdf.lstrip().startswith(b"%PDF-"):
+                    raise ValueError("Nguồn không trả PDF hợp lệ.")
+                folder = goc_du_lieu() / "gmail" / "tai-lai"
+                folder.mkdir(parents=True, exist_ok=True)
+                path = folder / (uuid.uuid4().hex + ".pdf")
+                path.write_bytes(pdf)
+                r.update(pdf=_tuong_doi(str(path)), trang_thai="Đã tải PDF gốc", can_tai_tay=False)
+            done += 1
+            with _KHOA_GHI:
+                kho = _doc_json(_gmail_kho_path(), {})
+                # Giữ mã vừa sửa trên giao diện trong lúc việc nền chạy.
+                current = kho.get(r["id"], {})
+                current.update({k: r[k] for k in ("pdf", "trang_thai", "can_tai_tay") if k in r})
+                lien_ket_gmail(current)
+                kho[r["id"]] = current
+                _ghi_json(_gmail_kho_path(), kho)
+        except Exception as e:
+            v.log(f"Hoá đơn {r.get('so') or r['id']}: {str(e)[:220]}")
+        v.i += 1
+    v.log(f"Xong: {done}/{v.n} hoá đơn có PDF; {v.n - done} chưa tải được.")
+    return {"co_pdf": done, "thieu": v.n - done}
 
 
 def chuan_mst(mst: str) -> str:
@@ -485,7 +573,7 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
                 inv["_pdf_loi"] = "Chưa có HTML hoặc chi tiết XML hợp lệ để tạo PDF."
     if "goc" in kieu and xp and not tuyet_doi(inv.get("_goc_path")):
         try:
-            ten, pdf = prov.fetch_original_pdf(xp.read_bytes(), inv, log=lambda s: log("   " + s))
+            ten, pdf = prov.fetch_original_pdf(xp.read_bytes(), inv, log=lambda s: log("   " + s), solver=tao_solver(log))
             g = xp.with_name(xp.stem + "_goc.pdf")
             g.write_bytes(pdf)
             inv["_goc_path"] = _tuong_doi(str(g))
@@ -625,6 +713,7 @@ def tom_tat(inv: dict) -> dict:
         "co_pdf": bool(tuyet_doi(inv.get("_pdf_path"))), "pdf_loi": inv.get("_pdf_loi") or "",
         "co_zip": bool(tuyet_doi(inv.get("_zip_path"))),
         "goc_loi": inv.get("_goc_loi") or "", "goc_link": link_an_toan(inv.get("_goc_link")),
+        "ma_tra_cuu": inv.get("_ma_tra_cuu") or "",
     }
 
 
@@ -839,6 +928,11 @@ def lien_ket_gmail(ban: dict, det: Optional[dict] = None) -> Optional[str]:
             kho = doc_kho(mst, "purchase")
             inv = kho[key]
             doi = False
+            if ban.get("ma_tra_cuu") and not inv.get("_ma_tra_cuu"):
+                inv["_ma_tra_cuu"] = ban["ma_tra_cuu"]
+                inv["_bkav_mtc"] = ban["ma_tra_cuu"]
+                inv["_code"] = ban["ma_tra_cuu"]
+                doi = True
             if pdf and not tuyet_doi(inv.get("_goc_path")):
                 inv["_goc_path"] = _chep_vao(inv, mst, pdf, "_goc.pdf")
                 inv["_goc_nguon"] = "Gmail"
@@ -927,6 +1021,10 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "
         cu = kho.get(rid) or {}
         bo_sung = any(r.get(t) and not tuyet_doi(cu.get(t)) for t in ("xml", "pdf"))
         if cu and not bo_sung:
+            if not cu.get("ma_tra_cuu") and (r.get("_mtc") or r.get("code")):
+                cu["ma_tra_cuu"] = r.get("_mtc") or r.get("code")
+                cu["link"] = link_an_toan(r.get("lookup_url")) or cu.get("link")
+                lien_ket_gmail(cu)
             if not kho[rid].get("lien_ket"):
                 ket = lien_ket_gmail(kho[rid])
                 if ket:
@@ -1225,9 +1323,11 @@ def register(app: FastAPI) -> None:
             if loai not in LOAI:
                 raise ValueError("Loại hoá đơn không hợp lệ.")
             keys = d.get("keys")
-            if not isinstance(keys, list) or not keys:
+            if keys is None:
                 keys = [khoa_hd(x) for x in loc_kho(mst, loai, d.get("tu"), d.get("den"))]
-            keys = [str(k) for k in keys][:5000]
+            if not isinstance(keys, list) or not keys or len(keys) > 5000:
+                raise ValueError("Chọn từ 1 đến 5000 hoá đơn mỗi lượt tải.")
+            keys = list(dict.fromkeys(str(k) for k in keys))
             kieu = [k for k in (d.get("kieu") or []) if k in ("xml", "pdf", "goc")]
             if d.get("ban_goc") and "goc" not in kieu:      # tương thích giao diện cũ
                 kieu.append("goc")
@@ -1299,6 +1399,80 @@ def register(app: FastAPI) -> None:
             return c
         return _mo_ta_cai_dat()
 
+    @app.get(A + "/captcha-api")
+    def cap_doc():
+        if ly_do_chan(APP_TAI) and ly_do_chan(APP_GMAIL):
+            return _chan(APP_TAI)
+        return {"ok": True, **captcha_cong_khai()}
+
+    @app.post(A + "/captcha-api")
+    async def cap_luu(request: Request):
+        if ly_do_chan(APP_TAI) and ly_do_chan(APP_GMAIL):
+            return _chan(APP_TAI)
+        d = await _than(request)
+        p = d.get("provider")
+        if p not in ("2captcha", "omocaptcha"):
+            return _loi(ValueError("Chọn 2Captcha hoặc OmoCaptcha."))
+        key = str(d.get("api_key") or "").strip()
+        if len(key) > 512:
+            return _loi(ValueError("API key quá dài."))
+        with _KHOA_GHI:
+            ch = doc_cau_hinh()
+            c = ch.setdefault("captcha", {})
+            if d.get("xoa_key"):
+                c.pop(p, None)
+            elif key:
+                c[p] = ma_hoa(key)
+            c.update(provider=p, enabled=bool(d.get("enabled")))
+            if c["enabled"] and not giai_ma(c.get(p, "")):
+                return _loi(ValueError("Nhập API key trước khi bật."))
+            ghi_cau_hinh(ch)
+        return {"ok": True, **captcha_cong_khai()}
+
+    @app.post(A + "/tra-cuu-hang")
+    async def hd_hang(request: Request):
+        if (c := _chan(APP_TAI)):
+            return c
+        d = await _than(request)
+        try:
+            mst, loai = chuan_mst(d.get("mst")), d.get("loai")
+            if loai not in LOAI:
+                raise ValueError("Loại hoá đơn không hợp lệ.")
+            with _KHOA_GHI:
+                kho = doc_kho(mst, loai)
+                inv = kho.get(str(d.get("key")))
+                if inv is None:
+                    raise ValueError("Không tìm thấy hoá đơn.")
+                if "code" in d:
+                    code = str(d["code"]).strip()
+                    if not re.fullmatch(r"[A-Za-z0-9._-]{0,200}", code):
+                        raise ValueError("Mã tra cứu chỉ gồm chữ, số, dấu chấm, gạch ngang/gạch dưới.")
+                    inv["_ma_tra_cuu"] = code
+                    inv["_bkav_mtc"] = code
+                    inv["_code"] = code
+                    ghi_kho(mst, loai, kho)
+                return {"ok": True, **ma_tra_cuu_hd(inv)}
+        except Exception as e:
+            return _loi(e)
+
+    @app.post(A + "/captcha-api/so-du")
+    async def cap_so_du(request: Request):
+        if ly_do_chan(APP_TAI) and ly_do_chan(APP_GMAIL):
+            return _chan(APP_TAI)
+        d = await _than(request)
+        p = d.get("provider")
+        if p not in ("2captcha", "omocaptcha"):
+            return _loi(ValueError("Dịch vụ không hợp lệ."))
+        key = giai_ma(doc_cau_hinh().get("captcha", {}).get(p, ""))
+        if not key:
+            return _loi(ValueError("Lưu API key dịch vụ này trước."))
+        try:
+            from starlette.concurrency import run_in_threadpool
+            balance = await run_in_threadpool(thd("captcha_solver").get_balance, p, key)
+            return {"ok": True, "balance": balance}
+        except Exception:
+            return _loi(ValueError("Chưa kiểm tra được số dư. Kiểm tra API key và kết nối tới dịch vụ."))
+
     @app.post(A + "/cai-dat")
     async def hd_cai_dat_luu(request: Request):
         if (c := _chan(APP_TAI)):
@@ -1317,7 +1491,7 @@ def register(app: FastAPI) -> None:
         """Hoá đơn được xuất: các dòng đã tích (keys + loai) hoặc toàn bộ trong khoảng ngày."""
         tu, den = (d.get("tu") or "")[:10], (d.get("den") or "")[:10]
         keys = d.get("keys") if isinstance(d.get("keys"), list) else []
-        if keys and d.get("loai") in LOAI:
+        if "keys" in d and d.get("loai") in LOAI:
             kho = doc_kho(mst, d["loai"])
             ds = [kho[k] for k in keys if k in kho]
             return (ds, []) if d["loai"] == "purchase" else ([], ds), tu, den
@@ -1598,15 +1772,22 @@ def register(app: FastAPI) -> None:
                             headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
 
     @app.post(A + "/gmail/ghep-lai")
-    def gm_ghep_lai():
+    async def gm_ghep_lai(request: Request):
         """Ghép lại toàn bộ hoá đơn Gmail vào kho Tải Hoá Đơn TCT (vd sau khi vừa tra cứu thêm kỳ mới,
         hay vừa thêm doanh nghiệp). Chỉ cần mở khoá Quét Gmail."""
         if (c := _chan(APP_GMAIL)):
             return c
+        d = await _than(request)
+        try:
+            ids = {r["id"] for r in chon_gmail(d)}
+        except ValueError as e:
+            return _loi(e)
         with _KHOA_GHI:
             kho = _doc_json(_gmail_kho_path(), {})
             dem = {"ghep": 0, "moi": 0}
             for ban in kho.values():
+                if ban.get("id") not in ids:
+                    continue
                 if ban.get("lien_ket") and tuyet_doi(ban.get("pdf")) is None:
                     continue
                 ket = lien_ket_gmail(ban)
@@ -1616,30 +1797,93 @@ def register(app: FastAPI) -> None:
         return {"ok": True, **dem}
 
     @app.post(A + "/gmail/xuat")
-    def gm_xuat():
+    async def gm_xuat(request: Request):
         if (c := _chan(APP_GMAIL)):
             return c
-        ds = sorted(_doc_json(_gmail_kho_path(), {}).values(), key=lambda r: r.get("luc", 0), reverse=True)
+        try:
+            ds = chon_gmail(await _than(request))
+        except ValueError as e:
+            return _loi(e)
         if not ds:
             return _loi(ValueError("Chưa quét được hoá đơn nào."))
         return _tai_ve(xuat_gmail_excel(ds), f"HoaDonGmail_{dt.date.today():%Y%m%d}.xlsx", XLSX)
 
     @app.post(A + "/gmail/zip")
-    def gm_zip():
+    async def gm_zip(request: Request):
         if (c := _chan(APP_GMAIL)):
             return c
+        try:
+            ds = chon_gmail(await _than(request))
+        except ValueError as e:
+            return _loi(e)
         buf = io.BytesIO()
         n = 0
+        manifest = []
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-            for r in _doc_json(_gmail_kho_path(), {}).values():
+            for index, r in enumerate(ds, 1):
                 for k in ("xml", "pdf"):
                     f = tuyet_doi(r.get(k))
                     if f:
-                        z.write(f, f.name)
+                        z.write(f, f"{index:04d}/{f.name}")
                         n += 1
+                    manifest.append({"id": r["id"], "loai": k, "da_co": bool(f)})
+            z.writestr("doi-soat-file.json", json.dumps(manifest, ensure_ascii=False, indent=2))
         if not n:
             return _loi(ValueError("Chưa có file nào."))
         return _tai_ve(buf.getvalue(), f"HoaDonGmail_{dt.date.today():%Y%m%d}.zip", "application/zip")
+
+    @app.post(A + "/gmail/pdf-gop")
+    async def gm_gop(request: Request):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        try:
+            ds = chon_gmail(await _than(request))
+            files = [tuyet_doi(r.get("pdf")) for r in ds]
+            missing = sum(not f for f in files)
+            if missing:
+                raise ValueError(f"Có {missing}/{len(ds)} hoá đơn chưa có PDF. Tải chứng từ trước hoặc lọc 'Có PDF'.")
+            if not files:
+                raise ValueError("Chưa chọn hoá đơn nào.")
+            import tempfile
+            with tempfile.TemporaryDirectory() as td:
+                out = str(Path(td) / "gop.pdf")
+                n = thd("exporter").merge_pdfs([str(f) for f in files], out)
+                return _tai_ve(Path(out).read_bytes(), f"Gmail_IN_GOP_{n}HD.pdf", "application/pdf")
+        except Exception as e:
+            return _loi(e)
+
+    @app.post(A + "/gmail/tai")
+    async def gm_tai(request: Request):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        try:
+            ds = chon_gmail(await _than(request))
+            if not ds:
+                raise ValueError("Chưa chọn hoá đơn nào.")
+            v = chay_viec("gmail", f"Tải chứng từ {len(ds)} hoá đơn Gmail", lambda v: tai_gmail_da_chon(v, ds))
+            return {"ok": True, "viec": v.id}
+        except Exception as e:
+            return _loi(e)
+
+    @app.post(A + "/gmail/ma-tra-cuu")
+    async def gm_ma(request: Request):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        d = await _than(request)
+        code = str(d.get("code") or "").strip()
+        if not re.fullmatch(r"[A-Za-z0-9._-]{0,200}", code):
+            return _loi(ValueError("Mã tra cứu không hợp lệ."))
+        with _KHOA_GHI:
+            kho = _doc_json(_gmail_kho_path(), {})
+            r = kho.get(str(d.get("id")))
+            if r is None:
+                return _loi(ValueError("Không tìm thấy hoá đơn."), 404)
+            r["ma_tra_cuu"] = code
+            if r.get("nha_cung_cap") == "bkav" and code:
+                from urllib.parse import quote
+                r["link"] = "https://tchd.ehoadon.vn/TCHD?MTC=" + quote(code, safe="")
+            _ghi_json(_gmail_kho_path(), kho)
+        return {"ok": True}
 
     # ---------------- file tĩnh (đặt CUỐI để không nuốt đường /api)
     @app.get(GOC + "/{ten}")

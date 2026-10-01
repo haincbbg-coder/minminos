@@ -17,6 +17,19 @@
   </header>
 
   <main>
+    <details class="the captcha-settings" id="captchaSettings">
+      <summary>Giải captcha bằng API</summary>
+      <form id="captchaForm" class="hang" autocomplete="off">
+        <label>Dịch vụ<select id="capProvider"><option value="2captcha">2Captcha</option><option value="omocaptcha">OmoCaptcha</option></select></label>
+        <label>API key<input id="capKey" type="password" autocomplete="new-password" placeholder="Nhập API key" /></label>
+        <label class="tich"><input id="capEnabled" type="checkbox" /> Dùng API khi tải bản gốc</label>
+        <button class="nut chinh" type="submit">Lưu API captcha</button>
+        <button class="nut" id="capBalance" type="button">Kiểm tra số dư</button>
+        <button class="nut" id="capDelete" type="button">Xoá key dịch vụ này</button>
+        <span id="capStatus" class="nho" role="status"></span>
+      </form>
+      <p class="nho">API key được mã hoá trên máy chủ, không trả lại trình duyệt. Dịch vụ tính phí theo tài khoản của bạn. Khi bật, nút Tải bản gốc/Tải chứng từ có thể gửi ảnh captcha hoặc URL tra cứu và site key đến dịch vụ đã chọn. Hỗ trợ captcha ảnh và reCAPTCHA v2 của các hãng đã tích hợp; chưa hỗ trợ thanh trượt Viettel.</p>
+    </details>
     <!-- ================= TẢI HOÁ ĐƠN ================= -->
     <section id="tab-tai" class="trang" hidden>
       <div class="khoa-app" id="khoaTai" hidden></div>
@@ -228,7 +241,9 @@
             <label class="tich"><input type="checkbox" id="gChiMoi" /> Chỉ email mới từ lần quét trước</label>
             <button type="button" class="nut chinh" id="nutQuet">Quét</button>
             <span class="tach"></span>
+            <button type="button" class="nut chinh" id="gTai">Tải chứng từ</button>
             <button type="button" class="nut" id="gXuat">Excel</button>
+            <button type="button" class="nut" id="gIn">In gộp PDF</button>
             <button type="button" class="nut" id="gZip">ZIP file</button>
             <button type="button" class="nut" id="gGhep" title="Ghép hoá đơn Gmail vào đúng hoá đơn trong Tải Hoá Đơn TCT">Ghép vào Tải Hoá Đơn</button>
           </div>
@@ -241,7 +256,7 @@
         <div class="the">
           <div class="cuon">
             <table class="bang">
-              <thead><tr><th>Ngày HĐ</th><th>Số</th><th>Người bán</th><th>Hộp thư</th><th class="so">Tổng</th><th>Hãng HĐ</th><th>Trạng thái</th><th>File</th></tr></thead>
+              <thead><tr><th><input id="gChonHet" type="checkbox" aria-label="Chọn tất cả Gmail đang lọc" /></th><th>Ngày HĐ / email</th><th>Số</th><th>Người bán</th><th>Hộp thư</th><th class="so">Tổng</th><th>Hãng HĐ</th><th>Trạng thái</th><th>Ghép kho</th><th>File</th></tr></thead>
               <tbody id="bangGmail"></tbody>
             </table>
           </div>
@@ -250,7 +265,16 @@
     </section>
   </main>
 
+  <dialog id="lookupDialog">
+    <form id="lookupForm">
+      <h2>Mã tra cứu bản gốc</h2><p class="nho" id="lookupNote"></p>
+      <label>Mã tra cứu<input id="lookupCode" maxlength="200" autocomplete="off" /></label>
+      <div class="hang"><button class="nut chinh" type="submit">Lưu mã</button><button class="nut" id="lookupCopy" type="button">Sao chép mã</button><a class="nut" id="lookupLink" target="_blank" rel="noopener noreferrer">Mở trang hãng</a><button class="nut" id="lookupClose" type="button">Đóng</button></div>
+      <p class="nho">Nếu trang hãng không nhận điền sẵn, bấm Sao chép mã rồi dán vào ô tra cứu. Không dùng số hoá đơn thay cho mã tra cứu.</p>
+    </form>
+  </dialog>
   <div class="bao" id="bao" role="status" aria-live="polite"></div>
+  <script src="invoice-ui.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

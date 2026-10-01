@@ -97,3 +97,19 @@ details.menu > summary::-webkit-details-marker { display: none; }
 .chip button.on { background: var(--chinh); border-color: var(--chinh); color: var(--chinh-chu); }
 .chip button b { margin-right: 4px; }
 .vi-du { margin: 0; font-size: 12px; color: var(--nhat); }
+.invoice-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 10px; align-items: end; padding: 12px 0; border-bottom: 1px solid var(--vien); margin-bottom: 12px; }
+.invoice-filters label, .period-filter label, .captcha-settings label { display: grid; gap: 5px; font-size: 12px; color: var(--nhat); }
+.invoice-filters input, .invoice-filters select { width: 100%; min-width: 0; }
+.invoice-filters p { grid-column: 1 / -1; margin: 0; }
+.period-filter { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--vien); }
+.period-filter input { max-width: 100px; }
+.captcha-settings { margin-bottom: 16px; }
+.captcha-settings summary { cursor: pointer; font-weight: 600; }
+.captcha-settings form { margin-top: 14px; align-items: end; }
+.captcha-settings label.tich { display: flex; }
+dialog { width: min(580px,calc(100vw - 32px)); max-height: 90vh; overflow: auto; border: 1px solid var(--vien); border-radius: 16px; color: var(--chu); background: var(--nen); padding: 24px; }
+dialog::backdrop { background: #17213b66; }
+dialog input { width: 100%; margin: 8px 0 16px; }
+dialog .hang { flex-wrap: wrap; }
+.bang .nut.phu { padding: 3px 7px; font-size: 11px; }
+@media(max-width:600px) { .invoice-filters { grid-template-columns: 1fr 1fr; } .captcha-settings form > label { width: 100%; } }
