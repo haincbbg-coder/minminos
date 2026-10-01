@@ -69,6 +69,9 @@ class WorkflowTests(unittest.TestCase):
         xml=b'<HDon><MSTTCGP>0101360697</MSTTCGP></HDon>'
         info=hd.thd('providers').manual_download_info(xml,{'_bkav_mtc':'HELLO123'})
         self.assertEqual(info['code'],'HELLO123'); self.assertIn('MTC=HELLO123',info['url'])
+        for provider in ('bkav','easyinvoice'):
+            mod=hd.thd('providers.'+provider)
+            self.assertEqual(mod.find_code('<HDon><TTin><TTruong>MaTraCuu</TTruong><DLieu>OLD123</DLieu></TTin></HDon>',{'_ma_tra_cuu':'NEW456'}),'NEW456')
 
     def test_solver_wired_into_retry(self):
         with patch.object(hd,'tao_solver',return_value='mock-solver'), patch.object(hd.thd('providers'),'fetch_original_pdf',return_value=('test',(self.root/'a.pdf').read_bytes())) as fetch:

@@ -54,6 +54,8 @@ def detect(xml_text: str, inv: dict) -> bool:
 
 
 def find_code(xml_text: str, inv: dict) -> str:
+    if inv.get("_ma_tra_cuu"):
+        return str(inv["_ma_tra_cuu"]).strip()
     for f in _CODE_FIELDS:
         v = C.ttkhac(xml_text, f)
         if v and v.strip():

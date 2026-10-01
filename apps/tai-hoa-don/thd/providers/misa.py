@@ -118,7 +118,7 @@ def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None)
     if r0.status_code != 200:
         raise ProviderError(f"Không mở được trang tra cứu MISA (HTTP {r0.status_code})")
 
-    code = find_code(xml_text)
+    code = str(inv.get("_ma_tra_cuu") or "").strip() or find_code(xml_text)
     ext = ""
     if code:
         res = _post_json(s, "/tra-cuu/GetInvoiceDataByTransactionID", {"transactionID": code}, referer)

@@ -368,7 +368,7 @@
           "</td><td>" + esc(r.hop_thu || "") + '</td><td class="so">' + (r.tong ? tien(r.tong) : "") + "</td><td>" + esc(r.nha_cung_cap) + "</td><td>" +
           (r.can_tai_tay ? '<span class="nhan loi">Cần tải tay</span>' : "") + esc(r.trang_thai) + "</td><td>" +
           (r.lien_ket ? '<span class="nhan ok" title="MST ' + esc(r.lien_ket.mst) + '">Đã ghép</span>' : "") + "</td><td>" + file + "</td></tr>";
-      }).join("") || '<tr><td colspan="10" class="nho">Chưa quét. Thêm tài khoản Gmail, chọn khoảng ngày rồi bấm Quét.</td></tr>';
+      }).join("") || '<tr><td colspan="10" class="nho">' + (dsG.length ? 'Không có hoá đơn khớp bộ lọc. Đổi kỳ thời gian hoặc đặt lại bộ lọc.' : 'Chưa quét. Thêm tài khoản Gmail, chọn khoảng ngày rồi bấm Quét.') + '</td></tr>';
 
     $("#bangGmail").querySelectorAll("[data-gid]").forEach(function(c) { c.onchange = function() { if(c.checked) gChon.add(c.dataset.gid); else gChon.delete(c.dataset.gid); demGmail(); }; });
     $("#bangGmail").querySelectorAll("[data-glookup]").forEach(function(b) { b.onclick = function() { openLookup("gmail",b.dataset.glookup); }; });
