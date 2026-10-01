@@ -1,0 +1,992 @@
+"""Tải Hoá Đơn TCT + Quét hoá đơn Gmail trên trình duyệt (26.10.6).
+
+Hai app của mục Kết nối ngoài, dùng chung một giao diện `/apps/tai-hoa-don/` và chung thư viện
+`apps/tai-hoa-don/thd` (chép từ Tải Hoá Đơn TCT v1.27.0 của TrungKienHa). Mỗi nhóm API khoá
+theo đúng app của nó:
+
+- `tai_hoa_don`        doanh nghiệp, captcha + đăng nhập cổng thuế, tra cứu, tải XML / bản gốc,
+                       xem hoá đơn, xuất Excel / bảng kê thuế / chi tiết mặt hàng / ZIP, cảnh báo
+- `quet_hoa_don_gmail` cấu hình Gmail (mật khẩu ứng dụng), quét hộp thư, kết quả, tải file, Excel
+
+Việc dài (tra cứu, tải, quét) chạy trong luồng nền thành "việc" có tiến độ và nhật ký; trình duyệt
+hỏi `GET .../viec/{id}` để vẽ thanh tiến độ. Mật khẩu cổng thuế và mật khẩu ứng dụng Gmail mã
+hoá bằng Fernet, khoá nằm ở `<STATE>/tai-hoa-don/.khoa` (quyền 600). Mọi tệp ở `<STATE>/tai-hoa-don/`.
+"""
+from __future__ import annotations
+
+import datetime as dt
+import importlib
+import importlib.util
+import io
+import json
+import os
+import re
+import sys
+import threading
+import time
+import uuid
+import zipfile
+from pathlib import Path
+from typing import Optional
+
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+
+import giay_phep
+import routes.ket_noi_ngoai as knn
+
+GOC = "/apps/tai-hoa-don"
+APP_DIR = Path(__file__).resolve().parents[2] / "apps" / "tai-hoa-don"
+WEB_DIR = APP_DIR / "web"
+WEB_FILES = {"index.html", "app.js", "styles.css"}
+APP_TAI, APP_GMAIL = "tai_hoa_don", "quet_hoa_don_gmail"
+LOAI = ("purchase", "sold")
+THU_MUC_LOAI = {"purchase": "MuaVao", "sold": "BanRa"}
+
+
+# ------------------------------------------------------------------ nạp thư viện
+
+_THD = None
+
+
+def thd(ten: str):
+    """Module con của thư viện hoá đơn (nạp lười, dưới tên `minmin_thd` để không đụng module
+    nào của server có cùng tên như `providers`, `analysis`)."""
+    global _THD
+    if _THD is None:
+        goc = APP_DIR / "thd"
+        spec = importlib.util.spec_from_file_location("minmin_thd", goc / "__init__.py",
+                                                      submodule_search_locations=[str(goc)])
+        m = importlib.util.module_from_spec(spec)
+        sys.modules["minmin_thd"] = m
+        spec.loader.exec_module(m)
+        _THD = m
+    return importlib.import_module("minmin_thd." + ten)
+
+
+# ------------------------------------------------------------------ lưu trữ
+
+def goc_du_lieu() -> Path:
+    try:
+        from config import STATE_DIR
+    except Exception:  # pragma: no cover
+        STATE_DIR = Path(os.environ.get("JAVIS_STATE_DIR") or Path.home() / ".minmin")
+    p = Path(STATE_DIR) / "tai-hoa-don"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+_KHOA_GHI = threading.RLock()
+
+
+def _doc_json(p: Path, mac_dinh):
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return mac_dinh
+
+
+def _ghi_json(p: Path, data) -> None:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tam = p.with_suffix(p.suffix + ".tmp")
+    tam.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    os.replace(tam, p)
+
+
+def _fernet():
+    from cryptography.fernet import Fernet
+    f = goc_du_lieu() / ".khoa"
+    with _KHOA_GHI:
+        if not f.exists():
+            f.write_bytes(Fernet.generate_key())
+            try:
+                os.chmod(f, 0o600)
+            except OSError:
+                pass
+    return Fernet(f.read_bytes().strip())
+
+
+def ma_hoa(s: str) -> str:
+    return _fernet().encrypt(str(s).encode("utf-8")).decode("ascii") if s else ""
+
+
+def giai_ma(s: str) -> str:
+    if not s:
+        return ""
+    try:
+        return _fernet().decrypt(s.encode("ascii")).decode("utf-8")
+    except Exception:
+        return ""
+
+
+def _cau_hinh_path() -> Path:
+    return goc_du_lieu() / "cau-hinh.json"
+
+
+def doc_cau_hinh() -> dict:
+    d = _doc_json(_cau_hinh_path(), {})
+    d.setdefault("doanh_nghiep", {})
+    d.setdefault("gmail", {})
+    d.setdefault("gmail_moc", {})
+    return d
+
+
+def ghi_cau_hinh(d: dict) -> None:
+    with _KHOA_GHI:
+        _ghi_json(_cau_hinh_path(), d)
+
+
+def chuan_mst(mst: str) -> str:
+    m = re.sub(r"[^0-9\-]", "", str(mst or "")).strip("-")
+    if not re.fullmatch(r"\d{10}(-\d{3})?", m):
+        raise ValueError("Mã số thuế phải có 10 số (hoặc 10 số - 3 số chi nhánh).")
+    return m
+
+
+def _thu_muc_mst(mst: str) -> Path:
+    return goc_du_lieu() / "du-lieu" / chuan_mst(mst)
+
+
+def _kho_path(mst: str, loai: str) -> Path:
+    return _thu_muc_mst(mst) / f"hoa-don-{loai}.json"
+
+
+def doc_kho(mst: str, loai: str) -> dict:
+    return _doc_json(_kho_path(mst, loai), {})
+
+
+def ghi_kho(mst: str, loai: str, kho: dict) -> None:
+    with _KHOA_GHI:
+        _ghi_json(_kho_path(mst, loai), kho)
+
+
+def khoa_hd(inv: dict) -> str:
+    return thd("gdt_client").invoice_key(inv)
+
+
+def ngay_hd(inv: dict) -> str:
+    return str(inv.get("tdlap") or inv.get("ngay") or "")[:10]
+
+
+def _tuong_doi(p: Optional[str]) -> Optional[str]:
+    if not p:
+        return None
+    try:
+        return str(Path(p).resolve().relative_to(goc_du_lieu().resolve()))
+    except ValueError:
+        return None
+
+
+def tuyet_doi(p: Optional[str]) -> Optional[Path]:
+    """Đường lưu trong kho là TƯƠNG ĐỐI gốc dữ liệu; ra ngoài gốc thì coi như không có."""
+    if not p:
+        return None
+    goc = goc_du_lieu().resolve()
+    q = (goc / p).resolve()
+    try:
+        q.relative_to(goc)
+    except ValueError:
+        return None
+    return q if q.is_file() else None
+
+
+# ------------------------------------------------------------------ việc nền
+
+class Viec:
+    def __init__(self, loai: str, mo_ta: str):
+        self.id = uuid.uuid4().hex[:12]
+        self.loai, self.mo_ta = loai, mo_ta
+        self.trang_thai = "dang_chay"
+        self.i = self.n = 0
+        self.nhat_ky: list[str] = []
+        self.ket_qua: dict = {}
+        self.loi = ""
+        self.huy = threading.Event()
+        self.bat_dau = time.time()
+        self.xong_luc = 0.0
+
+    def log(self, s: str) -> None:
+        self.nhat_ky.append(f"[{time.strftime('%H:%M:%S')}] {s}")
+        if len(self.nhat_ky) > 400:
+            del self.nhat_ky[:100]
+
+    def ra_dict(self, tu: int = 0) -> dict:
+        return {"id": self.id, "loai": self.loai, "mo_ta": self.mo_ta, "trang_thai": self.trang_thai,
+                "i": self.i, "n": self.n, "loi": self.loi, "ket_qua": self.ket_qua,
+                "nhat_ky": self.nhat_ky[tu:], "so_dong": len(self.nhat_ky),
+                "bat_dau": self.bat_dau, "xong_luc": self.xong_luc}
+
+
+VIEC: dict[str, Viec] = {}
+
+
+def chay_viec(loai: str, mo_ta: str, ham) -> Viec:
+    """Chạy `ham(viec)` trong luồng nền. Mỗi loại việc chỉ chạy một cái một lúc."""
+    for v in VIEC.values():
+        if v.loai == loai and v.trang_thai == "dang_chay":
+            raise RuntimeError("Đang có một việc cùng loại chạy, đợi xong hoặc bấm Dừng.")
+    v = Viec(loai, mo_ta)
+    VIEC[v.id] = v
+    for cu in sorted(VIEC.values(), key=lambda x: x.bat_dau)[:-30]:
+        if cu.trang_thai != "dang_chay":
+            VIEC.pop(cu.id, None)
+
+    def _chay():
+        try:
+            v.ket_qua = ham(v) or {}
+            v.trang_thai = "huy" if v.huy.is_set() else "xong"
+        except Exception as e:
+            if v.huy.is_set() or type(e).__name__ == "Cancelled":
+                v.trang_thai = "huy"
+                v.log("Đã dừng theo yêu cầu.")
+            else:
+                v.trang_thai, v.loi = "loi", str(e)
+                v.log("Lỗi: " + str(e))
+        finally:
+            v.xong_luc = time.time()
+
+    threading.Thread(target=_chay, name=f"hoa-don-{loai}", daemon=True).start()
+    return v
+
+
+# ------------------------------------------------------------------ cổng thuế
+
+_CLIENT: dict[str, object] = {}
+
+
+def _tct_base() -> Optional[str]:
+    return os.environ.get("MINMIN_TCT_BASE") or None   # test trỏ vào cổng giả
+
+
+def client_cho(mst: str):
+    """Mỗi MST một phiên (giữ cookie tường lửa + token). Còn token đã lưu thì nạp lại."""
+    mst = chuan_mst(mst)
+    c = _CLIENT.get(mst)
+    if c is None:
+        c = thd("gdt_client").GDTClient(base=_tct_base())
+        ph = _doc_json(goc_du_lieu() / "phien" / f"{mst}.json", {})
+        tok = giai_ma(ph.get("token", ""))
+        if tok:
+            c.set_token(tok)
+        _CLIENT[mst] = c
+    return c
+
+
+def luu_phien(mst: str, c) -> None:
+    p = goc_du_lieu() / "phien" / f"{mst}.json"
+    _ghi_json(p, {"token": ma_hoa(c.token or ""), "exp": c.token_exp()})
+    try:
+        os.chmod(p, 0o600)
+    except OSError:
+        pass
+
+
+def da_dang_nhap(mst: str) -> tuple[bool, int]:
+    try:
+        c = client_cho(mst)
+    except ValueError:
+        return False, 0
+    return c.token_valid(margin=120), c.token_exp()
+
+
+def _can_dang_nhap(mst: str):
+    c = client_cho(mst)
+    if not c.token_valid(margin=60):
+        raise RuntimeError("Phiên cổng thuế của MST này đã hết. Lấy captcha và đăng nhập lại.")
+    return c
+
+
+def _ngay(s: str) -> dt.date:
+    try:
+        return dt.date.fromisoformat(str(s)[:10])
+    except ValueError:
+        raise ValueError("Ngày không hợp lệ (dạng YYYY-MM-DD).")
+
+
+def tra_cuu(v: Viec, mst: str, tu: dt.date, den: dt.date, loai_ds, he_ds) -> dict:
+    c = _can_dang_nhap(mst)
+    c.cancel_check = v.huy.is_set
+    tong = {}
+    v.n = len(loai_ds) * len(he_ds)
+    for loai in loai_ds:
+        kho = doc_kho(mst, loai)
+        moi = 0
+        for he in he_ds:
+            v.log(f"Tra {'mua vào' if loai == 'purchase' else 'bán ra'}"
+                  f"{' (máy tính tiền)' if he == 'sco-query' else ''} {tu:%d/%m/%Y} - {den:%d/%m/%Y}...")
+            ds = c.query_invoices(tu, den, loai, he, progress=v.log)
+            for inv in ds:
+                k = khoa_hd(inv)
+                cu = kho.get(k) or {}
+                # Giữ lại phần MinMin tự thêm (đường file, chi tiết đã bóc) khi tra lại
+                giu = {x: cu[x] for x in cu if x.startswith("_") and x not in ("_system", "_loai")}
+                if not cu:
+                    moi += 1
+                kho[k] = {**inv, **giu}
+            v.i += 1
+        ghi_kho(mst, loai, kho)
+        tong[loai] = moi
+        v.log(f"Xong {'mua vào' if loai == 'purchase' else 'bán ra'}: thêm {moi} hoá đơn mới, kho có {len(kho)}.")
+    if c.token_dead:
+        raise RuntimeError("Phiên cổng thuế hết hạn giữa chừng, đăng nhập lại rồi tra tiếp.")
+    return {"moi": tong}
+
+
+def link_an_toan(u) -> str:
+    """Link lấy từ XML / email của bên thứ ba: chỉ nhận http(s), chặn `javascript:` và các kiểu lạ."""
+    u = str(u or "").strip()
+    return u[:500] if re.match(r"^https?://[^\s\"'<>]+$", u, re.I) else ""
+
+
+def _thu_muc_tai(mst: str, inv: dict) -> Path:
+    thang = ngay_hd(inv)[:7] or "khac"
+    return _thu_muc_mst(mst) / THU_MUC_LOAI.get(inv.get("_loai"), "Khac") / thang
+
+
+def tai_mot(c, mst: str, inv: dict, ban_goc: bool, log) -> dict:
+    """Tải XML (+ bản thể hiện) và nếu bật thì PDF gốc từ hãng phát hành. Sửa `inv` tại chỗ."""
+    gdt, ixml, prov = thd("gdt_client"), thd("invoice_xml"), thd("providers")
+    base = gdt.build_filename(inv, tokens=["ngay_lap", "ten_doitac", "ky_hieu", "so_hd"], keep_viet=False)
+    folder = _thu_muc_tai(mst, inv)
+    kq = {"xml": False, "goc": False}
+    xp = tuyet_doi(inv.get("_xml_path"))
+    if not xp:
+        z = c.download_xml_zip(inv)
+        paths = ixml.save_invoice_files(str(folder), base, z)
+        inv["_xml_path"] = _tuong_doi(paths["xml"])
+        inv["_html_path"] = _tuong_doi(paths["html"])
+        inv["_zip_path"] = _tuong_doi(paths["zip"])
+        if paths["xml"]:
+            try:
+                inv["_detail"] = ixml.parse_invoice(Path(paths["xml"]).read_bytes())
+            except Exception as e:
+                log(f"Không đọc được XML {base}: {e}")
+            kq["xml"] = True
+        else:
+            log(f"{base}: cổng thuế không trả XML, đã giữ file zip gốc.")
+        c.pause(c.delay_download)
+        xp = tuyet_doi(inv.get("_xml_path"))
+    if ban_goc and xp and not tuyet_doi(inv.get("_goc_path")):
+        try:
+            ten, pdf = prov.fetch_original_pdf(xp.read_bytes(), inv, log=lambda s: log("   " + s))
+            g = xp.with_name(xp.stem + "_goc.pdf")
+            g.write_bytes(pdf)
+            inv["_goc_path"] = _tuong_doi(str(g))
+            inv.pop("_goc_loi", None)
+            kq["goc"] = True
+            log(f"Đã tải bản gốc ({ten}): {g.name}")
+        except prov.ProviderError as e:
+            hang, url = prov.captcha_hint(xp.read_bytes())
+            inv["_goc_loi"] = (f"Hãng {hang} dùng captcha, cần tải tay" if hang else str(e))[:200]
+            if link_an_toan(url):
+                inv["_goc_link"] = link_an_toan(url)
+            log(f"Bản gốc chưa tải được: {inv['_goc_loi']}")
+    return kq
+
+
+def tai_ds(v: Viec, mst: str, loai: str, keys: list[str], ban_goc: bool) -> dict:
+    c = _can_dang_nhap(mst)
+    c.cancel_check = v.huy.is_set
+    kho = doc_kho(mst, loai)
+    ds = [k for k in keys if k in kho]
+    v.n = len(ds)
+    ok = loi = goc = 0
+    for k in ds:
+        if v.huy.is_set():
+            break
+        inv = kho[k]
+        try:
+            r = tai_mot(c, mst, inv, ban_goc, v.log)
+            ok += 1
+            goc += 1 if r["goc"] else 0
+        except Exception as e:
+            if type(e).__name__ in ("TokenExpired", "Cancelled"):
+                ghi_kho(mst, loai, kho)
+                raise
+            loi += 1
+            v.log(f"Lỗi {k}: {e}")
+        v.i += 1
+        if v.i % 10 == 0:
+            ghi_kho(mst, loai, kho)
+    ghi_kho(mst, loai, kho)
+    v.log(f"Xong: {ok} hoá đơn có file, {goc} bản gốc mới, {loi} lỗi.")
+    return {"ok": ok, "loi": loi, "goc": goc}
+
+
+def loc_kho(mst: str, loai: str, tu: Optional[str], den: Optional[str]) -> list[dict]:
+    a = (tu or "")[:10]
+    b = (den or "")[:10]
+    out = []
+    for inv in doc_kho(mst, loai).values():
+        d = ngay_hd(inv)
+        if (a and d < a) or (b and d > b):
+            continue
+        out.append(inv)
+    out.sort(key=lambda x: (ngay_hd(x), str(x.get("shdon"))), reverse=True)
+    return out
+
+
+def tom_tat(inv: dict) -> dict:
+    gdt = thd("gdt_client")
+    return {
+        "key": khoa_hd(inv), "loai": inv.get("_loai"), "ngay": ngay_hd(inv),
+        "so": inv.get("shdon"), "ky_hieu": f"{inv.get('khmshdon') or ''}{inv.get('khhdon') or ''}",
+        "doi_tac": gdt.partner_name(inv),
+        "mst_doi_tac": inv.get("nbmst") if inv.get("_loai") != "sold" else inv.get("nmmst"),
+        "tien_hang": inv.get("tgtcthue") or 0, "thue": inv.get("tgtthue") or 0,
+        "tong": inv.get("tgtttbso") or 0,
+        "trang_thai": gdt.TTHAI.get(inv.get("tthai"), str(inv.get("tthai") or "")),
+        "may_tinh_tien": inv.get("_system") == "sco-query",
+        "co_xml": bool(tuyet_doi(inv.get("_xml_path"))),
+        "co_html": bool(tuyet_doi(inv.get("_html_path"))) or bool(inv.get("_detail")),
+        "co_goc": bool(tuyet_doi(inv.get("_goc_path"))),
+        "goc_loi": inv.get("_goc_loi") or "", "goc_link": link_an_toan(inv.get("_goc_link")),
+    }
+
+
+# ------------------------------------------------------------------ Gmail
+
+def _gmail_kho_path() -> Path:
+    return goc_du_lieu() / "gmail" / "ket-qua.json"
+
+
+def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool) -> dict:
+    gs, ixml = thd("gmail_scan"), thd("invoice_xml")
+    ch = doc_cau_hinh()
+    mail = (ch["gmail"].get("email") or "").strip()
+    mk = giai_ma(ch["gmail"].get("mk", ""))
+    if not (mail and mk):
+        raise RuntimeError("Chưa nhập Gmail và mật khẩu ứng dụng.")
+    moc = int(ch["gmail_moc"].get(mail, 0) or 0) if chi_moi else 0
+    sc = gs.GmailScanner(mail, mk, log=v.log)
+    sc.connect()
+    try:
+        def tien_do(i, n):
+            v.i, v.n = i, n
+        recs = sc.scan(tu, den, want_download=True, progress=tien_do, since_uid=(moc or None),
+                       cancel_check=v.huy.is_set)
+    finally:
+        sc.close()
+    if getattr(sc, "last_uid", 0) and not v.huy.is_set():
+        ch = doc_cau_hinh()
+        ch["gmail_moc"][mail] = int(sc.last_uid)
+        ghi_cau_hinh(ch)
+    kho = _doc_json(_gmail_kho_path(), {})
+    thu_muc = goc_du_lieu() / "gmail" / dt.date.today().strftime("%Y-%m")
+    thu_muc.mkdir(parents=True, exist_ok=True)
+    moi = 0
+    for r in recs:
+        det = None
+        if r.get("xml"):
+            try:
+                det = ixml.parse_invoice(r["xml"])
+            except Exception:
+                det = None
+        so = (det or {}).get("shdon") or r.get("_so_hd") or ""
+        nb = (det or {}).get("ban_mst") or ""
+        rid = re.sub(r"[^0-9A-Za-z_-]", "", f"{nb}_{(det or {}).get('khhdon') or r.get('_khhdon')}_{so}") \
+            or uuid.uuid4().hex[:10]
+        if rid in kho and (kho[rid].get("xml") or kho[rid].get("pdf")):
+            continue
+        stem = re.sub(r"[^0-9A-Za-z_-]", "_", rid)[:80]
+        ban = {"id": rid, "tieu_de": r.get("subject", "")[:200], "tu": r.get("from", "")[:120],
+               "ngay_mail": r.get("date", ""), "nha_cung_cap": r.get("provider") or "",
+               "trang_thai": r.get("status", ""), "can_tai_tay": bool(r.get("needs_manual")),
+               "ma_tra_cuu": r.get("_mtc") or r.get("code") or "", "link": link_an_toan(r.get("lookup_url")),
+               "ban_ten": (det or {}).get("ban_ten") or r.get("_seller") or "", "ban_mst": nb,
+               "so": so, "ngay_hd": (det or {}).get("ngay") or "",
+               "tong": (det or {}).get("tong_tien") or 0, "thue": (det or {}).get("tien_thue") or 0,
+               "xml": None, "pdf": None, "luc": time.time()}
+        if r.get("xml"):
+            p = thu_muc / f"{stem}.xml"
+            p.write_bytes(r["xml"])
+            ban["xml"] = _tuong_doi(str(p))
+        if r.get("pdf"):
+            p = thu_muc / f"{stem}.pdf"
+            p.write_bytes(r["pdf"])
+            ban["pdf"] = _tuong_doi(str(p))
+        kho[rid] = ban
+        moi += 1
+    with _KHOA_GHI:
+        _ghi_json(_gmail_kho_path(), kho)
+    v.log(f"Lưu {moi} hoá đơn mới từ Gmail. Tổng trong kho: {len(kho)}.")
+    return {"moi": moi, "tong": len(kho)}
+
+
+def xuat_gmail_excel(ds: list[dict]) -> bytes:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "HoaDonGmail"
+    tieu = ["Ngày HĐ", "Số HĐ", "Người bán", "MST người bán", "Tổng tiền", "Thuế", "Nhà cung cấp HĐ",
+            "Trạng thái", "Cần tải tay", "Mã tra cứu", "Link tra cứu", "Tiêu đề email", "Người gửi"]
+    ws.append(tieu)
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    for r in ds:
+        ws.append([r.get("ngay_hd"), r.get("so"), r.get("ban_ten"), r.get("ban_mst"), r.get("tong") or 0,
+                   r.get("thue") or 0, r.get("nha_cung_cap"), r.get("trang_thai"),
+                   "Có" if r.get("can_tai_tay") else "", r.get("ma_tra_cuu"), r.get("link"),
+                   r.get("tieu_de"), r.get("tu")])
+    for col, w in zip("ABCDEFGHIJKLM", (12, 10, 40, 16, 14, 12, 14, 40, 10, 16, 40, 50, 30)):
+        ws.column_dimensions[col].width = w
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+# ------------------------------------------------------------------ cửa vào
+
+def ly_do_chan(app_id: str) -> Optional[str]:
+    ten = "Tải Hoá Đơn TCT" if app_id == APP_TAI else "Quét hoá đơn Gmail"
+    if not giay_phep.da_mo(app_id):
+        return f"{ten} chưa được mở khoá. Vào Kết nối & Khách > Kết nối ngoài để nhập mã kích hoạt."
+    if not knn.da_dong_y("chung"):
+        return "Cần đồng ý Điều khoản sử dụng MinMin trước (trang Kết nối ngoài)."
+    return None
+
+
+def _chan(app_id: str) -> Optional[JSONResponse]:
+    ly = ly_do_chan(app_id)
+    return JSONResponse({"ok": False, "error": ly}, status_code=403) if ly else None
+
+
+def _loi(e: Exception, ma: int = 400) -> JSONResponse:
+    return JSONResponse({"ok": False, "error": str(e)}, status_code=ma)
+
+
+async def _than(request: Request) -> dict:
+    try:
+        d = await request.json()
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _tai_ve(data: bytes, ten: str, kieu: str) -> Response:
+    from urllib.parse import quote
+    return Response(data, media_type=kieu, headers={
+        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(ten)}",
+        "Cache-Control": "no-store"})
+
+
+def _trang_khoa(ly_do: str) -> HTMLResponse:
+    from html import escape
+    return HTMLResponse(
+        '<!doctype html><html lang="vi"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1"><title>Hoá đơn</title>'
+        '<style>body{font-family:system-ui,sans-serif;background:#0f1420;color:#e8ecf4;display:grid;'
+        'place-items:center;min-height:100vh;margin:0;padding:16px}div{max-width:460px;background:#182033;'
+        'border-radius:14px;padding:24px;line-height:1.55}a{color:#7cc4ff}</style></head><body><div>'
+        f'<h2>Hoá đơn</h2><p>{escape(ly_do)}</p><p><a href="/">Về MinMin</a></p></div></body></html>',
+        status_code=403)
+
+
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def register(app: FastAPI) -> None:
+    A = GOC + "/api"
+
+    # ---------------- giao diện
+    @app.get(GOC)
+    def hd_goc():
+        return RedirectResponse(GOC + "/", status_code=307)
+
+    @app.get(GOC + "/")
+    def hd_trang():
+        if ly_do_chan(APP_TAI) and ly_do_chan(APP_GMAIL):
+            return _trang_khoa(ly_do_chan(APP_TAI))
+        return FileResponse(str(WEB_DIR / "index.html"), headers={"Cache-Control": "no-cache"})
+
+    @app.get(A + "/trang-thai")
+    def hd_trang_thai():
+        try:
+            co_cffi = bool(thd("gdt_client")._HAS_CFFI)
+        except Exception:
+            co_cffi = False
+        return {"ok": True, "tai_hoa_don": ly_do_chan(APP_TAI) is None,
+                "gmail": ly_do_chan(APP_GMAIL) is None,
+                "ly_do_tai": ly_do_chan(APP_TAI), "ly_do_gmail": ly_do_chan(APP_GMAIL),
+                "gia_lap_chrome": co_cffi}
+
+    # ---------------- việc nền (dùng chung)
+    @app.get(A + "/viec/{vid}")
+    def hd_viec(vid: str, tu: int = 0):
+        v = VIEC.get(vid)
+        if not v:
+            return _loi(ValueError("Không có việc này (có thể MinMin vừa khởi động lại)."), 404)
+        return {"ok": True, **v.ra_dict(max(0, tu))}
+
+    @app.post(A + "/viec/{vid}/dung")
+    def hd_viec_dung(vid: str):
+        v = VIEC.get(vid)
+        if v:
+            v.huy.set()
+        return {"ok": bool(v)}
+
+    # ---------------- doanh nghiệp + đăng nhập
+    @app.get(A + "/doanh-nghiep")
+    def hd_dn():
+        if (c := _chan(APP_TAI)):
+            return c
+        out = []
+        for mst, d in sorted(doc_cau_hinh()["doanh_nghiep"].items()):
+            ok, exp = da_dang_nhap(mst)
+            out.append({"mst": mst, "ten": d.get("ten", ""), "co_mk": bool(d.get("mk")),
+                        "dang_nhap": ok, "het_han": exp,
+                        "so_hd": {l: len(doc_kho(mst, l)) for l in LOAI}})
+        return {"ok": True, "ds": out}
+
+    @app.post(A + "/doanh-nghiep")
+    async def hd_dn_luu(request: Request):
+        if (c := _chan(APP_TAI)):
+            return c
+        d = await _than(request)
+        try:
+            mst = chuan_mst(d.get("mst"))
+        except ValueError as e:
+            return _loi(e)
+        ch = doc_cau_hinh()
+        dn = ch["doanh_nghiep"].setdefault(mst, {})
+        if d.get("ten") is not None:
+            dn["ten"] = str(d.get("ten") or "")[:200]
+        if d.get("mat_khau"):
+            dn["mk"] = ma_hoa(str(d["mat_khau"]))
+        ghi_cau_hinh(ch)
+        return {"ok": True, "mst": mst}
+
+    @app.delete(A + "/doanh-nghiep/{mst}")
+    def hd_dn_xoa(mst: str):
+        if (c := _chan(APP_TAI)):
+            return c
+        ch = doc_cau_hinh()
+        ch["doanh_nghiep"].pop(mst, None)
+        ghi_cau_hinh(ch)
+        _CLIENT.pop(mst, None)
+        try:
+            (goc_du_lieu() / "phien" / f"{chuan_mst(mst)}.json").unlink()
+        except (OSError, ValueError):
+            pass
+        return {"ok": True}
+
+    @app.get(A + "/captcha")
+    def hd_captcha(mst: str):
+        if (c := _chan(APP_TAI)):
+            return c
+        try:
+            cap = client_cho(mst).get_captcha()
+        except Exception as e:
+            return _loi(e, 502)
+        svg = thd("captcha_image").normalize_svg(str(cap.get("content") or ""))
+        return {"ok": True, "key": cap.get("key", ""), "svg": svg}
+
+    @app.post(A + "/dang-nhap")
+    async def hd_dang_nhap(request: Request):
+        if (c := _chan(APP_TAI)):
+            return c
+        d = await _than(request)
+        try:
+            mst = chuan_mst(d.get("mst"))
+            mk = str(d.get("mat_khau") or "") or giai_ma(doc_cau_hinh()["doanh_nghiep"].get(mst, {}).get("mk", ""))
+            if not mk:
+                raise ValueError("Chưa có mật khẩu cổng thuế của MST này.")
+            cl = client_cho(mst)
+            cl.login(mst, mk, str(d.get("captcha") or "").strip(), str(d.get("ckey") or ""))
+        except Exception as e:
+            return _loi(e)
+        luu_phien(mst, cl)
+        if d.get("nho_mk") and d.get("mat_khau"):
+            ch = doc_cau_hinh()
+            ch["doanh_nghiep"].setdefault(mst, {})["mk"] = ma_hoa(str(d["mat_khau"]))
+            ghi_cau_hinh(ch)
+        else:
+            ch = doc_cau_hinh()
+            ch["doanh_nghiep"].setdefault(mst, {})
+            ghi_cau_hinh(ch)
+        info = cl.token_info()
+        return {"ok": True, "het_han": cl.token_exp(), "ten": info.get("name") or ""}
+
+    @app.post(A + "/dang-xuat/{mst}")
+    def hd_dang_xuat(mst: str):
+        if (c := _chan(APP_TAI)):
+            return c
+        _CLIENT.pop(mst, None)
+        try:
+            (goc_du_lieu() / "phien" / f"{chuan_mst(mst)}.json").unlink()
+        except (OSError, ValueError):
+            pass
+        return {"ok": True}
+
+    # ---------------- tra cứu + tải
+    @app.post(A + "/tra-cuu")
+    async def hd_tra_cuu(request: Request):
+        if (c := _chan(APP_TAI)):
+            return c
+        d = await _than(request)
+        try:
+            mst = chuan_mst(d.get("mst"))
+            tu, den = _ngay(d.get("tu")), _ngay(d.get("den"))
+            if den < tu:
+                raise ValueError("Ngày kết thúc trước ngày bắt đầu.")
+            if (den - tu).days > 366:
+                raise ValueError("Mỗi lần tra tối đa 12 tháng.")
+            loai = d.get("loai") or "ca_hai"
+            loai_ds = list(LOAI) if loai == "ca_hai" else [loai]
+            if not set(loai_ds) <= set(LOAI):
+                raise ValueError("Loại hoá đơn không hợp lệ.")
+            he = d.get("he") or "query"
+            he_ds = ["query", "sco-query"] if he == "ca_hai" else [he]
+            if not set(he_ds) <= {"query", "sco-query"}:
+                raise ValueError("Hệ thống hoá đơn không hợp lệ.")
+            _can_dang_nhap(mst)
+            v = chay_viec("tra-cuu", f"Tra cứu {mst} {tu:%d/%m/%Y} - {den:%d/%m/%Y}",
+                          lambda v: tra_cuu(v, mst, tu, den, loai_ds, he_ds))
+        except Exception as e:
+            return _loi(e)
+        return {"ok": True, "viec": v.id}
+
+    @app.get(A + "/hoa-don")
+    def hd_ds(mst: str, loai: str = "purchase", tu: str = "", den: str = ""):
+        if (c := _chan(APP_TAI)):
+            return c
+        if loai not in LOAI:
+            return _loi(ValueError("Loại hoá đơn không hợp lệ."))
+        try:
+            ds = loc_kho(mst, loai, tu, den)
+        except ValueError as e:
+            return _loi(e)
+        rows = [tom_tat(x) for x in ds]
+        tong = {"so_hd": len(rows), "tien_hang": sum(float(r["tien_hang"] or 0) for r in rows),
+                "thue": sum(float(r["thue"] or 0) for r in rows), "tong": sum(float(r["tong"] or 0) for r in rows),
+                "co_xml": sum(1 for r in rows if r["co_xml"]), "co_goc": sum(1 for r in rows if r["co_goc"])}
+        return {"ok": True, "ds": rows, "tong": tong}
+
+    @app.post(A + "/tai")
+    async def hd_tai(request: Request):
+        if (c := _chan(APP_TAI)):
+            return c
+        d = await _than(request)
+        try:
+            mst = chuan_mst(d.get("mst"))
+            loai = d.get("loai")
+            if loai not in LOAI:
+                raise ValueError("Loại hoá đơn không hợp lệ.")
+            keys = d.get("keys")
+            if not isinstance(keys, list) or not keys:
+                keys = [khoa_hd(x) for x in loc_kho(mst, loai, d.get("tu"), d.get("den"))]
+            keys = [str(k) for k in keys][:5000]
+            ban_goc = bool(d.get("ban_goc"))
+            _can_dang_nhap(mst)
+            v = chay_viec("tai", f"Tải {len(keys)} hoá đơn {mst}",
+                          lambda v: tai_ds(v, mst, loai, keys, ban_goc))
+        except Exception as e:
+            return _loi(e)
+        return {"ok": True, "viec": v.id, "so": len(keys)}
+
+    def _tim(mst: str, loai: str, key: str) -> Optional[dict]:
+        if loai not in LOAI:
+            return None
+        return doc_kho(mst, loai).get(key)
+
+    @app.get(A + "/xem/{mst}/{loai}/{key}")
+    def hd_xem(mst: str, loai: str, key: str):
+        if (c := _chan(APP_TAI)):
+            return c
+        try:
+            inv = _tim(mst, loai, key)
+        except ValueError:
+            inv = None
+        if not inv:
+            return HTMLResponse("Không có hoá đơn này.", status_code=404)
+        if inv.get("_detail"):
+            return HTMLResponse(thd("invoice_xml").render_html(inv["_detail"]),
+                                headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
+        return HTMLResponse("Hoá đơn này chưa tải XML. Bấm Tải trước rồi xem lại.", status_code=404)
+
+    @app.get(A + "/tep/{mst}/{loai}/{key}/{kieu}")
+    def hd_tep(mst: str, loai: str, key: str, kieu: str):
+        if (c := _chan(APP_TAI)):
+            return c
+        try:
+            inv = _tim(mst, loai, key)
+        except ValueError:
+            inv = None
+        truong = {"xml": "_xml_path", "goc": "_goc_path", "html": "_html_path", "zip": "_zip_path"}.get(kieu)
+        p = tuyet_doi(inv.get(truong)) if (inv and truong) else None
+        if not p:
+            return _loi(ValueError("Chưa có file này."), 404)
+        kieu_mime = {"xml": "application/xml", "goc": "application/pdf", "html": "text/html",
+                     "zip": "application/zip"}[kieu]
+        return _tai_ve(p.read_bytes(), p.name, kieu_mime)
+
+    @app.post(A + "/xuat")
+    async def hd_xuat(request: Request):
+        if (c := _chan(APP_TAI)):
+            return c
+        d = await _than(request)
+        try:
+            mst = chuan_mst(d.get("mst"))
+            tu, den = (d.get("tu") or "")[:10], (d.get("den") or "")[:10]
+            p_ds, s_ds = loc_kho(mst, "purchase", tu, den), loc_kho(mst, "sold", tu, den)
+            if not (p_ds or s_ds):
+                raise ValueError("Kho chưa có hoá đơn nào trong khoảng ngày này. Tra cứu trước.")
+            # bản sao có đường file tuyệt đối cho exporter (nó chỉ kiểm có/không)
+            for inv in p_ds + s_ds:
+                inv["_xml_path"] = str(tuyet_doi(inv.get("_xml_path")) or "") or None
+            ex = thd("exporter")
+            kieu = d.get("kieu") or "excel"
+            nhan = f"{mst}_{tu.replace('-', '')}-{den.replace('-', '')}"
+            import tempfile
+            with tempfile.TemporaryDirectory() as td:
+                if kieu == "excel":
+                    p = ex.export_excel(os.path.join(td, "x.xlsx"), p_ds, s_ds)
+                    return _tai_ve(Path(p).read_bytes(), f"HoaDon_{nhan}.xlsx", XLSX)
+                if kieu == "bang_ke":
+                    ky = f"{tu[8:10]}/{tu[5:7]}/{tu[:4]} - {den[8:10]}/{den[5:7]}/{den[:4]}" if tu and den else ""
+                    p = ex.export_tax_declaration(os.path.join(td, "x.xlsx"), p_ds, s_ds, mst_cty=mst, ky=ky)
+                    return _tai_ve(Path(p).read_bytes(), f"BangKe_GTGT_{nhan}.xlsx", XLSX)
+                if kieu == "chi_tiet":
+                    p = ex.export_detail(os.path.join(td, "x.xlsx"), p_ds, s_ds)
+                    return _tai_ve(Path(p).read_bytes(), f"ChiTietMatHang_{nhan}.xlsx", XLSX)
+                if kieu == "zip":
+                    buf = io.BytesIO()
+                    n = 0
+                    kho = {l: doc_kho(mst, l) for l in LOAI}
+                    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+                        for inv in p_ds + s_ds:
+                            goc = kho[inv.get("_loai") or "purchase"].get(khoa_hd(inv)) or {}
+                            for tr in ("_xml_path", "_goc_path", "_html_path"):
+                                f = tuyet_doi(goc.get(tr))
+                                if f:
+                                    z.write(f, f"{THU_MUC_LOAI.get(inv.get('_loai'), 'Khac')}/{f.name}")
+                                    n += 1
+                    if not n:
+                        raise ValueError("Chưa tải file nào trong khoảng ngày này. Bấm Tải trước.")
+                    return _tai_ve(buf.getvalue(), f"HoaDon_{nhan}.zip", "application/zip")
+            raise ValueError("Kiểu xuất không hợp lệ.")
+        except Exception as e:
+            return _loi(e)
+
+    @app.get(A + "/canh-bao")
+    def hd_canh_bao(mst: str, tu: str = "", den: str = ""):
+        if (c := _chan(APP_TAI)):
+            return c
+        try:
+            ds = thd("analysis").check_invoices(loc_kho(mst, "purchase", tu, den),
+                                                loc_kho(mst, "sold", tu, den), chuan_mst(mst))
+        except Exception as e:
+            return _loi(e)
+        out = [{k: w.get(k) for k in ("muc", "loai", "ma", "so", "khhdon", "ngay", "doi_tac", "noi_dung")}
+               for w in ds[:500]]
+        return {"ok": True, "ds": out}
+
+    # ---------------- Gmail
+    @app.get(A + "/gmail/cau-hinh")
+    def gm_ch():
+        if (c := _chan(APP_GMAIL)):
+            return c
+        ch = doc_cau_hinh()
+        mail = ch["gmail"].get("email", "")
+        return {"ok": True, "email": mail, "co_mk": bool(ch["gmail"].get("mk")),
+                "co_moc": bool(ch["gmail_moc"].get(mail))}
+
+    @app.post(A + "/gmail/cau-hinh")
+    async def gm_ch_luu(request: Request):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        d = await _than(request)
+        mail = str(d.get("email") or "").strip()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", mail):
+            return _loi(ValueError("Địa chỉ Gmail không hợp lệ."))
+        ch = doc_cau_hinh()
+        if ch["gmail"].get("email") != mail:
+            ch["gmail"] = {"email": mail}
+        if d.get("mat_khau"):
+            ch["gmail"]["mk"] = ma_hoa(str(d["mat_khau"]).replace(" ", ""))
+        ghi_cau_hinh(ch)
+        return {"ok": True}
+
+    @app.post(A + "/gmail/quet")
+    async def gm_quet(request: Request):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        d = await _than(request)
+        try:
+            tu, den = _ngay(d.get("tu")), _ngay(d.get("den"))
+            if den < tu:
+                raise ValueError("Ngày kết thúc trước ngày bắt đầu.")
+            chi_moi = bool(d.get("chi_moi"))
+            v = chay_viec("gmail", f"Quét Gmail {tu:%d/%m/%Y} - {den:%d/%m/%Y}",
+                          lambda v: quet_gmail(v, tu, den, chi_moi))
+        except Exception as e:
+            return _loi(e)
+        return {"ok": True, "viec": v.id}
+
+    @app.get(A + "/gmail/ket-qua")
+    def gm_kq():
+        if (c := _chan(APP_GMAIL)):
+            return c
+        ds = sorted(_doc_json(_gmail_kho_path(), {}).values(), key=lambda r: r.get("luc", 0), reverse=True)
+        for r in ds:
+            r["co_xml"] = bool(tuyet_doi(r.get("xml")))
+            r["co_pdf"] = bool(tuyet_doi(r.get("pdf")))
+        return {"ok": True, "ds": ds}
+
+    @app.get(A + "/gmail/tep/{rid}/{kieu}")
+    def gm_tep(rid: str, kieu: str):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        r = _doc_json(_gmail_kho_path(), {}).get(rid) or {}
+        p = tuyet_doi(r.get(kieu)) if kieu in ("xml", "pdf") else None
+        if not p:
+            return _loi(ValueError("Chưa có file này."), 404)
+        return _tai_ve(p.read_bytes(), p.name, "application/pdf" if kieu == "pdf" else "application/xml")
+
+    @app.get(A + "/gmail/xem/{rid}")
+    def gm_xem(rid: str):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        r = _doc_json(_gmail_kho_path(), {}).get(rid) or {}
+        p = tuyet_doi(r.get("xml"))
+        if not p:
+            return HTMLResponse("Email này không đính kèm XML.", status_code=404)
+        ixml = thd("invoice_xml")
+        return HTMLResponse(ixml.render_html(ixml.parse_invoice(p.read_bytes())),
+                            headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
+
+    @app.post(A + "/gmail/xuat")
+    def gm_xuat():
+        if (c := _chan(APP_GMAIL)):
+            return c
+        ds = sorted(_doc_json(_gmail_kho_path(), {}).values(), key=lambda r: r.get("luc", 0), reverse=True)
+        if not ds:
+            return _loi(ValueError("Chưa quét được hoá đơn nào."))
+        return _tai_ve(xuat_gmail_excel(ds), f"HoaDonGmail_{dt.date.today():%Y%m%d}.xlsx", XLSX)
+
+    @app.post(A + "/gmail/zip")
+    def gm_zip():
+        if (c := _chan(APP_GMAIL)):
+            return c
+        buf = io.BytesIO()
+        n = 0
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for r in _doc_json(_gmail_kho_path(), {}).values():
+                for k in ("xml", "pdf"):
+                    f = tuyet_doi(r.get(k))
+                    if f:
+                        z.write(f, f.name)
+                        n += 1
+        if not n:
+            return _loi(ValueError("Chưa có file nào."))
+        return _tai_ve(buf.getvalue(), f"HoaDonGmail_{dt.date.today():%Y%m%d}.zip", "application/zip")
+
+    # ---------------- file tĩnh (đặt CUỐI để không nuốt đường /api)
+    @app.get(GOC + "/{ten}")
+    def hd_tinh(ten: str):
+        if ten not in WEB_FILES:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        if ly_do_chan(APP_TAI) and ly_do_chan(APP_GMAIL):
+            return JSONResponse({"error": "locked"}, status_code=403)
+        return FileResponse(str(WEB_DIR / ten), headers={"Cache-Control": "no-cache"})
