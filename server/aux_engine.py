@@ -155,7 +155,7 @@ async def pick_openrouter_free(key: str = "") -> str:
         if score > best_score:
             best, best_score = mid, score
     if not best:
-        best = "deepseek/deepseek-chat:free"
+        best = "deepseek/deepseek-v4-flash:free"
     _OR_FREE_CACHE.update(ts=now, model=best)
     return best
 

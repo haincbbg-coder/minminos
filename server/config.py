@@ -173,7 +173,7 @@ _DEFAULT = {
             "antigravity-cli": [],
             # Grok Build CLI: cung ly do, /provider/models hoi CLI roi nho lai.
             "grok-cli": [],
-            "openrouter": ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash-001", "deepseek/deepseek-chat"],
+            "openrouter": ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash-001", "deepseek/deepseek-v4.1-flash", "moonshotai/kimi-k3"],
         },
     },
     # Ảnh sinh bằng javis_generate_image.

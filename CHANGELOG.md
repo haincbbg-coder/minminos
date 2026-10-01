@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.2] - 2026-10-01
+### Cải thiện
+- **DeepSeek và Kimi K3 gọi công cụ ổn định hơn** qua OpenRouter và OpenAI Compatible: MinMin giữ lại phần "suy nghĩ" của model giữa các vòng gọi công cụ (đọc POS, Ads, Zalo, file...), đúng như hai hãng yêu cầu. Trước đây phần này bị bỏ nên việc nhiều bước có thể lỗi hoặc trả lời kém.
+- Gợi ý model OpenRouter mặc định thêm DeepSeek V4.1 Flash và Kimi K3.
+
 ## [26.10.1] - 2026-10-01
 ### Thêm mới
 - **Nút Cập nhật ngay trên thanh bên**, dưới nhóm Thiết lập. Bấm vào là MinMin hỏi "Có bản mới, cập nhật ngay?" với hai nút Đồng ý / Không. Có bản mới thì nút đổi màu có chấm đỏ, và một thẻ báo hiện lên ở góc màn hình.
