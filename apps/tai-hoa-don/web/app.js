@@ -207,7 +207,7 @@
         (r.co_pdf ? '<a class="nhan ok" href="' + API + "tep" + base + k + '/pdf">Trống đồng</a>' :
           r.pdf_loi ? '<span class="nhan loi" title="' + esc(r.pdf_loi) + '">Trống đồng: lỗi</span>' : "") +
         (r.co_goc ? '<a class="nhan ok" href="' + API + "tep" + base + k + '/goc">Gốc' + (r.goc_nguon === "Gmail" ? " (Gmail)" : "") + '</a>' :
-          r.goc_loi ? '<span class="nhan loi" title="' + esc(r.goc_loi) + '">Gốc: cần tải tay</span>' : "") +
+          r.goc_loi ? '<span class="nhan loi" title="' + esc(r.goc_loi) + '">Gốc: chưa tải được</span>' : "") +
         (r.co_zip ? '<a class="nhan" href="' + API + "tep" + base + k + '/zip">ZIP</a>' : "") +
         (r.goc_link ? '<a href="' + esc(r.goc_link) + '" target="_blank" rel="noopener noreferrer">Trang hãng</a>' : "");
       return '<tr><td><input type="checkbox" data-k="' + esc(r.key) + '"' + (chon.has(r.key) ? " checked" : "") + '></td>' +

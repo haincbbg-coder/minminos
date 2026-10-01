@@ -448,6 +448,12 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
             log(f"{base}: cổng thuế không trả XML, đã giữ file zip gốc.")
         c.pause(c.delay_download)
         xp = tuyet_doi(inv.get("_xml_path"))
+    # XML có thể đã tải ở lần trước, khi ấy vẫn cần đọc lại để tạo bản thể hiện.
+    if xp and not inv.get("_detail"):
+        try:
+            inv["_detail"] = ixml.parse_invoice(xp.read_bytes())
+        except Exception as e:
+            log(f"Không đọc được XML {base}: {e}")
     if "pdf" in kieu and not tuyet_doi(inv.get("_pdf_path")):
         if not browser:
             inv["_pdf_loi"] = "Máy chủ chưa có trình duyệt để in PDF (cài ở Thiết lập > Công cụ)."
@@ -467,6 +473,8 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
                 except Exception as e:
                     inv["_pdf_loi"] = str(e)[:200]
                     log(f"In PDF Trống đồng lỗi ({base}): {e}")
+            else:
+                inv["_pdf_loi"] = "Chưa có HTML hoặc chi tiết XML hợp lệ để tạo PDF."
     if "goc" in kieu and xp and not tuyet_doi(inv.get("_goc_path")):
         try:
             ten, pdf = prov.fetch_original_pdf(xp.read_bytes(), inv, log=lambda s: log("   " + s))
@@ -478,11 +486,19 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
             kq["goc"] = True
             log(f"Đã tải bản gốc ({ten}): {g.name}")
         except prov.ProviderError as e:
-            hang, url = prov.captcha_hint(xp.read_bytes())
-            inv["_goc_loi"] = (f"Hãng {hang} dùng captcha, cần tải tay hoặc Quét Gmail" if hang else str(e))[:200]
+            info = prov.manual_download_info(xp.read_bytes(), inv) or {}
+            url = info.get("url", "")
+            inv["_goc_loi"] = str(e)[:200]
             if link_an_toan(url):
                 inv["_goc_link"] = link_an_toan(url)
             log(f"Bản gốc chưa tải được: {inv['_goc_loi']}")
+    thieu = [x for x in ("xml", "pdf", "goc")
+             if (x == "xml" or x in kieu) and not tuyet_doi(inv.get(f"_{x}_path"))]
+    if cd["giu_zip"] and not tuyet_doi(inv.get("_zip_path")):
+        thieu.append("zip")
+    kq["thieu"] = thieu
+    if thieu:
+        log(f"{base}: còn thiếu {', '.join(TEN_LOAI_TEP[x] for x in thieu)}.")
     return kq
 
 
@@ -499,10 +515,41 @@ def tai_ds(v: Viec, mst: str, loai: str, keys: list[str], kieu) -> dict:
               "cài 'Trình duyệt' một lần (miễn phí). Vẫn tải XML.")
     kho = doc_kho(mst, loai)
     ds = [k for k in keys if k in kho]
+    if "goc" in kieu and loai == "purchase":
+        # Dùng những thư đã quét trước, không đăng nhập/quét thêm hộp thư trong tác vụ tải.
+        for ban in _doc_json(_gmail_kho_path(), {}).values():
+            pdf, xml = tuyet_doi(ban.get("pdf")), tuyet_doi(ban.get("xml"))
+            if not pdf or not xml:
+                continue
+            try:
+                det = thd("invoice_xml").parse_invoice(xml.read_bytes())
+                if str(det.get("mua_mst") or "") != mst:
+                    continue
+                hit = [k for k in ds if str(kho[k].get("nbmst") or "") == str(det.get("ban_mst") or "")
+                       and str(kho[k].get("khhdon") or "").upper() == str(det.get("khhdon") or "").upper()
+                       and str(kho[k].get("khmshdon") or "") == str(det.get("khmshdon") or "")
+                       and _so_hd(kho[k].get("shdon")) == _so_hd(det.get("shdon"))]
+                if len(hit) != 1 or tuyet_doi(kho[hit[0]].get("_goc_path")):
+                    continue
+                with pdf.open("rb") as f:
+                    if f.read(5) != b"%PDF-":
+                        continue
+                inv = kho[hit[0]]
+                inv["_goc_path"] = _chep_vao(inv, mst, pdf, "_goc.pdf")
+                inv["_goc_nguon"] = "Gmail"
+                inv.pop("_goc_loi", None)
+                v.log(f"Đã ghép PDF gốc từ Gmail đã quét: hoá đơn {inv.get('shdon')}.")
+            except Exception:
+                continue
     v.n = len(ds)
     n_luong = max(1, min(cd["luong"], len(ds) or 1))
     clients = [c] + [c.clone() for _ in range(n_luong - 1)]
     khoa = threading.Lock()
+    phien_luong = threading.local()
+
+    def gan_phien():
+        with khoa:
+            phien_luong.client = clients.pop()
     dem = {"ok": 0, "loi": 0, "goc": 0, "pdf": 0, "het_phien": False}
     v.log(f"Tải {len(ds)} hoá đơn ({', '.join(TEN_LOAI_TEP[x] for x in kieu)}) bằng {n_luong} luồng.")
 
@@ -511,9 +558,10 @@ def tai_ds(v: Viec, mst: str, loai: str, keys: list[str], kieu) -> dict:
         if v.huy.is_set() or dem["het_phien"]:
             return
         try:
-            r = tai_mot(clients[i % n_luong], mst, kho[k], kieu, v.log, cd, browser)
+            r = tai_mot(phien_luong.client, mst, kho[k], kieu, v.log, cd, browser)
             with khoa:
-                dem["ok"] += 1
+                dem["ok"] += int(not r["thieu"])
+                dem["loi"] += int(bool(r["thieu"]))
                 dem["goc"] += 1 if r["goc"] else 0
                 dem["pdf"] += 1 if r["pdf"] else 0
         except Exception as e:
@@ -529,12 +577,13 @@ def tai_ds(v: Viec, mst: str, loai: str, keys: list[str], kieu) -> dict:
             if v.i % 10 == 0:
                 ghi_kho(mst, loai, kho)
 
-    with ThreadPoolExecutor(max_workers=n_luong) as pool:
+    with ThreadPoolExecutor(max_workers=n_luong, initializer=gan_phien) as pool:
         list(pool.map(mot, enumerate(ds)))
     ghi_kho(mst, loai, kho)
     if dem["het_phien"]:
         raise RuntimeError("Phiên cổng thuế hết hạn giữa chừng. Đăng nhập lại rồi bấm Tải tiếp (file đã tải được giữ).")
-    v.log(f"Xong: {dem['ok']} hoá đơn, {dem['pdf']} PDF Trống đồng, {dem['goc']} bản gốc mới, {dem['loi']} lỗi.")
+    v.log(f"Xong: {dem['ok']} hoá đơn đủ file yêu cầu, {dem['pdf']} PDF Trống đồng mới, "
+          f"{dem['goc']} bản gốc mới, {dem['loi']} hoá đơn lỗi hoặc thiếu file.")
     return {"ok": dem["ok"], "loi": dem["loi"], "goc": dem["goc"], "pdf": dem["pdf"]}
 
 
@@ -867,7 +916,9 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "
         nb = (det or {}).get("ban_mst") or ""
         rid = re.sub(r"[^0-9A-Za-z_-]", "", f"{nb}_{(det or {}).get('khhdon') or r.get('_khhdon')}_{so}") \
             or uuid.uuid4().hex[:10]
-        if rid in kho and (kho[rid].get("xml") or kho[rid].get("pdf")):
+        cu = kho.get(rid) or {}
+        bo_sung = any(r.get(t) and not tuyet_doi(cu.get(t)) for t in ("xml", "pdf"))
+        if cu and not bo_sung:
             if not kho[rid].get("lien_ket"):
                 ket = lien_ket_gmail(kho[rid])
                 if ket:
@@ -882,7 +933,7 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "
                "so": so, "ngay_hd": (det or {}).get("ngay") or "",
                "ky_hieu": ((det or {}).get("khhdon") or r.get("_khhdon") or "").upper(),
                "tong": (det or {}).get("tong_tien") or 0, "thue": (det or {}).get("tien_thue") or 0,
-               "xml": None, "pdf": None, "luc": time.time()}
+               "xml": cu.get("xml"), "pdf": cu.get("pdf"), "luc": time.time()}
         if r.get("xml"):
             p = thu_muc / f"{stem}.xml"
             p.write_bytes(r["xml"])
@@ -1305,6 +1356,7 @@ def register(app: FastAPI) -> None:
                           "zip": "_zip_path"}
                 buf = io.BytesIO()
                 n = 0
+                doi_soat = []
                 with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
                     for inv in tat_ca:
                         for t in loai_tep:
@@ -1317,6 +1369,11 @@ def register(app: FastAPI) -> None:
                                     ten_trong = f.name
                                 z.write(f, ten_trong)
                                 n += 1
+                            doi_soat.append({"hoa_don": khoa_hd(inv), "loai_file": t,
+                                             "trang_thai": "da_co" if f else "con_thieu",
+                                             "file": ten_trong if f else "",
+                                             "ly_do": "" if f else inv.get(f"_{t}_loi", "Chưa tải được file")})
+                    z.writestr("doi-soat-file.json", json.dumps(doi_soat, ensure_ascii=False, indent=2))
                 if not n:
                     raise ValueError("Chưa có file loại này cho các hoá đơn đã chọn. Bấm Tải trước.")
                 ten = ("HTML_TrongDong_" if kieu == "html_zip" else "HoaDon_") + nhan

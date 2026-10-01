@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 from typing import Optional
 
 from openpyxl import Workbook
@@ -268,23 +269,33 @@ def html_to_pdf(html_path: str, pdf_path: str, browser: Optional[str] = None,
     if not browser:
         raise RuntimeError("Không tìm thấy Microsoft Edge hoặc Google Chrome để in PDF.")
     os.makedirs(os.path.dirname(pdf_path) or ".", exist_ok=True)
-    src = "file:///" + os.path.abspath(html_path).replace("\\", "/")
+    src = Path(html_path).resolve().as_uri()
     profile = tempfile.mkdtemp(prefix="tct_pdf_")
-    cmd = [browser, "--headless=new", "--disable-gpu", "--no-sandbox", "--no-pdf-header-footer",
-           f"--user-data-dir={profile}", f"--print-to-pdf={os.path.abspath(pdf_path)}", src]
+    # In vào file mới để lần chạy lỗi không nhận nhầm PDF cũ là thành công.
+    fd, pending = tempfile.mkstemp(suffix=".pdf", dir=os.path.dirname(os.path.abspath(pdf_path)))
+    os.close(fd)
+    cmd = [browser, "--headless=new", "--disable-gpu", "--disable-dev-shm-usage",
+           "--no-sandbox", "--no-pdf-header-footer",
+           f"--user-data-dir={profile}", f"--print-to-pdf={pending}", src]
     kw = {}
     if sys.platform.startswith("win"):
         kw["creationflags"] = 0x08000000  # CREATE_NO_WINDOW
     try:
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       timeout=timeout, **kw)
-    except subprocess.TimeoutExpired:
-        # MinMin: có bản Chrome in xong PDF rồi vẫn không tự thoát. Hết giờ thì xem file đã có chưa.
-        pass
+        try:
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=timeout, **kw)
+        except subprocess.TimeoutExpired:
+            # Một số bản Chrome đã in xong nhưng chưa tự thoát.
+            pass
+        with open(pending, "rb") as f:
+            valid = f.read(5) == b"%PDF-"
+        if not valid:
+            raise RuntimeError("Trình duyệt không tạo được PDF hợp lệ. Kiểm tra/cài lại Trình duyệt ở Công cụ.")
+        os.replace(pending, pdf_path)
     finally:
         shutil.rmtree(profile, ignore_errors=True)
-    if not os.path.isfile(pdf_path) or os.path.getsize(pdf_path) == 0:
-        raise RuntimeError("Trình duyệt không tạo được file PDF.")
+        if os.path.exists(pending):
+            os.unlink(pending)
     return pdf_path
 
 

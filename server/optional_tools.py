@@ -117,6 +117,9 @@ def _chrome_he_thong() -> str:
 # rút gọn sau, ba hệ điều hành trong cùng một danh sách - một thư mục build chỉ chứa đúng một
 # trong số này nên không cần hỏi đang chạy hệ nào.
 _BINARY_TRONG_BUILD = (
+    "chrome-headless-shell-linux64/chrome-headless-shell",
+    "chrome-headless-shell-linux-arm64/chrome-headless-shell",
+    "chrome-headless-shell-win64/chrome-headless-shell.exe",
     "chrome-linux/chrome",
     "chrome-win/chrome.exe",
     "chrome-mac/Chromium.app/Contents/MacOS/Chromium",
@@ -125,10 +128,10 @@ _BINARY_TRONG_BUILD = (
     "chrome-mac/headless_shell",
 )
 
-# TÊN file chạy. Đây mới là thứ bền: thư mục bọc ngoài đổi theo bản Playwright và theo kiến
-# trúc máy (`chrome-linux`, `chrome-linux64`, `chrome-linux-arm64`... - đọc thẳng trong
-# playwright-core mới thấy đủ), còn tên file thì không đổi.
-_TEN_FILE_CHAY = ("chrome", "chrome.exe", "headless_shell", "headless_shell.exe", "Chromium")
+# Giữ cả tên Chromium cũ và Chrome for Testing mới của Playwright.
+# Nguồn: packages/playwright-core/src/server/registry/index.ts, EXECUTABLE_PATHS.
+_TEN_FILE_CHAY = ("chrome", "chrome.exe", "headless_shell", "headless_shell.exe", "Chromium",
+                 "chrome-headless-shell", "chrome-headless-shell.exe", "Google Chrome for Testing")
 
 # Trần độ sâu khi quét. Bố cục sâu nhất đang biết là bản macOS:
 # chrome-mac/Chromium.app/Contents/MacOS/Chromium = 5 cấp. Có trần để một thư mục rác khổng lồ
