@@ -177,6 +177,8 @@
         if (u && u.dieu_khoan_rieng && !(await hoi(u.dieu_khoan_rieng))) return;
         thong.className = "knn-thong";
         thong.textContent = t("knn.dang_chuyen");
+        // App chạy trên trang riêng (giao diện đầy đủ của nó): mở tab mới, MinMin vẫn ở tab này.
+        if (u && u.duong_dan && !window.open(u.duong_dan, "_blank")) location.href = u.duong_dan;
       };
     });
     if (d.nha_phat_hanh) noiTaoMa(el);

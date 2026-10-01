@@ -3758,5 +3758,75 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 378,
+  "type": "APIRoute",
+  "path": "/apps/zalo-forwarder",
+  "name": "zf_goc",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 379,
+  "type": "APIRoute",
+  "path": "/apps/zalo-forwarder/",
+  "name": "zf_trang",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 380,
+  "type": "APIRoute",
+  "path": "/apps/zalo-forwarder/api/trang-thai",
+  "name": "zf_trang_thai",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 381,
+  "type": "APIRoute",
+  "path": "/apps/zalo-forwarder/api/rpc/{ham}",
+  "name": "zf_rpc",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 382,
+  "type": "APIRoute",
+  "path": "/apps/zalo-forwarder/api/upload",
+  "name": "zf_upload",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 383,
+  "type": "APIRoute",
+  "path": "/apps/zalo-forwarder/api/events",
+  "name": "zf_events",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 384,
+  "type": "APIRoute",
+  "path": "/apps/zalo-forwarder/{ten}",
+  "name": "zf_tinh",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]

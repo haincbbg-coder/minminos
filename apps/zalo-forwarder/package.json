@@ -1,0 +1,16 @@
+{
+  "name": "minmin-zalo-forwarder",
+  "version": "2.10.0-web.1",
+  "private": true,
+  "description": "Zalo Forwarder (TrungKienHa) chay tren web trong MinMin OS: nhieu tai khoan, chuyen tiep, dang nhom hang loat.",
+  "main": "server.js",
+  "author": "TrungKienHa",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "https-proxy-agent": "^7.0.6",
+    "image-size": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "zca-js": "^2.1.2"
+  }
+}

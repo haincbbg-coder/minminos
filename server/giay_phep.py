@@ -58,7 +58,8 @@ _KHOA = threading.Lock()
 # Các app trong Kết nối ngoài. `san_sang=False`: app đang được chuyển lên web, thẻ hiện "Sắp ra
 # mắt" và chưa mở được kể cả khi đã có mã (mã vẫn kích hoạt trước được).
 UNG_DUNG = (
-    {"id": "zalo_forwarder", "icon": "send", "san_sang": False, "dieu_khoan_rieng": "zalo"},
+    {"id": "zalo_forwarder", "icon": "send", "san_sang": True, "dieu_khoan_rieng": "zalo",
+     "duong_dan": "/apps/zalo-forwarder/"},
     {"id": "tai_hoa_don", "icon": "file-text", "san_sang": False, "dieu_khoan_rieng": ""},
     {"id": "quet_hoa_don_gmail", "icon": "mail", "san_sang": False, "dieu_khoan_rieng": ""},
     {"id": "dieu_khien_may", "icon": "hand", "san_sang": False, "dieu_khoan_rieng": "dieu_khien"},

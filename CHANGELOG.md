@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.4] - 2026-10-01
+### Thêm mới
+- **Zalo Forwarder chạy ngay trên trình duyệt**: trong Kết nối ngoài, thẻ Zalo Forwarder có nút **Mở** (cần mã kích hoạt). Đủ các tính năng của bản máy tính: đăng nhập Zalo bằng mã QR, nhiều tài khoản cùng lúc, tuyến chuyển tiếp có biên tập giá / thương hiệu / link, AI soạn tin, đăng nhóm hàng loạt kèm ảnh, nhắn bạn bè, nhật ký trực tiếp.
+- **Mỗi tài khoản Zalo một môi trường riêng**: trình duyệt riêng cố định cho từng tài khoản, và ô **proxy riêng** khi đăng nhập để các tài khoản không chung địa chỉ mạng.
+- Đang chuyển tiếp mà MinMin cập nhật hay khởi động lại thì **tự chạy lại**, không phải vào bấm.
+
 ## [26.10.3] - 2026-10-01
 ### Thêm mới
 - **Mục Kết nối ngoài** trong nhóm Kết nối & khách: nơi chứa các app riêng của TrungKienHa (Zalo Forwarder, Tải Hoá Đơn TCT, Quét hoá đơn Gmail, Điều khiển máy tính). Mỗi app mở khoá bằng **mã kích hoạt**, khoá theo máy và thời hạn. Các app đang được chuyển dần lên trình duyệt, thẻ hiện "Sắp ra mắt".

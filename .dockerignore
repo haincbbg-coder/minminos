@@ -97,3 +97,6 @@ server/javis.log
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Thư viện Node của app Kết nối ngoài (cài lúc build image hoặc lần đầu chạy)
+**/node_modules
