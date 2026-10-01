@@ -168,3 +168,8 @@ server/.mcp_agy_*.json
 server/settings.json.bak*
 # File ngữ cảnh Antigravity CLI sinh ra mỗi lượt chạy (rác của máy đang chạy, không phải mã)
 server/.javis-agy/
+
+# Giấy phép: khoá riêng nhà phát hành và mã máy KHÔNG BAO GIỜ vào repo
+giay-phep/
+**/giay-phep/
+*.pem
