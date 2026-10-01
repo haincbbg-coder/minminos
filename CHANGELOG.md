@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.5] - 2026-10-01
+### Cải thiện
+- **Mã kích hoạt của TrungKienHa có hiệu lực trên mọi bản MinMin**: gắn khoá công khai của nhà phát hành, nên mã cấp cho khách được máy khách nhận và mở đúng app.
+
 ## [26.10.4] - 2026-10-01
 ### Thêm mới
 - **Zalo Forwarder chạy ngay trên trình duyệt**: trong Kết nối ngoài, thẻ Zalo Forwarder có nút **Mở** (cần mã kích hoạt). Đủ các tính năng của bản máy tính: đăng nhập Zalo bằng mã QR, nhiều tài khoản cùng lúc, tuyến chuyển tiếp có biên tập giá / thương hiệu / link, AI soạn tin, đăng nhóm hàng loạt kèm ảnh, nhắn bạn bè, nhật ký trực tiếp.
