@@ -143,6 +143,15 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
         return d
 
     # Viettel S-Invoice - captcha trượt; mã bí mật có trong XML
+    if easyinvoice.detect(txt, inv or {}):
+        c = easyinvoice.find_code(txt, inv or {})
+        return std({"provider": easyinvoice.NAME, "url": easyinvoice.HOST_DEFAULT,
+                    "code": c, "method": "Nhập MST + mã + captcha", "mst": mst})
+    if misa.detect(txt, inv or {}):
+        from urllib.parse import quote
+        c = (inv or {}).get("_ma_tra_cuu") or misa.find_code(txt)
+        return {"provider": misa.NAME, "url": "https://www.meinvoice.vn/tra-cuu/?sc=" + quote(c or "", safe=""),
+                "code": c, "method": "Mã tra cứu", "mst": mst}
     if code == "0100109106":
         secret = viettel._secret(txt)
         if secret:
@@ -155,12 +164,9 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
                     "code": c or "(mã ở email)", "method": "reCAPTCHA", "mst": mst}, sh)
     # BKAV eHoadon - reCAPTCHA; MTC trong XML hoặc email
     if code == "0101360697":
-        mtc = ""
-        for f in ("MTC", "MaTraCuu", "MTCuu", "MaBaoMat"):
-            mtc = C.ttkhac(txt, f)
-            if mtc:
-                break
-        url = f"https://tracuu.ehoadon.vn/{mtc}" if mtc else "https://tracuu.ehoadon.vn"
+        from urllib.parse import quote
+        mtc = bkav.find_code(txt, inv or {})
+        url = "https://tchd.ehoadon.vn/TCHD" + ("?MTC=" + quote(mtc, safe="") if mtc else "")
         return std({"provider": "BKAV eHoadon", "url": url,
                     "code": mtc or "(mã ở email - Quét Gmail)", "method": "reCAPTCHA", "mst": mst})
     # MY SOFTWARE (myinvoice) - mã bảo mật gửi qua email

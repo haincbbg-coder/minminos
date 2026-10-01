@@ -10,6 +10,7 @@
   var loai = "purchase";
   var dsHd = [];
   var chon = new Set();
+  var dsG = [], gChon = new Set(), hdLoc = [], gmLoc = [];
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -195,10 +196,9 @@
   }
 
   function veBang() {
-    var f = $("#loc").value.trim().toLowerCase();
-    var ds = !f ? dsHd : dsHd.filter(function (r) {
-      return (String(r.doi_tac) + " " + r.mst_doi_tac + " " + r.so + " " + r.ky_hieu).toLowerCase().indexOf(f) >= 0;
-    });
+    var ds = hdLoc = InvoiceUI.filter(dsHd, readFilter("hd"));
+    var valid = new Set(ds.map(function(r) { return r.key; }));
+    chon.forEach(function(k) { if (!valid.has(k)) chon.delete(k); });
     var base = "/" + encodeURIComponent(dn) + "/" + loai + "/";
     $("#bangHd").innerHTML = ds.slice(0, 2000).map(function (r) {
       var k = encodeURIComponent(r.key);
@@ -209,7 +209,7 @@
         (r.co_goc ? '<a class="nhan ok" href="' + API + "tep" + base + k + '/goc">Gốc' + (r.goc_nguon === "Gmail" ? " (Gmail)" : "") + '</a>' :
           r.goc_loi ? '<span class="nhan loi" title="' + esc(r.goc_loi) + '">Gốc: chưa tải được</span>' : "") +
         (r.co_zip ? '<a class="nhan" href="' + API + "tep" + base + k + '/zip">ZIP</a>' : "") +
-        (r.goc_link ? '<a href="' + esc(r.goc_link) + '" target="_blank" rel="noopener noreferrer">Trang hãng</a>' : "");
+        '<button class="nut phu" data-lookup="' + esc(r.key) + '">Mã tra cứu / Trang hãng</button>';
       return '<tr><td><input type="checkbox" data-k="' + esc(r.key) + '"' + (chon.has(r.key) ? " checked" : "") + '></td>' +
         '<td class="ngay">' + esc(ngayVN(r.ngay)) + '</td><td>' + esc(r.so) + '</td><td>' + esc(r.ky_hieu) + '</td>' +
         '<td class="doi">' + esc(r.doi_tac) + (r.may_tinh_tien ? ' <span class="nhan">MTT</span>' : "") + (r.tu_gmail ? ' <span class="nhan">Từ Gmail</span>' : "") + '</td><td>' + esc(r.mst_doi_tac) + '</td>' +
@@ -219,16 +219,18 @@
     $("#bangHd").querySelectorAll("input[data-k]").forEach(function (c) {
       c.onchange = function () { if (c.checked) chon.add(c.dataset.k); else chon.delete(c.dataset.k); demChon(); };
     });
+    $("#bangHd").querySelectorAll("[data-lookup]").forEach(function(b) { b.onclick = function() { openLookup("tct", b.dataset.lookup); }; });
     demChon();
   }
   function demChon() {
-    $("#soChon").textContent = chon.size ? "Đã chọn " + chon.size + " hoá đơn" : "";
+    var all = $("#chonHet"); all.checked = hdLoc.length > 0 && chon.size === hdLoc.length; all.indeterminate = chon.size > 0 && chon.size < hdLoc.length;
+    $("#soChon").textContent = "Đang lọc " + hdLoc.length + "/" + dsHd.length + " · Đã chọn " + chon.size;
     $("#phamViTai").textContent = chon.size ? "Áp dụng cho " + chon.size + " hoá đơn đã chọn (cả nút Xuất)"
-      : "Áp dụng cho mọi hoá đơn " + (loai === "purchase" ? "mua vào" : "bán ra") + " trong khoảng ngày";
+      : "Áp dụng cho " + hdLoc.length + " hoá đơn đang lọc";
   }
   function phamViXuat(them) {
     var d = { mst: dn, tu: $("#tu").value, den: $("#den").value };
-    if (chon.size) { d.keys = Array.from(chon); d.loai = loai; }
+    d.keys = chon.size ? Array.from(chon) : hdLoc.map(function(r) { return r.key; }); d.loai = loai;
     for (var k in them) d[k] = them[k];
     return d;
   }
@@ -294,8 +296,9 @@
   }
   async function taiXml() {
     try {
+      if (!hdLoc.length) throw new Error("Không có hoá đơn trong bộ lọc.");
       var kieu = Array.prototype.map.call(document.querySelectorAll("[data-tai]:checked"), function (c) { return c.dataset.tai; });
-      var r = await goi("tai", { json: { mst: dn, loai: loai, keys: chon.size ? Array.from(chon) : null,
+      var r = await goi("tai", { json: { mst: dn, loai: loai, keys: chon.size ? Array.from(chon) : hdLoc.map(function(r) { return r.key; }),
         tu: $("#tu").value, den: $("#den").value, kieu: kieu } });
       bao("Đang tải " + r.so + " hoá đơn.");
       theoDoi(r.viec, viecTai, function () { chon.clear(); taiBang(); });
@@ -346,18 +349,112 @@
       $("#nutGoogle").classList.toggle("tat", !c.google.co_client);
       if (!c.google.co_client) $("#hopClient").open = true;
       var k = await goi("gmail/ket-qua");
-      $("#bangGmail").innerHTML = k.ds.map(function (r) {
+      dsG = k.ds; veGmail();
+    } catch (e) { bao(e.message); }
+  }
+
+
+  function veGmail() {
+    gmLoc = InvoiceUI.filter(dsG, readFilter("gm"));
+    var valid = new Set(gmLoc.map(function(r) { return r.id; }));
+    gChon.forEach(function(k) { if (!valid.has(k)) gChon.delete(k); });
+      $("#bangGmail").innerHTML = gmLoc.map(function (r) {
         var id = encodeURIComponent(r.id);
         var file = (r.co_xml ? '<a href="' + API + "gmail/xem/" + id + '" target="_blank" rel="noopener">Xem</a><a href="' + API + "gmail/tep/" + id + '/xml">XML</a>' : "") +
           (r.co_pdf ? '<a href="' + API + "gmail/tep/" + id + '/pdf">PDF</a>' : "") +
           (r.link ? '<a href="' + esc(r.link) + '" target="_blank" rel="noopener noreferrer">Trang tra cứu</a>' : "") +
-          (r.ma_tra_cuu ? '<span class="nhan">Mã ' + esc(r.ma_tra_cuu) + '</span>' : "");
-        return '<tr><td class="ngay">' + esc(ngayVN(r.ngay_hd)) + "</td><td>" + esc(r.so) + '</td><td class="doi">' + esc(r.ban_ten || r.tu) +
+          '<button class="nut phu" data-glookup="' + esc(r.id) + '">Mã tra cứu</button>';
+        return '<tr><td><input type="checkbox" data-gid="' + esc(r.id) + '"' + (gChon.has(r.id) ? " checked" : "") + '></td><td class="ngay">' + esc(ngayVN(InvoiceUI.date(r))) + (!r.ngay_hd ? '<small class="nho"> (email)</small>' : '') + "</td><td>" + esc(r.so) + '</td><td class="doi">' + esc(r.ban_ten || r.tu) +
           "</td><td>" + esc(r.hop_thu || "") + '</td><td class="so">' + (r.tong ? tien(r.tong) : "") + "</td><td>" + esc(r.nha_cung_cap) + "</td><td>" +
           (r.can_tai_tay ? '<span class="nhan loi">Cần tải tay</span>' : "") + esc(r.trang_thai) + "</td><td>" +
           (r.lien_ket ? '<span class="nhan ok" title="MST ' + esc(r.lien_ket.mst) + '">Đã ghép</span>' : "") + "</td><td>" + file + "</td></tr>";
-      }).join("") || '<tr><td colspan="9" class="nho">Chưa quét. Thêm tài khoản Gmail, chọn khoảng ngày rồi bấm Quét.</td></tr>';
-    } catch (e) { bao(e.message); }
+      }).join("") || '<tr><td colspan="10" class="nho">Chưa quét. Thêm tài khoản Gmail, chọn khoảng ngày rồi bấm Quét.</td></tr>';
+
+    $("#bangGmail").querySelectorAll("[data-gid]").forEach(function(c) { c.onchange = function() { if(c.checked) gChon.add(c.dataset.gid); else gChon.delete(c.dataset.gid); demGmail(); }; });
+    $("#bangGmail").querySelectorAll("[data-glookup]").forEach(function(b) { b.onclick = function() { openLookup("gmail",b.dataset.glookup); }; });
+    demGmail();
+  }
+  function demGmail() {
+    var a = $("#gChonHet"); a.checked = gmLoc.length > 0 && gChon.size === gmLoc.length; a.indeterminate = gChon.size > 0 && gChon.size < gmLoc.length;
+    $("#gmCount").textContent = "Đang lọc " + gmLoc.length + "/" + dsG.length + " · Đã chọn " + gChon.size + ". Tải/xuất/in dùng " + (gChon.size || gmLoc.length) + " dòng này.";
+  }
+  function gmailScope() {
+    var ids = gChon.size ? Array.from(gChon) : gmLoc.map(function(r) { return r.id; });
+    if (!ids.length) throw new Error("Không có hoá đơn trong bộ lọc.");
+    return {ids:ids};
+  }
+
+  async function gmailExport(type) { try { await taiFile("gmail/" + type,gmailScope()); } catch(e) { bao(e.message); } }
+  function readFilter(prefix) {
+    function value(id) { return $("#" + prefix + id).value; }
+    return {q:prefix === "hd" ? $("#loc").value : value("Query"),supplier:value("Supplier"),number:value("Number"),
+      min:value("Min"),max:value("Max"),file:value("File"),sort:value("Sort"),
+      from:prefix === "gm" ? $("#gTu").value : "",to:prefix === "gm" ? $("#gDen").value : ""};
+  }
+  function buildFilters(prefix, table) {
+    var box = document.createElement("div"); box.className = "invoice-filters";
+    box.innerHTML = (prefix === "gm" ? '<label>Tìm kiếm<input id="gmQuery" type="search" placeholder="Tên, MST, số, ký hiệu" /></label>' : '') +
+      '<label>Nhà cung cấp / MST<input id="' + prefix + 'Supplier" type="search" placeholder="Tên người bán hoặc MST" /></label>' +
+      '<label>Số hoá đơn<input id="' + prefix + 'Number" type="search" /></label>' +
+      '<label>Số tiền từ<input id="' + prefix + 'Min" type="number" step="any" /></label>' +
+      '<label>Đến số tiền<input id="' + prefix + 'Max" type="number" step="any" /></label>' +
+      '<label>Chứng từ<select id="' + prefix + 'File"><option value="">Tất cả</option><option value="pdf">Có PDF</option><option value="missing">Chưa có PDF</option><option value="xml">Có XML</option></select></label>' +
+      '<label>Sắp xếp<select id="' + prefix + 'Sort">' + [['date-desc','Ngày mới trước'],['date-asc','Ngày cũ trước'],['amount-asc','Số tiền nhỏ → lớn'],['amount-desc','Số tiền lớn → nhỏ'],['name-asc','Tên A → Z'],['name-desc','Tên Z → A'],['number-asc','Số HĐ tăng dần'],['number-desc','Số HĐ giảm dần']].map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('') + '</select></label>' +
+      '<button class="nut" type="button" data-reset>Đặt lại bộ lọc</button>' + (prefix === "gm" ? '<p id="gmCount" class="nho"></p>' : '');
+    $(table).closest(".cuon").before(box);
+    box.querySelectorAll("input,select").forEach(function(e) { e.oninput = e.onchange = prefix === "gm" ? veGmail : veBang; });
+    box.querySelector("[data-reset]").onclick = function() { box.querySelectorAll("input").forEach(function(e){e.value="";}); $("#"+prefix+"File").value=""; $("#"+prefix+"Sort").value="date-desc"; if(prefix === "hd") $("#loc").value=""; (prefix === "gm" ? veGmail : veBang)(); };
+  }
+  function buildPeriod(prefix, from, to, refresh) {
+    var box=document.createElement("div"); box.className="hang period-filter";
+    var opts=[['custom','Tuỳ chọn'],['all','Tất cả ngày'],['today','Hôm nay'],['yesterday','Hôm qua'],['last7','7 ngày qua'],['last30','30 ngày qua'],['last90','90 ngày qua'],['lastmonth','Tháng trước'],['week','Đầu tuần đến nay'],['month','Đầu tháng đến nay'],['year','Cả năm'],['h1','6 tháng đầu năm'],['h2','6 tháng cuối năm']];
+    for(var m=1;m<=12;m++) opts.push(['m'+m,'Tháng '+m]);
+    for(var q=1;q<=4;q++) opts.push(['q'+q,'Quý '+q]);
+    box.innerHTML='<label>Kỳ thời gian<select id="'+prefix+'Period">'+opts.map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('')+'</select></label><label>Năm<input id="'+prefix+'Year" type="number" min="2000" max="2100" value="'+new Date().getFullYear()+'" /></label>';
+    $(from).closest(".hang").before(box);
+    function change() { var id=$("#"+prefix+"Period").value; if(id==='custom') return; var dates=InvoiceUI.period(id,$("#"+prefix+"Year").value); $(from).value=dates[0]; $(to).value=dates[1]; refresh(); }
+    $("#"+prefix+"Period").onchange=$("#"+prefix+"Year").onchange=change;
+    [from,to].forEach(function(id){$(id).addEventListener("change",function(){ $("#"+prefix+"Period").value='custom'; if(prefix==='gm') refresh(); });});
+  }
+  var lookupContext=null;
+  function drawLookup(data) {
+    $("#lookupCode").value=data.code || "";
+    $("#lookupNote").textContent=data.code ? "Mã lấy từ XML, Gmail hoặc bạn đã nhập." : "Chưa có mã trong nguồn đã đọc. Lấy mã trong email hoá đơn rồi nhập tại đây; API captcha không tạo ra mã tra cứu.";
+    $("#lookupLink").hidden=!data.url;
+    if(data.url) $("#lookupLink").href=data.url; else $("#lookupLink").removeAttribute("href");
+  }
+  async function openLookup(kind,id) {
+    try {
+      lookupContext={kind:kind,id:id};
+      if(kind==='gmail') { var r=dsG.find(function(r){return r.id===id;}); drawLookup({code:r.ma_tra_cuu,url:r.link}); }
+      else drawLookup(await goi('tra-cuu-hang',{json:{mst:dn,loai:loai,key:id}}));
+      $("#lookupDialog").showModal();
+    } catch(e) { bao(e.message); }
+  }
+  var capConfig={keys:{}};
+  function showCap(c) { capConfig=c; $("#capProvider").value=c.provider; $("#capEnabled").checked=c.enabled; capPlaceholder(); }
+  function capPlaceholder() { var saved=capConfig.keys[$("#capProvider").value]; $("#capKey").value=""; $("#capKey").placeholder=saved ? "Đã lưu (để trống giữ nguyên)" : "Nhập API key"; $("#capStatus").textContent=saved ? "Đã có key dịch vụ này" : "Chưa có key dịch vụ này"; }
+  async function saveCap(remove) {
+    try { showCap(await goi('captcha-api',{json:{provider:$("#capProvider").value,api_key:$("#capKey").value,enabled:remove?false:$("#capEnabled").checked,xoa_key:remove}})); bao("Đã lưu cấu hình captcha."); } catch(e) { bao(e.message); }
+  }
+  function setupTools() {
+    buildFilters('hd','#bangHd'); buildFilters('gm','#bangGmail');
+    buildPeriod('hd','#tu','#den',function(){chon.clear();taiBang();}); buildPeriod('gm','#gTu','#gDen',veGmail);
+    goi('captcha-api').then(showCap).catch(function(e){bao(e.message);});
+    $("#capProvider").onchange=capPlaceholder;
+    $("#capBalance").onclick=async function(){ this.disabled=true; try{ var b=await goi('captcha-api/so-du',{json:{provider:$("#capProvider").value}}); $("#capStatus").textContent="Số dư: "+b.balance+" USD"; }catch(e){bao(e.message);}finally{this.disabled=false;} };
+    $("#captchaForm").onsubmit=function(e){e.preventDefault();saveCap(false);}; $("#capDelete").onclick=function(){saveCap(true);};
+    $("#lookupClose").onclick=function(){$("#lookupDialog").close();};
+    $("#lookupCode").oninput=function(){ $("#lookupLink").hidden=true; $("#lookupNote").textContent="Bấm Lưu mã để cập nhật đường dẫn tra cứu."; };
+    $("#lookupCopy").onclick=async function(){ try { if(!$("#lookupCode").value) throw new Error("Chưa có mã để sao chép."); await navigator.clipboard.writeText($("#lookupCode").value); bao("Đã sao chép mã tra cứu."); } catch(e){bao(e.message);} };
+    $("#lookupForm").onsubmit=async function(e){
+      e.preventDefault(); try {
+        var code=$("#lookupCode").value;
+        if(lookupContext.kind==='gmail') { await goi('gmail/ma-tra-cuu',{json:{id:lookupContext.id,code:code}}); await taiGmail(); var r=dsG.find(function(r){return r.id===lookupContext.id;}); drawLookup({code:r.ma_tra_cuu,url:r.link}); }
+        else drawLookup(await goi('tra-cuu-hang',{json:{mst:dn,loai:loai,key:lookupContext.id,code:code}}));
+        bao("Đã lưu mã tra cứu.");
+      } catch(e){bao(e.message);}
+    };
   }
 
   // ---------------- gắn sự kiện
@@ -399,17 +496,14 @@
       try { await taiFile("xuat", phamViXuat({ kieu: "pdf_gop", che_do: m })); this.closest("details").open = false; } catch (e) { bao(e.message); }
     };
     $("#gGhep").onclick = async function () {
-      try { var r = await goi("gmail/ghep-lai", { method: "POST" }); bao("Ghép thêm " + r.ghep + " hoá đơn có sẵn, thêm mới " + r.moi + " hoá đơn vào Tải Hoá Đơn."); taiGmail(); }
+      try { var r = await goi("gmail/ghep-lai", { json: gmailScope() }); bao("Ghép thêm " + r.ghep + " hoá đơn có sẵn, thêm mới " + r.moi + " hoá đơn vào Tải Hoá Đơn."); taiGmail(); }
       catch (e) { bao(e.message); }
     };
     $("#nutDangXuat").onclick = async function () { await goi("dang-xuat/" + encodeURIComponent(dn), { method: "POST" }); taiDn(); };
     $("#loc").oninput = veBang;
     $("#chonHet").onchange = function () {
       var bat = this.checked;
-      $("#bangHd").querySelectorAll("input[data-k]").forEach(function (c) {
-        c.checked = bat; if (bat) chon.add(c.dataset.k); else chon.delete(c.dataset.k);
-      });
-      demChon();
+      hdLoc.forEach(function(r) { if(bat) chon.add(r.key); else chon.delete(r.key); }); veBang();
     };
     document.querySelectorAll("[data-xuat]").forEach(function (b) {
       b.onclick = async function () {
@@ -452,8 +546,11 @@
         theoDoi(r.viec, viecGmail, taiGmail);
       } catch (e) { bao(e.message); }
     };
-    $("#gXuat").onclick = function () { taiFile("gmail/xuat").catch(function (e) { bao(e.message); }); };
-    $("#gZip").onclick = function () { taiFile("gmail/zip").catch(function (e) { bao(e.message); }); };
+    $("#gXuat").onclick = function () { gmailExport("xuat"); };
+    $("#gZip").onclick = function () { gmailExport("zip"); };
+    $("#gIn").onclick = function () { gmailExport("pdf-gop"); };
+    $("#gChonHet").onchange = function() { var checked = this.checked; gmLoc.forEach(function(r) { if(checked) gChon.add(r.id); else gChon.delete(r.id); }); veGmail(); };
+    $("#gTai").onclick = async function() { try { var r = await goi("gmail/tai",{json:gmailScope()}); theoDoi(r.viec,viecGmail,taiGmail); } catch(e) { bao(e.message); } };
   }
 
   document.addEventListener("click", function (ev) {
@@ -463,6 +560,7 @@
   async function batDau() {
     datNgayMacDinh($("#tu"), $("#den"));
     datNgayMacDinh($("#gTu"), $("#gDen"));
+    setupTools();
     gan();
     var s;
     try { s = await goi("trang-thai"); } catch (e) { bao(e.message); return; }
