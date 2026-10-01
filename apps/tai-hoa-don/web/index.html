@@ -129,25 +129,43 @@
       <div class="khoa-app" id="khoaGmail" hidden></div>
       <div id="boCucGmail">
         <div class="the">
-          <h2>Hộp thư Gmail</h2>
-          <form id="fGmail" class="hang" autocomplete="off">
-            <input name="email" type="email" placeholder="tenban@gmail.com" required />
-            <input name="mat_khau" type="password" placeholder="Mật khẩu ứng dụng 16 ký tự" autocomplete="new-password" />
-            <button type="submit" class="nut">Lưu</button>
-          </form>
-          <details class="nho">
-            <summary>Lấy mật khẩu ứng dụng Gmail thế nào?</summary>
+          <h2>Tài khoản Gmail</h2>
+          <ul id="dsGmail" class="ds-gmail"></ul>
+          <div class="hang">
+            <a class="nut chinh" id="nutGoogle" href="api/gmail/google/bat-dau">Đăng nhập bằng Google</a>
+            <span class="nho">Dùng được cho mọi tài khoản, kể cả bật xác minh 2 bước (g.co/sc, mã PIN, khoá bảo mật). Nhiều tài khoản thì bấm lại cho từng cái.</span>
+          </div>
+          <details class="nho" id="hopClient">
+            <summary>Cài đặt Đăng nhập bằng Google (làm một lần)</summary>
             <ol>
-              <li>Bật Xác minh 2 bước cho tài khoản Google.</li>
-              <li>Vào myaccount.google.com, mục Bảo mật, tìm "Mật khẩu ứng dụng", tạo một mật khẩu tên "MinMin".</li>
-              <li>Dán 16 ký tự Google đưa vào ô trên. Không dùng mật khẩu Gmail thường.</li>
-              <li>Trong Gmail, Cài đặt, Chuyển tiếp và POP/IMAP: bật IMAP.</li>
+              <li>Vào console.cloud.google.com, tạo một dự án (vd "MinMin").</li>
+              <li>Mục APIs &amp; Services, Library: bật <b>Gmail API</b>.</li>
+              <li>Mục OAuth consent screen: chọn External, điền tên app, thêm quyền <code>gmail.readonly</code>, rồi bấm Publish app.</li>
+              <li>Mục Credentials, Create credentials, OAuth client ID, loại <b>Web application</b>. Ở "Authorized redirect URIs" dán đúng dòng này:
+                <div class="hang"><code id="duongVe"></code><button type="button" class="nut" id="chepVe">Chép</button></div></li>
+              <li>Dán Client ID và Client secret Google đưa vào đây rồi bấm Lưu.</li>
             </ol>
+            <form id="fClient" class="hang" autocomplete="off">
+              <input name="client_id" placeholder="....apps.googleusercontent.com" />
+              <input name="client_secret" type="password" placeholder="Client secret" autocomplete="new-password" />
+              <button type="submit" class="nut">Lưu</button>
+            </form>
+            <p>Lúc đăng nhập, Google có thể báo "Google chưa xác minh ứng dụng này": bấm Nâng cao, rồi Đi tới (tên app). Đó là app của chính bố.</p>
+          </details>
+          <details class="nho">
+            <summary>Hoặc dùng mật khẩu ứng dụng 16 ký tự</summary>
+            <form id="fGmail" class="hang" autocomplete="off">
+              <input name="email" type="email" placeholder="tenban@gmail.com" required />
+              <input name="mat_khau" type="password" placeholder="Mật khẩu ứng dụng 16 ký tự" autocomplete="new-password" />
+              <button type="submit" class="nut">Thêm</button>
+            </form>
+            <p>Mật khẩu ứng dụng tạo ở myaccount.google.com/apppasswords (cần bật xác minh 2 bước). Không dán mật khẩu Gmail thường vào đây. Gmail phải bật IMAP.</p>
           </details>
           <div class="thong" id="thongGmail"></div>
         </div>
         <div class="the">
           <div class="hang thanh-cong-cu">
+            <select id="gTk" title="Tài khoản Gmail"></select>
             <label>Từ<input type="date" id="gTu" /></label>
             <label>Đến<input type="date" id="gDen" /></label>
             <label class="tich"><input type="checkbox" id="gChiMoi" /> Chỉ email mới từ lần quét trước</label>
@@ -165,7 +183,7 @@
         <div class="the">
           <div class="cuon">
             <table class="bang">
-              <thead><tr><th>Ngày HĐ</th><th>Số</th><th>Người bán</th><th class="so">Tổng</th><th>Hãng HĐ</th><th>Trạng thái</th><th>File</th></tr></thead>
+              <thead><tr><th>Ngày HĐ</th><th>Số</th><th>Người bán</th><th>Hộp thư</th><th class="so">Tổng</th><th>Hãng HĐ</th><th>Trạng thái</th><th>File</th></tr></thead>
               <tbody id="bangGmail"></tbody>
             </table>
           </div>

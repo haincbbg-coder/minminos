@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.8] - 2026-10-01
+### Thêm mới
+- **Quét hoá đơn Gmail: Đăng nhập bằng Google.** Tài khoản bật xác minh 2 bước kiểu g.co/sc, mã PIN, khoá bảo mật giờ quét được: bấm nút, đăng nhập ngay trên trang Google, MinMin chỉ nhận quyền đọc thư. Cài Google OAuth Client một lần, trang có hướng dẫn từng bước.
+- **Nhiều tài khoản Gmail**: thêm bao nhiêu hộp thư tuỳ ý (Google hoặc mật khẩu ứng dụng), chọn hộp thư khi quét, bảng kết quả ghi rõ hộp thư nguồn.
+### Sửa lỗi
+- Dán nhầm mật khẩu Gmail thường giờ bị chặn ngay lúc lưu, kèm lời chỉ dẫn, thay vì quét xong mới báo lỗi tiếng Anh khó hiểu.
+
 ## [26.10.7] - 2026-10-01
 ### Thêm mới
 - **Tải Hoá Đơn TCT chạy trên trình duyệt** (Kết nối ngoài, cần mã kích hoạt): lưu nhiều doanh nghiệp, đăng nhập cổng hoadondientu.gdt.gov.vn bằng captcha ngay trên trang, tra cứu mua vào / bán ra (cả hoá đơn máy tính tiền), tải XML và PDF gốc của hãng, xem hoá đơn, xuất Excel, bảng kê thuế GTGT, chi tiết mặt hàng, ZIP, và xem cảnh báo.

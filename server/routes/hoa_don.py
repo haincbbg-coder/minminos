@@ -450,16 +450,166 @@ def _gmail_kho_path() -> Path:
     return goc_du_lieu() / "gmail" / "ket-qua.json"
 
 
-def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool) -> dict:
-    gs, ixml = thd("gmail_scan"), thd("invoice_xml")
+# ---- tài khoản Gmail: mật khẩu ứng dụng (IMAP) hoặc Đăng nhập bằng Google (OAuth, Gmail API)
+#
+# Tài khoản bật xác minh 2 bước kiểu g.co/sc, mã PIN, khoá bảo mật... không đăng nhập IMAP bằng
+# mật khẩu thường được (Google trả "Application-specific password required"). Đăng nhập bằng
+# Google đưa người dùng sang CHÍNH trang Google để qua mọi bước đó, MinMin chỉ nhận về quyền
+# ĐỌC thư (gmail.readonly) và không bao giờ thấy mật khẩu.
+
+GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
+GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
+GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
+_OAUTH_STATE: dict[str, tuple[float, str]] = {}
+
+
+def ds_gmail(ch: Optional[dict] = None) -> dict:
+    """{email: {"kieu": "mk"|"google", "mk"|"refresh": <mã hoá>}}. Đọc luôn cấu hình cũ (1 Gmail)."""
+    ch = ch or doc_cau_hinh()
+    ds = dict(ch.get("gmail_ds") or {})
+    cu = ch.get("gmail") or {}
+    if cu.get("email") and cu["email"] not in ds:
+        ds[cu["email"]] = {"kieu": "mk", "mk": cu.get("mk", "")}
+    return ds
+
+
+def luu_gmail(email: str, tk: Optional[dict]) -> None:
     ch = doc_cau_hinh()
-    mail = (ch["gmail"].get("email") or "").strip()
-    mk = giai_ma(ch["gmail"].get("mk", ""))
-    if not (mail and mk):
-        raise RuntimeError("Chưa nhập Gmail và mật khẩu ứng dụng.")
-    moc = int(ch["gmail_moc"].get(mail, 0) or 0) if chi_moi else 0
-    sc = gs.GmailScanner(mail, mk, log=v.log)
-    sc.connect()
+    ds = ds_gmail(ch)
+    if tk is None:
+        ds.pop(email, None)
+    else:
+        ds[email] = tk
+    ch["gmail_ds"] = ds
+    ch["gmail"] = {}
+    ghi_cau_hinh(ch)
+
+
+def google_client() -> tuple[str, str]:
+    g = doc_cau_hinh().get("google_oauth") or {}
+    return g.get("client_id", ""), giai_ma(g.get("client_secret", ""))
+
+
+def google_access_token(refresh: str) -> str:
+    import requests
+    cid, sec = google_client()
+    if not (cid and sec):
+        raise RuntimeError("Chưa cài Google OAuth Client cho MinMin (mục Đăng nhập bằng Google).")
+    r = requests.post(GOOGLE_TOKEN, data={"client_id": cid, "client_secret": sec, "refresh_token": refresh,
+                                          "grant_type": "refresh_token"}, timeout=30)
+    d = r.json() if r.content else {}
+    if r.status_code != 200 or not d.get("access_token"):
+        if d.get("error") == "invalid_grant":
+            raise RuntimeError("Quyền đọc Gmail đã hết hạn hoặc bị thu hồi. Bấm Đăng nhập bằng Google lại cho tài khoản này.")
+        raise RuntimeError(f"Google từ chối làm mới quyền: {d.get('error_description') or d.get('error') or r.status_code}")
+    return d["access_token"]
+
+
+def tao_bo_quet_google(email: str, refresh: str, log):
+    """Bộ quét đọc thư qua Gmail API thay cho IMAP. Kế thừa GmailScanner nên phần nhận diện hoá
+    đơn, tách đính kèm, cào PDF gốc giữ y nguyên; chỉ thay cách tìm và lấy thư."""
+    import base64
+    import requests
+    gs = thd("gmail_scan")
+
+    class BoQuetGoogle(gs.GmailScanner):
+        def __init__(self):
+            super().__init__(email, "", log=log)
+            self._tok = ""
+            self._ts_max = 0
+            self._s = requests.Session()
+
+        def connect(self):
+            self.log(f"Kết nối Gmail {email} (Đăng nhập bằng Google)...")
+            self._tok = google_access_token(refresh)
+            self._s.headers["Authorization"] = "Bearer " + self._tok
+
+        def close(self):
+            self._s.close()
+
+        def _get(self, url, params=None):
+            for lan in (1, 2):
+                r = self._s.get(url, params=params, timeout=60)
+                if r.status_code == 401 and lan == 1:
+                    self.connect()
+                    continue
+                if r.status_code == 429 and lan == 1:
+                    time.sleep(5)
+                    continue
+                r.raise_for_status()
+                return r.json()
+
+        def _search_uids(self, d_from=None, d_to=None, since_uid=None):
+            if since_uid:
+                q = f"after:{int(since_uid)}"
+            else:
+                a = dt.datetime.strptime(d_from, "%d-%b-%Y").date()
+                b = dt.datetime.strptime(d_to, "%d-%b-%Y").date()
+                q = f"after:{a:%Y/%m/%d} before:{b:%Y/%m/%d}"
+            ids, tok = [], None
+            while True:
+                p = {"q": q, "maxResults": 500, "includeSpamTrash": "false"}
+                if tok:
+                    p["pageToken"] = tok
+                d = self._get(GMAIL_API + "/messages", p)
+                ids += [m["id"] for m in d.get("messages") or []]
+                tok = d.get("nextPageToken")
+                if not tok or len(ids) >= 20000:
+                    break
+            return list(reversed(ids))   # API trả mới nhất trước; scan() cần cũ -> mới
+
+        def _fetch_raw(self, mid):
+            try:
+                d = self._get(f"{GMAIL_API}/messages/{mid}", {"format": "raw"})
+            except Exception as e:
+                self.log(f"Không đọc được thư {mid}: {str(e)[:80]}")
+                return None
+            self._ts_max = max(self._ts_max, int(d.get("internalDate") or 0) // 1000)
+            raw = d.get("raw") or ""
+            return base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4))
+
+        def scan(self, *a, **kw):
+            truoc = int(kw.get("since_uid") or 0)
+            out = super().scan(*a, **kw)
+            self.last_uid = max(truoc, self._ts_max)   # mốc = thời điểm thư mới nhất đã đọc
+            return out
+
+    return BoQuetGoogle()
+
+
+def _loi_gmail_de_hieu(e: Exception) -> str:
+    s = str(e)
+    if "Application-specific password required" in s or "application-specific" in s.lower():
+        return ("Tài khoản này bật xác minh 2 bước nên Google không cho đăng nhập bằng mật khẩu Gmail thường. "
+                "Bấm Đăng nhập bằng Google (qua được cả g.co/sc, mã PIN, khoá bảo mật), "
+                "hoặc tạo Mật khẩu ứng dụng 16 ký tự rồi dán vào.")
+    if "AUTHENTICATIONFAILED" in s or "Invalid credentials" in s:
+        return ("Sai Gmail hoặc mật khẩu ứng dụng. Mật khẩu ứng dụng là 16 ký tự Google cấp riêng, "
+                "không phải mật khẩu Gmail. Hoặc dùng Đăng nhập bằng Google.")
+    return s
+
+
+def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "") -> dict:
+    ixml = thd("invoice_xml")
+    ds = ds_gmail()
+    if not ds:
+        raise RuntimeError("Chưa thêm tài khoản Gmail nào.")
+    mail = email if email in ds else next(iter(ds))
+    tk = ds[mail]
+    khoa_moc = ("google:" if tk.get("kieu") == "google" else "") + mail
+    moc = int(doc_cau_hinh()["gmail_moc"].get(khoa_moc, 0) or 0) if chi_moi else 0
+    if tk.get("kieu") == "google":
+        sc = tao_bo_quet_google(mail, giai_ma(tk.get("refresh", "")), v.log)
+    else:
+        mk = giai_ma(tk.get("mk", ""))
+        if not mk:
+            raise RuntimeError("Tài khoản này chưa có mật khẩu ứng dụng.")
+        sc = thd("gmail_scan").GmailScanner(mail, mk, log=v.log)
+    try:
+        sc.connect()
+    except Exception as e:
+        raise RuntimeError(_loi_gmail_de_hieu(e))
     try:
         def tien_do(i, n):
             v.i, v.n = i, n
@@ -469,7 +619,7 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool) -> dict:
         sc.close()
     if getattr(sc, "last_uid", 0) and not v.huy.is_set():
         ch = doc_cau_hinh()
-        ch["gmail_moc"][mail] = int(sc.last_uid)
+        ch["gmail_moc"][khoa_moc] = int(sc.last_uid)
         ghi_cau_hinh(ch)
     kho = _doc_json(_gmail_kho_path(), {})
     thu_muc = goc_du_lieu() / "gmail" / dt.date.today().strftime("%Y-%m")
@@ -489,7 +639,7 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool) -> dict:
         if rid in kho and (kho[rid].get("xml") or kho[rid].get("pdf")):
             continue
         stem = re.sub(r"[^0-9A-Za-z_-]", "_", rid)[:80]
-        ban = {"id": rid, "tieu_de": r.get("subject", "")[:200], "tu": r.get("from", "")[:120],
+        ban = {"id": rid, "hop_thu": mail, "tieu_de": r.get("subject", "")[:200], "tu": r.get("from", "")[:120],
                "ngay_mail": r.get("date", ""), "nha_cung_cap": r.get("provider") or "",
                "trang_thai": r.get("status", ""), "can_tai_tay": bool(r.get("needs_manual")),
                "ma_tra_cuu": r.get("_mtc") or r.get("code") or "", "link": link_an_toan(r.get("lookup_url")),
@@ -883,30 +1033,128 @@ def register(app: FastAPI) -> None:
         return {"ok": True, "ds": out}
 
     # ---------------- Gmail
+    def _goc_web(request: Request) -> str:
+        """Địa chỉ gốc mà TRÌNH DUYỆT thấy (sau Caddy/nginx), để Google trả người dùng về đúng chỗ."""
+        proto = (request.headers.get("x-forwarded-proto") or request.url.scheme).split(",")[0].strip()
+        host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc).split(",")[0].strip()
+        return f"{proto}://{host}"
+
+    def _ve_google(request: Request) -> str:
+        return _goc_web(request) + A + "/gmail/google/ve"
+
     @app.get(A + "/gmail/cau-hinh")
-    def gm_ch():
+    def gm_ch(request: Request):
         if (c := _chan(APP_GMAIL)):
             return c
         ch = doc_cau_hinh()
-        mail = ch["gmail"].get("email", "")
-        return {"ok": True, "email": mail, "co_mk": bool(ch["gmail"].get("mk")),
-                "co_moc": bool(ch["gmail_moc"].get(mail))}
+        ds = [{"email": e, "kieu": t.get("kieu", "mk"),
+               "co_moc": bool(ch["gmail_moc"].get(("google:" if t.get("kieu") == "google" else "") + e))}
+              for e, t in sorted(ds_gmail(ch).items())]
+        cid, sec = google_client()
+        return {"ok": True, "ds": ds, "google": {"co_client": bool(cid and sec), "client_id": cid,
+                                                 "duong_ve": _ve_google(request)}}
 
     @app.post(A + "/gmail/cau-hinh")
     async def gm_ch_luu(request: Request):
+        """Thêm / sửa tài khoản dùng MẬT KHẨU ỨNG DỤNG."""
         if (c := _chan(APP_GMAIL)):
             return c
         d = await _than(request)
-        mail = str(d.get("email") or "").strip()
+        mail = str(d.get("email") or "").strip().lower()
         if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", mail):
             return _loi(ValueError("Địa chỉ Gmail không hợp lệ."))
+        mk = str(d.get("mat_khau") or "").replace(" ", "")
+        cu = ds_gmail().get(mail) or {}
+        if not mk and cu.get("kieu") != "mk":
+            return _loi(ValueError("Nhập mật khẩu ứng dụng 16 ký tự."))
+        if mk and not re.fullmatch(r"[a-zA-Z]{16}", mk):
+            return _loi(ValueError("Mật khẩu ứng dụng là đúng 16 chữ cái Google cấp (vd: abcd efgh ijkl mnop), "
+                                   "không phải mật khẩu Gmail. Tài khoản đăng nhập bằng g.co/sc hay mã PIN thì bấm "
+                                   "Đăng nhập bằng Google."))
+        luu_gmail(mail, {"kieu": "mk", "mk": ma_hoa(mk) if mk else cu.get("mk", "")})
+        return {"ok": True}
+
+    @app.delete(A + "/gmail/tai-khoan/{email}")
+    def gm_xoa(email: str):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        tk = ds_gmail().get(email)
+        if tk and tk.get("kieu") == "google":
+            # Thu hồi quyền ở phía Google luôn, không để token mồ côi
+            try:
+                import requests
+                requests.post("https://oauth2.googleapis.com/revoke",
+                               data={"token": giai_ma(tk.get("refresh", ""))}, timeout=15)
+            except Exception:
+                pass
+        luu_gmail(email, None)
+        return {"ok": True}
+
+    @app.post(A + "/gmail/google/client")
+    async def gm_google_client(request: Request):
+        if (c := _chan(APP_GMAIL)):
+            return c
+        d = await _than(request)
+        cid = str(d.get("client_id") or "").strip()
+        sec = str(d.get("client_secret") or "").strip()
+        if not re.fullmatch(r"[0-9A-Za-z\-_.]+\.apps\.googleusercontent\.com", cid):
+            return _loi(ValueError("Client ID phải có dạng ....apps.googleusercontent.com"))
         ch = doc_cau_hinh()
-        if ch["gmail"].get("email") != mail:
-            ch["gmail"] = {"email": mail}
-        if d.get("mat_khau"):
-            ch["gmail"]["mk"] = ma_hoa(str(d["mat_khau"]).replace(" ", ""))
+        cu = ch.get("google_oauth") or {}
+        if not sec and not cu.get("client_secret"):
+            return _loi(ValueError("Nhập Client secret."))
+        ch["google_oauth"] = {"client_id": cid, "client_secret": ma_hoa(sec) if sec else cu["client_secret"]}
         ghi_cau_hinh(ch)
         return {"ok": True}
+
+    @app.get(A + "/gmail/google/bat-dau")
+    def gm_google_bat_dau(request: Request):
+        if (ly := ly_do_chan(APP_GMAIL)):
+            return _trang_khoa(ly)
+        cid, sec = google_client()
+        if not (cid and sec):
+            return _trang_khoa("Chưa cài Google OAuth Client. Quay lại trang Quét hoá đơn Gmail, mở mục Đăng nhập bằng Google.")
+        import secrets as _sec
+        from urllib.parse import urlencode
+        st = _sec.token_urlsafe(24)
+        now = time.time()
+        for k in [k for k, (t, _) in _OAUTH_STATE.items() if now - t > 900]:
+            _OAUTH_STATE.pop(k, None)
+        _OAUTH_STATE[st] = (now, _ve_google(request))
+        q = urlencode({"client_id": cid, "redirect_uri": _ve_google(request), "response_type": "code",
+                       "scope": GMAIL_SCOPE + " email", "access_type": "offline", "prompt": "consent select_account",
+                       "include_granted_scopes": "true", "state": st})
+        return RedirectResponse(GOOGLE_AUTH + "?" + q, status_code=302)
+
+    @app.get(A + "/gmail/google/ve")
+    def gm_google_ve(state: str = "", code: str = "", error: str = ""):
+        if (ly := ly_do_chan(APP_GMAIL)):
+            return _trang_khoa(ly)
+        luu = _OAUTH_STATE.pop(state, None)
+        if not luu or time.time() - luu[0] > 900:
+            return _trang_khoa("Phiên đăng nhập Google đã hết hoặc không hợp lệ. Bấm Đăng nhập bằng Google lại.")
+        if error or not code:
+            return _trang_khoa("Bố đã huỷ hoặc Google từ chối cấp quyền" + (f" ({error})." if error else "."))
+        import requests
+        cid, sec = google_client()
+        try:
+            r = requests.post(GOOGLE_TOKEN, data={"code": code, "client_id": cid, "client_secret": sec,
+                                                  "redirect_uri": luu[1], "grant_type": "authorization_code"}, timeout=30)
+            d = r.json()
+            if r.status_code != 200 or not d.get("access_token"):
+                raise RuntimeError(d.get("error_description") or d.get("error") or f"HTTP {r.status_code}")
+            if GMAIL_SCOPE not in str(d.get("scope", "")):
+                raise RuntimeError("Chưa tích ô cho phép đọc Gmail ở trang Google. Đăng nhập lại và tích ô đó.")
+            if not d.get("refresh_token"):
+                raise RuntimeError("Google không trả quyền dài hạn. Vào myaccount.google.com/permissions gỡ MinMin rồi đăng nhập lại.")
+            hs = requests.get(GMAIL_API + "/profile", headers={"Authorization": "Bearer " + d["access_token"]}, timeout=30).json()
+            mail = str(hs.get("emailAddress") or "").lower()
+            if not mail:
+                raise RuntimeError("Không đọc được địa chỉ Gmail.")
+        except Exception as e:
+            return _trang_khoa(f"Đăng nhập Google chưa xong: {e}")
+        luu_gmail(mail, {"kieu": "google", "refresh": ma_hoa(d["refresh_token"])})
+        return RedirectResponse(GOC + "/?tab=gmail&them=" + mail, status_code=302)
 
     @app.post(A + "/gmail/quet")
     async def gm_quet(request: Request):
@@ -918,8 +1166,15 @@ def register(app: FastAPI) -> None:
             if den < tu:
                 raise ValueError("Ngày kết thúc trước ngày bắt đầu.")
             chi_moi = bool(d.get("chi_moi"))
-            v = chay_viec("gmail", f"Quét Gmail {tu:%d/%m/%Y} - {den:%d/%m/%Y}",
-                          lambda v: quet_gmail(v, tu, den, chi_moi))
+            email = str(d.get("email") or "")
+            ds = ds_gmail()
+            if not ds:
+                raise ValueError("Chưa thêm tài khoản Gmail nào.")
+            if email and email not in ds:
+                raise ValueError("Không có tài khoản Gmail này.")
+            ten = email or next(iter(ds))
+            v = chay_viec("gmail", f"Quét {ten} {tu:%d/%m/%Y} - {den:%d/%m/%Y}",
+                          lambda v: quet_gmail(v, tu, den, chi_moi, ten))
         except Exception as e:
             return _loi(e)
         return {"ok": True, "viec": v.id}
