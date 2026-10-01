@@ -3992,6 +3992,26 @@
  {
   "order": 401,
   "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/cai-dat",
+  "name": "hd_cai_dat",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 402,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/cai-dat",
+  "name": "hd_cai_dat_luu",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 403,
+  "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/xuat",
   "name": "hd_xuat",
   "methods": [
@@ -4000,7 +4020,7 @@
   "trong": null
  },
  {
-  "order": 402,
+  "order": 404,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/canh-bao",
   "name": "hd_canh_bao",
@@ -4010,7 +4030,7 @@
   "trong": null
  },
  {
-  "order": 403,
+  "order": 405,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/cau-hinh",
   "name": "gm_ch",
@@ -4020,7 +4040,7 @@
   "trong": null
  },
  {
-  "order": 404,
+  "order": 406,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/cau-hinh",
   "name": "gm_ch_luu",
@@ -4030,7 +4050,7 @@
   "trong": null
  },
  {
-  "order": 405,
+  "order": 407,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/tai-khoan/{email}",
   "name": "gm_xoa",
@@ -4040,7 +4060,7 @@
   "trong": null
  },
  {
-  "order": 406,
+  "order": 408,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/client",
   "name": "gm_google_client",
@@ -4050,7 +4070,7 @@
   "trong": null
  },
  {
-  "order": 407,
+  "order": 409,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/bat-dau",
   "name": "gm_google_bat_dau",
@@ -4060,7 +4080,7 @@
   "trong": null
  },
  {
-  "order": 408,
+  "order": 410,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/ve",
   "name": "gm_google_ve",
@@ -4070,7 +4090,7 @@
   "trong": null
  },
  {
-  "order": 409,
+  "order": 411,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/quet",
   "name": "gm_quet",
@@ -4080,7 +4100,7 @@
   "trong": null
  },
  {
-  "order": 410,
+  "order": 412,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/ket-qua",
   "name": "gm_kq",
@@ -4090,7 +4110,7 @@
   "trong": null
  },
  {
-  "order": 411,
+  "order": 413,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/tep/{rid}/{kieu}",
   "name": "gm_tep",
@@ -4100,7 +4120,7 @@
   "trong": null
  },
  {
-  "order": 412,
+  "order": 414,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/xem/{rid}",
   "name": "gm_xem",
@@ -4110,7 +4130,17 @@
   "trong": null
  },
  {
-  "order": 413,
+  "order": 415,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/ghep-lai",
+  "name": "gm_ghep_lai",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 416,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/xuat",
   "name": "gm_xuat",
@@ -4120,7 +4150,7 @@
   "trong": null
  },
  {
-  "order": 414,
+  "order": 417,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/zip",
   "name": "gm_zip",
@@ -4130,7 +4160,7 @@
   "trong": null
  },
  {
-  "order": 415,
+  "order": 418,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/{ten}",
   "name": "hd_tinh",

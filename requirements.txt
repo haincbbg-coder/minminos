@@ -60,6 +60,8 @@ segno>=1.6,<2
 curl_cffi>=0.7
 openpyxl>=3.1
 requests>=2.31
+# pypdf: gộp nhiều PDF hoá đơn thành một file để in hàng loạt (Tải Hoá Đơn TCT).
+pypdf>=4.0
 # uv: KHÔNG phải thư viện app import, mà là runner cho các connector MCP khai `command: uvx`
 # trong system/mcp-catalog.json (google-keep, google-sheets, google-search-console, google-ads,
 # tiktok-ads). Cài qua đây là đủ cho cả Docker lẫn máy cá nhân - `pip install uv` sinh ra sẵn

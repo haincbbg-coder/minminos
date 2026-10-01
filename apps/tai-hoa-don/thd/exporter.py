@@ -278,6 +278,9 @@ def html_to_pdf(html_path: str, pdf_path: str, browser: Optional[str] = None,
     try:
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                        timeout=timeout, **kw)
+    except subprocess.TimeoutExpired:
+        # MinMin: có bản Chrome in xong PDF rồi vẫn không tự thoát. Hết giờ thì xem file đã có chưa.
+        pass
     finally:
         shutil.rmtree(profile, ignore_errors=True)
     if not os.path.isfile(pdf_path) or os.path.getsize(pdf_path) == 0:
