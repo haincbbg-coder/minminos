@@ -180,6 +180,12 @@
             <span class="log-title" data-i18n="run.log">📜 Nhật ký hoạt động</span>
             <button class="btn small ghost" id="btn-clear-log" data-i18n="run.clearLog">Xoá nhật ký</button>
           </div>
+          <div class="log-toolbar" style="flex-wrap:wrap;gap:8px">
+            <select id="log-level" aria-label="Lọc mức độ nhật ký"><option value="">Tất cả mức độ</option><option value="error">Lỗi</option><option value="warn">Cảnh báo</option><option value="ok">Thành công</option><option value="info">Thông tin</option></select>
+            <input id="log-query" type="search" placeholder="Tìm tài khoản, nhóm, nội dung..." aria-label="Tìm nhật ký" />
+            <button class="btn small ghost" id="btn-export-log">Xuất CSV đang lọc</button>
+            <span id="log-count" class="mini"></span>
+          </div>
           <div id="log" class="log"></div>
         </section>
       </main>
@@ -279,6 +285,7 @@
     </div>
     <script src="i18n.js"></script>
     <script src="web-api.js"></script>
+    <script src="operations.js"></script>
     <script src="renderer.js"></script>
   </body>
 </html>

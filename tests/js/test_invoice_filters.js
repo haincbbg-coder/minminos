@@ -17,6 +17,20 @@ assert.equal(ui.filter(rows,{from:'2027-01-01'}).length,0);
 assert.equal(rows[0].id,'a','filter must not reorder source rows');
 console.log('invoice date presets, filter intersections, amount/number sort: OK');
 
+// Original PDF must never satisfy the tax-rendering filter (and vice versa).
+{
+ const docs = [
+  {so:'1',co_xml:true,co_pdf:true,co_trong_dong:true,co_goc:false},
+  {so:'2',co_xml:false,co_pdf:true,co_trong_dong:false,co_goc:true},
+  {so:'3',co_xml:true,co_trong_dong:true,co_goc:true},
+  {so:'4'}
+ ];
+ for (const [file, expected] of Object.entries({xml:['1','3'],'no-xml':['2','4'],tax:['1','3'],'no-tax':['2','4'],original:['2','3'],'no-original':['1','4']})) {
+  assert.deepEqual(ui.filter(docs,{file,sort:'number-asc'}).map(r=>r.so),expected,file);
+ }
+ assert.deepEqual(ui.filter(docs,{file:'no-original',number:'1'}).map(r=>r.so),['1']);
+}
+
 // Publisher and manual filters intersect; unknown publishers remain selectable.
 {
  const ui = require('../../apps/tai-hoa-don/web/invoice-ui.js');

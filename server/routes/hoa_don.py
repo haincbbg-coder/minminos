@@ -751,6 +751,7 @@ def tom_tat(inv: dict) -> dict:
         "co_xml": bool(tuyet_doi(inv.get("_xml_path"))),
         "co_html": bool(tuyet_doi(inv.get("_html_path"))) or bool(inv.get("_detail")),
         "co_goc": bool(tuyet_doi(inv.get("_goc_path"))), "goc_nguon": inv.get("_goc_nguon") or "",
+        "co_trong_dong": bool(tuyet_doi(inv.get("_pdf_path"))),
         "co_pdf": bool(tuyet_doi(inv.get("_pdf_path"))), "pdf_loi": inv.get("_pdf_loi") or "",
         "co_zip": bool(tuyet_doi(inv.get("_zip_path"))),
         "goc_loi": inv.get("_goc_loi") or "", "goc_link": link_an_toan(inv.get("_goc_link")),
@@ -1004,6 +1005,19 @@ def ghep_chung_tu_gmail(inv, mst, ban, det=None):
             elif det:
                 inv["_detail"] = det
     return changed
+
+
+def gmail_trong_dong(ban: dict, cache: Optional[dict] = None) -> Optional[Path]:
+    """Only expose the tax rendering of an invoice already reconciled with a managed company."""
+    link = ban.get("lien_ket") or {}
+    mst, key = link.get("mst"), link.get("key")
+    if not mst or not key or mst not in doc_cau_hinh()["doanh_nghiep"]:
+        return None
+    if cache is None:
+        cache = {}
+    if mst not in cache:
+        cache[mst] = doc_kho(mst, "purchase")
+    return tuyet_doi((cache[mst].get(key) or {}).get("_pdf_path"))
 
 
 def lien_ket_gmail(ban: dict, det: Optional[dict] = None) -> Optional[str]:
@@ -1828,10 +1842,13 @@ def register(app: FastAPI) -> None:
         if (c := _chan(APP_GMAIL)):
             return c
         ds = sorted(_doc_json(_gmail_kho_path(), {}).values(), key=lambda r: r.get("luc", 0), reverse=True)
+        kho_tct = {}
         for r in ds:
             thong_tin_tra_cuu_gmail(r)
             r["co_xml"] = bool(tuyet_doi(r.get("xml")))
             r["co_pdf"] = bool(tuyet_doi(r.get("pdf")))
+            r["co_goc"] = r["co_pdf"]
+            r["co_trong_dong"] = bool(gmail_trong_dong(r, kho_tct))
         return {"ok": True, "ds": ds}
 
     @app.get(A + "/gmail/tep/{rid}/{kieu}")
@@ -1839,10 +1856,10 @@ def register(app: FastAPI) -> None:
         if (c := _chan(APP_GMAIL)):
             return c
         r = _doc_json(_gmail_kho_path(), {}).get(rid) or {}
-        p = tuyet_doi(r.get(kieu)) if kieu in ("xml", "pdf") else None
+        p = gmail_trong_dong(r) if kieu == "trong_dong" else tuyet_doi(r.get(kieu)) if kieu in ("xml", "pdf") else None
         if not p:
             return _loi(ValueError("Chưa có file này."), 404)
-        return _tai_ve(p.read_bytes(), p.name, "application/pdf" if kieu == "pdf" else "application/xml")
+        return _tai_ve(p.read_bytes(), p.name, "application/pdf" if kieu in ("pdf", "trong_dong") else "application/xml")
 
     @app.get(A + "/gmail/xem/{rid}")
     def gm_xem(rid: str):
@@ -1904,12 +1921,13 @@ def register(app: FastAPI) -> None:
         buf = io.BytesIO()
         n = 0
         manifest = []
+        kho_tct = {}
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
             for index, r in enumerate(ds, 1):
-                for k in ("xml", "pdf"):
-                    f = tuyet_doi(r.get(k))
+                for k in ("xml", "pdf", "trong_dong"):
+                    f = gmail_trong_dong(r, kho_tct) if k == "trong_dong" else tuyet_doi(r.get(k))
                     if f:
-                        z.write(f, f"{index:04d}/{f.name}")
+                        z.write(f, f"{index:04d}/{k}/{f.name}")
                         n += 1
                     manifest.append({"id": r["id"], "loai": k, "da_co": bool(f)})
             z.writestr("doi-soat-file.json", json.dumps(manifest, ensure_ascii=False, indent=2))
@@ -1926,7 +1944,7 @@ def register(app: FastAPI) -> None:
             files = [tuyet_doi(r.get("pdf")) for r in ds]
             missing = sum(not f for f in files)
             if missing:
-                raise ValueError(f"Có {missing}/{len(ds)} hoá đơn chưa có PDF. Tải chứng từ trước hoặc lọc 'Có PDF'.")
+                raise ValueError(f"Có {missing}/{len(ds)} hoá đơn chưa có PDF. Tải chứng từ trước hoặc lọc 'Có PDF gốc'.")
             if not files:
                 raise ValueError("Chưa chọn hoá đơn nào.")
             import tempfile

@@ -79,6 +79,9 @@ var ZaloService2 = class extends EventEmitter2 {
     this.forwarders = /* @__PURE__ */ new Map();
     this._sendLog = /* @__PURE__ */ new Map();
     this._loginAbort = null;
+    this._startingAccounts = new Set();
+    this._startEpoch = new Map();
+    this._seenMessages = new Map();
     this._cacheFile = path3.join(path3.dirname(this.sessionDir), "lists-cache.json");
     this._cache = { groups: {}, friends: {} };
     try {
@@ -510,8 +513,15 @@ var ZaloService2 = class extends EventEmitter2 {
   }
   // ---------- Chuyen tiep (da luong theo tung tai khoan) ----------
   async startForwarding(account, config) {
+    if (this._startingAccounts.has(account)) throw new Error("Tài khoản đang khởi động.");
+    this._startingAccounts.add(account);
+    try { return await this._startForwarding(account, config, this._startEpoch.get(account) || 0); }
+    finally { this._startingAccounts.delete(account); }
+  }
+  async _startForwarding(account, config, epoch) {
     if (this.forwarders.has(account)) throw new Error(`Tai khoan "${account}" dang chay roi.`);
     const api = await this.ensureApi(account);
+    if ((this._startEpoch.get(account) || 0) !== epoch) throw new Error("Đã huỷ khởi động theo yêu cầu dừng.");
     const ruleSets = config.ruleSets || {};
     const limits = this.getLimits(config, account);
     const ALBUM_WINDOW_MS = config.albumWindowMs || 2500;
@@ -536,29 +546,42 @@ var ZaloService2 = class extends EventEmitter2 {
       }
       return applyRules2(text || "", rs);
     };
+    const session = { account, sources, config, paused: false, pending: 0, dropped: 0 };
+    const active = () => this.forwarders.get(account) === session;
     const deliver = async (dest, label, sendFn) => {
-      const st = this.forwarders.get(account);
-      if (!st) return;
-      if (st.paused) return;
+      if (!active()) return;
+      if (session.paused) {
+        this.log("warn", `[${account}] Bỏ qua đích ${dest.threadId}: đang tạm dừng.`);
+        return;
+      }
       const can = this._canSend(account, limits);
       if (!can.ok) {
         this.log("warn", `[${account}] bo qua ${dest.type}:${dest.threadId} (${can.reason})`);
         return;
       }
       try {
-        await sendFn();
+        if (await sendFn() === false) return;
         this._recordSend(account);
-        this.log("ok", `  -> ${label}`);
+        this.log("ok", `[${account}] -> ${label}`);
         this.emit("forwarded", { account, dest });
       } catch (err2) {
-        this.log("error", `  -> loi gui ${dest.type}:${dest.threadId}: ${err2.message}`);
+        this.log("error", `[${account}] -> loi gui ${dest.type}:${dest.threadId}: ${err2.message}`);
       }
       await sleep(this._randDelay(limits));
     };
     const albumBuffers = /* @__PURE__ */ new Map();
     let chain = Promise.resolve();
     const enqueue = (fn) => {
-      chain = chain.then(fn).catch((e) => this.log("error", `[${account}] xu ly tin loi: ${e && e.message ? e.message : e}`));
+      if (!active()) return chain;
+      if (session.pending >= 500) {
+        session.dropped++;
+        this.log("error", `[${account}] Hàng đợi đầy (500), bỏ qua tin mới. Kiểm tra số đích và tốc độ gửi.`);
+        return chain;
+      }
+      session.pending++;
+      chain = chain.then(() => active() ? fn() : undefined)
+        .catch((e) => this.log("error", `[${account}] xu ly tin loi: ${e && e.message ? e.message : e}`))
+        .finally(() => { session.pending--; });
       return chain;
     };
     const flushAlbum = async (threadId) => {
@@ -577,6 +600,7 @@ var ZaloService2 = class extends EventEmitter2 {
       }
       if (!files.length) return;
       for (const route of matchRoutes(threadId)) {
+        if (!active()) break;
         if (!route.forward.image) continue;
         if (!this._passesKeyword(buf.caption, route)) continue;
         this.log(
@@ -598,6 +622,7 @@ var ZaloService2 = class extends EventEmitter2 {
     };
     const processSingle = async (threadId, parsed) => {
       for (const route of matchRoutes(threadId)) {
+        if (!active()) break;
         const kindOk = parsed.kind === "text" && route.forward.text || parsed.kind === "video" && route.forward.video || parsed.kind === "file" && route.forward.file;
         if (!kindOk) continue;
         if (!this._passesKeyword(parsed.text, route)) continue;
@@ -636,6 +661,7 @@ var ZaloService2 = class extends EventEmitter2 {
             await deliver(dest, `file -> ${dest.type}:${dest.threadId}`, async () => {
               const f = await downloadToTmp(parsed.imageUrl, this.tmpDir, ".dat");
               try {
+                if (!active() || session.paused) return false;
                 await api.sendMessage({ msg: editedText || "", attachments: [f] }, dest.threadId, tt);
               } finally {
                 cleanup(f);
@@ -647,10 +673,25 @@ var ZaloService2 = class extends EventEmitter2 {
     };
     const handler = (message) => {
       try {
-        if (message.isSelf) return;
+        if (!active() || message.isSelf) return;
+        if (session.paused) {
+          this.log("info", `[${account}] Bỏ qua tin mới trong thời gian tạm dừng.`);
+          return;
+        }
         const threadId = message.threadId;
         if (!sources.has(threadId)) return;
         const data = message.data || {};
+        const messageId = data.msgId || data.cliMsgId;
+        if (messageId) {
+          const key = JSON.stringify([account, threadId, message.type, messageId]);
+          const now = Date.now();
+          for (const [k, t] of this._seenMessages) {
+            if (now - t < 86400000 && this._seenMessages.size < 10000) break;
+            this._seenMessages.delete(k);
+          }
+          if (this._seenMessages.has(key)) return;
+          this._seenMessages.set(key, now);
+        }
         const parsed = this.parseMessage(data.msgType || "", data.content);
         if (parsed.kind === "image" && parsed.imageUrl) {
           if (!matchRoutes(threadId).some((r) => r.forward.image)) return;
@@ -658,6 +699,10 @@ var ZaloService2 = class extends EventEmitter2 {
           if (!buf) {
             buf = { items: [], caption: "", timer: null };
             albumBuffers.set(threadId, buf);
+          }
+          if (buf.items.length >= 100) {
+            this.log("warn", `[${account}] Album vượt 100 ảnh, bỏ qua ảnh mới để bảo vệ hàng đợi.`);
+            return;
           }
           buf.items.push(parsed);
           if (!buf.caption && parsed.text) buf.caption = parsed.text;
@@ -677,13 +722,13 @@ var ZaloService2 = class extends EventEmitter2 {
         this.log("error", "Loi xu ly tin: " + err2.message);
       }
     };
+    const errorHandler = (e) => this.log("error", `[${account}] listener loi: ` + (e && e.message ? e.message : e));
+    Object.assign(session, { handler, errorHandler, albumBuffers });
+    this.forwarders.set(account, session);
     api.listener.on("message", handler);
-    api.listener.on(
-      "error",
-      (e) => this.log("error", `[${account}] listener loi: ` + (e && e.message ? e.message : e))
-    );
-    api.listener.start();
-    this.forwarders.set(account, { account, sources, config, handler, albumBuffers, paused: false });
+    api.listener.on("error", errorHandler);
+    try { await api.listener.start(); }
+    catch (e) { await this.stopForwarding(account); throw e; }
     this.log(
       "ok",
       `[${account}] bat dau nghe ${sources.size} nhom nguon | tre ${limits.minDelayMs}-${limits.maxDelayMs}ms | gioi han ${limits.maxPerHour || "khong"}/gio, ${limits.maxPerDay || "khong"}/ngay`
@@ -691,8 +736,10 @@ var ZaloService2 = class extends EventEmitter2 {
     this.emit("forwarding-status", this.forwardingStatus());
   }
   async stopForwarding(account) {
+    this._startEpoch.set(account, (this._startEpoch.get(account) || 0) + 1);
     const f = this.forwarders.get(account);
     if (!f) return;
+    this.forwarders.delete(account); // invalidate queued work before stopping the listener
     if (f.albumBuffers) {
       for (const buf of f.albumBuffers.values()) if (buf.timer) clearTimeout(buf.timer);
       f.albumBuffers.clear();
@@ -701,7 +748,8 @@ var ZaloService2 = class extends EventEmitter2 {
     try {
       if (api && api.listener) {
         if (typeof api.listener.stop === "function") api.listener.stop();
-        api.listener.removeAllListeners("message");
+        api.listener.removeListener("message", f.handler);
+        api.listener.removeListener("error", f.errorHandler);
       }
     } catch (_e) {
     }
@@ -745,7 +793,7 @@ var ZaloService2 = class extends EventEmitter2 {
     return { started, errors };
   }
   async stopAll() {
-    for (const acc of Array.from(this.forwarders.keys())) await this.stopForwarding(acc);
+    for (const acc of new Set([...this.forwarders.keys(), ...this._startingAccounts])) await this.stopForwarding(acc);
   }
   forwardingStatus() {
     const running = Array.from(this.forwarders.keys());
