@@ -50,7 +50,10 @@ except Exception:   # chạy rời làm công cụ dòng lệnh
 
 # Khoá công khai của nhà phát hành (base64 của 32 byte Ed25519). Nhiều khoá được phép để đổi
 # khoá mà không làm hỏng mã đã bán. Rỗng = chưa phát hành: chỉ máy nhà phát hành dùng được app.
-KHOA_CONG_KHAI: tuple = ()
+KHOA_CONG_KHAI: tuple = (
+    # Khoá nhà phát hành TrungKienHa, sinh trên VPS minmin.elaria.cloud ngày 2026-10-01.
+    "sM24Bejp9GZqvy08mFa2xb6tgfxW1TzJK/PXvfIW5zk=",
+)
 
 TIEN_TO = "MM1."
 _KHOA = threading.Lock()
