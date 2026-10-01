@@ -48,6 +48,26 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(len(PdfReader(io.BytesIO(r.content)).pages),1)
         self.assertEqual(self.c.post(A+'/gmail/pdf-gop',json={'ids':['a','b']}).status_code,400)
 
+    def test_document_types_and_linked_tax_rendering(self):
+        hd.ghi_cau_hinh({'doanh_nghiep':{'1234567890':{'ten':'Fixture'}}})
+        hd.ghi_kho('1234567890','purchase',{'invoice':{'_pdf_path':'a.pdf'}})
+        kho=hd._doc_json(hd._gmail_kho_path(),{})
+        kho['a']['lien_ket']={'mst':'1234567890','key':'invoice'}
+        hd._ghi_json(hd._gmail_kho_path(),kho)
+        rows={r['id']:r for r in self.c.get(A+'/gmail/ket-qua').json()['ds']}
+        self.assertTrue(rows['a']['co_goc']); self.assertTrue(rows['a']['co_trong_dong'])
+        self.assertFalse(rows['b']['co_goc']); self.assertFalse(rows['b']['co_trong_dong'])
+        r=self.c.get(A+'/gmail/tep/a/trong_dong')
+        self.assertEqual(r.status_code,200); self.assertTrue(r.content.startswith(b'%PDF'))
+        self.assertIn('application/pdf',r.headers['content-type'])
+        with zipfile.ZipFile(io.BytesIO(self.c.post(A+'/gmail/zip',json={'ids':['a']}).content)) as z:
+            self.assertEqual(len(z.namelist()),4)
+            self.assertTrue(any('/trong_dong/' in n for n in z.namelist()))
+        # An unconfigured company or deleted file must not be advertised as downloadable.
+        hd.ghi_cau_hinh({'doanh_nghiep':{}})
+        self.assertEqual(self.c.get(A+'/gmail/tep/a/trong_dong').status_code,404)
+        self.assertFalse(hd.tom_tat({'_pdf_path':'missing.pdf'})['co_trong_dong'])
+
     def test_key_encryption_mask_and_provider_switch(self):
         r=self.c.post(A+'/captcha-api',json={'provider':'2captcha','api_key':'fake-secret','enabled':True})
         self.assertEqual(r.status_code,200); self.assertNotIn('fake-secret',r.text)

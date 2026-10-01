@@ -282,7 +282,17 @@ function bindGlobal() {
   $("#btn-save-routes").addEventListener("click", saveConfig);
   $("#btn-add-rule").addEventListener("click", addRuleSet);
   $("#btn-save-rules").addEventListener("click", saveConfig);
-  $("#btn-clear-log").addEventListener("click", () => ($("#log").innerHTML = ""));
+  $("#btn-clear-log").addEventListener("click", () => { logEntries = []; renderLog(); });
+  $("#log-level").addEventListener("change", renderLog);
+  $("#log-query").addEventListener("input", renderLog);
+  $("#btn-export-log").addEventListener("click", () => {
+    const data = window.ForwarderOperations.csv(filteredLogs());
+    const url = URL.createObjectURL(new Blob([data], {type: "text/csv;charset=utf-8"}));
+    const a = document.createElement("a"); a.href = url;
+    a.download = "Zalo-NhatKy-" + new Date().toISOString().slice(0,10) + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
 
   $("#btn-start-all").addEventListener("click", startAll);
   $("#btn-stop-all").addEventListener("click", stopAll);
@@ -2000,16 +2010,29 @@ function registerEvents() {
   bridge.onBroadcastDone((e) => bcDone(e));
 }
 
-function logLine(e) {
+let logEntries = [];
+function filteredLogs() {
+  return window.ForwarderOperations.filter(logEntries, $("#log-level").value, $("#log-query").value);
+}
+function renderLog() {
   const log = $("#log");
   if (!log) return;
-  const line = el("div", "l");
-  const t = new Date(e.ts || Date.now()).toLocaleTimeString("vi-VN");
-  line.innerHTML = `<span class="t">[${t}]</span> <span class="${e.level}">${esc(e.msg)}</span>`;
-  // Mới nhất lên TRÊN CÙNG
-  log.insertBefore(line, log.firstChild);
-  log.scrollTop = 0;
-  while (log.children.length > 500) log.removeChild(log.lastChild);
+  const rows = filteredLogs();
+  $("#log-count").textContent = `${rows.length}/${logEntries.length} dòng (tối đa 500 dòng gần đây trên màn hình)`;
+  log.innerHTML = "";
+  for (const e of rows) {
+    const line = el("div", "l");
+    const t = new Date(e.ts).toLocaleString("vi-VN");
+    line.innerHTML = `<span class="t">[${t}]</span> <span class="${e.level}">${esc(e.msg)}</span>`;
+    log.appendChild(line);
+  }
+}
+function logLine(e) {
+  if (!$("#log")) return;
+  const level = ["info", "ok", "warn", "error"].includes(e.level) ? e.level : "info";
+  logEntries.unshift({level, msg: String(e.msg || ""), ts: Number(e.ts) || Date.now()});
+  logEntries = logEntries.slice(0, 500);
+  renderLog();
 }
 
 window.__init = init;

@@ -199,6 +199,7 @@
   }
 
   function veBang() {
+    updateFileCounts("hd", dsHd);
     var ds = hdLoc = InvoiceUI.filter(dsHd, readFilter("hd"));
     var valid = new Set(dsHd.map(function(r) { return r.key; }));
     chon.forEach(function(k) { if (!valid.has(k)) chon.delete(k); });
@@ -361,13 +362,15 @@
 
 
   function veGmail() {
+    updateFileCounts("gm", dsG);
     gmLoc = InvoiceUI.filter(dsG, readFilter("gm"));
     var valid = new Set(gmLoc.map(function(r) { return r.id; }));
     gChon.forEach(function(k) { if (!valid.has(k)) gChon.delete(k); });
       $("#bangGmail").innerHTML = gmLoc.map(function (r) {
         var id = encodeURIComponent(r.id);
         var file = (r.co_xml ? '<a href="' + API + "gmail/xem/" + id + '" target="_blank" rel="noopener">Xem</a><a href="' + API + "gmail/tep/" + id + '/xml">XML</a>' : "") +
-          (r.co_pdf ? '<a href="' + API + "gmail/tep/" + id + '/pdf">PDF</a>' : "") +
+          (r.co_pdf ? '<a href="' + API + "gmail/tep/" + id + '/pdf">PDF gốc</a>' : "") +
+          (r.co_trong_dong ? '<a href="' + API + "gmail/tep/" + id + '/trong_dong">Trống đồng (TCT)</a>' : "") +
           (r.link ? '<a href="' + esc(r.link) + '" target="_blank" rel="noopener noreferrer">Trang tra cứu</a>' : "") +
           '<button class="nut phu" data-glookup="' + esc(r.id) + '">Mã tra cứu</button>';
         return '<tr><td><input type="checkbox" data-gid="' + esc(r.id) + '"' + (gChon.has(r.id) ? " checked" : "") + '></td><td class="ngay">' + esc(ngayVN(InvoiceUI.date(r))) + (!r.ngay_hd ? '<small class="nho"> (email)</small>' : '') + "</td><td>" + esc(r.so) + '</td><td class="doi">' + esc(r.ban_ten || r.tu) +
@@ -397,6 +400,14 @@
       min:value("Min"),max:value("Max"),file:value("File"),sort:value("Sort"),publisher:value("Publisher"),status:value("Status"),
       from:prefix === "gm" ? $("#gTu").value : "",to:prefix === "gm" ? $("#gDen").value : ""};
   }
+  function updateFileCounts(prefix, rows) {
+    var f = readFilter(prefix); f.file = "";
+    var base = InvoiceUI.filter(rows, f);
+    var labels = {xml:"Có XML", "no-xml":"Chưa có XML", tax:"Có Trống đồng", "no-tax":"Chưa có Trống đồng", original:"Có PDF gốc", "no-original":"Chưa có PDF gốc"};
+    Array.from($("#" + prefix + "File").options).forEach(function(o) {
+      o.textContent = (labels[o.value] || "Tất cả") + " (" + InvoiceUI.filter(base, {file:o.value}).length + ")";
+    });
+  }
   function buildFilters(prefix, table) {
     var box = document.createElement("div"); box.className = "invoice-filters";
     box.innerHTML = (prefix === "gm" ? '<label>Tìm kiếm<input id="gmQuery" type="search" placeholder="Tên, MST, số, ký hiệu" /></label>' : '') +
@@ -405,9 +416,9 @@
       '<label>Số hoá đơn<input id="' + prefix + 'Number" type="search" /></label>' +
       '<label>Số tiền từ<input id="' + prefix + 'Min" type="number" step="any" /></label>' +
       '<label>Đến số tiền<input id="' + prefix + 'Max" type="number" step="any" /></label>' +
-      '<label>Chứng từ<select id="' + prefix + 'File"><option value="">Tất cả</option><option value="pdf">Có PDF</option><option value="missing">Chưa có PDF</option><option value="xml">Có XML</option></select></label>' +
+      '<label>Chứng từ<select id="' + prefix + 'File"><option value="">Tất cả</option><option value="xml">Có XML</option><option value="no-xml">Chưa có XML</option><option value="tax">Có Trống đồng</option><option value="no-tax">Chưa có Trống đồng</option><option value="original">Có PDF gốc</option><option value="no-original">Chưa có PDF gốc</option></select></label>' +
       '<label>Sắp xếp<select id="' + prefix + 'Sort">' + [['date-desc','Ngày mới trước'],['date-asc','Ngày cũ trước'],['amount-asc','Số tiền nhỏ → lớn'],['amount-desc','Số tiền lớn → nhỏ'],['name-asc','Tên A → Z'],['name-desc','Tên Z → A'],['number-asc','Số HĐ tăng dần'],['number-desc','Số HĐ giảm dần']].map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('') + '</select></label>' +
-      '<button class="nut" type="button" data-reset>Đặt lại bộ lọc</button>' + (prefix === "gm" ? '<p id="gmCount" class="nho"></p>' : '');
+      '<button class="nut" type="button" data-reset>Đặt lại bộ lọc</button>' + (prefix === "gm" ? '<p id="gmCount" class="nho"></p><p class="nho">Trống đồng lấy từ hoá đơn đã ghép trong kho TCT. ZIP gồm các file đã có; in gộp sử dụng PDF gốc.</p>' : '');
     $(table).closest(".cuon").before(box);
     box.querySelectorAll("input,select").forEach(function(e) { e.oninput = e.onchange = prefix === "gm" ? veGmail : function(){chon.clear(); veBang();}; });
     box.querySelector("[data-reset]").onclick = function() { box.querySelectorAll("input").forEach(function(e){e.value="";}); $("#"+prefix+"File").value=""; $("#"+prefix+"Sort").value="date-desc"; $("#"+prefix+"Publisher").value=""; $("#"+prefix+"Status").value=""; if(prefix === "hd") $("#loc").value=""; (prefix === "gm" ? veGmail : veBang)(); };

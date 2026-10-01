@@ -23,6 +23,20 @@
     var d = new Date(r.ngay_mail || ""); return isNaN(d) ? "" : iso(d);
   }
   function seller(r) { return r.doi_tac || r.ban_ten || r.tu || ""; }
+  function hasFile(r, type) {
+    if (type === "xml") return !!r.co_xml;
+    if (type === "original") return !!r.co_goc;
+    if (type === "tax") return !!r.co_trong_dong;
+    return false;
+  }
+  function matchesFile(r, value) {
+    if (!value) return true;
+    if (value === "pdf") return !!(r.co_pdf || r.co_goc);
+    if (value === "missing") return !r.co_pdf && !r.co_goc;
+    var missing = value.indexOf("no-") === 0;
+    var type = missing ? value.slice(3) : value;
+    return missing ? !hasFile(r, type) : hasFile(r, type);
+  }
   function filter(rows, f) {
     var q = text(f.q), supplier = text(f.supplier), number = text(f.number);
     var out = rows.filter(function(r) {
@@ -35,7 +49,7 @@
         (!f.status || (f.status === "manual" ? r.can_tai_tay : !r.can_tai_tay)) &&
         (f.min === "" || f.min == null || amount >= Number(f.min)) &&
         (f.max === "" || f.max == null || amount <= Number(f.max)) &&
-        (!f.file || (f.file === "pdf" ? r.co_pdf || r.co_goc : f.file === "missing" ? !r.co_pdf && !r.co_goc : r.co_xml));
+        matchesFile(r, f.file);
     });
     var pair = (f.sort || "date-desc").split("-"), field = pair[0], dir = pair[1] === "asc" ? 1 : -1;
     return out.sort(function(a,b) {

@@ -40,7 +40,7 @@ APP_ID = "zalo_forwarder"
 GOC = "/apps/zalo-forwarder"
 APP_DIR = Path(__file__).resolve().parents[2] / "apps" / "zalo-forwarder"
 WEB_DIR = APP_DIR / "web"
-WEB_FILES = {"index.html", "renderer.js", "i18n.js", "styles.css", "web-api.js"}
+WEB_FILES = {"index.html", "renderer.js", "i18n.js", "styles.css", "web-api.js", "operations.js"}
 
 # Đúng các hàm web-api.js gọi. Tên lạ bị chặn ở đây, không tới được tiến trình Node.
 HAM = frozenset({

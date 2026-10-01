@@ -6,7 +6,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.18] - 2026-10-02
 ### Cải thiện
-- Nâng cấp bộ lọc chứng từ và vận hành Hóa đơn, Zalo Forwarder.
+- Hóa đơn TCT và Gmail: lọc riêng có/chưa có XML, Trống đồng, PDF gốc; hiện số lượng theo từng bộ lọc.
+- Gmail: tải bản Trống đồng đã ghép từ kho TCT, đưa vào ZIP cùng XML và PDF gốc, kèm bảng đối soát file.
+- Zalo Forwarder: chặn xử lý lặp cùng mã tin, ngăn hàng đợi cũ gửi tiếp sau khi dừng/bật lại, cảnh báo khi hàng đợi đầy.
+- Nhật ký Zalo: lọc lỗi/cảnh báo/thành công, tìm tài khoản hoặc nội dung và xuất CSV các dòng đang lọc.
 
 ## [26.10.17] - 2026-10-02
 ### Cải thiện
