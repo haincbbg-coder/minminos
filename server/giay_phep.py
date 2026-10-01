@@ -63,8 +63,10 @@ _KHOA = threading.Lock()
 UNG_DUNG = (
     {"id": "zalo_forwarder", "icon": "send", "san_sang": True, "dieu_khoan_rieng": "zalo",
      "duong_dan": "/apps/zalo-forwarder/"},
-    {"id": "tai_hoa_don", "icon": "file-text", "san_sang": False, "dieu_khoan_rieng": ""},
-    {"id": "quet_hoa_don_gmail", "icon": "mail", "san_sang": False, "dieu_khoan_rieng": ""},
+    {"id": "tai_hoa_don", "icon": "file-text", "san_sang": True, "dieu_khoan_rieng": "",
+     "duong_dan": "/apps/tai-hoa-don/"},
+    {"id": "quet_hoa_don_gmail", "icon": "mail", "san_sang": True, "dieu_khoan_rieng": "",
+     "duong_dan": "/apps/tai-hoa-don/?tab=gmail"},
     {"id": "dieu_khien_may", "icon": "hand", "san_sang": False, "dieu_khoan_rieng": "dieu_khien"},
 )
 ID_UNG_DUNG = tuple(u["id"] for u in UNG_DUNG)

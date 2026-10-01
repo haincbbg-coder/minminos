@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.7] - 2026-10-01
+### Thêm mới
+- **Tải Hoá Đơn TCT chạy trên trình duyệt** (Kết nối ngoài, cần mã kích hoạt): lưu nhiều doanh nghiệp, đăng nhập cổng hoadondientu.gdt.gov.vn bằng captcha ngay trên trang, tra cứu mua vào / bán ra (cả hoá đơn máy tính tiền), tải XML và PDF gốc của hãng, xem hoá đơn, xuất Excel, bảng kê thuế GTGT, chi tiết mặt hàng, ZIP, và xem cảnh báo.
+- **Quét hoá đơn Gmail**: nhập Gmail + mật khẩu ứng dụng, quét hộp thư lấy hoá đơn đính kèm (XML, PDF) và mã tra cứu, lần sau chỉ quét email mới. Xuất Excel và ZIP.
+### Bảo mật
+- Mật khẩu cổng thuế, phiên đăng nhập và mật khẩu ứng dụng Gmail được mã hoá trên máy chủ.
+
 ## [26.10.6] - 2026-10-01
 ### Thêm mới
 - Lead Engine: thêm hồ sơ doanh nghiệp, kho lead có dẫn chứng hội thoại và bản nháp quảng cáo/chăm sóc theo từng brain.

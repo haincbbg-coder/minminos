@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hoá đơn · MinMin</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="dau">
+    <a class="ve" href="/" title="Về MinMin OS">← MinMin</a>
+    <h1>Hoá đơn</h1>
+    <nav class="tab" role="tablist">
+      <button type="button" data-tab="tai" role="tab">Tải Hoá Đơn TCT</button>
+      <button type="button" data-tab="gmail" role="tab">Quét hoá đơn Gmail</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ================= TẢI HOÁ ĐƠN ================= -->
+    <section id="tab-tai" class="trang" hidden>
+      <div class="khoa-app" id="khoaTai" hidden></div>
+      <div class="bo-cuc" id="boCucTai">
+        <aside class="cot-dn">
+          <div class="the">
+            <h2>Doanh nghiệp</h2>
+            <ul id="dsDn" class="ds-dn"></ul>
+            <details class="them-dn">
+              <summary>+ Thêm doanh nghiệp</summary>
+              <form id="fDn" autocomplete="off">
+                <label>Mã số thuế<input name="mst" required placeholder="0312345678" inputmode="numeric" /></label>
+                <label>Tên gợi nhớ<input name="ten" placeholder="Công ty A" /></label>
+                <label>Mật khẩu cổng thuế (để lưu, không bắt buộc)<input name="mat_khau" type="password" autocomplete="new-password" /></label>
+                <button type="submit" class="nut chinh">Lưu</button>
+              </form>
+            </details>
+          </div>
+          <p class="nho" id="ghiChuCffi"></p>
+        </aside>
+
+        <div class="cot-chinh">
+          <div class="the trong" id="chuaChon">Chọn hoặc thêm một doanh nghiệp ở bên trái để bắt đầu.</div>
+
+          <div id="vungDn" hidden>
+            <div class="the dang-nhap" id="hopDangNhap" hidden>
+              <h2>Đăng nhập cổng thuế <span id="dnTen"></span></h2>
+              <p class="nho">Gõ chữ trong ảnh (phân biệt hoa thường). Ảnh mờ thì bấm Đổi ảnh.</p>
+              <div class="hang">
+                <img id="anhCaptcha" alt="Mã captcha" width="200" height="60" />
+                <button type="button" class="nut" id="doiCaptcha">Đổi ảnh</button>
+              </div>
+              <div class="hang">
+                <input id="oCaptcha" placeholder="Mã trong ảnh" autocomplete="off" />
+                <input id="oMk" type="password" placeholder="Mật khẩu cổng thuế" autocomplete="current-password" />
+                <label class="tich"><input type="checkbox" id="nhoMk" /> Nhớ mật khẩu</label>
+                <button type="button" class="nut chinh" id="nutDangNhap">Đăng nhập</button>
+              </div>
+              <div class="thong" id="thongDangNhap"></div>
+            </div>
+
+            <div class="the">
+              <div class="hang thanh-cong-cu">
+                <div class="loai" role="tablist">
+                  <button type="button" data-loai="purchase" class="on">Mua vào</button>
+                  <button type="button" data-loai="sold">Bán ra</button>
+                </div>
+                <label>Từ<input type="date" id="tu" /></label>
+                <label>Đến<input type="date" id="den" /></label>
+                <select id="he" title="Loại hệ thống hoá đơn">
+                  <option value="query">HĐ điện tử</option>
+                  <option value="sco-query">Máy tính tiền</option>
+                  <option value="ca_hai">Cả hai</option>
+                </select>
+                <button type="button" class="nut chinh" id="nutTraCuu">Tra cứu</button>
+              </div>
+              <div class="hang thanh-cong-cu">
+                <button type="button" class="nut" id="nutTai">Tải XML</button>
+                <label class="tich"><input type="checkbox" id="banGoc" /> Kèm PDF gốc của hãng</label>
+                <span class="tach"></span>
+                <button type="button" class="nut" data-xuat="excel">Excel</button>
+                <button type="button" class="nut" data-xuat="bang_ke">Bảng kê thuế GTGT</button>
+                <button type="button" class="nut" data-xuat="chi_tiet">Chi tiết mặt hàng</button>
+                <button type="button" class="nut" data-xuat="zip">ZIP file</button>
+                <button type="button" class="nut" id="nutCanhBao">Cảnh báo</button>
+                <button type="button" class="nut phu" id="nutDangXuat">Đăng xuất</button>
+              </div>
+              <div class="tong" id="tong"></div>
+            </div>
+
+            <div class="the viec" id="hopViec" hidden>
+              <div class="hang">
+                <b id="viecTen"></b>
+                <span id="viecSo"></span>
+                <button type="button" class="nut phu" id="nutDung">Dừng</button>
+              </div>
+              <progress id="viecThanh" max="1" value="0"></progress>
+              <pre id="viecLog"></pre>
+            </div>
+
+            <div class="the" id="hopCanhBao" hidden>
+              <h2>Cảnh báo</h2>
+              <div class="cuon"><table class="bang"><thead><tr><th>Mức</th><th>Loại</th><th>Số HĐ</th><th>Ngày</th><th>Đối tác</th><th>Nội dung</th></tr></thead><tbody id="bangCanhBao"></tbody></table></div>
+            </div>
+
+            <div class="the">
+              <div class="hang">
+                <input id="loc" type="search" placeholder="Lọc theo đối tác, MST, số hoá đơn" />
+                <span class="nho" id="soChon"></span>
+              </div>
+              <div class="cuon">
+                <table class="bang">
+                  <thead><tr>
+                    <th><input type="checkbox" id="chonHet" aria-label="Chọn tất cả" /></th>
+                    <th>Ngày</th><th>Số</th><th>Ký hiệu</th><th>Đối tác</th><th>MST</th>
+                    <th class="so">Tiền hàng</th><th class="so">Thuế</th><th class="so">Tổng</th>
+                    <th>Trạng thái</th><th>File</th>
+                  </tr></thead>
+                  <tbody id="bangHd"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= GMAIL ================= -->
+    <section id="tab-gmail" class="trang" hidden>
+      <div class="khoa-app" id="khoaGmail" hidden></div>
+      <div id="boCucGmail">
+        <div class="the">
+          <h2>Hộp thư Gmail</h2>
+          <form id="fGmail" class="hang" autocomplete="off">
+            <input name="email" type="email" placeholder="tenban@gmail.com" required />
+            <input name="mat_khau" type="password" placeholder="Mật khẩu ứng dụng 16 ký tự" autocomplete="new-password" />
+            <button type="submit" class="nut">Lưu</button>
+          </form>
+          <details class="nho">
+            <summary>Lấy mật khẩu ứng dụng Gmail thế nào?</summary>
+            <ol>
+              <li>Bật Xác minh 2 bước cho tài khoản Google.</li>
+              <li>Vào myaccount.google.com, mục Bảo mật, tìm "Mật khẩu ứng dụng", tạo một mật khẩu tên "MinMin".</li>
+              <li>Dán 16 ký tự Google đưa vào ô trên. Không dùng mật khẩu Gmail thường.</li>
+              <li>Trong Gmail, Cài đặt, Chuyển tiếp và POP/IMAP: bật IMAP.</li>
+            </ol>
+          </details>
+          <div class="thong" id="thongGmail"></div>
+        </div>
+        <div class="the">
+          <div class="hang thanh-cong-cu">
+            <label>Từ<input type="date" id="gTu" /></label>
+            <label>Đến<input type="date" id="gDen" /></label>
+            <label class="tich"><input type="checkbox" id="gChiMoi" /> Chỉ email mới từ lần quét trước</label>
+            <button type="button" class="nut chinh" id="nutQuet">Quét</button>
+            <span class="tach"></span>
+            <button type="button" class="nut" id="gXuat">Excel</button>
+            <button type="button" class="nut" id="gZip">ZIP file</button>
+          </div>
+        </div>
+        <div class="the viec" id="gViec" hidden>
+          <div class="hang"><b id="gViecTen"></b><span id="gViecSo"></span><button type="button" class="nut phu" id="gDung">Dừng</button></div>
+          <progress id="gThanh" max="1" value="0"></progress>
+          <pre id="gLog"></pre>
+        </div>
+        <div class="the">
+          <div class="cuon">
+            <table class="bang">
+              <thead><tr><th>Ngày HĐ</th><th>Số</th><th>Người bán</th><th class="so">Tổng</th><th>Hãng HĐ</th><th>Trạng thái</th><th>File</th></tr></thead>
+              <tbody id="bangGmail"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="bao" id="bao" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

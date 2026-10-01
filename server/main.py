@@ -19450,6 +19450,9 @@ ket_noi_ngoai_routes.register(app, Path(DASHBOARD_PATH))
 # Zalo Forwarder trên trình duyệt (26.10.4): app đầu tiên của Kết nối ngoài, chạy tiến trình Node riêng.
 import routes.zalo_forwarder as zalo_forwarder_routes   # noqa: E402
 zalo_forwarder_routes.register(app)
+# Tải Hoá Đơn TCT + Quét hoá đơn Gmail trên trình duyệt (26.10.6).
+import routes.hoa_don as hoa_don_routes   # noqa: E402
+hoa_don_routes.register(app)
 
 
 @app.on_event("shutdown")

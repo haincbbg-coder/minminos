@@ -3828,5 +3828,275 @@
    "GET"
   ],
   "trong": null
+ },
+ {
+  "order": 385,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don",
+  "name": "hd_goc",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 386,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/",
+  "name": "hd_trang",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 387,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/trang-thai",
+  "name": "hd_trang_thai",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 388,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/viec/{vid}",
+  "name": "hd_viec",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 389,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/viec/{vid}/dung",
+  "name": "hd_viec_dung",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 390,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/doanh-nghiep",
+  "name": "hd_dn",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 391,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/doanh-nghiep",
+  "name": "hd_dn_luu",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 392,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/doanh-nghiep/{mst}",
+  "name": "hd_dn_xoa",
+  "methods": [
+   "DELETE"
+  ],
+  "trong": null
+ },
+ {
+  "order": 393,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/captcha",
+  "name": "hd_captcha",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 394,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/dang-nhap",
+  "name": "hd_dang_nhap",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 395,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/dang-xuat/{mst}",
+  "name": "hd_dang_xuat",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 396,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/tra-cuu",
+  "name": "hd_tra_cuu",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 397,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/hoa-don",
+  "name": "hd_ds",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 398,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/tai",
+  "name": "hd_tai",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 399,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/xem/{mst}/{loai}/{key}",
+  "name": "hd_xem",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 400,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/tep/{mst}/{loai}/{key}/{kieu}",
+  "name": "hd_tep",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 401,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/xuat",
+  "name": "hd_xuat",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 402,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/canh-bao",
+  "name": "hd_canh_bao",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 403,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/cau-hinh",
+  "name": "gm_ch",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 404,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/cau-hinh",
+  "name": "gm_ch_luu",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 405,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/quet",
+  "name": "gm_quet",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 406,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/ket-qua",
+  "name": "gm_kq",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 407,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/tep/{rid}/{kieu}",
+  "name": "gm_tep",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 408,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/xem/{rid}",
+  "name": "gm_xem",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 409,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/xuat",
+  "name": "gm_xuat",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 410,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/gmail/zip",
+  "name": "gm_zip",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 411,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/{ten}",
+  "name": "hd_tinh",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]
