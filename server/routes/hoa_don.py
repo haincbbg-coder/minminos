@@ -40,7 +40,7 @@ GOC = "/apps/tai-hoa-don"
 APP_DIR = Path(__file__).resolve().parents[2] / "apps" / "tai-hoa-don"
 WEB_DIR = APP_DIR / "web"
 WEB_FILES = {"index.html", "app.js", "invoice-ui.js", "styles.css"}
-APP_TAI, APP_GMAIL = "tai_hoa_don", "quet_hoa_don_gmail"
+APP_TAI, APP_GMAIL, APP_CT = "tai_hoa_don", "quet_hoa_don_gmail", "bo_chung_tu_ke_toan"
 LOAI = ("purchase", "sold")
 THU_MUC_LOAI = {"purchase": "MuaVao", "sold": "BanRa"}
 
@@ -1248,10 +1248,185 @@ def xuat_gmail_excel(ds: list[dict]) -> bytes:
     return buf.getvalue()
 
 
+
+# ------------------------------------------------------------------ bộ chứng từ kế toán
+
+def _html(s) -> str:
+    import html
+    return html.escape(str(s or ""), quote=True)
+
+
+def _slug(s: str, limit: int = 72) -> str:
+    raw = re.sub(r"[^0-9A-Za-zÀ-ỹĐđ._ -]+", "", str(s or "")).strip()
+    raw = re.sub(r"\s+", " ", raw)[:limit].strip(" ._")
+    return raw or "chung-tu"
+
+
+def _so_tien(v) -> str:
+    try:
+        n = float(v or 0)
+    except Exception:
+        n = 0
+    if abs(n - round(n)) < 0.01:
+        return f"{int(round(n)):,}".replace(",", ".")
+    return f"{n:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def _ngay_vn(s) -> str:
+    s = str(s or "")[:10]
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", s):
+        return f"{s[8:10]}/{s[5:7]}/{s[:4]}"
+    return s
+
+
+def _cty(mst: str) -> dict:
+    d = doc_cau_hinh().get("doanh_nghiep", {}).get(mst, {})
+    return {"mst": mst, "ten": d.get("ten") or f"Doanh nghiệp {mst}", "dia_chi": d.get("dia_chi", "")}
+
+
+def _ben(inv: dict) -> dict:
+    return {"ten": inv.get("nbten") or inv.get("doi_tac") or inv.get("ten") or "Đối tác",
+            "mst": inv.get("nbmst") or inv.get("mst_doi_tac") or inv.get("mst") or "",
+            "dia_chi": inv.get("nbdchi") or inv.get("dia_chi") or ""}
+
+
+def _doc_frame(tieu_de: str, body: str, kieu: str = "ke_toan") -> str:
+    mau = {"ke_toan": ("#0f766e", "#f8f4ec"), "trang_trong": ("#5b3fd6", "#f7f1e7"), "toi_gian": ("#111827", "#ffffff")}.get(kieu, ("#0f766e", "#f8f4ec"))
+    return f'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>{_html(tieu_de)}</title>
+<style>@page{{size:A4;margin:20mm}}body{{font-family:"Times New Roman",serif;color:#111827;background:{mau[1]};font-size:13pt;line-height:1.45}}.page{{background:white;border:1px solid #e5ded1;border-radius:10px;padding:22px;box-shadow:0 8px 28px rgba(49,35,16,.08)}}h1{{text-align:center;color:{mau[0]};font-size:19pt;text-transform:uppercase;margin:8px 0 2px}}h2{{font-size:14pt;color:{mau[0]};margin:18px 0 8px}}.sub{{text-align:center;font-style:italic;margin-bottom:18px}}table{{width:100%;border-collapse:collapse;margin:10px 0}}td,th{{border:1px solid #7c7c7c;padding:6px;vertical-align:top}}th{{background:#f4efe6}}.no-border td{{border:0}}.right{{text-align:right}}.center{{text-align:center}}.muted{{color:#6b7280;font-size:11pt}}.sign td{{height:90px;text-align:center;border:0;font-weight:bold}}.line{{border-bottom:1px dotted #777;display:inline-block;min-width:180px}}</style></head><body><div class="page">{body}</div></body></html>'''
+
+
+def _doc_bytes(tieu_de: str, body: str, kieu: str) -> bytes:
+    return _doc_frame(tieu_de, body, kieu).encode("utf-8")
+
+
+def _hoa_don_id(inv: dict) -> str:
+    return f"{inv.get('khhdon') or inv.get('ky_hieu') or ''}-{inv.get('shdon') or inv.get('so') or ''}".strip("-") or khoa_hd(inv)
+
+
+def _dong_tien(inv: dict) -> str:
+    return f"Tiền hàng {_so_tien(inv.get('tien_hang') or inv.get('tgtcthue'))} đ; thuế {_so_tien(inv.get('thue') or inv.get('tgtthue'))} đ; tổng thanh toán {_so_tien(inv.get('tong') or inv.get('tgtttbso'))} đ"
+
+
+def _body_chung_tu(tieu_de: str, cty: dict, ben: dict, inv: dict, loai: str, noi_dung: str) -> str:
+    hd = _hoa_don_id(inv)
+    return f'''<p class="center"><b>{_html(cty['ten'])}</b><br>MST: {_html(cty['mst'])}</p><h1>{_html(tieu_de)}</h1><p class="sub">Lập tự động từ hóa đơn {_html(hd)} ngày {_html(_ngay_vn(ngay_hd(inv)))}</p>
+<table class="no-border"><tr><td><b>Đối tác:</b> {_html(ben['ten'])}</td><td><b>MST:</b> {_html(ben['mst'])}</td></tr><tr><td colspan="2"><b>Địa chỉ:</b> {_html(ben.get('dia_chi'))}</td></tr></table>
+<table><thead><tr><th>Diễn giải</th><th>Số hóa đơn</th><th>Ngày</th><th class="right">Tiền hàng</th><th class="right">Thuế</th><th class="right">Thanh toán</th></tr></thead><tbody><tr><td>{_html(noi_dung)}</td><td>{_html(hd)}</td><td>{_html(_ngay_vn(ngay_hd(inv)))}</td><td class="right">{_so_tien(inv.get('tien_hang') or inv.get('tgtcthue'))}</td><td class="right">{_so_tien(inv.get('thue') or inv.get('tgtthue'))}</td><td class="right">{_so_tien(inv.get('tong') or inv.get('tgtttbso'))}</td></tr></tbody></table>
+<p><b>Ghi chú kế toán:</b> {_html(_dong_tien(inv))}. Trạng thái PDF gốc NCC: {_html('đã có' if inv.get('_goc_path') else inv.get('_goc_loi') or 'chưa có')}.</p>
+<table class="sign"><tr><td>Người lập<br><span class="muted">(ký, ghi rõ họ tên)</span></td><td>Kế toán trưởng<br><span class="muted">(ký, ghi rõ họ tên)</span></td><td>Giám đốc<br><span class="muted">(ký, đóng dấu)</span></td></tr></table>'''
+
+
+def _invoice_docs(cty: dict, inv: dict, loai: str, nhom: set[str], kieu: str) -> list[tuple[str, bytes]]:
+    ben = _ben(inv)
+    docs = []
+    if loai == "purchase" and "mua_vao" in nhom:
+        items = [("01_Phieu_nhap_kho.doc", "Phiếu nhập kho", "Nhập hàng hóa/dịch vụ theo hóa đơn nhà cung cấp"), ("02_De_nghi_thanh_toan.doc", "Giấy đề nghị thanh toán", "Đề nghị thanh toán công nợ phát sinh theo hóa đơn"), ("03_Phieu_chi_Uy_nhiem_chi.doc", "Phiếu chi / Ủy nhiệm chi", "Thanh toán cho nhà cung cấp theo hóa đơn"), ("04_Bien_ban_giao_nhan.doc", "Biên bản giao nhận", "Xác nhận giao nhận hàng hóa/dịch vụ theo hóa đơn"), ("05_Doi_chieu_cong_no_phai_tra.doc", "Biên bản đối chiếu công nợ phải trả", "Đối chiếu công nợ phải trả với nhà cung cấp")]
+    elif loai == "sold" and "ban_ra" in nhom:
+        items = [("01_Phieu_xuat_kho.doc", "Phiếu xuất kho", "Xuất hàng hóa/dịch vụ theo hóa đơn bán ra"), ("02_Phieu_thu.doc", "Phiếu thu", "Thu tiền khách hàng theo hóa đơn"), ("03_Bien_ban_ban_giao_nghiem_thu.doc", "Biên bản bàn giao / nghiệm thu", "Xác nhận bàn giao hoặc nghiệm thu dịch vụ/hàng hóa"), ("04_Doi_chieu_cong_no_phai_thu.doc", "Biên bản đối chiếu công nợ phải thu", "Đối chiếu công nợ phải thu với khách hàng")]
+    else:
+        items = []
+    for ten, title, note in items:
+        docs.append((ten, _doc_bytes(title, _body_chung_tu(title, cty, ben, inv, loai, note), kieu)))
+    return docs
+
+
+
+def _checklist_57() -> list[tuple[str, str, str]]:
+    groups = {
+        "Folder_1_LƯƠNG_&_BHXH": ["Hợp đồng lao động", "Phụ lục hợp đồng lao động", "Quyết định tiếp nhận", "Quyết định bổ nhiệm/chức danh", "Bảng chấm công tháng", "Bảng lương tháng", "Phiếu lương/biên nhận lương", "Chứng từ chuyển khoản lương", "Đăng ký MST cá nhân", "Cam kết thu nhập mẫu 08", "Hồ sơ người phụ thuộc", "Tờ khai BHXH TK1-TS", "Danh sách D02-LT", "Chứng từ nộp BHXH", "Quyết định nghỉ việc/bàn giao"],
+        "Folder_2_MUA_BÁN_&_GIA_CÔNG": ["Hóa đơn đầu vào", "Hóa đơn đầu ra", "Phiếu nhập kho", "Phiếu xuất kho", "Phiếu giao nhận", "Biên bản kiểm kê kho", "Đơn đặt hàng", "Báo giá", "Hợp đồng mua bán", "Hợp đồng nguyên tắc", "Biên bản nghiệm thu", "Biên bản thanh lý", "Đơn đặt gia công", "Hợp đồng gia công", "Biên bản nghiệm thu gia công", "Bảng kê vật tư giao gia công", "Biên bản giao nhận gia công"],
+        "Folder_3_THUẾ_&_HĐĐT": ["XML hóa đơn", "PDF gốc nhà cung cấp", "Bảng kê VAT", "Tờ khai VAT", "Tờ khai TNDN", "Tờ khai TNCN", "Chứng từ nộp thuế", "Giải trình chênh lệch", "Thông báo phát hành/đăng ký hóa đơn", "Biên bản điều chỉnh/thay thế hóa đơn"],
+        "Folder_4_KẾ_TOÁN_&_BÁN_HÀNG": ["Sổ nhật ký chung", "Sổ cái", "Sổ chi tiết công nợ", "Sổ quỹ tiền mặt", "Sổ tiền gửi ngân hàng", "Sao kê ngân hàng", "Phiếu thu", "Phiếu chi", "Ủy nhiệm chi", "Chứng từ POS", "Hoàn hàng/đổi trả"],
+        "Folder_5_PHÁP_LÝ": ["Giấy chứng nhận đăng ký doanh nghiệp", "Điều lệ công ty", "Quyết định bổ nhiệm giám đốc", "Quyết định bổ nhiệm kế toán", "Hợp đồng thuê mặt bằng", "Cam kết/ủy quyền", "Nội quy lao động", "Quy chế lương thưởng", "Biên bản họp/quyết định chủ sở hữu", "Hồ sơ tài khoản ngân hàng", "Chữ ký số và đăng ký giao dịch điện tử"]
+    }
+    out = []
+    for folder, names in groups.items():
+        for name in names:
+            out.append((folder, name, "Bắt buộc" if len(out) < 32 else "Định kỳ"))
+    return out[:57]
+
+
+def _mau_gia_cong(cty: dict, kieu: str) -> list[tuple[str, bytes]]:
+    docs = []
+    mau = {
+        "01_BIEN_BAN_KIEM_KE_KHO.doc": "<h1>Biên bản kiểm kê kho</h1><p>Kiểm kê tại kho: <span class='line'></span>. Thời điểm: <span class='line'></span>.</p><table><tr><th>STT</th><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th>Sổ sách</th><th>Thực tế</th><th>Chênh lệch</th><th>Ghi chú</th></tr><tr><td>1</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table><table class='sign'><tr><td>Thủ kho</td><td>Kế toán</td><td>Đại diện công ty</td></tr></table>",
+        "02_PHIEU_GIAO_NHAN.doc": "<h1>Phiếu giao nhận</h1><p>Bên giao: <span class='line'></span> · Bên nhận: <span class='line'></span></p><table><tr><th>STT</th><th>Hàng hóa/dịch vụ</th><th>Số lượng</th><th>Tình trạng</th><th>Ghi chú</th></tr><tr><td>1</td><td></td><td></td><td>Đạt</td><td></td></tr></table><table class='sign'><tr><td>Bên giao</td><td>Bên nhận</td></tr></table>",
+        "03_DON_DAT_GIA_CONG.doc": "<h1>Đơn đặt gia công</h1><p>Đơn vị đặt gia công: " + _html(cty['ten']) + " - MST " + _html(cty['mst']) + "</p><table><tr><th>Sản phẩm</th><th>Quy cách</th><th>Số lượng</th><th>Đơn giá gia công</th><th>Ngày giao</th></tr><tr><td></td><td></td><td></td><td></td><td></td></tr></table>",
+        "04_BIEN_BAN_NGHIEM_THU_GIA_CONG.doc": "<h1>Biên bản nghiệm thu gia công</h1><p>Các bên xác nhận hàng gia công đã hoàn thành theo đơn đặt hàng/hợp đồng.</p><table><tr><th>Nội dung</th><th>Số lượng</th><th>Kết quả QC</th><th>Ghi chú</th></tr><tr><td></td><td></td><td>Đạt</td><td></td></tr></table><table class='sign'><tr><td>Bên đặt</td><td>Bên nhận gia công</td></tr></table>",
+        "05_HOP_DONG_GIA_CONG.doc": "<h1>Hợp đồng gia công</h1><p>Bên đặt gia công: " + _html(cty['ten']) + " - MST " + _html(cty['mst']) + "</p><h2>Nội dung gia công</h2><p>Sản phẩm, định mức, tiêu chuẩn chất lượng, thời hạn giao nhận và phương thức thanh toán theo phụ lục/đơn đặt hàng kèm theo.</p><table class='sign'><tr><td>Bên đặt gia công</td><td>Bên nhận gia công</td></tr></table>"
+    }
+    for fn, body in mau.items():
+        docs.append((fn, _doc_bytes(fn.rsplit('.',1)[0].replace('_',' '), body, kieu)))
+    return docs
+
+def _mau_hop_dong(cty: dict, kieu: str) -> list[tuple[str, bytes]]:
+    body = f'''<p class="center"><b>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><br>Độc lập - Tự do - Hạnh phúc</p><h1>Hợp đồng nguyên tắc / mua bán</h1><p class="sub">Mẫu khung tự động cho {_html(cty['ten'])}</p><h2>1. Thông tin các bên</h2><p>Bên A: <span class="line"></span> · MST: <span class="line"></span></p><p>Bên B: {_html(cty['ten'])} · MST: {_html(cty['mst'])}</p><h2>2. Nội dung hợp tác</h2><p>Các bên thỏa thuận mua bán hàng hóa/dịch vụ theo đơn đặt hàng, báo giá, biên bản giao nhận/nghiệm thu và hóa đơn điện tử phát sinh từng lần.</p><h2>3. Thanh toán và chứng từ</h2><p>Thanh toán theo từng hóa đơn hoặc bảng đối chiếu công nợ. Bộ chứng từ gồm hợp đồng/đơn đặt hàng, hóa đơn, biên bản giao nhận/nghiệm thu, đề nghị thanh toán và phiếu thu/chi hoặc UNC.</p><table class="sign"><tr><td>Đại diện Bên A</td><td>Đại diện Bên B</td></tr></table>'''
+    thanh_ly = '''<h1>Biên bản nghiệm thu / thanh lý hợp đồng</h1><p>Hôm nay, ngày <span class="line"></span>, các bên xác nhận đã hoàn thành nghĩa vụ theo hợp đồng/đơn hàng số <span class="line"></span>.</p><table><tr><th>Nội dung</th><th>Kết quả nghiệm thu</th><th>Giá trị</th></tr><tr><td>Hàng hóa/dịch vụ theo hóa đơn</td><td>Đạt yêu cầu</td><td></td></tr></table><p>Các bên thống nhất công nợ còn phải thanh toán: <span class="line"></span> đồng.</p><table class="sign"><tr><td>Bên giao</td><td>Bên nhận</td></tr></table>'''
+    return [("HopDongNguyenTac_MuaBan.doc", _doc_bytes("Hợp đồng nguyên tắc / mua bán", body, kieu)), ("BienBanNghiemThu_ThanhLy.doc", _doc_bytes("Biên bản nghiệm thu / thanh lý", thanh_ly, kieu))]
+
+
+def _mau_lao_dong(cty: dict, kieu: str) -> list[tuple[str, bytes]]:
+    hdld = f'''<h1>Hợp đồng lao động</h1><p class="sub">Mẫu khung cho {_html(cty['ten'])}</p><table><tr><td>Người sử dụng lao động</td><td>{_html(cty['ten'])} - MST {_html(cty['mst'])}</td></tr><tr><td>Người lao động</td><td><span class="line"></span></td></tr><tr><td>Chức danh / bộ phận</td><td><span class="line"></span></td></tr><tr><td>Mức lương / phụ cấp</td><td><span class="line"></span></td></tr><tr><td>Thời hạn hợp đồng</td><td><span class="line"></span></td></tr></table><p>Hai bên thỏa thuận quyền, nghĩa vụ, thời giờ làm việc, nghỉ ngơi, bảo hiểm, bảo mật và các nội dung khác theo quy định hiện hành.</p><table class="sign"><tr><td>Người lao động</td><td>Người sử dụng lao động</td></tr></table>'''
+    qd = '''<h1>Quyết định tiếp nhận / điều chuyển / nghỉ việc</h1><p>Căn cứ nhu cầu sử dụng lao động và hồ sơ nhân sự, công ty quyết định:</p><table><tr><th>Họ tên</th><th>Chức danh</th><th>Ngày hiệu lực</th><th>Nội dung</th></tr><tr><td></td><td></td><td></td><td></td></tr></table><table class="sign"><tr><td>Người nhận quyết định</td><td>Người ký quyết định</td></tr></table>'''
+    return [("HopDongLaoDong.doc", _doc_bytes("Hợp đồng lao động", hdld, kieu)), ("QuyetDinhNhanSu.doc", _doc_bytes("Quyết định nhân sự", qd, kieu))]
+
+
+def _workbook_bytes(rows: list[dict], cty: dict, nhom: set[str]) -> bytes:
+    from openpyxl import Workbook
+    wb = Workbook(); ws = wb.active; ws.title = "Bang_Ke_Hoa_Don"
+    ws.append(["Doanh nghiệp", cty["ten"], "MST", cty["mst"]]); ws.append([])
+    ws.append(["Ngày", "Ký hiệu", "Số", "Đối tác", "MST đối tác", "Tiền hàng", "Thuế", "Tổng", "Có XML", "Có PDF gốc", "Ghi chú"])
+    for inv in rows:
+        b = _ben(inv); ws.append([_ngay_vn(ngay_hd(inv)), inv.get("khhdon") or inv.get("ky_hieu"), inv.get("shdon") or inv.get("so"), b["ten"], b["mst"], inv.get("tien_hang") or inv.get("tgtcthue") or 0, inv.get("thue") or inv.get("tgtthue") or 0, inv.get("tong") or inv.get("tgtttbso") or 0, "Có" if inv.get("_xml_path") else "Không", "Có" if inv.get("_goc_path") else "Không", inv.get("_goc_loi") or ""])
+    for col, width in zip("ABCDEFGHIJK", [14,14,12,38,16,16,14,16,12,14,42]): ws.column_dimensions[col].width = width
+    ws4 = wb.create_sheet("CHECKLIST_57")
+    ws4.append(["STT", "Folder", "Chứng từ", "Mức độ", "Đã có", "Ghi chú"])
+    for i, (folder, name, level) in enumerate(_checklist_57(), 1):
+        ws4.append([i, folder, name, level, "☐", ""])
+    ws5 = wb.create_sheet("Bang_Luong")
+    ws5.append(["STT", "Họ tên", "Chức vụ", "Ngày công", "Lương cơ bản", "Phụ cấp", "Khấu trừ", "Thực nhận", "Ký nhận"])
+    for i in range(1, 11): ws5.append([i, "", "", "", "", "", "", "", ""])
+    ws6 = wb.create_sheet("Bang_Cham_Cong")
+    ws6.append(["STT", "Họ tên"] + [str(i) for i in range(1, 32)] + ["Tổng công", "Ghi chú"])
+    for i in range(1, 11): ws6.append([i, ""] + ["" for _ in range(31)] + ["", ""])
+    if "thue_bhxh" in nhom:
+        ws2 = wb.create_sheet("Khung_BHXH_D02LT_TK1TS"); ws2.append(["STT", "Họ tên", "Mã số BHXH", "Số CCCD", "Chức danh", "Tiền lương", "Từ tháng", "Đến tháng", "Ghi chú"])
+        for i in range(1, 6): ws2.append([i, "", "", "", "", "", "", "", ""])
+        ws3 = wb.create_sheet("Ho_So_Thue"); ws3.append(["Mục hồ sơ", "Đã có", "Ghi chú"])
+        for name in ["Hóa đơn điện tử", "PDF gốc NCC", "Hợp đồng/đơn hàng", "Biên bản nghiệm thu/giao nhận", "Thanh toán ngân hàng/phiếu thu chi"]: ws3.append([name, "", ""])
+    buf = io.BytesIO(); wb.save(buf); return buf.getvalue()
+
+
+def _tao_zip_chung_tu(mst: str, p_ds: list[dict], s_ds: list[dict], nhom: set[str], kieu: str) -> bytes:
+    cty = _cty(mst); buf = io.BytesIO(); all_rows = list(p_ds) + list(s_ds)
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        readme = f'''<h1>Bộ chứng từ kế toán tự động</h1><p>Doanh nghiệp: <b>{_html(cty['ten'])}</b> · MST {_html(cty['mst'])}</p><p>Gói gồm {len(p_ds)} hóa đơn mua vào, {len(s_ds)} hóa đơn bán ra. File .doc có thể mở bằng Microsoft Word/LibreOffice để rà soát, ký và in.</p><p>Lưu ý: mẫu là khung chứng từ để kế toán hoàn thiện trước khi ký/nộp; các biểu mẫu BHXH/thuế nên đối chiếu với cổng nộp hồ sơ tại thời điểm sử dụng.</p>'''
+        z.writestr("00_README.html", _doc_frame("README bộ chứng từ", readme).encode("utf-8"))
+        z.writestr("00_DoiSoat_HoaDon.xlsx", _workbook_bytes(all_rows, cty, nhom))
+        z.writestr("00_manifest.json", json.dumps({"mst": mst, "ten_doanh_nghiep": cty["ten"], "so_hoa_don_mua_vao": len(p_ds), "so_hoa_don_ban_ra": len(s_ds), "nhom_mau": sorted(nhom), "tao_luc": dt.datetime.now().isoformat(timespec="seconds")}, ensure_ascii=False, indent=2))
+        for l, rows, root in (("purchase", p_ds, "01_MuaVao"), ("sold", s_ds, "02_BanRa")):
+            for inv in rows:
+                ten = f"{_ngay_vn(ngay_hd(inv)).replace('/', '-')}_{_slug(_hoa_don_id(inv))}_{_slug(_ben(inv)['ten'], 40)}"
+                folder = f"{root}/{ten}"
+                for fn, data in _invoice_docs(cty, inv, l, nhom, kieu): z.writestr(f"{folder}/{fn}", data)
+                z.writestr(f"{folder}/ThongTin_HoaDon.json", json.dumps(tom_tat(inv), ensure_ascii=False, indent=2))
+        if "hop_dong" in nhom:
+            for fn, data in _mau_gia_cong(cty, kieu): z.writestr("02_MuaBan_GiaCong/" + fn, data)
+            for fn, data in _mau_hop_dong(cty, kieu): z.writestr("02_MuaBan_GiaCong/" + fn, data)
+        if "lao_dong" in nhom:
+            for fn, data in _mau_lao_dong(cty, kieu): z.writestr("01_Luong_BHXH/" + fn, data)
+        if "thue_bhxh" in nhom:
+            body = '''<h1>Checklist hồ sơ thuế và BHXH</h1><table><tr><th>Nhóm hồ sơ</th><th>Tệp cần chuẩn bị</th><th>Trạng thái</th></tr><tr><td>Thuế GTGT</td><td>Bảng kê hóa đơn, hóa đơn XML/PDF, giải trình chênh lệch</td><td>Rà soát</td></tr><tr><td>BHXH</td><td>D02-LT/TK1-TS, HĐLĐ, quyết định lương, CCCD</td><td>Điền bổ sung nhân sự</td></tr></table>'''
+            z.writestr("03_Thue_HDDT/Checklist_HoSo.doc", _doc_bytes("Checklist hồ sơ thuế và BHXH", body, kieu))
+        for folder, desc in [("01_Luong_BHXH/", "Lương, chấm công, BHXH"), ("02_MuaBan_GiaCong/", "Mua bán, kho và gia công"), ("03_Thue_HDDT/", "Thuế và hóa đơn điện tử"), ("04_KeToan_BanHang/", "Sổ kế toán, ngân hàng, POS, hoàn hàng"), ("05_PhapLy/", "Hồ sơ pháp lý doanh nghiệp")]:
+            z.writestr(folder + "README.txt", desc)
+    return buf.getvalue()
+
 # ------------------------------------------------------------------ cửa vào
 
 def ly_do_chan(app_id: str) -> Optional[str]:
-    ten = "Tải Hoá Đơn TCT" if app_id == APP_TAI else "Quét hoá đơn Gmail"
+    ten = "Tải Hoá Đơn TCT" if app_id == APP_TAI else "Quét hoá đơn Gmail" if app_id == APP_GMAIL else "Bộ chứng từ kế toán"
     if not giay_phep.da_mo(app_id):
         return f"{ten} chưa được mở khoá. Vào Kết nối & Khách > Kết nối ngoài để nhập mã kích hoạt."
     if not knn.da_dong_y("chung"):
@@ -1262,6 +1437,12 @@ def ly_do_chan(app_id: str) -> Optional[str]:
 def _chan(app_id: str) -> Optional[JSONResponse]:
     ly = ly_do_chan(app_id)
     return JSONResponse({"ok": False, "error": ly}, status_code=403) if ly else None
+
+
+def _chan_chung_tu() -> Optional[JSONResponse]:
+    if ly_do_chan(APP_TAI) is None or ly_do_chan(APP_CT) is None:
+        return None
+    return JSONResponse({"ok": False, "error": ly_do_chan(APP_CT)}, status_code=403)
 
 
 def _loi(e: Exception, ma: int = 400) -> JSONResponse:
@@ -1308,7 +1489,7 @@ def register(app: FastAPI) -> None:
 
     @app.get(GOC + "/")
     def hd_trang():
-        if ly_do_chan(APP_TAI) and ly_do_chan(APP_GMAIL):
+        if ly_do_chan(APP_TAI) and ly_do_chan(APP_GMAIL) and ly_do_chan(APP_CT):
             return _trang_khoa(ly_do_chan(APP_TAI))
         return FileResponse(str(WEB_DIR / "index.html"), headers={"Cache-Control": "no-cache"})
 
@@ -1320,7 +1501,9 @@ def register(app: FastAPI) -> None:
             co_cffi = False
         return {"ok": True, "tai_hoa_don": ly_do_chan(APP_TAI) is None,
                 "gmail": ly_do_chan(APP_GMAIL) is None,
+                "bo_chung_tu": (ly_do_chan(APP_TAI) is None or ly_do_chan(APP_CT) is None),
                 "ly_do_tai": ly_do_chan(APP_TAI), "ly_do_gmail": ly_do_chan(APP_GMAIL),
+                "ly_do_bo_chung_tu": ly_do_chan(APP_CT),
                 "gia_lap_chrome": co_cffi}
 
     # ---------------- việc nền (dùng chung)
@@ -1739,6 +1922,27 @@ def register(app: FastAPI) -> None:
                     so = ex.merge_pdfs(ds_pdf, out)
                     return _tai_ve(Path(out).read_bytes(), f"IN_GOP_{so}HD_{nhan}.pdf", "application/pdf")
             raise ValueError("Kiểu xuất không hợp lệ.")
+        except Exception as e:
+            return _loi(e)
+
+
+    @app.post(A + "/bo-chung-tu")
+    async def hd_bo_chung_tu(request: Request):
+        if (c := _chan_chung_tu()):
+            return c
+        d = await _than(request)
+        try:
+            mst = chuan_mst(d.get("mst"))
+            (p_ds, s_ds), tu, den = _chon(mst, d)
+            if not (p_ds or s_ds):
+                raise ValueError("Chưa có hoá đơn nào để tạo bộ chứng từ.")
+            nhom = set(x for x in (d.get("nhom") or []) if x in {"mua_vao", "ban_ra", "hop_dong", "lao_dong", "thue_bhxh"})
+            if not nhom:
+                raise ValueError("Chọn ít nhất một bộ hồ sơ cần tạo.")
+            kieu = d.get("kieu_mau") if d.get("kieu_mau") in {"ke_toan", "trang_trong", "toi_gian"} else "ke_toan"
+            data = _tao_zip_chung_tu(mst, p_ds, s_ds, nhom, kieu)
+            nhan = ten_excel(mst, "", tu, den, cai_dat_tai()).replace(".xlsx", "")
+            return _tai_ve(data, "BoChungTu_" + nhan + ".zip", "application/zip")
         except Exception as e:
             return _loi(e)
 

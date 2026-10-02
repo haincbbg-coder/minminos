@@ -13,6 +13,7 @@
     <nav class="tab" role="tablist">
       <button type="button" data-tab="tai" role="tab">Tải Hoá Đơn TCT</button>
       <button type="button" data-tab="gmail" role="tab">Quét hoá đơn Gmail</button>
+      <button type="button" data-tab="chungtu" role="tab">Bộ chứng từ</button>
     </nav>
   </header>
 
@@ -193,6 +194,61 @@
           </div>
         </div>
       </div>
+    </section>
+
+
+    <!-- ================= BỘ CHỨNG TỪ ================= -->
+    <section id="tab-chungtu" class="trang" hidden>
+      <div class="doc-hero">
+        <div>
+          <p class="eyebrow">BỘ HỒ SƠ KẾ TOÁN TỰ ĐỘNG</p>
+          <h2>Bộ chứng từ in được từ hoá đơn</h2>
+          <p>Tự lấy thông tin doanh nghiệp, nhà cung cấp, khách hàng, số hoá đơn và số tiền để dựng hồ sơ kế toán, hợp đồng, lao động, thuế và BHXH. Người dùng chỉ chọn phạm vi rồi tải một gói hoàn chỉnh.</p>
+        </div>
+        <div class="doc-hero-card">
+          <b id="ctDn">Chưa chọn doanh nghiệp</b>
+          <span id="ctScope">Chọn doanh nghiệp ở tab Tải Hoá Đơn TCT để lấy dữ liệu.</span>
+          <button type="button" class="nut chinh" id="nutBoChungTu">Tạo bộ chứng từ ZIP</button>
+        </div>
+      </div>
+
+      <div class="doc-grid">
+        <section class="the doc-panel">
+          <div class="hang giua">
+            <div>
+              <h2>Dữ liệu đầu vào</h2>
+              <p class="nho">Ưu tiên các hoá đơn đang tích chọn. Nếu chưa tích dòng nào, MinMin dùng toàn bộ hoá đơn đang lọc trong bảng.</p>
+            </div>
+            <button type="button" class="nut" id="ctLamMoi">Cập nhật số liệu</button>
+          </div>
+          <div class="doc-stats" id="ctStats"></div>
+          <div class="doc-check" id="ctCheck"></div>
+        </section>
+
+        <section class="the doc-panel">
+          <h2>Chọn bộ hồ sơ cần tạo</h2>
+          <div class="doc-options" id="ctNhom">
+            <label><input type="checkbox" value="mua_vao" checked /> <span><b>Mua vào</b><small>Phiếu nhập kho, đề nghị thanh toán, phiếu chi/UNC, giao nhận, công nợ.</small></span></label>
+            <label><input type="checkbox" value="ban_ra" checked /> <span><b>Bán ra</b><small>Phiếu xuất kho, phiếu thu, bàn giao/nghiệm thu, công nợ phải thu.</small></span></label>
+            <label><input type="checkbox" value="hop_dong" checked /> <span><b>Hợp đồng mua bán</b><small>Hợp đồng nguyên tắc, hợp đồng mua bán, đơn đặt hàng, nghiệm thu/thanh lý.</small></span></label>
+            <label><input type="checkbox" value="lao_dong" checked /> <span><b>Lao động nhân sự</b><small>HĐ thử việc, HĐLĐ, quyết định tiếp nhận/nghỉ việc, bàn giao tài sản.</small></span></label>
+            <label><input type="checkbox" value="thue_bhxh" checked /> <span><b>Thuế &amp; BHXH</b><small>Bảng kê VAT, hồ sơ giải trình, khung D02-LT/TK1-TS và danh sách lao động.</small></span></label>
+          </div>
+          <div class="hang">
+            <label>Kiểu mẫu<select id="ctKieu"><option value="ke_toan">Chuẩn kế toán</option><option value="trang_trong">Trang trọng</option><option value="toi_gian">Tối giản dễ in</option></select></label>
+            <label>Phạm vi<select id="ctPhamVi"><option value="dang_chon">Hoá đơn đang chọn/đang lọc</option><option value="ky_hien_tai">Cả kỳ đang xem</option></select></label>
+          </div>
+        </section>
+      </div>
+
+      <section class="the doc-panel">
+        <details open>
+          <summary><b>Danh mục mẫu biểu trong gói</b></summary>
+          <div class="doc-template-list">
+            <span>Phiếu nhập/xuất kho</span><span>Đề nghị thanh toán</span><span>Phiếu chi/phiếu thu</span><span>Ủy nhiệm chi</span><span>Biên bản giao nhận</span><span>Đối chiếu công nợ</span><span>Hợp đồng nguyên tắc</span><span>Hợp đồng mua bán</span><span>Nghiệm thu/thanh lý</span><span>HĐLĐ/thử việc</span><span>Quyết định nhân sự</span><span>Bảng kê VAT</span><span>Khung D02-LT/TK1-TS</span><span>README hướng dẫn in</span>
+          </div>
+        </details>
+      </section>
     </section>
 
     <!-- ================= GMAIL ================= -->

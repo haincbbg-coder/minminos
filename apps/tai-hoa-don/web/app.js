@@ -5,7 +5,7 @@
 (function () {
   var API = "api/";
   var $ = function (s) { return document.querySelector(s); };
-  var tt = { tai: false, gmail: false };
+  var tt = { tai: false, gmail: false, chungtu: false };
   var dn = null;            // MST đang chọn
   var loai = "purchase";
   var dsHd = [];
@@ -107,12 +107,13 @@
 
   // ---------------- tab
   function moTab(t) {
-    if (!tt[t]) t = tt.tai ? "tai" : "gmail";
+    if (!tt[t]) t = tt.tai ? "tai" : tt.gmail ? "gmail" : "chungtu";
     document.querySelectorAll(".tab button").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === t); });
     $("#tab-tai").hidden = t !== "tai";
     $("#tab-gmail").hidden = t !== "gmail";
-    history.replaceState(null, "", t === "gmail" ? "?tab=gmail" : "./");
-    if (t === "tai") taiDn(); else taiGmail();
+    $("#tab-chungtu").hidden = t !== "chungtu";
+    history.replaceState(null, "", t === "gmail" ? "?tab=gmail" : t === "chungtu" ? "?tab=chungtu" : "./");
+    if (t === "tai") taiDn(); else if (t === "gmail") taiGmail(); else { if (dn && !dsHd.length) taiBang(); veChungTu(); }
   }
 
   // ================= TẢI HOÁ ĐƠN =================
@@ -255,11 +256,44 @@
     $("#soChon").textContent = "Đang lọc " + hdLoc.length + "/" + dsHd.length + " · Đã chọn " + chon.size;
     $("#phamViTai").textContent = chon.size ? "Áp dụng cho " + chon.size + " hoá đơn đã chọn (cả nút Xuất)"
       : "Áp dụng cho " + hdLoc.length + " hoá đơn đang lọc";
+    veChungTu();
   }
   function phamViXuat(them) {
     var d = { mst: dn, tu: $("#tu").value, den: $("#den").value };
     d.keys = (chon.size ? dsHd : hdLoc).filter(function(r) { return !chon.size || chon.has(r.key); }).map(function(r) { return r.key; }); d.loai = loai;
     for (var k in them) d[k] = them[k];
+    return d;
+  }
+
+
+
+  // ---------------- bộ chứng từ kế toán
+  function chungTuRows() {
+    if (!dn) return [];
+    if (chon.size) return dsHd.filter(function(r){ return chon.has(r.key); });
+    return (hdLoc && hdLoc.length ? hdLoc : dsHd).slice();
+  }
+  function veChungTu() {
+    var rows = chungTuRows();
+    var hasDn = !!dn;
+    if ($("#ctDn")) $("#ctDn").textContent = hasDn ? "MST " + dn + " · " + (loai === "purchase" ? "mua vào" : "bán ra") : "Chưa chọn doanh nghiệp";
+    if ($("#ctScope")) $("#ctScope").textContent = hasDn ? (chon.size ? "Đang chọn " + rows.length + " hoá đơn." : "Đang dùng " + rows.length + " hoá đơn trong bộ lọc.") : "Chọn doanh nghiệp ở tab Tải Hoá Đơn TCT để lấy dữ liệu.";
+    if (!$("#ctStats")) return;
+    var sum = rows.reduce(function(a,r){ a.tien += Number(r.tien_hang||0); a.thue += Number(r.thue||0); a.tong += Number(r.tong||0); if(r.co_xml)a.xml++; if(r.co_goc)a.goc++; return a; }, {tien:0,thue:0,tong:0,xml:0,goc:0});
+    $("#ctStats").innerHTML = [
+      ["Hoá đơn", rows.length], ["Tiền hàng", tien(sum.tien)], ["Thuế GTGT", tien(sum.thue)], ["Tổng thanh toán", tien(sum.tong)], ["Đã có XML", sum.xml + "/" + rows.length], ["Đã có PDF gốc", sum.goc + "/" + rows.length]
+    ].map(function(x){return '<div><small>'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>';}).join('');
+    var missing = [];
+    if (!hasDn) missing.push("Chưa chọn doanh nghiệp/MST.");
+    if (!rows.length) missing.push("Chưa có hoá đơn trong phạm vi tạo bộ chứng từ.");
+    if (rows.some(function(r){ return !r.co_xml; })) missing.push("Một số hoá đơn chưa có XML nên mẫu chỉ ghi dòng tổng hợp theo số hoá đơn.");
+    if (rows.some(function(r){ return !r.co_goc; })) missing.push("Một số hoá đơn chưa có PDF gốc NCC; gói vẫn tạo chứng từ và ghi rõ trạng thái còn thiếu.");
+    $("#ctCheck").innerHTML = (missing.length ? missing : ["Dữ liệu đủ để tạo bộ chứng từ in được."]).map(function(m,i){return '<p class="'+(missing.length?'can':'ok')+'">'+(missing.length?'Cần rà soát: ':'Sẵn sàng: ')+esc(m)+'</p>';}).join('');
+  }
+  function phamViChungTu() {
+    var d = phamViXuat({ kieu_mau: $("#ctKieu").value, pham_vi_chung_tu: $("#ctPhamVi").value });
+    d.nhom = Array.prototype.map.call(document.querySelectorAll("#ctNhom input:checked"), function(c){ return c.value; });
+    if (!d.nhom.length) throw new Error("Chọn ít nhất một bộ hồ sơ cần tạo.");
     return d;
   }
 
@@ -536,6 +570,10 @@
   // ---------------- gắn sự kiện
   function gan() {
     document.querySelectorAll(".tab button").forEach(function (b) { b.onclick = function () { moTab(b.dataset.tab); }; });
+    if ($("#ctLamMoi")) $("#ctLamMoi").onclick = function(){ if (dn) taiBang(); else veChungTu(); };
+    if ($("#nutBoChungTu")) $("#nutBoChungTu").onclick = async function(){ this.disabled = true; try { await taiFile("bo-chung-tu", phamViChungTu()); } catch(e) { bao(e.message); } finally { this.disabled = false; } };
+    ["#ctKieu", "#ctPhamVi"].forEach(function(id){ if($(id)) $(id).onchange = veChungTu; });
+    if ($("#ctNhom")) $("#ctNhom").querySelectorAll("input").forEach(function(c){ c.onchange = veChungTu; });
     $("#fDn").onsubmit = async function (ev) {
       ev.preventDefault();
       var f = ev.target;
@@ -640,12 +678,13 @@
     gan();
     var s;
     try { s = await goi("trang-thai"); } catch (e) { bao(e.message); return; }
-    tt.tai = s.tai_hoa_don; tt.gmail = s.gmail;
+    tt.tai = s.tai_hoa_don; tt.gmail = s.gmail; tt.chungtu = s.bo_chung_tu || s.tai_hoa_don;
     document.querySelector('.tab [data-tab="tai"]').disabled = !tt.tai;
     document.querySelector('.tab [data-tab="gmail"]').disabled = !tt.gmail;
+    document.querySelector('.tab [data-tab="chungtu"]').disabled = !tt.chungtu;
     if (!s.gia_lap_chrome) $("#ghiChuCffi").textContent = "Máy chủ thiếu thư viện curl_cffi nên cổng thuế dễ chặn (lỗi 403). Cập nhật MinMin bản mới.";
     var qs = new URLSearchParams(location.search);
-    var muon = qs.get("tab") === "gmail" ? "gmail" : "tai";
+    var muon = qs.get("tab") === "gmail" ? "gmail" : qs.get("tab") === "chungtu" ? "chungtu" : "tai";
     if (qs.get("them")) setTimeout(function () { bao("Đã thêm " + qs.get("them") + " bằng Google."); }, 300);
     moTab(muon);
   }
