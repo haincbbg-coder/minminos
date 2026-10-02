@@ -62,8 +62,14 @@ def doi_viec(c, vid, han=120):
 APP = Path(ROOT) / "apps" / "tai-hoa-don"
 # ---- mã nguồn
 lib = list((APP / "thd").rglob("*.py"))
+public_ca = APP / "thd" / "providers" / "certs" / "rapidssl-tls-rsa-ca-g1.pem"
+from cryptography import x509
+ca = x509.load_pem_x509_certificate(public_ca.read_bytes())
+check("chứng chỉ VIN là CA công khai, không chứa khoá riêng",
+      ca.extensions.get_extension_for_class(x509.BasicConstraints).value.ca
+      and b"PRIVATE KEY" not in public_ca.read_bytes())
 check("thư viện hoá đơn không mang phần bản quyền / khoá riêng cũ",
-      not (APP / "thd" / "licensing.py").exists() and not list(APP.rglob("*.pem"))
+      not (APP / "thd" / "licensing.py").exists() and set(APP.rglob("*.pem")) == {public_ca}
       and not any("taokey" in p.name for p in lib))
 check("thư viện chỉ import tương đối giữa các module của nó",
       not [p.name for p in lib if re.search(r"^\s*(from|import) (gdt_client|analysis|providers|invoice_xml|captcha_local)\b",

@@ -6,7 +6,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.32] - 2026-10-03
 ### Sửa lỗi
-- Hoàn thiện tải bản gốc VIN-HOADON và EFY.
+- Thêm tải PDF gốc VIN-HOADON qua CAPTCHA ảnh; EFY dùng dịch vụ reCAPTCHA đã cấu hình. Đối chiếu XML hãng trước khi lưu PDF để tránh ghép nhầm hóa đơn.
+- Sửa liên kết EFY để tự điền đúng số hóa đơn và mã tra cứu.
 
 ## [26.10.31] - 2026-10-02
 ### Sửa lỗi

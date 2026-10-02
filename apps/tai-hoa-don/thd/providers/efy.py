@@ -1,20 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-providers/efy.py - Nhà phát hành EFY Việt Nam (iHoaDon / eHoaDon).
-
-Nhận diện: MSTTCGP = 0102519041 (CÔNG TY CP CÔNG NGHỆ TIN HỌC EFY VIỆT NAM),
-ví dụ Ngọc Thuỷ Hà. (0100727825 EFY-eHoaDon còn nhét link PDF thẳng trong XML -> xmllink lo.)
-
-Cổng tra cứu công khai: https://ihoadon.vn/kiem-tra - tra cứu theo SỐ HÓA ĐƠN + MÃ TRA CỨU,
-HOẶC upload file XML. Trang này bảo vệ bằng reCAPTCHA (chống bot).
-
-QUAN TRỌNG (nguyên tắc): phần mềm KHÔNG tự vượt reCAPTCHA/cơ chế chống bot của cổng.
-Với hóa đơn EFY, tool:
-  • đọc MÃ TRA CỨU trong XML (nếu có) và tạo LINK/hướng dẫn tra cứu điền sẵn để tải tay;
-  • bản thể hiện hợp lệ ĐÃ có sẵn: XML tải từ cổng Tổng Cục Thuế được tool tự dựng thành
-    bản thể hiện (nút 👁 Xem / tải HTML) - đủ giá trị lưu trữ & khai thuế.
-Bản gốc NCC chỉ là bản in đẹp của nhà cung cấp, KHÔNG bắt buộc về mặt pháp lý.
-"""
+"""EFY public lookup via invoice number, lookup code and configured reCAPTCHA solver."""
 from __future__ import annotations
 
 from typing import Callable
@@ -61,25 +46,86 @@ def lookup_url(sh: str, code: str) -> str:
     from urllib.parse import urlencode
     q = {}
     if sh:
-        q["so_hd"] = sh
+        q["shd"] = sh
     if code:
-        q["ma_tra_cuu"] = code
+        q["mtc"] = code
     return LOOKUP_PAGE + (("&" + urlencode(q)) if q else "")
 
 
-def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None) -> bytes:
-    sh = C.shdon(xml_text)
-    khh = C.khhdon(xml_text)
-    code = find_code(xml_text, inv)
-    log(f"EFY (iHoaDon): HĐ {khh} số {sh}" + (", đã có mã tra cứu" if code else ""))
+def _download(session, url):
+    from urllib.parse import urljoin
+    from .xmllink import _public_url, MAX_BYTES
+    for _ in range(4):
+        _public_url(url)
+        with session.get(url, timeout=60, allow_redirects=False, stream=True) as response:
+            if response.status_code in (301, 302, 303, 307, 308):
+                url = urljoin(url, response.headers.get("Location", ""))
+                continue
+            if response.status_code != 200:
+                raise ProviderError(f"EFY: tải file HTTP {response.status_code}")
+            chunks, size = [], 0
+            for chunk in response.iter_content(65536):
+                size += len(chunk)
+                if size > MAX_BYTES:
+                    raise ProviderError("EFY: file vượt giới hạn 25 MB")
+                chunks.append(chunk)
+            return b"".join(chunks)
+    raise ProviderError("EFY: đường dẫn tải chuyển hướng quá nhiều lần")
 
-    url = lookup_url(sh, code)
-    inv["_manual_url"] = url
-    if code:
-        raise ProviderError(
-            "EFY (iHoaDon) tra cứu có reCAPTCHA chống bot nên cần tải tay: mở "
-            f"ihoadon.vn/kiem-tra, nhập SỐ HĐ {sh} + MÃ TRA CỨU {code}. "
-            "Ứng dụng chưa hỗ trợ tải tự động từ cổng này. Link: " + url)
-    raise ProviderError(
-        "EFY (iHoaDon): chưa có mã tra cứu trong XML hoặc Gmail đã ghép. "
-        "Cần mã từ email của nhà phát hành để tra cứu số HĐ này. Link: " + url)
+
+def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None) -> bytes:
+    import re
+    from urllib.parse import urljoin
+    from .smartsign import identity
+    code = find_code(xml_text, inv)
+    inv["_manual_url"] = lookup_url(C.shdon(xml_text), code)
+    if not code:
+        raise ProviderError("EFY: chưa có mã tra cứu trong XML hoặc Gmail đã ghép")
+    if solver is None:
+        raise ProviderError("EFY: cần cấu hình dịch vụ giải reCAPTCHA")
+    expected = identity(xml_text)
+    with C.make_session() as session:
+        page = session.get(LOOKUP_PAGE, timeout=40, allow_redirects=False)
+        if page.status_code != 200:
+            raise ProviderError(f"EFY: mở trang tra cứu HTTP {page.status_code}")
+        match = re.search(r"site_key_recaptcha\s*=\s*['\"]([^'\"]+)['\"]", page.text)
+        if not match:
+            raise ProviderError("EFY: chưa đọc được cấu hình reCAPTCHA của trang tra cứu")
+        for attempt in range(2):
+            token = solver.recaptcha_v2(match.group(1), LOOKUP_PAGE)
+            response = session.post("https://ihoadon.vn/kiem-tra/check", json={
+                "certificate_id": C.shdon(xml_text), "signature": code,
+                "gRecaptchaResponse": token,
+            }, timeout=90, allow_redirects=False)
+            if response.status_code != 200:
+                raise ProviderError(f"EFY: tra cứu HTTP {response.status_code}")
+            obj = response.json()
+            if obj.get("status") == "success":
+                break
+            message = str(obj.get("message") or "Không tìm thấy hóa đơn")
+            if not any(word in message.lower() for word in ("captcha", "xác minh", "xác thực")):
+                raise ProviderError("EFY: " + message[:250])
+            log(f"EFY: reCAPTCHA bị từ chối ({attempt + 1}/2)")
+        else:
+            raise ProviderError("EFY: reCAPTCHA chưa được chấp nhận sau 2 lần")
+        data = obj.get("data") or {}
+        if not isinstance(data, dict):
+            raise ProviderError("EFY: cấu trúc kết quả tra cứu không hợp lệ")
+        # Download the supplier XML too, so a wrong/stale lookup cannot attach another
+        # company's PDF to the current invoice. Do not use local HTML rendering here.
+        files = data.get("attach_file") or []
+        xmls = [f for f in files if isinstance(f, dict) and
+                (str(f.get("name", "")).lower().endswith(".xml") or f.get("code") == "HD01")]
+        if len(xmls) != 1 or not xmls[0].get("link"):
+            raise ProviderError("EFY: thiếu XML hãng để đối chiếu hóa đơn; chưa lưu PDF")
+        source = _download(session, urljoin(LOOKUP_PAGE, xmls[0]["link"]))
+        if identity(source.decode("utf-8-sig")) != expected:
+            raise ProviderError("EFY: XML hãng không khớp MST, ký hiệu hoặc số hóa đơn")
+        pdf_file = data.get("pdf_file") or {}
+        if not isinstance(pdf_file, dict) or not pdf_file.get("link"):
+            raise ProviderError("EFY: kết quả tra cứu chưa có đường dẫn PDF gốc")
+        pdf = _download(session, urljoin(LOOKUP_PAGE, pdf_file["link"]))
+        if not pdf.startswith(b"%PDF-"):
+            raise ProviderError("EFY: đường dẫn tải chưa trả về PDF gốc")
+        log("EFY: đã đối chiếu XML hãng và tải PDF gốc")
+        return pdf
