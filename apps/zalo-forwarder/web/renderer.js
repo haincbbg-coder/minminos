@@ -104,8 +104,11 @@ async function init() {
 }
 
 // ---------- Giao diện Pro: theme, ngôn ngữ, bản quyền ----------
-function applyTheme(theme) {
-  document.body.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
+function applyTheme() {
+  // Theo tông của MinMin OS (cùng nguồn gốc nên đọc được localStorage).
+  var v = "light";
+  try { v = localStorage.getItem("javis.theme") === "dark" ? "dark" : "light"; } catch (e) {}
+  document.body.setAttribute("data-theme", v);
 }
 function applyLang(lang, silent) {
   window.i18n.setLang(lang);
@@ -126,8 +129,9 @@ function reRenderAll() {
 
 function bindProControls() {
   $("#btn-theme").addEventListener("click", async () => {
-    config.ui.theme = (config.ui.theme || "light") === "light" ? "dark" : "light";
-    applyTheme(config.ui.theme);
+    config.ui.theme = document.body.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    try { localStorage.setItem("javis.theme", config.ui.theme); } catch (e) {}
+    applyTheme();
     await saveConfig();
   });
   $("#btn-lang").addEventListener("click", async () => {

@@ -3,13 +3,13 @@
   --chinh: #c2410c; --chinh-chu: #ffffff; --ok: #15803d; --loi: #d11f1f; --vang: #96590a;
   --dong: #f7f4ef; --bong: 0 2px 8px rgba(76, 58, 38, .07);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --nen: #0f0d14; --the: #17141f; --chu: #ece9f2; --nhat: #a39fb0; --vien: #2b2736;
-    --chinh: #ff7a3c; --chinh-chu: #1a0f08; --ok: #45c08f; --loi: #f07068; --vang: #e2a33c;
-    --dong: #1c1826; --bong: none;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --nen: #0e0e16; --the: #181822; --chu: #f3f3fb; --nhat: #9a9ab6; --vien: #36364c;
+  --chinh: #ff7a3c; --chinh-chu: #1a0f08; --ok: #34d36b; --loi: #f4565a; --vang: #f0c020;
+  --dong: #1d1d29; --bong: none;
 }
+:root[data-theme="light"] { color-scheme: light; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--nen); color: var(--chu); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .dau { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 20px; background: var(--the); border-bottom: 1px solid var(--vien); position: sticky; top: 0; z-index: 5; }
