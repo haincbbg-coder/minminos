@@ -69,6 +69,9 @@ def provider_names() -> list[str]:
 
 # MSTTCGP (MST tổ chức cung cấp giải pháp hóa đơn) -> tên NHÀ PHÁT HÀNH, để hiện trên bảng.
 TCGP_NAME = {
+    "0401486901": "VIN-HOADON (Visnam)",
+    "0402024593": "VIN-HOADON",
+    "0105232093": "CyberBill (xCyber)",
     "0309612872": "SmartSign",
     "0101243150": "MISA meInvoice",
     "0103243195": "Sapo",
@@ -192,6 +195,19 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
         c = (inv or {}).get("_ma_tra_cuu") or C.ttkhac(txt, "Matracuu")
         return std({"provider": "SmartSign", "url": "https://tracuuhd.smartsign.com.vn",
                     "code": c, "method": "Mã tra cứu", "mst": mst}, sh)
+    # Public lookup portals verified on 2026-10-02. Identifying the issuer
+    # and opening its portal does not imply an automatic PDF downloader.
+    portals = {
+        "0401486901": "https://tracuu.vin-hoadon.com/",
+        "0402024593": "https://tracuu.vin-hoadon.com/",
+        "0105232093": "https://tracuuhoadon1.xcyber.vn/",
+    }
+    if code in portals:
+        c = (inv or {}).get("_ma_tra_cuu") or (inv or {}).get("_code") or next(
+            (v for field in ("MaTraCuu", "Matracuu", "MTCuu", "QuanLy_SoBaoMat", "MaTimKiem", "Mã tra cứu")
+             if (v := C.ttkhac(txt, field))), "")
+        return std({"provider": TCGP_NAME[code], "url": portals[code], "code": c,
+                    "method": "Sao chép mã vào trang tra cứu của hãng, nhập mã xác thực nếu được yêu cầu", "mst": mst}, sh)
     # A known lookup field remains useful even when no downloader exists yet.
     # Never substitute the invoice number/Fkey or invent an issuer URL.
     lookup = (inv or {}).get("_ma_tra_cuu") or next(

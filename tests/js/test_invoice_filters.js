@@ -17,6 +17,21 @@ assert.equal(ui.filter(rows,{from:'2027-01-01'}).length,0);
 assert.equal(rows[0].id,'a','filter must not reorder source rows');
 console.log('invoice date presets, filter intersections, amount/number sort: OK');
 {
+ const docs = [
+  {so:'1',doi_tac:'NGÂN HÀNG TMCP Á CHÂU',tong:100,co_goc:true},
+  {so:'2',ban_ten:'Chi nhánh Ngân hàng Vietcombank',tong:200},
+  {so:'3',doi_tac:'CÔNG TY MAY ABC',ngan_hang:'ACB',tong:300},
+  {so:'4',doi_tac:'ACB',mst_doi_tac:'0301452948-001',tong:400},
+  {so:'5',tu:'Techcombank <invoice@techcombank.com.vn>',tong:500},
+  {so:'6',doi_tac:'CÔNG TY CỔ PHẦN ACB LOGISTICS',tong:600}
+ ];
+ assert.deepEqual(ui.filter(docs,{group:'bank',sort:'number-asc'}).map(r=>r.so),['1','2','4','5']);
+ assert.deepEqual(ui.filter(docs,{group:'business',sort:'number-asc'}).map(r=>r.so),['3','6']);
+ assert.deepEqual(ui.filter(docs,{group:'bank',file:'no-original',max:250}).map(r=>r.so),['2']);
+ assert.equal(ui.filter(docs,{}).length,6);
+ assert.equal(ui.isBank({}),false);
+}
+{
  const stages=['no-xml','pending','failed','done'];
  const records=stages.map((stage,i)=>({so:String(i),goc_trang_thai:stage,can_tai_tay:stage!=='done'}));
  for(const status of stages) assert.equal(ui.filter(records,{status})[0].goc_trang_thai,status);

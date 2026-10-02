@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.28] - 2026-10-02
+### Cải thiện
+- Bổ sung trang tra cứu nhà phát hành và mục chứng từ ngân hàng riêng trong hai bảng hóa đơn.
+
 ## [26.10.27] - 2026-10-02
 ### Sửa lỗi
 - Tải bản gốc MY SOFTWARE bằng mã CQT có trong XML thuế, kể cả khi không có email hoặc mã tra cứu riêng. Đối chiếu đúng hóa đơn trước khi lưu PDF.

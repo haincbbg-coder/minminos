@@ -216,9 +216,10 @@
   }
 
   function veBang() {
+    updateGroups("hd", dsHd);
     updateFileCounts("hd", dsHd);
     var ds = hdLoc = InvoiceUI.filter(dsHd, readFilter("hd"));
-    var valid = new Set(dsHd.map(function(r) { return r.key; }));
+    var valid = new Set(ds.map(function(r) { return r.key; }));
     chon.forEach(function(k) { if (!valid.has(k)) chon.delete(k); });
     var base = "/" + encodeURIComponent(dn) + "/" + loai + "/";
     $("#bangHd").innerHTML = ds.slice(0, 2000).map(function (r) {
@@ -385,6 +386,7 @@
 
 
   function veGmail() {
+    updateGroups("gm", dsG);
     updateFileCounts("gm", dsG);
     gmLoc = InvoiceUI.filter(dsG, readFilter("gm"));
     var valid = new Set(gmLoc.map(function(r) { return r.id; }));
@@ -417,9 +419,26 @@
   }
 
   async function gmailExport(type) { try { await taiFile("gmail/" + type,gmailScope()); } catch(e) { bao(e.message); } }
+  var invoiceGroups = {hd:"", gm:""};
+  function updateGroups(prefix, rows) {
+    var box = $("#" + prefix + "Groups"); if (!box) return;
+    var f = readFilter(prefix); f.group = "";
+    var periodRows = InvoiceUI.filter(rows, {from:f.from,to:f.to});
+    box.querySelectorAll("[data-group]").forEach(function(b) {
+      var group = b.dataset.group, count = InvoiceUI.filter(periodRows,{group:group}).length;
+      b.textContent = (group === "bank" ? "Chứng từ ngân hàng" : group === "business" ? "Hóa đơn kinh doanh" : "Tất cả") + " (" + count + ")";
+      b.setAttribute("aria-pressed", String(invoiceGroups[prefix] === group));
+      b.classList.toggle("chinh", invoiceGroups[prefix] === group);
+    });
+    var selected = InvoiceUI.filter(rows, readFilter(prefix));
+    var missing = selected.filter(function(r){return !r.co_goc;}).length;
+    box.querySelector("p").textContent = invoiceGroups[prefix] === "bank" ?
+      "Chứng từ do ngân hàng phát hành: " + selected.length + " dòng đang lọc · Tổng " + tien(selected.reduce(function(sum,r){return sum + Number(r.tong || 0);},0)) + " đ · " + missing + " chưa có bản gốc. Tải, Excel, ZIP và in gộp áp dụng cho mục đang chọn. Nhận diện theo tên/MST người bán." :
+      "Chọn mục để kiểm soát riêng chứng từ ngân hàng hoặc hóa đơn kinh doanh.";
+  }
   function readFilter(prefix) {
     function value(id) { return $("#" + prefix + id).value; }
-    return {q:prefix === "hd" ? $("#loc").value : value("Query"),supplier:value("Supplier"),number:value("Number"),
+    return {group:invoiceGroups[prefix],q:prefix === "hd" ? $("#loc").value : value("Query"),supplier:value("Supplier"),number:value("Number"),
       min:value("Min"),max:value("Max"),file:value("File"),sort:value("Sort"),publisher:value("Publisher"),status:value("Status"),
       from:prefix === "gm" ? $("#gTu").value : "",to:prefix === "gm" ? $("#gDen").value : ""};
   }
@@ -443,6 +462,11 @@
       '<label>Sắp xếp<select id="' + prefix + 'Sort">' + [['date-desc','Ngày mới trước'],['date-asc','Ngày cũ trước'],['amount-asc','Số tiền nhỏ → lớn'],['amount-desc','Số tiền lớn → nhỏ'],['name-asc','Tên A → Z'],['name-desc','Tên Z → A'],['number-asc','Số HĐ tăng dần'],['number-desc','Số HĐ giảm dần']].map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('') + '</select></label>' +
       '<button class="nut" type="button" data-reset>Đặt lại bộ lọc</button>' + (prefix === "gm" ? '<p id="gmCount" class="nho"></p><p class="nho">Trống đồng lấy từ hoá đơn đã ghép trong kho TCT. ZIP gồm các file đã có; in gộp sử dụng PDF gốc.</p>' : '');
     $(table).closest(".cuon").before(box);
+    var groups = document.createElement("section"); groups.id = prefix + "Groups"; groups.className = "invoice-groups";
+    groups.setAttribute("aria-label", "Nhóm chứng từ");
+    groups.innerHTML = '<div class="hang">' + ["","business","bank"].map(function(g){return '<button type="button" class="nut" data-group="'+g+'"></button>';}).join('') + '</div><p class="nho"></p>';
+    box.before(groups);
+    groups.querySelectorAll("[data-group]").forEach(function(b){b.onclick = function(){invoiceGroups[prefix] = b.dataset.group; (prefix === "gm" ? gChon : chon).clear(); (prefix === "gm" ? veGmail : veBang)();};});
     box.querySelectorAll("input,select").forEach(function(e) { e.oninput = e.onchange = prefix === "gm" ? veGmail : function(){chon.clear(); veBang();}; });
     box.querySelector("[data-reset]").onclick = function() { box.querySelectorAll("input").forEach(function(e){e.value="";}); $("#"+prefix+"File").value=""; $("#"+prefix+"Sort").value="date-desc"; $("#"+prefix+"Publisher").value=""; $("#"+prefix+"Status").value=""; if(prefix === "hd") $("#loc").value=""; (prefix === "gm" ? veGmail : veBang)(); };
   }
