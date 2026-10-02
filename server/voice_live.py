@@ -112,8 +112,7 @@ def _language_instruction(language: str) -> str:
     else:
         policy = (f"The user selected recognition language {language}. Listen and reply in {language}; "
                   "switch only when the user clearly speaks another language or explicitly requests it.")
-    if language.lower().startswith("vi"):
-        policy += " Speak Vietnamese with a natural native Vietnamese accent, clear tones and consonants, at a relaxed conversational pace. Pronounce Vietnamese words as Vietnamese, not with English phonetics. Read numbers and percentages naturally in Vietnamese."
+    policy += " Use a natural native accent in the selected spoken language, clear tones and consonants, at a relaxed conversational pace. Do not impose English phonetics on other languages. Read numbers and percentages naturally in the spoken language."
     return policy + " If audio is unclear, ask for repetition in the current language; do not infer a language switch from noise."
 
 
