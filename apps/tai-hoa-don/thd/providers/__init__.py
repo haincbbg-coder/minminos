@@ -43,11 +43,12 @@ from . import viettel       # noqa: E402
 from . import htinvoice     # noqa: E402
 from . import kkvat         # noqa: E402
 from . import efy           # noqa: E402
+from . import myinvoice     # noqa: E402
 from . import xmllink       # noqa: E402
 
 # Thứ tự = thứ tự thử nhận diện. Thêm hãng mới: viết module rồi thêm vào đây.
 # xmllink đặt cuối để nhận link độc lập, đồng thời làm dự phòng khi hãng tải thất bại.
-PROVIDERS = [misa, sapo, easyinvoice, bkav, viettel, htinvoice, kkvat, efy, xmllink]
+PROVIDERS = [misa, sapo, easyinvoice, bkav, viettel, htinvoice, kkvat, efy, myinvoice, xmllink]
 
 
 def detect(xml_bytes: bytes, inv: Optional[dict] = None):
@@ -96,6 +97,7 @@ EMAIL_CODE_TCGP = {
 
 # MSTTCGP các hãng ĐÃ tự tải được bản gốc (để lọc ra hãng CHƯA hỗ trợ).
 SUPPORTED_TCGP = {
+    "0108971656",  # MY SOFTWARE (mã tra cứu từ email/PDF)
     "0101243150",  # MISA
     "0103243195",  # Sapo
     "0105987432",  # EasyInvoice (Softdreams)
@@ -172,8 +174,9 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
                     "code": mtc or "(mã ở email - Quét Gmail)", "method": "reCAPTCHA", "mst": mst})
     # MY SOFTWARE (myinvoice) - mã bảo mật gửi qua email
     if code == "0108971656":
-        return std({"provider": "MY SOFTWARE (myinvoice)", "url": "https://tracuu.myinvoice.vn",
-                    "code": "(mã ở email - Quét Gmail)", "method": "Nhập mã + captcha", "mst": mst})
+        c = myinvoice.find_code(txt, inv or {})
+        return std({"provider": myinvoice.NAME, "url": myinvoice.PORTAL,
+                    "code": c, "method": "Nhập mã tra cứu từ email/PDF của hãng", "mst": mst})
     # HTInvoice - mã MTCuu trong XML, cổng laphoadon.htinvoice.vn/TraCuu
     if code == "0315638251":
         c = htinvoice.code(txt)

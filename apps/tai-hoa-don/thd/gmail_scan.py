@@ -63,6 +63,7 @@ SENDER_PROVIDER = {
     # khác
     "asiainvoice.vn": "asiainvoice", "pancake.vn": "pancake",
     "mysoftware.vn": "myinvoice",
+    "tracuu.myinvoice.vn": "myinvoice",
 }
 
 # email/tiêu đề gợi ý là hóa đơn (lọc bớt trước khi tải nội dung)
@@ -229,6 +230,10 @@ def extract_link_info(provider: str, body: str) -> dict:
             info["lookup_url"] = html.unescape(m.group(1))
         elif "fast.com.vn" in body and "type=3" in body:
             info["lookup_url"] = _find_lookup_link(body)
+    elif provider == "myinvoice":
+        from .providers import myinvoice
+        info["code"] = myinvoice.email_code(body)
+        info["lookup_url"] = myinvoice.PORTAL
     elif provider == "sapo":
         m = _RE_SAPO_QR.search(body) or _RE_CODE_GENERIC.search(body)
         if m:
@@ -287,6 +292,9 @@ def extract_link_info(provider: str, body: str) -> dict:
 def fetch_from_link(info: dict, log: Callable[[str], None]) -> Optional[bytes]:
     """Tải PDF gốc dựa vào mã/token lấy từ email. Trả về PDF hoặc None (nếu cần tải tay)."""
     prov = info.get("provider")
+    if prov == "myinvoice":
+        from .providers import myinvoice
+        return myinvoice.fetch_documents(info.get("code"), log)[1]
     if prov == "easyinvoice" and info.get("token"):
         from .providers import easyinvoice
         hosts = info.get("hosts") or [easyinvoice.HOST_DEFAULT]
@@ -560,13 +568,25 @@ class GmailScanner:
             # Không lấy XML đầu và PDF đầu của email nhiều hoá đơn rồi ghép nhầm.
             pairs = _invoice_attachments(atts)
             if pairs:
+                info = extract_link_info(prov, text) if len(pairs) == 1 else {}
                 for xml, pdf in pairs:
                     item = dict(rec, xml=xml, pdf=pdf)
+                    item["code"] = info.get("token") or info.get("code") or ""
+                    item["_mtc"] = info.get("code") or ""
+                    item["lookup_url"] = info.get("lookup_url") or info.get("link") or ""
                     item["needs_manual"] = not bool(pdf)
                     item["status"] = "Đính kèm: " + ", ".join(
                         (["XML"] if xml else []) + (["PDF"] if pdf else []))
                     if not pdf:
                         item["status"] += "; chưa có PDF khớp duy nhất"
+                        if prov == "myinvoice" and xml and item["code"] and want_download:
+                            try:
+                                item["pdf"] = providers.myinvoice.fetch_pdf(
+                                    xml.decode("utf-8-sig"), {"_code": item["code"]}, self.log)
+                                item["needs_manual"] = False
+                                item["status"] = "Đính kèm XML; đã tải PDF gốc từ MY SOFTWARE"
+                            except Exception as exc:
+                                item["status"] += "; " + str(exc)
                     keep(item)
                 continue
             # 2) chỉ có link -> cào PDF gốc
@@ -587,7 +607,10 @@ class GmailScanner:
                 keep(rec); continue
             if want_download and prov:
                 try:
-                    pdf = fetch_from_link(info, self.log)
+                    if prov == "myinvoice":
+                        rec["xml"], pdf = providers.myinvoice.fetch_documents(info.get("code"), self.log)
+                    else:
+                        pdf = fetch_from_link(info, self.log)
                     if pdf:
                         rec["pdf"] = pdf
                         rec["status"] = f"Đã cào PDF gốc từ {prov}"

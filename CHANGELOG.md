@@ -6,24 +6,16 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.27] - 2026-10-02
 ### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
+- Tải bản gốc MY SOFTWARE khi có mã tra cứu; giữ mã trong email có chứng từ đính kèm.
 
 ## [26.10.26] - 2026-10-02
 ### Sửa lỗi
 - Nghe thử ChatGPT Live thực sự phát lời chào Min Min: chờ kênh âm thanh mở rồi gửi lệnh đọc; tạo tín hiệu im lặng để duy trì nhịp phát, không mở microphone.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.25] - 2026-10-02
 ### Sửa lỗi
 - Dùng mã tra cứu EFY đã tìm được từ Gmail khi mở trang nhà phát hành.
 - Quét lại Gmail không tạo thêm dòng chỉ vì trang hãng tạo một file PDF có dữ liệu kỹ thuật khác lần trước.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.24] - 2026-10-02
 ### Sửa lỗi
@@ -32,18 +24,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Cải thiện
 - Phiên nghe thử chỉ phát âm thanh, không mở mic, không lưu hội thoại và không giao việc; tự đóng sau khi nghe thử.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.23] - 2026-10-02
 ### Sửa lỗi
 - Tự nối lại theo dõi tải hóa đơn và quét Gmail khi mất kết nối tạm thời, tránh dừng thanh tiến độ vì lỗi 502.
 - Lưu và ghép từng hóa đơn Gmail ngay khi đọc được, giảm giữ file trong bộ nhớ và giữ lại kết quả nếu lượt quét bị gián đoạn.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.22] - 2026-10-02
 ### Thêm mới
@@ -57,25 +41,13 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - Nối lại thất bại không tự đổi giọng giữa cuộc gọi ChatGPT Live. Giữ tùy chọn ElevenLabs và thương hiệu MinMin.
 
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.21] - 2026-10-02
 ### Sửa lỗi
 - Không lưu trang báo lỗi của cổng thuế thành ZIP hoặc PDF Trống đồng; nhận diện chứng từ lỗi đã lưu trước đây.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.20] - 2026-10-02
 ### Sửa lỗi
 - Đọc đúng số hóa đơn trong XML gửi qua Gmail có lớp thông điệp; khôi phục ghép bản gốc vào kho thuế.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.19] - 2026-10-02
 ### Sửa lỗi
@@ -83,20 +55,12 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - Sửa nút mở trang hãng khi không có đường dẫn, thêm tải XML ngay trong hộp tra cứu và đọc mã SmartSign từ XML.
 - Kết nối captcha trượt Viettel và luồng reCAPTCHA của HTInvoice với API giải captcha đã cấu hình.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.18] - 2026-10-02
 ### Cải thiện
 - Hóa đơn TCT và Gmail: lọc riêng có/chưa có XML, Trống đồng, PDF gốc; hiện số lượng theo từng bộ lọc.
 - Gmail: tải bản Trống đồng đã ghép từ kho TCT, đưa vào ZIP cùng XML và PDF gốc, kèm bảng đối soát file.
 - Zalo Forwarder: chặn xử lý lặp cùng mã tin, ngăn hàng đợi cũ gửi tiếp sau khi dừng/bật lại, cảnh báo khi hàng đợi đầy.
 - Nhật ký Zalo: lọc lỗi/cảnh báo/thành công, tìm tài khoản hoặc nội dung và xuất CSV các dòng đang lọc.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.17] - 2026-10-02
 ### Cải thiện
@@ -106,28 +70,16 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - Giữ các hoá đơn đã chọn sau khi tải để xuất ZIP đúng phạm vi; file còn thiếu được liệt kê trong bản đối soát.
 
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.16] - 2026-10-02
 ### Sửa lỗi
 - BKAV: tải thêm mẫu hoá đơn dùng nút tải file PDF có sẵn trong trang tra cứu.
 - FAST/J&T: nhận đúng link PDF trong email, tránh nhầm link bảng kê vận đơn hoặc chỉ mở trang chủ. Quét lại email cũ để bổ sung link tải.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.15] - 2026-10-02
 ### Sửa lỗi
 - BKAV: tải PDF từ hoá đơn mở trực tiếp, không bắt khai báo captcha khi trang không yêu cầu.
 - EasyInvoice: sửa địa chỉ tải, khôi phục nút Trang tra cứu cho dữ liệu Gmail cũ.
 - Gmail: lọc hãng phát hành và chứng từ cần tải lại rồi tải cả danh sách bằng một nút. Báo kết quả từng hoá đơn và tiếp tục khi một hoá đơn lỗi.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.14] - 2026-10-01
 ### Cải thiện
@@ -136,17 +88,9 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - Cả hai danh sách có kỳ tháng/quý/nửa năm, lọc nhà cung cấp, số hoá đơn, khoảng tiền và sắp xếp tăng/giảm. Tải và xuất dùng đúng danh sách đã chọn hoặc đang lọc.
 
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.13] - 2026-10-01
 ### Sửa lỗi
 - Giữ ảnh nền Trống đồng từ ZIP cổng thuế và ngắt dòng chữ ký dài khi in PDF.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.12] - 2026-10-01
 ### Sửa lỗi
@@ -155,10 +99,6 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - Quét Gmail đọc cả ZIP đính kèm, ghép XML/PDF theo tên khi thư có nhiều hoá đơn và bổ sung file thiếu khi quét lại.
 - Kết quả tải báo rõ hoá đơn còn thiếu file; ZIP xuất ra kèm danh sách đối soát từng file.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.11] - 2026-10-01
 ### Thêm mới
 - **Tải Hoá Đơn TCT đầy đủ như bản PC**: tách rõ tải XML thuế, PDF Trống đồng (bản thể hiện cổng thuế), PDF gốc của nhà cung cấp; giữ ZIP gốc cổng thuế; tải nhiều luồng song song.
@@ -166,17 +106,9 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - **Xuất ra máy**: ZIP chọn loại file (giữ nguyên cây thư mục), HTML Trống đồng (.zip), gộp PDF để in hàng loạt. Mọi nút xuất áp dụng cho các dòng đã tích, hoặc cả khoảng ngày nếu không tích dòng nào.
 - **Gmail ghép vào Tải Hoá Đơn TCT**: hoá đơn quét được trong Gmail tự gắn bản gốc PDF và XML vào đúng hoá đơn đã tra từ cổng thuế. Hoá đơn chưa có trong kho thì được thêm vào mục mua vào. Có nút Ghép lại khi vừa tra thêm kỳ mới.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.10] - 2026-10-01
 ### Cải thiện
 - Ẩn Điều khiển máy tính khỏi Kết nối ngoài và danh sách chọn ứng dụng khi tạo mã kích hoạt.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.8] - 2026-10-01
 ### Thêm mới
@@ -185,10 +117,6 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Sửa lỗi
 - Dán nhầm mật khẩu Gmail thường giờ bị chặn ngay lúc lưu, kèm lời chỉ dẫn, thay vì quét xong mới báo lỗi tiếng Anh khó hiểu.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.7] - 2026-10-01
 ### Thêm mới
 - **Tải Hoá Đơn TCT chạy trên trình duyệt** (Kết nối ngoài, cần mã kích hoạt): lưu nhiều doanh nghiệp, đăng nhập cổng hoadondientu.gdt.gov.vn bằng captcha ngay trên trang, tra cứu mua vào / bán ra (cả hoá đơn máy tính tiền), tải XML và PDF gốc của hãng, xem hoá đơn, xuất Excel, bảng kê thuế GTGT, chi tiết mặt hàng, ZIP, và xem cảnh báo.
@@ -196,26 +124,14 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Bảo mật
 - Mật khẩu cổng thuế, phiên đăng nhập và mật khẩu ứng dụng Gmail được mã hoá trên máy chủ.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.6] - 2026-10-01
 ### Thêm mới
 - Lead Engine: thêm hồ sơ doanh nghiệp, kho lead có dẫn chứng hội thoại và bản nháp quảng cáo/chăm sóc theo từng brain.
 - Có bảng theo dõi đơn giao thành công và chi phí đã nhập, chống cộng lặp khi đồng bộ lại. Bản đầu chưa tự gửi tin hoặc chạy quảng cáo.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.5] - 2026-10-01
 ### Cải thiện
 - **Mã kích hoạt của TrungKienHa có hiệu lực trên mọi bản MinMin**: gắn khoá công khai của nhà phát hành, nên mã cấp cho khách được máy khách nhận và mở đúng app.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.4] - 2026-10-01
 ### Thêm mới
@@ -223,28 +139,16 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - **Mỗi tài khoản Zalo một môi trường riêng**: trình duyệt riêng cố định cho từng tài khoản, và ô **proxy riêng** khi đăng nhập để các tài khoản không chung địa chỉ mạng.
 - Đang chuyển tiếp mà MinMin cập nhật hay khởi động lại thì **tự chạy lại**, không phải vào bấm.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.3] - 2026-10-01
 ### Thêm mới
 - **Mục Kết nối ngoài** trong nhóm Kết nối & khách: nơi chứa các app riêng của TrungKienHa (Zalo Forwarder, Tải Hoá Đơn TCT, Quét hoá đơn Gmail, Điều khiển máy tính). Mỗi app mở khoá bằng **mã kích hoạt**, khoá theo máy và thời hạn. Các app đang được chuyển dần lên trình duyệt, thẻ hiện "Sắp ra mắt".
 - **Máy nhà phát hành** (giữ khoá riêng) tự mở mọi app và có khung **tạo mã kích hoạt** cho khách ngay trong trang.
 - **Điều khoản sử dụng**: lần đầu mở MinMin phải đọc và bấm đồng ý. Tự động hoá Zalo và Điều khiển máy tính có điều khoản riêng, hỏi thêm khi mở app.
 
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
-
 ## [26.10.2] - 2026-10-01
 ### Cải thiện
 - **DeepSeek và Kimi K3 gọi công cụ ổn định hơn** qua OpenRouter và OpenAI Compatible: MinMin giữ lại phần "suy nghĩ" của model giữa các vòng gọi công cụ (đọc POS, Ads, Zalo, file...), đúng như hai hãng yêu cầu. Trước đây phần này bị bỏ nên việc nhiều bước có thể lỗi hoặc trả lời kém.
 - Gợi ý model OpenRouter mặc định thêm DeepSeek V4.1 Flash và Kimi K3.
-
-## [26.10.27] - 2026-10-02
-### Sửa lỗi
-- Bổ sung tải bản gốc MY SOFTWARE và giữ mã tra cứu từ email.
 
 ## [26.10.1] - 2026-10-01
 ### Thêm mới
