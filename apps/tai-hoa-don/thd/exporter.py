@@ -243,6 +243,15 @@ def export_excel(path: str, purchase: list[dict], sold: list[dict],
 # --------------------------------------------------------------------- PDF
 def find_browser() -> Optional[str]:
     """Tìm Edge / Chrome để in HTML -> PDF (headless)."""
+    # Server installs live in MinMin's persistent tool directory, outside PATH.
+    # Standalone desktop usage does not have the optional server module.
+    try:
+        import optional_tools
+        managed = optional_tools.duong_dan_chrome()
+        if managed and os.path.isfile(managed):
+            return managed
+    except (ImportError, OSError):
+        pass
     cands = []
     if sys.platform.startswith("win"):
         pf = [os.environ.get("ProgramFiles", r"C:\Program Files"),
