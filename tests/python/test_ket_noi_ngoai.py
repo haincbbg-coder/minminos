@@ -99,8 +99,11 @@ app = FastAPI()
 rk.register(app, Path(ROOT) / "dashboard")
 with TestClient(app) as tc:
     d = tc.get("/ket-noi-ngoai").json()
-    check("GET trả mã máy, 4 app, điều khoản chưa đồng ý",
-          d["ma_may"] == m1 and len(d["ung_dung"]) == 4 and d["dieu_khoan"]["chung"] is False)
+    check("GET trả mã máy, danh sách app và điều khoản chưa đồng ý",
+          d["ma_may"] == m1 and {u["id"] for u in d["ung_dung"]} == {
+              "zalo_forwarder", "tai_hoa_don", "quet_hoa_don_gmail",
+              "bo_chung_tu_ke_toan", "dieu_khien_may",
+          } and d["dieu_khoan"]["chung"] is False)
     r = tc.post("/ket-noi-ngoai/kich-hoat", data={"ma": ma_moi_may})
     check("chưa đồng ý điều khoản thì không kích hoạt được (403)", r.status_code == 403)
     r = tc.post("/dieu-khoan/dong-y", data={"phan": "chung"})
