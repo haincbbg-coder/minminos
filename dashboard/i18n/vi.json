@@ -1,4 +1,10 @@
 {
+  "settings.vc_latest": "Mặc định mới nhất",
+  "settings.vc_live_pace": "Nhịp nói Live",
+  "settings.vc_pace_slow": "Chậm, rõ ràng",
+  "settings.vc_pace_normal": "Tự nhiên",
+  "settings.vc_pace_fast": "Nhanh, gọn",
+  "settings.vc_pace_hint": "Áp dụng cho lượt gọi và nghe thử tiếp theo. Đây là yêu cầu cách nói cho AI, không phải hệ số tốc độ chính xác; không thay đổi thời gian xử lý của nhà cung cấp.",
   "app.voice_focus_mic_busy": "Mic chưa đóng xong. Bấm mic để mở lại đàm thoại.",
   "app.voice_focus_waiting": "Cứ nói hoặc bấm để tiếp tục",
   "app.voice_focus_click": "Bấm để tiếp tục đàm thoại",

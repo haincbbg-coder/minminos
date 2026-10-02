@@ -1,4 +1,10 @@
 {
+  "settings.vc_latest": "Latest default",
+  "settings.vc_live_pace": "Live speaking pace",
+  "settings.vc_pace_slow": "Slow and clear",
+  "settings.vc_pace_normal": "Natural",
+  "settings.vc_pace_fast": "Fast and concise",
+  "settings.vc_pace_hint": "Applies to the next call and preview. This guides the AI speaking style, not an exact speed multiplier or provider processing time.",
   "app.voice_focus_mic_busy": "The microphone has not finished closing. Tap the mic to reopen the conversation.",
   "app.voice_focus_waiting": "Just speak or tap to resume",
   "app.voice_focus_click": "Tap to resume conversation",
