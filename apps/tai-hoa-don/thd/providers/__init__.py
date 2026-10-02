@@ -175,8 +175,9 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
     # MY SOFTWARE (myinvoice) - mã bảo mật gửi qua email
     if code == "0108971656":
         c = myinvoice.find_code(txt, inv or {})
-        return std({"provider": myinvoice.NAME, "url": myinvoice.PORTAL,
-                    "code": c, "method": "Nhập mã tra cứu từ email/PDF của hãng", "mst": mst})
+        return {"provider": myinvoice.NAME,
+                "url": myinvoice.API + c + "/pdf" if c else myinvoice.PORTAL,
+                "code": c, "method": "Mở PDF từ mã tra cứu" if c else "Cần mã tra cứu từ email/PDF của hãng", "mst": mst}
     # HTInvoice - mã MTCuu trong XML, cổng laphoadon.htinvoice.vn/TraCuu
     if code == "0315638251":
         c = htinvoice.code(txt)

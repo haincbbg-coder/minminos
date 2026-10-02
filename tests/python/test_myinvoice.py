@@ -46,6 +46,7 @@ class MyInvoice(unittest.TestCase):
         self.assertIs(detect(xml()), p)
         info = manual_download_info(xml(), {"_ma_tra_cuu": CODE})
         self.assertEqual(info["code"], CODE)
+        self.assertEqual(info["url"], p.API + CODE + "/pdf")
         self.assertNotIn("captcha", info["method"])
 
     def test_rejects_html_and_redirect(self):
