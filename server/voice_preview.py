@@ -2,7 +2,7 @@
 import asyncio
 import json
 
-SAMPLE = "Chào anh, Min Min đây. Anh muốn em giúp việc gì hôm nay?"
+SAMPLE = "Chào bạn, Min Min đây. Bạn muốn mình giúp việc gì hôm nay?"
 
 
 async def serve(ws, provider):
