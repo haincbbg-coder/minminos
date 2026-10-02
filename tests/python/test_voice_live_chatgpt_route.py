@@ -95,7 +95,7 @@ class ChatGPTLiveRouteTests(unittest.IsolatedAsyncioTestCase):
                 asyncio=asyncio, json=json, sys=sys, WebSocket=Socket, Query=lambda x: x,
                 cfgmod=types.SimpleNamespace(gate_active=lambda: False,
                                              read_settings=lambda: {"voice": {"live_provider": "chatgpt"}}),
-                voice_live=types.SimpleNamespace(make_provider=make_provider, MEMORY_CHARS=4000),
+                voice_live=types.SimpleNamespace(make_provider=make_provider, MEMORY_CHARS=4000, is_speech_stop=lambda text: False),
                 openai_oauth=types.SimpleNamespace(write_codex_auth=write_auth),
                 _brain_memory_dir=lambda root: mem_dir, _brain_root=lambda b: directory,
                 _fit_memory_index=lambda mem, cap=None: mem[:cap],

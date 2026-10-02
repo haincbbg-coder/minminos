@@ -32,9 +32,13 @@ const vm = require('node:vm');
  await button.listeners.click();const old=captures[2].onresult;input.value='Sửa tay';input.dispatchEvent({type:'input'});
  old({results:[[{transcript:'late'}]]});assert.equal(input.value,'Sửa tay');
  await button.listeners.click();captures[3].onerror({error:'network'});assert.equal(status.textContent,'dictation.network');assert.ok(!d.active());
- let release; const pending=window.MinMinDictation.create({input,button:el(),status,beforeStart:()=>new Promise(r=>release=r),language:()=> 'vi-VN',onError:()=>{}});
- // cancellation after navigation cannot resurrect recognition
- document.hidden=true;document.listeners.visibilitychange();assert.ok(!pending.active());
+ let release; const pendingButton=el();
+ const pending=window.MinMinDictation.create({input,button:pendingButton,status,beforeStart:()=>new Promise(r=>release=r),language:()=> 'vi-VN',onError:()=>{}});
+ const count=captures.length;
+ const opening=pendingButton.listeners.click();
+ document.hidden=true;document.listeners.visibilitychange();
+ release();await opening;
+ assert.ok(!pending.active());assert.equal(captures.length,count,'leaving during microphone handover must not start capture');
  assert.equal(stopped,4);
  console.log('OK native recognition: live text, rollover, stop-final, empty, late results, errors; no chat transport');
 })().catch(e=>{console.error(e);process.exitCode=1;});

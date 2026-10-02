@@ -174,6 +174,14 @@ class SpeechQueueTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 2))
         self.assertIn("Hai.", self.fake.spoken()[-1])
 
+    async def test_spoken_stop_does_not_auto_resume(self):
+        await self.prov.send_tool_result("h1", "ask_javis", "Doanh thu 100 triệu. Chi phí 20 triệu.")
+        self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 1))
+        self.fake.push("thread/realtime/transcript/done", role="user", text="thôi con")
+        self.assertTrue(await self.until(lambda: any(e.get("status") == "paused" for e in self.events)))
+        await asyncio.sleep(0.1)
+        self.assertEqual(len(self.fake.spoken()), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

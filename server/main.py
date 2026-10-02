@@ -12770,6 +12770,10 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
         req = str((ev.get("args") or {}).get("request") or "")
         if name != "ask_javis":
             return await _run_one(name, cid, req, None)
+        if voice_live.is_speech_stop(req):
+            if hasattr(prov, "cancel_readback"):
+                await prov.cancel_readback()
+            return
         previous = ask_state["last"] if ask_state["waiting"] else None
         if previous is not None and (voice_live.is_followup_ack(req) or voice_live.is_same_request(previous, req)):
             # Chỉ là xác nhận trong lúc chờ, hay model bắn lặp chính yêu cầu đang chạy: kết quả việc đang

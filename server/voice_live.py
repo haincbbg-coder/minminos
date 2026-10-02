@@ -762,6 +762,10 @@ sure yes yeah yep thanks thank you let me know when done fine great cool alright
 _ACK_MAX_WORDS = 16
 
 
+def is_speech_stop(text: str) -> bool:
+    return _norm_words(text) in {"thôi", "thôi con", "dừng", "dừng đọc", "đừng đọc nữa", "im lặng", "stop", "stop speaking", "thôi min min"}
+
+
 def is_followup_ack(text: str) -> bool:
     """Câu nói thêm CHỈ gồm từ xác nhận, nhắc báo kết quả, bảo chờ. Một từ lạ là coi như có yêu cầu thật
     (thà chạy thêm một lượt còn hơn nuốt mất yêu cầu)."""
@@ -1042,7 +1046,12 @@ class ChatGPTLive(LiveProvider):
                 text = str(p.get("text") or "").strip() or self._user_buf.strip()
                 self._user_buf = ""
                 if self._speech_current:
-                    self._speech_done.set()
+                    if is_speech_stop(text):
+                        task = asyncio.ensure_future(self.cancel_readback())
+                        self._bg.add(task)
+                        task.add_done_callback(self._bg.discard)
+                    else:
+                        self._speech_done.set()
                 out: List[dict] = []
                 if text:
                     self._user_last, self._user_last_at = text, time.monotonic()
