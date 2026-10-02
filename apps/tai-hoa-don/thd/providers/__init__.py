@@ -91,7 +91,6 @@ TCGP_NAME = {
 # Nhiều hãng còn ĐÍNH KÈM SẴN PDF trong email nên Quét Gmail lấy được ngay, khỏi cần mã.
 EMAIL_CODE_TCGP = {
     "0101360697": ("BKAV eHoadon", "https://tracuu.ehoadon.vn"),
-    "0108971656": ("MY SOFTWARE (myinvoice)", "https://tracuu.myinvoice.vn"),
 }
 
 
@@ -172,7 +171,7 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
         url = "https://tchd.ehoadon.vn/TCHD" + ("?MTC=" + quote(mtc, safe="") if mtc else "")
         return std({"provider": "BKAV eHoadon", "url": url,
                     "code": mtc or "(mã ở email - Quét Gmail)", "method": "reCAPTCHA", "mst": mst})
-    # MY SOFTWARE (myinvoice) - mã bảo mật gửi qua email
+    # MY SOFTWARE - mã CQT trong XML hoặc mã tra cứu từ email/PDF
     if code == "0108971656":
         c = myinvoice.find_code(txt, inv or {})
         return {"provider": myinvoice.NAME,
