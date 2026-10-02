@@ -34,7 +34,11 @@
     if (r.status === 401) { location.href = "/"; throw new Error("Cần đăng nhập MinMin"); }
     var d = null;
     try { d = await r.json(); } catch (e) {}
-    if (!r.ok || !d || d.ok === false) throw new Error((d && (d.error || d.detail)) || ("HTTP " + r.status));
+    if (!r.ok || !d || d.ok === false) {
+      var loi = new Error((d && (d.error || d.detail)) || ("HTTP " + r.status));
+      loi.status = r.status;
+      throw loi;
+    }
     return d;
   }
   async function taiFile(duong, json) {
@@ -63,12 +67,25 @@
 
   // ---------------- việc nền
   function theoDoi(id, o, xong) {
-    var tu = 0;
+    var tu = 0, lanLoi = 0, phien = {};
+    o.phienTheoDoi = phien;
     o.hop.hidden = false; o.log.textContent = ""; o.thanh.value = 0; o.thanh.removeAttribute("value");
     o.dung.onclick = function () { goi("viec/" + id + "/dung", { method: "POST" }).catch(function () {}); };
     async function vong() {
+      if (o.phienTheoDoi !== phien) return;
       var v;
-      try { v = await goi("viec/" + id + "?tu=" + tu); } catch (e) { o.ten.textContent = e.message; return; }
+      try { v = await goi("viec/" + id + "?tu=" + tu); } catch (e) {
+        if (o.phienTheoDoi !== phien) return;
+        if ((!e.status || e.status >= 500 || e.status === 429) && ++lanLoi <= 12) {
+          o.ten.textContent = "Mất kết nối tạm thời, đang nối lại tiến độ. Không cần bấm quét/tải lại.";
+          setTimeout(vong, Math.min(15000, 2000 * lanLoi));
+        } else {
+          o.ten.textContent = e.message + ". Chưa đọc được tiến độ; tác vụ trên máy chủ có thể vẫn đang chạy.";
+        }
+        return;
+      }
+      if (o.phienTheoDoi !== phien) return;
+      lanLoi = 0;
       o.ten.textContent = v.mo_ta;
       if (v.nhat_ky.length) {
         o.log.textContent += v.nhat_ky.join("\n") + "\n";
