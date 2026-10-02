@@ -2,7 +2,7 @@
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
 
-Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [26.10.24] - 2026-10-02
+Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [26.10.25] - 2026-10-02
 ### Sửa lỗi
 - Dùng mã tra cứu EFY đã tìm được từ Gmail khi mở trang nhà phát hành.
 
