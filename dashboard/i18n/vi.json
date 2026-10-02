@@ -3211,6 +3211,8 @@
   "knn.app.tai_hoa_don.mo_ta": "Tải hoá đơn điện tử mua vào, bán ra từ cổng hoadondientu.gdt.gov.vn, xuất Excel, XML, PDF gốc, nhiều MST.",
   "knn.app.quet_hoa_don_gmail.ten": "Quét hoá đơn Gmail",
   "knn.app.quet_hoa_don_gmail.mo_ta": "Quét hộp thư Gmail tìm email hoá đơn, tải XML và PDF đính kèm, gom về một chỗ.",
+  "knn.app.bo_chung_tu_ke_toan.ten": "Bộ chứng từ kế toán",
+  "knn.app.bo_chung_tu_ke_toan.mo_ta": "Tự tạo bộ chứng từ từ hóa đơn: phiếu nhập/xuất kho, giao nhận, gia công, hợp đồng, lương, chấm công, thuế và BHXH để tải ZIP và in.",
   "knn.app.dieu_khien_may.ten": "Điều khiển máy tính",
   "knn.app.dieu_khien_may.mo_ta": "MinMin xem màn hình và thao tác trên máy tính ở nhà, chỉ trong ứng dụng bạn cấp quyền, có phanh khẩn cấp.",
   "call.connecting": "Đang kết nối",

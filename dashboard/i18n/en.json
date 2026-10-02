@@ -3211,6 +3211,8 @@
   "knn.app.tai_hoa_don.mo_ta": "Download purchase and sales e-invoices from hoadondientu.gdt.gov.vn, export Excel, XML, original PDF, many tax IDs.",
   "knn.app.quet_hoa_don_gmail.ten": "Gmail invoice scan",
   "knn.app.quet_hoa_don_gmail.mo_ta": "Scan Gmail for invoice emails, save attached XML and PDF in one place.",
+  "knn.app.bo_chung_tu_ke_toan.ten": "Accounting document pack",
+  "knn.app.bo_chung_tu_ke_toan.mo_ta": "Generate document packs from invoices: warehouse slips, delivery records, processing contracts, payroll, timesheets, tax and social insurance files.",
   "knn.app.dieu_khien_may.ten": "Computer control",
   "knn.app.dieu_khien_may.mo_ta": "MinMin sees the screen and operates the home computer, only inside apps you allow, with an emergency stop.",
   "call.connecting": "Connecting",

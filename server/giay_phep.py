@@ -67,6 +67,8 @@ UNG_DUNG = (
      "duong_dan": "/apps/tai-hoa-don/"},
     {"id": "quet_hoa_don_gmail", "icon": "mail", "san_sang": True, "dieu_khoan_rieng": "",
      "duong_dan": "/apps/tai-hoa-don/?tab=gmail"},
+    {"id": "bo_chung_tu_ke_toan", "icon": "folder-check", "san_sang": True, "dieu_khoan_rieng": "",
+     "duong_dan": "/apps/tai-hoa-don/?tab=chungtu"},
     {"id": "dieu_khien_may", "icon": "hand", "san_sang": False, "dieu_khoan_rieng": "dieu_khien"},
 )
 ID_UNG_DUNG = tuple(u["id"] for u in UNG_DUNG)
