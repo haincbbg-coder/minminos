@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.19] - 2026-10-02
+### Sửa lỗi
+- Phân biệt hóa đơn chưa tải XML, chưa thử bản gốc và đã thử nhưng chưa thành công; hiển thị số lượng từng nhóm.
+- Sửa nút mở trang hãng khi không có đường dẫn, thêm tải XML ngay trong hộp tra cứu và đọc mã SmartSign từ XML.
+- Kết nối captcha trượt Viettel và luồng reCAPTCHA của HTInvoice với API giải captcha đã cấu hình.
+
 ## [26.10.18] - 2026-10-02
 ### Cải thiện
 - Hóa đơn TCT và Gmail: lọc riêng có/chưa có XML, Trống đồng, PDF gốc; hiện số lượng theo từng bộ lọc.

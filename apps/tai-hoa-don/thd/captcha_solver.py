@@ -104,8 +104,12 @@ def _solve(provider: str, api_key: str, task: dict, want_key: str,
         res = _post(s, cfg["base"] + "/getTaskResult", {"clientKey": api_key, "taskId": task_id})
         if res.get("errorId"):
             raise CaptchaError(f"{provider}: {res.get('errorCode') or 'lỗi lấy kết quả'}")
+        if res.get("status") == "fail":
+            raise CaptchaError(f"{provider}: không giải được captcha")
         if res.get("status") == "ready":
             sol = res.get("solution") or {}
+            if want_key is None:
+                return sol
             val = sol.get(want_key) or sol.get("text") or sol.get("gRecaptchaResponse")
             if not val:
                 raise CaptchaError(f"{provider}: kết quả rỗng")
@@ -213,6 +217,30 @@ class Solver:
     def recaptcha_v2(self, site_key: str, page_url: str) -> str:
         return self._run(lambda p, k: solve_recaptcha_v2(p, k, site_key, page_url, log=self.log),
                          "reCAPTCHA")
+
+    def slider(self, background: bytes, puzzle: bytes, domain: str, width: int, height: int, puzzle_width: int) -> float:
+        """Return horizontal displacement, not a token; caller verifies with the issuer."""
+        def solve(provider, key):
+            bg = base64.b64encode(background).decode()
+            piece = base64.b64encode(puzzle).decode()
+            if provider == "omocaptcha":
+                task = {"type": "SliderAllWebTask", "domain": domain, "imageBase64": bg,
+                        "puzzle": piece, "widthView": width, "heightView": height}
+            elif provider == "2captcha":
+                task = {"type": "CoordinatesTask", "body": bg, "imgInstructions": piece,
+                        "comment": "Click the center of the missing puzzle piece in the background. One point only.",
+                        "minClicks": 1, "maxClicks": 1}
+            else:
+                raise CaptchaError("Dịch vụ chưa hỗ trợ captcha trượt trong MinMin")
+            solution = _solve(provider, key, task, None, 180, self.log)
+            point = solution.get("end") if provider == "omocaptcha" else (solution.get("coordinates") or [None])[0]
+            if not isinstance(point, dict) or "x" not in point:
+                raise CaptchaError("Dịch vụ không trả tọa độ trượt hợp lệ")
+            offset = float(point["x"]) - puzzle_width / 2
+            if not 0 <= offset <= width - puzzle_width:
+                raise CaptchaError("Tọa độ trượt nằm ngoài ảnh")
+            return offset
+        return self._run(solve, "captcha trượt")
 
     # tương thích code cũ gọi solver(img)
     def __call__(self, image_bytes: bytes) -> str:

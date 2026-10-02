@@ -127,40 +127,48 @@ def search_url(mst: str, secret: str) -> str:
 
 
 def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None) -> bytes:
-    """Tra cứu & tải bản gốc từ cổng công khai Viettel.
-
-    CẬP NHẬT 20/09/2026 (đã kiểm chứng thực tế trên vinvoice.viettel.vn):
-    cổng tra cứu Viettel nay bảo vệ bằng CAPTCHA TRƯỢT (slider puzzle) - một cơ chế
-    CHỐNG BOT, không phải captcha ảnh chữ. Phần mềm KHÔNG tự vượt cơ chế chống bot này.
-    Thay vào đó tool xác nhận đúng cổng + mã số bí mật rồi hướng dẫn tải tay bằng LINK
-    ĐIỀN SẴN (chỉ còn kéo thanh trượt + bấm Tìm kiếm). Bản gốc Viettel cũng thường được
-    đính kèm sẵn trong EMAIL người bán - dùng '📧 Quét Gmail' để lấy tự động, khỏi captcha.
-    """
+    """Verify the slider once, then submit the public portal's download form."""
+    import base64
+    import io
+    from PIL import Image
     mst = C.seller_mst(xml_text)
-    secret = _secret(xml_text)
-    sh = C.shdon(xml_text)
-    khh = C.khhdon(xml_text)
-    if not mst:
-        raise ProviderError("Viettel: thiếu MST người bán trong XML")
-    if not secret:
-        raise ProviderError("Viettel: XML không có 'Mã số bí mật' để tra cứu")
-
-    log(f"Viettel: HĐ {khh} số {sh} - MST {mst}, mã số bí mật {secret}")
-    # Kiểm tra nhanh cổng còn sống + xác nhận là captcha trượt (để báo lý do chính xác).
-    slider = False
-    try:
-        s = C.make_session()
-        r = s.get(HOST + CAPTCHA_GENERATE, timeout=30)
-        if r.status_code == 200 and ("backgroundUrl" in r.text or "image" in (r.headers.get("Content-Type") or "")):
-            slider = True
-            log("Viettel: cổng dùng captcha TRƯỢT (slider) chống bot - không tự vượt, chuyển tải tay.")
-    except Exception:  # noqa
-        pass
-
-    url = search_url(mst, secret)
-    inv["_manual_url"] = url          # để giao diện mở link điền sẵn khi bấm 'tải tay'
-    raise ProviderError(
-        "Viettel dùng captcha TRƯỢT chống bot nên cần tải tay (hoặc lấy tự động qua "
-        f"'📧 Quét Gmail' vì bản gốc thường đính kèm email). Mở link đã điền sẵn: {url}"
-        if slider else
-        "Viettel: cần tải tay tại cổng tra cứu. Mở link đã điền sẵn MST + mã số bí mật: " + url)
+    secret = inv.get("_ma_tra_cuu") or _secret(xml_text)
+    if not mst or not secret:
+        raise ProviderError("Viettel: thiếu MST người bán hoặc mã số bí mật trong XML")
+    inv["_manual_url"] = search_url(mst, secret)
+    if not solver or not hasattr(solver, "slider"):
+        raise ProviderError("Viettel: cần bật API giải captcha trượt (OmoCaptcha hoặc 2Captcha)")
+    s = C.make_session()
+    r = s.get(HOST + CAPTCHA_GENERATE, timeout=30)
+    r.raise_for_status()
+    challenge = r.json()
+    def decode_image(value):
+        if not isinstance(value, str) or not value.startswith("data:image/") or ";base64," not in value:
+            raise ProviderError("Viettel: định dạng ảnh captcha đã thay đổi")
+        return base64.b64decode(value.split(",", 1)[1], validate=True)
+    bg = decode_image(challenge.get("backgroundUrl"))
+    piece = decode_image(challenge.get("puzzleUrl"))
+    with Image.open(io.BytesIO(bg)) as im:
+        width, height = im.size
+    with Image.open(io.BytesIO(piece)) as im:
+        piece_width = im.width
+    offset = solver.slider(bg, piece, "vinvoice.viettel.vn", width, height, piece_width)
+    r = s.post(HOST + "/api/services/einvoiceuaa/api/captcha/verify",
+               json={"token": challenge.get("token"), "offsetX": offset}, timeout=30)
+    r.raise_for_status()
+    verified = r.json()
+    if not verified.get("success") or not verified.get("token"):
+        raise ProviderError("Viettel: cổng không chấp nhận kết quả captcha trượt; chưa tải PDF")
+    log("Viettel: captcha trượt đã được cổng xác nhận.")
+    payload = {"supplierTaxCode": mst, "reservationCode": secret, "recaptcha": verified["token"]}
+    # Both routes are the portal's own current/legacy download sequence.
+    routes = ["/api/services/einvoicequery/sync/utility/downloadPDF",
+              "/api/services/einvoiceadminapplication/no-auth/invoice-v1/downloadPDF"]
+    for route in routes:
+        r = s.post(HOST + route, params={"taxCode": mst}, json=payload, timeout=60)
+        if r.status_code == 200:
+            pdf = _pdf_from_bytes(r.content)
+            if pdf:
+                log("Viettel: đã tải PDF gốc.")
+                return pdf
+    raise ProviderError("Viettel: đã xác thực captcha nhưng cổng chưa trả PDF hợp lệ")

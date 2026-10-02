@@ -16,6 +16,13 @@ assert.equal(ui.filter(rows,{from:'2026-09-02',to:'2026-09-30',file:'pdf'}).leng
 assert.equal(ui.filter(rows,{from:'2027-01-01'}).length,0);
 assert.equal(rows[0].id,'a','filter must not reorder source rows');
 console.log('invoice date presets, filter intersections, amount/number sort: OK');
+{
+ const stages=['no-xml','pending','failed','done'];
+ const records=stages.map((stage,i)=>({so:String(i),goc_trang_thai:stage,can_tai_tay:stage!=='done'}));
+ for(const status of stages) assert.equal(ui.filter(records,{status})[0].goc_trang_thai,status);
+ assert.equal(ui.filter(records,{status:'manual'}).length,3);
+ assert.equal(ui.filter(records,{status:'failed',number:'0'}).length,0);
+}
 
 // Original PDF must never satisfy the tax-rendering filter (and vice versa).
 {

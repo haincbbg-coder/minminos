@@ -113,3 +113,5 @@ dialog input { width: 100%; margin: 8px 0 16px; }
 dialog .hang { flex-wrap: wrap; }
 .bang .nut.phu { padding: 3px 7px; font-size: 11px; }
 @media(max-width:600px) { .invoice-filters { grid-template-columns: 1fr 1fr; } .captcha-settings form > label { width: 100%; } }
+/* Author display rules must not expose unavailable actions or inactive panels. */
+[hidden] { display: none !important; }

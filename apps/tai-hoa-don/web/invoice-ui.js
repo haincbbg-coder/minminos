@@ -46,7 +46,7 @@
         (!supplier || text(seller(r) + " " + (r.mst_doi_tac || r.ban_mst || "")).includes(supplier)) &&
         (!number || text(r.so).includes(number)) &&
         (!f.publisher || (r.nha_cung_cap || "unknown") === f.publisher) &&
-        (!f.status || (f.status === "manual" ? r.can_tai_tay : !r.can_tai_tay)) &&
+        (!f.status || (f.status === "manual" ? r.can_tai_tay : r.goc_trang_thai ? r.goc_trang_thai === f.status : f.status === "done" && !r.can_tai_tay)) &&
         (f.min === "" || f.min == null || amount >= Number(f.min)) &&
         (f.max === "" || f.max == null || amount <= Number(f.max)) &&
         matchesFile(r, f.file);

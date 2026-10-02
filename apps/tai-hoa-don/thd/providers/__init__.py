@@ -68,6 +68,7 @@ def provider_names() -> list[str]:
 
 # MSTTCGP (MST tổ chức cung cấp giải pháp hóa đơn) -> tên NHÀ PHÁT HÀNH, để hiện trên bảng.
 TCGP_NAME = {
+    "0309612872": "SmartSign",
     "0101243150": "MISA meInvoice",
     "0103243195": "Sapo",
     "0105987432": "EasyInvoice (Softdreams)",
@@ -184,6 +185,18 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
         c = kkvat.code(txt)
         return std({"provider": "TS24 (KKVAT)", "url": kkvat.HOST,
                     "code": c or "(không có mã)", "method": "Nhập MST + mã + captcha", "mst": mst})
+    if code == "0309612872":
+        c = (inv or {}).get("_ma_tra_cuu") or C.ttkhac(txt, "Matracuu")
+        return std({"provider": "SmartSign", "url": "https://tracuuhd.smartsign.com.vn",
+                    "code": c, "method": "Mã tra cứu", "mst": mst}, sh)
+    # A known lookup field remains useful even when no downloader exists yet.
+    # Never substitute the invoice number/Fkey or invent an issuer URL.
+    lookup = (inv or {}).get("_ma_tra_cuu") or next(
+        (v for field in ("MaTraCuu", "Matracuu", "MTCuu", "QuanLy_SoBaoMat", "MaTimKiem")
+         if (v := C.ttkhac(txt, field))), "")
+    if lookup:
+        return {"provider": TCGP_NAME.get(code, f"NPH {code}" if code else ""),
+                "code": lookup, "url": "", "method": "Mã trong XML", "mst": mst}
     return None
 
 
