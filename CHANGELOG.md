@@ -8,7 +8,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Sửa lỗi
 - Nút mũi tên thu gọn dùng bộ biểu tượng của MinMin thay ký tự rời, khắc phục lỗi kiểm tra tự động trên bản trước.
 ### Cải thiện
-- Hóa đơn và Zalo Forwarder dùng cùng bảng màu ngà và cam của MinMin, cả tông sáng lẫn tối.
+- Hóa đơn và Zalo Forwarder dùng cùng bảng màu ngà và cam của MinMin, đúng tông sáng hoặc tối đang chọn trong MinMin (không còn tự đen theo máy).
 
 ## [26.10.42] - 2026-10-03
 ### Sửa lỗi
