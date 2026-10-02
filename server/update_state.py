@@ -56,6 +56,15 @@ def record_boot_version(current: str) -> dict:
     patch = {}
     if last_good and last_good != current and ver_newer(current, last_good):
         patch["previous_version"] = last_good
+    # Docker stops the old process before Watchtower can return. Only a boot into
+    # the requested newer version completes that persisted restarting state.
+    target, old = st.get("target_version"), st.get("old_version")
+    if (st.get("phase") == "restarting" and target and old
+            and ver_newer(current, old)
+            and ver_tuple(current) >= ver_tuple(target)):
+        from datetime import datetime
+        patch.update(phase="idle", result="success", error=None,
+                     finished_at=datetime.now().isoformat(timespec="seconds"))
     patch["last_good_version"] = current
     return write_state(patch)
 

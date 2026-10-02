@@ -32,7 +32,7 @@
   <!-- Biến --ic-* cho icon dùng trong content: của CSS. Phải đứng TRƯỚC style.css
        vì style.css tham chiếu các biến này. -->
   <link rel="stylesheet" href="/static/vendor/lucide-icons.css?v=1">
-  <link rel="stylesheet" href="/static/style.css?v=105">
+  <link rel="stylesheet" href="/static/style.css?v=106">
   <link rel="stylesheet" href="/static/console.css?v=83">
   <link rel="stylesheet" href="/static/minmin-galaxy.css?v=3">
   <link rel="stylesheet" href="/static/noi-mem.css?v=4">
@@ -847,7 +847,7 @@
   <script src="/static/graph.js?v=17"></script>
   <script src="/static/minmin-galaxy.js?v=3"></script>
   <script src="/static/minmin-galaxy3d.js?v=4"></script>
-  <script src="/static/chat-render.js?v=17"></script>
+  <script src="/static/chat-render.js?v=18"></script>
   <script src="/static/code-hl.js?v=1"></script>
   <script src="/static/dataview.js?v=2"></script>
   <!-- window.JavisCopy: chép một chuỗi vào bảng nhớ tạm, có đường lui cho http trần. Đứng
@@ -857,7 +857,9 @@
   <!-- Bảng lệnh của trình soạn .md (nút thanh công cụ + phím tắt + menu "/"). PHẢI đứng
        trước console.js: _neBuildToolbar đọc window.JavisEditorCmds để vẽ nút. -->
   <script src="/static/editor-cmds.js?v=1"></script>
-  <script src="/static/file-editor.js?v=12"></script>
+  <!-- Đếm từ + ký tự cho trình sửa file (0.65.32). Thuần, console.js dùng qua window.JavisWordCount. -->
+  <script src="/static/word-count.js?v=1"></script>
+  <script src="/static/file-editor.js?v=14"></script>
   <script src="/static/chat-ask.js?v=2"></script>
   <script src="/static/limit-resume.js?v=1"></script>
   <script src="/static/chat-slash.js?v=3"></script>
@@ -875,7 +877,7 @@
   <script src="/static/voice-live.js?v=7"></script>
   <script src="/static/screen-awake.js?v=1"></script>
   <script src="/static/call-bar.js?v=1"></script>
-  <script src="/static/app.js?v=200"></script>
+  <script src="/static/app.js?v=201"></script>
   <script src="/static/hud-launch.js?v=3"></script>
   <!-- Sau app.js: dải việc nền đọc window.JavisSessions (app.js dựng) để biết phiên + brain. -->
   <script src="/static/background-strip.js?v=3"></script>
@@ -909,7 +911,7 @@
   <!-- Console layer: console.js đăng ký store TRƯỚC khi Alpine khởi động (defer) -->
   <!-- Phần đọc cấu hình của form "Tự thêm MCP" (thuần, có test node). Nạp TRƯỚC console.js. -->
   <script src="/static/mcp-form-parse.js?v=1"></script>
-  <script src="/static/console.js?v=201"></script>
+  <script src="/static/console.js?v=202"></script>
   <script src="/static/cap-nhat.js?v=1"></script>
   <script src="/static/ket-noi-ngoai.js?v=1"></script>
   <script src="/static/mobile-chat.js?v=11"></script>
