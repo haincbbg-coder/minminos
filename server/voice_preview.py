@@ -9,10 +9,13 @@ async def serve(ws, provider):
     tasks = []
     try:
         await provider.connect()
-        await ws.send_json({"type": "ready"})
+        pcm = getattr(provider, "transport", "webrtc") == "pcm"
+        await ws.send_json({"type": "ready", "transport": "pcm" if pcm else "webrtc"})
 
         async def events():
             async for event in provider.events():
+                if pcm and event.get("type") == "audio":
+                    await ws.send_bytes(event["data"])
                 if event.get("type") in ("error", "transcript", "turn_done"):
                     await ws.send_json(event)
                 # No handoff/tool execution, history writes, or user audio in previews.
@@ -30,13 +33,16 @@ async def serve(ws, provider):
                     continue
                 if data.get("type") == "stop":
                     return
-                if data.get("type") == "webrtc_offer" and not offered:
+                if data.get("type") == "webrtc_offer" and not offered and not pcm:
                     offered = True
                     answer = await provider.start_webrtc(str(data.get("sdp") or ""))
                     await ws.send_json({"type": "webrtc_answer", "sdp": answer})
-                elif data.get("type") == "sample" and offered and not spoken:
+                elif data.get("type") == "sample" and (offered or pcm) and not spoken:
                     spoken = True
-                    await provider.speak_text(SAMPLE)
+                    if pcm:
+                        await provider.send_text("Chỉ đọc đúng câu sau bằng tiếng Việt: " + SAMPLE)
+                    else:
+                        await provider.speak_text(SAMPLE)
 
         tasks = [asyncio.create_task(events()), asyncio.create_task(client())]
         done, _ = await asyncio.wait(tasks, timeout=60, return_when=asyncio.FIRST_COMPLETED)

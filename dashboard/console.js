@@ -6549,7 +6549,7 @@
     }
     const basic = call.engine === "basic";
     const isEleven = () => basic && sel.value === "elevenlabs";
-    tryBtn.hidden = call.engine === "api";   // giọng của Live qua API không có mẫu thu sẵn
+    tryBtn.hidden = call.engine === "api" && call.live_provider !== "gemini";   // giọng của Live qua API không có mẫu thu sẵn
     $("vcVoiceNote").hidden = !(basic && sel.value.startsWith("edge:"));
     $("vcRateRow").hidden = !basic;          // tốc độ đọc chỉ áp cho giọng đọc của đường Cơ bản
     $("vcOpenaiNote").hidden = !basic || !!tts.openai_key_set;
@@ -6581,21 +6581,30 @@
     // Nghe thử đúng giọng đang chọn, với danh tính Min Min, không thu mic.
     if (window.MinMinVoicePreview) window.MinMinVoicePreview.stop();
     tryBtn.onclick = () => {
-      if (call.engine === "chatgpt" && window.MinMinVoicePreview) {
+      if ((call.engine === "chatgpt" || (call.engine === "api" && call.live_provider === "gemini")) && window.MinMinVoicePreview) {
         if (window.JavisVoiceLive && window.JavisVoiceLive.isOn()) {
           $("vcStatus").textContent = "Hãy cúp cuộc gọi trước khi nghe thử giọng.";
           return;
         }
         window.MinMinVoicePreview.play(sel.value, text => {
           if (gen === _renderGen && $("vcStatus")) $("vcStatus").textContent = text;
-        }).catch(() => { $("vcStatus").textContent = "Không mở được giọng nghe thử."; });
+        }, call.live_provider).catch(() => { $("vcStatus").textContent = "Không mở được giọng nghe thử."; });
       } else if (window.JavisVoiceSample) window.JavisVoiceSample();
     };
 
 
-    $("vcEngine").value = call.setting || "auto";
+    $("vcEngine").value = call.setting === "api" && v.live_provider === "gemini" ? "gemini" : (call.setting || "auto");
+    const gemini = (o.live_providers || []).find(p => p.id === "gemini");
+    $("vcProviderNote").textContent = $("vcEngine").value === "gemini"
+      ? (gemini && gemini.available ? t("settings.gemini_ready") : t("settings.gemini_key"))
+      : t("settings.dictation_note");
     $("vcEngine").onchange = async () => {
-      await luuGiong({ call_engine: $("vcEngine").value });
+      const choice = $("vcEngine").value;
+      if (choice === "gemini") {
+        const patch = { call_engine: "api", live_provider: "gemini" };
+        if (v.live_provider !== "gemini") { patch.live_model = ""; patch.live_voice = "Aoede"; }
+        await luuGiong(patch);
+      } else await luuGiong({ call_engine: choice });
       renderVoiceCard();   // dòng "Đang dùng" và danh sách giọng đổi theo đường mới
     };
 
@@ -7197,7 +7206,7 @@
   // (giữ nguyên mọi handler + WebSocket + streaming đã gắn trong app.js) rồi TRẢ về HUD khi
   // rời trang. Cùng một cuộc trò chuyện hiển thị ở cả màn Javis lẫn tab này.
   // ============================================
-  const CHAT_NODE_IDS = ["callBar", "chatArea", "bgStrip", "attachBar", "modelBar", "hudVoice"];
+  const CHAT_NODE_IDS = ["callBar", "chatArea", "bgStrip", "attachBar", "modelBar", "dictationStatus", "hudVoice"];
   let _chatSlots = [];        // vị trí gốc từng node để trả về đúng chỗ trong HUD
 
   function _injectChatCss() {

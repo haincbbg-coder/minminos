@@ -19,7 +19,7 @@ const context = {
   attention: { stop() {} }, liveWake: { cancelListening() {} }, updateVoiceFocus() {},
   clearTimeout() {}, setTimeout: fn => fn,
   handsFree: false, voice: { cancelListening() { cancelled++; }, stopSpeaking() {} },
-  voiceBtn: { classList: { remove() {} } }, window: {}, tatLive() {}, nhapGiong() {},
+  callBtn: { classList: { remove() {} } }, window: {}, tatLive() {}, nhapGiong() {},
   runActions() {}, turn: { micOff: () => [] },
   hideActivity() {}, goMoiTinCu() {}, chatArea: { innerHTML: '' },
   persistSession() {}, notifySessions() {}, syncActiveUI() {}, savedSessionId: 'old',

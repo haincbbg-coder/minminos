@@ -144,7 +144,7 @@ const base = (call, extra = {}) => Object.assign({
   check("Live API: dòng Đang dùng ghi tên nhà cung cấp, lý do rơi xuống và cách bật ChatGPT Live",
     now.includes('call.engine_api{\\"provider\\":\\"Gemini\\"}') && now.includes("settings.vc_reason_auto_api") && now.includes("settings.vc_detail_no_login"));
   check("Live API: ô giọng là giọng Gemini, giữ giọng đã lưu", r.els.vcVoice.options.length === 2 && r.els.vcVoice.value === "Kore");
-  check("Live API: không có nút nghe thử", r.els.vcTry.hidden === true);
+  check("Gemini Live: nghe thử giọng đang chọn", r.els.vcTry.hidden === false);
   r.els.vcVoice.value = "Puck"; await r.els.vcVoice.onchange();
   check("Live API: đổi giọng tự lưu live_voice", JSON.stringify(r.saves.at(-1)) === '["voice",{"live_voice":"Puck"}]');
 
@@ -260,6 +260,11 @@ const base = (call, extra = {}) => Object.assign({
   await settle();
   check("Model: Bộ não chính thì ẩn ô Model và không tải danh sách",
     r.els.vcBrainModelRow.hidden === true && !r.ctx.urls.some(u => u.startsWith("/voice/brain-models")));
+
+  r = await run(base({ engine: "chatgpt", live_provider: "chatgpt", setting: "chatgpt", reason: "chosen" },
+    { voice: {live_provider: "openai", live_model: "gpt-realtime", live_voice: "marin"} }));
+  r.els.vcEngine.value="gemini"; await r.els.vcEngine.onchange();
+  check("Chọn Gemini không mang model/giọng OpenAI sang", JSON.stringify(r.saves.at(-1)) === '["voice",{"call_engine":"api","live_provider":"gemini","live_model":"","live_voice":"Aoede"}]');
 
   if (fails.length) { console.log("\nFAIL:", fails.length, fails); process.exit(1); }
   console.log("\nOK - thẻ Giọng nói gọn");

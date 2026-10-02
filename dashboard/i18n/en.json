@@ -209,7 +209,7 @@
   "qs.domain_docs": "Domain setup guide ↗",
   "qs.deploy_docs": "Deploy/SSL guide ↗",
   "mb.open": "Change model / provider / effort",
-  "bar.mic": "Click to call MinMin",
+  "bar.mic": "Dictate a draft, without sending",
   "bar.attach": "Attach files (images, text, documents) → saved to Sources",
   "bar.input_ph": "What would you like me to do?",
   "bar.stop": "Stop command / stop reading (Esc)",
@@ -3229,10 +3229,6 @@
   "call.engine_basic": "Basic",
   "call.engine_api": "Live ({provider})",
   "call.fallback": "ChatGPT Live could not start, the call switched to the Basic path.",
-  "app.att_empty": "couldn't read the file (0 bytes). Pick it again with the attach button",
-  "share.rename": "Rename",
-  "share.rename_ask": "Link name (leave empty to use the file title):",
-  "share.rename_fail": "Couldn't rename, try again",
   "settings.vc_title": "VOICE",
   "settings.vc_voice": "MinMin's voice",
   "settings.vc_advanced": "Advanced",
@@ -3263,5 +3259,12 @@
   "settings.vc_group_edge": "Edge (free)",
   "settings.vc_eleven_opt": "Your ElevenLabs voice (Voice ID under Advanced)",
   "settings.vc_openai_note": "For OpenAI voices, paste an OpenAI API key on the Models page.",
-  "call.reconnect_failed": "Couldn't reconnect ChatGPT Live. Just speak again to retry."
+  "call.reconnect_failed": "Couldn't reconnect ChatGPT Live. Just speak again to retry.",
+  "bar.call": "Call Min Min for a live conversation",
+  "dictation.stop": "Stop dictation",
+  "dictation.listening": "Dictating · Nothing is sent · Tap mic to stop",
+  "dictation.review": "Draft ready. Review it, then press Send.",
+  "settings.gemini_ready": "Gemini Live uses your connected Google API key. Pick a voice and preview it.",
+  "settings.gemini_key": "Gemini Live needs a Gemini API key in AI Models. Add one to use Gemini voices.",
+  "settings.dictation_note": "The composer mic only dictates a draft. The separate phone button starts a conversation with automatic replies."
 }

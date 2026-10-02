@@ -25,7 +25,7 @@ const box = {
     setRecognitionLang(lang) { this.lang = lang; }
     cancelListening() { events.push('cancel-capture'); } startListening() { events.push('wake-listen'); } stopSpeaking() {} },
   Date: {now: () => now}, document: {getElementById: () => button},
-  voiceBtn: {classList: {add: noop, remove: noop, toggle: noop}},
+  callBtn: {classList: {add: noop, remove: noop, toggle: noop}},
   handsFree: true, voiceMode: 'standard', isProcessing: false, savedSessionId: 'session-A',
   turn: {micOn: () => [], micOff: () => [], endpoint: () => [], delayFor: () => 1200,
     toolCall: () => [], turnDone: () => [], ttsEnd: () => [], interim: () => []},

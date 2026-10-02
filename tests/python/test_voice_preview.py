@@ -41,6 +41,37 @@ class PreviewTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([e["type"] for e in socket.sent], ["ready", "webrtc_answer"])
         self.assertTrue(provider.closed and socket.closed)
 
+    async def test_gemini_pcm_preview_is_listen_only(self):
+        class Provider:
+            transport = "pcm"
+            def __init__(self): self.texts, self.closed = [], False
+            async def connect(self): pass
+            async def close(self): self.closed = True
+            async def send_text(self, text): self.texts.append(text)
+            async def events(self):
+                yield {"type": "audio", "data": b"pcm-audio"}
+                yield {"type": "tool_call", "name": "ask_javis"}
+                await asyncio.Event().wait()
+        messages = [{"bytes": b"never-forward-input"},
+                    {"text": json.dumps({"type": "sample", "text": "run a task"})},
+                    {"text": json.dumps({"type": "sample"})}, {"type": "websocket.disconnect"}]
+        class Socket:
+            def __init__(self): self.sent, self.audio = [], []
+            async def send_json(self, data): self.sent.append(data)
+            async def send_bytes(self, data): self.audio.append(data)
+            async def close(self): pass
+            async def receive(self):
+                await asyncio.sleep(0)
+                return messages.pop(0)
+        provider, socket = Provider(), Socket()
+        await voice_preview.serve(socket, provider)
+        self.assertEqual(socket.sent[0]["transport"], "pcm")
+        self.assertEqual(socket.audio, [b"pcm-audio"])
+        self.assertEqual(len(provider.texts), 1)
+        self.assertIn(voice_preview.SAMPLE, provider.texts[0])
+        self.assertNotIn("run a task", provider.texts[0])
+        self.assertTrue(provider.closed)
+
     async def test_identity_and_vietnamese_pronunciation_reach_live_session(self):
         provider = voice_live.ChatGPTLive(voice="maple")
         params = provider.start_params("offer")

@@ -72,7 +72,13 @@ function currentBrainPath() {
 const chatArea = document.getElementById("chatArea");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
-const voiceBtn = document.getElementById("voiceBtn");
+const callBtn = document.getElementById("callBtn");
+const dictation = window.MinMinDictation.create({
+  input: chatInput, button: document.getElementById("voiceBtn"),
+  status: document.getElementById("dictationStatus"),
+  beforeStart: () => tatRanhTay(),
+  language: () => voice.lang || "vi-VN", onError: alertMic,
+});
 const voiceInterim = document.getElementById("voiceInterim");
 
 // ---- Voice V3: chữ đang nghe hiện NGAY TRONG KHUNG CHAT (chủ dự án 2026-09-14) ----
@@ -142,7 +148,7 @@ const voice = new JavisVoice({
   // xét lại trên chữ của tai (0.65.15, voice.js onTranscript).
   wakeCandidate: (text) => handsFree && attention.wakeCandidate(text),
   onStart: () => {
-    voiceBtn.classList.add("recording");
+    callBtn.classList.add("recording");
     if (!adaptive.running()) nhapGiong("");
     adaptive.start();
     runActions(turn.micOn());
@@ -158,14 +164,14 @@ const voice = new JavisVoice({
     runActions(turn.interim(text));
   },
   onTranscript: (text) => {
-    voiceBtn.classList.remove("recording");
+    callBtn.classList.remove("recording");
     if (adaptive.manual(text)) return;
     nhapGiong("");
     text = veTinTuGiong(text);   // luật CHỜ / DỪNG của đạo diễn: trả "" khi không gửi
     if (text) sendMessage(text);
   },
   onEnd: () => {
-    voiceBtn.classList.remove("recording");
+    callBtn.classList.remove("recording");
     // Hands-free: giữ trạng thái chờ nghe lại, đừng reset về SẴN SÀNG cho đỡ nháy.
     // Phiên nghe kết thúc mà không có chữ (tiếng ồn rồi im) thì vẫn phải hạ cờ "đang nói":
     // endpoint("") không gửi gì, chỉ trả đạo diễn về listening để tin nền được đọc tiếp.
@@ -176,7 +182,7 @@ const voice = new JavisVoice({
   onTranscribing: () => capNhatOrb(),
   onError: (err) => {
     adaptive.save("capture_error");
-    voiceBtn.classList.remove("recording");
+    callBtn.classList.remove("recording");
     // Mic hỏng hẳn thì TẮT chế độ rảnh tay. Không tắt thì vòng giữ mic 500ms bên dưới cứ mở
     // lại mãi, mỗi lần một hộp thoại chặn - người dùng bấm OK xong nửa giây sau nó nổ tiếp,
     // không còn đường nào bấm vào trang nữa. Đúng cảnh người dùng báo 04/09.
@@ -678,7 +684,7 @@ function updateVoiceFocus() {
   button.hidden = !handsFree || !attention.waiting();
   const wakeAvailable = voiceMode !== "live" || (liveWake.isSupported() && !liveWake.micHong()) || !_levelWakeLoi;
   button.textContent = window.t(wakeAvailable ? "app.voice_focus_waiting" : "app.voice_focus_click");
-  voiceBtn.classList.toggle("focus-waiting", !button.hidden);
+  callBtn.classList.toggle("focus-waiting", !button.hidden);
 }
 
 function resumeVoiceFocus(text = "") {
@@ -762,7 +768,7 @@ async function batLive(wakeText = "", { som = false, lanThu = 0 } = {}) {
     brain: () => currentBrainPath(),
     language: () => voice.langAuto ? "auto" : voice.lang,
     onStarted: () => {
-      voiceBtn.classList.add("recording"); runActions(turn.micOn());
+      callBtn.classList.add("recording"); runActions(turn.micOn());
       clearInterval(_liveCtxTimer); _liveCtxTimer = setInterval(guiNguCanhLive, 1500); guiNguCanhLive();
     },
     onStopped: () => {
@@ -770,7 +776,7 @@ async function batLive(wakeText = "", { som = false, lanThu = 0 } = {}) {
       if (_liveJavisText.trim()) recordTurn("javis", _liveJavisText.trim(), null, null);
       if (_theoLoi && _theoLoi.live) ketThucTheoLoi(true);
       _liveJavisText = ""; _liveJavisBubble = null;
-      voiceBtn.classList.remove("recording"); runActions(turn.micOff());
+      callBtn.classList.remove("recording"); runActions(turn.micOff());
     },
     onReady: (d) => {
       if (ticket !== _liveStartSeq || !handsFree) return;
@@ -1385,6 +1391,7 @@ const _gocCongSu = {};
 // đoán lại ý người dùng (xem workflow_chat.quyet_dinh_luot): bấm đúng nút Chạy thì chạy,
 // dù câu trong ô nhập có nghe như đang nói về chính quy trình.
 function sendMessage(text, opts) {
+  dictation.stop();
   if (window.JavisWorkspace && !window.JavisWorkspace.canSend()) return;
   const msg = (text || chatInput.value).trim();
   // Lệnh / : session-command chạy tại chỗ; skill-command bung thành lời gọi skill.
@@ -3495,6 +3502,7 @@ let handsFree = false;
 // thái này nằm ở ba nơi - biến, lớp CSS của nút, và công tắc loa - và bỏ sót một nơi thì giao
 // diện nói dối: nút vẫn sáng "đang nghe" trong khi không có gì đang nghe cả.
 function tatRanhTay() {
+  try { dictation.stop(); } catch (_) {}
   adaptive.cancel(); adaptiveContinuation="";
   adaptiveOutbox.clear();
   attention.stop(); _liveWaitingWake = false; _liveBusyUntil = 0;
@@ -3507,16 +3515,16 @@ function tatRanhTay() {
   _choTaiLen = null; _tuGiong = false;
   handsFree = false;
   voice.handsFree = false;        // thôi rình ngắt lời ngay, đừng đợi vòng 500 ms
-  voiceBtn.classList.remove("handsfree");
+  callBtn.classList.remove("handsfree");
   // Gọi điện (0.65.18): cúp máy thì ẩn thanh gọi, nút mic về lại "gọi", và lần gọi sau thử lại
   // đường chính (chuyenSangCoBan chỉ đổi chế độ cho MỘT cuộc gọi).
   // Bọc try: vài test bóc riêng hàm này ra chạy, ở đó không có thanh gọi.
   try {
     _callMuted = false; voice.muted = false;
     if (callBar) callBar.hide();
-    voiceBtn.classList.remove("in-call");
-    voiceBtn.title = window.t("bar.mic");
-    voiceBtn.setAttribute("aria-label", window.t("bar.mic"));
+    callBtn.classList.remove("in-call");
+    callBtn.title = window.t("bar.call");
+    callBtn.setAttribute("aria-label", window.t("bar.call"));
     if (_callInfo && _callInfo.voice_mode) datCheDoGiong(_callInfo.voice_mode);
     // Cúp máy (0.65.22): thôi đo âm lượng lúc chờ và trả màn hình về tự tắt như thường.
     tatNgheAmLuong();
@@ -3559,17 +3567,18 @@ function alertMic(err) {
   // Lỗi khác (mạng, start-failed…) KHÔNG hiện hộp thoại: chúng thoáng qua và tự thử lại được,
   // còn hộp thoại thì chặn cứng cả trang.
 }
-voiceBtn.addEventListener("click", () => {
+callBtn.addEventListener("click", () => {
+  dictation.stop();
   if (voiceMode !== "live" && !voice.isSupported()) { alert(window.t("app.voice_unsupported")); return; }
   handsFree = !handsFree;
   if (handsFree) attention.start();
-  voiceBtn.classList.toggle("handsfree", handsFree);
+  callBtn.classList.toggle("handsfree", handsFree);
   if (handsFree) {
     // Bấm mic là GỌI: hiện thanh gọi, nút mic thành Cúp máy (0.65.18).
     _callMuted = false;
-    voiceBtn.classList.add("in-call");
-    voiceBtn.title = window.t("call.hangup");
-    voiceBtn.setAttribute("aria-label", window.t("call.hangup"));
+    callBtn.classList.add("in-call");
+    callBtn.title = window.t("call.hangup");
+    callBtn.setAttribute("aria-label", window.t("call.hangup"));
     if (callBar) { callBar.show(tenDuongGoi()); capNhatThanhGoi(); }
     // Giữ màn hình sáng suốt cuộc gọi (0.65.22): điện thoại khoá màn hình là trình duyệt cắt mic.
     try { if (window.JavisScreenAwake) window.JavisScreenAwake.hold(); } catch (e) {}
