@@ -18,6 +18,14 @@ def res(text):
     return SimpleNamespace(status_code=200,text=text,content=text.encode(),json=lambda:{'str':text})
 
 class PetrolimexTests(unittest.TestCase):
+    def test_renderer_finds_persistent_minmin_browser_outside_path(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            browser=Path(directory)/'headless_shell';browser.write_bytes(b'fixture')
+            module=SimpleNamespace(duong_dan_chrome=lambda:str(browser))
+            with patch.dict(sys.modules,{'optional_tools':module}),patch.object(exporter.shutil,'which',return_value=None):
+                self.assertEqual(exporter.find_browser(),str(browser))
+
     def test_mapping_does_not_capture_other_vnpt_sellers(self):
         self.assertTrue(P.detect(XML,{}))
         self.assertFalse(P.detect(XML.replace('PETROLIMEX TEST','OTHER'),{}))
