@@ -8,8 +8,7 @@ Mã tra cứu NẰM TRONG XML:
     <TTin><TTruong>DDTC</TTruong>...<DLieu>laphoadon.htinvoice.vn/TraCuu</DLieu></TTin>
 Không cần email. Cổng tra cứu công khai (có thể có captcha).
 
-GHI CHÚ: cổng dùng JavaScript nên module thử các endpoint ứng viên + GHI LOG để chốt sau 1
-lần chạy thật (như đã làm EasyInvoice). Chưa ra -> ProviderError (đánh dấu 'cần tải tay').
+Luồng tra cứu sử dụng reCAPTCHA, token phiên và PDF gốc nhúng trong trang nhà phát hành.
 """
 from __future__ import annotations
 
@@ -38,11 +37,11 @@ def _field(xml_text: str, name: str) -> str:
 
 
 def code(xml_text: str) -> str:
-    return _field(xml_text, "MTCuu") or _field(xml_text, "MaTraCuu")
+    return C.ttkhac(xml_text, "MTCuu") or C.ttkhac(xml_text, "MaTraCuu")
 
 
 def portal(xml_text: str) -> str:
-    d = _field(xml_text, "DDTC") or "laphoadon.htinvoice.vn/TraCuu"
+    d = C.ttkhac(xml_text, "DDTC") or "laphoadon.htinvoice.vn/TraCuu"
     return d if d.startswith("http") else "https://" + d.lstrip("/")
 
 
@@ -53,27 +52,39 @@ def detect(xml_text: str, inv: dict) -> bool:
 
 
 def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None) -> bytes:
-    mtc = code(xml_text)
-    base = portal(xml_text).split("/TraCuu")[0].rstrip("/")
+    """Public portal flow, inspected 2026-10-02: lookup token -> embedded supplier PDF."""
+    import base64
+    from urllib.parse import urlsplit
+    mtc = inv.get("_ma_tra_cuu") or code(xml_text)
+    page = portal(xml_text)
+    host = urlsplit(page).hostname or ""
+    if host != "htinvoice.vn" and not host.endswith(".htinvoice.vn"):
+        raise ProviderError("HTInvoice: địa chỉ cổng không hợp lệ")
+    base = "https://" + host
     if not mtc:
-        raise ProviderError("HTInvoice: không thấy mã tra cứu (MTCuu) trong XML")
-    log(f"HTInvoice: mã tra cứu {mtc}, cổng {base}")
+        raise ProviderError("HTInvoice: XML chưa có mã tra cứu")
+    if not solver or not hasattr(solver, "recaptcha_v2"):
+        raise ProviderError("HTInvoice: cần bật API giải reCAPTCHA v2 (2Captcha)")
     s = C.make_session()
-    # các endpoint ứng viên tải PDF theo mã tra cứu (chốt lại sau 1 lần chạy thật)
-    cands = [
-        f"{base}/api/tracuu/pdf?ma={mtc}",
-        f"{base}/TraCuu/DownloadPdf?ma={mtc}",
-        f"{base}/api/Invoice/Pdf/{mtc}",
-        f"{base}/TraCuu/Pdf?code={mtc}",
-    ]
-    for u in cands:
-        try:
-            r = s.get(u, timeout=60, headers={"Accept": "application/pdf,*/*"})
-        except Exception as e:  # noqa
-            log(f"  {u} lỗi ({str(e)[:40]})"); continue
-        if r.status_code == 200 and r.content[:4] == b"%PDF":
-            log("HTInvoice: ✓ lấy được PDF gốc.")
-            return r.content
-        log(f"  {u} → HTTP {r.status_code}")
-    raise ProviderError(f"HTInvoice: chưa lấy được PDF qua cổng (mã {mtc}). "
-                        f"Gửi Nhật ký 1 lần chạy thật để chốt đúng endpoint, hoặc tra tay tại {base}/TraCuu.")
+    r = s.get(base + "/TraCuu", timeout=30)
+    r.raise_for_status()
+    sitekey = re.search(r"['\"]sitekey['\"]\s*:\s*['\"]([^'\"]+)", r.text)
+    if not sitekey:
+        raise ProviderError("HTInvoice: cổng đã thay đổi cấu hình reCAPTCHA")
+    captcha = solver.recaptcha_v2(sitekey.group(1), base + "/TraCuu")
+    r = s.post(base + "/TraCuu/TimTheoMaTraCuu", json={"MaTraCuu": mtc, "recaptchaResponse": captcha}, timeout=60)
+    r.raise_for_status()
+    token = r.json()
+    if not isinstance(token, str) or not token.strip():
+        raise ProviderError("HTInvoice: tra cứu không trả mã phiên hóa đơn; kiểm tra mã và captcha")
+    r = s.get(base + "/TraCuu/HienThiHoaDon", params={"token": token}, timeout=60)
+    r.raise_for_status()
+    if r.content.startswith(b"%PDF"):
+        return r.content
+    match = re.search(r"(?:const|var|let)\s+pdfBase64\s*=\s*['\"]([A-Za-z0-9+/=\s]+)['\"]", r.text)
+    if match:
+        data = base64.b64decode(re.sub(r"\s+", "", match.group(1)), validate=True)
+        if data.startswith(b"%PDF"):
+            log("HTInvoice: đã tải PDF gốc từ trang hóa đơn.")
+            return data
+    raise ProviderError("HTInvoice: trang hóa đơn chưa trả PDF gốc hợp lệ")

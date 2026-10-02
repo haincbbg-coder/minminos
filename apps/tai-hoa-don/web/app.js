@@ -213,7 +213,7 @@
         (r.co_goc ? '<a class="nhan ok" href="' + API + "tep" + base + k + '/goc">Gốc' + (r.goc_nguon === "Gmail" ? " (Gmail)" : "") + '</a>' :
           r.goc_loi ? '<span class="nhan loi" title="' + esc(r.goc_loi) + '">Gốc: chưa tải được</span>' : "") +
         (r.co_zip ? '<a class="nhan" href="' + API + "tep" + base + k + '/zip">ZIP</a>' : "") +
-        '<button class="nut phu" data-lookup="' + esc(r.key) + '">Mã tra cứu / Trang hãng</button>';
+        (!r.co_xml && !r.co_goc ? '<span class="nhan">Chưa tải XML</span>' : '') + '<button class="nut phu" data-lookup="' + esc(r.key) + '">Mã tra cứu / Trang hãng</button>';
       return '<tr><td><input type="checkbox" data-k="' + esc(r.key) + '"' + (chon.has(r.key) ? " checked" : "") + '></td>' +
         '<td class="ngay">' + esc(ngayVN(r.ngay)) + '</td><td>' + esc(r.so) + '</td><td>' + esc(r.ky_hieu) + '</td>' +
         '<td class="doi">' + esc(r.doi_tac) + (r.may_tinh_tien ? ' <span class="nhan">MTT</span>' : "") + (r.tu_gmail ? ' <span class="nhan">Từ Gmail</span>' : "") + '</td><td>' + esc(r.mst_doi_tac) + '</td>' +
@@ -224,6 +224,12 @@
       c.onchange = function () { if (c.checked) chon.add(c.dataset.k); else chon.delete(c.dataset.k); demChon(); };
     });
     $("#bangHd").querySelectorAll("[data-lookup]").forEach(function(b) { b.onclick = function() { openLookup("tct", b.dataset.lookup); }; });
+    var missing=ds.filter(function(r){return !r.co_goc;});
+    var noXml=missing.filter(function(r){return !r.co_xml;}).length;
+    var failed=missing.filter(function(r){return r.goc_trang_thai==='failed';}).length;
+    var summary=document.querySelector('#missingOriginalSummary');
+    if(!summary){summary=document.createElement('p'); summary.id='missingOriginalSummary'; summary.className='nho'; $('#bangHd').closest('.cuon').before(summary);}
+    summary.textContent='Trong kết quả đang lọc: '+missing.length+' chưa có bản gốc; '+noXml+' chưa tải XML, '+failed+' đã thử tải gốc nhưng chưa thành công, '+(missing.length-noXml-failed)+' có XML và chưa thử tải gốc.';
     demChon();
   }
   function demChon() {
@@ -411,7 +417,7 @@
   function buildFilters(prefix, table) {
     var box = document.createElement("div"); box.className = "invoice-filters";
     box.innerHTML = (prefix === "gm" ? '<label>Tìm kiếm<input id="gmQuery" type="search" placeholder="Tên, MST, số, ký hiệu" /></label>' : '') +
-      ('<label>Hãng phát hành<select id="' + prefix + 'Publisher"><option value="">Tất cả hãng</option></select></label><label>Trạng thái bản gốc<select id="' + prefix + 'Status"><option value="">Tất cả</option><option value="manual">' + (prefix === 'hd' ? 'Chưa có bản gốc / tải lại' : 'Cần tải tay / tải lại') + '</option><option value="done">' + (prefix === 'hd' ? 'Đã có bản gốc' : 'Không cần tải lại') + '</option></select></label>') +
+      ('<label>Hãng phát hành<select id="' + prefix + 'Publisher"><option value="">Tất cả hãng</option></select></label><label>Trạng thái bản gốc<select id="' + prefix + 'Status"><option value="">Tất cả</option><option value="manual">' + (prefix === 'hd' ? 'Tất cả chưa có bản gốc' : 'Cần tải tay / tải lại') + '</option>' + (prefix === 'hd' ? '<option value="no-xml">Chưa tải XML</option><option value="pending">Có XML, chưa thử bản gốc</option><option value="failed">Đã thử, chưa tải được gốc</option>' : '') + '<option value="done">' + (prefix === 'hd' ? 'Đã có bản gốc' : 'Không cần tải lại') + '</option></select></label>') +
       '<label>Nhà cung cấp / MST<input id="' + prefix + 'Supplier" type="search" placeholder="Tên người bán hoặc MST" /></label>' +
       '<label>Số hoá đơn<input id="' + prefix + 'Number" type="search" /></label>' +
       '<label>Số tiền từ<input id="' + prefix + 'Min" type="number" step="any" /></label>' +
@@ -437,7 +443,9 @@
   var lookupContext=null;
   function drawLookup(data) {
     $("#lookupCode").value=data.code || "";
-    $("#lookupNote").textContent=data.code ? "Mã lấy từ XML, Gmail hoặc bạn đã nhập." : "Chưa có mã trong nguồn đã đọc. Lấy mã trong email hoá đơn rồi nhập tại đây; API captcha không tạo ra mã tra cứu.";
+    $("#lookupNote").textContent=data.note || (data.code ? "Mã lấy từ XML, Gmail hoặc bạn đã nhập." : "Chưa có mã trong nguồn đã đọc. Đối chiếu Gmail hoặc nhập mã từ email nhà phát hành.");
+    $("#lookupCopy").disabled=!data.code;
+    $("#lookupXml").hidden=lookupContext.kind!=='tct' || data.has_xml!==false;
     $("#lookupLink").hidden=!data.url;
     if(data.url) $("#lookupLink").href=data.url; else $("#lookupLink").removeAttribute("href");
   }
@@ -463,7 +471,16 @@
     $("#capBalance").onclick=async function(){ this.disabled=true; try{ var b=await goi('captcha-api/so-du',{json:{provider:$("#capProvider").value}}); $("#capStatus").textContent="Số dư: "+b.balance+" USD"; }catch(e){bao(e.message);}finally{this.disabled=false;} };
     $("#captchaForm").onsubmit=function(e){e.preventDefault();saveCap(false);}; $("#capDelete").onclick=function(){saveCap(true);};
     $("#lookupClose").onclick=function(){$("#lookupDialog").close();};
-    $("#lookupCode").oninput=function(){ $("#lookupLink").hidden=true; $("#lookupNote").textContent="Bấm Lưu mã để cập nhật đường dẫn tra cứu."; };
+    $("#lookupXml").onclick=async function(){
+      this.disabled=true;
+      try {
+        var context=lookupContext;
+        var r=await goi('tai',{json:{mst:dn,loai:loai,keys:[context.id],kieu:['xml']}});
+        $("#lookupDialog").close();
+        theoDoi(r.viec,viecTai,async function(){await taiBang(); await openLookup('tct',context.id);});
+      } catch(e){bao(e.message);} finally {this.disabled=false;}
+    };
+    $("#lookupCode").oninput=function(){ $("#lookupCopy").disabled=!this.value.trim(); $("#lookupLink").hidden=true; $("#lookupNote").textContent="Bấm Lưu mã để cập nhật đường dẫn tra cứu."; };
     $("#lookupCopy").onclick=async function(){ try { if(!$("#lookupCode").value) throw new Error("Chưa có mã để sao chép."); await navigator.clipboard.writeText($("#lookupCode").value); bao("Đã sao chép mã tra cứu."); } catch(e){bao(e.message);} };
     $("#lookupForm").onsubmit=async function(e){
       e.preventDefault(); try {

@@ -6,7 +6,9 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.19] - 2026-10-02
 ### Sửa lỗi
-- Hoàn thiện tra cứu bản gốc và phân loại hóa đơn còn thiếu chứng từ.
+- Phân biệt hóa đơn chưa tải XML, chưa thử bản gốc và đã thử nhưng chưa thành công; hiển thị số lượng từng nhóm.
+- Sửa nút mở trang hãng khi không có đường dẫn, thêm tải XML ngay trong hộp tra cứu và đọc mã SmartSign từ XML.
+- Kết nối captcha trượt Viettel và luồng reCAPTCHA của HTInvoice với API giải captcha đã cấu hình.
 
 ## [26.10.18] - 2026-10-02
 ### Cải thiện

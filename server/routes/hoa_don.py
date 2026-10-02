@@ -156,11 +156,18 @@ def ma_tra_cuu_hd(inv: dict) -> dict:
     xml = tuyet_doi(inv.get("_xml_path"))
     info = thd("providers").manual_download_info(xml.read_bytes(), inv) if xml else None
     info = info or {}
-    code = str(inv.get("_ma_tra_cuu") or info.get("code") or "")
+    source = inv.get("_gmail_lookup") or {}
+    code = str(inv.get("_ma_tra_cuu") or info.get("code") or source.get("ma_tra_cuu") or "")
     if code.startswith("("):
         code = ""
-    return {"code": code, "url": link_an_toan(info.get("url") or inv.get("_goc_link")),
-            "provider": info.get("provider", "")}
+    url = link_an_toan(info.get("url") or inv.get("_goc_link") or source.get("link"))
+    note = ""
+    if not xml and not code and not url:
+        note = "Hoá đơn mới có trong danh sách tra cứu, chưa tải XML. Bấm Tải XML để nhận diện hãng và tìm mã tra cứu trong chứng từ."
+    elif not code:
+        note = "Nguồn đã đọc chưa có mã tra cứu. Có thể đối chiếu Gmail đã quét hoặc nhập mã từ email của nhà phát hành. Số hoá đơn không phải mã tra cứu."
+    return {"code": code, "url": url, "has_xml": bool(xml), "note": note,
+            "provider": info.get("provider") or source.get("nha_cung_cap") or ""}
 
 
 def chon_gmail(d: dict) -> list[dict]:
@@ -739,6 +746,9 @@ def loc_kho(mst: str, loai: str, tu: Optional[str], den: Optional[str]) -> list[
 
 def tom_tat(inv: dict) -> dict:
     gdt = thd("gdt_client")
+    original = bool(tuyet_doi(inv.get("_goc_path")))
+    xml = bool(tuyet_doi(inv.get("_xml_path")))
+    original_status = "done" if original else "no-xml" if not xml else "failed" if inv.get("_goc_loi") else "pending"
     return {
         "key": khoa_hd(inv), "loai": inv.get("_loai"), "ngay": ngay_hd(inv),
         "so": inv.get("shdon"), "ky_hieu": f"{inv.get('khmshdon') or ''}{inv.get('khhdon') or ''}",
@@ -757,7 +767,8 @@ def tom_tat(inv: dict) -> dict:
         "goc_loi": inv.get("_goc_loi") or "", "goc_link": link_an_toan(inv.get("_goc_link")),
         "ma_tra_cuu": inv.get("_ma_tra_cuu") or "",
         "nha_cung_cap": thd("providers").issuer_name(inv),
-        "can_tai_tay": not bool(tuyet_doi(inv.get("_goc_path"))),
+        "can_tai_tay": not original,
+        "goc_trang_thai": original_status,
     }
 
 
