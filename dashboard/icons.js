@@ -56,6 +56,7 @@
   // Icon thiếu là icon VÔ HÌNH - lỗi rất khó thấy bằng mắt. Nên báo to ra
   // console và vẽ dấu hỏi thay chỗ để lộ ra ngay khi nhìn.
   function bodyOf(name) {
+    if (window.MinMinIcons && window.MinMinIcons[name]) return window.MinMinIcons[name];
     if (RIENG[name]) return RIENG[name];
     if (RAW[name]) return RAW[name];
     if (!missing[name]) {

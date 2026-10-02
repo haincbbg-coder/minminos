@@ -11,7 +11,10 @@ if (!window.JavisRunning) window.JavisRunning = new Set();   // sid đang genera
 function newSid() { try { return crypto.randomUUID().replace(/-/g, ""); } catch (e) { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); } }
 function setSessionRunning(sid, on) {
   if (!sid) return;
-  if (on) window.JavisRunning.add(sid); else window.JavisRunning.delete(sid);
+  if (on) {
+    if (!window.JavisRunning.has(sid) && window.MinMinWorkspace) window.MinMinWorkspace.event(sid, {type:"start"});
+    window.JavisRunning.add(sid);
+  } else window.JavisRunning.delete(sid);
   try { if (window.JavisChatSide && window.JavisChatSide.refresh) window.JavisChatSide.refresh(); } catch (e) {}
 }
 
@@ -36,9 +39,11 @@ function syncActiveUI() {
   // Đang trả lời thì khoá nút gửi lại của mọi tin (CSS .transcript.busy) cho khỏi chồng lượt.
   try { chatArea.classList.toggle("busy", isProcessing); } catch (e) {}
   updateStopBtn();
+  if (window.MinMinWorkspace) window.MinMinWorkspace.sync();
 }
 
 function stopCurrent() {
+  if (window.MinMinWorkspace) window.MinMinWorkspace.event(savedSessionId, {type:"cancelled"});
   if (handsFree && voiceMode === "live" && window.JavisVoiceLive) {
     window.JavisVoiceLive.stopResponse();
     _liveToolCount = 0; _liveBusyUntil = 0; _liveReadbackState = "paused";
@@ -803,7 +808,7 @@ async function batLive(wakeText = "", { som = false, lanThu = 0 } = {}) {
     onInterrupted: () => { ketThucTheoLoi(true); attention.keepActive(); _liveBusyUntil = Date.now() + 120000; _liveJavisText = ""; _liveJavisBubble = null; },
     // Kết quả ĐẦY ĐỦ của bộ não chính (bảng, link, file) thành bong bóng riêng: model nói chuyện
     // chỉ đọc phần tóm tắt, không có bong bóng này thì số liệu chi tiết mất hút (0.65.17).
-    onProgress: text => { _liveProgress = text; capNhatThanhGoi(); },
+    onProgress: text => { if (window.MinMinWorkspace) window.MinMinWorkspace.event(savedSessionId, {type:"progress",content:text}); _liveProgress = text; capNhatThanhGoi(); },
     onReadback: status => {
       _liveReadbackState = status; _liveProgress = "";
       attention.keepActive(); capNhatThanhGoi(); updateStopBtn();
@@ -814,10 +819,15 @@ async function batLive(wakeText = "", { som = false, lanThu = 0 } = {}) {
       recordTurn("javis", text, null, null);
     },
     onTool: (name, status) => {
+      if (window.MinMinWorkspace && status === "running" && !_liveToolCount) window.MinMinWorkspace.event(savedSessionId, {type:"start"});
       // A running tool is real work, not idle: only done/connection close/user stop may
       // release it. An arbitrary idle timeout must not cancel a legitimate long task.
       if (status === "running") { _liveToolCount++; _liveProgress = ""; }
       else { _liveToolCount = Math.max(0, _liveToolCount - 1); attention.keepActive(); }
+      if (window.MinMinWorkspace && status !== "running") {
+        const type = status === "cancelled" ? "cancelled" : status === "error" ? "error" : _liveToolCount ? "tool_result" : "turn_done";
+        window.MinMinWorkspace.event(savedSessionId, {type});
+      }
       if (status === "running") runActions(turn.toolCall(name)); else runActions(turn.turnDone());
       capNhatThanhGoi(); updateStopBtn();
     },
@@ -1111,6 +1121,7 @@ function handleMessage(data) {
     } catch (e) {}
     return;
   }
+  if (window.MinMinWorkspace && data.type !== "turn_done") window.MinMinWorkspace.event(sid, data);
   if (data.type === "status") {
     if (t) t.running = true;
     setSessionRunning(sid, true);
@@ -1248,6 +1259,7 @@ function handleMessage(data) {
       delete _luotDaDung[sid];
       if (t && t.id && t.id !== _idDung) return;
     }
+    if (window.MinMinWorkspace) window.MinMinWorkspace.event(sid, data);
     try { if (window.JavisResume) window.JavisResume.turnDone(sid); } catch (e) {}
     // Trang Cộng sự phải biết lượt đã đóng: tiến độ quy trình còn kẹt ở "đang chạy" thì icon
     // quay mãi ở cột trái, kể cả khi lượt chết theo đường không kịp phát sự kiện nào.
@@ -1682,6 +1694,7 @@ function recordTurn(role, text, atts, ask, buoc) {
                  ? buoc : undefined });
   if (convo.length > 200) convo = convo.slice(-200);
   persistSession();
+  notifySessions();
 }
 function restoreSession() {
   let s = null;
@@ -1913,7 +1926,7 @@ function newChat() {
   resetChatView();
   try { chatInput.focus(); } catch (e) {}
 }
-window.JavisSessions = { open: openStoredSession, new: newChat, brain: () => currentBrainPath(), current: () => savedSessionId };
+window.JavisSessions = { open: openStoredSession, new: newChat, brain: () => currentBrainPath(), current: () => savedSessionId, messages: () => convo.map(m => ({role:m.role, text:m.text, ts:m.ts})) };
 // Báo các UI khác (sidebar Lịch sử trong chat workspace) biết phiên/danh sách vừa đổi
 function notifySessions() { try { window.dispatchEvent(new Event("javis:sessions-changed")); } catch (e) {} }
 
