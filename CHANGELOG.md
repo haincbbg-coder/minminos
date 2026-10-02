@@ -7,6 +7,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.23] - 2026-10-02
 ### Sửa lỗi
 - Tự nối lại theo dõi tải hóa đơn và quét Gmail khi mất kết nối tạm thời, tránh dừng thanh tiến độ vì lỗi 502.
+- Lưu và ghép từng hóa đơn Gmail ngay khi đọc được, giảm giữ file trong bộ nhớ và giữ lại kết quả nếu lượt quét bị gián đoạn.
 
 ## [26.10.22] - 2026-10-02
 ### Thêm mới

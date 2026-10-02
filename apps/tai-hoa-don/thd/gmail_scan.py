@@ -462,7 +462,7 @@ class GmailScanner:
         return uids
 
     def scan(self, d_from, d_to, want_download=True, progress=None, since_uid: int = None,
-             cancel_check=None, pause_gate=None, auto_captcha: bool = False) -> list:
+             cancel_check=None, pause_gate=None, auto_captcha: bool = False, on_record=None) -> list:
         """d_from/d_to: datetime.date. since_uid: chỉ quét email MỚI hơn UID này (tăng dần).
         cancel_check(): trả True để DỪNG; pause_gate(): chờ khi đang tạm dừng.
         Sau khi chạy, self.last_uid = UID email lớn nhất đã quét (để lưu mốc)."""
@@ -476,6 +476,15 @@ class GmailScanner:
             ids = self._search_uids(df, dtb)
         self.log(f"Có {len(ids)} email cần xét, đang lọc hóa đơn...")
         out = []
+        saved_count = manual_count = 0
+        def keep(record):
+            nonlocal saved_count, manual_count
+            saved_count += 1
+            manual_count += bool(record.get("needs_manual"))
+            if on_record and not auto_captcha:
+                on_record(record)
+            else:
+                out.append(record)
         total = len(ids)
         for i, mid in enumerate(reversed(ids)):  # mới nhất trước
             if pause_gate:
@@ -558,7 +567,7 @@ class GmailScanner:
                         (["XML"] if xml else []) + (["PDF"] if pdf else []))
                     if not pdf:
                         item["status"] += "; chưa có PDF khớp duy nhất"
-                    out.append(item)
+                    keep(item)
                 continue
             # 2) chỉ có link -> cào PDF gốc
             info = extract_link_info(prov, text)
@@ -575,7 +584,7 @@ class GmailScanner:
                 hcode = f", mã {rec['code']}" if rec["code"] else ""
                 url = f" - {rec['lookup_url']}" if rec.get("lookup_url") else ""
                 rec["status"] = f"Link {prov.upper()} (captcha) - cần tải tay{hcode}{url}"
-                out.append(rec); continue
+                keep(rec); continue
             if want_download and prov:
                 try:
                     pdf = fetch_from_link(info, self.log)
@@ -594,13 +603,19 @@ class GmailScanner:
             else:
                 rec["needs_manual"] = not prov
                 rec["status"] = "Chỉ có link" + (f" ({prov})" if prov else " (chưa nhận diện NCC)")
-            out.append(rec)
+            keep(rec)
         # ===== ĐỌC XONG EMAIL. Giờ mới (nếu bật) tự tải hãng captcha - TÁCH khỏi IMAP để
         # không giữ kết nối Gmail treo trong lúc chờ giải captcha (tránh 'socket error: EOF').
         if auto_captcha and self.solver and want_download:
             self._auto_download_captcha(out, cancel_check, pause_gate)
-        self.log(f"Xong: {len(out)} hóa đơn"
-                 + (f", cần tải tay {sum(1 for r in out if r.get('needs_manual'))}." if out else "."))
+        if auto_captcha:
+            manual_count = sum(1 for r in out if r.get('needs_manual'))
+        self.log(f"Xong: {saved_count} hóa đơn"
+                 + (f", cần tải tay {manual_count}." if saved_count else "."))
+        if on_record:
+            for record in out:
+                on_record(record)
+            return []
         return out
 
     def _auto_download_captcha(self, recs, cancel_check=None, pause_gate=None):
