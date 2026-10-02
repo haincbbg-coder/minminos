@@ -1,9 +1,10 @@
 // HUD 0.64.84: nhan ra cu chi chum ngon, va cau hoi "nhin" thi gui kem anh camera.
 const assert = require("assert");
 const path = require("path");
+const { pathToFileURL } = require("url");
 const fs = require("fs");
 (async () => {
-  const { laChum, CU_CHI } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js"));
+  const { laChum, CU_CHI } = await import(pathToFileURL(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js")).href);
   const tay = (dx) => { const lm = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 })); lm[0] = { x: 0.5, y: 0.8 }; lm[9] = { x: 0.5, y: 0.5 }; lm[4] = { x: 0.5, y: 0.4 }; lm[8] = { x: 0.5 + dx, y: 0.4 }; return lm; };
   assert.strictEqual(laChum(tay(0.02)), true);
   assert.strictEqual(laChum(tay(0.2)), false);
@@ -19,8 +20,8 @@ const fs = require("fs");
   for (const c of ["hôm nay có bao nhiêu đơn", "tắt camp HH214"]) assert.ok(!re.test(c), c);
 
   // Hinh nguoi va robot co du bo phan, co gan canh tay de bat chuoc
-  const { humanPoints } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "body.js"));
-  const { robotPoints } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "robot.js"));
+  const { humanPoints } = await import(pathToFileURL(path.join(__dirname, "..", "..", "dashboard", "hud", "body.js")).href);
+  const { robotPoints } = await import(pathToFileURL(path.join(__dirname, "..", "..", "dashboard", "hud", "robot.js")).href);
   for (const [ten, b] of [["nguoi", humanPoints(5000)], ["robot", robotPoints(5000)]]) {
     assert.strictEqual(b.pos.length, 15000, ten);
     assert.ok(!Array.from(b.pos).some(Number.isNaN), ten + " NaN");
@@ -30,14 +31,14 @@ const fs = require("fs");
   }
 
   // Goc canh tay tu diem khop: tha xuong = 0, dang ngang = +-90 do
-  const { ngonDuoi } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js"));
+  const { ngonDuoi } = await import(pathToFileURL(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js")).href);
   const bt = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 })); bt[0] = { x: 0.5, y: 0.9 };
   bt[6] = { x: 0.5, y: 0.6 }; bt[8] = { x: 0.5, y: 0.35 };      // ngon tro duoi
   bt[10] = { x: 0.52, y: 0.62 }; bt[12] = { x: 0.52, y: 0.66 };  // ngon giua co
   assert.strictEqual(ngonDuoi(bt, 8, 6), true);
   assert.strictEqual(ngonDuoi(bt, 12, 10), false);
   // tuong ban than: du hat, co phap tuyen don vi, co vung mat am
-  const { bustPoints } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "bust.js"));
+  const { bustPoints } = await import(pathToFileURL(path.join(__dirname, "..", "..", "dashboard", "hud", "bust.js")).href);
   const bu = bustPoints(8000);
   let nong = 0, lech = 0;
   for (let i = 0; i < 8000; i++) {
@@ -47,7 +48,7 @@ const fs = require("fs");
   }
   assert.ok(nong > 200 && lech === 0 && !Array.from(bu.pos).some(Number.isNaN), JSON.stringify({ nong, lech }));
 
-  const { gocTay, khoangCach, tenDoVat } = await import(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js"));
+  const { gocTay, khoangCach, tenDoVat } = await import(pathToFileURL(path.join(__dirname, "..", "..", "dashboard", "hud", "vision.js")).href);
   const P = (x, y) => ({ x, y });
   const g0 = gocTay(P(.4, .4), P(.4, .6), P(.4, .8));
   assert.ok(Math.abs(g0[0]) < 1e-9 && Math.abs(g0[1]) < 1e-9);

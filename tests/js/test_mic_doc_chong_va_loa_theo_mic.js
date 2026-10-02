@@ -75,7 +75,8 @@ check("stopSpeaking xoá dấu vết đoạn cuối để lượt sau đọc l�
 // ---- 4. Loa đi theo mic ----
 check("quick-settings phơi window.JavisTts.set đi qua applyState", /window\.JavisTts = \{ set: applyState/.test(qs));
 check("bấm mic: loa bật/tắt theo handsFree", /window\.JavisTts\.set\(handsFree\)/.test(app));
-check("bấm-giữ Space: bật loa", /window\.JavisTts\.set\(true\)/.test(app));
+// 0.65.18: phím Space không còn mở mic (bấm mic là gọi), nên không còn đường "giữ Space bật loa".
+check("Space không còn mở mic", !/e\.code === "Space"/.test(app));
 check("Esc (thoát rảnh tay): tắt loa", /window\.JavisTts\.set\(false\)/.test(app));
 // Thả Space là hết một câu, không phải tắt nghe - tắt loa ở đó là câu trả lời bị câm.
 const keyup = (app.match(/addEventListener\("keyup"[\s\S]*?\}\);/) || [""])[0];
@@ -85,7 +86,8 @@ check("CANARY: thả Space KHÔNG tắt loa", !/JavisTts/.test(keyup));
 // (test_mic_khong_tu_gui canh kỹ chỗ đó), không phải một đường gửi tin mới.
 // 6 từ 0.57.17: chỗ thứ 6 cũng là HOÃN - câu nói chen ngang gửi lại sau khi lượt cũ dừng hẳn.
 // 7 từ 0.58.2: chỗ thứ 7 cũng HOÃN - câu gửi lúc mất WebSocket, gửi lại khi nối lại được.
-check("có 9 chỗ (thêm adaptive commit) gọi sendMessage", (app.match(/(?<!function )\bsendMessage\(/g) || []).length === 9,
+// 10 từ 0.65.28: chỗ thứ 10 cũng HOÃN - câu nói lúc Javis đang trả lời trong cuộc gọi, gửi khi lượt xong.
+check("có 10 chỗ (thêm câu chờ lượt trong cuộc gọi) gọi sendMessage", (app.match(/(?<!function )\bsendMessage\(/g) || []).length === 10,
   (app.match(/(?<!function )\bsendMessage\(/g) || []).length);
 
 // ---- 5. Mic là công tắc DUY NHẤT (chủ repo chốt 02/09: "không cần nút bật tắt loa nữa") ----

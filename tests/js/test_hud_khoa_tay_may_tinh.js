@@ -2,6 +2,7 @@
 // Noi lien / tu goi qua _xuLy chung cho trinh duyet va Whisper.
 const assert = require("assert");
 const path = require("path");
+const { pathToFileURL } = require("url");
 const hud = (f) => path.join(__dirname, "..", "..", "dashboard", "hud", f);
 
 // Ban tay gia: ngon nao duoi thi dau ngon xa co tay; ti le co ban tay (0 -> 9) = 0.3
@@ -21,7 +22,7 @@ function tay({ tro = false, giua = false, ap = false, ut = false, mo = 0.6, cai 
 }
 
 (async () => {
-  const { tayThat, chonTay, CHE_DO } = await import(hud("vision.js"));
+  const { tayThat, chonTay, CHE_DO } = await import(pathToFileURL(hud("vision.js")).href);
   // 0.64.89: nhan cua may chi dao khi bo da "Chinh tay" va may goi nguoc (dao = true)
   assert.strictEqual(tayThat("Left", true), "Right");
   assert.strictEqual(tayThat("Right", true), "Left");
@@ -29,7 +30,7 @@ function tay({ tro = false, giua = false, ap = false, ut = false, mo = 0.6, cai 
   assert.strictEqual(tayThat("Right", null), "Right");
   assert.strictEqual(tayThat("", true), "");
   // Nut Doi cam: phuong thuc rieng, khong con trung ten voi cai dat `flip` (bi che mat)
-  const { Vision } = await import(hud("vision.js"));
+  const { Vision } = await import(pathToFileURL(hud("vision.js")).href);
   assert.strictEqual(typeof Vision.prototype.doiCam, "function");
   assert.ok(!("flip" in Vision.prototype), "khong duoc co phuong thuc ten flip");
   assert.deepStrictEqual(Object.keys(CHE_DO), ["cuchi", "batchuoc", "maytinh"]);
@@ -49,7 +50,7 @@ function tay({ tro = false, giua = false, ap = false, ut = false, mo = 0.6, cai 
   assert.strictEqual(chonTay([], "Right", null), null);
 
   // ---- Dieu khien may tinh ----
-  const { DieuKhienMay, doMo, baNgonCo, anhXa, taoBat, CU_CHI_MAY } = await import(hud("dieukhien.js"));
+  const { DieuKhienMay, doMo, baNgonCo, anhXa, taoBat, CU_CHI_MAY } = await import(pathToFileURL(hud("dieukhien.js")).href);
   assert.ok(doMo(tay({ tro: true, mo: 0.1 })) < 0.28);
   assert.ok(baNgonCo(tay({ tro: true })));
   assert.ok(!baNgonCo(tay({ tro: true, giua: true, ap: true, ut: true })));
@@ -117,7 +118,7 @@ function tay({ tro = false, giua = false, ap = false, ut = false, mo = 0.6, cai 
   assert.ok(/^[\x00-\x7f]*$/.test(bat), "bat phai la ASCII");
 
   // Hinh minh hoa: du cho moi cu chi trong bang
-  const { hinhTay, HINH } = await import(hud("hinhtay.js"));
+  const { hinhTay, HINH } = await import(pathToFileURL(hud("hinhtay.js")).href);
   const fs = require("fs");
   const html = fs.readFileSync(hud("index.html"), "utf8");
   const ds = [...html.matchAll(/data-g="(\w+)"/g)].map(x => x[1]);
@@ -127,7 +128,7 @@ function tay({ tro = false, giua = false, ap = false, ut = false, mo = 0.6, cai 
   // ---- Giong: Noi lien khong can tu goi; tu goi van chay ----
   global.localStorage = { getItem: () => null, setItem: () => {} };
   global.window = {};
-  const { VoiceIO } = await import(hud("voice.js"));
+  const { VoiceIO } = await import(pathToFileURL(hud("voice.js")).href);
   const cmds = [], wakes = [], nghe = [];
   const v = new VoiceIO({ onCommand: (c) => cmds.push(c), onWake: (r) => wakes.push(r), onHeard: (x, f, g) => nghe.push([x, f, g]) });
   v._xuLy(["hôm nay bao nhiêu đơn"], true);

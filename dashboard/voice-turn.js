@@ -1,4 +1,4 @@
-/* voice-turn.js - ĐẠO DIỄN hội thoại bằng giọng (Voice V1, docs/dev/2026-09-voice-v1-spec.md mục 3).
+/* voice-turn.js - ĐẠO DIỄN hội thoại bằng giọng (Voice V1, docs/dev/2026-10-voice-call-spec.md phụ lục A1).
 
    Module THUẦN: không đụng DOM, không gọi recognition hay audio. voice.js và app.js bắn sự kiện
    vào đây, nhận về một MẢNG hành động rồi tự thực hiện. Nhờ vậy toàn bộ luật "ai đang nói, đã
@@ -226,8 +226,10 @@
       return acts.concat(this._recompute());
     }
     if (isStopPhrase(t)) {
-      if (this.speaking) { this.speaking = false; acts.push({ type: "stop_tts" }); }
-      if (this.processing) { acts.push({ type: "stop_turn" }); }
+      // "thôi / dừng lại" chỉ làm Javis IM (0.65.28): lượt đang chạy vẫn viết nốt câu trả lời vào
+      // khung chat. Chủ dự án chốt 02/10: trong cuộc gọi, lượt chỉ dừng khi bấm lại nút mic.
+      if (this.speaking) { this.speaking = false; }
+      acts.push({ type: "stop_tts" });
       this.waiting = false;
       return acts.concat(this._recompute());
     }
@@ -311,12 +313,11 @@
     this.speaking = false;
     this.userSpeaking = true;
     if (spokenPrefix) this.interruptedAt = String(spokenPrefix);
+    // Cắt lời chỉ làm Javis IM, KHÔNG dừng lượt đang chạy (0.65.28). Trước đây cắt lời là dừng
+    // luôn lượt, và chủ dự án báo 02/10: nói chen một câu là "Đã dừng lượt này", mô hình bị cắt
+    // liên tục. Nay lượt viết nốt câu trả lời vào khung chat (stop_tts đánh dấu phần còn lại không
+    // đọc), câu người dùng vừa nói xếp hàng ở app.js và đi sau khi lượt xong.
     var acts = [{ type: "stop_tts", interrupted: true }];
-    // Cắt lời giữa chừng nghĩa là THÔI, không cần nốt câu trả lời ấy nữa: dừng luôn lượt đang
-    // chạy, y như cụm "thôi / dừng lại" trong endpoint(). Để lượt chạy tiếp thì server vẫn đẻ
-    // chữ cho một câu không ai nghe, và tệ hơn: phiên còn "đang trả lời" nên câu người dùng
-    // vừa chen vào sẽ bị chặn không gửi được.
-    if (this.processing) { this.processing = false; acts.push({ type: "stop_turn" }); }
     acts.push({ type: "listen" });
     return acts.concat(this._recompute());
   };

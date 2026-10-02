@@ -10,7 +10,7 @@ Chính comment ở nhánh `locale` đã cảnh báo đúng cái bẫy này.
 
 Hai lớp canh:
   1. Vòng tròn THẬT qua TestClient: POST rồi đọc lại settings, từng ô một.
-  2. Chốt chặn tương lai: mọi key mà console.js gửi đi trong thẻ cài đặt V2 phải có tên trong
+  2. Chốt chặn tương lai: mọi key mà console.js gửi đi trong thẻ cài đặt giọng nói phải có tên trong
      nhánh voice của main.py. Thêm ô mới mà quên server là test đỏ ngay, không đợi người dùng
      phát hiện.
 """
@@ -88,16 +88,40 @@ check("lưu thẻ giọng đọc KHÔNG xoá cài đặt làn nhanh",
       v.get("mode") == "fast" and v.get("brain_provider") == "groq" and v.get("brain_model") == "m1")
 check("thẻ giọng đọc vẫn lưu được phần của nó", v.get("tts_provider") == "openai")
 
+# ---- 4b. Model theo từng bộ não (0.65.26) ----
+luu({"brain_model_for": "codex", "brain_model": "gpt-a"})
+luu({"brain_model_for": "antigravity", "brain_model": "gemini-3.8-flash-high"})
+v = doc()
+check("model lưu riêng theo từng bộ não",
+      v.get("brain_models") == {"codex": "gpt-a", "antigravity": "gemini-3.8-flash-high"})
+check("lưu model theo bộ não không đụng khoá chung cũ", v.get("brain_model") == "m1")
+luu({"brain_model_for": "codex", "brain_model": ""})
+check("model rỗng là về mặc định của bộ não đó", doc().get("brain_models") == {"antigravity": "gemini-3.8-flash-high"})
+luu({"brain_model_for": "khong-co", "brain_model": "x"})
+check("bộ não lạ không ghi model", doc().get("brain_models") == {"antigravity": "gemini-3.8-flash-high"}
+      and doc().get("brain_model") == "m1")
+
 # ---- 5. Chốt chặn: key nào console.js gửi thì main.py phải nhận ----
+# 0.65.19: thẻ Giọng nói TỰ LƯU từng ô qua luuGiong({...}), không còn một khối data của nút Lưu.
+# Gom key từ MỌI lời gọi luuGiong trong console.js rồi soi nhánh voice của main.py.
 js = (ROOT / "dashboard" / "console.js").read_text(encoding="utf-8", errors="replace")
-m = re.search(r"v2Save\"\)\.onclick[\s\S]{0,900}?const data = \{([\s\S]{0,600}?)\};", js)
-keys_js = set(re.findall(r"(\w+):", m.group(1))) if m else set()
-check("đọc được khối data của nút Lưu cài đặt giọng nói trong console.js", len(keys_js) >= 7)
+keys_js = set()
+for m in re.finditer(r"luuGiong\(\{([^}]*)\}\)", js):
+    keys_js |= set(re.findall(r"(\w+):", m.group(1)))
+check("đọc được các ô tự lưu của thẻ Giọng nói trong console.js: " + ", ".join(sorted(keys_js)), len(keys_js) >= 7)
 src = (SERVER / "main.py").read_text(encoding="utf-8", errors="replace")
 nhanh = src[src.index('elif section == "voice":'):src.index('elif section == "password":')]
 thieu = sorted(k for k in keys_js if f'"{k}"' not in nhanh)
 check("mọi ô trong thẻ cài đặt giọng nói đều được nhánh voice của main.py xử lý: "
       + (", ".join(thieu) if thieu else "đủ"), not thieu)
+
+# ---- 6. Ô mới của thẻ gọn lưu rồi đọc lại được ----
+luu({"call_engine": "basic", "chatgpt_voice": "maple", "focus_mode": False})
+v = doc()
+check("lưu rồi đọc lại call_engine, chatgpt_voice, focus_mode",
+      v.get("call_engine") == "basic" and v.get("chatgpt_voice") == "maple" and v.get("focus_mode") is False)
+luu({"call_engine": "xxx", "chatgpt_voice": "khong-co"})
+check("đường gọi lạ và giọng lạ không ghi đè", doc().get("call_engine") == "basic" and doc().get("chatgpt_voice") == "maple")
 
 if _fails:
     print("\nFAIL:", len(_fails), _fails)

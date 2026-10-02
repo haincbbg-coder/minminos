@@ -6,6 +6,8 @@ const { Attention } = require('../../dashboard/voice-attention.js');
 const source = fs.readFileSync('dashboard/app.js', 'utf8');
 let now = 0, liveOptions, wakeOptions, voiceOptions, stopCount = 0;
 let captureEnd = Promise.resolve(true);
+let startResult = true, basicCalls = 0;
+const timers = [], notes = [];
 const sent = [], stored = [], drafts = [], events = [];
 const button = {};
 const noop = () => {};
@@ -14,7 +16,8 @@ const box = {
   adaptiveOutbox:new Map(), adaptiveContinuation:'',
 
   window: { JavisVoiceAttention: { Attention: class extends Attention { constructor() { super({now: () => now}); } } },
-    t: x => x, JavisVoiceLive: { start: async o => { liveOptions = o; events.push('live-start'); return true; },
+    t: x => x, JavisVoiceLive: { start: async o => { liveOptions = o; events.push('live-start'); return startResult; },
+      attachMic: async () => { events.push('attach-mic'); return true; },
       stop: () => { stopCount++; }, isSpeaking: () => false, sendText: t => sent.push(t) } },
   JavisVoice: class { constructor(o) { if (!voiceOptions) voiceOptions = o; else wakeOptions = o; this.lang = 'vi-VN'; }
     isSupported() { return true; } micHong() { return false; } isSpeaking() { return false; }
@@ -25,14 +28,16 @@ const box = {
   voiceBtn: {classList: {add: noop, remove: noop, toggle: noop}},
   handsFree: true, voiceMode: 'standard', isProcessing: false, savedSessionId: 'session-A',
   turn: {micOn: () => [], micOff: () => [], endpoint: () => [], delayFor: () => 1200,
-    toolCall: () => [], turnDone: () => [], ttsEnd: () => []},
+    toolCall: () => [], turnDone: () => [], ttsEnd: () => [], interim: () => []},
   _tinChoTimer: null, _tinChoLuot: null, _tinDutMangTimer: null, _tinDutMang: [], _choTaiLen: null,
   _sendEpoch: 0, _tuGiong: false,
   _theoLoi: null, _liveCtxTimer: null,
-  runActions: noop, nhapGiong: t => drafts.push(t), veTinTuGiong: t => t, sendMessage: t => sent.push(t),
+  runActions: noop, petReact: noop, nhapGiong: t => drafts.push(t), veTinTuGiong: t => t, sendMessage: t => sent.push(t),
   capNhatOrb: noop, appendUserMessage: noop, recordTurn: (role, text) => stored.push([role, text]),
   currentBrainPath: () => 'brain', persistSession: noop, guiNguCanhLive: noop,
-  setInterval: () => 1, clearInterval: noop, clearTimeout: noop,
+  setInterval: () => 1, clearInterval: noop, clearTimeout: noop, capNhatThanhGoi: noop,
+  setTimeout: (fn) => { timers.push(fn); return timers.length; },
+  chuyenSangCoBan: () => { basicCalls++; return true; }, ghiChuThoang: (k) => notes.push(k),
 };
 vm.createContext(box);
 vm.runInContext(source.slice(source.indexOf('const attention ='), source.indexOf('// ============================================\n// Voice V1 -')), box);
@@ -49,28 +54,47 @@ vm.runInContext(source.match(/^function tatLive\(\).*$/m)[0], box);
 const run = s => vm.runInContext(s, box);
 function final(text) { if (voiceOptions.acceptTranscript(text)) voiceOptions.onTranscript(text); }
 (async () => {
+  // 0.65.22: đường Cơ bản không có rào im lâu (app.js datCheDoGiong tắt rào khi không phải Live):
+  // cuộc gọi nghe suốt, câu nói sau 30 giây im vẫn được gửi như thường.
+  run('attention.enabled = false');
   run('attention.start()'); final('đưa anh về trò chuyện');
   assert.deepEqual(sent, ['đưa anh về trò chuyện']); sent.length = 0;
-  now = 20001; voiceOptions.onInterim('mua ngay trên TV'); final('mua ngay trên TV');
-  assert.equal(sent.length, 0); assert.equal(stored.length, 0); assert.equal(drafts.at(-1), '');
-  final('Javis ơi mở màn hình chat'); assert.equal(sent[0], 'Javis ơi mở màn hình chat'); sent.length = 0;
-  final('không'); assert.equal(sent[0], 'không'); sent.length = 0;
-  now += 20001;
-  voiceOptions.onInterim('tiếng TV đang chép dở');
-  box.resumeVoiceFocus();
-  assert.deepEqual(events.slice(-2), ['cancel-capture', 'wake-listen'], 'click discards buffered noise before a fresh capture');
+  now = 30001; voiceOptions.onInterim('mở lịch tuần này'); final('mở lịch tuần này');
+  assert.deepEqual(sent, ['mở lịch tuần này'], 'basic path keeps listening through the call'); sent.length = 0;
 
-  box.voiceMode = 'live'; now += 20001; box.tickVoiceFocus();
+  // Đường Live: im 30 giây thì ngắt nhà cung cấp; câu nói THẬT đầu tiên là nối lại, không cần tên.
+  run('attention.enabled = true'); run('attention.start()');
+  box.voiceMode = 'live'; now += 29999; box.tickVoiceFocus();
+  assert.equal(stopCount, 0, 'Live stays connected before 30 seconds');
+  now += 2; box.tickVoiceFocus();
   assert.equal(stopCount, 1, 'provider closed on idle');
   assert.equal(events.at(-1), 'wake-listen');
-  wakeOptions.onTranscript('tiếng người khác'); assert.equal(liveOptions, undefined);
-  wakeOptions.onTranscript('Javis mở trò chuyện');
+  wakeOptions.onInterim('ừ');
+  assert.equal(liveOptions, undefined, 'a single grunt does not start a connection');
+  // 0.65.24: hai chữ thật trong chữ tạm là bắt tay NGAY, chưa giữ mic (bộ nghe còn nghe nốt câu).
+  wakeOptions.onInterim('mở trò');
+  assert.equal(drafts.at(-1), 'mở trò', 'what the waiting listener hears is shown as a draft');
   await new Promise(setImmediate);
-  assert.deepEqual(events.slice(-2), ['cancel-capture', 'live-start']);
-  assert.equal(sent.length, 0, 'handoff waits for ready');
-  liveOptions.onReady({session_id:'session-A'}); liveOptions.onReady({});
-  assert.deepEqual(sent, ['Javis mở trò chuyện']);
-  assert.deepEqual(stored, [['user', 'Javis mở trò chuyện']]);
+  assert.equal(liveOptions && liveOptions.deferMic, true, 'early handshake without the microphone');
+  wakeOptions.onInterim('mở trò chuyện');
+  await new Promise(setImmediate);
+  assert.equal(events.filter(e => e === 'live-start').length, 1, 'one early connection, not one per interim');
+  wakeOptions.onTranscript('ừ');
+  assert.equal(drafts.at(-1), '');
+  assert.equal(stopCount, 2, 'the final was only a grunt: the early connection is closed');
+  assert.equal(run('_liveSom'), null);
+  wakeOptions.onInterim('mở trò');
+  await new Promise(setImmediate);
+  assert.equal(events.filter(e => e === 'live-start').length, 2);
+  liveOptions.onReady({session_id:'session-A'});   // bắt tay xong trước khi câu chốt
+  assert.equal(sent.length, 0, 'nothing is sent before the sentence is final');
+  wakeOptions.onTranscript('mở trò chuyện giúp anh');
+  for (let i = 0; i < 5; i++) await new Promise(setImmediate);
+  assert.deepEqual(events.slice(-2), ['cancel-capture', 'attach-mic'], 'listener releases the mic, then the mic joins the open call');
+  assert.equal(events.filter(e => e === 'live-start').length, 2, 'the early connection is reused, not reopened');
+  liveOptions.onReady({});
+  assert.deepEqual(sent, ['mở trò chuyện giúp anh'], 'the waking sentence becomes the first message, once');
+  assert.deepEqual(stored, [['user', 'mở trò chuyện giúp anh']]);
   run('_liveJavisText = "Latest answer"');
   liveOptions.onStopped(); liveOptions.onStopped();
   assert.deepEqual(stored.at(-1), ['javis', 'Latest answer']);
@@ -79,29 +103,51 @@ function final(text) { if (voiceOptions.acceptTranscript(text)) voiceOptions.onT
   await box.batLive('Javis câu của phiên A');
   const stale = liveOptions;
   box.tatRanhTay(); box.savedSessionId = 'session-B';
-  stale.onReady({session_id:'session-A'}); wakeOptions.onTranscript('Javis câu cũ');
+  stale.onReady({session_id:'session-A'}); wakeOptions.onTranscript('Javis câu cũ của phiên trước');
   assert.equal(sent.length, 0); assert.equal(stored.length, 0);
   assert.equal(run('attention.running'), false); assert.equal(button.hidden, true);
-  box.handsFree = true; run('attention.start()');
+  box.handsFree = true; run('attention.enabled = true; attention.start()');
   await box.batLive(); liveOptions.onReady({});
   liveOptions.onTool('ask_javis', 'running'); liveOptions.onTool('ask_javis', 'running');
   liveOptions.onSpeakEnd(); liveOptions.onTurnDone();
-  now += 19000; box.tickVoiceFocus();
+  now += 29000; box.tickVoiceFocus();
   now += 2000; box.tickVoiceFocus();
   assert.equal(run('_liveWaitingWake'), false, 'a spoken acknowledgement must not cancel the running tool');
   liveOptions.onTool('ask_javis', 'done');
-  for (let i = 0; i < 8; i++) { now += 19000; box.tickVoiceFocus(); }
+  for (let i = 0; i < 8; i++) { now += 29000; box.tickVoiceFocus(); }
   assert.equal(run('_liveWaitingWake'), false, 'a legitimate long-running tool is not cancelled by an idle timer');
-  now += 19000; box.tickVoiceFocus();
+  now += 29000; box.tickVoiceFocus();
   assert.equal(run('_liveWaitingWake'), false, 'one tool finishing must not clear another');
   liveOptions.onTool('ask_javis', 'done');
-  now += 19000; box.tickVoiceFocus(); assert.equal(run('_liveWaitingWake'), false);
-  now += 1001; box.tickVoiceFocus(); assert.equal(run('_liveWaitingWake'), true, 'new silent Live sleeps after 20s, not 40s');
+  now += 29000; box.tickVoiceFocus(); assert.equal(run('_liveWaitingWake'), false);
+  now += 1001; box.tickVoiceFocus(); assert.equal(run('_liveWaitingWake'), true, 'new silent Live sleeps after 30s, not 60s');
   let release;
   captureEnd = new Promise(resolve => { release = resolve; });
   const starts = events.filter(e => e === 'live-start').length;
-  const opening = box.batLive('Javis câu đang chờ nhả mic');
+  const opening = box.batLive('câu đang chờ nhả mic');
   box.tatRanhTay(); release(true); await opening;
   assert.equal(events.filter(e => e === 'live-start').length, starts, 'cancel while waiting for capture release never opens provider');
-  console.log('voice focus app: rejects before send/store, Live sleep/wake, duplicate ready, stale handoff pass');
+  // 0.65.25: nối lại hỏng GIỮA cuộc gọi không chuyển sang đường Cơ bản (giọng Edge khác hẳn, chủ dự án
+  // nghe như Javis tự đổi giọng nữ sang nam). Thử lại một lần đúng câu đó, rồi quay về chờ và báo.
+  captureEnd = Promise.resolve(true);
+  box.handsFree = true; box.voiceMode = 'live';
+  run('attention.enabled = true; attention.start(); _liveWaitingWake = false; _liveSom = null; _cuocGoiDaNoi = true');
+  startResult = false; timers.length = 0; notes.length = 0; basicCalls = 0;
+  const before = events.filter(e => e === 'live-start').length;
+  await box.batLive('câu sau khi tạm ngắt');
+  assert.equal(basicCalls, 0, 'a mid-call reconnect failure never switches to the Basic path');
+  assert.equal(timers.length, 1, 'one retry is scheduled');
+  timers.shift()();
+  for (let i = 0; i < 5; i++) await new Promise(setImmediate);
+  assert.equal(events.filter(e => e === 'live-start').length, before + 2, 'retried once');
+  assert.equal(basicCalls, 0);
+  assert.equal(timers.length, 0, 'no endless retry loop');
+  assert.equal(run('_liveWaitingWake'), true, 'after the retry fails the call goes back to waiting');
+  assert.deepEqual(notes, ['call.reconnect_failed']);
+  // Đầu cuộc gọi (chưa nối lần nào) vẫn chuyển đường Cơ bản như trước.
+  run('_liveWaitingWake = false; _cuocGoiDaNoi = false');
+  await box.batLive('');
+  assert.equal(basicCalls, 1, 'a first-connect failure still falls back to Basic');
+  startResult = true;
+  console.log('voice focus app: basic listens through the call, Live sleeps at 30 s and wakes on real speech, duplicate ready, stale handoff, no mid-call voice switch pass');
 })().catch(e => { console.error(e); process.exitCode = 1; });
