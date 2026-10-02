@@ -644,7 +644,11 @@ def tai_mot(c, mst: str, inv: dict, kieu, log, cd: Optional[dict] = None, browse
             if isinstance(source, dict):
                 try:
                     info = thong_tin_tra_cuu_gmail(dict(source))
-                    pdf = thd("gmail_scan").fetch_from_link(info, log)
+                    if info.get("provider") == "myinvoice":
+                        pdf = thd("providers.myinvoice").fetch_pdf(
+                            xp.read_text(encoding="utf-8-sig"), {"_code": info.get("code")}, log)
+                    else:
+                        pdf = thd("gmail_scan").fetch_from_link(info, log)
                     ten = "Gmail"
                 except Exception:
                     log("Link Gmail đã đối chiếu chưa trả PDF; thử nguồn XML và hãng phát hành.")
