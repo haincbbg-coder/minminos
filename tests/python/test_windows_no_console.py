@@ -114,8 +114,13 @@ check("CANARY: không lấy CREATE_NO_WINDOW từ asyncio.subprocess (ở đó n
 sys.path.insert(0, str(ROOT / "server"))
 import winproc  # noqa: E402
 
-check("winproc.no_window() trả 0 ngoài Windows", winproc.no_window() == 0)
-check("winproc.kwargs_no_window() rỗng ngoài Windows", winproc.kwargs_no_window() == {})
+from unittest.mock import patch
+with patch.object(winproc.os, "name", "posix"):
+    check("winproc.no_window() trả 0 ngoài Windows", winproc.no_window() == 0)
+    check("winproc.kwargs_no_window() rỗng ngoài Windows", winproc.kwargs_no_window() == {})
+with patch.object(winproc.os, "name", "nt"), patch.object(winproc, "CREATE_NO_WINDOW", 0x08000000):
+    check("Windows dùng CREATE_NO_WINDOW", winproc.no_window() == 0x08000000)
+    check("Windows truyền creationflags", winproc.kwargs_no_window() == {"creationflags": 0x08000000})
 
 print()
 if _fails:
