@@ -8,6 +8,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Sửa lỗi
 - Nghe thử ChatGPT Live thực sự phát lời chào Min Min: chờ kênh âm thanh mở rồi gửi lệnh đọc; tạo tín hiệu im lặng để duy trì nhịp phát, không mở microphone.
 
+## [26.10.25] - 2026-10-02
+### Sửa lỗi
+- Dùng mã tra cứu EFY đã tìm được từ Gmail khi mở trang nhà phát hành.
+- Quét lại Gmail không tạo thêm dòng chỉ vì trang hãng tạo một file PDF có dữ liệu kỹ thuật khác lần trước.
+
 ## [26.10.24] - 2026-10-02
 ### Sửa lỗi
 - Nghe thử ChatGPT Live bằng chính giọng đang chọn với lời chào “Min Min”, bỏ mẫu thu sẵn xưng Javis và số doanh thu minh họa.

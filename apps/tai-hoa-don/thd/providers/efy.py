@@ -49,6 +49,13 @@ def detect(xml_text: str, inv: dict) -> bool:
     return "ihoadon.vn" in (xml_text or "").lower()
 
 
+def find_code(xml_text: str, inv: dict) -> str:
+    """Use the code recovered from email/user input before the XML fallback."""
+    return str(inv.get("_ma_tra_cuu") or inv.get("_code") or
+               (inv.get("_gmail_lookup") or {}).get("ma_tra_cuu") or
+               _code(xml_text)).strip()
+
+
 def lookup_url(sh: str, code: str) -> str:
     """Link trang tra cứu iHoaDon (khách nhập số HĐ + mã tra cứu rồi qua reCAPTCHA để tải tay)."""
     from urllib.parse import urlencode
@@ -63,8 +70,8 @@ def lookup_url(sh: str, code: str) -> str:
 def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None) -> bytes:
     sh = C.shdon(xml_text)
     khh = C.khhdon(xml_text)
-    code = _code(xml_text)
-    log(f"EFY (iHoaDon): HĐ {khh} số {sh}" + (f", mã tra cứu {code}" if code else ""))
+    code = find_code(xml_text, inv)
+    log(f"EFY (iHoaDon): HĐ {khh} số {sh}" + (", đã có mã tra cứu" if code else ""))
 
     url = lookup_url(sh, code)
     inv["_manual_url"] = url
@@ -72,8 +79,7 @@ def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None)
         raise ProviderError(
             "EFY (iHoaDon) tra cứu có reCAPTCHA chống bot nên cần tải tay: mở "
             f"ihoadon.vn/kiem-tra, nhập SỐ HĐ {sh} + MÃ TRA CỨU {code}. "
-            "Hoặc dùng bản thể hiện từ XML cổng thuế (đã đủ pháp lý). Link: " + url)
+            "Ứng dụng chưa hỗ trợ tải tự động từ cổng này. Link: " + url)
     raise ProviderError(
-        "EFY (iHoaDon): chưa đọc được 'mã tra cứu' trong XML này (cần 1 XML thật để chốt tên "
-        "trường). Trước mắt tra cứu tay tại ihoadon.vn/kiem-tra bằng số HĐ, hoặc dùng bản thể "
-        "hiện từ XML cổng thuế. Link: " + url)
+        "EFY (iHoaDon): chưa có mã tra cứu trong XML hoặc Gmail đã ghép. "
+        "Cần mã từ email của nhà phát hành để tra cứu số HĐ này. Link: " + url)

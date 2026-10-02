@@ -11,6 +11,20 @@ import routes.hoa_don as hd
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_efy_email_code_reaches_lookup_link_and_download_hint(self):
+        from urllib.parse import parse_qs, urlsplit
+        xml = b'<HDon><MSTTCGP>0102519041</MSTTCGP><SHDon>1875</SHDon></HDon>'
+        for inv in ({'_ma_tra_cuu':'EMAIL+CODE'}, {'_gmail_lookup':{'ma_tra_cuu':'EMAIL+CODE'}}):
+            info = hd.thd('providers').manual_download_info(xml, inv)
+            query = parse_qs(urlsplit(info['url']).query)
+            self.assertEqual(info['code'], 'EMAIL+CODE')
+            self.assertEqual(query['ma_tra_cuu'], ['EMAIL+CODE'])
+            self.assertEqual(query['hddt_ma'], ['EMAIL+CODE'])
+            with self.assertRaises(hd.thd('providers').ProviderError) as error:
+                hd.thd('providers.efy').fetch_pdf(xml.decode(), inv, lambda s:None)
+            self.assertNotIn('chưa có mã', str(error.exception))
+            self.assertEqual(parse_qs(urlsplit(inv['_manual_url']).query)['ma_tra_cuu'], ['EMAIL+CODE'])
+
     def test_missing_original_is_not_always_a_failed_download(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(hd, 'goc_du_lieu', return_value=Path(folder)):
             Path(folder, 'a.xml').write_text('<HDon/>')

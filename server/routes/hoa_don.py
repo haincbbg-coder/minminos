@@ -1144,8 +1144,20 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "
         else:
             # Incomplete identities must not collapse unrelated emails into '__'.
             source = r.get("_source_id") or repr((r.get("from"), r.get("subject"), r.get("date"), r.get("code")))
-            digest = hashlib.sha256((mail + source).encode() + (r.get("xml") or r.get("pdf") or b"")).hexdigest()[:24]
+            # Portal PDFs may contain a fresh timestamp/document ID on every fetch.
+            # Email attachments remain byte-keyed to keep multiple PDFs separate.
+            portal = bool(r.get("lookup_url") and not r.get("xml"))
+            payload = str(r["lookup_url"]).encode() if portal else (r.get("xml") or r.get("pdf") or b"")
+            digest = hashlib.sha256((mail + source).encode() + payload).hexdigest()[:24]
             rid = "mail_" + digest
+            if portal and r.get("subject") and r.get("from") and r.get("date"):
+                # Reuse existing byte-keyed rows without deleting their saved files.
+                legacy = [b for b in kho.values() if b.get("id", "").startswith("mail_")
+                          and b.get("hop_thu") == mail and b.get("tieu_de") == r["subject"][:200]
+                          and b.get("tu") == r["from"][:120] and b.get("ngay_mail") == r["date"]
+                          and b.get("link") == link_an_toan(r["lookup_url"])]
+                if legacy:
+                    rid = min(legacy, key=lambda b: (b.get("luc", 0), b["id"]))["id"]
         cu = kho.get(rid) or {}
         bo_sung = any(r.get(t) and not tuyet_doi(cu.get(t)) for t in ("xml", "pdf"))
         if cu and not bo_sung:
