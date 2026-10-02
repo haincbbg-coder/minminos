@@ -55,10 +55,22 @@ def _looks_html(data: bytes) -> bool:
     return b"<html" in head or b"<!doctype html" in head
 
 
+def is_error_document(data: bytes) -> bool:
+    """Recognize gateway error pages, including responses incorrectly sent as HTTP 200."""
+    if not _looks_html(data):
+        return False
+    head = data[:32768].lower()
+    return (b"this page can't be displayed" in head
+            or b"the requested url was rejected" in head
+            or bool(re.search(rb"<title>\s*(?:error|access denied|request rejected|service unavailable)\s*</title>", head)))
+
+
 def extract_zip(zip_bytes: bytes, _depth: int = 0) -> dict:
     """-> {"xml": bytes|None, "html": bytes|None, "others": {name: bytes}, "names": [..]}
     Nhận diện theo NỘI DUNG (không tin tên file): cổng thuế có lúc trả file XML không đuôi,
     hoặc zip lồng trong zip."""
+    if is_error_document(zip_bytes):
+        raise ValueError("Cổng thuế trả trang báo lỗi thay vì chứng từ; chưa tải được XML/ZIP. Thử lại sau.")
     out = {"xml": None, "html": None, "others": {}, "names": []}
     try:
         zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
@@ -72,6 +84,8 @@ def extract_zip(zip_bytes: bytes, _depth: int = 0) -> dict:
         if name.endswith("/"):
             continue
         data = zf.read(name)
+        if is_error_document(data):
+            raise ValueError("Gói cổng thuế chứa trang báo lỗi; không tạo PDF Trống đồng từ trang lỗi.")
         out["names"].append(name)
         low = name.lower()
         if (low.endswith(".zip") or data[:2] == b"PK") and _depth < 3:
