@@ -146,7 +146,7 @@ class LiveRouteFollowupTests(unittest.IsolatedAsyncioTestCase):
                     make_provider=lambda cfg, recognition_lang="vi-VN", memory_index="": prov, MEMORY_CHARS=4000,
                     is_followup_ack=voice_live.is_followup_ack, followup_request=voice_live.followup_request,
                     is_noop_result=voice_live.is_noop_result, FOLLOWUP_ACK=voice_live.FOLLOWUP_ACK,
-                    is_same_request=voice_live.is_same_request),
+                    is_same_request=voice_live.is_same_request, is_speech_stop=voice_live.is_speech_stop),
                 openai_oauth=types.SimpleNamespace(write_codex_auth=lambda: None),
                 _brain_memory_dir=lambda root: Path(directory), _brain_root=lambda b: directory,
                 _fit_memory_index=lambda mem, cap=None: mem[:cap],
