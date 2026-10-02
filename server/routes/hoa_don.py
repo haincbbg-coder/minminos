@@ -1366,13 +1366,41 @@ def _mau_hop_dong(cty: dict, kieu: str) -> list[tuple[str, bytes]]:
     return [("HopDongNguyenTac_MuaBan.doc", _doc_bytes("Hợp đồng nguyên tắc / mua bán", body, kieu)), ("BienBanNghiemThu_ThanhLy.doc", _doc_bytes("Biên bản nghiệm thu / thanh lý", thanh_ly, kieu))]
 
 
-def _mau_lao_dong(cty: dict, kieu: str) -> list[tuple[str, bytes]]:
-    hdld = f'''<h1>Hợp đồng lao động</h1><p class="sub">Mẫu khung cho {_html(cty['ten'])}</p><table><tr><td>Người sử dụng lao động</td><td>{_html(cty['ten'])} - MST {_html(cty['mst'])}</td></tr><tr><td>Người lao động</td><td><span class="line"></span></td></tr><tr><td>Chức danh / bộ phận</td><td><span class="line"></span></td></tr><tr><td>Mức lương / phụ cấp</td><td><span class="line"></span></td></tr><tr><td>Thời hạn hợp đồng</td><td><span class="line"></span></td></tr></table><p>Hai bên thỏa thuận quyền, nghĩa vụ, thời giờ làm việc, nghỉ ngơi, bảo hiểm, bảo mật và các nội dung khác theo quy định hiện hành.</p><table class="sign"><tr><td>Người lao động</td><td>Người sử dụng lao động</td></tr></table>'''
-    qd = '''<h1>Quyết định tiếp nhận / điều chuyển / nghỉ việc</h1><p>Căn cứ nhu cầu sử dụng lao động và hồ sơ nhân sự, công ty quyết định:</p><table><tr><th>Họ tên</th><th>Chức danh</th><th>Ngày hiệu lực</th><th>Nội dung</th></tr><tr><td></td><td></td><td></td><td></td></tr></table><table class="sign"><tr><td>Người nhận quyết định</td><td>Người ký quyết định</td></tr></table>'''
-    return [("HopDongLaoDong.doc", _doc_bytes("Hợp đồng lao động", hdld, kieu)), ("QuyetDinhNhanSu.doc", _doc_bytes("Quyết định nhân sự", qd, kieu))]
+
+def _nhan_su_sach(ds) -> list[dict]:
+    out = []
+    if not isinstance(ds, list):
+        return out
+    for x in ds[:500]:
+        if not isinstance(x, dict):
+            continue
+        row = {k: str(x.get(k) or '').strip()[:300] for k in ('ho_ten', 'ngay_sinh', 'cccd', 'dia_chi', 'chuc_vu', 'luong', 'ngay_vao', 'ma_bhxh')}
+        if row['ho_ten']:
+            out.append(row)
+    return out
 
 
-def _workbook_bytes(rows: list[dict], cty: dict, nhom: set[str]) -> bytes:
+def _mau_lao_dong(cty: dict, kieu: str, nhan_su: Optional[list[dict]] = None) -> list[tuple[str, bytes]]:
+    people = _nhan_su_sach(nhan_su)
+    if not people:
+        hdld = f'''<h1>Hợp đồng lao động</h1><p class="sub">Mẫu khung cho {_html(cty['ten'])}</p><table><tr><td>Người sử dụng lao động</td><td>{_html(cty['ten'])} - MST {_html(cty['mst'])}</td></tr><tr><td>Người lao động</td><td><span class="line"></span></td></tr><tr><td>Ngày sinh / CCCD / Địa chỉ</td><td><span class="line"></span></td></tr><tr><td>Chức danh / bộ phận</td><td><span class="line"></span></td></tr><tr><td>Mức lương / phụ cấp</td><td><span class="line"></span></td></tr><tr><td>Thời hạn hợp đồng</td><td><span class="line"></span></td></tr></table><p>Hai bên thỏa thuận quyền, nghĩa vụ, thời giờ làm việc, nghỉ ngơi, bảo hiểm, bảo mật và các nội dung khác theo quy định hiện hành.</p><table class="sign"><tr><td>Người lao động</td><td>Người sử dụng lao động</td></tr></table>'''
+        qd = '''<h1>Quyết định tiếp nhận / điều chuyển / nghỉ việc</h1><p>Căn cứ nhu cầu sử dụng lao động và hồ sơ nhân sự, công ty quyết định:</p><table><tr><th>Họ tên</th><th>Chức danh</th><th>Ngày hiệu lực</th><th>Nội dung</th></tr><tr><td></td><td></td><td></td><td></td></tr></table><table class="sign"><tr><td>Người nhận quyết định</td><td>Người ký quyết định</td></tr></table>'''
+        huong_dan = '''<h1>Hướng dẫn nhập dữ liệu nhân sự</h1><p>Nhập một người mỗi dòng trong tab Bộ chứng từ theo thứ tự: Họ tên | Ngày sinh | CCCD | Địa chỉ | Chức vụ | Lương | Ngày vào làm | Mã BHXH.</p><p>Khi có dữ liệu, MinMin sẽ tự sinh hồ sơ riêng cho từng người lao động, gồm HĐLĐ, quyết định tiếp nhận, quyết định lương, cam kết bảo mật/bàn giao và tờ khai BHXH khung.</p>'''
+        return [('HopDongLaoDong_MauTrong.doc', _doc_bytes('Hợp đồng lao động', hdld, kieu)), ('QuyetDinhNhanSu_MauTrong.doc', _doc_bytes('Quyết định nhân sự', qd, kieu)), ('HUONG_DAN_NHAP_DU_LIEU_NHAN_SU.doc', _doc_bytes('Hướng dẫn nhập dữ liệu nhân sự', huong_dan, kieu))]
+    docs = []
+    for i, ns in enumerate(people, 1):
+        ten = _slug(ns['ho_ten'], 50)
+        base = f'{i:02d}_{ten}/'
+        common = f'''<table><tr><td>Họ tên</td><td>{_html(ns['ho_ten'])}</td></tr><tr><td>Ngày sinh</td><td>{_html(ns['ngay_sinh'])}</td></tr><tr><td>CCCD</td><td>{_html(ns['cccd'])}</td></tr><tr><td>Địa chỉ</td><td>{_html(ns['dia_chi'])}</td></tr><tr><td>Chức vụ</td><td>{_html(ns['chuc_vu'])}</td></tr><tr><td>Lương</td><td>{_html(ns['luong'])}</td></tr><tr><td>Ngày vào làm</td><td>{_html(ns['ngay_vao'])}</td></tr><tr><td>Mã BHXH</td><td>{_html(ns['ma_bhxh'])}</td></tr></table>'''
+        hdld = f'''<h1>Hợp đồng lao động</h1><p class="sub">{_html(cty['ten'])} ký với {_html(ns['ho_ten'])}</p><p><b>Người sử dụng lao động:</b> {_html(cty['ten'])} - MST {_html(cty['mst'])}</p>{common}<p>Hai bên thỏa thuận công việc, tiền lương, thời giờ làm việc, nghỉ ngơi, bảo hiểm, bảo mật, bàn giao tài sản và trách nhiệm vật chất theo nội quy/quy chế công ty.</p><table class="sign"><tr><td>Người lao động<br>{_html(ns['ho_ten'])}</td><td>Người sử dụng lao động</td></tr></table>'''
+        qd_tn = f'''<h1>Quyết định tiếp nhận tuyển dụng</h1><p>Tiếp nhận ông/bà <b>{_html(ns['ho_ten'])}</b>, CCCD {_html(ns['cccd'])}, vào làm việc tại {_html(cty['ten'])} từ ngày {_html(ns['ngay_vao'])}.</p>{common}<table class="sign"><tr><td>Người nhận quyết định</td><td>Người ký quyết định</td></tr></table>'''
+        qd_luong = f'''<h1>Quyết định lương và phụ cấp</h1><p>Áp dụng mức lương/phụ cấp cho ông/bà <b>{_html(ns['ho_ten'])}</b> từ ngày {_html(ns['ngay_vao'])}.</p>{common}<table><tr><th>Khoản</th><th>Số tiền</th><th>Ghi chú</th></tr><tr><td>Lương chính</td><td>{_html(ns['luong'])}</td><td>Theo HĐLĐ/quy chế lương</td></tr><tr><td>Phụ cấp</td><td></td><td></td></tr></table><table class="sign"><tr><td>Người lao động</td><td>Giám đốc</td></tr></table>'''
+        cam_ket = f'''<h1>Cam kết bảo mật và bàn giao</h1><p>Ông/bà <b>{_html(ns['ho_ten'])}</b> cam kết bảo mật dữ liệu, tài khoản, tài sản, thông tin khách hàng và bàn giao đầy đủ khi thay đổi/chấm dứt công việc.</p>{common}<table class="sign"><tr><td>Người cam kết</td><td>Đại diện công ty</td></tr></table>'''
+        tk1 = f'''<h1>Khung thông tin TK1-TS / BHXH</h1><p>Dữ liệu dùng để kế toán điền lên cổng BHXH hoặc mẫu điện tử tương ứng.</p>{common}<table><tr><th>Trường</th><th>Dữ liệu</th></tr><tr><td>Họ tên</td><td>{_html(ns['ho_ten'])}</td></tr><tr><td>Mã BHXH</td><td>{_html(ns['ma_bhxh'])}</td></tr><tr><td>CCCD</td><td>{_html(ns['cccd'])}</td></tr><tr><td>Địa chỉ liên hệ</td><td>{_html(ns['dia_chi'])}</td></tr><tr><td>Tiền lương đóng BHXH</td><td>{_html(ns['luong'])}</td></tr></table>'''
+        docs.extend([(base + '01_HopDongLaoDong.doc', _doc_bytes('Hợp đồng lao động', hdld, kieu)), (base + '02_QuyetDinhTiepNhan.doc', _doc_bytes('Quyết định tiếp nhận', qd_tn, kieu)), (base + '03_QuyetDinhLuongPhuCap.doc', _doc_bytes('Quyết định lương', qd_luong, kieu)), (base + '04_CamKetBaoMatBanGiao.doc', _doc_bytes('Cam kết bảo mật', cam_ket, kieu)), (base + '05_TK1TS_BHXH_ThongTin.doc', _doc_bytes('Thông tin BHXH', tk1, kieu))])
+    return docs
+
+def _workbook_bytes(rows: list[dict], cty: dict, nhom: set[str], nhan_su: Optional[list[dict]] = None) -> bytes:
     from openpyxl import Workbook
     wb = Workbook(); ws = wb.active; ws.title = "Bang_Ke_Hoa_Don"
     ws.append(["Doanh nghiệp", cty["ten"], "MST", cty["mst"]]); ws.append([])
@@ -1386,24 +1414,35 @@ def _workbook_bytes(rows: list[dict], cty: dict, nhom: set[str]) -> bytes:
         ws4.append([i, folder, name, level, "☐", ""])
     ws5 = wb.create_sheet("Bang_Luong")
     ws5.append(["STT", "Họ tên", "Chức vụ", "Ngày công", "Lương cơ bản", "Phụ cấp", "Khấu trừ", "Thực nhận", "Ký nhận"])
-    for i in range(1, 11): ws5.append([i, "", "", "", "", "", "", "", ""])
+    people = _nhan_su_sach(nhan_su)
+    if people:
+        for i, ns in enumerate(people, 1):
+            ws5.append([i, ns.get("ho_ten"), ns.get("chuc_vu"), "", ns.get("luong"), "", "", "", ""])
+    else:
+        for i in range(1, 11): ws5.append([i, "", "", "", "", "", "", "", ""])
     ws6 = wb.create_sheet("Bang_Cham_Cong")
     ws6.append(["STT", "Họ tên"] + [str(i) for i in range(1, 32)] + ["Tổng công", "Ghi chú"])
-    for i in range(1, 11): ws6.append([i, ""] + ["" for _ in range(31)] + ["", ""])
+    if people:
+        for i, ns in enumerate(people, 1): ws6.append([i, ns.get("ho_ten")] + ["" for _ in range(31)] + ["", ""])
+    else:
+        for i in range(1, 11): ws6.append([i, ""] + ["" for _ in range(31)] + ["", ""])
     if "thue_bhxh" in nhom:
         ws2 = wb.create_sheet("Khung_BHXH_D02LT_TK1TS"); ws2.append(["STT", "Họ tên", "Mã số BHXH", "Số CCCD", "Chức danh", "Tiền lương", "Từ tháng", "Đến tháng", "Ghi chú"])
-        for i in range(1, 6): ws2.append([i, "", "", "", "", "", "", "", ""])
+        if people:
+            for i, ns in enumerate(people, 1): ws2.append([i, ns.get("ho_ten"), ns.get("ma_bhxh"), ns.get("cccd"), ns.get("chuc_vu"), ns.get("luong"), ns.get("ngay_vao"), "", ns.get("dia_chi")])
+        else:
+            for i in range(1, 6): ws2.append([i, "", "", "", "", "", "", "", ""])
         ws3 = wb.create_sheet("Ho_So_Thue"); ws3.append(["Mục hồ sơ", "Đã có", "Ghi chú"])
         for name in ["Hóa đơn điện tử", "PDF gốc NCC", "Hợp đồng/đơn hàng", "Biên bản nghiệm thu/giao nhận", "Thanh toán ngân hàng/phiếu thu chi"]: ws3.append([name, "", ""])
     buf = io.BytesIO(); wb.save(buf); return buf.getvalue()
 
 
-def _tao_zip_chung_tu(mst: str, p_ds: list[dict], s_ds: list[dict], nhom: set[str], kieu: str) -> bytes:
+def _tao_zip_chung_tu(mst: str, p_ds: list[dict], s_ds: list[dict], nhom: set[str], kieu: str, nhan_su: Optional[list[dict]] = None) -> bytes:
     cty = _cty(mst); buf = io.BytesIO(); all_rows = list(p_ds) + list(s_ds)
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         readme = f'''<h1>Bộ chứng từ kế toán tự động</h1><p>Doanh nghiệp: <b>{_html(cty['ten'])}</b> · MST {_html(cty['mst'])}</p><p>Gói gồm {len(p_ds)} hóa đơn mua vào, {len(s_ds)} hóa đơn bán ra. File .doc có thể mở bằng Microsoft Word/LibreOffice để rà soát, ký và in.</p><p>Lưu ý: mẫu là khung chứng từ để kế toán hoàn thiện trước khi ký/nộp; các biểu mẫu BHXH/thuế nên đối chiếu với cổng nộp hồ sơ tại thời điểm sử dụng.</p>'''
         z.writestr("00_README.html", _doc_frame("README bộ chứng từ", readme).encode("utf-8"))
-        z.writestr("00_DoiSoat_HoaDon.xlsx", _workbook_bytes(all_rows, cty, nhom))
+        z.writestr("00_DoiSoat_HoaDon.xlsx", _workbook_bytes(all_rows, cty, nhom, nhan_su))
         z.writestr("00_manifest.json", json.dumps({"mst": mst, "ten_doanh_nghiep": cty["ten"], "so_hoa_don_mua_vao": len(p_ds), "so_hoa_don_ban_ra": len(s_ds), "nhom_mau": sorted(nhom), "tao_luc": dt.datetime.now().isoformat(timespec="seconds")}, ensure_ascii=False, indent=2))
         for l, rows, root in (("purchase", p_ds, "01_MuaVao"), ("sold", s_ds, "02_BanRa")):
             for inv in rows:
@@ -1415,7 +1454,7 @@ def _tao_zip_chung_tu(mst: str, p_ds: list[dict], s_ds: list[dict], nhom: set[st
             for fn, data in _mau_gia_cong(cty, kieu): z.writestr("02_MuaBan_GiaCong/" + fn, data)
             for fn, data in _mau_hop_dong(cty, kieu): z.writestr("02_MuaBan_GiaCong/" + fn, data)
         if "lao_dong" in nhom:
-            for fn, data in _mau_lao_dong(cty, kieu): z.writestr("01_Luong_BHXH/" + fn, data)
+            for fn, data in _mau_lao_dong(cty, kieu, nhan_su): z.writestr("01_Luong_BHXH/" + fn, data)
         if "thue_bhxh" in nhom:
             body = '''<h1>Checklist hồ sơ thuế và BHXH</h1><table><tr><th>Nhóm hồ sơ</th><th>Tệp cần chuẩn bị</th><th>Trạng thái</th></tr><tr><td>Thuế GTGT</td><td>Bảng kê hóa đơn, hóa đơn XML/PDF, giải trình chênh lệch</td><td>Rà soát</td></tr><tr><td>BHXH</td><td>D02-LT/TK1-TS, HĐLĐ, quyết định lương, CCCD</td><td>Điền bổ sung nhân sự</td></tr></table>'''
             z.writestr("03_Thue_HDDT/Checklist_HoSo.doc", _doc_bytes("Checklist hồ sơ thuế và BHXH", body, kieu))
@@ -1940,7 +1979,7 @@ def register(app: FastAPI) -> None:
             if not nhom:
                 raise ValueError("Chọn ít nhất một bộ hồ sơ cần tạo.")
             kieu = d.get("kieu_mau") if d.get("kieu_mau") in {"ke_toan", "trang_trong", "toi_gian"} else "ke_toan"
-            data = _tao_zip_chung_tu(mst, p_ds, s_ds, nhom, kieu)
+            data = _tao_zip_chung_tu(mst, p_ds, s_ds, nhom, kieu, d.get("nhan_su"))
             nhan = ten_excel(mst, "", tu, den, cai_dat_tai()).replace(".xlsx", "")
             return _tai_ve(data, "BoChungTu_" + nhan + ".zip", "application/zip")
         except Exception as e:

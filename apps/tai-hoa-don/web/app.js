@@ -290,9 +290,20 @@
     if (rows.some(function(r){ return !r.co_goc; })) missing.push("Một số hoá đơn chưa có PDF gốc NCC; gói vẫn tạo chứng từ và ghi rõ trạng thái còn thiếu.");
     $("#ctCheck").innerHTML = (missing.length ? missing : ["Dữ liệu đủ để tạo bộ chứng từ in được."]).map(function(m,i){return '<p class="'+(missing.length?'can':'ok')+'">'+(missing.length?'Cần rà soát: ':'Sẵn sàng: ')+esc(m)+'</p>';}).join('');
   }
+  function docNhanSu() {
+    var box = $("#ctNhanSu");
+    if (!box) return [];
+    return box.value.split(/\r?\n+/).map(function(line){
+      var p = line.split("|").map(function(x){ return x.trim(); });
+      if (!p.join("")) return null;
+      return { ho_ten:p[0]||"", ngay_sinh:p[1]||"", cccd:p[2]||"", dia_chi:p[3]||"", chuc_vu:p[4]||"", luong:p[5]||"", ngay_vao:p[6]||"", ma_bhxh:p[7]||"" };
+    }).filter(Boolean);
+  }
+  function veNhanSuDem() { if ($("#ctNhanSuDem")) $("#ctNhanSuDem").textContent = docNhanSu().length + " người lao động"; }
   function phamViChungTu() {
     var d = phamViXuat({ kieu_mau: $("#ctKieu").value, pham_vi_chung_tu: $("#ctPhamVi").value });
     d.nhom = Array.prototype.map.call(document.querySelectorAll("#ctNhom input:checked"), function(c){ return c.value; });
+    d.nhan_su = docNhanSu();
     if (!d.nhom.length) throw new Error("Chọn ít nhất một bộ hồ sơ cần tạo.");
     return d;
   }
@@ -574,6 +585,8 @@
     if ($("#nutBoChungTu")) $("#nutBoChungTu").onclick = async function(){ this.disabled = true; try { await taiFile("bo-chung-tu", phamViChungTu()); } catch(e) { bao(e.message); } finally { this.disabled = false; } };
     ["#ctKieu", "#ctPhamVi"].forEach(function(id){ if($(id)) $(id).onchange = veChungTu; });
     if ($("#ctNhom")) $("#ctNhom").querySelectorAll("input").forEach(function(c){ c.onchange = veChungTu; });
+    if ($("#ctNhanSu")) $("#ctNhanSu").oninput = veNhanSuDem;
+    if ($("#ctNhanSuMau")) $("#ctNhanSuMau").onclick = function(){ $("#ctNhanSu").value = "Nguyễn Văn A | 01/01/1998 | 001098000001 | Hà Nội | Nhân viên kinh doanh | 8.000.000 | 01/08/2026 | 0123456789"; veNhanSuDem(); };
     $("#fDn").onsubmit = async function (ev) {
       ev.preventDefault();
       var f = ev.target;
