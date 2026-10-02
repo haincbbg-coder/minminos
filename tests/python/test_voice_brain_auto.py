@@ -110,7 +110,7 @@ try:
     check("trả đường gọi đang dùng", (d.get("call") or {}).get("engine") == "basic" and d["call"].get("setting") == "basic")
     check("trả giọng đọc của đường Cơ bản",
           d.get("tts") == {"provider": "openai", "openai_voice": "nova", "openai_key_set": True,
-                           "elevenlabs_voice": "", "elevenlabs_key_set": False})
+                           "elevenlabs_voice": "", "elevenlabs_model": "auto", "elevenlabs_key_set": False})
     check("trả bộ não giọng tự chọn kèm nhãn", (d.get("voice_brain") or {}).get("id") == "claude"
           and "Claude" in d["voice_brain"].get("label", ""))
     check("vẫn trả giọng ChatGPT Live và nhà cung cấp Live", d.get("chatgpt_voice") and d.get("live_providers"))
