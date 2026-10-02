@@ -290,20 +290,43 @@
     if (rows.some(function(r){ return !r.co_goc; })) missing.push("Một số hoá đơn chưa có PDF gốc NCC; gói vẫn tạo chứng từ và ghi rõ trạng thái còn thiếu.");
     $("#ctCheck").innerHTML = (missing.length ? missing : ["Dữ liệu đủ để tạo bộ chứng từ in được."]).map(function(m,i){return '<p class="'+(missing.length?'can':'ok')+'">'+(missing.length?'Cần rà soát: ':'Sẵn sàng: ')+esc(m)+'</p>';}).join('');
   }
+  var nsCols = ["ho_ten", "ngay_sinh", "cccd", "dia_chi", "chuc_vu", "luong", "ngay_vao", "ma_bhxh"];
+  function dongNhanSu(data) {
+    data = data || {};
+    var tr = document.createElement("tr");
+    tr.innerHTML = nsCols.map(function(k){ return '<td><input data-ns="'+k+'" value="'+esc(data[k]||'')+'" /></td>'; }).join("") + '<td><button type="button" class="nut phu" data-xoa-ns>×</button></td>';
+    tr.querySelectorAll("input").forEach(function(i){ i.oninput = veNhanSuDem; });
+    tr.querySelector("[data-xoa-ns]").onclick = function(){ tr.remove(); veNhanSuDem(); };
+    return tr;
+  }
+  function themNhanSu(data) {
+    var body = $("#ctNhanSuBody");
+    if (!body) return;
+    body.appendChild(dongNhanSu(data));
+    veNhanSuDem();
+  }
   function docNhanSu() {
-    var box = $("#ctNhanSu");
-    if (!box) return [];
-    return box.value.split(/\r?\n+/).map(function(line){
-      var p = line.split("|").map(function(x){ return x.trim(); });
-      if (!p.join("")) return null;
-      return { ho_ten:p[0]||"", ngay_sinh:p[1]||"", cccd:p[2]||"", dia_chi:p[3]||"", chuc_vu:p[4]||"", luong:p[5]||"", ngay_vao:p[6]||"", ma_bhxh:p[7]||"" };
-    }).filter(Boolean);
+    var body = $("#ctNhanSuBody");
+    if (!body) return [];
+    return Array.prototype.map.call(body.querySelectorAll("tr"), function(tr){
+      var row = {};
+      nsCols.forEach(function(k){ var el = tr.querySelector('[data-ns="'+k+'"]'); row[k] = el ? el.value.trim() : ""; });
+      return row;
+    }).filter(function(row){ return Object.keys(row).some(function(k){ return row[k]; }); });
   }
   function veNhanSuDem() { if ($("#ctNhanSuDem")) $("#ctNhanSuDem").textContent = docNhanSu().length + " người lao động"; }
+  function veDocTabs(name) {
+    document.querySelectorAll("#ctTabs [data-doc-tab]").forEach(function(b){ b.classList.toggle("on", b.dataset.docTab === name); });
+    document.querySelectorAll("[data-doc-pane]").forEach(function(p){ p.classList.toggle("on", p.dataset.docPane === name); });
+  }
   function phamViChungTu() {
     var d = phamViXuat({ kieu_mau: $("#ctKieu").value, pham_vi_chung_tu: $("#ctPhamVi").value });
-    d.nhom = Array.prototype.map.call(document.querySelectorAll("#ctNhom input:checked"), function(c){ return c.value; });
+    d.nhom = Array.prototype.map.call(document.querySelectorAll("#ctNhomHoaDon input:checked, #ctNhomKiemTra input:checked"), function(c){ return c.value; });
     d.nhan_su = docNhanSu();
+    var loai = document.querySelector('input[name="ctLoaiHd"]:checked');
+    d.loai_hoat_dong = loai ? loai.value : "thuong_mai";
+    if ($("#ctGomBhxh") && $("#ctGomBhxh").checked && d.nhan_su.length && d.nhom.indexOf("thue_bhxh") < 0) d.nhom.push("thue_bhxh");
+    if (d.nhan_su.length && d.nhom.indexOf("lao_dong") < 0) d.nhom.push("lao_dong");
     if (!d.nhom.length) throw new Error("Chọn ít nhất một bộ hồ sơ cần tạo.");
     return d;
   }
@@ -584,9 +607,11 @@
     if ($("#ctLamMoi")) $("#ctLamMoi").onclick = function(){ if (dn) taiBang(); else veChungTu(); };
     if ($("#nutBoChungTu")) $("#nutBoChungTu").onclick = async function(){ this.disabled = true; try { await taiFile("bo-chung-tu", phamViChungTu()); } catch(e) { bao(e.message); } finally { this.disabled = false; } };
     ["#ctKieu", "#ctPhamVi"].forEach(function(id){ if($(id)) $(id).onchange = veChungTu; });
-    if ($("#ctNhom")) $("#ctNhom").querySelectorAll("input").forEach(function(c){ c.onchange = veChungTu; });
-    if ($("#ctNhanSu")) $("#ctNhanSu").oninput = veNhanSuDem;
-    if ($("#ctNhanSuMau")) $("#ctNhanSuMau").onclick = function(){ $("#ctNhanSu").value = "Nguyễn Văn A | 01/01/1998 | 001098000001 | Hà Nội | Nhân viên kinh doanh | 8.000.000 | 01/08/2026 | 0123456789"; veNhanSuDem(); };
+    ["#ctNhomHoaDon", "#ctNhomKiemTra", "#ctLoaiHd"].forEach(function(id){ if($(id)) $(id).querySelectorAll("input").forEach(function(c){ c.onchange = veChungTu; }); });
+    if ($("#ctTabs")) $("#ctTabs").querySelectorAll("[data-doc-tab]").forEach(function(b){ b.onclick = function(){ veDocTabs(b.dataset.docTab); }; });
+    if ($("#ctThemNhanSu")) $("#ctThemNhanSu").onclick = function(){ themNhanSu({}); };
+    if ($("#ctNhanSuMau")) $("#ctNhanSuMau").onclick = function(){ themNhanSu({ ho_ten:"Nguyễn Văn A", ngay_sinh:"01/01/1998", cccd:"001098000001", dia_chi:"Hà Nội", chuc_vu:"Nhân viên kinh doanh", luong:"8.000.000", ngay_vao:"01/08/2026", ma_bhxh:"0123456789" }); };
+    if ($("#ctNhanSuBody") && !$("#ctNhanSuBody").children.length) themNhanSu({});
     $("#fDn").onsubmit = async function (ev) {
       ev.preventDefault();
       var f = ev.target;

@@ -1367,6 +1367,14 @@ def _mau_hop_dong(cty: dict, kieu: str) -> list[tuple[str, bytes]]:
 
 
 
+
+
+def _mau_pccc_luu_tru(cty: dict, kieu: str) -> list[tuple[str, bytes]]:
+    checklist = f'''<h1>Checklist lưu trữ chứng từ và PCCC</h1><p class="sub">{_html(cty['ten'])} - MST {_html(cty['mst'])}</p><table><tr><th>Nhóm kiểm tra</th><th>Nội dung cần có</th><th>Trạng thái</th><th>Ghi chú</th></tr><tr><td>Lưu trữ hóa đơn</td><td>XML gốc, PDF CQT, PDF gốc nhà phát hành, email/nguồn tải</td><td>☐</td><td></td></tr><tr><td>Hợp đồng/chứng từ kèm hóa đơn</td><td>Hợp đồng, đơn hàng, biên bản bàn giao/nghiệm thu, thanh toán</td><td>☐</td><td></td></tr><tr><td>PCCC</td><td>Nội quy, sơ đồ thoát nạn, bình chữa cháy, lối thoát, nhật ký kiểm tra</td><td>☐</td><td></td></tr><tr><td>Lao động/BHXH</td><td>HĐLĐ, quyết định lương, TK1-TS/D02-LT nếu có</td><td>☐</td><td></td></tr></table>'''
+    bien_ban = f'''<h1>Biên bản tự kiểm tra PCCC định kỳ</h1><p>Hôm nay, đại diện {_html(cty['ten'])} tiến hành tự kiểm tra điều kiện an toàn PCCC tại địa điểm kinh doanh/kho/xưởng.</p><table><tr><th>Hạng mục</th><th>Kết quả</th><th>Tồn tại</th><th>Hướng xử lý</th></tr><tr><td>Bình chữa cháy</td><td>☐ Đạt ☐ Chưa đạt</td><td></td><td></td></tr><tr><td>Lối thoát nạn</td><td>☐ Thông thoáng ☐ Cần xử lý</td><td></td><td></td></tr><tr><td>Nội quy, biển báo</td><td>☐ Có ☐ Thiếu</td><td></td><td></td></tr><tr><td>Hệ thống điện/kho hàng</td><td>☐ An toàn ☐ Cần xử lý</td><td></td><td></td></tr></table><table class="sign"><tr><td>Người kiểm tra</td><td>Đại diện doanh nghiệp</td></tr></table>'''
+    phan_cong = f'''<h1>Quyết định phân công người phụ trách PCCC và lưu trữ chứng từ</h1><p>{_html(cty['ten'])} phân công nhân sự phụ trách kiểm tra PCCC, lưu trữ hóa đơn/chứng từ và báo cáo khi có yêu cầu kiểm tra.</p><table><tr><th>Họ tên</th><th>Chức vụ</th><th>Nhiệm vụ</th><th>Thời hạn</th></tr><tr><td></td><td></td><td>Kiểm tra PCCC định kỳ, lưu hồ sơ hóa đơn/chứng từ</td><td></td></tr></table><table class="sign"><tr><td>Người được phân công</td><td>Giám đốc</td></tr></table>'''
+    lich = '<h1>Lịch kiểm tra định kỳ</h1><table><tr><th>Tháng</th><th>PCCC</th><th>Hóa đơn/chứng từ</th><th>Lao động/BHXH</th><th>Người phụ trách</th></tr>' + ''.join(f'<tr><td>{i:02d}</td><td>☐</td><td>☐</td><td>☐</td><td></td></tr>' for i in range(1,13)) + '</table>'
+    return [("Checklist_LuuTru_ChungTu_PCCC.doc", _doc_bytes("Checklist lưu trữ chứng từ và PCCC", checklist, kieu)), ("BienBan_TuKiemTra_PCCC.doc", _doc_bytes("Biên bản tự kiểm tra PCCC", bien_ban, kieu)), ("QuyetDinh_PhanCong_PCCC_LuuTru.doc", _doc_bytes("Phân công PCCC và lưu trữ", phan_cong, kieu)), ("Lich_KiemTra_DinhKy.doc", _doc_bytes("Lịch kiểm tra định kỳ", lich, kieu))]
 def _nhan_su_sach(ds) -> list[dict]:
     out = []
     if not isinstance(ds, list):
@@ -1437,13 +1445,13 @@ def _workbook_bytes(rows: list[dict], cty: dict, nhom: set[str], nhan_su: Option
     buf = io.BytesIO(); wb.save(buf); return buf.getvalue()
 
 
-def _tao_zip_chung_tu(mst: str, p_ds: list[dict], s_ds: list[dict], nhom: set[str], kieu: str, nhan_su: Optional[list[dict]] = None) -> bytes:
+def _tao_zip_chung_tu(mst: str, p_ds: list[dict], s_ds: list[dict], nhom: set[str], kieu: str, nhan_su: Optional[list[dict]] = None, loai_hoat_dong: str = "thuong_mai") -> bytes:
     cty = _cty(mst); buf = io.BytesIO(); all_rows = list(p_ds) + list(s_ds)
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         readme = f'''<h1>Bộ chứng từ kế toán tự động</h1><p>Doanh nghiệp: <b>{_html(cty['ten'])}</b> · MST {_html(cty['mst'])}</p><p>Gói gồm {len(p_ds)} hóa đơn mua vào, {len(s_ds)} hóa đơn bán ra. File .doc có thể mở bằng Microsoft Word/LibreOffice để rà soát, ký và in.</p><p>Lưu ý: mẫu là khung chứng từ để kế toán hoàn thiện trước khi ký/nộp; các biểu mẫu BHXH/thuế nên đối chiếu với cổng nộp hồ sơ tại thời điểm sử dụng.</p>'''
         z.writestr("00_README.html", _doc_frame("README bộ chứng từ", readme).encode("utf-8"))
         z.writestr("00_DoiSoat_HoaDon.xlsx", _workbook_bytes(all_rows, cty, nhom, nhan_su))
-        z.writestr("00_manifest.json", json.dumps({"mst": mst, "ten_doanh_nghiep": cty["ten"], "so_hoa_don_mua_vao": len(p_ds), "so_hoa_don_ban_ra": len(s_ds), "nhom_mau": sorted(nhom), "tao_luc": dt.datetime.now().isoformat(timespec="seconds")}, ensure_ascii=False, indent=2))
+        z.writestr("00_manifest.json", json.dumps({"mst": mst, "ten_doanh_nghiep": cty["ten"], "so_hoa_don_mua_vao": len(p_ds), "so_hoa_don_ban_ra": len(s_ds), "nhom_mau": sorted(nhom), "loai_hoat_dong": loai_hoat_dong, "tao_luc": dt.datetime.now().isoformat(timespec="seconds")}, ensure_ascii=False, indent=2))
         for l, rows, root in (("purchase", p_ds, "01_MuaVao"), ("sold", s_ds, "02_BanRa")):
             for inv in rows:
                 ten = f"{_ngay_vn(ngay_hd(inv)).replace('/', '-')}_{_slug(_hoa_don_id(inv))}_{_slug(_ben(inv)['ten'], 40)}"
@@ -1458,6 +1466,9 @@ def _tao_zip_chung_tu(mst: str, p_ds: list[dict], s_ds: list[dict], nhom: set[st
         if "thue_bhxh" in nhom:
             body = '''<h1>Checklist hồ sơ thuế và BHXH</h1><table><tr><th>Nhóm hồ sơ</th><th>Tệp cần chuẩn bị</th><th>Trạng thái</th></tr><tr><td>Thuế GTGT</td><td>Bảng kê hóa đơn, hóa đơn XML/PDF, giải trình chênh lệch</td><td>Rà soát</td></tr><tr><td>BHXH</td><td>D02-LT/TK1-TS, HĐLĐ, quyết định lương, CCCD</td><td>Điền bổ sung nhân sự</td></tr></table>'''
             z.writestr("03_Thue_HDDT/Checklist_HoSo.doc", _doc_bytes("Checklist hồ sơ thuế và BHXH", body, kieu))
+        if "pccc_luu_tru" in nhom:
+            for fn, data in _mau_pccc_luu_tru(cty, kieu):
+                z.writestr("04_PCCC_LuuTru/" + fn, data)
         for folder, desc in [("01_Luong_BHXH/", "Lương, chấm công, BHXH"), ("02_MuaBan_GiaCong/", "Mua bán, kho và gia công"), ("03_Thue_HDDT/", "Thuế và hóa đơn điện tử"), ("04_KeToan_BanHang/", "Sổ kế toán, ngân hàng, POS, hoàn hàng"), ("05_PhapLy/", "Hồ sơ pháp lý doanh nghiệp")]:
             z.writestr(folder + "README.txt", desc)
     return buf.getvalue()
@@ -1979,7 +1990,7 @@ def register(app: FastAPI) -> None:
             if not nhom:
                 raise ValueError("Chọn ít nhất một bộ hồ sơ cần tạo.")
             kieu = d.get("kieu_mau") if d.get("kieu_mau") in {"ke_toan", "trang_trong", "toi_gian"} else "ke_toan"
-            data = _tao_zip_chung_tu(mst, p_ds, s_ds, nhom, kieu, d.get("nhan_su"))
+            data = _tao_zip_chung_tu(mst, p_ds, s_ds, nhom, kieu, d.get("nhan_su"), str(d.get("loai_hoat_dong") or "thuong_mai"))
             nhan = ten_excel(mst, "", tu, den, cai_dat_tai()).replace(".xlsx", "")
             return _tai_ve(data, "BoChungTu_" + nhan + ".zip", "application/zip")
         except Exception as e:
