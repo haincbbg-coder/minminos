@@ -2,10 +2,10 @@
 import re
 import time
 from collections import OrderedDict
-from datetime import datetime, timezone, timedelta
+import localefmt
 
 def now():
-    return datetime.now(timezone(timedelta(hours=7)))
+    return localefmt.now()
 
 MODES = ("fast", "balanced", "thorough")
 _CACHE = OrderedDict()
@@ -17,7 +17,7 @@ def eligible(request):
     return bool(re.search(r"(?:doanh thu|kết quả kinh doanh|báo cáo|chi phí|bao nhiêu|số liệu)", text))
 
 def key(brain, session, request):
-    return str(brain), str(session), now().date().isoformat(), " ".join(re.findall(r"[^\W_]+", str(request).lower()))
+    return str(brain), str(session), localefmt.ten_tz(), now().date().isoformat(), " ".join(re.findall(r"[^\W_]+", str(request).lower()))
 
 def get(brain, session, request, mode):
     if mode == "thorough" or not eligible(request):
@@ -30,7 +30,7 @@ def get(brain, session, request, mode):
 def put(brain, session, request, result):
     if not eligible(request) or not result or re.search(r"lỗi:|không có nội dung|JAVIS_NOOP", result, re.I):
         return
-    _CACHE[key(brain, session, request)] = (time.monotonic(), (now().strftime("%H:%M %d/%m") + " giờ Việt Nam"), result)
+    _CACHE[key(brain, session, request)] = (time.monotonic(), (now().strftime("%H:%M %d/%m") + " " + localefmt.ten_tz()), result)
     while len(_CACHE) > 128:
         _CACHE.popitem(last=False)
 
