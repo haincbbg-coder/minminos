@@ -73,7 +73,7 @@ body.on-chat .chatpage-main.edit-on > .chatpage-slot > .hud-voice { grid-row:8; 
 
 /* Compact modes retain status, percentage and reachable call controls. */
 .call-collapse, .mm-progress-collapse { flex:none; width:44px; height:44px; border:0; border-radius:50%; background:var(--bg2); color:var(--text); font-size:24px; cursor:pointer; box-shadow:var(--nm-out); }
-.call-bar[data-compact="true"] { display:flex; flex-wrap:wrap; gap:8px; padding:6px 10px; border-radius:20px; }
+.call-bar[data-compact="true"]:not([hidden]) { display:flex; flex-wrap:wrap; gap:8px; padding:6px 10px; border-radius:20px; }
 .call-bar[data-compact="true"] .call-engine { display:none; }
 .call-bar[data-compact="true"] .call-state { flex:1; min-width:70px; font-size:12px; }
 .call-bar[data-compact="true"] .call-btn { width:44px; height:44px; min-width:44px; font-size:0; padding:0; gap:0; }
