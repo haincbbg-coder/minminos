@@ -23,6 +23,14 @@
     var d = new Date(r.ngay_mail || ""); return isNaN(d) ? "" : iso(d);
   }
   function seller(r) { return r.doi_tac || r.ban_ten || r.tu || ""; }
+  function isBank(r) {
+    // Classify by the issuing seller, never by payment-bank text in an invoice.
+    var name = text(seller(r)).trim();
+    var mst = String(r.mst_doi_tac || r.ban_mst || "").replace(/\D/g, "");
+    return mst.slice(0,10) === "0301452948" ||
+      /^(?:chi nhanh\s+)?ngan hang\b/.test(name) ||
+      /^(?:vietcombank|vietinbank|agribank|bidv|acb|techcombank|sacombank|mbbank|tpbank|vpbank|hdbank|eximbank)(?:\b|_)/.test(name);
+  }
   function hasFile(r, type) {
     if (type === "xml") return !!r.co_xml;
     if (type === "original") return !!r.co_goc;
@@ -42,6 +50,7 @@
     var out = rows.filter(function(r) {
       var d = date(r), amount = Number(r.tong || 0);
       return (!f.from || d && d >= f.from) && (!f.to || d && d <= f.to) &&
+        (!f.group || (f.group === "bank" ? isBank(r) : !isBank(r))) &&
         (!q || text([seller(r),r.mst_doi_tac,r.ban_mst,r.so,r.ky_hieu,r.nha_cung_cap].join(" ")).includes(q)) &&
         (!supplier || text(seller(r) + " " + (r.mst_doi_tac || r.ban_mst || "")).includes(supplier)) &&
         (!number || text(r.so).includes(number)) &&
@@ -58,7 +67,7 @@
       return dir * (field === "amount" ? x-y : String(x || "").localeCompare(String(y || ""),"vi",{numeric:true}));
     });
   }
-  var api = {period:period,filter:filter,date:date};
+  var api = {period:period,filter:filter,date:date,isBank:isBank};
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.InvoiceUI = api;
 })(typeof window !== "undefined" ? window : this);

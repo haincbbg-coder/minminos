@@ -115,3 +115,6 @@ dialog .hang { flex-wrap: wrap; }
 @media(max-width:600px) { .invoice-filters { grid-template-columns: 1fr 1fr; } .captcha-settings form > label { width: 100%; } }
 /* Author display rules must not expose unavailable actions or inactive panels. */
 [hidden] { display: none !important; }
+.invoice-groups { padding: 12px 0; border-bottom: 1px solid var(--vien); }
+.invoice-groups .hang { flex-wrap: wrap; gap: 8px; }
+.invoice-groups p { margin: 10px 0 0; }
