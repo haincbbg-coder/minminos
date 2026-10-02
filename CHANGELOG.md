@@ -6,7 +6,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.38] - 2026-10-03
 ### Cải thiện
-- Tải hóa đơn Petrolimex bằng mã trong XML, đối chiếu đúng hóa đơn trước khi lưu; sửa ngày hiển thị lệch múi giờ.
+- Tải hóa đơn BKAV tự tìm bằng định danh XML khi thiếu mã tra cứu. Petrolimex bằng mã trong XML, đối chiếu đúng hóa đơn trước khi lưu; sửa ngày hiển thị lệch múi giờ.
 - Phân trang TCT, Gmail và cảnh báo; thêm số thứ tự, thu gọn cảnh báo, hiển thị rõ số đã chọn và cách xếp file ZIP.
 - Nghe thử Gemini phát liền mạch; thêm nhịp nói Live, lựa chọn model và danh sách giọng.
 

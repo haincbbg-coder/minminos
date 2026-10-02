@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'apps'/'tai-hoa-don'))
 from thd.providers import petrolimex as P, ProviderError, manual_download_info
 from thd import exporter
+from thd.providers import bkav
 
 XML='<HDon><TTChung><KHMSHDon>1</KHMSHDon><KHHDon>K26AAA</KHHDon><SHDon>12</SHDon><MSTTCGP>0100684378</MSTTCGP></TTChung><NBan><MST>1234567890</MST><Ten>PETROLIMEX TEST</Ten></NBan><TTKhac><TTin><TTruong>MaTimKiem</TTruong><DLieu>not-the-lookup</DLieu></TTin><TTin><TTruong>Fkey</TTruong><DLieu>CODE*</DLieu></TTin></TTKhac></HDon>'
 FORM='<input name="__RequestVerificationToken" value="state">'
@@ -46,6 +47,22 @@ class PetrolimexTests(unittest.TestCase):
     def test_wrong_invoice_rejected_before_render(self):
         with self.assertRaisesRegex(ProviderError,'không khớp'):
             self.run_lookup(XML.replace('<SHDon>12','<SHDon>13'))
+
+class BkavUuidTests(unittest.TestCase):
+    def test_uuid_recovery_verifies_issuer_xml_before_pdf(self):
+        xml=XML.replace('<HDon>','<HDon><DLHDon Id="f465cb70-251b-4754-a5fc-e979f2089b70"/>').replace('PETROLIMEX TEST','BKAV TEST')
+        for source,ok in [(xml,True),(xml.replace('<SHDon>12','<SHDon>13'),False)]:
+            session=MagicMock();session.__enter__.return_value=session
+            session.get.return_value=res(FORM+'LinkDownXML')
+            session.post.return_value=res(source)
+            with patch.object(bkav.C,'make_session',return_value=session),patch.object(bkav,'_direct_invoice',return_value=b'%PDF-fixture') as download:
+                if ok:
+                    inv={}
+                    self.assertEqual(bkav.fetch_pdf(xml,inv,lambda _:None),b'%PDF-fixture')
+                    self.assertIn('InvoiceGUID=',inv['_manual_url'])
+                else:
+                    with self.assertRaises(ProviderError):bkav.fetch_pdf(xml,{},lambda _:None)
+                    download.assert_not_called()
 
 if __name__=='__main__':
     unittest.main()
