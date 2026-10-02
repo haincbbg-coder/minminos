@@ -38,7 +38,7 @@
       button.type = "button"; button.className = "mm-progress-collapse";
       const update = () => {
         const compact = el.dataset.compact === "true";
-        button.textContent = compact ? "⌄" : "⌃";
+        button.innerHTML = (typeof window !== "undefined" && window.ic) ? window.ic(compact ? "chevron-down" : "chevron-up") : "";
         button.setAttribute("aria-expanded", String(!compact));
         button.setAttribute("aria-label", compact ? "Mở rộng tiến độ" : "Thu gọn tiến độ");
       };

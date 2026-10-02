@@ -63,7 +63,7 @@
       var shown = muted ? "muted" : state;
       el.dataset.state = shown;
       el.dataset.compact = String(compact);
-      compactBtn.textContent = compact ? "⌄" : "⌃";
+      compactBtn.innerHTML = (typeof window !== "undefined" && window.ic) ? window.ic(compact ? "chevron-down" : "chevron-up") : "";
       compactBtn.setAttribute("aria-expanded", String(!compact));
       compactBtn.setAttribute("aria-label", compact ? "Mở rộng cuộc gọi" : "Thu gọn cuộc gọi");
       engineEl.textContent = engine;
