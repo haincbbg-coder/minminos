@@ -18,12 +18,13 @@ class RecoveryTests(unittest.TestCase):
             info = hd.thd('providers').manual_download_info(xml, inv)
             query = parse_qs(urlsplit(info['url']).query)
             self.assertEqual(info['code'], 'EMAIL+CODE')
-            self.assertEqual(query['ma_tra_cuu'], ['EMAIL+CODE'])
+            self.assertEqual(query['mtc'], ['EMAIL+CODE'])
+            self.assertEqual(query['shd'], ['1875'])
             self.assertEqual(query['hddt_ma'], ['EMAIL+CODE'])
             with self.assertRaises(hd.thd('providers').ProviderError) as error:
                 hd.thd('providers.efy').fetch_pdf(xml.decode(), inv, lambda s:None)
             self.assertNotIn('chưa có mã', str(error.exception))
-            self.assertEqual(parse_qs(urlsplit(inv['_manual_url']).query)['ma_tra_cuu'], ['EMAIL+CODE'])
+            self.assertEqual(parse_qs(urlsplit(inv['_manual_url']).query)['mtc'], ['EMAIL+CODE'])
 
     def test_missing_original_is_not_always_a_failed_download(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(hd, 'goc_du_lieu', return_value=Path(folder)):
