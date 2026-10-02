@@ -35,6 +35,7 @@
     var t = opts.t || function (k) { return k; };
     var now = opts.now || Date.now;
     var setIntervalFn = opts.setInterval || root.setInterval, clearIntervalFn = opts.clearInterval || root.clearInterval;
+    var readback = "";
     var state = "connecting", detail = "", engine = "", muted = false, startedAt = 0, timer = null;
 
     function span(cls) { var s = doc.createElement("span"); s.className = cls; return s; }
@@ -45,9 +46,12 @@
     hangBtn.className = "call-btn call-hangup";
     muteBtn.onclick = function () { if (opts.onMute) opts.onMute(!muted); };
     hangBtn.onclick = function () { if (opts.onHangup) opts.onHangup(); };
+    var resumeBtn = doc.createElement("button");
+    resumeBtn.type = "button"; resumeBtn.className = "call-resume"; resumeBtn.hidden = true;
+    resumeBtn.onclick = function () { if (opts.onResume) opts.onResume(); };
     if (el) {
       el.innerHTML = "";
-      [dot, engineEl, stateEl, clockEl, muteBtn, hangBtn].forEach(function (n) { el.appendChild(n); });
+      [dot, engineEl, stateEl, clockEl, muteBtn, hangBtn, resumeBtn].forEach(function (n) { el.appendChild(n); });
       el.setAttribute("role", "status");
     }
 
@@ -62,6 +66,12 @@
       muteBtn.textContent = t(muted ? "call.unmute" : "call.mute");
       muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
       hangBtn.textContent = t("call.hangup");
+      muteBtn.setAttribute("aria-label", muteBtn.textContent);
+      hangBtn.setAttribute("aria-label", hangBtn.textContent);
+      resumeBtn.textContent = t("call.resume");
+      resumeBtn.hidden = readback !== "paused";
+      if (readback === "reading") stateEl.textContent = t("call.reading");
+      if (readback === "recovering") stateEl.textContent = t("call.recovering");
     }
 
     return {
@@ -84,6 +94,7 @@
         detail = info || "";
         render();
       },
+      setReadback: function (value) { readback = value; render(); },
       setEngine: function (label) { engine = label || ""; render(); },
       setMuted: function (value) { muted = !!value; render(); },
       isVisible: function () { return !!(el && !el.hidden); },

@@ -345,7 +345,7 @@ async def main():
           'f"voice:{conv_sid}:{uuid.uuid4().hex[:8]}"' in src5
           and "_voice_ask_javis(request, conv_sid, brain, key=khoa_mach)" in src5
           and "await push_to_chat(conv_sid, out" in src5
-          and 'meta={"chat_id": key}' in src5)
+          and 'meta={"chat_id": key, "voice_response_mode": mode}' in src5)
     check("main: câu gửi bộ não giọng ghép pending_note", "voice_brain.pending_note(conv_sid)" in src5)
     check("main: /voice/options báo sẵn/chưa sẵn cho codex, claude, grok",
           'elif pid == "codex":' in src5 and 'elif pid == "claude":' in src5 and 'elif pid == "grok":' in src5)

@@ -3266,5 +3266,18 @@
   "dictation.review": "Draft ready. Review it, then press Send.",
   "settings.gemini_ready": "Gemini Live uses your connected Google API key. Pick a voice and preview it.",
   "settings.gemini_key": "Gemini Live needs a Gemini API key in AI Models. Add one to use Gemini voices.",
-  "settings.dictation_note": "The composer mic only dictates a draft. The separate phone button starts a conversation with automatic replies."
+  "settings.dictation_note": "The composer mic only dictates a draft. The separate phone button starts a conversation with automatic replies.",
+  "dictation.starting": "Opening microphone…",
+  "dictation.empty": "No speech received. Try the microphone again; nothing was sent.",
+  "dictation.network": "Browser speech recognition disconnected. Check your connection and retry.",
+  "dictation.failed": "No text received. Check your selected microphone and browser microphone permission.",
+  "dictation.unsupported": "Speech recognition is unavailable. Try Chrome or Edge.",
+  "call.response_mode": "Response style",
+  "call.fast": "Fast · use available data",
+  "call.balanced": "Balanced",
+  "call.thorough": "Thorough · verify sources",
+  "call.response_hint": "Fast uses existing figures with their timestamp; missing data still requires lookup.",
+  "call.reading": "Reading result",
+  "call.resume": "Resume reading",
+  "call.recovering": "Recovering speech…"
 }

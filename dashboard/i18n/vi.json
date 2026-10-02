@@ -3266,5 +3266,18 @@
   "dictation.review": "Bản nháp đã sẵn sàng. Xem lại rồi bấm Gửi.",
   "settings.gemini_ready": "Gemini Live dùng API Google đã kết nối. Chọn giọng và bấm Nghe thử.",
   "settings.gemini_key": "Gemini Live cần Gemini API key ở Bộ não AI. Chưa có key thì chưa dùng được giọng Gemini.",
-  "settings.dictation_note": "Mic ở ô chat chỉ nhập văn bản. Nút điện thoại riêng mở cuộc gọi và tự trả lời."
+  "settings.dictation_note": "Mic ở ô chat chỉ nhập văn bản. Nút điện thoại riêng mở cuộc gọi và tự trả lời.",
+  "dictation.starting": "Đang mở mic…",
+  "dictation.empty": "Chưa nhận được lời nói. Bấm mic để thử lại; chưa có nội dung nào được gửi.",
+  "dictation.network": "Dịch vụ nhận giọng của trình duyệt mất kết nối. Kiểm tra mạng rồi thử lại.",
+  "dictation.failed": "Mic chưa nhận được chữ. Kiểm tra mic đang chọn và quyền micro của trình duyệt.",
+  "dictation.unsupported": "Trình duyệt này chưa hỗ trợ nhập giọng nói. Hãy thử Chrome hoặc Edge.",
+  "call.response_mode": "Cách trả lời",
+  "call.fast": "Nhanh · ưu tiên dữ liệu đã có",
+  "call.balanced": "Cân bằng",
+  "call.thorough": "Kỹ · đối chiếu lại nguồn",
+  "call.response_hint": "Nhanh dùng số liệu đã có và nói rõ thời điểm; thiếu dữ liệu vẫn phải tra cứu.",
+  "call.reading": "Đang đọc kết quả",
+  "call.resume": "Đọc tiếp kết quả",
+  "call.recovering": "Đang khôi phục đoạn đọc…"
 }

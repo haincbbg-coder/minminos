@@ -372,7 +372,7 @@ class JavisVoice {
       // Đang phát TTS thì BỎ mọi kết quả nhận dạng: đó là mic nghe lại chính giọng Javis
       // (SpeechRecognition thu riêng, KHÔNG được khử vọng như luồng đo mức âm), không phải
       // user nói. Không chặn thì giọng Javis bị chép vào khung chat rồi tự gửi đi.
-      if ((this.isSpeaking() && !this._awaitingFirstAudio) || this._discardRecognition || (this._stopping && this._endpointText)) return;
+      if ((!this.inputOnly && this.isSpeaking() && !this._awaitingFirstAudio) || this._discardRecognition || (this._stopping && this._endpointText)) return;
       // DỰNG LẠI từ TOÀN BỘ event.results mỗi lần, KHÔNG cộng dồn qua từng sự kiện.
       // Bản cũ làm `accumulated += final` từ resultIndex trở đi. Chrome máy tính giao đúng
       // từng mảnh một nên không sao; Chrome Android thì resultIndex thường đứng ở 0 và mỗi

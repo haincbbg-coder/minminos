@@ -30,7 +30,7 @@ class FollowupWordsTests(unittest.TestCase):
     def test_ack_words(self):
         for text in ("Ok, xem xong kiểm tra xong thì báo anh nhé", "ok em", "Dạ được rồi, cảm ơn em nhé",
                      "Xong thì báo anh nha", "ok Javis, làm luôn đi", "okay let me know when done",
-                     "Min Min ơi, xong thì báo anh nhé", "ok MinMin"):
+                     "Min Min ơi, xong thì báo anh nhé", "ok MinMin", "sao lâu vậy", "nhưng mà lâu vậy", "xong chưa con"):
             self.assertTrue(voice_live.is_followup_ack(text), text)
         for text in ("", "thêm cả số đơn huỷ nữa", "kiểm tra cả email nữa", "thôi không cần nữa",
                      "à mà doanh thu tháng trước bao nhiêu", "Ok, xem lịch tuần này luôn", "MinMin mở email mới"):
@@ -131,7 +131,7 @@ class LiveRouteFollowupTests(unittest.IsolatedAsyncioTestCase):
 
             gates = {}
 
-            async def ask(req, conv_sid, brain, key=""):
+            async def ask(req, conv_sid, brain, key="", progress=None):
                 n = len(asks)
                 asks.append(req)
                 gate = gates.setdefault(n, asyncio.Event())
@@ -146,7 +146,7 @@ class LiveRouteFollowupTests(unittest.IsolatedAsyncioTestCase):
                     make_provider=lambda cfg, recognition_lang="vi-VN", memory_index="": prov, MEMORY_CHARS=4000,
                     is_followup_ack=voice_live.is_followup_ack, followup_request=voice_live.followup_request,
                     is_noop_result=voice_live.is_noop_result, FOLLOWUP_ACK=voice_live.FOLLOWUP_ACK,
-                    is_same_request=voice_live.is_same_request),
+                    is_same_request=voice_live.is_same_request, is_speech_stop=voice_live.is_speech_stop),
                 openai_oauth=types.SimpleNamespace(write_codex_auth=lambda: None),
                 _brain_memory_dir=lambda root: Path(directory), _brain_root=lambda b: directory,
                 _fit_memory_index=lambda mem, cap=None: mem[:cap],

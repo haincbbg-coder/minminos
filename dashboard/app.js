@@ -23,7 +23,7 @@ const stopBtn = document.getElementById("stopBtn");
 let stopTag = null;        // tag phiên chat server phát qua message hello → Stop chỉ ngắt phiên MÌNH
 
 function updateStopBtn() {
-  const active = isProcessing || voice.isSpeaking();
+  const active = isProcessing || voice.isSpeaking() || (handsFree && voiceMode === "live" && (_liveToolCount > 0 || Date.now() < _liveBusyUntil || _liveReadbackState === "reading" || _liveReadbackState === "recovering" || (window.JavisVoiceLive && window.JavisVoiceLive.isSpeaking())));
   stopBtn.style.display = active ? "flex" : "none";
   sendBtn.style.display = active ? "none" : "flex";
 }
@@ -39,6 +39,12 @@ function syncActiveUI() {
 }
 
 function stopCurrent() {
+  if (handsFree && voiceMode === "live" && window.JavisVoiceLive) {
+    window.JavisVoiceLive.stopResponse();
+    _liveToolCount = 0; _liveBusyUntil = 0; _liveReadbackState = "paused";
+    _liveProgress = ""; updateStopBtn(); capNhatThanhGoi();
+    return;
+  }
   try { ketThucTheoLoi(false); } catch (e) {}
   voice.stopSpeaking();
   const sid = savedSessionId;
@@ -76,7 +82,7 @@ const callBtn = document.getElementById("callBtn");
 const dictation = window.MinMinDictation.create({
   input: chatInput, button: document.getElementById("voiceBtn"),
   status: document.getElementById("dictationStatus"),
-  beforeStart: () => tatRanhTay(),
+  beforeStart: async () => { tatRanhTay(); await Promise.all([voice.waitForCaptureEnd(), liveWake.waitForCaptureEnd()]); },
   language: () => voice.lang || "vi-VN", onError: alertMic,
 });
 const voiceInterim = document.getElementById("voiceInterim");
@@ -472,6 +478,7 @@ var callBar = window.JavisCallBar ? window.JavisCallBar.create({
   t: (k, p) => window.t(k, p),
   onMute: (want) => datTatMic(want),
   onHangup: () => cupMay(),
+  onResume: () => window.JavisVoiceLive && window.JavisVoiceLive.resumeReadback(),
 }) : null;
 const _TEN_LIVE_API = { gemini: "Gemini", openai: "OpenAI", "gpt-live": "GPT-Live" };
 function tenDuongGoi() {
@@ -493,7 +500,11 @@ function capNhatThanhGoi() {
     // ask_javis là "giao bộ não chính", không phải tên công cụ người dùng hiểu: để "Đang làm việc".
     if (turn.tool && turn.tool !== "ask_javis") info = compactToolLabel(turn.tool).label;
   }
+  if (_liveToolCount > 0 && _liveProgress) { st = "working"; info = _liveProgress; }
+  if (_liveReadbackState === "reading" || _liveReadbackState === "recovering") { st = "speaking"; }
+  callBar.setReadback(_liveReadbackState);
   callBar.setState(st, info);
+  updateStopBtn();
 }
 // Tắt mic giữa cuộc gọi: Javis vẫn nói được, chỉ không nghe. Live tắt track; đường Cơ bản dừng
 // nghe và vòng giữ mic (bên dưới) không mở lại cho tới khi bật lại.
@@ -534,6 +545,7 @@ async function napCaiDatGiong() {
       fetch("/voice/call").then(r => r.json()).catch(() => null),
     ]);
     const v = (s && s.voice) || {};
+    attention.idleMs = v.response_mode === "fast" ? 120000 : 30000;
     const upload = !!(ear && ear.kind === "upload");
     if (call && call.voice_mode) _callInfo = call;
     const mode = (call && call.voice_mode) || v.mode || "standard";
@@ -562,6 +574,7 @@ const NOI_SOM_HUY_MS = 12000;   // nối sớm mà mãi không có câu chốt (
 // nên nghe như Javis "tự đổi giọng nữ sang giọng nam" giữa chừng (chủ báo 02/10).
 let _cuocGoiDaNoi = false;
 let _liveToolCount = 0;
+var _liveReadbackState = "", _liveProgress = "";
 // Only one capture is alive: Live is closed before this free browser listener starts.
 // Lúc Live đã ngắt vì im lâu, CÂU NÓI THẬT đầu tiên là nối lại (0.65.22, attention.wakes): không
 // bắt buộc gọi "Javis" nữa, vì trình duyệt hay chép tên thành "David" và cuộc gọi không nối lại được.
@@ -709,7 +722,7 @@ function tickVoiceFocus() {
   // Only foreground replies prolong an already-open conversation. A background notification
   // cannot reopen it; stale processing is bounded for Live providers without turn_done.
   const busy = voiceMode === "live"
-    ? !_liveWaitingWake && (Date.now() < _liveBusyUntil || _liveToolCount > 0 || (window.JavisVoiceLive && window.JavisVoiceLive.isSpeaking()))
+    ? !_liveWaitingWake && (Date.now() < _liveBusyUntil || _liveToolCount > 0 || _liveReadbackState === "reading" || _liveReadbackState === "recovering" || (window.JavisVoiceLive && window.JavisVoiceLive.isSpeaking()))
     : isProcessing || voice.isSpeaking() || voice.isTranscribing;
   if (busy) attention.keepActive();
   if (attention.waiting() && voiceMode === "live" && !_liveWaitingWake) {
@@ -790,6 +803,11 @@ async function batLive(wakeText = "", { som = false, lanThu = 0 } = {}) {
     onInterrupted: () => { ketThucTheoLoi(true); attention.keepActive(); _liveBusyUntil = Date.now() + 120000; _liveJavisText = ""; _liveJavisBubble = null; },
     // Kết quả ĐẦY ĐỦ của bộ não chính (bảng, link, file) thành bong bóng riêng: model nói chuyện
     // chỉ đọc phần tóm tắt, không có bong bóng này thì số liệu chi tiết mất hút (0.65.17).
+    onProgress: text => { _liveProgress = text; capNhatThanhGoi(); },
+    onReadback: status => {
+      _liveReadbackState = status; _liveProgress = "";
+      attention.keepActive(); capNhatThanhGoi(); updateStopBtn();
+    },
     onToolResult: (name, text) => {
       if (!String(text || "").trim()) return;
       appendJavisMessage(text, Date.now(), currentBrainPath());
@@ -798,9 +816,10 @@ async function batLive(wakeText = "", { som = false, lanThu = 0 } = {}) {
     onTool: (name, status) => {
       // A running tool is real work, not idle: only done/connection close/user stop may
       // release it. An arbitrary idle timeout must not cancel a legitimate long task.
-      if (status === "running") _liveToolCount++;
+      if (status === "running") { _liveToolCount++; _liveProgress = ""; }
       else { _liveToolCount = Math.max(0, _liveToolCount - 1); attention.keepActive(); }
       if (status === "running") runActions(turn.toolCall(name)); else runActions(turn.turnDone());
+      capNhatThanhGoi(); updateStopBtn();
     },
     onTranscript: (role, text, final) => {
       if (role === "user") {
@@ -3506,7 +3525,7 @@ function tatRanhTay() {
   adaptive.cancel(); adaptiveContinuation="";
   adaptiveOutbox.clear();
   attention.stop(); _liveWaitingWake = false; _liveBusyUntil = 0;
-  _liveToolCount = 0;
+  _liveToolCount = 0; _liveReadbackState = ""; _liveProgress = "";
   liveWake.cancelListening();
   _sendEpoch++;
   clearTimeout(_tinChoTimer); _tinChoTimer = null; _tinChoLuot = null;
