@@ -8,6 +8,12 @@
     const pc = new RTCPeerConnection();
     const audio = new Audio();
     audio.autoplay = true;
+    // Unlock audio during the click for Safari/iPhone; no input device is opened.
+    let audioContext = null, audioSource = null, transcript = "";
+    try {
+      const Context = window.AudioContext || window.webkitAudioContext;
+      if (Context) { audioContext = new Context(); audioContext.resume().catch(() => {}); }
+    } catch (_) {}
     const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://")
       + location.host + "/ws/voice-preview?voice=" + encodeURIComponent(voice));
     let timer, ended = false, doneTimer;
@@ -16,6 +22,8 @@
       ended = true;
       clearTimeout(timer); clearTimeout(doneTimer);
       audio.pause(); audio.srcObject = null;
+      if (audioSource) audioSource.disconnect();
+      if (audioContext) audioContext.close().catch(() => {});
       pc.close(); ws.close();
       if (current === finish) current = null;
     };
@@ -28,7 +36,14 @@
     pc.ontrack = e => {
       if (ended) return;
       audio.srcObject = e.streams[0] || new MediaStream([e.track]);
-      audio.play().catch(fail);
+      audio.play().catch(() => {
+        if (ended) return;
+        try {
+          if (!audioContext || audioContext.state !== "running") return fail();
+          audioSource = audioContext.createMediaStreamSource(audio.srcObject);
+          audioSource.connect(audioContext.destination);
+        } catch (_) { fail(); }
+      });
     };
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === "failed") fail();
@@ -53,7 +68,8 @@
           await pc.setRemoteDescription({ type: "answer", sdp: data.sdp });
           if (!ended) ws.send(JSON.stringify({ type: "sample" }));
         } else if (data.type === "transcript" && data.role === "assistant") {
-          status("Đang nghe thử: Chào anh, Min Min đây. Anh muốn em giúp việc gì hôm nay?");
+          transcript += data.text || "";
+          status("Đang nghe thử: " + transcript);
           // Transcript can finish slightly before the last audio packets arrive.
         } else if (data.type === "turn_done") {
           doneTimer = setTimeout(() => { status("Đã nghe thử giọng Min Min."); finish(); }, 3000);
