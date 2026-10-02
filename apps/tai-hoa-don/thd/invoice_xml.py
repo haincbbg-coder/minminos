@@ -90,6 +90,12 @@ def extract_zip(zip_bytes: bytes, _depth: int = 0) -> dict:
 def parse_invoice(xml_bytes: bytes) -> dict:
     """Bóc thông tin chung + danh sách dòng hàng từ XML hóa đơn."""
     root = ET.fromstring(xml_bytes)
+    document = root
+    invoices = [el for el in root.iter() if _local(el.tag) == "DLHDon"]
+    if len(invoices) > 1:
+        raise ValueError("XML chứa nhiều hóa đơn; cần tách từng hóa đơn trước khi ghép")
+    if invoices:
+        root = invoices[0]
     tt_chung = _find(root, "TTChung")
     nban = _find(root, ["NBan", "SellerInfo"])
     nmua = _find(root, ["NMua", "BuyerInfo"])
@@ -102,7 +108,7 @@ def parse_invoice(xml_bytes: bytes) -> dict:
         "dvtte": _text(tt_chung, "DVTTe", "VND"),
         "tgia": _text(tt_chung, "TGia", "1"),
         "httt": _text(tt_chung, "HTTToan"),
-        "mccqt": _text(root, "MCCQT"),
+        "mccqt": _text(document, "MCCQT"),
         "ban_mst": _text(nban, ["MST", "sellerTaxCode"]),
         "ban_ten": _text(nban, ["Ten", "sellerLegalName"]),
         "ban_dchi": _text(nban, ["DChi", "sellerAddressLine"]),
