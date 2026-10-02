@@ -46,11 +46,12 @@ from . import efy           # noqa: E402
 from . import myinvoice     # noqa: E402
 from . import smartsign     # noqa: E402
 from . import vinhoadon     # noqa: E402
+from . import cyberbill     # noqa: E402
 from . import xmllink       # noqa: E402
 
 # Thứ tự = thứ tự thử nhận diện. Thêm hãng mới: viết module rồi thêm vào đây.
 # xmllink đặt cuối để nhận link độc lập, đồng thời làm dự phòng khi hãng tải thất bại.
-PROVIDERS = [misa, sapo, easyinvoice, bkav, viettel, htinvoice, kkvat, efy, myinvoice, smartsign, vinhoadon, xmllink]
+PROVIDERS = [misa, sapo, easyinvoice, bkav, viettel, htinvoice, kkvat, efy, myinvoice, smartsign, vinhoadon, cyberbill, xmllink]
 
 
 def detect(xml_bytes: bytes, inv: Optional[dict] = None):
