@@ -2,7 +2,7 @@
 
        node tests/js/test_voice_turn.js
 
-   Voice V1 (docs/dev/2026-09-voice-v1-spec.md mục 3). Khoá các luật mượn từ livekit/agents:
+   Voice V1 (docs/dev/2026-10-voice-call-spec.md phụ lục A1). Khoá các luật mượn từ livekit/agents:
      1. Endpointing hai ngưỡng: câu kết bằng liên từ / dấu phẩy thì chờ lâu, còn lại chờ ngắn.
      2. Cụm CHỜ ("khoan", "đợi chút", "wait") -> không gửi, sang waiting_for_user, dừng đọc.
      3. Cụm DỪNG ("thôi", "stop") -> dừng đọc / dừng lượt, không gửi.
@@ -83,7 +83,9 @@ check("DỪNG khi đang đọc: stop_tts, không commit", has(a, "stop_tts") && 
 const s2 = new T.VoiceTurn();
 s2.micOn(); s2.turnStart();
 a = s2.endpoint("dừng lại");
-check("DỪNG khi đang xử lý: stop_turn", has(a, "stop_turn") && !has(a, "commit"));
+// 0.65.28: trong cuộc gọi, lượt chỉ dừng khi bấm lại nút mic. "dừng lại" làm Javis im, lượt viết nốt.
+check("DỪNG khi đang xử lý: chỉ stop_tts, KHÔNG stop_turn, không commit",
+  has(a, "stop_tts") && !has(a, "stop_turn") && !has(a, "commit") && s2.processing === true);
 
 // ---- 4. Chen ngang ----
 const b = new T.VoiceTurn();

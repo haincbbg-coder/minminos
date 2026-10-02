@@ -6,7 +6,7 @@
    "ĐANG NÓI" khi đã im, không bao giờ hiện "ĐANG KẾT NỐI LẠI"), không có lỗi nào trên console.
      1. app.js: mọi orb đi qua đạo diễn (không còn setOrbState("thinking"/"speaking") rải rác).
      2. app.js: mất WebSocket -> wsDown; hello -> wsUp; tool_call -> toolCall; turn_done -> turnDone.
-     3. voice.js: chen ngang cần 5 nhịp (500 ms), tạm dừng qua onBargeStart chứ không giết ngay;
+     3. voice.js: chen ngang cần 2 nhịp (200 ms) để nghi ngờ rồi nhá tiếng xác nhận (từ 0.57.14);
         pause/resume/lastSpokenPrefix có thật; isSpeaking() = false khi đang tạm dừng.
      4. index.html nạp voice-turn.js TRƯỚC voice.js; ui-context/ui-actions TRƯỚC app.js; có hai
         hàng cài đặt mới; từ điển có đủ nhãn orb ở cả vi lẫn en; CSS có lớp cho trạng thái mới. */
@@ -70,8 +70,10 @@ check("index.html: voice-turn.js trước voice.js", iTurn > 0 && iTurn < iVoice
 check("index.html: ui-context.js và ui-actions.js trước app.js", iCtx > 0 && iAct > 0 && iCtx < iApp && iAct < iApp);
 const vVoice = +((html.match(/\/static\/voice\.js\?v=(\d+)/) || [])[1] || 0), vApp = +((html.match(/\/static\/app\.js\?v=(\d+)/) || [])[1] || 0);
 check("index.html: ?v= voice.js >= 19 và app.js >= 104 (bản Voice V1)", vVoice >= 19 && vApp >= 104);
-check("index.html: hàng chọn im lặng (name=endpoint) và công tắc #qsBarge", /name="endpoint"/.test(html) && /id="qsBarge"/.test(html));
-["app.orb_waiting", "app.orb_tool", "app.orb_paused", "app.orb_reconnecting", "app.orb_mic_error", "app.orb_slow", "app.orb_background", "qs.endpoint", "qs.barge"].forEach(k => {
+// 0.65.19: ô "im lặng rồi gửi" và công tắc ngắt lời đã gỡ khỏi Cài đặt (máy tự lo: 1,2 giây,
+// ngắt lời luôn bật), xem test_voice_settings_simple.js.
+check("index.html: không còn ô im lặng rồi gửi và công tắc ngắt lời", !/name="endpoint"/.test(html) && !/id="qsBarge"/.test(html));
+["app.orb_waiting", "app.orb_tool", "app.orb_paused", "app.orb_reconnecting", "app.orb_mic_error", "app.orb_slow", "app.orb_background"].forEach(k => {
   check("i18n vi+en có " + k, typeof vi[k] === "string" && typeof en[k] === "string");
 });
 check("css: lớp orb waiting/paused/reconnecting/error", /\.orb-state\.waiting/.test(css) && /\.orb-state\.paused/.test(css) && /\.orb-state\.reconnecting/.test(css) && /\.orb-state\.error/.test(css));

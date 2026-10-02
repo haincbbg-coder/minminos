@@ -1,4 +1,4 @@
-"""Bộ não GIỌNG NÓI riêng (Voice V2, docs/dev/2026-09-voice-v2-spec.md mục 2).
+"""Bộ não GIỌNG NÓI riêng (Voice V2, docs/dev/2026-10-voice-call-spec.md phụ lục A3).
 
 Khi người dùng NÓI với Javis, lượt đi qua một bộ não nhanh và nhẹ ở đây thay vì bộ não chính
 (vốn dựng tiến trình, nạp MCP và prompt dài, mất 5-10 giây mới ra chữ đầu). Bộ não giọng trả
@@ -1032,13 +1032,16 @@ def cau_roi_ve_bo_nao_chinh(provider: str, err) -> str:
     """Câu hiện TRONG KHUNG CHAT khi làn nhanh rơi về bộ não chính.
 
     Nói đủ ba ý, không dài hơn: rơi vì cái gì (tên bộ não giọng và lời báo lỗi thật), hệ quả là
-    gì (lượt này chậm hơn vì đi bộ não chính), và sửa ở đâu (Cài đặt → Giọng nói). Không dùng
+    gì (lượt này chậm hơn vì đi bộ não chính), và sửa ở đâu (trang Models). Không dùng
     gạch dài (luật của chủ dự án) và không đổ lỗi cho người dùng.
     """
     loi = re.sub(r"\s+", " ", str(err or "").strip())[:_LOI_MAX_CHU] or "không rõ lỗi"
+    # Lỗi tên model (0.65.26): sửa ở ô Model của thẻ Giọng nói, không phải trang Models. Chủ dự án
+    # đọc "Kiểm tra ở trang Models" mà tưởng Antigravity bị đăng xuất.
+    sua = ("Chọn lại model ở Cài đặt, Giọng nói, Nâng cao." if re.search(r"\bmodel\b", loi, re.I)
+           else "Kiểm tra bộ não này ở trang Models.")
     return (f"Làn nhanh không chạy được: bộ não giọng {ten_bo_nao(provider)} báo \"{loi}\". "
-            f"Lượt này đi bộ não chính nên chậm hơn bình thường. "
-            f"Kiểm tra bộ não giọng ở Cài đặt, mục Giọng nói, hoặc chọn bộ não khác ở đó.")
+            f"Lượt này đi bộ não chính nên chậm hơn bình thường. " + sua)
 
 
 # ============================================================
@@ -1048,13 +1051,87 @@ _BRAINS: Dict[str, VoiceBrain] = {}
 _REAPER: Optional[asyncio.Task] = None
 
 
+# Bộ não giọng TỰ CHỌN (0.65.19, docs/dev/2026-10-voice-call-spec.md mục 5): trang Cài đặt không còn
+# ô "bộ não giọng". Làn nhanh mà khoá brain_provider rỗng thì dùng bộ não đầu tiên đang sẵn trên GÓI
+# người dùng đã có, theo đúng thứ tự này. Không có cái nào thì tin từ mic đi bộ não chính như cũ.
+# Khoá đã lưu (chọn tay từ bản cũ) vẫn thắng: giá trị cũ được đọc và dùng tiếp.
+PLAN_BRAINS = ("antigravity", "codex", "claude", "grok")
+_AUTO_TTL = 60.0
+_AUTO_CACHE: Dict[str, object] = {"at": 0.0, "key": None, "value": ""}
+
+
+def plan_brain_available(pid: str, cfg: dict) -> bool:
+    """Bộ não giọng trên gói này chạy được không. Chỉ soi máy và trạng thái đăng nhập đã lưu, không hỏi mạng."""
+    try:
+        if pid == "antigravity":
+            import antigravity_cli
+            return bool(antigravity_cli.find_antigravity_cli())
+        if pid == "codex":
+            o = ((cfg or {}).get("model") or {}).get("openai_oauth") or {}
+            return bool(o.get("access_token") or o.get("refresh_token"))
+        if pid == "claude":
+            import claude_cli
+            import claude_sdk_engine
+            return bool(claude_sdk_engine.sdk_available() and claude_cli.find_claude_cli())
+        if pid == "grok":
+            import grok_cli
+            return bool(grok_cli.find_grok_cli())
+    except Exception:
+        return False
+    return False
+
+
+def brain_available(pid: str, cfg: dict) -> bool:
+    """Ô "Bộ não trả lời nhanh" (0.65.25): bộ não trên gói soi như plan_brain_available, bộ não API
+    soi đã có key ở trang Models chưa. Không hỏi mạng."""
+    p = BRAIN_PROVIDERS.get(pid)
+    if not pid or not p:
+        return False
+    if p["key_field"]:
+        return bool(((cfg or {}).get("model") or {}).get(p["key_field"]))
+    return plan_brain_available(pid, cfg)
+
+
+def auto_brain(cfg: dict) -> str:
+    """Bộ não giọng đầu tiên đang sẵn trong PLAN_BRAINS, "" khi không có. Nhớ 60 giây: hàm chạy mỗi
+    câu nói, còn dò binary là đi quét PATH."""
+    o = ((cfg or {}).get("model") or {}).get("openai_oauth") or {}
+    key = bool(o.get("access_token") or o.get("refresh_token"))
+    now = time.monotonic()
+    if _AUTO_CACHE["key"] == key and now - float(_AUTO_CACHE["at"]) < _AUTO_TTL:
+        return str(_AUTO_CACHE["value"])
+    value = next((p for p in PLAN_BRAINS if plan_brain_available(p, cfg)), "")
+    _AUTO_CACHE.update(at=now, key=key, value=value)
+    return value
+
+
+def brain_model_for(voice: dict, provider: str) -> str:
+    """Model đã chọn cho MỘT bộ não giọng (0.65.26), "" = mặc định của hãng.
+
+    Lưu theo từng bộ não (`brain_models` = {bộ não: model}) vì tên model chỉ có nghĩa với đúng hãng
+    của nó. Khoá cũ `brain_model` là MỘT chuỗi chung cho mọi bộ não: đổi bộ não ở ô mới mà khoá đó
+    còn giữ tên model ChatGPT thì Antigravity nhận "--model gpt-6-luna" và từ chối (chủ dự án báo
+    02/10). Nên khoá cũ bị bỏ qua, chỉ để nguyên trong file."""
+    models = (voice or {}).get("brain_models")
+    if not isinstance(models, dict) or not provider:
+        return ""
+    return str(models.get(provider) or "").strip()
+
+
 def config_from_settings(cfg: dict) -> dict:
     v = (cfg or {}).get("voice") or {}
     m = (cfg or {}).get("model") or {}
     prov = str(v.get("brain_provider") or "").strip().lower()
+    mode = str(v.get("mode") or "standard")
+    # Khoá cũ mode = live (0.65.19): Live nay là ĐƯỜNG GỌI riêng (voice_call), không đi qua đây.
+    # Tin từ mic chỉ tới đây khi cuộc gọi chạy đường Cơ bản, và đường đó vẫn được làn nhanh.
+    if mode == "live":
+        mode = "fast"
+    if not prov and mode == "fast":
+        prov = auto_brain(cfg)
     kf = (BRAIN_PROVIDERS.get(prov) or {}).get("key_field") or ""
-    return {"mode": str(v.get("mode") or "standard"), "provider": prov,
-            "model": str(v.get("brain_model") or "").strip(),
+    return {"mode": mode, "provider": prov,
+            "model": brain_model_for(v, prov),
             "api_key": str(m.get(kf, "")) if kf else "",
             # Lọc tạp âm MẶC ĐỊNH BẬT: brain cũ chưa có khoá này trong settings.json vẫn được lọc,
             # nên phải hỏi `is False` chứ không phải `or True` (giá trị False hợp lệ).

@@ -4,6 +4,17 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.22] - 2026-10-02
+### Thêm mới
+- ChatGPT Live qua WebRTC bằng phiên ChatGPT đã kết nối; chọn giọng và nghe thử ngay trong Tuỳ chỉnh → Giọng nói.
+- Bấm mic để gọi liên tục, có thanh trạng thái, đồng hồ, tắt mic và cúp máy; tự chọn đường gọi phù hợp.
+### Cải thiện
+- Nói tiếp để nối lại sau 30 giây im lặng, chuẩn bị kết nối ngay khi nghe câu đầu; giữ màn hình sáng khi gọi.
+- Tai Groq nghe lại câu Việt xen tiếng Anh khi đã có API key; cài đặt giọng nói tự lưu, chọn model riêng cho từng bộ não trả lời nhanh.
+### Sửa lỗi
+- Không đọc lặp hoặc chồng hai câu trả lời; nói chen ở đường Cơ bản không huỷ việc đang chạy.
+- Nối lại thất bại không tự đổi giọng giữa cuộc gọi ChatGPT Live. Giữ tùy chọn ElevenLabs và thương hiệu MinMin.
+
 ## [26.10.21] - 2026-10-02
 ### Sửa lỗi
 - Không lưu trang báo lỗi của cổng thuế thành ZIP hoặc PDF Trống đồng; nhận diện chứng từ lỗi đã lưu trước đây.

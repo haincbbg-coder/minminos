@@ -88,8 +88,11 @@ APP_JS = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 # Bubble removal and stale raw-text guards are exercised by test_voice_app_session.js.
 check("app.js để lại dòng ghi chú thoáng qua", 'ghiChuThoang(window.t("app.tap_am_bo_qua"))' in APP_JS)
 CONSOLE_JS = (ROOT / "dashboard" / "console.js").read_text(encoding="utf-8")
-check("trang Cài đặt có ô gạt", 'id="v2LocTapAm"' in CONSOLE_JS)
-check("ô gạt được gửi lên khi bấm Lưu", 'focus_mode: $("v2LocTapAm").checked' in CONSOLE_JS)
+INDEX_HTML = (ROOT / "dashboard" / "index.html").read_text(encoding="utf-8")
+# 0.65.22: công tắc Tập trung đã gỡ (chủ dự án chốt 01/10): im 30 giây thì ngắt Live, nói là nối
+# lại. Khoá focus_mode cũ server vẫn nhận (client cũ) nhưng trang Cài đặt không còn gửi.
+check("trang Cài đặt không còn ô gạt Tập trung", 'id="vcFocus"' not in INDEX_HTML and "vcFocus" not in CONSOLE_JS)
+check("trang Cài đặt không còn lưu focus_mode", "focus_mode" not in CONSOLE_JS)
 
 print()
 if _fails:
