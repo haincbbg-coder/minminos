@@ -42,9 +42,10 @@ class PreviewTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(provider.closed and socket.closed)
 
     async def test_gemini_pcm_preview_is_listen_only(self):
-        class Provider:
-            transport = "pcm"
-            def __init__(self): self.texts, self.closed = [], False
+        class Provider(voice_live.GeminiLive):
+            def __init__(self):
+                super().__init__("test-key", tools=[])
+                self.texts, self.closed = [], False
             async def connect(self): pass
             async def close(self): self.closed = True
             async def send_text(self, text): self.texts.append(text)

@@ -141,6 +141,7 @@ def _b64(b: bytes) -> str:
 
 class LiveProvider:
     name = ""
+    transport = "pcm"
 
     def __init__(self, api_key: str, model: str = "", voice: str = "", system: str = SYSTEM_PROMPT,
                  tools: Optional[List[dict]] = None, recognition_lang: str = "vi-VN"):
