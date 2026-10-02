@@ -36,7 +36,7 @@ async def serve(ws, provider):
                     await ws.send_json({"type": "webrtc_answer", "sdp": answer})
                 elif data.get("type") == "sample" and offered and not spoken:
                     spoken = True
-                    await provider.send_text("Chỉ đọc nguyên văn câu nghe thử sau, không thêm lời: " + SAMPLE)
+                    await provider.speak_text(SAMPLE)
 
         tasks = [asyncio.create_task(events()), asyncio.create_task(client())]
         done, _ = await asyncio.wait(tasks, timeout=60, return_when=asyncio.FIRST_COMPLETED)
