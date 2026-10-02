@@ -7218,7 +7218,7 @@
   // (giữ nguyên mọi handler + WebSocket + streaming đã gắn trong app.js) rồi TRẢ về HUD khi
   // rời trang. Cùng một cuộc trò chuyện hiển thị ở cả màn Javis lẫn tab này.
   // ============================================
-  const CHAT_NODE_IDS = ["callBar", "chatArea", "bgStrip", "attachBar", "modelBar", "dictationStatus", "hudVoice"];
+  const CHAT_NODE_IDS = ["callBar", "chatArea", "bgStrip", "attachBar", "modelBar", "minminProgress", "dictationStatus", "hudVoice"];
   let _chatSlots = [];        // vị trí gốc từng node để trả về đúng chỗ trong HUD
 
   function _injectChatCss() {
@@ -7605,11 +7605,13 @@
             // đúng một điều mà rail đang tô sáng và khung trống đã ghi bằng chữ in nghiêng
             // ngay bên dưới, nên nó chỉ ăn chỗ. Chip project lùi về mép phải, chiếm chỗ đó.
             '<span class="proj-chip-host"></span>' +
+            '<button id="mmLibraryToggle" class="mm-library-toggle" type="button" aria-controls="mmLibrary">' + ic('folder-tree') + '<span>' + esc(t('mmw.library')) + '</span></button>' +
           '</div>' +
           '<div class="chatpage-slot" id="chatPageSlot"></div>' +
           // Chỗ đứng cho TRÌNH SỬA khi mở file từ tab Thư mục. Rỗng và ẩn cho tới lúc đó.
           '<div class="chatpage-edit" id="chatPageEdit" data-ne-host></div>' +
         '</div>' +
+        '<aside id="mmLibrary" class="mm-library" aria-label="' + esc(t('mmw.library')) + '"></aside>' +
       '</div>';
     const page = el.querySelector("#chatPage");
     const slot = el.querySelector("#chatPageSlot");
@@ -7672,7 +7674,8 @@
     const ca = document.getElementById("chatArea"); if (ca) ca.scrollTop = ca.scrollHeight;
     const ci = document.getElementById("chatInput"); if (ci) { try { ci.focus(); } catch (e) {} }
 
-    _pageLeave = _returnChatNodes;   // rời tab → trả node về HUD trước khi cviewBody bị ghi đè
+    const releaseLibrary = window.MinMinWorkspace?.mount(el.querySelector("#mmLibrary"), page, el.querySelector("#mmLibraryToggle"));
+    _pageLeave = () => { if (releaseLibrary) releaseLibrary(); _returnChatNodes(); };   // rời tab → trả node về HUD trước khi cviewBody bị ghi đè
   }
 
   // ============================================

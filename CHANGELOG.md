@@ -6,7 +6,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.39] - 2026-10-03
 ### Cải thiện
-- Thiết kế không gian hội thoại Min Min, kho tệp bên phải và tiến độ xử lý.
+- Diện mạo riêng của Min Min: nền trắng lạnh, xanh ngọc, khối phẳng và bộ biểu tượng hình học mới; thay bố cục nổi kem/tím cũ.
+- Cột Không gian phiên bên phải gom ảnh/video, tệp và liên kết của từng hội thoại, có tìm kiếm, mở và tải xuống; trên điện thoại mở dạng ngăn bên.
+- Bảng Tóm tắt trích các yêu cầu gần đây và kết quả gần nhất để xem nhanh nội dung phiên.
+- Thanh tiến độ lớn ngay trên ô nhập, chuyển động mượt theo các bước xử lý thực tế. Phần trăm là ước tính; chỉ báo 100% khi lượt hoàn tất, phân biệt lỗi và dừng.
 
 ## [26.10.38] - 2026-10-03
 ### Cải thiện
