@@ -1123,23 +1123,13 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "
         sc.connect()
     except Exception as e:
         raise RuntimeError(_loi_gmail_de_hieu(e))
-    try:
-        def tien_do(i, n):
-            v.i, v.n = i, n
-        recs = sc.scan(tu, den, want_download=True, progress=tien_do, since_uid=(moc or None),
-                       cancel_check=v.huy.is_set)
-    finally:
-        sc.close()
-    if getattr(sc, "last_uid", 0) and not v.huy.is_set():
-        ch = doc_cau_hinh()
-        ch["gmail_moc"][khoa_moc] = int(sc.last_uid)
-        ghi_cau_hinh(ch)
     kho = _doc_json(_gmail_kho_path(), {})
     thu_muc = goc_du_lieu() / "gmail" / dt.date.today().strftime("%Y-%m")
     thu_muc.mkdir(parents=True, exist_ok=True)
     moi = 0
     ghep: dict = {}
-    for r in recs:
+    def luu_ban(r):
+        nonlocal moi
         det = None
         if r.get("xml"):
             try:
@@ -1167,7 +1157,7 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "
                 ket = lien_ket_gmail(kho[rid])
                 if ket:
                     ghep[ket] = ghep.get(ket, 0) + 1
-            continue
+            return
         stem = re.sub(r"[^0-9A-Za-z_-]", "_", rid)[:80]
         ban = {"id": rid, "hop_thu": mail, "tieu_de": r.get("subject", "")[:200], "tu": r.get("from", "")[:120],
                "ngay_mail": r.get("date", ""), "nha_cung_cap": r.get("provider") or "",
@@ -1191,8 +1181,27 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "
         ket = lien_ket_gmail(ban, det)
         if ket:
             ghep[ket] = ghep.get(ket, 0) + 1
-    with _KHOA_GHI:
-        _ghi_json(_gmail_kho_path(), kho)
+    def nhan_ban(r):
+        with _KHOA_GHI:
+            # Keep earlier invoices durable even if the scan or server stops.
+            kho.clear()
+            kho.update(_doc_json(_gmail_kho_path(), {}))
+            luu_ban(r)
+            _ghi_json(_gmail_kho_path(), kho)
+
+    try:
+        def tien_do(i, n):
+            v.i, v.n = i, n
+        recs = sc.scan(tu, den, want_download=True, progress=tien_do, since_uid=(moc or None),
+                       cancel_check=v.huy.is_set, on_record=nhan_ban)
+    finally:
+        sc.close()
+    if getattr(sc, "last_uid", 0) and not v.huy.is_set():
+        ch = doc_cau_hinh()
+        ch["gmail_moc"][khoa_moc] = int(sc.last_uid)
+        ghi_cau_hinh(ch)
+    for r in recs:
+        nhan_ban(r)
     v.log(f"Lưu {moi} hoá đơn mới từ Gmail. Tổng trong kho: {len(kho)}.")
     if ghep:
         v.log(f"Đã ghép vào Tải Hoá Đơn TCT: {ghep.get('ghep', 0)} hoá đơn có sẵn được thêm bản gốc / XML, "

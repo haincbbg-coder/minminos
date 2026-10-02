@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.23] - 2026-10-02
+### Sửa lỗi
+- Tự nối lại theo dõi tải hóa đơn và quét Gmail khi mất kết nối tạm thời, tránh dừng thanh tiến độ vì lỗi 502.
+- Lưu và ghép từng hóa đơn Gmail ngay khi đọc được, giảm giữ file trong bộ nhớ và giữ lại kết quả nếu lượt quét bị gián đoạn.
+
 ## [26.10.22] - 2026-10-02
 ### Thêm mới
 - ChatGPT Live qua WebRTC bằng phiên ChatGPT đã kết nối; chọn giọng và nghe thử ngay trong Tuỳ chỉnh → Giọng nói.
@@ -14,6 +19,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Sửa lỗi
 - Không đọc lặp hoặc chồng hai câu trả lời; nói chen ở đường Cơ bản không huỷ việc đang chạy.
 - Nối lại thất bại không tự đổi giọng giữa cuộc gọi ChatGPT Live. Giữ tùy chọn ElevenLabs và thương hiệu MinMin.
+
 
 ## [26.10.21] - 2026-10-02
 ### Sửa lỗi

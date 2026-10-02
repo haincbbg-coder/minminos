@@ -19,6 +19,40 @@ def invoice(number):
 
 
 class EnvelopeRecovery(unittest.TestCase):
+    def test_scan_streams_before_reading_next_email(self):
+        mod = hd.thd('gmail_scan')
+        msg = EmailMessage()
+        msg['From'] = 'test@example.com'
+        msg['Subject'] = 'Invoice'
+        msg.set_content('Invoice')
+        msg.add_attachment(invoice('30'), maintype='application', subtype='xml', filename='invoice.xml')
+        scanner = mod.GmailScanner('test@example.com', '')
+        saved = []
+        def fetch(mid):
+            if mid == '1':
+                self.assertEqual(len(saved), 1)
+            return msg.as_bytes()
+        with patch.object(scanner, '_search_uids', return_value=['1','2']), patch.object(scanner, '_fetch_raw', side_effect=fetch):
+            rows = scanner.scan(dt.date(2026,1,1), dt.date(2026,12,31), want_download=False, on_record=saved.append)
+        self.assertEqual(rows, [])
+        self.assertEqual(len(saved), 2)
+
+    def test_partial_scan_is_durable_after_connection_failure(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(hd, 'goc_du_lieu', return_value=Path(folder)):
+            hd.ghi_cau_hinh({'doanh_nghiep': {'2222222222': {'ten':'Buyer'}}})
+            scanner = Mock(last_uid=999)
+            def interrupted(*args, **kwargs):
+                kwargs['on_record']({'xml':invoice('30'), 'pdf':b'%PDF-fixture'})
+                self.assertEqual(len(hd._doc_json(hd._gmail_kho_path(),{})), 1)
+                raise ConnectionError('interrupted')
+            scanner.scan.side_effect = interrupted
+            with patch.object(hd,'ds_gmail',return_value={'mail@example.com':{'kieu':'google','refresh':'fake'}}), patch.object(hd,'giai_ma',return_value='fake'), patch.object(hd,'tao_bo_quet_google',return_value=scanner):
+                with self.assertRaises(ConnectionError):
+                    hd.quet_gmail(Mock(),dt.date(2026,1,1),dt.date(2026,12,31),False)
+            self.assertEqual(len(hd.doc_kho('2222222222','purchase')), 1)
+            self.assertFalse(hd.doc_cau_hinh()['gmail_moc'])
+            scanner.close.assert_called_once()
+
     def test_invoice_header_is_inside_signed_payload(self):
         mod = hd.thd('invoice_xml')
         result = mod.parse_invoice(invoice('00000030'))
