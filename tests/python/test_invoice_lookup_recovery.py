@@ -50,6 +50,12 @@ class RecoveryTests(unittest.TestCase):
             self.assertEqual(info['code'],'LOOKUP'); self.assertEqual(info['url'],'')
         self.assertIsNone(mod.manual_download_info(b'<HDon><SHDon>999</SHDon></HDon>'))
 
+    def test_misa_keeps_underscore_in_transaction_and_namespace(self):
+        mod=hd.thd('providers.misa')
+        xml='<HDon xmlns="urn:invoice"><TTKhac><TTin><DLieu>ABCDEF_GHIJK</DLieu><TTruong>TransactionID</TTruong></TTin></TTKhac></HDon>'
+        self.assertEqual(mod.find_code(xml),'ABCDEF_GHIJK')
+        self.assertEqual(mod.find_code('https://www.meinvoice.vn/tra-cuu/?sc=ABCDEF_GHIJK'),'ABCDEF_GHIJK')
+
     def test_viettel_verified_token_is_used_for_pdf_and_rejection_stops(self):
         mod=hd.thd('providers.viettel')
         def image(size):

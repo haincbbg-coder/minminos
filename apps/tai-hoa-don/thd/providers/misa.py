@@ -33,7 +33,7 @@ MST_TCGP = "0101243150"   # MST của MISA JSC - thẻ <MSTTCGP> trong XML (tổ
 ACCEPT_HTML = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
 
 _RE_TCGP = re.compile(r"<MSTTCGP>\s*([0-9\-]+)\s*</MSTTCGP>", re.I)
-_RE_CODE_URL = re.compile(r"meinvoice\.vn/tra-cuu/?\?(?:[^\"'<\s]*&)?sc=([A-Za-z0-9]+)", re.I)
+_RE_CODE_URL = re.compile(r"meinvoice\.vn/tra-cuu/?\?(?:[^\"'<\s]*&)?sc=([A-Za-z0-9_-]+)", re.I)
 _RE_CODE_TRANS = re.compile(r"<TTruong>\s*TransactionID\s*</TTruong>\s*<KDLieu>[^<]*</KDLieu>\s*<DLieu>\s*([A-Za-z0-9]{6,})\s*</DLieu>", re.I)
 _RE_CODE_ID = re.compile(r"<DLHDon\s+Id=\"([A-Za-z0-9]{8,})\"", re.I)
 
@@ -48,6 +48,10 @@ def detect(xml_text: str, inv: dict) -> bool:
 
 def find_code(xml_text: str) -> str:
     """Mã tra cứu MISA = TransactionID (12 ký tự) - nằm ở TTKhac/TransactionID hoặc Id của DLHDon."""
+    from . import _common as C
+    transaction = C.ttkhac(xml_text, "TransactionID").strip()
+    if transaction:
+        return transaction
     for rx in (_RE_CODE_URL, _RE_CODE_TRANS, _RE_CODE_ID):
         m = rx.search(xml_text)
         if m:
