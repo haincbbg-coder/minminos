@@ -959,7 +959,11 @@ class ChatGPTLive(LiveProvider):
         self.initial_items = items
 
     def start_params(self, sdp: str) -> dict:
-        prompt = self.system
+        prompt = self.system + (
+            "\nKhi nhận văn bản kết quả đã hoàn tất để đọc: đọc nguyên nội dung được cung cấp, "
+            "giữ đầy đủ số liệu và kết luận. Không thay kết quả bằng lời hứa kiểm tra, không giao "
+            "lại cùng công việc. Các câu nói sẽ kiểm tra trong lịch sử là trạng thái cũ đã kết thúc."
+        )
         if self.memory_index.strip():
             prompt += "\n\nBộ nhớ về người dùng (mục lục, chỉ làm ngữ cảnh):\n" + self.memory_index.strip()
         params = {
@@ -1063,6 +1067,10 @@ class ChatGPTLive(LiveProvider):
                 return out
             self._speaking, self._pushed_at, self._quiet_since = False, 0.0, time.monotonic()
             if self._speech_current:
+                # Some transports only emit the completed transcript, without deltas.
+                completed = str(p.get("text") or "").strip()
+                if completed and not self._speech_heard.strip():
+                    self._speech_heard = completed
                 self._speech_done.set()
             # Javis nói xong mà câu người dùng vẫn chưa có done (hiếm): chốt phần đã nghe rồi mới nhả.
             out = self._flush_user() + self._held + [{"type": "turn_done"}]
@@ -1185,6 +1193,11 @@ class ChatGPTLive(LiveProvider):
                 self._speech_done.clear()
                 self._pushed_at = time.monotonic()
                 try:
+                    await self.srv.request("thread/realtime/appendText", {
+                        "threadId": self.thread_id,
+                        "text": "Kết quả đã hoàn tất, không cần kiểm tra hay giao việc lại. "
+                                "Đoạn tiếp theo là nội dung cần đọc đầy đủ: " + text,
+                    })
                     await self.srv.request("thread/realtime/appendSpeech", {"threadId": self.thread_id, "text": text})
                     # A receipt from appendSpeech is not proof that the text was spoken.
                     await asyncio.wait_for(self._speech_done.wait(), self.SPEECH_READ_TIMEOUT or max(12.0, len(text) / 6.0))

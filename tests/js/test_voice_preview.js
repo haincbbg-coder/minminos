@@ -19,19 +19,19 @@ class Socket {
   async event(data) { await this.onmessage({data: JSON.stringify(data)}); }
 }
 const track = {stop() {this.stopped = true;}};
-let source;
+let source, suspended = false;
 const played=[];
 class AudioContext {
-  constructor() {this.state = 'running';this.currentTime=0;}
+  constructor() {this.state = suspended ? 'suspended' : 'running';this.currentTime=0;}
   createBuffer(c,n,r) {const values=new Float32Array(n);return {duration:n/r,getChannelData:()=>values};}
   createBufferSource() {return {connect(){},disconnect(){},start(t){this.at=t;played.push(this);},stop(){this.stopped=true;}};}
-  async resume() {}
+  async resume() {if (!suspended) this.state='running';}
   async close() {}
   createMediaStreamDestination() {return {stream: {getAudioTracks: () => [track], getTracks: () => [track]}};}
   createConstantSource() { source = {offset: {value: 1}, connect() {}, start() {}, stop() {this.stopped = true;}, disconnect() {}}; return source; }
 }
 const context = {window: {addEventListener() {}, AudioContext}, location: {protocol: 'https:', host: 'test'},
-  RTCPeerConnection: Peer, WebSocket: Socket, ArrayBuffer, DataView,
+  navigator: {}, RTCPeerConnection: Peer, WebSocket: Socket, ArrayBuffer, DataView,
   Audio: class { pause() {} async play() {} },
   setTimeout(fn, ms) { timers.set(++nextTimer, {fn, ms}); return nextTimer; },
   clearTimeout(id) { timers.delete(id); }, encodeURIComponent, console};
@@ -72,8 +72,24 @@ vm.runInNewContext(fs.readFileSync('dashboard/voice-preview.js', 'utf8'), contex
   await gemini.event({type:'turn_done'});
   assert.equal(played.length,1,'One continuous buffer per preview');
   assert.deepEqual(Array.from(played[0].buffer.getChannelData(0)),[0.5,-0.5]);
-  [...timers.values()].find(timer=>timer.ms===3000).fn();
+  gemini.onclose();
+  assert.ok(!gemini.closed, 'Transport close must not cut buffered playback');
+  played[0].onended();
   assert.ok(gemini.closed);
+  assert.equal(timers.size,0);
+  suspended = true;
+  const retries = [];
+  await context.window.MinMinVoicePreview.play('Kore', s => retries.push(s), 'gemini');
+  const blocked = sockets.at(-1), total = sockets.length;
+  await blocked.onmessage({data:new Uint8Array([0,64]).buffer});
+  await blocked.event({type:'turn_done'});
+  blocked.onclose();
+  assert.ok(retries.at(-1).includes('Bấm Nghe thử lần nữa'));
+  suspended = false;
+  await context.window.MinMinVoicePreview.play('Kore', s => retries.push(s), 'gemini');
+  assert.equal(sockets.length, total, 'A new gesture reuses the prepared preview');
+  assert.equal(played.length,2);
+  played[1].onended();
   assert.equal(timers.size,0);
   console.log('OK: preview sends only synthetic silence, selects voice, closes on finish, replacement and errors');
 })().catch(error => { console.error(error); process.exitCode = 1; });

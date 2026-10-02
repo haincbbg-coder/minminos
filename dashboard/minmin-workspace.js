@@ -33,6 +33,18 @@
     const s = states.get(key(current())); el.hidden = !s; if (!s) return;
     el.dataset.phase = s.phase;
     if (!el.firstElementChild) el.innerHTML = '<div class="mm-progress-head"><span class="mm-motion-mark" aria-hidden="true"></span><div><b></b><small></small></div><strong></strong></div><div class="mm-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"><span></span></div><div class="mm-progress-foot"><span></span><span></span></div>';
+    if (!el.querySelector(".mm-progress-collapse")) {
+      const button = document.createElement("button");
+      button.type = "button"; button.className = "mm-progress-collapse";
+      const update = () => {
+        const compact = el.dataset.compact === "true";
+        button.textContent = compact ? "⌄" : "⌃";
+        button.setAttribute("aria-expanded", String(!compact));
+        button.setAttribute("aria-label", compact ? "Mở rộng tiến độ" : "Thu gọn tiến độ");
+      };
+      button.onclick = () => { el.dataset.compact = String(el.dataset.compact !== "true"); update(); };
+      el.querySelector(".mm-progress-head").appendChild(button); update();
+    }
     el.querySelector("b").textContent = t(s.phase === "error" ? "work_error" : s.phase);
     el.querySelector(".mm-progress-head div small").textContent = s.phase === "working" ? (s.text || t("receiving")) : t(s.phase + "_hint");
     el.querySelector("strong").textContent = s.pct + "%";

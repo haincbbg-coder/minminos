@@ -163,6 +163,13 @@ class SpeechQueueTests(unittest.IsolatedAsyncioTestCase):
         self.speak("Chi phí 20 triệu."); self.done()
         self.assertTrue(await self.until(lambda: any(e.get("status") == "done" for e in self.events)))
 
+    async def test_completed_transcript_without_deltas_advances_queue(self):
+        await self.prov.send_tool_result("h1", "ask_javis", "Doanh thu 100 triệu.")
+        self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 1))
+        self.done("Doanh thu 100 triệu.")
+        self.assertTrue(await self.until(lambda: any(e.get("status") == "done" for e in self.events)))
+        self.assertEqual(len(self.fake.spoken()), 1)
+
     async def test_pause_retains_queue_for_resume(self):
         await self.prov.send_tool_result("h1", "ask_javis", "Một.")
         await self.prov.send_tool_result("h2", "ask_javis", "Hai.")

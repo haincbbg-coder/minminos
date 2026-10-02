@@ -49,9 +49,12 @@
     var resumeBtn = doc.createElement("button");
     resumeBtn.type = "button"; resumeBtn.className = "call-resume"; resumeBtn.hidden = true;
     resumeBtn.onclick = function () { if (opts.onResume) opts.onResume(); };
+    var compactBtn = doc.createElement("button"), compact = false;
+    compactBtn.type = "button"; compactBtn.className = "call-collapse";
+    compactBtn.onclick = function () { compact = !compact; render(); };
     if (el) {
       el.innerHTML = "";
-      [dot, engineEl, stateEl, clockEl, muteBtn, hangBtn, resumeBtn].forEach(function (n) { el.appendChild(n); });
+      [dot, engineEl, stateEl, clockEl, muteBtn, hangBtn, resumeBtn, compactBtn].forEach(function (n) { el.appendChild(n); });
       el.setAttribute("role", "status");
     }
 
@@ -59,6 +62,10 @@
       if (!el) return;
       var shown = muted ? "muted" : state;
       el.dataset.state = shown;
+      el.dataset.compact = String(compact);
+      compactBtn.textContent = compact ? "⌄" : "⌃";
+      compactBtn.setAttribute("aria-expanded", String(!compact));
+      compactBtn.setAttribute("aria-label", compact ? "Mở rộng cuộc gọi" : "Thu gọn cuộc gọi");
       engineEl.textContent = engine;
       engineEl.hidden = !engine;
       stateEl.textContent = (shown === "working" && detail) ? t("call.working", { tool: detail }) : t(STATE_KEYS[shown] || STATE_KEYS.listening);
