@@ -160,7 +160,7 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
                         "code": secret, "method": "Kéo thanh trượt", "mst": mst})
     # EFY iHoaDon - reCAPTCHA; tra theo số HĐ + mã tra cứu
     if code == "0102519041":
-        c = efy._code(txt)
+        c = efy.find_code(txt, inv or {})
         return std({"provider": "EFY (iHoaDon)", "url": efy.lookup_url(sh, c),
                     "code": c or "(mã ở email)", "method": "reCAPTCHA", "mst": mst}, sh)
     # BKAV eHoadon - reCAPTCHA; MTC trong XML hoặc email

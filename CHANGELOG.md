@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.25] - 2026-10-02
+### Sửa lỗi
+- Dùng mã tra cứu EFY đã tìm được từ Gmail khi mở trang nhà phát hành.
+- Quét lại Gmail không tạo thêm dòng chỉ vì trang hãng tạo một file PDF có dữ liệu kỹ thuật khác lần trước.
+
 ## [26.10.24] - 2026-10-02
 ### Sửa lỗi
 - Nghe thử ChatGPT Live bằng chính giọng đang chọn với lời chào “Min Min”, bỏ mẫu thu sẵn xưng Javis và số doanh thu minh họa.
