@@ -18,6 +18,7 @@ import datetime as dt
 import importlib
 import importlib.util
 import io
+import hashlib
 import json
 import os
 import re
@@ -1040,7 +1041,7 @@ def lien_ket_gmail(ban: dict, det: Optional[dict] = None) -> Optional[str]:
     - Chưa có mà XML cho biết người mua là một doanh nghiệp đang quản lý: thêm mới vào mua vào.
     """
     pdf, xml = tuyet_doi(ban.get("pdf")), tuyet_doi(ban.get("xml"))
-    if not (pdf or xml):
+    if not (pdf or xml) and not (ban.get("ban_mst") and ban.get("ky_hieu") and ban.get("so")):
         return None
     if det is None and xml:
         try:
@@ -1059,7 +1060,7 @@ def lien_ket_gmail(ban: dict, det: Optional[dict] = None) -> Optional[str]:
             ban["lien_ket"] = {"mst": mst, "key": key}
             return "ghep" if doi else None
         mua = str((det or {}).get("mua_mst") or "").strip()
-        if not det or mua not in doc_cau_hinh()["doanh_nghiep"]:
+        if not det or not det.get("shdon") or not det.get("khhdon") or not det.get("ban_mst") or mua not in doc_cau_hinh()["doanh_nghiep"]:
             return None
         inv = {"nbmst": det.get("ban_mst"), "nbten": det.get("ban_ten"), "nmmst": mua, "nmten": det.get("mua_ten"),
                "khmshdon": det.get("khmshdon"), "khhdon": det.get("khhdon"), "shdon": _so_hd(det.get("shdon")),
@@ -1126,9 +1127,15 @@ def quet_gmail(v: Viec, tu: dt.date, den: dt.date, chi_moi: bool, email: str = "
             except Exception:
                 det = None
         so = (det or {}).get("shdon") or r.get("_so_hd") or ""
-        nb = (det or {}).get("ban_mst") or ""
-        rid = re.sub(r"[^0-9A-Za-z_-]", "", f"{nb}_{(det or {}).get('khhdon') or r.get('_khhdon')}_{so}") \
-            or uuid.uuid4().hex[:10]
+        nb = (det or {}).get("ban_mst") or r.get("_seller_mst") or ""
+        serial = (det or {}).get("khhdon") or r.get("_khhdon") or ""
+        if nb and serial and so:
+            rid = re.sub(r"[^0-9A-Za-z_-]", "", f"{nb}_{serial}_{so}")
+        else:
+            # Incomplete identities must not collapse unrelated emails into '__'.
+            source = r.get("_source_id") or repr((r.get("from"), r.get("subject"), r.get("date"), r.get("code")))
+            digest = hashlib.sha256((mail + source).encode() + (r.get("xml") or r.get("pdf") or b"")).hexdigest()[:24]
+            rid = "mail_" + digest
         cu = kho.get(rid) or {}
         bo_sung = any(r.get(t) and not tuyet_doi(cu.get(t)) for t in ("xml", "pdf"))
         if cu and not bo_sung:

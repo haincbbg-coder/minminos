@@ -21,6 +21,7 @@ import imaplib
 import re
 import io
 import zipfile
+import hashlib
 from pathlib import PurePosixPath
 from email.header import decode_header
 from typing import Callable, Optional
@@ -61,6 +62,7 @@ SENDER_PROVIDER = {
     "fast.com.vn": "fast",
     # khác
     "asiainvoice.vn": "asiainvoice", "pancake.vn": "pancake",
+    "mysoftware.vn": "myinvoice",
 }
 
 # email/tiêu đề gợi ý là hóa đơn (lọc bớt trước khi tải nội dung)
@@ -157,7 +159,7 @@ def _html_to_text(s: str) -> str:
 _RE_KKVAT_LINK = re.compile(r"(hoadon\.kkvat\.com\.vn[^\s\"'\)]*CommonBill2\.jsp[^\s\"'\)]*)", re.I)
 _RE_KKVAT_SECURE = re.compile(r"vSecureKey=?([0-9]{8,})", re.I)
 # Số hóa đơn trong tiêu đề/nội dung email (nhiều cách viết)
-_RE_SO_HD = re.compile(r"(?:Hóa đơn số|Số hóa đơn|Số Hóa đơn|Số HĐ|số\s*\(No\.\)|Invoice No\.?|No\.)\s*[:\)]*\s*0*([0-9]{1,10})", re.I)
+_RE_SO_HD = re.compile(r"(?:H[oó][aá] đơn(?:\s+GTGT)?\s+số|HDĐT\s+số|Số h[oó][aá] đơn|Số HĐ|số\s*\(No\.\)|Invoice No\.?|No\.)\s*[:\)]*\s*0*([0-9]{1,10})", re.I)
 # KÝ HIỆU (6-8 ký tự, vd C26TYY) và MẪU SỐ (1 chữ số) - để khớp hóa đơn khi mail KHÔNG kèm XML
 _RE_KYHIEU = re.compile(r"(?:Ký hiệu(?:\s*hóa đơn)?|Ky hieu|Serial)\s*[:\-]?\s*([0-9]?[A-Z][0-9A-Z]{4,6})", re.I)
 _RE_MAUSO = re.compile(r"(?:Mẫu số|Mau so|Form)\s*[:\-]?\s*([0-9])", re.I)
@@ -530,7 +532,8 @@ class GmailScanner:
                 seller = m_sel.group(1).strip()
                 # cắt các cụm đuôi thừa ("đã được phát hành", "gởi hóa đơn"...)
                 seller = re.split(r"\s+(?:đã|được|gởi|gửi|xin|kính|ký|MST|Mã số)\b", seller, 1, re.I)[0].strip(" *-")
-            m_kh = _RE_KYHIEU.search(subject or "") or _RE_KYHIEU.search(body_clean)
+            m_kh = (_RE_KYHIEU.search(subject or "") or _RE_KYHIEU.search(body_clean)
+                    or re.search(r"\b([12]?[CK]\d{2}[A-Z]{3})\b", subject or "", re.I))
             m_ms = _RE_MAUSO.search(body_clean) or _RE_MAUSO.search(subject or "")
             kyhieu = m_kh.group(1).upper() if m_kh else ""
             mauso = m_ms.group(1) if m_ms else ""
@@ -538,6 +541,9 @@ class GmailScanner:
             if len(kyhieu) == 7 and kyhieu[0].isdigit():
                 mauso = mauso or kyhieu[0]; kyhieu = kyhieu[1:]
             rec = {"subject": subject, "from": frm, "date": date, "provider": prov,
+                   "_source_id": hashlib.sha256(raw).hexdigest(),
+                   "_seller_mst": (re.search(r"\bMST\s*[:\-]?\s*(\d{10}(?:-?\d{3})?)\b", subject, re.I).group(1)
+                                   if re.search(r"\bMST\s*[:\-]?\s*(\d{10}(?:-?\d{3})?)\b", subject, re.I) else ""),
                    "xml": None, "pdf": None, "status": "", "needs_manual": False, "code": "",
                    "_so_hd": (m_so.group(1) if m_so else ""),
                    "_khhdon": kyhieu, "_khmshdon": mauso,
