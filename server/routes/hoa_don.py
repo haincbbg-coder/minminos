@@ -286,7 +286,27 @@ def _kho_path(mst: str, loai: str) -> Path:
 
 
 def doc_kho(mst: str, loai: str) -> dict:
-    return _doc_json(_kho_path(mst, loai), {})
+    kho = _doc_json(_kho_path(mst, loai), {})
+    # Older versions rendered HTTP-200 gateway errors as tax PDFs. Keep the
+    # files for diagnosis, but never count, serve or export them as invoices.
+    for inv in kho.values():
+        if tuyet_doi(inv.get("_xml_path")):
+            continue
+        for field in ("_html_path", "_zip_path"):
+            path = tuyet_doi(inv.get(field))
+            if not path:
+                continue
+            try:
+                with path.open("rb") as stream:
+                    bad = thd("invoice_xml").is_error_document(stream.read(32768))
+            except OSError:
+                continue
+            if bad:
+                for key in ("_html_path", "_zip_path", "_pdf_path", "_pdf_render_version", "_html_assets"):
+                    inv.pop(key, None)
+                inv["_pdf_loi"] = "File cũ là trang báo lỗi cổng thuế, không phải chứng từ. Cần tải lại."
+                break
+    return kho
 
 
 def ghi_kho(mst: str, loai: str, kho: dict) -> None:
