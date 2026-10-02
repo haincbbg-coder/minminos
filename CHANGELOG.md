@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.21] - 2026-10-02
+### Sửa lỗi
+- Không lưu trang báo lỗi của cổng thuế thành ZIP hoặc PDF Trống đồng; nhận diện chứng từ lỗi đã lưu trước đây.
+
 ## [26.10.20] - 2026-10-02
 ### Sửa lỗi
 - Đọc đúng số hóa đơn trong XML gửi qua Gmail có lớp thông điệp; khôi phục ghép bản gốc vào kho thuế.
