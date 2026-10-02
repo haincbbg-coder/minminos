@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.36] - 2026-10-03
+### Sửa lỗi
+- Sửa nút Nghe thử Gemini Live bị đứng chờ và không phát âm thanh.
+
 ## [26.10.34] - 2026-10-03
 ### Cải thiện
 - Mic ở ô chat chỉ nhập lời nói thành bản nháp, không tự gửi khi ngừng nói. Xem lại rồi bấm Gửi; dừng mic hoặc rời trang vẫn giữ chữ đã nhập.
