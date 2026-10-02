@@ -202,6 +202,7 @@
   }
 
   function start(o) {
+    if (window.MinMinVoicePreview) window.MinMinVoicePreview.stop();
     if (on) return Promise.resolve(true);
     if (starting) return starting;
     opts = o || {};

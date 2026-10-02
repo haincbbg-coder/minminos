@@ -6578,16 +6578,18 @@
         if (!tts.elevenlabs_key_set) $("vcElKey").focus();
       }
     };
-    // Nghe thử: ChatGPT Live phát mẫu thu sẵn (dashboard/voices/<giọng>.mp3, không mở phiên
-    // realtime nào); đường Cơ bản đọc một câu bằng giọng đang chọn (app.js JavisVoiceSample).
+    // Nghe thử đúng giọng đang chọn, với danh tính Min Min, không thu mic.
+    if (window.MinMinVoicePreview) window.MinMinVoicePreview.stop();
     tryBtn.onclick = () => {
-      try {
-        if (window._vcSample) window._vcSample.pause();
-        if (call.engine === "chatgpt") {
-          window._vcSample = new Audio("/static/voices/" + encodeURIComponent(sel.value) + ".mp3");
-          window._vcSample.play().catch(() => {});
-        } else if (window.JavisVoiceSample) window.JavisVoiceSample();
-      } catch (e) {}
+      if (call.engine === "chatgpt" && window.MinMinVoicePreview) {
+        if (window.JavisVoiceLive && window.JavisVoiceLive.isOn()) {
+          $("vcStatus").textContent = "Hãy cúp cuộc gọi trước khi nghe thử giọng.";
+          return;
+        }
+        window.MinMinVoicePreview.play(sel.value, text => {
+          if (gen === _renderGen && $("vcStatus")) $("vcStatus").textContent = text;
+        }).catch(() => { $("vcStatus").textContent = "Không mở được giọng nghe thử."; });
+      } else if (window.JavisVoiceSample) window.JavisVoiceSample();
     };
 
 

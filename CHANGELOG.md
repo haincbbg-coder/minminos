@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.24] - 2026-10-02
+### Sửa lỗi
+- Nghe thử ChatGPT Live bằng chính giọng đang chọn với lời chào “Min Min”, bỏ mẫu thu sẵn xưng Javis và số doanh thu minh họa.
+- Nhắc giọng gọi phát âm tên thành hai tiếng Min Min, đọc tiếng Việt rõ dấu và số liệu tự nhiên.
+### Cải thiện
+- Phiên nghe thử chỉ phát âm thanh, không mở mic, không lưu hội thoại và không giao việc; tự đóng sau khi nghe thử.
+
 ## [26.10.23] - 2026-10-02
 ### Sửa lỗi
 - Tự nối lại theo dõi tải hóa đơn và quét Gmail khi mất kết nối tạm thời, tránh dừng thanh tiến độ vì lỗi 502.

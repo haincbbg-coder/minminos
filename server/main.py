@@ -12473,6 +12473,25 @@ async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "
     return str(out or "")[:6000]
 
 
+@app.websocket("/ws/voice-preview")
+async def voice_preview_ws(ws: WebSocket, voice: str = Query("juniper")):
+    if cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", "")):
+        await ws.close(code=1008)
+        return
+    if voice not in voice_live.CHATGPT_VOICES:
+        await ws.close(code=1008)
+        return
+    await ws.accept()
+    try:
+        await asyncio.to_thread(openai_oauth.write_codex_auth)
+    except Exception:
+        pass
+    import voice_preview
+    provider = voice_live.ChatGPTLive(voice=voice, recognition_lang="vi-VN",
+        system="Bạn là Min Min. Chỉ đọc câu nghe thử được yêu cầu, không thêm lời và không giao việc.")
+    await voice_preview.serve(ws, provider)
+
+
 @app.websocket("/ws/voice-live")
 async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str = Query("brain"),
                         lang: str = Query("vi-VN")):

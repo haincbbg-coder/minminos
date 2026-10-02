@@ -3101,7 +3101,7 @@
   "coding.mode_auto_note": "Edits files and runs tests, no commit or deploy",
   "coding.mode_full_note": "Adds commit, push and deploy when the task calls for it",
   "app.voice_playback_failed": "The selected voice could not play. Try again or choose another voice in Settings.",
-  "app.voice_sample": "Hello, I am MinMin. Here is a sample of this voice.",
+  "app.voice_sample": "Hello, I am Min Min. Here is a sample of this voice.",
   "settings.v2_stt_note": "With Groq Whisper selected, the sent message is Groq's transcript (better with mixed Vietnamese and English); the browser's text is only a live preview while you speak. If Groq fails, the browser's text is used.",
   "settings.voice_advanced": "Advanced: model, recognition and microphone",
   "settings.voice_focus_short": "Say “MinMin” after an idle pause to resume the conversation.",
