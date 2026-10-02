@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.43] - 2026-10-03
+### Sửa lỗi
+- Nút mũi tên thu gọn dùng bộ biểu tượng của MinMin thay ký tự rời, khắc phục lỗi kiểm tra tự động trên bản trước.
+### Cải thiện
+- Hóa đơn và Zalo Forwarder dùng cùng bảng màu ngà và cam của MinMin, cả tông sáng lẫn tối.
+
 ## [26.10.42] - 2026-10-03
 ### Sửa lỗi
 - Quả cầu tôn trọng tốc độ quay đã chọn, kể cả khi điện thoại bật giảm chuyển động. Nền khớp tông sáng có chiều sâu của Min Min.
