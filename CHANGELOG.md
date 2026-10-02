@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.39] - 2026-10-03
+### Cải thiện
+- Thiết kế không gian hội thoại Min Min, kho tệp bên phải và tiến độ xử lý.
+
 ## [26.10.38] - 2026-10-03
 ### Cải thiện
 - Tải hóa đơn BKAV tự tìm bằng định danh XML khi thiếu mã tra cứu. Petrolimex bằng mã trong XML, đối chiếu đúng hóa đơn trước khi lưu; sửa ngày hiển thị lệch múi giờ.
