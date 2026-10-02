@@ -138,6 +138,30 @@ def _direct_invoice(s, body: str, log):
 def fetch_pdf(xml_text: str, inv: dict, log: Callable[[str], None], solver=None) -> bytes:
     mtc = find_code(xml_text, inv)
     if not mtc:
+        # TCT XML can omit the lookup code but retain BKAV's invoice UUID.
+        # Verify the issuer XML before accepting any PDF reached through that UUID.
+        import xml.etree.ElementTree as ET
+        from .smartsign import identity
+        try:
+            root = ET.fromstring(xml_text)
+            guid = next((e.get("Id", "") for e in root.iter()
+                         if e.tag.split("}")[-1] == "DLHDon"), "")
+        except ET.ParseError:
+            guid = ""
+        if re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", guid):
+            with C.make_session() as session:
+                lookup = HOST + "/Lookup?InvoiceGUID=" + guid + "&ViewATF="
+                page = session.get(lookup, timeout=60)
+                if page.status_code == 200 and "LinkDownXML" in page.text:
+                    fields = _hidden_fields(page.text)
+                    fields.update({"__EVENTTARGET": "LinkDownXML", "__EVENTARGUMENT": ""})
+                    source = session.post(lookup, data=fields, timeout=60)
+                    if source.status_code != 200 or identity(source.content.decode("utf-8-sig")) != identity(xml_text):
+                        raise ProviderError("BKAV: XML hãng không khớp định danh hóa đơn")
+                    pdf = _direct_invoice(session, "ViewInvoice('" + guid + "')", log)
+                    if pdf:
+                        inv["_manual_url"] = lookup
+                        return pdf
         raise ProviderError("Không có Mã tra cứu (MTC) của BKAV trong XML - cần lấy MTC "
                             "từ email (quét Gmail).")
     url = f"{HOST}{SEARCH_PATH}?MTC={quote(mtc)}"
