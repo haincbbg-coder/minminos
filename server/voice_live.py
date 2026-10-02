@@ -377,7 +377,7 @@ class GeminiLive(LiveProvider):
     def supports_async_tools(self) -> bool:
         # Tài liệu Google (09/2026): "Asynchronous function calling is not yet supported in
         # Gemini 3.1 Flash Live", chỉ 2.5 Flash Live nhận behavior NON_BLOCKING.
-        return "2.5" in self.model or "3.8-live" in self.model
+        return "2.5" in self.model or self.model.removeprefix("models/") == "gemini-3.8-live"
 
     def setup_message(self) -> dict:
         model = self.model if self.model.startswith("models/") else f"models/{self.model}"
