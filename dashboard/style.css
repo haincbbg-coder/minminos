@@ -3372,3 +3372,6 @@ body.ne-full-on .cview { z-index: 250; }
 @media (max-width: 600px) { .call-bar { gap: 8px; padding: 6px 6px 6px 10px; } .call-bar .call-engine { display: none; } }
 /* Nút mic khi đang gọi: thành nút Cúp máy đỏ. */
 .mic-big.in-call { background: #ef4444 !important; border-color: #ef4444 !important; color: #fff !important; }
+
+.dictation-status { font-size: 12px; color: var(--text2); padding: 4px 12px; }
+#callBtn.in-call { color: #e04545; background: rgba(224,69,69,.12); }

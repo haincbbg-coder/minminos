@@ -34,11 +34,13 @@ def setting(cfg: dict) -> str:
     return "auto"
 
 
-def _api_provider(cfg: dict) -> str:
+def _api_provider(cfg: dict, strict: bool = False) -> str:
     """Nhà cung cấp Live qua API dùng được: cái người dùng đã chọn nếu có key, không thì cái đầu tiên có key."""
     v = (cfg or {}).get("voice") or {}
     m = (cfg or {}).get("model") or {}
     pref = str(v.get("live_provider") or "")
+    if strict and pref in API_PROVIDERS:
+        return pref if str(m.get(_API_KEY[pref]) or "").strip() else ""
     order = ([pref] if pref in API_PROVIDERS else []) + [p for p in API_PROVIDERS if p != pref]
     for p in order:
         if str(m.get(_API_KEY[p]) or "").strip():
@@ -64,7 +66,7 @@ def select_call_engine(cfg: dict) -> dict:
     """
     choice = setting(cfg)
     chat_ok, why = codex_realtime.realtime_available(cfg)
-    api = _api_provider(cfg)
+    api = _api_provider(cfg, strict=choice == "api")
 
     def out(engine, reason, provider=""):
         return {"engine": engine, "live_provider": provider,

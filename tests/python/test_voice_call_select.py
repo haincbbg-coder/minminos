@@ -69,6 +69,10 @@ check("chọn tay Cơ bản -> basic dù ChatGPT sẵn", r["engine"] == "basic" 
 r = voice_call.select_call_engine({"model": {"gemini_api_key": "g"}, "voice": {"mode": "live", "live_provider": "gemini"}})
 check("khoá cũ Live Gemini vẫn là Gemini dù ChatGPT sẵn", r["engine"] == "api" and r["live_provider"] == "gemini")
 
+r = voice_call.select_call_engine({"model": {"openai_api_key": "k"},
+    "voice": {"call_engine": "api", "live_provider": "gemini"}})
+check("Gemini chọn tay thiếu key không chuyển lén sang OpenAI", r["live_provider"] != "openai" and r["reason"] == "chosen_unavailable")
+
 # ---- routes ----
 _goc_cfg = main.cfgmod.read_settings
 main.cfgmod.read_settings = lambda: {"model": CHAT_OK, "voice": {}}

@@ -371,6 +371,17 @@
                  khung là node TĨNH để data-i18n dịch được và #rateSel giữ tay bắt của app.js. -->
             <div class="qs-block" id="voiceCard" data-settings-section="voice">
               <div class="popover-label" data-i18n="settings.vc_title">GIỌNG NÓI</div>
+                <div class="qs-field">
+                  <label class="qs-lbl" for="vcEngine" data-i18n="settings.vc_engine">Đường gọi</label>
+                  <select class="js-input" id="vcEngine">
+                    <option value="auto" data-i18n="settings.vc_engine_auto">Tự động</option>
+                    <option value="chatgpt">ChatGPT Live</option>
+                    <option value="gemini">Gemini Live (Google API)</option>
+                    <option value="api" data-i18n="settings.vc_engine_api">Live qua API key</option>
+                    <option value="basic" data-i18n="settings.vc_engine_basic">Cơ bản</option>
+                  </select>
+                </div>
+              <div class="qs-hint" id="vcProviderNote" role="status"></div>
               <div class="qs-hint" id="vcNow" role="status"></div>
               <div class="qs-field">
                 <label class="qs-lbl" for="vcVoice" data-i18n="settings.vc_voice">Giọng MinMin</label>
@@ -382,15 +393,6 @@
               <div class="qs-hint" id="vcVoiceNote" data-i18n="qs.voice_ml_note" hidden>Giọng đa ngôn ngữ hỗ trợ tiếng Việt.</div>
               <details class="qs-advanced" id="vcAdvanced">
                 <summary data-i18n="settings.vc_advanced">Nâng cao</summary>
-                <div class="qs-field">
-                  <label class="qs-lbl" for="vcEngine" data-i18n="settings.vc_engine">Đường gọi</label>
-                  <select class="js-input" id="vcEngine">
-                    <option value="auto" data-i18n="settings.vc_engine_auto">Tự động</option>
-                    <option value="chatgpt">ChatGPT Live</option>
-                    <option value="api" data-i18n="settings.vc_engine_api">Live qua API key</option>
-                    <option value="basic" data-i18n="settings.vc_engine_basic">Cơ bản</option>
-                  </select>
-                </div>
                 <!-- Bộ não trả lời nhanh + Model: CHỈ hiện khi cuộc gọi chạy đường Cơ bản (0.65.31, chủ dự
                      án góp ý 02/10). ChatGPT Live và Live qua API tự nghe, tự trả lời nên ô này không có
                      tác dụng; để hiện ở đó thì chọn Antigravity mà vẫn nghe ChatGPT trả lời, rất khó hiểu.
@@ -516,14 +518,18 @@
            khung chat (khối bước + chip đang chạy), nên dải này chỉ lặp lại thứ đã thấy. -->
     </div>
 
+    <div id="dictationStatus" class="dictation-status" role="status" hidden></div>
     <!-- ===== BOTTOM: voice bar ===== -->
     <div class="hud-voice" id="hudVoice">
       <button id="voiceFocusResume" class="voice-focus-resume" hidden></button>
-      <button class="mic-big" id="voiceBtn" title="Bấm để gọi MinMin" data-i18n-title="bar.mic">
+      <button class="mic-big" id="voiceBtn" title="Nhập bằng giọng nói, không tự gửi" aria-label="Nhập bằng giọng nói, không tự gửi" data-i18n-title="bar.mic" data-i18n-aria="bar.mic">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
           <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
         </svg>
+      </button>
+      <button class="attach-btn" id="callBtn" title="Gọi Min Min, trò chuyện trực tiếp" aria-label="Gọi Min Min, trò chuyện trực tiếp" data-i18n-title="bar.call" data-i18n-aria="bar.call">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 3.09 5.18 2 2 0 0 1 5.08 3h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.79a2 2 0 0 1-.45 2.11L9.06 10.9a16 16 0 0 0 4.04 4.04l1.28-1.27a2 2 0 0 1 2.11-.45c.89.34 1.83.58 2.79.7A2 2 0 0 1 22 16.92z"/></svg>
       </button>
       <button class="attach-btn" id="attachBtn" title="Đính kèm file (ảnh, text, tài liệu) → lưu vào Sources" data-i18n-title="bar.attach">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -876,6 +882,7 @@
   <script src="/static/voice-preview.js?v=2"></script>
   <script src="/static/voice-live.js?v=7"></script>
   <script src="/static/screen-awake.js?v=1"></script>
+  <script src="/static/dictation.js?v=1"></script>
   <script src="/static/call-bar.js?v=1"></script>
   <script src="/static/app.js?v=201"></script>
   <script src="/static/hud-launch.js?v=3"></script>

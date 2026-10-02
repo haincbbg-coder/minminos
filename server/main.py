@@ -12582,22 +12582,33 @@ async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "
 
 
 @app.websocket("/ws/voice-preview")
-async def voice_preview_ws(ws: WebSocket, voice: str = Query("juniper")):
+async def voice_preview_ws(ws: WebSocket, voice: str = Query("juniper"), provider: str = Query("chatgpt")):
     if cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", "")):
         await ws.close(code=1008)
         return
-    if voice not in voice_live.CHATGPT_VOICES:
+    if provider not in ("chatgpt", "gemini") or voice not in voice_live.PROVIDERS[provider]["voices"]:
         await ws.close(code=1008)
         return
     await ws.accept()
-    try:
-        await asyncio.to_thread(openai_oauth.write_codex_auth)
-    except Exception:
-        pass
     import voice_preview
-    provider = voice_live.ChatGPTLive(voice=voice, recognition_lang="vi-VN",
-        system="Bạn là Min Min. Chỉ đọc câu nghe thử được yêu cầu, không thêm lời và không giao việc.")
-    await voice_preview.serve(ws, provider)
+    prompt = "Bạn là Min Min. Chỉ đọc câu nghe thử được yêu cầu bằng tiếng Việt tự nhiên, không thêm lời và không giao việc."
+    if provider == "gemini":
+        cfg = cfgmod.read_settings()
+        key = str((cfg.get("model") or {}).get("gemini_api_key") or "").strip()
+        if not key:
+            await ws.send_json({"type": "error", "message": "Cần Gemini API key ở Bộ não AI."})
+            await ws.close()
+            return
+        v = cfg.get("voice") or {}
+        model = v.get("live_model", "") if v.get("live_provider") == "gemini" else ""
+        live = voice_live.GeminiLive(key, model=model, voice=voice, system=prompt, tools=[])
+    else:
+        try:
+            await asyncio.to_thread(openai_oauth.write_codex_auth)
+        except Exception:
+            pass
+        live = voice_live.ChatGPTLive(voice=voice, recognition_lang="vi-VN", system=prompt, tools=[])
+    await voice_preview.serve(ws, live)
 
 
 @app.websocket("/ws/voice-live")

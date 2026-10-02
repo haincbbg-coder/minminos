@@ -209,7 +209,7 @@
   "qs.domain_docs": "Hướng dẫn cài tên miền ↗",
   "qs.deploy_docs": "Hướng dẫn deploy/SSL ↗",
   "mb.open": "Đổi model / nhà cung cấp / effort",
-  "bar.mic": "Bấm để gọi MinMin",
+  "bar.mic": "Nhập bằng giọng nói, không tự gửi",
   "bar.attach": "Đính kèm file (ảnh, text, tài liệu) → lưu vào Sources",
   "bar.input_ph": "Bạn muốn tôi làm điều gì?",
   "bar.stop": "Ngắt lệnh / dừng đọc (Esc)",
@@ -3229,10 +3229,6 @@
   "call.engine_basic": "Cơ bản",
   "call.engine_api": "Live ({provider})",
   "call.fallback": "ChatGPT Live chưa mở được, cuộc gọi chuyển sang đường Cơ bản.",
-  "app.att_empty": "không đọc được file (0 byte). Chọn lại bằng nút đính kèm",
-  "share.rename": "Đổi tên",
-  "share.rename_ask": "Tên link (để trống là lấy theo tiêu đề file):",
-  "share.rename_fail": "Chưa đổi được, thử lại",
   "settings.vc_title": "GIỌNG NÓI",
   "settings.vc_voice": "Giọng MinMin",
   "settings.vc_advanced": "Nâng cao",
@@ -3263,5 +3259,12 @@
   "settings.vc_group_edge": "Edge (miễn phí)",
   "settings.vc_eleven_opt": "Giọng ElevenLabs của bạn (Voice ID ở Nâng cao)",
   "settings.vc_openai_note": "Muốn dùng giọng OpenAI: dán API key OpenAI ở trang Models.",
-  "call.reconnect_failed": "Chưa nối lại được ChatGPT Live. Cứ nói lại là MinMin thử tiếp."
+  "call.reconnect_failed": "Chưa nối lại được ChatGPT Live. Cứ nói lại là MinMin thử tiếp.",
+  "bar.call": "Gọi Min Min, trò chuyện trực tiếp",
+  "dictation.stop": "Dừng nhập giọng nói",
+  "dictation.listening": "Đang nhập giọng nói · Không tự gửi · Bấm mic để dừng",
+  "dictation.review": "Bản nháp đã sẵn sàng. Xem lại rồi bấm Gửi.",
+  "settings.gemini_ready": "Gemini Live dùng API Google đã kết nối. Chọn giọng và bấm Nghe thử.",
+  "settings.gemini_key": "Gemini Live cần Gemini API key ở Bộ não AI. Chưa có key thì chưa dùng được giọng Gemini.",
+  "settings.dictation_note": "Mic ở ô chat chỉ nhập văn bản. Nút điện thoại riêng mở cuộc gọi và tự trả lời."
 }

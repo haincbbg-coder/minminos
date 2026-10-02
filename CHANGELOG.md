@@ -6,7 +6,9 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.34] - 2026-10-03
 ### Cải thiện
-- Đang chuẩn bị chế độ mic nhập văn bản và lựa chọn giọng Live.
+- Mic ở ô chat chỉ nhập lời nói thành bản nháp, không tự gửi khi ngừng nói. Xem lại rồi bấm Gửi; dừng mic hoặc rời trang vẫn giữ chữ đã nhập.
+- Nút điện thoại riêng dùng để gọi Min Min và nhận trả lời trực tiếp; tránh bật nhầm cuộc gọi khi chỉ muốn nhập chữ.
+- Chọn Gemini Live hoặc ChatGPT Live ngay trong cài đặt Giọng nói. Gemini có nghe thử giọng bằng lời chào Min Min, không mở mic; cần Gemini API key ở Bộ não AI.
 
 ## [26.10.33] - 2026-10-03
 ### Sửa lỗi
