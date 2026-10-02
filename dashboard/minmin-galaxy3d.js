@@ -347,7 +347,7 @@
     if (ctl) {
       ctl.enableDamping = true;
       ctl.dampingFactor = 0.08;
-      ctl.autoRotate = !giamChuyenDong && tocDoQuay() > 0;
+      ctl.autoRotate = tocDoQuay() > 0;
       ctl.autoRotateSpeed = 0.35 * tocDoQuay();
       var hen = null, the = self.__mmThe;
       ctl.addEventListener("start", function () { ctl.autoRotate = false; clearTimeout(hen); });
@@ -370,7 +370,7 @@
       }, true);
       ctl.addEventListener("end", function () {
         clearTimeout(hen);
-        if (!giamChuyenDong) hen = setTimeout(function () { if (self.__mmThe === the) ctl.autoRotate = tocDoQuay() > 0; }, 8000);
+        hen = setTimeout(function () { if (self.__mmThe === the) ctl.autoRotate = tocDoQuay() > 0; }, 8000);
       });
     }
 
@@ -460,11 +460,13 @@
   function tocDoQuay() {
     var v = NaN;
     try { v = parseFloat(localStorage.getItem(KHOA_QUAY)); } catch (e) {}
-    return isFinite(v) ? Math.max(0, Math.min(6, v)) : 1;
+    return isFinite(v) ? Math.max(0, Math.min(6, v)) : (giamChuyenDong ? 0 : 1);
   }
   function thanhQuay(self) {
     var cha = self.container && self.container.parentElement;
-    if (!cha || cha.querySelector(".mm-cau-quay")) return;
+    if (!cha) return;
+    var old = cha.querySelector(".mm-cau-quay");
+    if (old) old.remove();
     var hop = document.createElement("div");
     hop.className = "mm-cau-quay";
     hop.innerHTML = '<span class="mm-cq-ic" aria-hidden="true">⟳</span>' +
@@ -479,7 +481,7 @@
       try { localStorage.setItem(KHOA_QUAY, String(v)); } catch (e) {}
       ghi(v);
       var ctl = self.__mmCtl;
-      if (ctl) { ctl.autoRotateSpeed = 0.35 * v; ctl.autoRotate = v > 0 && !giamChuyenDong; }
+      if (ctl) { ctl.autoRotateSpeed = 0.35 * v; ctl.autoRotate = v > 0; }
     });
     ["pointerdown", "wheel", "touchstart"].forEach(function (ev) {
       hop.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: true });

@@ -70,3 +70,25 @@ body.on-chat .chatpage-main.edit-on > .chatpage-slot > .hud-voice { grid-row:8; 
 :root[data-theme="light"] :is(.mm-library-toggle,.mm-library-close,.mm-progress,.mm-asset) { background:var(--nm-bg); box-shadow:var(--nm-out-sm); }
 :root[data-theme="light"] :is(.mm-library-search input,.mm-progress-track,.mm-library-tabs button[aria-selected="true"]) { background:var(--nm-bg); box-shadow:var(--nm-in-sm); }
 :root[data-theme="light"] .mm-progress-track span { background:var(--nm-blue); }
+
+/* Compact modes retain status, percentage and reachable call controls. */
+.call-collapse, .mm-progress-collapse { flex:none; width:44px; height:44px; border:0; border-radius:50%; background:var(--bg2); color:var(--text); font-size:24px; cursor:pointer; box-shadow:var(--nm-out); }
+.call-bar[data-compact="true"] { display:flex; flex-wrap:wrap; gap:8px; padding:6px 10px; border-radius:20px; }
+.call-bar[data-compact="true"] .call-engine { display:none; }
+.call-bar[data-compact="true"] .call-state { flex:1; min-width:70px; font-size:12px; }
+.call-bar[data-compact="true"] .call-btn { width:44px; height:44px; min-width:44px; font-size:0; padding:0; gap:0; }
+.call-bar[data-compact="true"] .call-clock { font-size:11px; }
+.call-bar[data-compact="true"] .call-resume { flex-basis:100%; padding:5px; }
+.mm-progress[data-compact="true"], #minminProgress[data-compact="true"] { padding:5px 10px; }
+#minminProgress[data-compact="true"] .mm-motion-mark, #minminProgress[data-compact="true"] .mm-progress-foot { display:none; }
+#minminProgress[data-compact="true"] .mm-progress-head strong { font-size:16px; }
+#minminProgress[data-compact="true"] .mm-progress-head small { margin:0; font-size:10px; }
+#minminProgress[data-compact="true"] .mm-progress-track { height:3px; margin-top:3px; }
+@media(max-width:600px) {
+  .call-bar .call-state { grid-column:2 / 4; }
+  .call-bar .call-collapse { grid-column:4; grid-row:1; justify-self:end; }
+  .hud-top { filter:none; backdrop-filter:none; -webkit-backdrop-filter:none; opacity:1; background:var(--nm-bg, var(--bg2)); }
+  .hud-top button, .hud-top .model-pill { text-shadow:none; filter:none; }
+}
+html.mm-galaxy[data-theme="light"] .hud-center { background:var(--nm-bg); }
+html.mm-galaxy[data-theme="light"] .hud-center::after { inset:auto; top:50%; left:50%; width:min(70%, 350px); aspect-ratio:1; height:auto; transform:translate(-50%, -50%); border-radius:50%; background:radial-gradient(circle at 32% 25%, #ffffff90, #ffffff08 55%, #b9a89528 100%); box-shadow:inset 9px 9px 24px #ffffff65, inset -10px -12px 26px #aa99b82b, 10px 14px 28px #c9bfb533; pointer-events:none; }

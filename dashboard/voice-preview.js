@@ -1,9 +1,12 @@
 /* Genuine selected ChatGPT voice with synthetic silence: no microphone permission or recording. */
 (function () {
   "use strict";
-  let current = null;
+  let current = null, pendingPreview = null;
   function stop() { if (current) current(); }
   async function play(voice, status, provider = "chatgpt") {
+    if (pendingPreview && pendingPreview.voice === voice && pendingPreview.provider === provider) {
+      return pendingPreview.resume();
+    }
     stop();
     const pcm = provider === "gemini";
     const pc = pcm ? null : new RTCPeerConnection();
@@ -15,6 +18,13 @@
     audio.autoplay = true;
     // Unlock audio during the click for Safari/iPhone; no input device is opened.
     let audioContext = null, audioSource = null, transcript = "";
+    let previousAudioSession = null;
+    try {
+      if (navigator.audioSession) {
+        previousAudioSession = navigator.audioSession.type;
+        navigator.audioSession.type = "playback";
+      }
+    } catch (_) {}
     try {
       const Context = window.AudioContext || window.webkitAudioContext;
       if (Context) { audioContext = new Context(); audioContext.resume().catch(() => {}); }
@@ -22,12 +32,13 @@
     const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://")
       + location.host + "/ws/voice-preview?voice=" + encodeURIComponent(voice) + "&provider=" + encodeURIComponent(provider));
     ws.binaryType = "arraybuffer";
-    let timer, ended = false, doneTimer, silence = null, silentOutput = null;
+    let timer, ended = false, doneTimer, silence = null, silentOutput = null, playbackStarted = false, previewReady = false;
     const finish = () => {
       if (ended) return;
-      ended = true;
+      ended = true; pendingPreview = null;
       clearTimeout(timer); clearTimeout(doneTimer);
       audio.pause(); audio.srcObject = null;
+      try { if (previousAudioSession !== null) navigator.audioSession.type = previousAudioSession; } catch (_) {}
       if (silence) { silence.stop(); silence.disconnect(); }
       if (silentOutput) silentOutput.stream.getTracks().forEach(track => track.stop());
       if (audioSource) audioSource.disconnect();
@@ -43,6 +54,11 @@
     status("Đang mở giọng nghe thử " + (pcm ? "Gemini Live" : "ChatGPT Live") + "…");
     // The realtime model advances with incoming audio. Generate zeros, never capture a mic.
     if (!audioContext) { fail(); return; }
+    // Keep an actual output connected during the original gesture on iOS.
+    if (pcm) {
+      silence = audioContext.createConstantSource(); silence.offset.value = 0;
+      silence.connect(audioContext.destination); silence.start();
+    }
     if (!pcm) {
     silentOutput = audioContext.createMediaStreamDestination();
     silence = audioContext.createConstantSource();
@@ -69,8 +85,8 @@
       if (pc.connectionState === "failed") fail();
     };
     }
-    ws.onerror = fail;
-    ws.onclose = () => { if (!ended) fail(); };
+    ws.onerror = () => { if (!previewReady) fail(); };
+    ws.onclose = () => { if (!ended && !previewReady && !playbackStarted) fail(); };
     ws.onmessage = async e => {
       try {
         if (pcm && e.data instanceof ArrayBuffer) {
@@ -113,15 +129,30 @@
             const buffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
             const values = buffer.getChannelData(0);
             for (let i = 0; i < values.length; i++) values[i] = samples.getInt16(i * 2, true) / 32768;
-            await audioContext.resume();
-            if (ended) return;
-            if (audioContext.state !== "running") return fail();
-            const source = audioContext.createBufferSource();
-            source.buffer = buffer; source.connect(audioContext.destination); sources.add(source);
-            source.onended = () => { sources.delete(source); source.disconnect(); };
-            nextAudio = audioContext.currentTime + 0.05;
-            source.start(nextAudio); nextAudio += buffer.duration;
-            status("Đang nghe thử: " + transcript);
+            previewReady = true;
+            const startBuffer = async () => {
+              try { await audioContext.resume(); } catch (_) {}
+              if (ended) return;
+              if (audioContext.state !== "running") {
+                pendingPreview = { voice, provider, resume: startBuffer };
+                status("Giọng đã sẵn sàng. Bấm Nghe thử lần nữa để phát trên iPhone.");
+                return;
+              }
+              pendingPreview = null; playbackStarted = true;
+              clearTimeout(timer);
+              const source = audioContext.createBufferSource();
+              source.buffer = buffer; source.connect(audioContext.destination); sources.add(source);
+              source.onended = () => {
+                sources.delete(source); source.disconnect();
+                if (!ended) { status("Đã nghe thử giọng Min Min."); finish(); }
+              };
+              nextAudio = audioContext.currentTime + 0.05;
+              source.start(nextAudio); nextAudio += buffer.duration;
+              status("Đang nghe thử: " + transcript);
+              doneTimer = setTimeout(() => { status("Đã nghe thử giọng Min Min."); finish(); }, Math.max(3000, buffer.duration * 1000 + 1000));
+            };
+            await startBuffer();
+            return;
           }
           doneTimer = setTimeout(() => { status("Đã nghe thử giọng Min Min."); finish(); }, pcm ? Math.max(3000, (nextAudio - audioContext.currentTime) * 1000 + 300) : 3000);
         } else if (data.type === "error") fail();

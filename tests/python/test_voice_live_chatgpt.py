@@ -175,7 +175,7 @@ async def main():
     check("kết quả nói ra không quá 600 ký tự", len(sp["text"]) <= 600)
 
     await prov.send_text("Mở trang kết nối")
-    check("chữ gõ đi appendText", call(fake, "thread/realtime/appendText") == [{"threadId": "th-9", "text": "Mở trang kết nối"}])
+    check("chữ gõ đi appendText", call(fake, "thread/realtime/appendText")[-1:] == [{"threadId": "th-9", "text": "Mở trang kết nối"}])
 
     fake.push("thread/realtime/closed", reason="server_error")
     ev = await asyncio.wait_for(agen.__anext__(), 2)

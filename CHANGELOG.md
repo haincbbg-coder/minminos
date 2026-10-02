@@ -6,7 +6,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.42] - 2026-10-03
 ### Sửa lỗi
-- Cải thiện quả cầu, thanh gọi gọn và phát giọng trên điện thoại.
+- Quả cầu tôn trọng tốc độ quay đã chọn, kể cả khi điện thoại bật giảm chuyển động. Nền khớp tông sáng có chiều sâu của Min Min.
+- Thanh cuộc gọi và tiến độ có mũi tên thu gọn riêng, vẫn thấy trạng thái và phần trăm; thanh đầu trang điện thoại dùng nền rõ nét.
+- ChatGPT Live nhận rõ kết quả đã hoàn tất để đọc, nhận cả lời đọc chỉ gửi transcript cuối, tránh thử đọc lại nhầm.
+- Gemini nghe thử giữ âm thanh đến hết khi kết nối đóng. Nếu iPhone chặn phát tự động, bấm Nghe thử lần nữa phát bản đã tạo.
 
 ## [26.10.41] - 2026-10-03
 ### Sửa lỗi
