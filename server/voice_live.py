@@ -1056,6 +1056,10 @@ class ChatGPTLive(LiveProvider):
         self._user_last, self._user_last_at = str(text), time.monotonic()
         await self.srv.request("thread/realtime/appendText", {"threadId": self.thread_id, "text": str(text)})
 
+    async def speak_text(self, text: str):
+        """Read fixed preview text; appendText only adds context, it does not request speech."""
+        await self.srv.request("thread/realtime/appendSpeech", {"threadId": self.thread_id, "text": str(text)})
+
     async def send_tool_result(self, call_id: str, name: str, result: str):
         """Xếp lời đọc kết quả vào hàng, trả về ngay (route không phải đứng chờ model đọc xong)."""
         self._speech_q.append(speakable(result) or "Em chưa có kết quả.")

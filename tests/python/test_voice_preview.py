@@ -16,7 +16,7 @@ class PreviewTests(unittest.IsolatedAsyncioTestCase):
             async def start_webrtc(self, sdp):
                 self.offers.append(sdp)
                 return "answer"
-            async def send_text(self, text): self.texts.append(text)
+            async def speak_text(self, text): self.texts.append(text)
             async def events(self):
                 yield {"type": "tool_call", "name": "ask_javis"}
                 await asyncio.Event().wait()

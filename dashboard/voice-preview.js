@@ -1,4 +1,4 @@
-/* Genuine selected ChatGPT voice, receive-only: no microphone permission or recording. */
+/* Genuine selected ChatGPT voice with synthetic silence: no microphone permission or recording. */
 (function () {
   "use strict";
   let current = null;
@@ -16,12 +16,14 @@
     } catch (_) {}
     const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://")
       + location.host + "/ws/voice-preview?voice=" + encodeURIComponent(voice));
-    let timer, ended = false, doneTimer;
+    let timer, ended = false, doneTimer, silence = null, silentOutput = null;
     const finish = () => {
       if (ended) return;
       ended = true;
       clearTimeout(timer); clearTimeout(doneTimer);
       audio.pause(); audio.srcObject = null;
+      if (silence) { silence.stop(); silence.disconnect(); }
+      if (silentOutput) silentOutput.stream.getTracks().forEach(track => track.stop());
       if (audioSource) audioSource.disconnect();
       if (audioContext) audioContext.close().catch(() => {});
       pc.close(); ws.close();
@@ -31,8 +33,17 @@
     const fail = () => { status("Không phát được giọng nghe thử. Hãy thử lại."); finish(); };
     timer = setTimeout(fail, 60000);
     status("Đang mở giọng nghe thử ChatGPT Live…");
-    pc.addTransceiver("audio", { direction: "recvonly" });
-    pc.createDataChannel("oai-events");
+    // The realtime model advances with incoming audio. Generate zeros, never capture a mic.
+    if (!audioContext) { fail(); return; }
+    silentOutput = audioContext.createMediaStreamDestination();
+    silence = audioContext.createConstantSource();
+    silence.offset.value = 0;
+    silence.connect(silentOutput); silence.start();
+    pc.addTrack(silentOutput.stream.getAudioTracks()[0], silentOutput.stream);
+    const channel = pc.createDataChannel("oai-events");
+    channel.onopen = () => {
+      if (!ended) ws.send(JSON.stringify({ type: "sample" }));
+    };
     pc.ontrack = e => {
       if (ended) return;
       audio.srcObject = e.streams[0] || new MediaStream([e.track]);
@@ -66,7 +77,7 @@
           if (!ended) ws.send(JSON.stringify({ type: "webrtc_offer", sdp: pc.localDescription.sdp }));
         } else if (data.type === "webrtc_answer") {
           await pc.setRemoteDescription({ type: "answer", sdp: data.sdp });
-          if (!ended) ws.send(JSON.stringify({ type: "sample" }));
+
         } else if (data.type === "transcript" && data.role === "assistant") {
           transcript += data.text || "";
           status("Đang nghe thử: " + transcript);
