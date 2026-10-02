@@ -19,6 +19,23 @@ def invoice(number):
 
 
 class EnvelopeRecovery(unittest.TestCase):
+    def test_rescan_portal_pdf_with_changing_bytes_reuses_email_record(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(hd, 'goc_du_lieu', return_value=Path(folder)):
+            scanner = Mock(last_uid=999)
+            records = [{'subject':'Invoice', 'from':'vendor@example.com', 'date':'2026-07-23',
+                        '_source_id':'same-email', 'lookup_url':'https://example.com/invoice/1',
+                        'pdf': b'%PDF-' + str(i).encode()} for i in range(2)]
+            def scan(*args, **kwargs):
+                kwargs['on_record'](records.pop(0))
+                return []
+            scanner.scan.side_effect = scan
+            with patch.object(hd,'ds_gmail',return_value={'mail@example.com':{'kieu':'google','refresh':'fake'}}), patch.object(hd,'giai_ma',return_value='fake'), patch.object(hd,'tao_bo_quet_google',return_value=scanner):
+                first = hd.quet_gmail(Mock(),dt.date(2026,1,1),dt.date(2026,12,31),False)
+                second = hd.quet_gmail(Mock(),dt.date(2026,1,1),dt.date(2026,12,31),False)
+            self.assertEqual(first['moi'], 1)
+            self.assertEqual(second['moi'], 0)
+            self.assertEqual(second['tong'], 1)
+
     def test_scan_streams_before_reading_next_email(self):
         mod = hd.thd('gmail_scan')
         msg = EmailMessage()

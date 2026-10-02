@@ -7,6 +7,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.25] - 2026-10-02
 ### Sửa lỗi
 - Dùng mã tra cứu EFY đã tìm được từ Gmail khi mở trang nhà phát hành.
+- Quét lại Gmail không tạo thêm dòng chỉ vì trang hãng tạo một file PDF có dữ liệu kỹ thuật khác lần trước.
 
 ## [26.10.24] - 2026-10-02
 ### Sửa lỗi
