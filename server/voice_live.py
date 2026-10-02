@@ -754,7 +754,7 @@ FOLLOWUP_ACK = "Đã ghi nhận. Việc đang làm sẽ báo kết quả ngay kh
 _ACK_WORDS = frozenset("""
 ok oke okie okay ừ ừm ờ ừa vâng dạ được rồi nhé nha nhá nhỉ nghen thế vậy thì là xong xem kiểm tra
 báo lại cho anh em chị mình tôi tớ bạn biết đi cảm ơn cám chờ đợi tí chút xíu nhanh lên cứ làm khi nào
-có kết quả đó đấy nghe hiểu ạ à nhớ giúp hộ với luôn sau javis jarvis
+có kết quả đó đấy nghe hiểu ạ à nhớ giúp hộ với luôn sau javis jarvis minmin min ơi
 sure yes yeah yep thanks thank you let me know when done fine great cool alright got it please
 """.split())
 _ACK_MAX_WORDS = 16

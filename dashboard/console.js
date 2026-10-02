@@ -6556,7 +6556,7 @@
     $("vcEleven").hidden = !isEleven();
     $("vcElKeySet").hidden = !tts.elevenlabs_key_set;
     $("vcElVoice").value = tts.elevenlabs_voice || "";
-    $("vcElModel").value = v.elevenlabs_model === "eleven_multilingual_v2" ? "auto" : (v.elevenlabs_model || "auto");
+    $("vcElModel").value = tts.elevenlabs_model === "eleven_multilingual_v2" ? "auto" : (tts.elevenlabs_model || "auto");
     sel.onchange = async () => {
       const val = sel.value;
       if (call.engine === "chatgpt") { await luuGiong({ chatgpt_voice: val }); return; }

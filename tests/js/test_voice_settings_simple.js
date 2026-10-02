@@ -181,6 +181,12 @@ const base = (call, extra = {}) => Object.assign({
   check("Cơ bản + OpenAI: đổi giọng lưu cả nhà cung cấp lẫn giọng",
     JSON.stringify(r.saves.at(-1)) === '["voice",{"tts_provider":"openai","openai_tts_voice":"coral"}]');
 
+  r = await run(base({ engine: "basic", setting: "basic", reason: "chosen" },
+    { tts: { provider: "elevenlabs", elevenlabs_model: "eleven_v3" } }));
+  check("MinMin: giữ model ElevenLabs đã lưu", r.els.vcElModel.value === "eleven_v3");
+  r.els.vcElModel.value = "eleven_flash_v2_5"; await r.els.vcElModel.onchange();
+  check("MinMin: đổi model ElevenLabs tự lưu", r.saves.at(-1)[1].elevenlabs_model === "eleven_flash_v2_5");
+
   // 3d. Bộ não trả lời nhanh (0.65.25, chủ dự án xin trả lại ô này để tự chỉnh).
   const CHOICES = [{ id: "antigravity", label: "Antigravity", available: false },
     { id: "codex", label: "ChatGPT", available: true }, { id: "groq", label: "Groq", available: false }];

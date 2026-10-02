@@ -29,10 +29,11 @@ import voice_live
 class FollowupWordsTests(unittest.TestCase):
     def test_ack_words(self):
         for text in ("Ok, xem xong kiểm tra xong thì báo anh nhé", "ok em", "Dạ được rồi, cảm ơn em nhé",
-                     "Xong thì báo anh nha", "ok Javis, làm luôn đi", "okay let me know when done"):
+                     "Xong thì báo anh nha", "ok Javis, làm luôn đi", "okay let me know when done",
+                     "Min Min ơi, xong thì báo anh nhé", "ok MinMin"):
             self.assertTrue(voice_live.is_followup_ack(text), text)
         for text in ("", "thêm cả số đơn huỷ nữa", "kiểm tra cả email nữa", "thôi không cần nữa",
-                     "à mà doanh thu tháng trước bao nhiêu", "Ok, xem lịch tuần này luôn"):
+                     "à mà doanh thu tháng trước bao nhiêu", "Ok, xem lịch tuần này luôn", "MinMin mở email mới"):
             self.assertFalse(voice_live.is_followup_ack(text), text)
 
     def test_same_request(self):

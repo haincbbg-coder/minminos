@@ -12433,6 +12433,7 @@ async def voice_options(brains: int = 1):
                 "openai_voice": v.get("openai_tts_voice") or "alloy",
                 "openai_key_set": bool(m.get("openai_api_key")),
                 "elevenlabs_voice": v.get("elevenlabs_voice") or "",
+                "elevenlabs_model": v.get("elevenlabs_model") or "auto",
                 "elevenlabs_key_set": bool(str(v.get("elevenlabs_key") or "").strip())},
     }
 
