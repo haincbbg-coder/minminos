@@ -95,5 +95,14 @@ body.on-chat .chatpage-main.edit-on > .chatpage-slot > .hud-voice { grid-row:8; 
 @keyframes mm-progress-shine { to { transform:translateX(100%); } }
 @keyframes mm-panel-in { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
 @media(max-width:1279px) { .mm-library { position:absolute; right:0; top:0; bottom:0; z-index:20; box-shadow:-15px 0 45px #183c4a22; width:min(360px,calc(100vw - 28px)); } body.on-chat .chatpage-main { padding:16px; } }
-@media(max-width:860px) { body .rail { width:var(--rail-w); } body.on-chat .chatpage-main { padding:12px 10px; } .mm-library-toggle span { display:none; } .mm-progress { padding:10px 12px; } .mm-progress-head strong { font-size:20px; } .mm-progress-foot { font-size:8px; } }
+@media(max-width:860px) {
+  :root { --topbar-h:calc(58px + env(safe-area-inset-top,0px)); }
+  body .rail { width:min(280px,82vw); padding-top:max(20px,env(safe-area-inset-top,0px)); }
+  body .hud-top { height:var(--topbar-h); min-height:var(--topbar-h); }
+  body.on-chat .chatpage-main { padding:12px 10px; }
+  .mm-library-toggle span { display:none; }
+  .mm-progress { padding:10px 12px; }
+  .mm-progress-head strong { font-size:20px; }
+  .mm-progress-foot { font-size:8px; }
+}
 @media(prefers-reduced-motion:reduce) { .mm-library,.mm-motion-mark,.mm-progress-track span:after { animation:none!important; } .mm-progress-track span { transition:none; } }
