@@ -57,7 +57,8 @@ def _download(session, url):
     from .xmllink import _public_url, MAX_BYTES
     for _ in range(4):
         _public_url(url)
-        with session.get(url, timeout=60, allow_redirects=False, stream=True) as response:
+        response = session.get(url, timeout=60, allow_redirects=False, stream=True)
+        try:
             if response.status_code in (301, 302, 303, 307, 308):
                 url = urljoin(url, response.headers.get("Location", ""))
                 continue
@@ -70,6 +71,8 @@ def _download(session, url):
                     raise ProviderError("EFY: file vượt giới hạn 25 MB")
                 chunks.append(chunk)
             return b"".join(chunks)
+        finally:
+            response.close()
     raise ProviderError("EFY: đường dẫn tải chuyển hướng quá nhiều lần")
 
 

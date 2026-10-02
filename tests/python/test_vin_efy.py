@@ -3,7 +3,7 @@ import base64
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'apps' / 'tai-hoa-don'))
 from thd.providers import ProviderError, vinhoadon as V, efy as E
@@ -94,6 +94,15 @@ class EfyTests(unittest.TestCase):
         with self.assertRaises(ProviderError):
             E._download(s, 'https://127.0.0.1/file.pdf')
         s.get.assert_not_called()
+
+    def test_download_closes_curl_response_without_context_manager(self):
+        response = Mock(status_code=200)
+        response.iter_content.return_value = [PDF]
+        session = Mock()
+        session.get.return_value = response
+        with patch('thd.providers.xmllink._public_url'):
+            self.assertEqual(E._download(session, 'https://ihoadon.vn/file.pdf'), PDF)
+        response.close.assert_called_once()
 
 
 if __name__ == '__main__':
