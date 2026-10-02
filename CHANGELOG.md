@@ -2,14 +2,15 @@
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
 
-Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [26.10.35] - 2026-10-03
+Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
+
+## [26.10.37] - 2026-10-03
 ### Cải thiện
 - Mic nhập chữ chờ nhả cuộc gọi cũ, hiện chữ trực tiếp và giữ cả chữ cuối khi bấm dừng. Không còn báo có bản nháp khi chưa nhận được chữ; lỗi mic hoặc mạng được báo rõ.
 - Nút tắt mic và cúp máy tròn, lớn, có hiệu ứng. Cuộc gọi hiện tiến độ lấy dữ liệu/soạn câu trả lời và đổi nút Gửi thành Dừng khi đang xử lý.
 - ChatGPT Live đọc kết quả theo từng đoạn, giữ phần cuối thay vì cắt 600 ký tự. Đọc thiếu sẽ thử tiếp phần chưa đọc; nếu vẫn lỗi có nút Đọc tiếp kết quả.
 - Thêm Nhanh, Cân bằng, Kỹ: ưu tiên số liệu đã có đúng ngày/phạm vi hoặc yêu cầu đối chiếu lại. Mức Nhanh giữ kết nối lâu hơn khi im và nhắc rõ thời điểm khi dùng lại kết quả.
 
-## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
 ## [26.10.36] - 2026-10-03
 ### Sửa lỗi
