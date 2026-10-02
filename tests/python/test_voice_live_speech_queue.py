@@ -169,6 +169,8 @@ class SpeechQueueTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 1))
         await self.prov.cancel_readback()
         self.assertIn("Hai.", self.prov._speech_failed)
+        await self.prov.cancel_readback()  # duplicate stop from transcript and tool handoff
+        self.assertIn("Hai.", self.prov._speech_failed)
         self.prov._pushed_at = 0
         await self.prov.resume_readback()
         self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 2))

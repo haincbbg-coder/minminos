@@ -1147,7 +1147,8 @@ class ChatGPTLive(LiveProvider):
 
     async def cancel_readback(self):
         self._speech_epoch += 1
-        self._speech_failed = " ".join([unread_suffix(self._speech_current, self._speech_heard)] + self._speech_q)
+        if self._speech_current or self._speech_q:
+            self._speech_failed = " ".join([unread_suffix(self._speech_current, self._speech_heard)] + self._speech_q)
         self._speech_q.clear()
         if self._speech_task and not self._speech_task.done():
             self._speech_task.cancel()
