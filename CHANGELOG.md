@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.41] - 2026-10-03
+### Sửa lỗi
+- Khôi phục tông sáng có chiều sâu và kiểu nút cũ; giữ biểu tượng và bố cục hội thoại mới.
+
 ## [26.10.40] - 2026-10-03
 ### Sửa lỗi
 - Tải PDF Petrolimex dùng đúng trình duyệt do MinMin quản lý trên VPS.
