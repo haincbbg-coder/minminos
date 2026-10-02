@@ -67,7 +67,15 @@
       return dir * (field === "amount" ? x-y : String(x || "").localeCompare(String(y || ""),"vi",{numeric:true}));
     });
   }
-  var api = {period:period,filter:filter,date:date,isBank:isBank};
+  function paginate(rows, page, size) {
+    size = Number(size);
+    if ([10,30,100,500,1000].indexOf(size) < 0) size = size === 0 ? Math.max(rows.length,1) : 30;
+    var pages = Math.max(1, Math.ceil(rows.length / size));
+    page = Math.min(pages, Math.max(1, Math.floor(Number(page) || 1)));
+    var start = (page - 1) * size;
+    return {rows:rows.slice(start,start+size),page:page,pages:pages,start:start,total:rows.length};
+  }
+  var api = {period:period,filter:filter,date:date,isBank:isBank,paginate:paginate};
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.InvoiceUI = api;
 })(typeof window !== "undefined" ? window : this);

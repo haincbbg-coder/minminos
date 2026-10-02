@@ -4581,6 +4581,8 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         # Giọng của ChatGPT Live (realtime v3 chỉ nhận 9 giọng riêng, mặc định juniper).
         if patch.get("chatgpt_voice") in voice_live.CHATGPT_VOICES:
             v["chatgpt_voice"] = patch["chatgpt_voice"]
+        if patch.get("live_pace") in ("slow", "normal", "fast"):
+            v["live_pace"] = patch["live_pace"]
         # Đường gọi của nút mic (0.65.18): auto | chatgpt | api | basic (voice_call.ENGINES).
         if patch.get("call_engine") in voice_call.ENGINES:
             v["call_engine"] = patch["call_engine"]
@@ -12497,7 +12499,7 @@ async def voice_options(brains: int = 1):
         "ok": True,
         "voice": dict(
             {k: v.get(k, "") for k in ("mode", "brain_provider", "brain_model", "stt_provider",
-                                       "stt_model", "live_provider", "live_model", "live_voice",
+                                       "stt_model", "live_provider", "live_model", "live_voice", "live_pace",
                                        "hotwords")},
             # Model đã chọn theo từng bộ não giọng (0.65.26), {bộ não: model}.
             brain_models=v.get("brain_models") if isinstance(v.get("brain_models"), dict) else {},
@@ -12605,8 +12607,11 @@ async def voice_preview_ws(ws: WebSocket, voice: str = Query("juniper"), provide
     await ws.accept()
     import voice_preview
     prompt = "Bạn là Min Min. Chỉ đọc câu nghe thử được yêu cầu bằng tiếng Việt tự nhiên, không thêm lời và không giao việc."
+    cfg = cfgmod.read_settings()
+    pace = {"slow": "Nói chậm rãi, ngắt nghỉ rõ giữa các ý.", "normal": "Nói với tốc độ tự nhiên, vừa phải.",
+            "fast": "Nói nhanh gọn nhưng vẫn rõ từng từ."}.get((cfg.get("voice") or {}).get("live_pace"), "")
+    prompt += "\n" + pace
     if provider == "gemini":
-        cfg = cfgmod.read_settings()
         key = str((cfg.get("model") or {}).get("gemini_api_key") or "").strip()
         if not key:
             await ws.send_json({"type": "error", "message": "Cần Gemini API key ở Bộ não AI."})

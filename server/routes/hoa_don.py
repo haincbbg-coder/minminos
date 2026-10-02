@@ -319,7 +319,18 @@ def khoa_hd(inv: dict) -> str:
 
 
 def ngay_hd(inv: dict) -> str:
-    return str(inv.get("tdlap") or inv.get("ngay") or "")[:10]
+    source = str((inv.get("_detail") or {}).get("ngay") or "")
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", source):
+        return source
+    raw = str(inv.get("tdlap") or inv.get("ngay") or "")
+    if "T" in raw:
+        try:
+            stamp = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            if stamp.tzinfo is not None:
+                return stamp.astimezone(dt.timezone(dt.timedelta(hours=7))).date().isoformat()
+        except ValueError:
+            pass
+    return raw[:10]
 
 
 def _tuong_doi(p: Optional[str]) -> Optional[str]:
@@ -1945,6 +1956,17 @@ def register(app: FastAPI) -> None:
                                     ten_trong = str(f.relative_to(_thu_muc_mst(mst)))
                                 except ValueError:
                                     ten_trong = f.name
+                                if d.get("layout") in ("invoice", "supplier"):
+                                    # Stable identity prevents two invoices with the same filename colliding.
+                                    import hashlib
+                                    identity = hashlib.sha256(khoa_hd(inv).encode()).hexdigest()[:16]
+                                    if d["layout"] == "invoice":
+                                        folder = "HoaDon_" + str(inv.get("shdon") or "").strip() + "_" + identity
+                                    else:
+                                        seller = _ben(inv)
+                                        folder = str(seller.get("mst") or "KhongMST") + "_" + str(seller.get("ten") or "NhaCungCap")
+                                    folder = re.sub(r'[^\w .-]', '_', folder, flags=re.UNICODE).strip(' .')[:140] or "HoaDon"
+                                    ten_trong = folder + "/" + identity + "_" + t + "_" + f.name
                                 z.write(f, ten_trong)
                                 n += 1
                             doi_soat.append({"hoa_don": khoa_hd(inv), "loai_file": t,

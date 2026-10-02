@@ -8,6 +8,8 @@
     const pcm = provider === "gemini";
     const pc = pcm ? null : new RTCPeerConnection();
     const sources = new Set();
+    const pcmChunks = [];
+    let pcmBytes = 0;
     let nextAudio = 0;
     const audio = new Audio();
     audio.autoplay = true;
@@ -73,17 +75,9 @@
       try {
         if (pcm && e.data instanceof ArrayBuffer) {
           if (ended) return;
-          const samples = new DataView(e.data);
-          const count = Math.floor(samples.byteLength / 2);
-          if (!count) return;
-          const buffer = audioContext.createBuffer(1, count, 24000);
-          const values = buffer.getChannelData(0);
-          for (let i = 0; i < count; i++) values[i] = samples.getInt16(i * 2, true) / 32768;
-          const source = audioContext.createBufferSource();
-          source.buffer = buffer; source.connect(audioContext.destination); sources.add(source);
-          source.onended = () => { sources.delete(source); source.disconnect(); };
-          nextAudio = Math.max(nextAudio, audioContext.currentTime);
-          source.start(nextAudio); nextAudio += buffer.duration;
+          pcmBytes += e.data.byteLength;
+          if (pcmBytes > 8 * 1024 * 1024) return fail();
+          pcmChunks.push(new Uint8Array(e.data));
           return;
         }
         const data = JSON.parse(e.data);
@@ -107,6 +101,28 @@
           status("Đang nghe thử: " + transcript);
           // Transcript can finish slightly before the last audio packets arrive.
         } else if (data.type === "turn_done") {
+          if (pcm) {
+            // Preview is a short sentence. Buffer it once to avoid underruns/clicks
+            // between network packets and preserve samples split across packets.
+            if (!pcmBytes || pcmBytes % 2) return fail();
+            const bytes = new Uint8Array(pcmBytes);
+            let offset = 0;
+            pcmChunks.forEach(chunk => { bytes.set(chunk, offset); offset += chunk.length; });
+            pcmChunks.length = 0; pcmBytes = 0;
+            const samples = new DataView(bytes.buffer);
+            const buffer = audioContext.createBuffer(1, bytes.length / 2, 24000);
+            const values = buffer.getChannelData(0);
+            for (let i = 0; i < values.length; i++) values[i] = samples.getInt16(i * 2, true) / 32768;
+            await audioContext.resume();
+            if (ended) return;
+            if (audioContext.state !== "running") return fail();
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer; source.connect(audioContext.destination); sources.add(source);
+            source.onended = () => { sources.delete(source); source.disconnect(); };
+            nextAudio = audioContext.currentTime + 0.05;
+            source.start(nextAudio); nextAudio += buffer.duration;
+            status("Đang nghe thử: " + transcript);
+          }
           doneTimer = setTimeout(() => { status("Đã nghe thử giọng Min Min."); finish(); }, pcm ? Math.max(3000, (nextAudio - audioContext.currentTime) * 1000 + 300) : 3000);
         } else if (data.type === "error") fail();
       } catch (_) { if (!ended) fail(); }

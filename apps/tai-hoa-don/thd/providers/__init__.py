@@ -47,11 +47,12 @@ from . import myinvoice     # noqa: E402
 from . import smartsign     # noqa: E402
 from . import vinhoadon     # noqa: E402
 from . import cyberbill     # noqa: E402
+from . import petrolimex    # noqa: E402
 from . import xmllink       # noqa: E402
 
 # Thứ tự = thứ tự thử nhận diện. Thêm hãng mới: viết module rồi thêm vào đây.
 # xmllink đặt cuối để nhận link độc lập, đồng thời làm dự phòng khi hãng tải thất bại.
-PROVIDERS = [misa, sapo, easyinvoice, bkav, viettel, htinvoice, kkvat, efy, myinvoice, smartsign, vinhoadon, cyberbill, xmllink]
+PROVIDERS = [misa, sapo, easyinvoice, bkav, viettel, htinvoice, kkvat, efy, myinvoice, smartsign, vinhoadon, cyberbill, petrolimex, xmllink]
 
 
 def detect(xml_bytes: bytes, inv: Optional[dict] = None):
@@ -118,6 +119,8 @@ def issuer_name(inv: dict) -> str:
     """Tên nhà phát hành hóa đơn của 1 hóa đơn (dựa MSTTCGP trong XML đã bóc)."""
     d = inv.get("_detail") or {}
     code = str(d.get("msttcgp") or "").strip()
+    if code == "0100684378" and "PETROLIMEX" in str(inv.get("nbten") or "").upper():
+        return petrolimex.NAME
     if not code:
         return ""
     return TCGP_NAME.get(code, f"NPH {code}")
@@ -150,6 +153,9 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
             d["url"] = url + ("&" if "?" in url else "?") + urlencode(q)
         return d
 
+    if petrolimex.detect(txt, inv or {}):
+        return std({"provider":petrolimex.NAME,"url":petrolimex.PORTAL,
+                    "code":petrolimex.find_code(txt,inv or {}),"method":"Mã tra cứu Fkey và CAPTCHA ảnh","mst":mst})
     # Viettel S-Invoice - captcha trượt; mã bí mật có trong XML
     if easyinvoice.detect(txt, inv or {}):
         c = easyinvoice.find_code(txt, inv or {})

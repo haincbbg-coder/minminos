@@ -1,5 +1,10 @@
 const assert = require('node:assert/strict');
 const ui = require('../../apps/tai-hoa-don/web/invoice-ui.js');
+const many = Array.from({length:2007},(_,i)=>i);
+assert.equal(ui.paginate(many,1,0).rows.length,2007,'All must not silently truncate at 2000');
+assert.deepEqual(ui.paginate(many,999,1000).rows,[2000,2001,2002,2003,2004,2005,2006]);
+assert.equal(ui.paginate([],5,30).page,1);
+assert.equal(ui.paginate(many,2,30).start,30);
 assert.deepEqual(ui.period('m2',2024),['2024-02-01','2024-02-29']);
 assert.deepEqual(ui.period('h1',2026),['2026-01-01','2026-06-30']);
 assert.deepEqual(ui.period('h2',2026),['2026-07-01','2026-12-31']);

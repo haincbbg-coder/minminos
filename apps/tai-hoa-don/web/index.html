@@ -101,8 +101,10 @@
                 <button type="button" class="nut" data-xuat="bang_ke">Bảng kê &amp; Tờ khai GTGT</button>
                 <button type="button" class="nut" data-xuat="chi_tiet">Chi tiết mặt hàng</button>
                 <details class="menu">
-                  <summary class="nut">ZIP file ▾</summary>
+                  <summary class="nut">Lưu file riêng (ZIP) ▾</summary>
                   <div class="menu-than">
+                    <label>Cách sắp xếp file<select id="zipLayout"><option value="invoice">Mỗi hóa đơn một thư mục</option><option value="supplier">Nhóm theo nhà cung cấp</option><option value="stored">Giữ cách xếp trong kho</option></select></label>
+                    <p class="nho">ZIP chứa từng file riêng, không gộp nội dung. Muốn in chung, chọn “Gộp PDF để in”.</p>
                     <label class="tich"><input type="checkbox" data-zip="xml" checked /> XML thuế</label>
                     <label class="tich"><input type="checkbox" data-zip="pdf" checked /> PDF Trống đồng</label>
                     <label class="tich"><input type="checkbox" data-zip="goc" checked /> PDF gốc NCC</label>
@@ -170,20 +172,22 @@
             </div>
 
             <div class="the" id="hopCanhBao" hidden>
-              <h2>Cảnh báo</h2>
+              <div class="section-heading"><h2>Cảnh báo hóa đơn</h2><button type="button" class="nut" id="collapseWarnings">Thu gọn cảnh báo</button></div>
               <div class="cuon"><table class="bang"><thead><tr><th>Mức</th><th>Loại</th><th>Số HĐ</th><th>Ngày</th><th>Đối tác</th><th>Nội dung</th></tr></thead><tbody id="bangCanhBao"></tbody></table></div>
             </div>
 
             <div class="the">
+              <h2>Danh sách hóa đơn TCT</h2>
+              <p class="nho">Tích ô đầu bảng để chọn toàn bộ kết quả đang lọc, kể cả các trang khác.</p>
               <div class="hang">
                 <input id="loc" type="search" placeholder="Lọc theo đối tác, MST, số hoá đơn" />
-                <span class="nho" id="soChon"></span>
+                <span class="selection-summary" id="soChon"></span>
               </div>
               <div class="cuon">
                 <table class="bang">
                   <thead><tr>
-                    <th><input type="checkbox" id="chonHet" aria-label="Chọn tất cả" /></th>
-                    <th>Ngày</th><th>Số</th><th>Ký hiệu</th><th>Đối tác</th><th>MST</th>
+                    <th><input type="checkbox" id="chonHet" aria-label="Chọn tất cả hóa đơn đang lọc, mọi trang" /></th>
+                    <th>STT</th><th>Ngày</th><th>Số</th><th>Ký hiệu</th><th>Đối tác</th><th>MST</th>
                     <th class="so">Tiền hàng</th><th class="so">Thuế</th><th class="so">Tổng</th>
                     <th>Trạng thái</th><th>File</th>
                   </tr></thead>
@@ -357,9 +361,11 @@
           <pre id="gLog"></pre>
         </div>
         <div class="the">
+          <h2>Danh sách hóa đơn Gmail</h2>
+          <p class="nho">Tích ô đầu bảng để chọn toàn bộ kết quả đang lọc, kể cả các trang khác.</p>
           <div class="cuon">
             <table class="bang">
-              <thead><tr><th><input id="gChonHet" type="checkbox" aria-label="Chọn tất cả Gmail đang lọc" /></th><th>Ngày HĐ / email</th><th>Số</th><th>Người bán</th><th>Hộp thư</th><th class="so">Tổng</th><th>Hãng HĐ</th><th>Trạng thái</th><th>Ghép kho</th><th>File</th></tr></thead>
+              <thead><tr><th><input id="gChonHet" type="checkbox" aria-label="Chọn tất cả Gmail đang lọc" /></th><th>STT</th><th>Ngày HĐ / email</th><th>Số</th><th>Người bán</th><th>Hộp thư</th><th class="so">Tổng</th><th>Hãng HĐ</th><th>Trạng thái</th><th>Ghép kho</th><th>File</th></tr></thead>
               <tbody id="bangGmail"></tbody>
             </table>
           </div>

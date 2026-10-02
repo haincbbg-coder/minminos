@@ -6552,6 +6552,14 @@
     tryBtn.hidden = call.engine === "api" && call.live_provider !== "gemini";   // giọng của Live qua API không có mẫu thu sẵn
     $("vcVoiceNote").hidden = !(basic && sel.value.startsWith("edge:"));
     $("vcRateRow").hidden = !basic;          // tốc độ đọc chỉ áp cho giọng đọc của đường Cơ bản
+    $("vcLivePaceBox").hidden = basic;
+    $("vcGeminiModelRow").hidden = call.live_provider !== "gemini" || call.engine !== "api";
+    const modelSelect = $("vcGeminiModel");
+    if (v.live_model && !Array.from(modelSelect.options).some(x => x.value === v.live_model)) modelSelect.add(new Option(v.live_model, v.live_model));
+    modelSelect.value = v.live_model || "";
+    modelSelect.onchange = async () => { await luuGiong({ live_model: modelSelect.value }); };
+    $("vcLivePace").value = v.live_pace || "normal";
+    $("vcLivePace").onchange = async () => { await luuGiong({ live_pace: $("vcLivePace").value }); };
     $("vcOpenaiNote").hidden = !basic || !!tts.openai_key_set;
     $("vcEleven").hidden = !isEleven();
     $("vcElKeySet").hidden = !tts.elevenlabs_key_set;
