@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.38] - 2026-10-03
+### Cải thiện
+- Tải hóa đơn BKAV tự tìm bằng định danh XML khi thiếu mã tra cứu. Petrolimex bằng mã trong XML, đối chiếu đúng hóa đơn trước khi lưu; sửa ngày hiển thị lệch múi giờ.
+- Phân trang TCT, Gmail và cảnh báo; thêm số thứ tự, thu gọn cảnh báo, hiển thị rõ số đã chọn và cách xếp file ZIP.
+- Nghe thử Gemini phát liền mạch; thêm nhịp nói Live, lựa chọn model và danh sách giọng.
+
 ## [26.10.37] - 2026-10-03
 ### Cải thiện
 - Mic nhập chữ chờ nhả cuộc gọi cũ, hiện chữ trực tiếp và giữ cả chữ cuối khi bấm dừng. Không còn báo có bản nháp khi chưa nhận được chữ; lỗi mic hoặc mạng được báo rõ.

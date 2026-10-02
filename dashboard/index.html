@@ -402,6 +402,13 @@
               <div class="qs-hint" id="vcVoiceNote" data-i18n="qs.voice_ml_note" hidden>Giọng đa ngôn ngữ hỗ trợ tiếng Việt.</div>
               <details class="qs-advanced" id="vcAdvanced">
                 <summary data-i18n="settings.vc_advanced">Nâng cao</summary>
+                <div id="vcLivePaceBox" hidden>
+                  <div class="qs-field" id="vcGeminiModelRow" hidden><label class="qs-lbl" for="vcGeminiModel">Model Gemini Live</label><select class="js-input" id="vcGeminiModel"><option value="" data-i18n="settings.vc_latest">Mặc định mới nhất</option><option value="gemini-3.8-live">Gemini 3.8 Live</option><option value="gemini-3.1-flash-live-preview">Gemini 3.1 Flash Live Preview</option></select></div>
+                  <div class="qs-field"><label class="qs-lbl" for="vcLivePace" data-i18n="settings.vc_live_pace">Nhịp nói Live</label>
+                    <select class="js-input" id="vcLivePace"><option value="slow" data-i18n="settings.vc_pace_slow">Chậm, rõ ràng</option><option value="normal" data-i18n="settings.vc_pace_normal">Tự nhiên</option><option value="fast" data-i18n="settings.vc_pace_fast">Nhanh, gọn</option></select>
+                  </div>
+                  <div class="qs-hint" data-i18n="settings.vc_pace_hint">Áp dụng cho lượt gọi và nghe thử tiếp theo. Đây là yêu cầu cách nói cho AI, không phải hệ số tốc độ chính xác; không thay đổi thời gian xử lý của nhà cung cấp.</div>
+                </div>
                 <!-- Bộ não trả lời nhanh + Model: CHỈ hiện khi cuộc gọi chạy đường Cơ bản (0.65.31, chủ dự
                      án góp ý 02/10). ChatGPT Live và Live qua API tự nghe, tự trả lời nên ô này không có
                      tác dụng; để hiện ở đó thì chọn Antigravity mà vẫn nghe ChatGPT trả lời, rất khó hiểu.

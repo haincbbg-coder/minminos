@@ -58,8 +58,10 @@ PROVIDERS = {
     "chatgpt": {"label": "ChatGPT Live (gói ChatGPT)", "key_field": None,
                 "default_model": "", "default_voice": "juniper", "voices": CHATGPT_VOICES, "transport": "webrtc"},
     "gemini": {"label": "Google Gemini Live (API)", "key_field": "gemini_api_key",
-               "default_model": "gemini-3.1-flash-live-preview",   # 03/2026; bản cũ: gemini-2.5-flash-native-audio-preview-12-2025
-               "default_voice": "Aoede", "voices": ["Aoede", "Puck", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Zephyr"],
+               "default_model": "gemini-3.8-live",   # Google Live capabilities, verified 2026-10-03.
+               "default_voice": "Aoede", "voices": ["Aoede", "Puck", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Zephyr",
+                   "Callirrhoe", "Autonoe", "Enceladus", "Iapetus", "Umbriel", "Algieba", "Despina", "Erinome", "Algenib", "Rasalgethi",
+                   "Laomedeia", "Achernar", "Alnilam", "Schedar", "Gacrux", "Pulcherrima", "Achird", "Zubenelgenubi", "Vindemiatrix", "Sadachbia", "Sadaltager", "Sulafat"],
                "transport": "pcm"},
     "openai": {"label": "OpenAI Realtime (API)", "key_field": "openai_api_key",
                "default_model": "gpt-realtime", "default_voice": "marin", "voices": _OPENAI_VOICES, "transport": "pcm"},
@@ -375,7 +377,7 @@ class GeminiLive(LiveProvider):
     def supports_async_tools(self) -> bool:
         # Tài liệu Google (09/2026): "Asynchronous function calling is not yet supported in
         # Gemini 3.1 Flash Live", chỉ 2.5 Flash Live nhận behavior NON_BLOCKING.
-        return "2.5" in self.model
+        return "2.5" in self.model or self.model.removeprefix("models/") == "gemini-3.8-live"
 
     def setup_message(self) -> dict:
         model = self.model if self.model.startswith("models/") else f"models/{self.model}"
@@ -1253,6 +1255,9 @@ CHATGPT_UNAVAILABLE = {
 def make_provider(cfg: dict, system: str = "", recognition_lang: str = "vi-VN", memory_index: str = "") -> LiveProvider:
     """Dựng nhà cung cấp Live từ settings. Ném RuntimeError có câu người đọc hiểu được."""
     v = (cfg or {}).get("voice") or {}
+    pace = {"slow": "Nói chậm rãi, ngắt nghỉ rõ giữa các ý.",
+            "normal": "Nói với tốc độ tự nhiên, vừa phải.",
+            "fast": "Nói nhanh gọn nhưng vẫn rõ từng từ."}.get(v.get("live_pace"), "")
     m = (cfg or {}).get("model") or {}
     prov = str(v.get("live_provider") or "gemini").strip().lower()
     if prov not in PROVIDERS:
@@ -1266,7 +1271,10 @@ def make_provider(cfg: dict, system: str = "", recognition_lang: str = "vi-VN", 
               "memory_index": memory_index}
         if system:
             kw["system"] = system
-        return ChatGPTLive(**kw)
+        provider = ChatGPTLive(**kw)
+        if pace:
+            provider.system += "\nYêu cầu nhịp nói: " + pace
+        return provider
     key = str(m.get(PROVIDERS[prov]["key_field"]) or "").strip()
     if not key:
         raise RuntimeError(f"{PROVIDERS[prov]['label']} chưa có API key ở trang Models.")
@@ -1275,7 +1283,10 @@ def make_provider(cfg: dict, system: str = "", recognition_lang: str = "vi-VN", 
           "recognition_lang": recognition_lang}
     if system:
         kw["system"] = system
-    return cls(key, **kw)
+    provider = cls(key, **kw)
+    if pace:
+        provider.system += "\nYêu cầu nhịp nói: " + pace
+    return provider
 
 
 def catalog() -> dict:

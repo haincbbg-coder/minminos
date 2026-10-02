@@ -11,6 +11,21 @@
   var dsHd = [];
   var chon = new Set();
   var dsG = [], gChon = new Set(), hdLoc = [], gmLoc = [];
+  var paging = {}, warnings = [];
+  function pageRows(id, rows, refresh, table, signature) {
+    var state = paging[id] || (paging[id] = {page:1,size:30});
+    if (state.signature !== signature) { state.page=1; state.signature=signature; }
+    var part = InvoiceUI.paginate(rows,state.page,state.size); state.page=part.page;
+    var box = $('#' + id + 'Pager');
+    if (!box) { box=document.createElement('nav'); box.id=id+'Pager'; box.className='invoice-pager'; box.setAttribute('aria-label','Phân trang '+id); $(table).closest('.cuon').before(box); }
+    box.innerHTML='<label>Số dòng mỗi trang <select aria-label="Số dòng '+id+'">'+[10,30,100,500,1000,0].map(function(n){return '<option value="'+n+'"'+(state.size===n?' selected':'')+'>'+(n||'Tất cả')+'</option>';}).join('')+'</select></label>'+
+      '<strong>'+ (rows.length ? part.start+1 : 0)+'–'+(part.start+part.rows.length)+' / '+rows.length+' dòng</strong>'+
+      '<button class="nut" data-prev'+(part.page===1?' disabled':'')+'>Trang trước</button><span>Trang '+part.page+' / '+part.pages+'</span><button class="nut" data-next'+(part.page===part.pages?' disabled':'')+'>Trang sau</button>';
+    box.querySelector('select').onchange=function(){state.size=Number(this.value);state.page=1;refresh();};
+    box.querySelector('[data-prev]').onclick=function(){state.page--;refresh();};
+    box.querySelector('[data-next]').onclick=function(){state.page++;refresh();};
+    return part;
+  }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -223,7 +238,8 @@
     var valid = new Set(ds.map(function(r) { return r.key; }));
     chon.forEach(function(k) { if (!valid.has(k)) chon.delete(k); });
     var base = "/" + encodeURIComponent(dn) + "/" + loai + "/";
-    $("#bangHd").innerHTML = ds.slice(0, 2000).map(function (r) {
+    var part = pageRows('hd',ds,veBang,'#bangHd',JSON.stringify([dn,loai,readFilter('hd')]));
+    $("#bangHd").innerHTML = part.rows.map(function (r, index) {
       var k = encodeURIComponent(r.key);
       var file = (r.co_html ? '<a href="' + API + "xem" + base + k + '" target="_blank" rel="noopener">Xem</a>' : "") +
         (r.co_xml ? '<a class="nhan ok" href="' + API + "tep" + base + k + '/xml">XML</a>' : "") +
@@ -234,11 +250,11 @@
         (r.co_zip ? '<a class="nhan" href="' + API + "tep" + base + k + '/zip">ZIP</a>' : "") +
         (!r.co_xml && !r.co_goc ? '<span class="nhan">Chưa tải XML</span>' : '') + '<button class="nut phu" data-lookup="' + esc(r.key) + '">Mã tra cứu / Trang hãng</button>';
       return '<tr><td><input type="checkbox" data-k="' + esc(r.key) + '"' + (chon.has(r.key) ? " checked" : "") + '></td>' +
-        '<td class="ngay">' + esc(ngayVN(r.ngay)) + '</td><td>' + esc(r.so) + '</td><td>' + esc(r.ky_hieu) + '</td>' +
+        '<td class="row-number">' + (part.start+index+1) + '</td><td class="ngay">' + esc(ngayVN(r.ngay)) + '</td><td>' + esc(r.so) + '</td><td>' + esc(r.ky_hieu) + '</td>' +
         '<td class="doi">' + esc(r.doi_tac) + (r.may_tinh_tien ? ' <span class="nhan">MTT</span>' : "") + (r.tu_gmail ? ' <span class="nhan">Từ Gmail</span>' : "") + '</td><td>' + esc(r.mst_doi_tac) + '</td>' +
         '<td class="so">' + tien(r.tien_hang) + '</td><td class="so">' + tien(r.thue) + '</td><td class="so">' + tien(r.tong) + '</td>' +
         '<td>' + esc(r.trang_thai) + '<div class="nho">' + esc(r.nha_cung_cap || '') + '</div></td><td>' + file + '</td></tr>';
-    }).join("") || '<tr><td colspan="11" class="nho">Chưa có hoá đơn trong khoảng ngày này. Đăng nhập rồi bấm Tra cứu.</td></tr>';
+    }).join("") || '<tr><td colspan="12" class="nho">Chưa có hoá đơn trong khoảng ngày này. Đăng nhập rồi bấm Tra cứu.</td></tr>';
     $("#bangHd").querySelectorAll("input[data-k]").forEach(function (c) {
       c.onchange = function () { if (c.checked) chon.add(c.dataset.k); else chon.delete(c.dataset.k); demChon(); };
     });
@@ -401,14 +417,19 @@
     } catch (e) { bao(e.message); }
   }
   async function canhBao() {
+    if (!$("#hopCanhBao").hidden) { $("#hopCanhBao").hidden=true; return; }
     try {
       var d = await goi("canh-bao?mst=" + encodeURIComponent(dn) + "&tu=" + $("#tu").value + "&den=" + $("#den").value);
       $("#hopCanhBao").hidden = false;
-      $("#bangCanhBao").innerHTML = d.ds.map(function (w) {
+      warnings=d.ds; veCanhBao();
+    } catch (e) { bao(e.message); }
+  }
+  function veCanhBao() {
+      var part=pageRows('warnings',warnings,veCanhBao,'#bangCanhBao',JSON.stringify([dn,$('#tu').value,$('#den').value]));
+      $("#bangCanhBao").innerHTML = part.rows.map(function (w) {
         return "<tr><td>" + esc(w.muc) + "</td><td>" + esc(w.loai) + "</td><td>" + esc(w.so) + '</td><td class="ngay">' + esc(ngayVN(w.ngay)) +
           "</td><td>" + esc(w.doi_tac) + "</td><td>" + esc(w.noi_dung) + "</td></tr>";
       }).join("") || '<tr><td colspan="6" class="nho">Không có cảnh báo nào.</td></tr>';
-    } catch (e) { bao(e.message); }
   }
 
   // ================= GMAIL =================
@@ -459,18 +480,19 @@
     gmLoc = InvoiceUI.filter(dsG, readFilter("gm"));
     var valid = new Set(gmLoc.map(function(r) { return r.id; }));
     gChon.forEach(function(k) { if (!valid.has(k)) gChon.delete(k); });
-      $("#bangGmail").innerHTML = gmLoc.map(function (r) {
+      var part=pageRows('gm',gmLoc,veGmail,'#bangGmail',JSON.stringify(readFilter('gm')));
+      $("#bangGmail").innerHTML = part.rows.map(function (r, index) {
         var id = encodeURIComponent(r.id);
         var file = (r.co_xml ? '<a href="' + API + "gmail/xem/" + id + '" target="_blank" rel="noopener">Xem</a><a href="' + API + "gmail/tep/" + id + '/xml">XML</a>' : "") +
           (r.co_pdf ? '<a href="' + API + "gmail/tep/" + id + '/pdf">PDF gốc</a>' : "") +
           (r.co_trong_dong ? '<a href="' + API + "gmail/tep/" + id + '/trong_dong">Trống đồng (TCT)</a>' : "") +
           (r.link ? '<a href="' + esc(r.link) + '" target="_blank" rel="noopener noreferrer">Trang tra cứu</a>' : "") +
           '<button class="nut phu" data-glookup="' + esc(r.id) + '">Mã tra cứu</button>';
-        return '<tr><td><input type="checkbox" data-gid="' + esc(r.id) + '"' + (gChon.has(r.id) ? " checked" : "") + '></td><td class="ngay">' + esc(ngayVN(InvoiceUI.date(r))) + (!r.ngay_hd ? '<small class="nho"> (email)</small>' : '') + "</td><td>" + esc(r.so) + '</td><td class="doi">' + esc(r.ban_ten || r.tu) +
+        return '<tr><td><input type="checkbox" data-gid="' + esc(r.id) + '"' + (gChon.has(r.id) ? " checked" : "") + '></td><td class="row-number">' + (part.start+index+1) + '</td><td class="ngay">' + esc(ngayVN(InvoiceUI.date(r))) + (!r.ngay_hd ? '<small class="nho"> (email)</small>' : '') + "</td><td>" + esc(r.so) + '</td><td class="doi">' + esc(r.ban_ten || r.tu) +
           "</td><td>" + esc(r.hop_thu || "") + '</td><td class="so">' + (r.tong ? tien(r.tong) : "") + "</td><td>" + esc(r.nha_cung_cap) + "</td><td>" +
           (r.can_tai_tay ? '<span class="nhan loi">Cần tải tay</span>' : "") + esc(r.trang_thai) + "</td><td>" +
           (r.lien_ket ? '<span class="nhan ok" title="MST ' + esc(r.lien_ket.mst) + '">Đã ghép</span>' : "") + "</td><td>" + file + "</td></tr>";
-      }).join("") || '<tr><td colspan="10" class="nho">' + (dsG.length ? 'Không có hoá đơn khớp bộ lọc. Đổi kỳ thời gian hoặc đặt lại bộ lọc.' : 'Chưa quét. Thêm tài khoản Gmail, chọn khoảng ngày rồi bấm Quét.') + '</td></tr>';
+      }).join("") || '<tr><td colspan="11" class="nho">' + (dsG.length ? 'Không có hoá đơn khớp bộ lọc. Đổi kỳ thời gian hoặc đặt lại bộ lọc.' : 'Chưa quét. Thêm tài khoản Gmail, chọn khoảng ngày rồi bấm Quét.') + '</td></tr>';
 
     $("#bangGmail").querySelectorAll("[data-gid]").forEach(function(c) { c.onchange = function() { if(c.checked) gChon.add(c.dataset.gid); else gChon.delete(c.dataset.gid); demGmail(); }; });
     $("#bangGmail").querySelectorAll("[data-glookup]").forEach(function(b) { b.onclick = function() { openLookup("gmail",b.dataset.glookup); }; });
@@ -573,6 +595,7 @@
     try { showCap(await goi('captcha-api',{json:{provider:$("#capProvider").value,api_key:$("#capKey").value,enabled:remove?false:$("#capEnabled").checked,xoa_key:remove}})); bao("Đã lưu cấu hình captcha."); } catch(e) { bao(e.message); }
   }
   function setupTools() {
+    $('#collapseWarnings').onclick=function(){$('#hopCanhBao').hidden=true;};
     buildFilters('hd','#bangHd'); buildFilters('gm','#bangGmail');
     buildPeriod('hd','#tu','#den',function(){chon.clear();taiBang();}); buildPeriod('gm','#gTu','#gDen',veGmail);
     goi('captcha-api').then(showCap).catch(function(e){bao(e.message);});
@@ -641,7 +664,7 @@
     $("#nutZip").onclick = async function () {
       var lt = Array.prototype.map.call(document.querySelectorAll("[data-zip]:checked"), function (c) { return c.dataset.zip; });
       if (!lt.length) { bao("Tích ít nhất một loại file."); return; }
-      try { await taiFile("xuat", phamViXuat({ kieu: "zip", loai_tep: lt })); this.closest("details").open = false; } catch (e) { bao(e.message); }
+      try { await taiFile("xuat", phamViXuat({ kieu: "zip", loai_tep: lt, layout: $('#zipLayout').value })); this.closest("details").open = false; } catch (e) { bao(e.message); }
     };
     $("#nutGopPdf").onclick = async function () {
       var m = (document.querySelector("[name=cheDoIn]:checked") || {}).value || "goc_uu_tien";

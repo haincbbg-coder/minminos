@@ -20,10 +20,11 @@ class Socket {
 }
 const track = {stop() {this.stopped = true;}};
 let source;
+const played=[];
 class AudioContext {
   constructor() {this.state = 'running';this.currentTime=0;}
-  createBuffer(c,n,r) {return {duration:n/r,getChannelData:()=>new Float32Array(n)};}
-  createBufferSource() {return {connect(){},disconnect(){},start(t){this.at=t;},stop(){this.stopped=true;}};}
+  createBuffer(c,n,r) {const values=new Float32Array(n);return {duration:n/r,getChannelData:()=>values};}
+  createBufferSource() {return {connect(){},disconnect(){},start(t){this.at=t;played.push(this);},stop(){this.stopped=true;}};}
   async resume() {}
   async close() {}
   createMediaStreamDestination() {return {stream: {getAudioTracks: () => [track], getTracks: () => [track]}};}
@@ -65,8 +66,12 @@ vm.runInNewContext(fs.readFileSync('dashboard/voice-preview.js', 'utf8'), contex
   assert.equal(peers.length,peerCount, 'Gemini preview never opens WebRTC or microphone');
   await gemini.event({type:'ready',transport:'pcm'});
   assert.equal(gemini.sent[0].type,'sample');
-  await gemini.onmessage({data:new ArrayBuffer(4800)});
+  await gemini.onmessage({data:new Uint8Array([0]).buffer});
+  await gemini.onmessage({data:new Uint8Array([64,0,192]).buffer});
+  assert.equal(played.length,0,'Do not play incomplete preview packets');
   await gemini.event({type:'turn_done'});
+  assert.equal(played.length,1,'One continuous buffer per preview');
+  assert.deepEqual(Array.from(played[0].buffer.getChannelData(0)),[0.5,-0.5]);
   [...timers.values()].find(timer=>timer.ms===3000).fn();
   assert.ok(gemini.closed);
   assert.equal(timers.size,0);

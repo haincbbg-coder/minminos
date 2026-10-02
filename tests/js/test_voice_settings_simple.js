@@ -79,6 +79,7 @@ class El {
   }
   get innerHTML() { return this._html; }
   focus() { this.focused = true; }
+  add(option) { this.options.push(option); }
   dispatchEvent(e) { this.events.push(e.type); }
 }
 
@@ -103,6 +104,7 @@ async function run(options, edgeVoice = "vi-VN-HoaiMyNeural", models = null) {
     saveSetting: async (section, data) => { saves.push([section, data]); return { ok: true }; },
     window: { MinMinVoicePreview: { stop() {}, play: async voice => { ctx.played = voice; } }, JavisVoiceMode: { refresh: () => refreshes.push(1) } }, Event: class { constructor(type) { this.type = type; } },
     Audio: class { constructor(src) { ctx.played = src; } play() { return Promise.resolve(); } pause() {} },
+    Option: class { constructor(text, value) { this.textContent = text; this.value = value; } },
     Date, Math, Number, Array, String, JSON, Promise,
   };
   vm.createContext(ctx);
