@@ -89,8 +89,12 @@
       // ngoai vung nhin thay, va nguoi dung khong con duong ra. Dan the vao bon canh thi dau
       // the luon nam dung mep tren, ban phim che gi thi che.
       "@media(max-width:700px){" +
-        ".jvfe-modal{padding:0;align-items:stretch;justify-content:stretch}" +
-        ".jvfe-card{width:100%;max-width:none;height:100vh;height:100dvh;max-height:none;" +
+        // 0.65.30: dan kin man thi chua VUNG AN TOAN cua iPhone mo tu man hinh chinh (thanh
+        // trang thai trong suot de len dau the, che mat nut Dong).
+        ".jvfe-modal{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) " +
+        "env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);align-items:stretch;justify-content:stretch}" +
+        // Cao theo khung (da tru vung an toan) chu khong 100dvh, keo the tran xuong duoi day.
+        ".jvfe-card{width:100%;max-width:none;height:auto;align-self:stretch;max-height:none;" +
         "border-radius:0;border:0}" +
         // Dau the dinh o tren ke ca khi than cuon: nut Dong khong bao gio troi khoi tam tay.
         ".jvfe-head{position:sticky;top:0;z-index:2;background:var(--bg2);flex-wrap:wrap;gap:6px}" +
@@ -432,6 +436,9 @@
       var lang = window.JavisCodeHL ? window.JavisCodeHL.langFromPath(ceil) : "";
       if (lang) window.JavisCodeHL.attach(ta, lang);
     } catch (e) {}
+    // Bo dem tu + ky tu (0.65.32), dung chung ham cua trinh sua dinh (console.js).
+    var NE0 = window.JavisNoteEditor;
+    if (NE0 && NE0.ganDemTu) NE0.ganDemTu(elActions, function () { return { text: ta.value, md: false }; }, [ta]);
     appendSaveAndClose(b, ceil, function () { return ta.value; });
     focusNeuDuocPhep(ta);
   }
@@ -475,6 +482,7 @@
       if (m === "source") wysToSrc(); else srcToWys();
       curMode = m;
       neBody.className = "ne-body ne-md " + (m === "wys" ? "mode-wys" : "mode-source");
+      if (demLai) demLai();
       bWys.classList.toggle("active", m === "wys"); bSrc.classList.toggle("active", m === "source");
     }
     // Nguoi dung TU BAM sang che do soan thi cho focus that: do la y dinh ro rang cua ho,
@@ -483,7 +491,13 @@
     bSrc.onclick = function () { setMode("source"); try { ta.focus(); } catch (e) {} };
     seg.appendChild(bWys); seg.appendChild(bSrc); elActions.appendChild(seg);
 
-    NE.buildToolbar(neBody.querySelector(".ne-fmt"), { mode: function () { return curMode; }, ta: ta, wys: wys });
+    var demLai = null;
+    NE.buildToolbar(neBody.querySelector(".ne-fmt"), { mode: function () { return curMode; }, ta: ta, wys: wys,
+      onChange: function () { if (demLai) demLai(); } });
+    // Bo dem tu + ky tu (0.65.32): dem chu HIEN RA, giong trinh sua dinh.
+    if (NE.ganDemTu) demLai = NE.ganDemTu(neBody.querySelector(".ne-fmt"), function () {
+      return curMode === "wys" ? { text: wys.innerText, md: false } : { text: ta.value, md: true };
+    }, [ta, wys]);
     appendSaveAndClose(b, ceil, mdGetter);
 
     // Vao che do Sua (WYSIWYG) khi Turndown san sang; offline khong nap duoc thi o lai Nguon (van sua tot).

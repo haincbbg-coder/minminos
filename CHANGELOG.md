@@ -2,11 +2,14 @@
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
 
-Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [26.10.29] - 2026-10-02
-### Cải thiện
-- Đang chuẩn bị các cải tiến phù hợp từ Javis 0.65.33 cho MinMin.
+Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
-## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
+## [26.10.29] - 2026-10-02
+### Cải thiện
+- Ảnh AI vừa sửa hiện ngay trong câu trả lời, kể cả khi ghi đè file cũ; trình sửa file có bộ đếm từ và ký tự.
+- Link chia sẻ lấy tên theo tiêu đề file, đổi tên và tìm theo tên được mà không đổi đường link.
+- Sửa thanh công cụ bị che và gửi ảnh kéo thả trên iPhone.
+- Cập nhật Docker kiểm tra bản đã đóng gói, báo rõ khi chưa thay được bản mới và bỏ trạng thái chờ khi khởi động bản mới thành công. Bộ cập nhật trong file cài đặt dùng Watchtower được bảo trì.
 
 ## [26.10.28] - 2026-10-02
 ### Cải thiện

@@ -35,6 +35,19 @@ us.record_boot_version("0.9.79")
 check("boot lên bản mới: last_good cập nhật", us.read_state().get("last_good_version") == "0.9.79")
 check("boot lên bản mới: previous = bản cũ", us.read_state().get("previous_version") == "0.9.78")
 
+# A successful Docker replacement must not leave the update button locked.
+for current, target, phase, expected in [
+    ("26.10.29", "26.10.29", "restarting", "idle"),
+    ("26.10.30", "26.10.29", "restarting", "idle"),
+    ("26.10.28", "26.10.29", "restarting", "restarting"),
+    ("26.10.29", "26.10.30", "restarting", "restarting"),
+    ("26.10.29", "26.10.29", "installing", "installing"),
+]:
+    us.write_state({"phase": phase, "old_version": "26.10.28", "target_version": target})
+    boot = us.record_boot_version(current)
+    check(f"boot {current}, target {target}, {phase} -> {expected}", boot["phase"] == expected)
+us.STATE_FILE.unlink(missing_ok=True)
+
 # --- update_outcome ---
 check("health đỏ - need_rollback", us.update_outcome(False, "0.9.79", "0.9.78", "0.9.79") == "need_rollback")
 check("health xanh + đúng target - success", us.update_outcome(True, "0.9.79", "0.9.78", "0.9.79") == "success")
@@ -77,6 +90,28 @@ class _FakeClient:
     async def get(self, *a, **k):
         return _FakeResp(404, "")
 _httpx.AsyncClient = _FakeClient
+
+# Check private GHCR credentials, configured image and tri-state manifest results.
+from unittest.mock import patch
+class _RegistryClient(_FakeClient):
+    code = 200
+    calls = []
+    async def get(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        class Token:
+            status_code = 200
+            def json(self): return {"token": "test-bearer"}
+        return Token()
+    async def head(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        return _FakeResp(self.code)
+with patch.dict(os.environ, {"GHCR_USER": "minmin", "GHCR_TOKEN": "test-secret", "JAVIS_IMAGE": "ghcr.io/custom/minmin:latest"}):
+    with patch.object(_httpx, "AsyncClient", _RegistryClient):
+        for code, expected in [(200, True), (404, False), (403, None), (503, None)]:
+            _RegistryClient.code = code
+            check(f"GHCR manifest {code}", asyncio.run(main._docker_image_published("26.10.29")) is expected)
+        check("private GHCR uses configured credentials", _RegistryClient.calls[0][1]["auth"] == ("minmin", "test-secret"))
+        check("private GHCR uses configured image", _RegistryClient.calls[1][0] == "https://ghcr.io/v2/custom/minmin/manifests/26.10.29")
 
 check("main alias _ver_newer chạy", main._ver_newer("0.9.79", "0.9.78") is True)
 us.STATE_FILE.unlink(missing_ok=True)
@@ -140,6 +175,84 @@ check("docker no-watchtower → 400", isinstance(_rd, JSONResponse) and _rd.stat
 check("early-return nhả claim → phase idle (không kẹt preparing)", us.read_state().get("phase") == "idle")
 main._deploy_mode = _orig_mode
 main._watchtower_reachable = _orig_wt
+
+# --- 0.65.27: Docker, bản mới đã có trên main mà image chưa đóng gói xong ---
+# Chủ dự án gặp 02/10: bấm Cập nhật ngay ngay sau khi gộp 0.65.26, Watchtower kéo `latest` vẫn là
+# bản cũ, không thay gì, rồi nút kẹt "Đang cập nhật rồi, chờ chút" 15 phút.
+_saved = {k: getattr(main, k) for k in ("_deploy_mode", "_watchtower_reachable", "_latest_remote_version",
+                                        "_read_version", "_docker_image_published", "_watchtower_update")}
+async def _wt_yes():
+    return True
+async def _latest_new(cur=""):
+    return "0.65.27", None
+_published = {"v": False}
+_asked = []
+async def _img(version):
+    _asked.append(version)
+    return _published["v"]
+_triggered = []
+async def _fake_wu(token, started_at):
+    _triggered.append(started_at)
+main._deploy_mode = lambda: "docker"
+main._watchtower_reachable = _wt_yes
+main._latest_remote_version = _latest_new
+main._read_version = lambda: "0.65.26"
+main._docker_image_published = _img
+main._watchtower_update = _fake_wu
+try:
+    us.write_state({"phase": "idle"})
+    _ri = asyncio.run(main.do_update())
+    _body = json.loads(_ri.body) if isinstance(_ri, JSONResponse) else {}
+    check("image chưa lên → báo chờ đóng gói, không gọi Watchtower",
+          isinstance(_ri, JSONResponse) and _ri.status_code == 409 and _body.get("retry") is True
+          and "đang đóng gói" in _body.get("error", "") and _asked == ["0.65.27"])
+    check("image chưa lên → nhả claim, bấm lại được ngay", us.read_state().get("phase") == "idle")
+    _published["v"] = True
+    _ok = asyncio.run(main.do_update())
+    check("image đã lên → gọi Watchtower, phase restarting",
+          isinstance(_ok, dict) and _ok.get("ok") is True and us.read_state().get("phase") == "restarting")
+    _published["v"] = None
+    us.write_state({"phase": "idle"})
+    _ok2 = asyncio.run(main.do_update())
+    check("không hỏi được GHCR → không chặn oan, vẫn gọi Watchtower", isinstance(_ok2, dict) and _ok2.get("ok") is True)
+finally:
+    for _k, _v in _saved.items():
+        setattr(main, _k, _v)
+
+# --- 0.65.27: Watchtower trả lời mà container còn sống = không thay gì → nhả "restarting" ngay ---
+_r = main._watchtower_no_update_reason
+check("Watchtower: không có image mới → nói rõ", "chưa thấy image mới" in _r(200, {"summary": {"scanned": 1, "updated": 0, "failed": 0}}))
+check("Watchtower: thay hỏng → nói lỗi", "bị lỗi" in _r(200, {"summary": {"scanned": 1, "updated": 0, "failed": 1}}))
+check("Watchtower: báo đã thay → im (container mới sắp lên)", _r(200, {"summary": {"updated": 1, "failed": 0}}) == "")
+check("Watchtower bản cũ trả thân rỗng → coi như không thay", "chưa thấy image mới" in _r(200, None))
+check("Watchtower bận → 429", "bận" in _r(429, None))
+check("Watchtower lỗi HTTP → nói mã", "HTTP 503" in _r(503, None))
+
+_saved_post = main._watchtower_post
+_started = _dtmod.datetime.now().isoformat(timespec="seconds")
+async def _post_none(token):
+    return 200, {"summary": {"scanned": 1, "updated": 0, "failed": 0}}
+main._watchtower_post = _post_none
+try:
+    us.write_state({"phase": "restarting", "started_at": _started, "result": None, "error": None})
+    asyncio.run(main._watchtower_update("tok", _started))
+    _st = us.read_state()
+    check("không thay gì → phase idle + result error kèm lý do (trang hiện lý do, nút bấm lại được)",
+          _st.get("phase") == "idle" and _st.get("result") == "error" and "chưa thấy image mới" in (_st.get("error") or ""))
+    check("không thay gì → guard 409 không còn chặn (phase không thuộc nhóm đang chạy)",
+          _st.get("phase") not in main._UPDATE_ACTIVE)
+    us.write_state({"phase": "restarting", "started_at": "2026-10-02T01:02:03", "result": None, "error": None})
+    asyncio.run(main._watchtower_update("tok", _started))
+    check("lần cập nhật khác đã bắt đầu → không đè trạng thái của nó", us.read_state().get("phase") == "restarting")
+    async def _post_cut(token):
+        raise ConnectionError("container đang bị thay")
+    main._watchtower_post = _post_cut
+    us.write_state({"phase": "restarting", "started_at": _started, "result": None, "error": None})
+    asyncio.run(main._watchtower_update("tok", _started))
+    check("mất kết nối (đang bị thay) → giữ restarting", us.read_state().get("phase") == "restarting")
+finally:
+    main._watchtower_post = _saved_post
+    us.write_state({"phase": "idle", "result": None, "error": None})
 
 # --- updater.py --dry-run (không thực thi git/pip) ---
 import subprocess as _sp  # noqa: E402

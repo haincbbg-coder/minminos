@@ -7051,9 +7051,13 @@ def _share_asset(ban, p: str):
 @app.post("/share/create")
 async def share_create(body: dict = Body(...)):
     """Bật chia sẻ cho một file. Gọi lại trên cùng file thì trả đúng link cũ, không đẻ link mới."""
+    nhan = str(body.get("nhan") or "").strip()
+    if not nhan:
+        # 0.65.30: link mới tự lấy tên theo TIÊU ĐỀ file (chủ dự án chọn 01/10), không có thì tên
+        # thư mục của index.html hoặc tên file. Sửa lại được ở trang Chia sẻ (/share/rename).
+        nhan = _share_ten_tu_dong({"brain": body.get("brain") or "brain", "path": body.get("path") or ""})
     try:
-        ban = share_store.tao(body.get("brain") or "brain", body.get("path") or "",
-                              body.get("nhan") or "")
+        ban = share_store.tao(body.get("brain") or "brain", body.get("path") or "", nhan)
     except ValueError as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
     # Trả ĐƯỜNG DẪN TƯƠNG ĐỐI, để trình duyệt tự ghép với location.origin. Dựng URL tuyệt đối ở
@@ -7075,12 +7079,26 @@ async def share_of(brain: str = Query("brain"), path: str = Query(...)):
                                   if ban else None)}
 
 
+def _share_ten_tu_dong(ban) -> str:
+    """Tên tự đặt của một link: tiêu đề file, không có thì tên dự phòng (share_render)."""
+    f = _share_file(ban)
+    return (share_render.tieu_de_file(f) if f else "") or share_render.ten_du_phong(ban.get("path") or "")
+
+
+def _share_ten(ban) -> str:
+    """Tên hiển thị: tên đã đặt (tự lúc tạo hoặc người dùng sửa), link cũ chưa có tên thì tự lấy."""
+    return str(ban.get("nhan") or "").strip() or _share_ten_tu_dong(ban)
+
+
 @app.get("/share/list")
 async def share_list(brain: str = Query("")):
     ds = share_store.danh_sach(brain)
+    # Link tạo trước 0.65.30 chưa có tên: đọc đầu file lấy tiêu đề. Luồng phụ vì có thể là vài
+    # trăm file; kho không bị ghi đè (tên vẫn theo file cho tới khi người dùng đặt tên).
+    ten = await asyncio.to_thread(lambda: [_share_ten(b) for b in ds])
     return {"ok": True, "items": [{"token": b["token"], "brain": b.get("brain"),
                                    "path": b.get("path"), "tao_luc": b.get("tao_luc"),
-                                   "url": "/s/" + b["token"]} for b in ds]}
+                                   "ten": t, "url": "/s/" + b["token"]} for b, t in zip(ds, ten)]}
 
 
 @app.get("/s/{token}")
@@ -11159,9 +11177,11 @@ async def _watchtower_ly_do() -> str:
       `docker compose up -d --pull always`.
     - watchtower_off: token có nhưng không nối được tới container. Hai khả năng, và câu trả
       lời cho cả hai đều là "deploy lại bằng compose mới": stack cũ có Watchtower trong
-      `profiles: ["update"]` nên `docker compose up -d` không bật nó; hoặc Watchtower có chạy
-      nhưng không đụng được Docker socket của host (Hostinger từng dính, xem log container
-      `<tên>-watchtower`).
+      `profiles: ["update"]` nên `docker compose up -d` không bật nó; hoặc Watchtower Restarting
+      mãi. Khả năng sau là cảnh của MỌI máy cài bằng compose trước 0.65.20: image
+      `containrrr/watchtower` nói Docker API 1.25, Docker Engine mới từ chối ("client version
+      1.25 is too old"). Từng bị đoán nhầm là "không đụng được socket" - log container
+      `<tên>-watchtower` mới là bằng chứng.
 
     Điều KHÔNG đổi: cả hai đều là app CÒN SỐNG, chỉ mất cái nút. Không được vẽ chúng như lỗi.
     """
@@ -11291,6 +11311,95 @@ def _git_head(root: str) -> str:
         return ""
 
 
+async def _docker_image_published(version: str):
+    """Image `ghcr.io/<repo>:<version>` đã lên GHCR chưa: True/False, None = không hỏi được.
+
+    VERSION trên nhánh main đổi NGAY lúc gộp PR, còn image Docker đóng gói xong sau đó 2 đến 5 phút.
+    Bấm Cập nhật ngay trong khoảng đó thì Watchtower kéo `latest` vẫn là bản cũ, không thay gì, và
+    nút kẹt "Đang cập nhật rồi" 15 phút. Dùng cấu hình ảnh và GHCR_TOKEN cho kho riêng tư;
+    kho công khai vẫn hỏi ẩn danh. Lỗi mạng thì trả None để không chặn oan."""
+    if not version:
+        return None
+    import ghcr_version
+    repo, user, secret = ghcr_version.cau_hinh(GITHUB_REPO)
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=8) as client:
+            auth = {"auth": (user, secret)} if secret else {}
+            response = await client.get("https://ghcr.io/token",
+                params={"scope": f"repository:{repo}:pull", "service": "ghcr.io"}, **auth)
+            if response.status_code != 200:
+                return None
+            tok = response.json().get("token")
+            if not tok:
+                return None
+            r = await client.head(f"https://ghcr.io/v2/{repo}/manifests/{version}", headers={
+                "Authorization": f"Bearer {tok}",
+                "Accept": ", ".join(("application/vnd.oci.image.index.v1+json",
+                                     "application/vnd.docker.distribution.manifest.list.v2+json",
+                                     "application/vnd.docker.distribution.manifest.v2+json",
+                                     "application/vnd.oci.image.manifest.v1+json"))})
+        if r.status_code == 200:
+            return True
+        if r.status_code == 404:
+            return False
+    except Exception:
+        return None
+    return None
+
+
+async def _watchtower_post(token: str):
+    """POST /v1/update của Watchtower: (mã HTTP, JSON hoặc None). Watchtower trả lời SAU KHI chạy
+    xong (chế độ đồng bộ); nếu nó thay chính container này thì tiến trình chết trước lúc có trả lời."""
+    import httpx
+    async with httpx.AsyncClient(timeout=180) as client:
+        r = await client.post("http://watchtower:8080/v1/update",
+                              headers={"Authorization": f"Bearer {token}"})
+    try:
+        body = r.json()
+    except Exception:
+        body = None
+    return r.status_code, body
+
+
+def _watchtower_no_update_reason(status: int, body) -> str:
+    """Watchtower đã TRẢ LỜI mà container này vẫn sống, tức là nó không thay bản mới. Trả câu báo
+    cho người dùng; "" khi Watchtower báo đã thay (container mới sắp lên, không có gì để nói)."""
+    if status == 429:
+        return "Watchtower đang bận một lần cập nhật khác. Chờ một phút rồi thử lại."
+    if status >= 400:
+        return f"Watchtower báo lỗi (HTTP {status}). Thử lại sau ít phút; vẫn lỗi thì Redeploy."
+    summary = body.get("summary") if isinstance(body, dict) else None
+    if isinstance(summary, dict):
+        if summary.get("failed"):
+            return "Watchtower kéo hoặc khởi động bản mới bị lỗi. Thử lại sau ít phút; vẫn lỗi thì Redeploy."
+        if summary.get("updated"):
+            return ""
+    return "Watchtower chưa thấy image mới để kéo (bản mới có thể chưa đóng gói xong). Thử lại sau ít phút."
+
+
+async def _watchtower_update(token: str, started_at: str):
+    """Gọi Watchtower rồi, nếu nó trả lời mà không thay container này, nhả trạng thái "restarting"
+    ngay kèm lý do. Trước 0.65.27 trạng thái đó nằm nguyên 15 phút và mọi lần bấm lại đều bị chặn
+    "Đang cập nhật rồi, chờ chút"."""
+    import sys as _sys
+    import datetime as _dt
+    try:
+        status, body = await _watchtower_post(token)
+    except Exception as e:
+        # Mất kết nối thường là vì Watchtower đang dừng chính container này để thay bản mới.
+        print(f"[update] watchtower trigger: {e}", file=_sys.stderr)
+        return
+    reason = _watchtower_no_update_reason(status, body)
+    if not reason:
+        return
+    print(f"[update] watchtower trả lời mà không thay container (HTTP {status}, {body}): {reason}", file=_sys.stderr)
+    st = _read_update_state()
+    if st.get("phase") == "restarting" and st.get("started_at") == started_at:
+        _write_update_state({"phase": "idle", "result": "error", "error": reason,
+                             "finished_at": _dt.datetime.now().isoformat(timespec="seconds")})
+
+
 @app.post("/update")
 async def do_update():
     """Cập nhật lên bản mới nhất. Git checkout (windows/native) → spawn updater.py TÁCH RỜI
@@ -11323,21 +11432,20 @@ async def do_update():
                 "manual": "docker compose up -d --pull always",
                 "current": cur, "latest": latest,
                 "previous_version": st.get("previous_version")}, status_code=400)
+        # Bản mới đã có trên main nhưng image chưa đóng gói xong: báo chờ, đừng gọi Watchtower
+        # (nó sẽ kéo lại đúng bản cũ rồi không làm gì).
+        if latest and _ver_newer(latest, cur) and await _docker_image_published(latest) is False:
+            _write_update_state({"phase": "idle"})   # nhả claim
+            return JSONResponse({"ok": False, "retry": True, "current": cur, "latest": latest,
+                "error": f"Bản v{latest} vừa phát hành, image Docker còn đang đóng gói (thường 2 đến 5 phút "
+                         f"sau khi phát hành). Thử lại sau ít phút."}, status_code=409)
         token = os.getenv("WATCHTOWER_TOKEN", "")
+        started_at = now()
         _write_update_state({"phase": "restarting", "old_version": cur, "target_version": latest,
                              "old_sha": None, "result": None, "error": None, "stashed": False,
-                             "started_at": now(), "finished_at": None})
+                             "started_at": started_at, "finished_at": None})
         import asyncio
-        import httpx
-
-        async def _trigger():
-            try:
-                async with httpx.AsyncClient(timeout=180) as client:
-                    await client.post("http://watchtower:8080/v1/update",
-                                      headers={"Authorization": f"Bearer {token}"})
-            except Exception as e:
-                print(f"[update] watchtower trigger: {e}", file=_sys.stderr)
-        t = asyncio.create_task(_trigger())
+        t = asyncio.create_task(_watchtower_update(token, started_at))
         _UPDATE_TASKS.add(t)
         t.add_done_callback(_UPDATE_TASKS.discard)
         return {"ok": True, "mode": "docker", "message": "Đang kéo image mới + khởi động lại (~20-40s)."}
@@ -19687,6 +19795,17 @@ async def _shutdown_mcp_pool():
         terminal.KHO.dong_het()
     except Exception:
         pass
+
+
+@app.post("/share/rename")
+async def share_rename(body: dict = Body(...)):
+    """Đổi tên hiển thị của một link ở trang Chia sẻ (0.65.30). Tên rỗng thì quay về tên tự lấy
+    theo tiêu đề file. Đặt sau route cuối để bảng route chỉ thêm một dòng."""
+    ban = share_store.doi_ten(body.get("token") or "", body.get("nhan") or "")
+    if not ban:
+        return {"ok": False, "error": "Link không tồn tại hoặc đã bị thu hồi."}
+    return {"ok": True, "token": ban["token"], "nhan": ban.get("nhan") or "",
+            "ten": await asyncio.to_thread(_share_ten, ban)}
 
 
 if __name__ == "__main__":
