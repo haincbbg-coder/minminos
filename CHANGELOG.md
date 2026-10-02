@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.34] - 2026-10-03
+### Cải thiện
+- Đang chuẩn bị chế độ mic nhập văn bản và lựa chọn giọng Live.
+
 ## [26.10.33] - 2026-10-03
 ### Sửa lỗi
 - Bổ sung tải bản gốc CyberBill qua mã tra cứu và CAPTCHA, đối chiếu XML hãng trước khi lưu PDF.
