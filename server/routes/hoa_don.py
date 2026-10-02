@@ -166,6 +166,8 @@ def ma_tra_cuu_hd(inv: dict) -> dict:
         note = "Hoá đơn mới có trong danh sách tra cứu, chưa tải XML. Bấm Tải XML để nhận diện hãng và tìm mã tra cứu trong chứng từ."
     elif not code:
         note = "Nguồn đã đọc chưa có mã tra cứu. Có thể đối chiếu Gmail đã quét hoặc nhập mã từ email của nhà phát hành. Số hoá đơn không phải mã tra cứu."
+    elif not url:
+        note = "Đã tìm thấy mã tra cứu nhưng chưa xác định được địa chỉ trang của nhà phát hành. Bạn có thể sao chép mã; ứng dụng không mở một đường dẫn rỗng."
     return {"code": code, "url": url, "has_xml": bool(xml), "note": note,
             "provider": info.get("provider") or source.get("nha_cung_cap") or ""}
 

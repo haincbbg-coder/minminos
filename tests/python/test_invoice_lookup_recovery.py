@@ -42,6 +42,14 @@ class RecoveryTests(unittest.TestCase):
                 with self.assertRaises(mod.CaptchaError):
                     mod.Solver(provider='omocaptcha',api_key='fake').slider(b'bg',b'p','example.com',300,150,50)
 
+    def test_unknown_issuer_retains_explicit_lookup_code_without_inventing_url(self):
+        mod=hd.thd('providers')
+        for field in ('MaTraCuu','MTCuu','QuanLy_SoBaoMat','MaTimKiem'):
+            xml=f'<HDon><SHDon>999</SHDon><TTKhac><TTin><TTruong>{field}</TTruong><DLieu>LOOKUP</DLieu></TTin></TTKhac></HDon>'.encode()
+            info=mod.manual_download_info(xml)
+            self.assertEqual(info['code'],'LOOKUP'); self.assertEqual(info['url'],'')
+        self.assertIsNone(mod.manual_download_info(b'<HDon><SHDon>999</SHDon></HDon>'))
+
     def test_viettel_verified_token_is_used_for_pdf_and_rejection_stops(self):
         mod=hd.thd('providers.viettel')
         def image(size):
