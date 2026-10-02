@@ -15,7 +15,7 @@ API = PORTAL + "/erp/rest/s1/iam-entry/invoices/"
 
 def valid_code(value):
     value = str(value or "").strip()
-    return value if re.fullmatch(r"[0-9a-fA-F]{16}", value) else ""
+    return value if re.fullmatch(r"(?:[0-9a-fA-F]{16}|[0-9a-fA-F]{34})", value) else ""
 
 
 def email_code(body):
@@ -33,8 +33,11 @@ def find_code(xml_text, inv):
         value = valid_code(C.ttkhac(xml_text, field))
         if value:
             return value
-    # MCCQT, XML Id and invoice number are not the issuer's reference code.
-    return ""
+    # Verified on MY SOFTWARE's public lookup form: MCCQT is accepted as an
+    # alternative reference. This fallback is specific to this issuer, not a
+    # general conversion of tax codes into other issuers' secret codes.
+    tax_code = C._tag(xml_text, "MCCQT")
+    return tax_code if re.fullmatch(r"[0-9a-fA-F]{34}", tax_code) else ""
 
 
 def detect(xml_text, inv):
@@ -56,7 +59,7 @@ def _identity(text):
 def fetch_documents(code, log, expected_xml=""):
     code = valid_code(code)
     if not code:
-        raise ProviderError("MY SOFTWARE: chưa có mã tra cứu của hãng trong XML/email. Cần email hoặc PDF của đúng hóa đơn; mã CQT không thay thế mã tra cứu.")
+        raise ProviderError("MY SOFTWARE: chưa có mã tra cứu hoặc mã CQT hợp lệ trong XML/email. Cần tải XML thuế hoặc quét email của đúng hóa đơn.")
     session = C.make_session()
     try:
         response = session.get(API + code + "/xml", timeout=45, allow_redirects=False)

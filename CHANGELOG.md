@@ -6,7 +6,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.27] - 2026-10-02
 ### Sửa lỗi
-- Tải bản gốc MY SOFTWARE khi có mã tra cứu; giữ mã trong email có chứng từ đính kèm.
+- Tải bản gốc MY SOFTWARE bằng mã CQT có trong XML thuế, kể cả khi không có email hoặc mã tra cứu riêng. Đối chiếu đúng hóa đơn trước khi lưu PDF.
+- Giữ mã tra cứu trong email có chứng từ đính kèm; mở thẳng PDF hãng khi đã có mã.
 
 ## [26.10.26] - 2026-10-02
 ### Sửa lỗi

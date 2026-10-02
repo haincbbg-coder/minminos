@@ -17,7 +17,7 @@ def xml(number="35", seller="1111111111"):
     return (f'<HDon><DLHDon><TTChung><KHMSHDon>1</KHMSHDon><KHHDon>C26TPC</KHHDon>'
             f'<SHDon>{number}</SHDon><MSTTCGP>0108971656</MSTTCGP></TTChung>'
             f'<NDHDon><NBan><MST>{seller}</MST></NBan></NDHDon></DLHDon>'
-            '<MCCQT>0123456789ABCDEF0123456789ABCDEF</MCCQT></HDon>').encode()
+            '<MCCQT>000123456789ABCDEF0123456789ABCDEF</MCCQT></HDon>').encode()
 
 
 class MyInvoice(unittest.TestCase):
@@ -39,15 +39,19 @@ class MyInvoice(unittest.TestCase):
                 p.fetch_pdf(xml().decode(), {"_code": CODE}, Mock())
             self.assertEqual(session.get.call_count, 1)
 
-    def test_missing_code_does_not_use_tax_code_or_number(self):
+    def test_missing_code_does_not_use_invoice_number(self):
         with patch.object(p.C, "make_session") as session, self.assertRaises(ProviderError):
-            p.fetch_pdf(xml().decode(), {}, Mock())
+            p.fetch_pdf(xml().decode().replace("000123456789ABCDEF0123456789ABCDEF", ""), {}, Mock())
         session.assert_not_called()
         self.assertIs(detect(xml()), p)
         info = manual_download_info(xml(), {"_ma_tra_cuu": CODE})
         self.assertEqual(info["code"], CODE)
         self.assertEqual(info["url"], p.API + CODE + "/pdf")
         self.assertNotIn("captcha", info["method"])
+
+    def test_mysoftware_accepts_tax_authority_code(self):
+        self.assertEqual(p.find_code(xml().decode(), {}), "00" + CODE + CODE)
+        self.assertEqual(p.find_code(xml().decode(), {"_code": CODE}), CODE)
 
     def test_rejects_html_and_redirect(self):
         for response in (Mock(status_code=200, content=b"<html>gateway</html>"),
