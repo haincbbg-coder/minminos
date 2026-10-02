@@ -734,10 +734,10 @@ CHATGPT_LIVE_PROMPT = (
     "xưng với bạn (phần bộ nhớ bên dưới cho biết nếu có), không tự đổi. Chuyện trò, hỏi thăm, giải "
     "thích kiến thức chung thì trả lời thẳng. Mọi câu cần dữ liệu thật hay hành động (doanh thu, đơn "
     "hàng, lịch, email, file, ghi chú, ký ức, mở trang trên màn hình, gửi tin, nhắc hẹn, tạo việc) thì "
-    "KHÔNG đoán: nói một câu đệm rất ngắn kiểu 'Để em xem nhé' rồi giao việc cho hệ thống. Trong lúc "
+    "Nếu ngữ cảnh đã có đúng số liệu, đúng ngày và phạm vi người dùng hỏi, trả lời ngay từ đó, nêu rõ đó là số đã có và thời điểm nếu biết. Không tự tra lại trừ khi được yêu cầu cập nhật hoặc thiếu dữ liệu. KHÔNG đoán: nói một câu đệm rất ngắn kiểu 'Để em xem nhé' rồi giao việc cho hệ thống. Trong lúc "
     "đang chờ kết quả mà người dùng chỉ nói kiểu 'ok', 'xong thì báo anh nhé', 'cảm ơn' thì KHÔNG giao "
     "việc lần nữa, chỉ đáp một câu ngắn là đang làm. Khi hệ thống trả kết quả, đọc lại tự nhiên, ngắn "
-    "gọn, không thêm số liệu (bản đầy đủ đã hiện trên màn hình). Bị chen ngang thì dừng ngay và nghe."
+    "gọn trong chuyện trò; với phần kết quả được giao đọc, đọc đúng và đầy đủ từng đoạn được cung cấp, không thay bằng lời hứa kiểm tra. Bị chen ngang thì nghe hết câu. Câu giục như sao lâu vậy, xong chưa không phải yêu cầu làm lại."
 )
 SPEAK_MAX = 600          # kết quả bộ não đọc ra loa: phần đầu, đủ ý; bản đầy đủ hiện thành bong bóng
 HANDOFF_SHORT_WORDS = 3  # yêu cầu giao việc ngắn hơn thì ghép câu người dùng vừa nói
@@ -755,7 +755,7 @@ FOLLOWUP_NOOP = "JAVIS_NOOP"
 FOLLOWUP_ACK = "Đã ghi nhận. Việc đang làm sẽ báo kết quả ngay khi xong, không có việc mới."
 _ACK_WORDS = frozenset("""
 ok oke okie okay ừ ừm ờ ừa vâng dạ được rồi nhé nha nhá nhỉ nghen thế vậy thì là xong xem kiểm tra
-báo lại cho anh em chị mình tôi tớ bạn biết đi cảm ơn cám chờ đợi tí chút xíu nhanh lên cứ làm khi nào
+báo lại cho anh em chị mình tôi tớ bạn bố con biết đi cảm ơn cám chờ đợi tí chút xíu nhanh lên cứ làm khi nào sao lâu vậy nhưng mà chưa xong
 có kết quả đó đấy nghe hiểu ạ à nhớ giúp hộ với luôn sau javis jarvis minmin min ơi
 sure yes yeah yep thanks thank you let me know when done fine great cool alright got it please
 """.split())
@@ -824,6 +824,47 @@ def speakable(text: str, limit: int = SPEAK_MAX) -> str:
     return (cut[:end + 1] if end > limit // 3 else cut.rsplit(" ", 1)[0]).strip()
 
 
+def speech_chunks(text: str, size: int = 360) -> List[str]:
+    """Read the whole result in bounded chunks; do not discard its tail."""
+    plain = speakable(text, limit=max(1, len(str(text)) * 2))
+    words = plain.split()
+    chunks, current = [], ""
+    for word in words:
+        if current and len(current) + len(word) + 1 > size:
+            chunks.append(current)
+            current = ""
+        current = (current + " " + word).strip()
+        if len(current) >= size // 2 and re.search(r"[.!?]$", word):
+            chunks.append(current)
+            current = ""
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def unread_suffix(expected: str, heard: str) -> str:
+    """Resume after the longest ordered matching prefix; preserve uncertain words."""
+    import difflib
+    words = expected.split()
+    numbers = set("một hai ba bốn tư năm sáu bảy tám chín mười mươi trăm nghìn ngàn triệu tỷ tỉ lẻ linh phẩy đồng phần".split())
+    def significant(word):
+        value = _norm_words(word)
+        return bool(value) and value not in numbers and not any(c.isdigit() for c in value)
+    positions = [i for i, w in enumerate(words) if significant(w)]
+    a = [_norm_words(words[i]) for i in positions]
+    b = [_norm_words(w) for w in heard.split() if significant(w)]
+    if not a:
+        return "" if _norm_words(expected) == _norm_words(heard) else expected
+    matched = 0
+    for block in difflib.SequenceMatcher(None, a, b, autojunk=False).get_matching_blocks():
+        if block.size and block.a <= matched + 1:
+            matched = block.a + block.size
+    if matched == len(a):
+        return ""
+    index = positions[matched] if matched else 0
+    return " ".join(words[index:])
+
+
 class ChatGPTLive(LiveProvider):
     """ChatGPT Live: realtime v3 của Codex app-server trên gói ChatGPT, KHÔNG cần API key.
 
@@ -836,6 +877,7 @@ class ChatGPTLive(LiveProvider):
     # Hàng chờ lời đọc kết quả (0.65.23): đẩy appendSpeech giữa lúc model đang nói thì nó TRỘN hai
     # nội dung vào cùng một lượt (đo trên Codex 0.153.4 và 0.158), người nghe thấy hai câu trả lời lẫn
     # vào nhau. Nên chỉ đẩy khi model im; vừa đẩy mà model chưa mở lời thì chờ một khoảng ân hạn.
+    SPEECH_READ_TIMEOUT = 0.0  # tests may shorten the per-chunk watchdog
     SPEECH_START_GRACE = 8.0   # giây: chờ model mở lời cho kết quả vừa đẩy
     SPEECH_GAP = 0.4           # giây im sau lượt nói trước, cho nghe ra hai câu tách nhau
     SPEECH_WAIT_MAX = 90.0     # giây: trần chờ, mất khung transcript cũng không kẹt
@@ -870,6 +912,11 @@ class ChatGPTLive(LiveProvider):
         self._quiet_since = 0.0       # lúc lượt nói gần nhất xong
         self._pushed_at = 0.0         # lúc vừa đẩy appendSpeech mà model chưa mở lời
         self._speech_q: List[str] = []
+        self._speech_done = asyncio.Event()
+        self._speech_heard = ""
+        self._speech_current = ""
+        self._speech_epoch = 0
+        self._speech_failed = ""
         self._speech_task: Optional[asyncio.Task] = None
 
     async def connect(self):
@@ -958,6 +1005,8 @@ class ChatGPTLive(LiveProvider):
     def translate(self, msg: dict) -> List[dict]:
         method = str(msg.get("method") or "")
         p = msg.get("params") or {}
+        if method == "_minmin_readback":
+            return [p]
         if method == "thread/realtime/sdp":
             if self._sdp is not None and not self._sdp.done():
                 self._sdp.set_result(str(p.get("sdp") or ""))
@@ -981,6 +1030,8 @@ class ChatGPTLive(LiveProvider):
             if not delta:
                 return []
             self._speaking, self._pushed_at, self._last_delta_at = True, 0.0, time.monotonic()
+            if self._speech_current:
+                self._speech_heard += delta
             ev = {"type": "transcript", "role": "assistant", "text": delta, "final": False}
             if self._user_buf.strip():
                 self._held.append(ev)
@@ -990,6 +1041,8 @@ class ChatGPTLive(LiveProvider):
             if p.get("role") == "user":
                 text = str(p.get("text") or "").strip() or self._user_buf.strip()
                 self._user_buf = ""
+                if self._speech_current:
+                    self._speech_done.set()
                 out: List[dict] = []
                 if text:
                     self._user_last, self._user_last_at = text, time.monotonic()
@@ -998,6 +1051,8 @@ class ChatGPTLive(LiveProvider):
                 self._held = []
                 return out
             self._speaking, self._pushed_at, self._quiet_since = False, 0.0, time.monotonic()
+            if self._speech_current:
+                self._speech_done.set()
             # Javis nói xong mà câu người dùng vẫn chưa có done (hiếm): chốt phần đã nghe rồi mới nhả.
             out = self._flush_user() + self._held + [{"type": "turn_done"}]
             self._held = []
@@ -1063,7 +1118,7 @@ class ChatGPTLive(LiveProvider):
 
     async def send_tool_result(self, call_id: str, name: str, result: str):
         """Xếp lời đọc kết quả vào hàng, trả về ngay (route không phải đứng chờ model đọc xong)."""
-        self._speech_q.append(speakable(result) or "Em chưa có kết quả.")
+        self._speech_q.extend(speech_chunks(result) or ["Em chưa có kết quả."])
         if self._speech_task is None or self._speech_task.done():
             self._speech_task = asyncio.ensure_future(self._drain_speech())
             self._bg.add(self._speech_task)
@@ -1077,21 +1132,69 @@ class ChatGPTLive(LiveProvider):
             return True
         return bool(self._quiet_since) and now - self._quiet_since < self.SPEECH_GAP
 
+    def _readback_state(self, state):
+        if self.queue is not None:
+            self.queue.put_nowait({"method": "_minmin_readback", "params": {"type": "readback", "status": state}})
+
+    async def cancel_readback(self):
+        self._speech_epoch += 1
+        self._speech_failed = " ".join([unread_suffix(self._speech_current, self._speech_heard)] + self._speech_q)
+        self._speech_q.clear()
+        if self._speech_task and not self._speech_task.done():
+            self._speech_task.cancel()
+            await asyncio.gather(self._speech_task, return_exceptions=True)
+        self._speech_task = None
+        self._speech_current = ""
+        self._readback_state("paused")
+
+    async def resume_readback(self):
+        if self._speech_failed:
+            text, self._speech_failed = self._speech_failed, ""
+            await self.send_tool_result("resume", "ask_javis", text)
+
     async def _drain_speech(self):
-        while self._speech_q and not self._closing:
+        epoch = self._speech_epoch
+        self._readback_state("reading")
+        while self._speech_q and not self._closing and epoch == self._speech_epoch:
             deadline = time.monotonic() + self.SPEECH_WAIT_MAX
             while self._model_busy() and time.monotonic() < deadline and not self._closing:
                 await asyncio.sleep(0.05)
             if self._closing or not self._speech_q:
                 return
             text = self._speech_q.pop(0)
-            self._pushed_at = time.monotonic()
-            if os.environ.get("JAVIS_LIVE_DEBUG"):
-                print(f"[chatgpt live] {time.monotonic():.1f} appendSpeech ({len(text)} ký tự)", file=sys.stderr)
-            try:
-                await self.srv.request("thread/realtime/appendSpeech", {"threadId": self.thread_id, "text": text})
-            except Exception as e:
-                print(f"[chatgpt live] appendSpeech lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+            for attempt in range(2):
+                deadline = time.monotonic() + self.SPEECH_WAIT_MAX
+                while attempt and (self._user_buf or self._model_busy()) and time.monotonic() < deadline and not self._closing:
+                    await asyncio.sleep(0.05)
+                if self._closing or epoch != self._speech_epoch:
+                    return
+                self._speech_current = text
+                self._speech_heard = ""
+                self._speech_done.clear()
+                self._pushed_at = time.monotonic()
+                try:
+                    await self.srv.request("thread/realtime/appendSpeech", {"threadId": self.thread_id, "text": text})
+                    # A receipt from appendSpeech is not proof that the text was spoken.
+                    await asyncio.wait_for(self._speech_done.wait(), self.SPEECH_READ_TIMEOUT or max(12.0, len(text) / 6.0))
+                    remaining = unread_suffix(text, self._speech_heard)
+                    if not remaining:
+                        break
+                    text = remaining
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    text = unread_suffix(text, self._speech_heard) or text
+                if attempt == 0:
+                    self._readback_state("recovering")
+                    await asyncio.sleep(0.8)
+                else:
+                    self._speech_failed = " ".join([text] + self._speech_q)
+                    self._speech_q.clear()
+                    self._speech_current = ""
+                    self._readback_state("paused")
+                    return
+            self._speech_current = ""
+        self._readback_state("done")
 
     async def send_tool_ack(self, call_id: str, name: str, text: str):
         return   # handoff do client tự quản không cần kết quả; nói gì ở đây là đọc thừa ra loa

@@ -3375,3 +3375,22 @@ body.ne-full-on .cview { z-index: 250; }
 
 .dictation-status { font-size: 12px; color: var(--text2); padding: 4px 12px; }
 #callBtn.in-call { color: #e04545; background: rgba(224,69,69,.12); }
+
+/* Call dock: large circular controls, motion reflects the real state. */
+.call-bar { padding: 12px 16px; gap: 14px; border-radius: 24px; box-shadow: 0 5px 18px #31204c18; border-color: #9274df55; }
+.call-bar .call-btn { width: 68px; height: 68px; min-width: 68px; padding: 7px 2px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 650; transition: transform .18s, box-shadow .18s; box-shadow: 3px 4px 10px #35245625, -3px -3px 8px #ffffff75; }
+.call-bar .call-btn::before { content: ""; width: 23px; height: 23px; background: currentColor; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='2' stroke-linecap='round' d='M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0V5zm-3 6v1a6 6 0 0 0 12 0v-1m-6 7v4m-4 0h8'/%3E%3C/svg%3E") center/contain no-repeat; }
+.call-bar .call-hangup::before { mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M3 16l3-3v-3c4-2 8-2 12 0v3l3 3 2-3c-5-8-17-8-22 0z'/%3E%3C/svg%3E"); }
+.call-bar .call-hangup { background: #ef4444; border: 2px solid #ff8a8a; box-shadow: 0 5px 15px #ef444445; color: white; }
+.call-bar .call-btn:hover { transform: translateY(-2px) scale(1.04); }
+.call-bar .call-btn:active { transform: scale(.95); }
+.call-bar .call-btn:focus-visible, .call-resume:focus-visible { outline: 3px solid #8460e8; outline-offset: 4px; }
+.call-bar .call-state { white-space: normal; line-height: 1.4; }
+.call-bar .call-dot { width: 14px; height: 14px; box-shadow: 0 0 0 6px #8460e815; }
+.call-bar[data-state="listening"] .call-dot { animation: call-pulse 1.6s ease-in-out infinite; }
+.call-resume { border-radius: 20px; padding: 10px 14px; border: 1px solid #8460e8; color: var(--accent); background: var(--bg); }
+.call-resume[hidden] { display: none; }
+#voiceBtn, #callBtn { border-radius: 50%; min-width: 48px; min-height: 48px; }
+#voiceBtn.recording { animation: call-pulse 1.4s ease-in-out infinite; box-shadow: 0 0 0 5px #8460e828; }
+@media (max-width: 600px) { .call-bar { flex-wrap: wrap; padding: 10px; gap: 10px; } .call-bar .call-btn { width: 58px; height: 58px; min-width: 58px; } .call-bar .call-clock { font-size: 12px; } .call-resume { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .call-bar *, #voiceBtn.recording { animation: none !important; transition: none !important; } }

@@ -259,6 +259,8 @@
         if (d.transport !== "webrtc" || on) emit("onReady", d);
       }
       else if (d.type === "webrtc_answer") { if (answerWaiter) answerWaiter(String(d.sdp || "")); }
+      else if (d.type === "progress") emit("onProgress", d.text || "");
+      else if (d.type === "readback") emit("onReadback", d.status || "");
       else if (d.type === "tool_result") emit("onToolResult", d.name || "", d.text || "");
       else if (d.type === "interrupted") {
         var ms = playedMs();          // đo TRƯỚC khi xả, xả xong là mất mốc
@@ -266,7 +268,10 @@
         sendJson({ type: "played", ms: ms });
         emit("onInterrupted", ms);
       }
-      else if (d.type === "transcript") emit("onTranscript", d.role, d.text || "", !!d.final);
+      else if (d.type === "transcript") {
+        if (d.role === "user" && remoteAudio) remoteAudio.muted = false;
+        emit("onTranscript", d.role, d.text || "", !!d.final);
+      }
       else if (d.type === "tool") emit("onTool", d.name, d.status);
       else if (d.type === "turn_done") { nextUtterance = true; emit("onTurnDone"); }
       else if (d.type === "reconnected") emit("onReconnected");
@@ -419,7 +424,10 @@
     emit("onStopped");
   }
 
-  window.JavisVoiceLive = { start: start, stop: stop, sendText: sendText, sendContext: sendContext, attachMic: attachMic,
+  window.JavisVoiceLive = {
+    stopResponse: function () { if (remoteAudio) remoteAudio.muted = true; flushPlayback(); sendJson({type:"cancel_work"}); },
+    resumeReadback: function () { if (remoteAudio) remoteAudio.muted = false; sendJson({type:"resume_readback"}); },
+    start: start, stop: stop, sendText: sendText, sendContext: sendContext, attachMic: attachMic,
                             hasMic: function () { return !!stream; },
                             playedMs: playedMs, progress: progress, resetProgress: resetProgress,
                             setMuted: setMuted, isMuted: function () { return muted; },

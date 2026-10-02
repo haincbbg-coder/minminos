@@ -179,6 +179,8 @@ async def main():
 
     fake.push("thread/realtime/closed", reason="server_error")
     ev = await asyncio.wait_for(agen.__anext__(), 2)
+    while ev["type"] == "readback":
+        ev = await asyncio.wait_for(agen.__anext__(), 2)
     check("phiên bị ngắt ngoài ý muốn thì báo lỗi", ev["type"] == "error")
 
     await prov.close()

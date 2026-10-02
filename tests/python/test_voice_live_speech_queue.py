@@ -119,8 +119,11 @@ class SpeechQueueTests(unittest.IsolatedAsyncioTestCase):
         await self.prov.send_tool_result("h2", "ask_javis", "Hai.")
         await asyncio.sleep(0.1)
         self.assertEqual(self.fake.spoken(), ["Một."], "model chưa kịp mở lời cho kết quả một thì chưa đẩy kết quả hai")
-        self.assertTrue(await self.until(lambda: self.fake.spoken() == ["Một.", "Hai."], 1.0),
-                        "model không nói gì sau ân hạn thì vẫn đọc tiếp")
+        await asyncio.sleep(0.35)
+        self.assertEqual(self.fake.spoken(), ["Một."], "no speech confirmation must not discard the first chunk")
+        self.speak("Một."); self.done("Một.")
+        self.assertTrue(await self.until(lambda: self.fake.spoken() == ["Một.", "Hai."], 1.0))
+
 
     async def test_interrupted_turn_without_done_does_not_block(self):
         self.speak(" Dạ kết quả một")    # người dùng chen ngang: model im, không có done
@@ -144,6 +147,32 @@ class SpeechQueueTests(unittest.IsolatedAsyncioTestCase):
         await self.prov.close()
         await asyncio.sleep(0.5)
         self.assertEqual(self.fake.spoken(), [], "cúp máy thì không đọc nốt")
+
+    async def test_full_report_keeps_tail(self):
+        report = "Doanh thu 100 triệu. " * 60 + "CHƯA ĐỦ CƠ SỞ báo lãi ròng."
+        chunks = voice_live.speech_chunks(report)
+        self.assertEqual(" ".join(chunks), report.strip())
+        self.assertTrue(chunks[-1].endswith("lãi ròng."))
+
+    async def test_partial_read_retries_only_unread_tail(self):
+        await self.prov.send_tool_result("h1", "ask_javis", "Doanh thu 100 triệu. Chi phí 20 triệu.")
+        self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 1))
+        self.speak("Doanh thu 100 triệu."); self.done()
+        self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 2))
+        self.assertEqual(self.fake.spoken()[1], "Chi phí 20 triệu.")
+        self.speak("Chi phí 20 triệu."); self.done()
+        self.assertTrue(await self.until(lambda: any(e.get("status") == "done" for e in self.events)))
+
+    async def test_pause_retains_queue_for_resume(self):
+        await self.prov.send_tool_result("h1", "ask_javis", "Một.")
+        await self.prov.send_tool_result("h2", "ask_javis", "Hai.")
+        self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 1))
+        await self.prov.cancel_readback()
+        self.assertIn("Hai.", self.prov._speech_failed)
+        self.prov._pushed_at = 0
+        await self.prov.resume_readback()
+        self.assertTrue(await self.until(lambda: len(self.fake.spoken()) == 2))
+        self.assertIn("Hai.", self.fake.spoken()[-1])
 
 
 if __name__ == "__main__":

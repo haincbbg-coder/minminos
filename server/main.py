@@ -147,6 +147,7 @@ import ui_bridge   # tool javis_ui bảo dashboard mở trang/file/việc rồi 
 import ui_targets   # đổi lời nói ("mở trang công cụ") thành id trang dashboard hiểu
 import voice_turn_protocol
 import voice_brain   # Voice V2: bộ não giọng nói riêng (Antigravity sống lâu / Groq / Gemini...)
+import voice_answers
 import voice_live    # Voice V2: nghe nói thẳng qua Gemini Live / OpenAI Realtime
 import voice_ear     # tai nghe lại: model đa ngôn ngữ nghe âm thanh rồi mới chốt chữ (0.65.15)
 import codex_realtime  # ChatGPT Live: một Codex app-server sống lâu, realtime trên gói ChatGPT (0.65.17)
@@ -4550,6 +4551,8 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
             cfg["image"]["strip_c2pa"] = bool(patch["strip_c2pa"])
     elif section == "voice":
         v = cfg.setdefault("voice", {})
+        if patch.get("response_mode") in voice_answers.MODES:
+            v["response_mode"] = patch["response_mode"]
         if patch.get("tts_provider") in ("edge", "openai", "elevenlabs"):
             v["tts_provider"] = patch["tts_provider"]
         for k in ("openai_tts_voice", "openai_tts_model", "elevenlabs_voice", "elevenlabs_model"):
@@ -12546,7 +12549,7 @@ async def voice_options(brains: int = 1):
     }
 
 
-async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "") -> str:
+async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "", progress=None) -> str:
     """Tool `ask_javis` của phiên Live, và việc nền của làn nhanh (V3): chạy MỘT lượt bộ não
     chính rồi trả chữ.
 
@@ -12563,6 +12566,14 @@ async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "
     `ghi_kho=False` vì phần ghi kết quả đã có `push_to_chat` (làn nhanh) hoặc chính vòng
     hội thoại Live lo - vỏ chen tin vào nữa là ghi đôi.
     """
+    mode = (cfgmod.read_settings().get("voice") or {}).get("response_mode", "balanced")
+    cached = voice_answers.get(brain, conv_sid, request, mode)
+    if cached:
+        if progress:
+            await progress("Đang dùng kết quả đã có")
+        return cached
+    original_request = request
+    request = voice_answers.instruction(mode) + "\n\n" + request
     key = key or f"voice:{conv_sid}"
     sess = _tg_session(key)
     try:
@@ -12572,13 +12583,15 @@ async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "
     except Exception:
         pass
     try:
-        out = await _tg_answer(request, meta={"chat_id": key}, channel="cli",
+        out = await _tg_answer(request, meta={"chat_id": key, "voice_response_mode": mode}, progress=progress, channel="cli",
                                phien_kho=str(conv_sid or ""), ghi_kho=False)
     except Exception as e:
         return f"Bộ não chính lỗi: {type(e).__name__}: {e}"
-    if isinstance(out, dict):
-        return channel_context.strip_control_blocks(str(out.get("text") or ""))[:6000] or "(không có nội dung)"
-    return str(out or "")[:6000]
+    result = channel_context.strip_control_blocks(str(out.get("text") or "")) if isinstance(out, dict) else str(out or "")
+    result = result[:24000] or "(không có nội dung)"
+    voice_answers.put(brain, conv_sid, original_request, result)
+    return result
+
 
 
 @app.websocket("/ws/voice-preview")
@@ -12686,7 +12699,7 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
     # bóng đầy đủ, nên lời đọc đó không thành bong bóng thứ hai và không vào lịch sử.
     ask_lock = asyncio.Lock()
     ask_state = {"waiting": 0, "last": ""}
-    readback = {"pending": 0, "active": False}
+    readback = {"pending": 0, "active": False, "reading": False}
 
     async def from_client():
         while True:
@@ -12726,6 +12739,14 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
                     task = asyncio.create_task(_answer_webrtc(str(d.get("sdp") or "")))
                     tool_tasks.add(task)
                     task.add_done_callback(tool_tasks.discard)
+                elif d.get("type") == "cancel_work":
+                    for task in list(tool_tasks):
+                        task.cancel()
+                    if hasattr(prov, "cancel_readback"):
+                        await prov.cancel_readback()
+                    await _j({"type": "tool", "name": "ask_javis", "status": "cancelled"})
+                elif d.get("type") == "resume_readback" and hasattr(prov, "resume_readback"):
+                    await prov.resume_readback()
                 elif d.get("type") == "stop":
                     return
 
@@ -12777,8 +12798,10 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
             req = voice_live.followup_request(previous, req)
         if ui_ctx["text"]:
             req = ui_ctx["text"] + "\n\n" + req
+        async def report_progress(text):
+            await _j({"type": "progress", "text": str(text)[:240]})
         try:
-            result = await _voice_ask_javis(req, conv_sid, brain) if name == "ask_javis" \
+            result = await _voice_ask_javis(req, conv_sid, brain, progress=report_progress) if name == "ask_javis" \
                 else f"Tool {name} không có."
         except Exception as e:
             result = f"Bộ não chính lỗi: {type(e).__name__}: {e}"
@@ -12838,11 +12861,11 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
                 task.add_done_callback(tool_tasks.discard)
             elif t == "transcript":
                 if ev.get("role") == "assistant":
-                    if readback["active"] or readback["pending"]:
+                    if readback["reading"] or readback["active"] or readback["pending"]:
                         # Lượt nói đầu tiên sau khi trả kết quả là lời đọc lại bản đã hiện đầy đủ.
                         if not readback["active"]:
                             readback["active"] = True
-                            readback["pending"] -= 1
+                            readback["pending"] = max(0, readback["pending"] - 1)
                         return True
                     asst_buf["text"] += str(ev.get("text") or "")
                 elif ev.get("final") and ev.get("text"):
@@ -12871,6 +12894,12 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
                     except Exception:
                         pass
                 asst_buf["text"] = ""
+                await _j(ev)
+            elif t == "readback":
+                readback["reading"] = ev.get("status") in ("reading", "recovering")
+                if not readback["reading"]:
+                    readback["pending"] = 0
+                    readback["active"] = False
                 await _j(ev)
             elif t in ("error", "ready"):
                 await _j(ev)
@@ -17952,6 +17981,8 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
     sess["last"] = text
     sess["sent"] = set()    # lượt mới → reset dedupe (endpoint /telegram/send-file add vào đây)
     reasoning = _reasoning_level(mcfg)
+    if channel == "cli" and str(chat_id).startswith("voice:"):
+        reasoning = {"fast": "low", "thorough": "high"}.get((meta or {}).get("voice_response_mode"), reasoning)
     runtime_trace = context_runtime.current_trace()
 
     # NGÔN NGỮ cho lượt này. Dính theo TỪNG CUỘC CHAT (chat_id), không theo tiến trình: một

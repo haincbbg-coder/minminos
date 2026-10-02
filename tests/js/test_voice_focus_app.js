@@ -35,7 +35,7 @@ const box = {
   runActions: noop, petReact: noop, nhapGiong: t => drafts.push(t), veTinTuGiong: t => t, sendMessage: t => sent.push(t),
   capNhatOrb: noop, appendUserMessage: noop, recordTurn: (role, text) => stored.push([role, text]),
   currentBrainPath: () => 'brain', persistSession: noop, guiNguCanhLive: noop,
-  setInterval: () => 1, clearInterval: noop, clearTimeout: noop, capNhatThanhGoi: noop,
+  setInterval: () => 1, clearInterval: noop, clearTimeout: noop, updateStopBtn:()=>{}, capNhatThanhGoi: noop,
   setTimeout: (fn) => { timers.push(fn); return timers.length; },
   chuyenSangCoBan: () => { basicCalls++; return true; }, ghiChuThoang: (k) => notes.push(k),
 };

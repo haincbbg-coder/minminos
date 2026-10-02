@@ -85,7 +85,7 @@ class ChatGPTLiveRouteTests(unittest.IsolatedAsyncioTestCase):
 
                 async def close(self): pass
 
-            async def ask(req, conv_sid, brain, key=""):
+            async def ask(req, conv_sid, brain, key="", progress=None):
                 return "## Doanh thu hôm nay\n\n| Kênh | Tiền |\n|---|---|\n| POS | 12.500.000 |"
 
             def write_auth():

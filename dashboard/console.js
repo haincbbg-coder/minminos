@@ -6593,6 +6593,10 @@
     };
 
 
+    if ($("vcResponseMode")) {
+      $("vcResponseMode").value = v.response_mode || "balanced";
+      $("vcResponseMode").onchange = () => luuGiong({response_mode: $("vcResponseMode").value});
+    }
     $("vcEngine").value = call.setting === "api" && v.live_provider === "gemini" ? "gemini" : (call.setting || "auto");
     const gemini = (o.live_providers || []).find(p => p.id === "gemini");
     $("vcProviderNote").textContent = $("vcEngine").value === "gemini"

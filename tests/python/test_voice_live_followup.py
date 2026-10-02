@@ -30,7 +30,7 @@ class FollowupWordsTests(unittest.TestCase):
     def test_ack_words(self):
         for text in ("Ok, xem xong kiểm tra xong thì báo anh nhé", "ok em", "Dạ được rồi, cảm ơn em nhé",
                      "Xong thì báo anh nha", "ok Javis, làm luôn đi", "okay let me know when done",
-                     "Min Min ơi, xong thì báo anh nhé", "ok MinMin"):
+                     "Min Min ơi, xong thì báo anh nhé", "ok MinMin", "sao lâu vậy", "nhưng mà lâu vậy", "xong chưa con"):
             self.assertTrue(voice_live.is_followup_ack(text), text)
         for text in ("", "thêm cả số đơn huỷ nữa", "kiểm tra cả email nữa", "thôi không cần nữa",
                      "à mà doanh thu tháng trước bao nhiêu", "Ok, xem lịch tuần này luôn", "MinMin mở email mới"):
@@ -131,7 +131,7 @@ class LiveRouteFollowupTests(unittest.IsolatedAsyncioTestCase):
 
             gates = {}
 
-            async def ask(req, conv_sid, brain, key=""):
+            async def ask(req, conv_sid, brain, key="", progress=None):
                 n = len(asks)
                 asks.append(req)
                 gate = gates.setdefault(n, asyncio.Event())
