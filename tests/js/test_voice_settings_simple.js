@@ -101,7 +101,7 @@ async function run(options, edgeVoice = "vi-VN-HoaiMyNeural", models = null) {
       return options;
     } }), urls: [],
     saveSetting: async (section, data) => { saves.push([section, data]); return { ok: true }; },
-    window: { JavisVoiceMode: { refresh: () => refreshes.push(1) } }, Event: class { constructor(type) { this.type = type; } },
+    window: { MinMinVoicePreview: { stop() {}, play: async voice => { ctx.played = voice; } }, JavisVoiceMode: { refresh: () => refreshes.push(1) } }, Event: class { constructor(type) { this.type = type; } },
     Audio: class { constructor(src) { ctx.played = src; } play() { return Promise.resolve(); } pause() {} },
     Date, Math, Number, Array, String, JSON, Promise,
   };
@@ -133,7 +133,7 @@ const base = (call, extra = {}) => Object.assign({
   check("ChatGPT Live: đổi giọng tự lưu chatgpt_voice", JSON.stringify(r.saves.at(-1)) === '["voice",{"chatgpt_voice":"maple"}]');
   check("tự lưu xong thì đường gọi của nút mic nạp lại", r.refreshes.length === 1 && $("vcStatus").textContent === "settings.vc_saved");
   $("vcTry").onclick();
-  check("ChatGPT Live: Nghe thử phát mẫu thu sẵn", r.ctx.played === "/static/voices/maple.mp3");
+  check("ChatGPT Live: Nghe thử tạo câu Min Min bằng giọng đã chọn", r.ctx.played === "maple");
   $("vcEngine").value = "basic"; await $("vcEngine").onchange();
   check("Đường gọi: đổi là tự lưu call_engine", r.saves.some(s => s[1].call_engine === "basic"));
 
