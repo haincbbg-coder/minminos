@@ -766,6 +766,13 @@
             '<button type="button" class="s-btn-ghost" id="cbThemNhom">' + ic("plus") + ' ' + esc(window.t("cb.nk_them")) + '</button>' +
             '<div id="cbNguoiLa">' + htmlNguoiLa(b && b.nguoi_la, agents) + '</div></div>' +
 
+          '<div class="cb-nk-tieude">' + esc(window.t("cb.tv_tieu_de")) + '</div>' +
+          '<div class="cb-hint">' + esc(window.t("cb.tv_hint")) + '</div>' +
+          (sua ? '<div id="cbThuVien" class="cb-tv"></div>' +
+                 '<label class="s-btn-ghost cb-tv-up">' + ic("plus") + ' ' + esc(window.t("cb.tv_tai_len")) +
+                 '<input type="file" id="cbTvFile" multiple style="display:none" accept="image/*,video/mp4,video/quicktime,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.csv"></label>'
+               : '<div class="cb-hint"><b>' + esc(window.t("cb.tv_luu_truoc")) + '</b></div>') +
+
           '<div class="cb-nk-tieude">' + esc(window.t("cb.nk_mac_dinh")) + '</div>' +
           '<label>' + esc(window.t("cb.lb_noi_duoc")) + '</label>' +
           '<textarea id="cbNoiDuoc" rows="3" placeholder="' + esc(window.t("cb.ph_noi_duoc")) + '">' +
@@ -974,6 +981,36 @@
       });
       veMoiDanhBa();
     }
+    // Thư viện file gửi khách: chỉ khi SỬA bot (bot mới chưa có id để gắn file).
+    async function taiThuVien() {
+      var ds = box.querySelector("#cbThuVien");
+      if (!ds || !b) return;
+      try {
+        var d = await api("/chatbots/" + encodeURIComponent(b.id) + "/thu-vien");
+        ds.innerHTML = (d.items || []).length ? d.items.map(function (x) {
+          return '<div class="cb-tv-dong"><span>' + esc(x.name) + ' <em>' + Math.max(1, Math.round(x.size / 1024)) + ' KB</em></span>' +
+            '<button type="button" class="s-btn-ghost cb-tv-xoa" data-n="' + esc(x.name) + '">' + esc(window.t("cb.nk_xoa")) + '</button></div>';
+        }).join("") : '<div class="cb-hint">' + esc(window.t("cb.tv_trong")) + '</div>';
+        Array.prototype.forEach.call(ds.querySelectorAll(".cb-tv-xoa"), function (n) {
+          n.onclick = async function () {
+            if (!confirm(window.t("cb.tv_xac_nhan_xoa"))) return;
+            try { await api("/chatbots/" + encodeURIComponent(b.id) + "/thu-vien/xoa", { method: "POST", body: fd({ ten: n.getAttribute("data-n") }) }); } catch (e) { alert(e.message); }
+            taiThuVien();
+          };
+        });
+      } catch (e) { ds.innerHTML = '<div class="cb-warn">' + esc(e.message) + '</div>'; }
+    }
+    var fTv = box.querySelector("#cbTvFile");
+    if (fTv) fTv.onchange = async function () {
+      for (var i = 0; i < fTv.files.length; i++) {
+        var f = new FormData(); f.append("file", fTv.files[i]);
+        try { await api("/chatbots/" + encodeURIComponent(b.id) + "/thu-vien", { method: "POST", body: f }); }
+        catch (e) { alert(fTv.files[i].name + ": " + e.message); }
+      }
+      fTv.value = "";
+      taiThuVien();
+    };
+    taiThuVien();
     var nutThem = box.querySelector("#cbThemNhom");
     if (nutThem) nutThem.onclick = function () {
       var ds = box.querySelectorAll("#cbNhomKhach .cb-nk");

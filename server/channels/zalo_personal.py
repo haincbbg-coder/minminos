@@ -101,6 +101,36 @@ async def gui_co_tag(conn_id: str, thread: str, cau: str, specs: list):
         return await gui({"id": conn_id}, thread, cau, "group")
 
 
+async def gui_tep(conn_id: str, thread: str, path: str, loai_chat: str = "private", loai_tep: str = "tep"):
+    """Gửi MỘT ảnh/video/tài liệu. Tool MCP chỉ có chữ, nên đi bằng lệnh `msg send-image` /
+    `msg send-file` của chính zalo-agent-cli (cùng gói đã ghim, cùng thư mục đăng nhập)."""
+    import zalo_personal_channel as zc
+    try:
+        conn = zc.ket_noi_theo_id(conn_id)
+        sub = "send-image" if loai_tep == "anh" else "send-file"
+        argv = lenh_cli(conn, "--json", "msg", sub, str(thread), str(path),
+                        "-t", "1" if str(loai_chat) == "group" else "0")
+        if not argv:
+            return False, "không dựng được lệnh CLI"
+        import os
+        env = dict(os.environ)
+        env.update({k: str(v) for k, v in (conn.get("env") or {}).items()})
+        import winproc
+        proc = await asyncio.create_subprocess_exec(
+            *argv, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
+            **winproc.kwargs_no_window())
+        try:
+            _o, e = await asyncio.wait_for(proc.communicate(), timeout=180)
+        except asyncio.TimeoutError:
+            proc.kill()
+            return False, "gửi file quá 3 phút chưa xong"
+        if proc.returncode != 0:
+            return False, (e or b"").decode("utf-8", "replace").strip()[-200:] or f"CLI thoát mã {proc.returncode}"
+        return True, ""
+    except Exception as ex:
+        return False, f"{type(ex).__name__}: {ex}"[:200]
+
+
 class Transport:
     """Lớp vận chuyển cho bot trên Zalo cá nhân, đúng khế ước của `chatbot_runtime.start_bot`.
 
@@ -215,10 +245,21 @@ class Transport:
                     if out.get("im_lang"):
                         return
                     cau = str(out.get("text") or "").strip()
+                    # CHỈ file trong thư viện chủ duyệt (cờ `thu_vien`): file engine tự sinh trong
+                    # brain không tự bay ra Zalo của người lạ.
+                    tep = [f for f in (out.get("files") or []) if isinstance(f, dict) and f.get("thu_vien")]
                 else:
                     cau = str(out or "").strip()
+                    tep = []
                 if cau:
                     await self._gui(thread, cau, meta if nhom else None)
+                for f in tep[:4]:
+                    zc.ghi_tep_da_gui(self.conn_id, thread)
+                    ok, loi = await gui_tep(self.conn_id, thread, f["path"],
+                                            "group" if nhom else "private", str(f.get("loai") or "tep"))
+                    if not ok:
+                        self.last_error = f"Gửi file Zalo lỗi: {loi}"[:300]
+                        print(f"[zalo-personal bot {self.conn_id}] {self.last_error}", file=sys.stderr)
             except asyncio.CancelledError:
                 raise
             except Exception as e:

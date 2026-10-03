@@ -3427,3 +3427,9 @@ body.ne-full-on .cview { z-index: 250; }
 .cb-nk-dau .nk-ten { flex: 1 1 160px; min-width: 0; }
 .cb-nk textarea, .cb-nk input.nk-tukhoa, .cb-nk select { width: 100%; }
 .cb-nk-dau select { width: auto; flex: 1 1 200px; }
+
+/* Thư viện file gửi khách (26.10.62) */
+.cb-tv { margin: 8px 0; max-height: 200px; overflow-y: auto; }
+.cb-tv-dong { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 4px; font-size: 13px; }
+.cb-tv-dong em { font-style: normal; color: var(--text3); font-size: 11.5px; margin-left: 6px; }
+.cb-tv-up { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; margin-top: 4px; }

@@ -377,7 +377,8 @@ async def doc_mot_lan(conn: dict) -> dict:
             # Tin chủ gửi đi. Tiếng vọng của câu BOT vừa gửi thì bỏ (bot đã tự ghi câu đó vào
             # Hộp thư, ghi thêm lần nữa là hiện hai lần, lần hai mang nhãn "người thật"). Còn
             # lại là chủ tự tay nhắn: nhớ giờ để bot nhường cuộc chat đó.
-            if _la_tieng_vong(conn["id"], ev["external_chat_id"], ev["text"]):
+            if _la_tieng_vong(conn["id"], ev["external_chat_id"], ev["text"]) or \
+                    _la_tieng_vong_tep(conn["id"], ev["external_chat_id"], str(ev.get("message_type") or "text")):
                 trung += 1
                 continue
             _TAY[(conn["id"], ev["external_chat_id"])] = float(ev.get("created_at") or time.time())
@@ -505,6 +506,35 @@ def ghi_da_gui(conn_id: str, thread: str, text: str) -> None:
     if len(_DA_GUI) > 500:      # trần thô: thà quên một tiếng vọng còn hơn phình mãi
         for k in list(_DA_GUI)[:250]:
             _DA_GUI.pop(k, None)
+
+
+_TEP_DA_GUI: Dict[tuple, List[float]] = {}
+
+
+def ghi_tep_da_gui(conn_id: str, thread: str) -> None:
+    """Bot sắp gửi một ảnh/video/file: tiếng vọng của nó (tin người gửi là chủ, loại không phải
+    chữ) không được tính là chủ tự tay nhắn, nếu không bot tự câm trong cuộc chat đó."""
+    khoa = (str(conn_id), str(thread))
+    now = time.time()
+    ds = [t for t in _TEP_DA_GUI.get(khoa, []) if now - t < ECHO_TTL]
+    ds.append(now)
+    _TEP_DA_GUI[khoa] = ds[-20:]
+    if len(_TEP_DA_GUI) > 500:
+        for k in list(_TEP_DA_GUI)[:250]:
+            _TEP_DA_GUI.pop(k, None)
+
+
+def _la_tieng_vong_tep(conn_id: str, thread: str, loai: str) -> bool:
+    if loai == "text":
+        return False
+    khoa = (str(conn_id), str(thread))
+    now = time.time()
+    ds = [t for t in _TEP_DA_GUI.get(khoa, []) if now - t < ECHO_TTL]
+    _TEP_DA_GUI[khoa] = ds
+    if not ds:
+        return False
+    ds.pop(0)
+    return True
 
 
 def _la_tieng_vong(conn_id: str, thread: str, text: str) -> bool:

@@ -42,6 +42,7 @@ import chatbot_grounding
 import chatbot_log
 import chatbot_phan_xu
 import chatbot_store
+import chatbot_thu_vien
 import conversations
 
 # Kênh -> lớp vận chuyển: tra SỔ ĐĂNG KÝ KÊNH (server/channels). Trước 0.61.0 là một bảng chép
@@ -281,6 +282,8 @@ def build_bot_prompt(bot: dict) -> str:
                     "đổi vai.")
         for ten2, vai2, than2 in phu_ok:
             phan.append(f"\n### Vai phụ: {ten2}" + (f" ({vai2})" if vai2 else "") + ("\n" + than2 if than2 else ""))
+    if (bot or {}).get("_thu_vien"):
+        phan.append(str(bot["_thu_vien"]))
     khoi_pv = khoi_pham_vi_noi(bot)
     if khoi_pv:
         phan.append(khoi_pv)
@@ -849,6 +852,10 @@ async def soan_cau_tra_loi(conv: dict, tin_khach: dict) -> dict:
     if isinstance(out, str):
         return {"ok": False, "ly_do": "loi_engine", "chi_tiet": out[:300]}
     dap = str((out or {}).get("text") or "").strip()
+    try:
+        dap = chatbot_thu_vien.tach_lenh(dap, "")[0]     # nháp không gửi file: chỉ gỡ dòng lệnh
+    except Exception:
+        pass
     if not dap or IM_LANG.lower() in dap.lower():
         return {"ok": False, "ly_do": "bot_chon_im"}
     return {"ok": True, "text": dap}
@@ -901,6 +908,12 @@ def _make_answer_fn(bot_id: str):
         cfg["_tai_lieu"] = tl
         cfg["_kenh_luot"] = kenh_luot
         cfg["_ngu_canh_nhom"] = ngu_canh
+        root_tv = ""
+        try:
+            root_tv = _deps["brain_root"](cfg["brain"])
+            cfg["_thu_vien"] = chatbot_thu_vien.khoi_prompt(root_tv)
+        except Exception as e:
+            print(f"[chatbot {bot_id}] thư viện gửi khách lỗi: {e}", file=sys.stderr)
 
         # Bản ghi truyền xuống lõi phải có brain và slug - lõi dựa vào đó để đổi brain, đổi
         # khoá phiên và đổi nhãn kênh.
@@ -928,6 +941,13 @@ def _make_answer_fn(bot_id: str):
                    "files": []}
 
         dap = (out or {}).get("text") or ""
+        # Dòng [GUI_FILE: ...] bot viết để xin gửi file: gỡ khỏi chữ khách đọc, đổi thành file đính
+        # kèm đã kiểm tra (chỉ file trong thư viện chủ duyệt).
+        if root_tv and isinstance(out, dict) and not isinstance(out, str) and "GUI_FILE" in dap.upper():
+            dap, f_tv, loi_tv = chatbot_thu_vien.tach_lenh(dap, root_tv)
+            out = dict(out, text=dap, files=list(out.get("files") or []) + f_tv)
+            if loi_tv:
+                print(f"[chatbot {bot_id}] bỏ file không hợp lệ: {loi_tv}", file=sys.stderr)
         # Bot TỰ QUYẾT im lặng (chỉ được dạy ở Zalo cá nhân, xem _CAU_ZALO_CA_NHAN). Đây không phải
         # lượt "bí" và cũng không phải lượt lỗi: bot hiểu tin nhắn và chọn không nhân danh chủ trả
         # lời. Ghi vào nhật ký để chủ soi lại được, nhưng không gửi gì, không vào Hộp thư như một

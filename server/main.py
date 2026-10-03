@@ -19393,6 +19393,45 @@ async def chatbots_danh_ba(account_id: str = "", q: str = "", loai: str = ""):
     return JSONResponse(r, status_code=200 if r.get("ok") else 400)
 
 
+def _tv_root(bot_id: str):
+    b = chatbot_store.get_bot(bot_id)
+    if not b:
+        return None
+    return _brain_root(b.get("brain") or b.get("agent_brain") or "brain")
+
+
+@app.get("/chatbots/{bot_id}/thu-vien")
+async def chatbots_thu_vien(bot_id: str):
+    """File bot được phép gửi khách (thư mục gui-khach của brain)."""
+    import chatbot_thu_vien
+    root = _tv_root(bot_id)
+    if root is None:
+        return JSONResponse({"ok": False, "error": "Không có bot này."}, status_code=404)
+    return {"ok": True, "items": chatbot_thu_vien.liet_ke(root), "thu_muc": chatbot_thu_vien.TEN_THU_MUC}
+
+
+@app.post("/chatbots/{bot_id}/thu-vien")
+async def chatbots_thu_vien_up(bot_id: str, file: UploadFile = File(...)):
+    import chatbot_thu_vien
+    root = _tv_root(bot_id)
+    if root is None:
+        return JSONResponse({"ok": False, "error": "Không có bot này."}, status_code=404)
+    nd = await file.read(chatbot_thu_vien.MAX_BYTES + 1)
+    ten, err = chatbot_thu_vien.luu(root, file.filename or "", nd)
+    if err:
+        return JSONResponse({"ok": False, "error": err}, status_code=400)
+    return {"ok": True, "name": ten}
+
+
+@app.post("/chatbots/{bot_id}/thu-vien/xoa")
+async def chatbots_thu_vien_xoa(bot_id: str, ten: str = Form(...)):
+    import chatbot_thu_vien
+    root = _tv_root(bot_id)
+    if root is None:
+        return JSONResponse({"ok": False, "error": "Không có bot này."}, status_code=404)
+    return {"ok": chatbot_thu_vien.xoa(root, ten)}
+
+
 @app.post("/chatbots/{bot_id}/update")
 async def chatbots_update(bot_id: str, request: Request):
     form = dict(await request.form())

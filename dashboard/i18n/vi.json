@@ -3381,5 +3381,11 @@
   "cb.nl_im": "Bot im với người lạ",
   "cb.nl_hint": "Người lạ = chưa thuộc nhóm nào, chưa được cho phép, ví dụ người lạ kết bạn hỏi tuyển dụng. Bật lên thì đặt phạm vi hẹp, ví dụ chỉ nói về tuyển dụng.",
   "ht.nhom_khach": "Nhóm khách",
-  "ht.nk_khong": "Người lạ (chưa xếp nhóm)"
+  "ht.nk_khong": "Người lạ (chưa xếp nhóm)",
+  "cb.tv_tieu_de": "File bot được gửi cho khách (ảnh, video, tài liệu)",
+  "cb.tv_hint": "Tải vào đây bảng giá, catalogue, ảnh sản phẩm, video hướng dẫn. Bot chỉ gửi được đúng những file này (không đụng được file khác trong brain), khi khách cần và file khớp. Tối đa 25MB mỗi file; Zalo cá nhân, Telegram và Zalo Bot đều gửi được.",
+  "cb.tv_tai_len": "Tải file lên",
+  "cb.tv_trong": "Chưa có file nào.",
+  "cb.tv_luu_truoc": "Lưu bot xong rồi mở Sửa để tải file lên.",
+  "cb.tv_xac_nhan_xoa": "Xoá file này khỏi thư viện?"
 }
