@@ -4500,6 +4500,206 @@
  {
   "order": 452,
   "type": "APIRoute",
+  "path": "/apps/xuong-video",
+  "name": "xv_goc",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 453,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/",
+  "name": "xv_trang",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 454,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/{ten}",
+  "name": "xv_tinh",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 455,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/trang-thai",
+  "name": "xv_trang_thai",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 456,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/khoa/{dv}",
+  "name": "xv_khoa",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 457,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/khoa/{dv}",
+  "name": "xv_khoa_xoa",
+  "methods": [
+   "DELETE"
+  ],
+  "trong": null
+ },
+ {
+  "order": 458,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/cai-dat",
+  "name": "xv_cai_dat",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 459,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/youtube/ket-noi",
+  "name": "xv_yt_ket_noi",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 460,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/youtube/callback",
+  "name": "xv_yt_callback",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 461,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an",
+  "name": "xv_ds",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 462,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an",
+  "name": "xv_tao",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 463,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}",
+  "name": "xv_xem",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 464,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}",
+  "name": "xv_xoa",
+  "methods": [
+   "DELETE"
+  ],
+  "trong": null
+ },
+ {
+  "order": 465,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}",
+  "name": "xv_sua",
+  "methods": [
+   "PATCH"
+  ],
+  "trong": null
+ },
+ {
+  "order": 466,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}/tai-lieu",
+  "name": "xv_tai_lieu",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 467,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}/tep",
+  "name": "xv_tep",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 468,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}/chay",
+  "name": "xv_chay",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 469,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}/duyet",
+  "name": "xv_duyet",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 470,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}/dang-ngay",
+  "name": "xv_dang_ngay",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 471,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/lo",
+  "name": "xv_lo",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 472,
+  "type": "APIRoute",
   "path": "/share/rename",
   "name": "share_rename",
   "methods": [

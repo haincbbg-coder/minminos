@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.63] - 2026-10-04
+### Thêm mới
+- **Xưởng video** (app mới trong Kết nối ngoài, cần mã kích hoạt): nhập ý tưởng bằng chữ, kèm ảnh hoặc video mẫu, MinMin tự viết kịch bản, chia cảnh, tạo ảnh, tạo video, giọng đọc, ghép phụ đề rồi đăng. Có **Làm hàng loạt**: dán nhiều ý tưởng, mỗi ý một video, giãn giờ đăng đều nhau.
+- Nhà cung cấp bản này: ảnh bằng Gemini (Nano Banana) hoặc OpenAI, video qua fal.ai (Veo, Kling, Seedance...), giọng ElevenLabs. Đăng YouTube, YouTube Shorts và Facebook Reels. TikTok, Instagram, X, Threads, Zalo hiện rõ là chưa hỗ trợ.
+- An toàn tiền và tài khoản: chọn Chờ duyệt hoặc Tự đăng khi xong, có hạn mức cảnh video và bài đăng mỗi ngày. Lỗi mạng đúng lúc đăng bài được ghi là "chưa rõ" và không bao giờ tự đăng lại để tránh đăng đúp. Khoá API mã hoá trên máy, giao diện chỉ hiện 4 ký tự cuối.
+
 ## [26.10.62] - 2026-10-04
 ### Thêm mới
 - **Bot gửi ảnh, video, tài liệu cho khách**: ở form Sửa bot có mục **File bot được gửi cho khách**, tải lên bảng giá, catalogue, ảnh sản phẩm, video hướng dẫn (tối đa 25MB mỗi file). Khi khách cần và có file khớp, bot trả lời rồi gửi kèm file. Chạy trên Zalo cá nhân (mới), Telegram và Zalo Bot.

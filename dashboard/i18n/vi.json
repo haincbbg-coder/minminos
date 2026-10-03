@@ -3230,6 +3230,8 @@
   "knn.app.quet_hoa_don_gmail.mo_ta": "Quét hộp thư Gmail tìm email hoá đơn, tải XML và PDF đính kèm, gom về một chỗ.",
   "knn.app.bo_chung_tu_ke_toan.ten": "Bộ chứng từ kế toán",
   "knn.app.bo_chung_tu_ke_toan.mo_ta": "Tự tạo bộ chứng từ từ hóa đơn: phiếu nhập/xuất kho, giao nhận, gia công, hợp đồng, lương, chấm công, thuế và BHXH để tải ZIP và in.",
+  "knn.app.xuong_video.ten": "Xưởng video",
+  "knn.app.xuong_video.mo_ta": "Sản xuất video hàng loạt từ ý tưởng, ảnh hoặc video mẫu: tự viết kịch bản, tạo ảnh, video, giọng đọc, ghép phụ đề rồi tự đăng YouTube, Shorts, Facebook Reels theo lịch.",
   "knn.app.dieu_khien_may.ten": "Điều khiển máy tính",
   "knn.app.dieu_khien_may.mo_ta": "MinMin xem màn hình và thao tác trên máy tính ở nhà, chỉ trong ứng dụng bạn cấp quyền, có phanh khẩn cấp.",
   "call.connecting": "Đang kết nối",
