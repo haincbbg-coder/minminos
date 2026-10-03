@@ -101,9 +101,39 @@ def register(app, hd):
             text = identity.read_pdf(path)
             matches = [(m, k) for m, kho in invs.items() for k, inv in kho.items() if identity.matches(text, inv, m)]
             hit = matches[0] if len(matches) == 1 else None
+            if not matches:
+                # A PDF may arrive before its invoice was queried on the tax portal.
+                # Import only a uniquely matching XML from mail, never the input PDF.
+                candidates = {}
+                for ban in hd._doc_json(hd._gmail_kho_path(), {}).values():
+                    xp = hd.tuyet_doi(ban.get('xml'))
+                    if not xp:
+                        continue
+                    try:
+                        det = hd.thd('invoice_xml').parse_invoice(xp.read_bytes())
+                        inv = {'nbmst': det.get('ban_mst'), 'shdon': det.get('shdon'),
+                               'khhdon': det.get('khhdon'), 'khmshdon': det.get('khmshdon')}
+                        buyer = det.get('mua_mst')
+                        if buyer in invs and identity.matches(text, inv, buyer):
+                            candidates[(buyer, hd.khoa_hd(inv))] = (ban, det)
+                    except Exception:
+                        continue
+                if len(candidates) == 1:
+                    ban, det = next(iter(candidates.values()))
+                    safe_ban = {'xml': ban['xml']}
+                    hd.lien_ket_gmail(safe_ban, det)
+                    link = safe_ban.get('lien_ket') or {}
+                    if link:
+                        hit = (link['mst'], link['key'])
             from pypdf import PdfReader
             reader = PdfReader(str(path))
             raw = reader.pages[0].extract_text() if reader.pages else ''
+            if reader.pages:
+                for annotation in (reader.pages[0].get('/Annots') or [])[:50]:
+                    action = annotation.get_object().get('/A')
+                    if action:
+                        action = action.get_object()
+                        raw = (raw or '') + '\n' + str(action.get('/URI') or '')
             row['code'], row['url'] = hints(raw or '')
             row['label'] = path.name
         if hit:
@@ -294,6 +324,10 @@ def register(app, hd):
             if d.get('gmail_ids') is not None:
                 refs = []
                 for ban in hd.chon_gmail({'ids': d['gmail_ids']}):
+                    hit = hd.tim_hd_gmail(None, ban)
+                    if hit:
+                        refs.append((hit[0], 'purchase', hit[1]))
+                        continue
                     safe_ban = dict(ban)
                     safe_ban.pop('pdf', None)
                     hd.lien_ket_gmail(safe_ban)
