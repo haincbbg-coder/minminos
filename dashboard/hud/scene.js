@@ -159,7 +159,8 @@ void main(){
 
 // ---------- Nen plasma tim ----------
 const BG_FRAG = /* glsl */`
-uniform float uTime, uEnergy;
+uniform float uTime, uEnergy, uLight;
+uniform vec3 uBase;
 uniform vec2 uRes;
 varying vec2 vUv;
 float wave(vec2 p, float f, float s, float ph){ return sin(p.x*f + uTime*s + ph + sin(p.y*1.7+uTime*0.3)*1.5); }
@@ -174,7 +175,8 @@ void main(){
   vec3 base = mix(vec3(0.020,0.012,0.045), vec3(0.055,0.020,0.090), vUv.y);
   vec3 line = mix(vec3(0.42,0.20,0.85), vec3(1.0,0.55,0.18), 0.25 + 0.25*sin(uTime*0.2));
   float vig = smoothstep(1.25, 0.2, length(vUv-0.5)*1.6);
-  gl_FragColor = vec4(base + line * min(w, 0.9) * (0.14 + uEnergy*0.22) * vig, 1.0);
+  vec3 dark = base + line * min(w, 0.9) * (0.14 + uEnergy*0.22) * vig;
+  gl_FragColor = vec4(mix(dark, uBase - vec3(0.025,0.035,0.015)*min(w,0.9)*vig, uLight), 1.0);
 }`;
 
 const STATES = { standby: 0, listening: 1, thinking: 2, speaking: 3, error: 4 };
@@ -199,7 +201,7 @@ export class MinMinScene {
     this.bgMat = new THREE.ShaderMaterial({
       vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.9999, 1.0); }",
       fragmentShader: BG_FRAG, depthWrite: false, depthTest: false,
-      uniforms: { uTime: { value: 0 }, uEnergy: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
+      uniforms: { uLight: { value: 0 }, uBase: { value: new THREE.Color("#efe9e2") }, uTime: { value: 0 }, uEnergy: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
     });
     const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.bgMat);
     bg.frustumCulled = false; bg.renderOrder = -1;
@@ -271,6 +273,23 @@ export class MinMinScene {
     });
     this.rings.position.y = 0.2;
     this.scene.add(this.rings);
+
+    const applyTheme = () => {
+      const light = document.documentElement.getAttribute("data-theme") === "light";
+      const style = getComputedStyle(document.documentElement);
+      this.bgMat.uniforms.uLight.value = light ? 1 : 0;
+      // Shader outputs display-space color; keep the shared surface's exact sRGB tone.
+      this.bgMat.uniforms.uBase.value.set(style.getPropertyValue("--mm-bg").trim() || "#efe9e2").convertLinearToSRGB();
+      this.mat.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+      const colors = light ? ["#5335be","#a54f12","#6a4bd6","#564b63"] : ["#8f6bff","#ff9a3c","#ffe2b0","#d9ccff"];
+      ["uCool","uWarm","uHot","uRim"].forEach((key,i) => this.mat.uniforms[key].value.set(colors[i]));
+      this.rings.children.forEach((ring,i) => {
+        ring.material.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+        ring.material.color.set(light ? (i ? "#6a4bd6" : "#a54f12") : (i ? "#8f6bff" : "#ff9a3c"));
+      });
+    };
+    applyTheme();
+    window.addEventListener("javis-theme-change", applyTheme);
 
     // ---- tuong tac ----
     this.look = { x: 0, y: 0 };           // muc tieu nhin (-1..1), tu chuot hoac camera

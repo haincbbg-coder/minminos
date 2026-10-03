@@ -1,3 +1,4 @@
+@import url("surface-tokens.css?v=26.10.42");
 /* ============================================================================
    MinMin OS - Giao diện NỔI MỀM (neumorphism) - 0.64.90
    ----------------------------------------------------------------------------
@@ -8,20 +9,20 @@
    Đây là TÔNG SÁNG MỚI và là tông mặc định. Tông tối cũ giữ nguyên (nút đổi tông).
    File nạp SAU style.css / console.css / minmin-galaxy.css nên chỉ cần đè token + bề mặt
    của các thành phần hay gặp; mọi chỗ khác tự theo token.
-   HUD màn phụ (/hud) KHÔNG dùng file này: HUD giữ nền tối để hạt phát sáng.
+   HUD và các app dùng chung surface-tokens.css qua app-theme.css.
    ========================================================================== */
 
 :root[data-theme="light"] {
-  --nm-bg: #efe9e2;
-  --nm-hi: rgba(255, 255, 255, 0.95);
-  --nm-lo: rgba(178, 160, 140, 0.50);
-  --nm-out: 7px 7px 16px var(--nm-lo), -7px -7px 16px var(--nm-hi);
-  --nm-out-sm: 4px 4px 9px var(--nm-lo), -4px -4px 9px var(--nm-hi);
-  --nm-out-xs: 2px 2px 5px var(--nm-lo), -2px -2px 5px var(--nm-hi);
-  --nm-in: inset 5px 5px 11px var(--nm-lo), inset -5px -5px 11px var(--nm-hi);
-  --nm-in-sm: inset 3px 3px 7px var(--nm-lo), inset -3px -3px 7px var(--nm-hi);
-  --nm-blue: linear-gradient(145deg, #8a6cf0, #5b3fd0);
-  --nm-blue-glow: 4px 4px 12px rgba(91, 63, 208, 0.32), -4px -4px 10px var(--nm-hi);
+  --nm-bg: var(--mm-bg);
+  --nm-hi: var(--mm-hi);
+  --nm-lo: var(--mm-lo);
+  --nm-out: var(--mm-out);
+  --nm-out-sm: var(--mm-out-sm);
+  --nm-out-xs: var(--mm-out-xs);
+  --nm-in: var(--mm-in);
+  --nm-in-sm: var(--mm-in-sm);
+  --nm-blue: var(--mm-primary);
+  --nm-blue-glow: var(--mm-primary-shadow);
 
   color-scheme: light;
   --bg: var(--nm-bg);

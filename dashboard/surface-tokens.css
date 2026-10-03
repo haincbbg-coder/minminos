@@ -1,0 +1,25 @@
+/* Shared MinMin surfaces. Main dashboard and standalone apps use these tokens. */
+:root {
+  --mm-bg:#0e0e16; --mm-panel:#181822; --mm-field:#12121c; --mm-text:#f3f3fb; --mm-muted:#c0c0da; --mm-dim:#9a9ab6;
+  --mm-line:#36364c; --mm-brand:#ff7a3c; --mm-link:#ffab81; --mm-on-brand:#1a1400;
+  --mm-primary:linear-gradient(145deg,#ff995f,#ff7a3c); --mm-wash:rgba(159,104,255,.12); --mm-row:rgba(255,255,255,.025);
+  --mm-hi:rgba(255,255,255,.04); --mm-lo:rgba(0,0,0,.4);
+  --mm-out:0 8px 30px rgba(0,0,0,.45); --mm-out-sm:0 4px 14px rgba(0,0,0,.28); --mm-out-xs:0 2px 6px rgba(0,0,0,.24);
+  --mm-in:inset 3px 3px 8px rgba(0,0,0,.3); --mm-in-sm:inset 2px 2px 5px rgba(0,0,0,.25);
+  --mm-primary-shadow:0 4px 12px rgba(255,122,60,.2); --mm-scrim:rgba(3,3,8,.8);
+  --mm-ok:#6fe0b1; --mm-bad:#ff8e98; --mm-warn:#e0a04a;
+  --mm-font:'Be Vietnam Pro','Segoe UI',Arial,sans-serif;
+}
+:root[data-theme="light"] {
+  --mm-bg:#efe9e2; --mm-panel:#efe9e2; --mm-field:#efe9e2; --mm-text:#2a2234; --mm-muted:#564b63; --mm-dim:#675d72;
+  --mm-line:rgba(178,160,140,.30); --mm-brand:#6a4bd6; --mm-link:#5335be; --mm-on-brand:#fff;
+  --mm-primary:linear-gradient(145deg,#8a6cf0,#5b3fd0); --mm-wash:rgba(106,75,214,.08); --mm-row:rgba(178,160,140,.08);
+  --mm-hi:rgba(255,255,255,.95); --mm-lo:rgba(178,160,140,.50);
+  --mm-out:7px 7px 16px var(--mm-lo),-7px -7px 16px var(--mm-hi);
+  --mm-out-sm:4px 4px 9px var(--mm-lo),-4px -4px 9px var(--mm-hi);
+  --mm-out-xs:2px 2px 5px var(--mm-lo),-2px -2px 5px var(--mm-hi);
+  --mm-in:inset 5px 5px 11px var(--mm-lo),inset -5px -5px 11px var(--mm-hi);
+  --mm-in-sm:inset 3px 3px 7px var(--mm-lo),inset -3px -3px 7px var(--mm-hi);
+  --mm-primary-shadow:4px 4px 12px rgba(91,63,208,.32),-4px -4px 10px var(--mm-hi);
+  --mm-scrim:rgba(52,38,56,.3); --mm-ok:#137653; --mm-bad:#b82d40; --mm-warn:#945200;
+}

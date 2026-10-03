@@ -1,0 +1,81 @@
+@import url("surface-tokens.css?v=26.10.42");
+/* Scoped adapters: keep each application's layout and behavior, share MinMin surfaces. */
+:root { color-scheme:dark; }
+:root[data-theme="light"] { color-scheme:light; }
+body[data-mm-app] { background:var(--mm-bg); color:var(--mm-text); font-family:var(--mm-font); }
+body[data-mm-app] :is(button,input,select,textarea) { font-family:inherit; }
+body[data-mm-app] :is(button,a,input,select,textarea,summary):focus-visible { outline:2px solid var(--mm-link); outline-offset:3px; }
+body[data-mm-app] :is(input[type="checkbox"],input[type="radio"],progress) { accent-color:var(--mm-brand); }
+body[data-mm-app] ::-webkit-scrollbar-thumb { background:var(--mm-line); }
+body[data-mm-app] ::selection { background:var(--mm-brand); color:var(--mm-on-brand); }
+
+/* TCT / Gmail / accounting document sets */
+body[data-mm-app="invoice"] {
+ --nen:var(--mm-bg); --the:var(--mm-panel); --chu:var(--mm-text); --text:var(--mm-text); --nhat:var(--mm-dim); --vien:var(--mm-line);
+ --chinh:var(--mm-brand); --chinh-chu:var(--mm-on-brand); --ok:var(--mm-ok); --loi:var(--mm-bad); --vang:var(--mm-warn); --dong:var(--mm-row); --bong:var(--mm-out);
+}
+[data-mm-app="invoice"] .dau { box-shadow:var(--mm-out-sm); border:0; padding:16px 24px; gap:14px; }
+[data-mm-app="invoice"] main { padding-top:26px; }
+[data-mm-app="invoice"] .the { border-radius:22px; padding:20px; margin-bottom:24px; }
+[data-mm-app="invoice"] :is(.nut,.tab button,.loai button,.chip button,.doc-tabs button) { background:var(--mm-panel); color:var(--mm-muted); border:1px solid var(--mm-line); border-radius:12px; box-shadow:var(--mm-out-sm); transition:box-shadow .16s,color .16s; }
+[data-mm-app="invoice"] :is(.nut,.tab button,.loai button,.chip button,.doc-tabs button):active { box-shadow:var(--mm-in-sm); }
+[data-mm-app="invoice"] :is(.nut.chinh,.tab button.on,.loai button.on,.chip button.on,.doc-tabs button.on) { background:var(--mm-primary); color:var(--mm-on-brand); border-color:transparent; box-shadow:var(--mm-primary-shadow); }
+[data-mm-app="invoice"] :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea,.viec pre) { background:var(--mm-field); color:var(--mm-text); border-color:var(--mm-line); border-radius:12px; box-shadow:var(--mm-in-sm); }
+[data-mm-app="invoice"] :is(.menu-than,dialog) { background:var(--mm-panel); border-color:var(--mm-line); box-shadow:var(--mm-out); }
+[data-mm-app="invoice"] dialog::backdrop { background:var(--mm-scrim); }
+[data-mm-app="invoice"] :is(.selection-summary,#gmCount) { background:var(--mm-wash); border-color:var(--mm-brand); color:var(--mm-link); }
+[data-mm-app="invoice"] :is(.row-number,.eyebrow) { color:var(--mm-link); }
+[data-mm-app="invoice"] .bang a { color:var(--mm-link); }
+[data-mm-app="invoice"] .ds-dn li.on { background:var(--mm-wash); box-shadow:inset 3px 0 var(--mm-brand),var(--mm-in-sm); }
+[data-mm-app="invoice"] :is(.doc-hero,.doc-panel,.doc-hero-card,.doc-stats div,.doc-options label,.doc-segment label,.doc-template-list span,.doc-table-wrap) { background:var(--mm-panel); color:var(--mm-text); border-color:var(--mm-line); box-shadow:var(--mm-out-sm); }
+[data-mm-app="invoice"] .doc-hero { box-shadow:var(--mm-out); }
+[data-mm-app="invoice"] :is(.doc-hero h2,.doc-stats b) { color:var(--mm-text); }
+[data-mm-app="invoice"] :is(.doc-hero p,.doc-stats small,.doc-options small,.doc-segment small) { color:var(--mm-dim); }
+[data-mm-app="invoice"] .doc-segment label:has(input:checked) { background:var(--mm-wash); border-color:var(--mm-brand); box-shadow:var(--mm-in-sm); }
+[data-mm-app="invoice"] .doc-check .ok { background:var(--mm-row); color:var(--mm-ok); }
+[data-mm-app="invoice"] .doc-check .can { background:var(--mm-row); color:var(--mm-warn); }
+[data-mm-app="invoice"] .doc-tabs { background:var(--mm-bg); }
+@media(max-width:600px) { [data-mm-app="invoice"] .dau { padding:12px; } [data-mm-app="invoice"] main { padding:18px 12px; } [data-mm-app="invoice"] .the { padding:16px; border-radius:18px; } }
+
+/* Zalo Forwarder */
+body[data-mm-app="zalo"] {
+ --bg:var(--mm-bg); --bg-grad:var(--mm-bg); --surface:var(--mm-panel); --surface-2:var(--mm-field); --surface-3:var(--mm-wash);
+ --line:var(--mm-line); --line-soft:var(--mm-line); --text:var(--mm-text); --muted:var(--mm-dim); --muted-2:var(--mm-dim);
+ --brand:var(--mm-brand); --brand-2:var(--mm-link); --accent:var(--mm-primary); --shadow:var(--mm-out); --shadow-sm:var(--mm-out-sm);
+ --success:var(--mm-ok); --danger:var(--mm-bad); --warn:var(--mm-warn);
+}
+body[data-mm-app="zalo"] .sidebar { background:var(--mm-panel); border-right:0; box-shadow:var(--mm-out); }
+[data-mm-app="zalo"] :is(.card,.block,.log-wrap,.modal,.gate-card) { border-radius:22px; box-shadow:var(--mm-out); }
+[data-mm-app="zalo"] :is(.btn,.nav-item) { box-shadow:var(--mm-out-sm); border-radius:12px; }
+[data-mm-app="zalo"] .nav-item { margin-bottom:5px; }
+[data-mm-app="zalo"] :is(.nav-item.active,.btn.primary,.brand-logo) { background:var(--mm-primary); color:var(--mm-on-brand); box-shadow:var(--mm-primary-shadow); }
+[data-mm-app="zalo"] :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea,.log) { background:var(--mm-field); color:var(--mm-text); border-color:var(--mm-line); box-shadow:var(--mm-in-sm); }
+body[data-mm-app="zalo"] :is(.ver-chip,.section-title,.log-title) { color:var(--mm-muted); }
+body[data-mm-app="zalo"] .log .t { color:var(--mm-dim); }
+body[data-mm-app="zalo"] .log .info { color:var(--mm-link); }
+body[data-mm-app="zalo"] .log .ok { color:var(--mm-ok); }
+body[data-mm-app="zalo"] .log .warn { color:var(--mm-warn); }
+body[data-mm-app="zalo"] .log .error { color:var(--mm-bad); }
+body[data-mm-app="zalo"] .empty { background:var(--mm-row); }
+[data-mm-app="zalo"] :is(.modal-backdrop,.gate) { background:var(--mm-scrim); }
+[data-mm-app="zalo"] :is(.btn,.card,.gate-close):hover { border-color:var(--mm-brand); }
+[data-mm-app="zalo"] :is(.role-badge.owner,.lic-badge.trial,.trial-badge,.warn-badge) { color:var(--mm-warn); }
+[data-mm-app="zalo"] .role-badge.admin { color:var(--mm-link); }
+[data-mm-app="zalo"] .lic-badge.ok { color:var(--mm-ok); }
+[data-mm-app="zalo"] .lic-badge.locked { color:var(--mm-bad); }
+
+/* Secondary screen: controls and canvas both follow the main theme. */
+body[data-mm-app="hud"] {
+ --bg:var(--mm-bg); --ink:var(--mm-text); --ink-2:var(--mm-muted); --ink-3:var(--mm-dim); --line:var(--mm-line); --glass:var(--mm-panel);
+ --amber:var(--mm-brand); --amber-hi:var(--mm-link); --violet:var(--mm-link); --violet-lo:var(--mm-wash); --ok:var(--mm-ok); --warn:var(--mm-warn); --bad:var(--mm-bad);
+}
+[data-mm-app="hud"] :is(.tile,.talk,.stream,.card,.guide,.toast,.ask,.gate-in) { background:var(--mm-panel); border:1px solid var(--mm-line); border-radius:20px; box-shadow:var(--mm-out); }
+[data-mm-app="hud"] :is(.tools button,.asks button,.sw,.g-tabs) { background:var(--mm-panel); color:var(--mm-muted); border-color:var(--mm-line); box-shadow:var(--mm-out-sm); }
+[data-mm-app="hud"] :is(.ask button,.gate button:not(.ghost),.guide .btn:not(.ghost),.guide footer button:not(.ghost),.tools button[aria-pressed="true"],.g-tabs button[aria-selected="true"]) { background:var(--mm-primary); color:var(--mm-on-brand); box-shadow:var(--mm-primary-shadow); }
+[data-mm-app="hud"] :is(select,input,.g-tabs) { background:var(--mm-field); color:var(--mm-text); border-color:var(--mm-line); box-shadow:var(--mm-in-sm); }
+[data-mm-app="hud"] .gate { background:var(--mm-scrim); }
+[data-mm-app="hud"] .reply { text-shadow:none; }
+[data-mm-app="hud"] .bottom { border-radius:20px; background:var(--mm-panel); box-shadow:var(--mm-out-sm); padding:12px 16px; }
+[data-mm-app="hud"] :is(.talk-st[data-k="err"],.may-st.bad) { color:var(--mm-bad); }
+[data-mm-app="hud"] .slog li.v { color:var(--mm-link); }
+@media(prefers-reduced-motion:reduce) { body[data-mm-app] *,body[data-mm-app] *::before,body[data-mm-app] *::after { scroll-behavior:auto; transition:none; } }

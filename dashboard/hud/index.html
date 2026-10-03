@@ -11,8 +11,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/hud/hud.css?v=7">
 <script type="importmap">{ "imports": { "three": "/static/hud/vendor/three.module.min.js" } }</script>
+<link rel="stylesheet" href="/static/app-theme.css?v=26.10.42">
+<script src="/static/theme.js?v=26.10.42"></script>
 </head>
-<body data-state="standby">
+<body data-mm-app="hud" data-state="standby">
   <canvas id="scene" aria-hidden="true"></canvas>
   <canvas id="web" aria-label="Bản đồ các bộ phận MinMin đang điều phối"></canvas>
   <canvas id="ink" aria-hidden="true"></canvas>
@@ -92,6 +94,7 @@
   </section>
 
   <nav class="tools" id="tools" aria-label="Công cụ HUD">
+    <button type="button" id="themeToggle" aria-label="Đổi giao diện">◐<span>Sáng / Tối</span></button>
     <button type="button" id="tNhin" title="MinMin nhìn: chụp camera (kèm nét vẽ) rồi hỏi MinMin (phím V)"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Nhìn</span></button>
     <button type="button" id="tCam" aria-pressed="false" title="Bật / tắt camera: nhìn theo mặt, điều khiển bằng tay (phím C)"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3"/></svg><span>Camera</span></button>
     <button type="button" id="tFlip" title="Đổi camera trước / sau (điện thoại)" hidden><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16m0 5v-5h5"/></svg><span>Đổi cam</span></button>
