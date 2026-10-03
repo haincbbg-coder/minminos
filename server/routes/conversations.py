@@ -233,7 +233,35 @@ def register(app, deps: ConversationsDeps):
         bot = chatbot_store.get_bot(bid) if bid else None
         rieng = c.get("chat_type") != "group" and bool(bot) and chatbot_store.pham_vi_rieng(bot) == "chon"
         cho = bool(bot) and cid in {str(x) for x in (bot.get("rieng_cho_phep") or [])}
-        return {"ok": True, "items": ds, "bot_id": bid, "can_cho_phep": rieng, "da_cho_phep": cho}
+        nk = [{"id": n["id"], "ten": n["ten"]} for n in ((bot or {}).get("nhom_khach") or [])]
+        n_hien = chatbot_store.nhom_cua(bot, cid) if bot else None
+        return {"ok": True, "items": ds, "bot_id": bid, "can_cho_phep": rieng, "da_cho_phep": cho,
+                "nhom_khach": nk, "nhom_hien_tai": (n_hien or {}).get("id", "")}
+
+    @router.post("/conversations/{conv_id}/nhom-khach")
+    async def conversations_nhom_khach(conv_id: int, nhom_id: str = Form("")):
+        """Xếp cuộc chat này vào một nhóm khách của bot (nhom_id rỗng = gỡ khỏi mọi nhóm).
+        Mỗi cuộc chat chỉ ở MỘT nhóm: xếp vào nhóm mới là gỡ khỏi nhóm cũ."""
+        c = conversations.chi_tiet(conv_id)
+        if not c:
+            return _404()
+        bid = str(c.get("bot_id") or "")
+        bot = chatbot_store.get_bot(bid) if bid else None
+        if not bot:
+            return JSONResponse({"ok": False, "error": "Cuộc chat này không thuộc bot nào."}, status_code=400)
+        cid = str(c.get("external_chat_id") or "")
+        ds = [dict(n) for n in (bot.get("nhom_khach") or [])]
+        if nhom_id and not any(n["id"] == nhom_id for n in ds):
+            return JSONResponse({"ok": False, "error": "Không có nhóm khách này."}, status_code=400)
+        for n in ds:
+            tv = [x for x in n.get("thanh_vien") or [] if str(x) != cid]
+            if n["id"] == nhom_id:
+                tv.append(cid)
+            n["thanh_vien"] = tv
+        ok, err = chatbot_store.update_bot(bid, {"nhom_khach": ds})
+        if not ok:
+            return JSONResponse({"ok": False, "error": err}, status_code=400)
+        return {"ok": True, "nhom_hien_tai": nhom_id}
 
     @router.post("/conversations/{conv_id}/cho-phep")
     async def conversations_cho_phep(conv_id: int, bat: str = Form("1")):

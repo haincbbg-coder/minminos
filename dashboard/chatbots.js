@@ -527,6 +527,55 @@
                      : '<option value="">' + esc(window.t("cb.khong_agent")) + '</option>';
   }
 
+  // ---- NHÓM KHÁCH (26.10.60) -------------------------------------------------------------
+  // Mỗi nhóm: tên, thành viên (chọn từ danh bạ), bật/tắt, Agent riêng và phạm vi riêng. Người lạ
+  // là một thẻ cố định cuối danh sách. Trạng thái nằm trong DOM, đọc ra bằng docNhom().
+  var _nkSeq = 0;
+  function optAgentRieng(ds, cur) {
+    return '<option value="">' + esc(window.t("cb.nk_agent_bot")) + '</option>' +
+      ds.map(function (a) { return '<option value="' + esc(a.slug) + '"' + (a.slug === cur ? " selected" : "") + '>' + esc(a.name) + '</option>'; }).join("");
+  }
+  function htmlPhamVi(p, ds) {
+    p = p || {};
+    return '<label>' + esc(window.t("cb.nk_agent")) + '</label><select class="nk-agent">' + optAgentRieng(ds, p.agent_slug || "") + '</select>' +
+      '<label>' + esc(window.t("cb.nk_nguon")) + '</label><select class="nk-nguon">' +
+        '<option value=""' + (!p.nguon_tra_loi ? " selected" : "") + '>' + esc(window.t("cb.nk_nguon_bot")) + '</option>' +
+        '<option value="agent"' + (p.nguon_tra_loi === "agent" ? " selected" : "") + '>' + esc(window.t("cb.nk_nguon_agent")) + '</option>' +
+        '<option value="tai_lieu"' + (p.nguon_tra_loi === "tai_lieu" ? " selected" : "") + '>' + esc(window.t("cb.nk_nguon_tl")) + '</option></select>' +
+      '<label>' + esc(window.t("cb.lb_noi_duoc")) + '</label><textarea class="nk-duoc" rows="2" placeholder="' + esc(window.t("cb.ph_noi_duoc")) + '">' + esc(p.noi_duoc || "") + '</textarea>' +
+      '<label>' + esc(window.t("cb.lb_noi_cam")) + '</label><textarea class="nk-cam" rows="2" placeholder="' + esc(window.t("cb.ph_noi_cam")) + '">' + esc(p.noi_cam || "") + '</textarea>' +
+      '<label>' + esc(window.t("cb.lb_tu_khoa")) + '</label><input class="nk-tukhoa" value="' + esc((p.cam_tu_khoa || []).join(", ")) + '" placeholder="' + esc(window.t("cb.ph_tu_khoa")) + '">' +
+      '<label>' + esc(window.t("cb.lb_ngoai_pv")) + '</label><select class="nk-ngoai">' +
+        '<option value="tu_choi"' + (p.ngoai_pham_vi !== "im" ? " selected" : "") + '>' + esc(window.t("cb.npv_tu_choi")) + '</option>' +
+        '<option value="im"' + (p.ngoai_pham_vi === "im" ? " selected" : "") + '>' + esc(window.t("cb.npv_im")) + '</option></select>';
+  }
+  function htmlNhomThe(n, ds) {
+    var id = "nkTv" + (++_nkSeq);
+    return '<div class="cb-nk" data-id="' + esc(n.id || "") + '">' +
+      '<div class="cb-nk-dau"><input class="nk-ten" value="' + esc(n.ten || "") + '" placeholder="' + esc(window.t("cb.nk_ten_ph")) + '">' +
+        '<label class="cb-chk"><input type="checkbox" class="nk-bat"' + (n.bat === false ? "" : " checked") + '> ' + esc(window.t("cb.nk_bat")) + '</label>' +
+        '<button type="button" class="s-btn-ghost nk-xoa">' + esc(window.t("cb.nk_xoa")) + '</button></div>' +
+      '<label>' + esc(window.t("cb.nk_thanh_vien")) + '</label>' +
+      '<textarea id="' + id + '" class="nk-tv" rows="2" placeholder="' + esc(window.t("cb.ph_rieng_cho")) + '">' + esc((n.thanh_vien || []).join("\n")) + '</textarea>' +
+      '<div class="cb-db" data-loai="" data-ta="' + id + '"></div>' +
+      htmlPhamVi(n, ds) + '</div>';
+  }
+  function htmlNguoiLa(nl, ds) {
+    nl = nl || {};
+    return '<div class="cb-nk cb-nk-la">' +
+      '<div class="cb-nk-dau"><b>' + esc(window.t("cb.nl_ten")) + '</b>' +
+        '<select class="nl-bat">' +
+          '<option value=""' + (nl.bat === null || nl.bat === undefined ? " selected" : "") + '>' + esc(window.t("cb.nl_mac_dinh")) + '</option>' +
+          '<option value="1"' + (nl.bat === true ? " selected" : "") + '>' + esc(window.t("cb.nl_tra_loi")) + '</option>' +
+          '<option value="0"' + (nl.bat === false ? " selected" : "") + '>' + esc(window.t("cb.nl_im")) + '</option></select></div>' +
+      '<div class="cb-hint">' + esc(window.t("cb.nl_hint")) + '</div>' + htmlPhamVi(nl, ds) + '</div>';
+  }
+  function docPhamVi(el) {
+    var q = function (c) { return (el.querySelector(c) || {}).value || ""; };
+    return { agent_slug: q(".nk-agent"), nguon_tra_loi: q(".nk-nguon"), noi_duoc: q(".nk-duoc"),
+             noi_cam: q(".nk-cam"), cam_tu_khoa: q(".nk-tukhoa"), ngoai_pham_vi: q(".nk-ngoai") || "tu_choi" };
+  }
+
   // Agent PHỤ: ô tick, tối đa 5. Agent chính không hiện ở đây (đã chọn ở ô trên).
   function htmlAgentPhu(ds, dangChon, chinh) {
     var ra = ds.filter(function (a) { return a.slug !== chinh; }).map(function (a) {
@@ -711,6 +760,13 @@
           '<div class="cb-db" id="cbDbRieng" data-loai="private" data-ta="cbRiengCho"></div>' +
           '<div class="cb-hint">' + esc(window.t("cb.hint_rieng")) + '</div>' +
 
+          '<div class="cb-nk-khoi"><div class="cb-nk-tieude">' + esc(window.t("cb.nk_tieu_de")) + '</div>' +
+            '<div class="cb-hint">' + esc(window.t("cb.nk_hint")) + '</div>' +
+            '<div id="cbNhomKhach">' + ((b && b.nhom_khach) || []).map(function (n) { return htmlNhomThe(n, agents); }).join("") + '</div>' +
+            '<button type="button" class="s-btn-ghost" id="cbThemNhom">' + ic("plus") + ' ' + esc(window.t("cb.nk_them")) + '</button>' +
+            '<div id="cbNguoiLa">' + htmlNguoiLa(b && b.nguoi_la, agents) + '</div></div>' +
+
+          '<div class="cb-nk-tieude">' + esc(window.t("cb.nk_mac_dinh")) + '</div>' +
           '<label>' + esc(window.t("cb.lb_noi_duoc")) + '</label>' +
           '<textarea id="cbNoiDuoc" rows="3" placeholder="' + esc(window.t("cb.ph_noi_duoc")) + '">' +
             esc((b && b.noi_duoc) || "") + '</textarea>' +
@@ -912,6 +968,39 @@
       };
       q.oninput = function () { clearTimeout(hen); hen = setTimeout(tai, 350); };
     }
+    function noiNhom() {
+      Array.prototype.forEach.call(box.querySelectorAll(".nk-xoa"), function (n) {
+        n.onclick = function () { var the = n.closest(".cb-nk"); if (the) the.remove(); };
+      });
+      veMoiDanhBa();
+    }
+    var nutThem = box.querySelector("#cbThemNhom");
+    if (nutThem) nutThem.onclick = function () {
+      var ds = box.querySelectorAll("#cbNhomKhach .cb-nk");
+      if (ds.length >= 12) return alert(window.t("cb.nk_toi_da"));
+      var d = document.createElement("div");
+      d.innerHTML = htmlNhomThe({ ten: "", bat: true }, agents);
+      box.querySelector("#cbNhomKhach").appendChild(d.firstChild);
+      noiNhom();
+    };
+    function docNhom() {
+      return Array.prototype.map.call(box.querySelectorAll("#cbNhomKhach .cb-nk"), function (el) {
+        var o = docPhamVi(el);
+        o.id = el.getAttribute("data-id") || "";
+        o.ten = (el.querySelector(".nk-ten") || {}).value || "";
+        o.bat = !!(el.querySelector(".nk-bat") || {}).checked;
+        o.thanh_vien = (el.querySelector(".nk-tv") || {}).value || "";
+        return o;
+      });
+    }
+    function docNguoiLa() {
+      var el = box.querySelector("#cbNguoiLa .cb-nk");
+      if (!el) return {};
+      var o = docPhamVi(el);
+      var v = (el.querySelector(".nl-bat") || {}).value;
+      o.bat = v === "" ? null : v === "1";
+      return o;
+    }
     function veMoiDanhBa() {
       Array.prototype.forEach.call(box.querySelectorAll(".cb-db"), veDanhBa);
     }
@@ -939,6 +1028,7 @@
       apNhom();
       veTom();
       veMoiDanhBa();
+      noiNhom();
     }
     noiTK();
 
@@ -1016,6 +1106,7 @@
                       function (x) { return x.value; }).filter(function (x) { return x !== ag; }).join(","),
                     rieng_pham_vi: (box.querySelector("#cbRiengPhamVi") || {}).value || "",
                     rieng_cho_phep: ((box.querySelector("#cbRiengCho") || {}).value || ""),
+                    nhom_khach: JSON.stringify(docNhom()), nguoi_la: JSON.stringify(docNguoiLa()),
                     noi_duoc: (box.querySelector("#cbNoiDuoc") || {}).value || "",
                     noi_cam: (box.querySelector("#cbNoiCam") || {}).value || "",
                     cam_tu_khoa: (box.querySelector("#cbTuKhoa") || {}).value || "",

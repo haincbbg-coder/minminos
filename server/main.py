@@ -19347,7 +19347,8 @@ async def chatbots_create(name: str = Form(...), agent_slug: str = Form(...),
                           account_label: str = Form(""), agents_phu: str = Form(""),
                           rieng_pham_vi: str = Form(""), rieng_cho_phep: str = Form(""),
                           noi_duoc: str = Form(""), noi_cam: str = Form(""),
-                          cam_tu_khoa: str = Form(""), ngoai_pham_vi: str = Form("")):
+                          cam_tu_khoa: str = Form(""), ngoai_pham_vi: str = Form(""),
+                          nhom_khach: str = Form(""), nguoi_la: str = Form("")):
     # Bot sống TRONG một brain: Agent nó dùng và tài liệu nó đọc là cùng một chỗ. Nhận cả hai
     # tên tham số và tự bù cho nhau, nên người gọi chỉ cần gửi một cái.
     br = (brain or agent_brain or "").strip()
@@ -19370,7 +19371,7 @@ async def chatbots_create(name: str = Form(...), agent_slug: str = Form(...),
         "ngon_ngu": ngon_ngu,
         "agents_phu": agents_phu, "rieng_pham_vi": rieng_pham_vi, "rieng_cho_phep": rieng_cho_phep,
         "noi_duoc": noi_duoc, "noi_cam": noi_cam, "cam_tu_khoa": cam_tu_khoa,
-        "ngoai_pham_vi": ngoai_pham_vi,
+        "ngoai_pham_vi": ngoai_pham_vi, "nhom_khach": nhom_khach, "nguoi_la": nguoi_la,
     })
     if err:
         return JSONResponse({"ok": False, "error": err}, status_code=400)
