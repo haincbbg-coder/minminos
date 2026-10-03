@@ -81,5 +81,24 @@ class StudioTest(unittest.TestCase):
             self.assertEqual(save(status='approved',platform='douyin').status_code,400)
             self.assertEqual(save(status='scheduled',scheduled=time.time()+86400*10).status_code,200)
 
+    def test_changed_page_revokes_publication(self):
+        v.put('drafts',{'id':'draft','platform':'facebook','status':'approved','page_id':'12345','body':'Test'})
+        remote=AsyncMock()
+        with patch.object(v,'settings',return_value={'page_id':'67890','graph_version':'v24.0'}),patch.object(v,'secret',return_value='test'),patch.object(v,'remote_json',remote):
+            with self.assertRaises(ValueError):asyncio.run(v.publish('draft'))
+        remote.assert_not_called()
+
+    def test_ai_stream_creates_draft_with_source(self):
+        import engine
+        p=v.normalize({'url':'https://www.tiktok.com/@test/video/1','text':'Nguồn tham khảo'},self.c,'test');v.put('posts',p)
+        async def stream(key,model,messages,reasoning):
+            self.assertEqual(key,'test');self.assertIn('Nguồn tham khảo',messages[1]['content'])
+            yield {'type':'text','content':'Nội dung mới'}
+        with patch.object(v,'gate'),patch.object(v,'settings',return_value={'ai_model':'test-model'}),patch.object(v,'secret',return_value='test'),patch.object(engine,'gemini_stream',stream):
+            r=self.client.post(v.BASE+'/api/action/generate',json={'id':p['id'],'brief':'Góc nhìn riêng'})
+        self.assertEqual(r.status_code,200)
+        self.assertEqual(r.json()['status'],'draft');self.assertEqual(r.json()['source_url'],p['url'])
+        self.assertEqual(v.rows('drafts')[0]['body'],'Nội dung mới')
+
 
 if __name__=='__main__':unittest.main()

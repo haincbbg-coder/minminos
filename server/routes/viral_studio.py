@@ -238,15 +238,15 @@ async def publish(id):
 
 async def tick():
     gate()
+    for d in rows('drafts'):
+        if d.get('status')=='scheduled' and 0<d.get('scheduled',0)<=time.time():
+            try: await publish(d['id'])
+            except ValueError as e: d.update(status='needs_check',error=str(e));put('drafts',d)
     s=settings()
     if s.get('auto_sync') and time.time()-s.get('last_auto',0)>3600:
         with db() as c:
             s['last_auto']=time.time();c.execute('INSERT OR REPLACE INTO settings VALUES(1,?)',(json.dumps(s),))
         await sync_all()
-    for d in rows('drafts'):
-        if d.get('status')=='scheduled' and 0<d.get('scheduled',0)<=time.time():
-            try: await publish(d['id'])
-            except ValueError as e: d.update(status='needs_check',error=str(e));put('drafts',d)
 
 def register(app):
     @app.get(BASE)

@@ -6,14 +6,14 @@
   const statusNames = {draft:'Bản nháp',approved:'Đã duyệt',scheduled:'Đã hẹn giờ',publishing:'Đang gửi',published:'Đã đăng',needs_check:'Cần kiểm tra trên Trang'};
   let state = {channels:[],posts:[],drafts:[],settings:{}}, page = 1;
   const notify = t => { $('toast').textContent=t; setTimeout(()=>{$('toast').textContent='';},6500); };
-  function fail(e) { $('error').hidden=false; $('error').textContent=e.message || 'Không thực hiện được. Vui lòng thử lại.'; }
+  function fail(e) { const msg=e.message || 'Không thực hiện được. Vui lòng thử lại.'; $('error').hidden=false; $('error').textContent=msg;const dialog=document.querySelector('dialog[open]');if(dialog){let box=dialog.querySelector('.formerror');if(!box){box=document.createElement('p');box.className='notice formerror';box.setAttribute('role','alert');dialog.prepend(box);}box.textContent=msg;} }
   async function api(path, data) {
     const r = await fetch('api/'+path, data === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const d = await r.json().catch(()=>({}));
     if (!r.ok) throw new Error(d.error || d.detail || 'Không thể truy cập. Kiểm tra đăng nhập và giấy phép trong MinMin.');
     return d;
   }
-  async function busy(button, fn) { if(button) button.disabled=true; $('error').hidden=true; try { await fn(); } catch(e) { fail(e); notify(e.message); } finally { if(button) button.disabled=false; } }
+  async function busy(button, fn) { if(button) button.disabled=true; $('error').hidden=true;document.querySelectorAll('.formerror').forEach(e=>e.remove()); try { await fn(); } catch(e) { fail(e); notify(e.message); } finally { if(button) button.disabled=false; } }
   const options = Object.entries(labels).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
   document.querySelectorAll('.platforms').forEach(el=>el.innerHTML=options); $('platform').insertAdjacentHTML('beforeend',options);
   function tab(id) { document.querySelectorAll('.pane').forEach(el=>el.hidden=el.id!==id); document.querySelectorAll('[data-tab]').forEach(el=>el.classList.toggle('active',el.dataset.tab===id)); }
