@@ -84,8 +84,10 @@ async def gui_co_tag(conn_id: str, thread: str, cau: str, specs: list):
         import os
         env = dict(os.environ)
         env.update({k: str(v) for k, v in (conn.get("env") or {}).items()})
+        import winproc
         proc = await asyncio.create_subprocess_exec(
-            *argv, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env)
+            *argv, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
+            **winproc.kwargs_no_window())
         try:
             await asyncio.wait_for(proc.communicate(), timeout=25)
         except asyncio.TimeoutError:
