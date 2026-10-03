@@ -38,4 +38,7 @@ for i in range(6):
 check("ngưỡng bị chặn trên", px._doc("b1")["lech"]["g1"] <= px.LECH_TOI_DA)
 px.quen_het("b1", "g1")
 check("quên hết xoá ngưỡng đã học", "g1" not in px._doc("b1")["lech"])
+check("nhận ra khách bức xúc", px.la_khieu_nai("Giao sai size, tôi muốn hoàn tiền") and not px.la_khieu_nai("áo này giá bao nhiêu"))
+kn = px.quyet_dinh("b2", "g9", "hàng lỗi quá, shop lừa đảo à?", [], khoa_tin="k1")
+check("tin khiếu nại: bot không nói và đánh dấu để báo chủ", kn["noi"] is False and kn["khieu_nai"])
 sys.exit(0 if ok else 1)

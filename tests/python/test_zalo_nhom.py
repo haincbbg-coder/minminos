@@ -131,6 +131,29 @@ async def chay():
     check("nhưng nhóm đó lên hàng chờ để chủ duyệt",
           any(x.get("chat_id") == "70022" for x in (chatbot_runtime.nhom_cho(bid) or [])),
           chatbot_runtime.nhom_cho(bid))
+    # ---- chế độ Tự phán đoán trên nhóm Zalo ------------------------------------------------
+    import inbox
+    import chatbot_phan_xu
+    chatbot_phan_xu.GIAY_NGUOI_GIONG = 0     # nguội giọng đã có test riêng; ở đây chỉ thử luồng
+    chatbot_store.update_bot(bid, {"reply_when": "judge"})
+    chatbot_runtime.stop_bot(bid); chatbot_runtime.start_bot(bid)
+    GUI.clear(); n = len(LUOT)
+    KHO.append(msg("70011", "j1", "ok cảm ơn nha"))
+    await zc.doc_mot_lan(dict(CONN)); await asyncio.sleep(0.3)
+    check("tự phán đoán: tin xã giao thì im", not GUI and len(LUOT) == n, GUI)
+    KHO.append(msg("70011", "j2", "áo thun này giá bao nhiêu vậy shop?"))
+    await zc.doc_mot_lan(dict(CONN)); await asyncio.sleep(0.4)
+    check("tự phán đoán: tin hỏi giá không cần gọi tên, bot vẫn trả lời", len(GUI) == 1, GUI)
+    GUI.clear(); n = len(LUOT)
+    truoc = len(inbox.danh_sach(50))
+    KHO.append(msg("70011", "j3", "mua hàng của shop mà giao sai size, thất vọng quá, tôi muốn hoàn tiền"))
+    await zc.doc_mot_lan(dict(CONN)); await asyncio.sleep(0.4)
+    check("khách bức xúc: bot IM, không cãi trước mặt cả nhóm", not GUI and len(LUOT) == n, GUI)
+    check("và báo chủ qua hòm thư MinMin", len(inbox.danh_sach(50)) == truoc + 1, (truoc, len(inbox.danh_sach(50))))
+    KHO.append(msg("70011", "j4", "tệ quá, hoàn tiền cho tôi đi, lừa đảo"))
+    await zc.doc_mot_lan(dict(CONN)); await asyncio.sleep(0.4)
+    check("khách giận nhắn tiếp: không báo chủ dồn dập (một lần mỗi nửa giờ)",
+          len(inbox.danh_sach(50)) == truoc + 1)
     chatbot_runtime.stop_bot(bid)
 
 

@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.55] - 2026-10-03
+### Thêm mới
+- Chế độ Tự phán đoán nhận ra **khách bức xúc / khiếu nại** trong nhóm (giao sai, hoàn tiền, hàng lỗi, lừa đảo, thất vọng...): bot **im**, không trả lời máy móc trước mặt cả nhóm, và **báo chủ qua chuông thông báo của MinMin** (kèm tên nhóm, người nhắn, câu gốc). Một nhóm báo tối đa một lần mỗi nửa giờ để khách giận nhắn liên tục không làm chuông kêu dồn. Telegram có khai người trực thì nhắn thêm cho người đó.
+- Tin bị đánh dấu khiếu nại hiện lý do trong nhật ký bộ phán xử; chủ bấm Trả lời giúp hoặc trả lời tay ở Hộp thư.
+### Sửa lỗi
+- Báo "cần người thật" của bot trước đây chỉ gửi được qua Telegram nên bot Zalo gọi người là rơi vào im lặng. Phần khiếu nại mới đi qua hòm thư MinMin nên chạy cho mọi kênh.
+
 ## [26.10.54] - 2026-10-03
 ### Thêm mới
 - Plugin **Công cụ nhóm Zalo** (có sẵn, bật mặc định): bot và MinMin tạo được **ghi chú** (có ghim), **nhắc việc** (lặp ngày/tuần/tháng) và **bình chọn** trong nhóm Zalo, và **tìm thành viên theo tên** (không dấu cũng được) để lấy ID thật mà tag; trùng tên thì hỏi lại, không đoán. Giờ nhắc hiểu theo giờ Việt Nam và tự đổi sang múi giờ máy chủ.

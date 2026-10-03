@@ -47,6 +47,21 @@ _XA_GIAO = {"ok", "oke", "okie", "da", "vang", "uh", "um", "uhm", "haha", "hihi"
             "vay ha", "the a", "ua", "uk"}
 
 
+# Dấu hiệu khách bức xúc / khiếu nại (không dấu, chữ thường). Bot trả lời ở chỗ này là rủi ro
+# lớn nhất của chế độ tự phán đoán: một câu máy móc trước mặt cả nhóm khi khách đang giận làm
+# mọi thứ tệ hơn, nên bot im và báo CHỦ.
+_TU_KHIEU_NAI = ("lua dao", "lua dot", "lua dao", "hoan tien", "tra hang", "hang loi", "hang hu",
+                 "hang kem", "khong hai long", "that vong", "buc minh", "buc xuc", "khieu nai",
+                 "bao cong an", "to cao", "bom hang", "chua nhan duoc hang", "chua thay hang",
+                 "giao sai", "gui sai", "mat tien", "te qua", "te hai", "lam an kieu gi",
+                 "coi thuong khach", "khong ai tra loi", "bao gio moi", "toi se review")
+
+
+def la_khieu_nai(text: str) -> bool:
+    k = _bo_dau(text)
+    return any(re.search(r"(^|\W)" + re.escape(w) + r"(\W|$)", k) for w in _TU_KHIEU_NAI)
+
+
 def _bo_dau(s: str) -> str:
     s = unicodedata.normalize("NFD", str(s or "").lower().replace("đ", "d"))
     return "".join(c for c in s if unicodedata.category(c) != "Mn")
@@ -145,12 +160,16 @@ def quyet_dinh(bot_id: str, chat_id: str, text: str, ngu_canh: List[dict],
         d = _doc(bot_id)
         lech = int(d["lech"].get(str(chat_id), 0))
         noi, diem, ly = cham_diem(text, ngu_canh, bay_gio=bay_gio, lech=lech)
+        khieu_nai = la_khieu_nai(text)
+        if khieu_nai:
+            noi = False
+            ly.append("khách có dấu hiệu bức xúc/khiếu nại: bot im, để chủ xử lý")
         if lech:
             ly.append(f"ngưỡng nhóm này đã chỉnh {lech:+d} theo phản hồi của chủ")
-        kq = {"noi": noi, "diem": diem, "ly_do": ly, "id": int(bay_gio * 1000)}
+        kq = {"noi": noi, "diem": diem, "ly_do": ly, "id": int(bay_gio * 1000), "khieu_nai": khieu_nai}
         d["nhat_ky"].append({"id": kq["id"], "ts": bay_gio, "chat_id": str(chat_id),
                              "nhom": str(ten_nhom or "")[:80], "tin": str(text or "")[:300],
-                             "noi": noi, "diem": diem, "ly_do": ly, "phan_hoi": ""})
+                             "noi": noi, "diem": diem, "ly_do": ly, "phan_hoi": "", "khieu_nai": khieu_nai})
         _luu(bot_id, d)
         _NHO[khoa] = (bay_gio, kq)
         return kq
