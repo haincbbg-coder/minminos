@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.54] - 2026-10-03
+### Thêm mới
+- Plugin **Công cụ nhóm Zalo** (có sẵn, bật mặc định): bot và MinMin tạo được **ghi chú** (có ghim), **nhắc việc** (lặp ngày/tuần/tháng) và **bình chọn** trong nhóm Zalo, và **tìm thành viên theo tên** (không dấu cũng được) để lấy ID thật mà tag; trùng tên thì hỏi lại, không đoán. Giờ nhắc hiểu theo giờ Việt Nam và tự đổi sang múi giờ máy chủ.
+- Ba tool tạo ghi chú, nhắc việc, bình chọn là hành động thật trước mặt cả nhóm nên chỉ chạy ở mức Toàn quyền; tìm thành viên chỉ đọc.
+- Chưa kiểm tra với tài khoản Zalo thật: lệnh đúng theo zalo-agent-cli 1.6.2 nhưng cần thử một lần trong nhóm của bố.
+
 ## [26.10.53] - 2026-10-03
 ### Thêm mới
 - Bot trên **Zalo cá nhân đứng được trong NHÓM**. Trước đây bot bỏ qua mọi tin nhóm và ảnh nên chế độ phán xử không có chỗ chạy. Nay: nhóm phải do chủ bật (form bot có ô khai nhóm cho kênh Zalo), nhóm chưa bật thì bot IM hẳn, chỉ lên hàng chờ ở trang Chatbot để chủ bấm Cho phép (không nhân danh chủ chen vào nhóm lạ xin được bật).
