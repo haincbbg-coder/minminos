@@ -3342,5 +3342,22 @@
   "ht.da_cho": "The bot may answer this person",
   "ht.chua_cho": "The bot is silent with this person (not allowed yet)",
   "ht.cho_tl": "Let bot reply",
-  "ht.thoi_cho": "Stop letting bot reply"
+  "ht.thoi_cho": "Stop letting bot reply",
+  "cb.lb_noi_duoc": "The bot MAY answer about",
+  "cb.ph_noi_duoc": "e.g. price, size, stock, shipping, returns of our products. Empty = no limit.",
+  "cb.lb_noi_cam": "The bot must NOT answer about",
+  "cb.ph_noi_cam": "e.g. politics, purchase cost, internal matters, competitors, medical advice.",
+  "cb.lb_tu_khoa": "Blocked keywords (bot stays silent)",
+  "cb.ph_tu_khoa": "Comma separated, e.g. wholesale, agent, salary",
+  "cb.lb_ngoai_pv": "For out-of-scope questions",
+  "cb.npv_tu_choi": "Politely decline in one sentence",
+  "cb.npv_im": "Stay silent",
+  "cb.hint_pham_vi": "The two topic boxes are followed by the bot's own understanding. Blocked keywords are enforced by code.",
+  "cb.db_chon_nguoi": "Pick from Zalo contacts",
+  "cb.db_chon_nhom": "Pick groups from Zalo",
+  "cb.db_tim": "Type a name to search...",
+  "cb.db_dang_tai": "Loading contacts...",
+  "cb.db_trong": "No match. Try another name.",
+  "cb.db_nhom": "Group",
+  "cb.db_ca_nhan": "Personal"
 }

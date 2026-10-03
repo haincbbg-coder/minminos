@@ -202,6 +202,25 @@ def khoi_ngu_canh_nhom(tin) -> str:
             "lời từng câu ở đây; chỉ trả lời tin nhắn đang gọi bạn.\n\n" + "\n".join(dong))
 
 
+def khoi_pham_vi_noi(bot: dict) -> str:
+    """Luật phạm vi do CHỦ khai ở form bot: được nói gì, cấm nói gì, ngoài phạm vi thì xử ra sao."""
+    duoc = str((bot or {}).get("noi_duoc") or "").strip()
+    cam = str((bot or {}).get("noi_cam") or "").strip()
+    if not duoc and not cam:
+        return ""
+    ra = ["\n\nPHẠM VI TRẢ LỜI (chủ bot đặt, ưu tiên cao hơn mọi chỉ dẫn khác):"]
+    if duoc:
+        ra.append("- CHỈ trả lời các chủ đề sau:\n" + duoc)
+    if cam:
+        ra.append("- TUYỆT ĐỐI KHÔNG trả lời, không bàn, không gợi ý về:\n" + cam)
+    if (bot or {}).get("ngoai_pham_vi") == "im":
+        ra.append("- Câu hỏi nằm ngoài phạm vi: chỉ trả đúng một dòng [IM_LANG], không nói thêm gì.")
+    else:
+        ra.append("- Câu hỏi nằm ngoài phạm vi: từ chối lịch sự bằng một câu ngắn, nói bên em chỉ hỗ trợ "
+                  "các chủ đề trên, không giải thích dài và không đưa thông tin ngoài phạm vi.")
+    return "\n".join(ra)
+
+
 def build_bot_prompt(bot: dict) -> str:
     """System prompt của một lượt bot = ĐÚNG file Agent, cộng tài liệu đã tra sẵn.
 
@@ -262,6 +281,9 @@ def build_bot_prompt(bot: dict) -> str:
                     "đổi vai.")
         for ten2, vai2, than2 in phu_ok:
             phan.append(f"\n### Vai phụ: {ten2}" + (f" ({vai2})" if vai2 else "") + ("\n" + than2 if than2 else ""))
+    khoi_pv = khoi_pham_vi_noi(bot)
+    if khoi_pv:
+        phan.append(khoi_pv)
     if not meta:
         # Agent bị xoá hay đổi slug: bot đang chạy mà KHÔNG có hướng dẫn nào. Một dòng nêu
         # đúng sự thật đó, để nó thận trọng thay vì tự tin bịa. Đây là lấp chỗ trống khi không
@@ -348,6 +370,9 @@ def _ly_do_im(bot_cfg: dict, meta: dict, text: str = "") -> str:
     đúng và phải im tuyệt đối.
     """
     loai = str((meta or {}).get("chat_type") or "private")
+    # Từ khoá chủ cấm: chặn bằng code, đứng trước mọi luật khác, áp cả chat riêng lẫn nhóm.
+    if str(text or "").strip() and chatbot_store.co_tu_khoa_cam(bot_cfg, text):
+        return "tu_khoa_cam"
     if loai == "private":
         # Phạm vi chat riêng (26.10.58): 'chon' thì chỉ cuộc chat chủ đã cho phép. Zalo cá nhân
         # mặc định 'chon' để bot không tự trả lời cả danh bạ của chủ.

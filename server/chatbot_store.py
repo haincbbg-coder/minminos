@@ -280,6 +280,31 @@ def _clean_rieng_cho_phep(v: Any) -> List[str]:
     return out[:500]
 
 
+NGOAI_PHAM_VI = ("tu_choi", "im")
+MAX_CHU_DE = 1500
+
+
+def _clean_chu_de(v: Any) -> str:
+    """Khối chữ chủ đề được/không được trả lời. Chỉ cắt gọn, không diễn giải."""
+    return re.sub(r"\n{3,}", "\n\n", str(v or "").replace("\r", "")).strip()[:MAX_CHU_DE]
+
+
+def _clean_tu_khoa(v: Any) -> List[str]:
+    """Từ khoá CẤM: tin khách chứa một từ này thì bot im hẳn (chặn bằng code, không nhờ model)."""
+    items = re.split(r"[,;\n]+", v) if isinstance(v, str) else (list(v) if isinstance(v, (list, tuple)) else [])
+    out: List[str] = []
+    for x in items:
+        x = str(x).strip()[:60]
+        if len(x) >= 2 and x.lower() not in [o.lower() for o in out]:
+            out.append(x)
+    return out[:40]
+
+
+def co_tu_khoa_cam(bot: dict, text: str) -> bool:
+    t = str(text or "").lower()
+    return any(k.lower() in t for k in ((bot or {}).get("cam_tu_khoa") or []))
+
+
 def pham_vi_rieng(bot: dict) -> str:
     """'tat_ca' = trả lời mọi người nhắn riêng; 'chon' = chỉ cuộc chat chủ đã cho phép.
 
@@ -544,6 +569,10 @@ def create_bot(data: dict) -> tuple[Optional[str], str]:
             "agents_phu": _clean_agents_phu(data.get("agents_phu"), agent_slug),
             "rieng_pham_vi": (data.get("rieng_pham_vi") if data.get("rieng_pham_vi") in RIENG_PHAM_VI else ""),
             "rieng_cho_phep": _clean_rieng_cho_phep(data.get("rieng_cho_phep")),
+            "noi_duoc": _clean_chu_de(data.get("noi_duoc")),
+            "noi_cam": _clean_chu_de(data.get("noi_cam")),
+            "cam_tu_khoa": _clean_tu_khoa(data.get("cam_tu_khoa")),
+            "ngoai_pham_vi": (data.get("ngoai_pham_vi") if data.get("ngoai_pham_vi") in NGOAI_PHAM_VI else "tu_choi"),
             "reply_when": (data.get("reply_when") if data.get("reply_when") in REPLY_WHEN else "mention"),
             "nguon_tra_loi": (data.get("nguon_tra_loi") if data.get("nguon_tra_loi") in NGUON
                               else NGUON_DEFAULT),
@@ -582,7 +611,8 @@ def _nhan_brain_cho_tk(bot: dict) -> None:
 _PATCHABLE = ("name", "icon", "groups", "reply_when", "handoff_to", "rate_limit",
               "agent_slug", "agent_brain", "brain", "bot_username", "token", "enabled",
               "nguon_tra_loi", "muc_quyen", "ngon_ngu", "account_ids",
-              "agents_phu", "rieng_pham_vi", "rieng_cho_phep")
+              "agents_phu", "rieng_pham_vi", "rieng_cho_phep",
+              "noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi")
 # `channel` CỐ Ý đứng ngoài danh sách trắng. Đổi kênh của một bot đã tạo là đổi sang một CON
 # BOT KHÁC: token khác, danh tính khác, khách khác, và cả đống id nhóm đang lưu lập tức vô
 # nghĩa. Cho sửa tại chỗ thì bản ghi còn nguyên tên và lịch sử của con cũ trong khi nó đã là
@@ -651,6 +681,13 @@ def update_bot(bot_id: str, patch: dict) -> tuple[bool, str]:
                 elif k == "rieng_pham_vi":
                     if v in RIENG_PHAM_VI or v == "":
                         b["rieng_pham_vi"] = v
+                elif k in ("noi_duoc", "noi_cam"):
+                    b[k] = _clean_chu_de(v)
+                elif k == "cam_tu_khoa":
+                    b[k] = _clean_tu_khoa(v)
+                elif k == "ngoai_pham_vi":
+                    if v in NGOAI_PHAM_VI:
+                        b[k] = v
                 elif k == "rieng_cho_phep":
                     b["rieng_cho_phep"] = _clean_rieng_cho_phep(v)
                 elif k == "agent_slug":

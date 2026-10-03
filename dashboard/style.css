@@ -3410,3 +3410,12 @@ body.ne-full-on .cview { z-index: 250; }
   .call-bar .call-hangup { grid-column: 4; grid-row: 2; }
   .call-bar .call-resume { grid-column: 1 / -1; grid-row: 3; }
 }
+
+/* Chọn Agent phụ và chọn người/nhóm từ danh bạ Zalo (26.10.59): ô tick nằm CÙNG DÒNG với tên. */
+.cb-form label.cb-chk { display: flex; align-items: center; gap: 10px; margin: 0; padding: 7px 4px; font-weight: 500; cursor: pointer; }
+.cb-form label.cb-chk input { width: 18px; height: 18px; flex: none; margin: 0; }
+.cb-form label.cb-chk em { margin-left: auto; font-style: normal; font-size: 11.5px; color: var(--text3); }
+.cb-agent-phu, .cb-db-ds { max-height: 220px; overflow-y: auto; border-radius: 12px; padding: 4px 8px; }
+.cb-db { margin-top: 8px; }
+.cb-db-panel { margin-top: 8px; }
+.cb-db-panel .cb-db-q { width: 100%; margin-bottom: 6px; }

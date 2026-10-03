@@ -296,6 +296,65 @@ async def _nap_ten(conn: dict, tt: dict) -> Dict[str, dict]:
     return tt["ten"]
 
 
+def _chuan_ten(s: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFD", str(s or "").lower().replace("đ", "d"))
+    return "".join(c for c in s if unicodedata.category(c) != "Mn")
+
+
+async def danh_ba(conn_id: str, q: str = "", loai: str = "") -> dict:
+    """Danh bạ để chủ TÍCH CHỌN thay vì chép id tay: bạn bè và nhóm của một nick Zalo, lọc theo tên
+    (không phân biệt hoa thường và dấu). `loai` = "private" | "group" | "" (cả hai).
+    Gộp ba nguồn: danh sách cuộc chat của Zalo, kết quả tìm của Zalo cho đúng từ khoá, và các
+    cuộc chat bot đã từng thấy (có tên). Nguồn nào hỏng thì bỏ nguồn đó, không làm cả danh sách lỗi."""
+    conn = ket_noi_theo_id(conn_id)
+    if not conn:
+        return {"ok": False, "error": "Tài khoản Zalo này chưa bật hoặc chưa kết nối."}
+    bang: Dict[str, dict] = {}
+
+    def them(t):
+        if not isinstance(t, dict):
+            return
+        tid = str(_lay(t, "threadId", "id", mac_dinh="") or "")
+        if not tid:
+            return
+        ten = str(t.get("name") or t.get("displayName") or t.get("title") or "").strip()
+        ty = str(t.get("type") or "").lower()
+        nhom = ty == "group" or str(t.get("threadType")) == "1"
+        cu = bang.get(tid) or {}
+        bang[tid] = {"id": tid, "name": ten or cu.get("name") or "", "type": "group" if nhom else "private"}
+
+    loi = ""
+    try:
+        d = await _goi(conn, "zalo_list_threads", {"limit": 500})
+        for t in ((d.get("threads") if isinstance(d, dict) else d) or []):
+            them(t)
+    except Exception as e:
+        loi = str(e)[:200]
+    if str(q or "").strip():
+        try:
+            d = await _goi(conn, "zalo_search_threads", {"query": str(q).strip()})
+            for t in ((d.get("threads") or d.get("results") or d.get("items")) if isinstance(d, dict) else d) or []:
+                them(t)
+        except Exception as e:
+            loi = loi or str(e)[:200]
+    try:
+        for c in conversations.danh_sach(channel=KENH, account_id=str(conn_id), limit=300) or []:
+            tid = str(c.get("external_chat_id") or "")
+            if tid:
+                them({"threadId": tid, "name": c.get("title") or c.get("customer_name") or "",
+                      "type": "group" if c.get("chat_type") == "group" else "user"})
+    except Exception:
+        pass
+    k = _chuan_ten(q)
+    ds = [v for v in bang.values()
+          if (not loai or v["type"] == loai) and (not k or k in _chuan_ten(v["name"]) or k in v["id"])]
+    ds.sort(key=lambda v: (v["type"] != "group", _chuan_ten(v["name"]) or "~", v["id"]))
+    if not ds and loi:
+        return {"ok": False, "error": "Chưa lấy được danh bạ Zalo: " + loi}
+    return {"ok": True, "items": ds[:400]}
+
+
 async def doc_mot_lan(conn: dict) -> dict:
     """Một lượt đọc cho một tài khoản. Trả {"moi": n, "trung": n} hoặc ném lỗi."""
     tt = _TT.setdefault(conn["id"], {})

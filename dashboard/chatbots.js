@@ -708,7 +708,24 @@
           '</select>' +
           '<textarea id="cbRiengCho" rows="2" placeholder="' + esc(window.t("cb.ph_rieng_cho")) + '">' +
             esc(((b && b.rieng_cho_phep) || []).join("\n")) + '</textarea>' +
+          '<div class="cb-db" id="cbDbRieng" data-loai="private" data-ta="cbRiengCho"></div>' +
           '<div class="cb-hint">' + esc(window.t("cb.hint_rieng")) + '</div>' +
+
+          '<label>' + esc(window.t("cb.lb_noi_duoc")) + '</label>' +
+          '<textarea id="cbNoiDuoc" rows="3" placeholder="' + esc(window.t("cb.ph_noi_duoc")) + '">' +
+            esc((b && b.noi_duoc) || "") + '</textarea>' +
+          '<label>' + esc(window.t("cb.lb_noi_cam")) + '</label>' +
+          '<textarea id="cbNoiCam" rows="3" placeholder="' + esc(window.t("cb.ph_noi_cam")) + '">' +
+            esc((b && b.noi_cam) || "") + '</textarea>' +
+          '<label>' + esc(window.t("cb.lb_tu_khoa")) + '</label>' +
+          '<input id="cbTuKhoa" value="' + esc(((b && b.cam_tu_khoa) || []).join(", ")) + '" placeholder="' +
+            esc(window.t("cb.ph_tu_khoa")) + '">' +
+          '<label>' + esc(window.t("cb.lb_ngoai_pv")) + '</label>' +
+          '<select id="cbNgoaiPV">' +
+            '<option value="tu_choi"' + (!b || b.ngoai_pham_vi !== "im" ? " selected" : "") + '>' + esc(window.t("cb.npv_tu_choi")) + '</option>' +
+            '<option value="im"' + (b && b.ngoai_pham_vi === "im" ? " selected" : "") + '>' + esc(window.t("cb.npv_im")) + '</option>' +
+          '</select>' +
+          '<div class="cb-hint">' + esc(window.t("cb.hint_pham_vi")) + '</div>' +
 
           // Lựa chọn này quyết định bot "ăn nhập với Agent" hay không, nên đặt ngay dưới Agent
           // chứ không giấu trong khối Cài đặt thêm: nó là thứ người dùng cần hiểu TRƯỚC khi
@@ -762,6 +779,7 @@
               '<label>' + esc(window.t("cb.lb_nhom")) + '</label>' +
               '<textarea id="cbGroups" rows="2" placeholder="' + esc(window.t("cb.ph_nhom")) + '">' +
                 esc(((b && b.groups) || []).join("\n")) + '</textarea>' +
+              '<div class="cb-db" id="cbDbNhom" data-loai="group" data-ta="cbGroups"></div>' +
               '<div class="cb-hint">' + esc(window.t("cb.hint_ho_3")) + ' <b>' +
               esc(window.t("cb.hint_nhom_rieng")) + '</b>' + esc(window.t("cb.hint_nhom_1")) +
               ' <b>' + esc(window.t("cb.cho_phep")) + '</b>' + esc(window.t("cb.hint_nhom_2")) +
@@ -831,6 +849,73 @@
       if (khong) khong.style.display = co ? "none" : "";
     }
 
+    // Chọn người/nhóm từ DANH BẠ Zalo (tìm theo tên, tích chọn) thay vì chép id tay. Ô chữ id vẫn là
+    // nguồn dữ liệu thật; bảng này chỉ thêm/bớt dòng trong đó.
+    var _tenDb = {};
+    function zaloDangChon() {
+      var a = tkDangChon().filter(function (x) { return x.channel === "zalo_personal"; })[0];
+      return a ? a.id : "";
+    }
+    function veDanhBa(host) {
+      var ta = box.querySelector("#" + host.getAttribute("data-ta"));
+      var loai = host.getAttribute("data-loai");
+      var aid = zaloDangChon();
+      if (!aid) { host.style.display = "none"; host.innerHTML = ""; return; }
+      host.style.display = "";
+      if (host.getAttribute("data-aid") === aid && host.firstChild) return;
+      host.setAttribute("data-aid", aid);
+      host.innerHTML =
+        '<button type="button" class="s-btn-ghost cb-db-mo">' + esc(window.t(loai === "group" ? "cb.db_chon_nhom" : "cb.db_chon_nguoi")) + '</button>' +
+        '<div class="cb-db-panel" style="display:none">' +
+          '<input class="cb-db-q" placeholder="' + esc(window.t("cb.db_tim")) + '">' +
+          '<div class="cb-db-ds"></div></div>';
+      var panel = host.querySelector(".cb-db-panel"), ds = host.querySelector(".cb-db-ds");
+      var q = host.querySelector(".cb-db-q"), hen = null, seq = 0;
+      function idsHienCo() {
+        return ta.value.split(/[\s,;]+/).filter(Boolean);
+      }
+      function datIds(arr) { ta.value = arr.join("\n"); }
+      function ve(items) {
+        var co = idsHienCo();
+        var thieu = co.filter(function (i) { return !items.some(function (x) { return x.id === i; }); })
+          .map(function (i) { return { id: i, name: _tenDb[i] || "", type: loai }; });
+        var all = thieu.concat(items);
+        ds.innerHTML = all.length ? all.map(function (x) {
+          _tenDb[x.id] = x.name || _tenDb[x.id] || "";
+          return '<label class="cb-chk cb-db-dong"><input type="checkbox" value="' + esc(x.id) + '"' +
+            (co.indexOf(x.id) >= 0 ? " checked" : "") + '> <span>' + esc(x.name || x.id) + '</span> ' +
+            (loai ? "" : '<em>' + esc(window.t(x.type === "group" ? "cb.db_nhom" : "cb.db_ca_nhan")) + '</em>') + '</label>';
+        }).join("") : '<div class="cb-hint">' + esc(window.t("cb.db_trong")) + '</div>';
+        Array.prototype.forEach.call(ds.querySelectorAll("input"), function (o) {
+          o.onchange = function () {
+            var cur = idsHienCo().filter(function (i) { return i !== o.value; });
+            if (o.checked) cur.push(o.value);
+            datIds(cur);
+          };
+        });
+      }
+      async function tai() {
+        var my = ++seq;
+        ds.innerHTML = '<div class="cb-hint">' + esc(window.t("cb.db_dang_tai")) + '</div>';
+        try {
+          var d = await api("/chatbots/danh-ba?account_id=" + encodeURIComponent(aid) + "&loai=" + loai +
+                            "&q=" + encodeURIComponent(q.value || ""));
+          if (my === seq) ve(d.items || []);
+        } catch (e) {
+          if (my === seq) ds.innerHTML = '<div class="cb-warn">' + esc(e.message) + '</div>';
+        }
+      }
+      host.querySelector(".cb-db-mo").onclick = function () {
+        var mo = panel.style.display === "none";
+        panel.style.display = mo ? "" : "none";
+        if (mo) tai();
+      };
+      q.oninput = function () { clearTimeout(hen); hen = setTimeout(tai, 350); };
+    }
+    function veMoiDanhBa() {
+      Array.prototype.forEach.call(box.querySelectorAll(".cb-db"), veDanhBa);
+    }
+
     // Dòng tóm tắt ở đầu bước 2: bot này sẽ trả lời ở đâu, và lối quay lại đổi. Không có nó thì
     // sang bước 2 là mất dấu lựa chọn vừa làm.
     function veTom() {
@@ -849,10 +934,11 @@
     // Nối lại sự kiện cho danh sách tài khoản: nó được vẽ lại sau mỗi lần nối kênh mới.
     function noiTK() {
       box.querySelectorAll(".cb-tk-o").forEach(function (n) {
-        n.onchange = function () { apNhom(); veTom(); };
+        n.onchange = function () { apNhom(); veTom(); veMoiDanhBa(); };
       });
       apNhom();
       veTom();
+      veMoiDanhBa();
     }
     noiTK();
 
@@ -929,7 +1015,11 @@
                     agents_phu: Array.prototype.map.call(box.querySelectorAll(".cbAgentPhuCk:checked"),
                       function (x) { return x.value; }).filter(function (x) { return x !== ag; }).join(","),
                     rieng_pham_vi: (box.querySelector("#cbRiengPhamVi") || {}).value || "",
-                    rieng_cho_phep: ((box.querySelector("#cbRiengCho") || {}).value || "") };
+                    rieng_cho_phep: ((box.querySelector("#cbRiengCho") || {}).value || ""),
+                    noi_duoc: (box.querySelector("#cbNoiDuoc") || {}).value || "",
+                    noi_cam: (box.querySelector("#cbNoiCam") || {}).value || "",
+                    cam_tu_khoa: (box.querySelector("#cbTuKhoa") || {}).value || "",
+                    ngoai_pham_vi: (box.querySelector("#cbNgoaiPV") || {}).value || "tu_choi" };
       try {
         if (sua) {
           await api("/chatbots/" + encodeURIComponent(b.id) + "/update", { method: "POST", body: fd(chung) });
