@@ -40,6 +40,31 @@ def _404(msg: str = "không có hội thoại nào id đó"):
     return JSONResponse({"ok": False, "error": msg}, status_code=404)
 
 
+async def _gui_cho_khach(c: dict, txt: str):
+    """Gửi một câu tới khách của hội thoại `c` qua kênh trong sổ. (ok, lỗi, raw account id)."""
+    kenh = str(c.get("channel") or "")
+    key = str(c.get("channel_account_id") or "")
+    raw = key.split(":", 1)[1] if ":" in key else key
+    s = channels.spec(kenh)
+    if not s:
+        return False, f"kênh '{kenh}' không có trong sổ đăng ký", raw
+    tk = {"id": raw, "channel": kenh}
+    if s.kind == "bot":
+        a = channel_accounts.get_account(raw) or {}
+        tk.update({k: a.get(k) for k in ("label", "external_id")})
+        tk["token"] = channel_accounts.get_token(raw)
+    ok, loi = await channels.gui(kenh, tk, str(c.get("external_chat_id") or ""), txt,
+                                 str(c.get("chat_type") or "private"))
+    return ok, loi, raw
+
+
+def _tin_khach_cuoi(conv_id: int) -> dict:
+    for m in reversed(conversations.tin_nhan(conv_id, limit=60)):
+        if m.get("sender_type") == "customer" and str(m.get("text") or "").strip():
+            return m
+    return {}
+
+
 def register(app, deps: ConversationsDeps):
     global _DEPS
     _DEPS = deps
@@ -141,6 +166,54 @@ def register(app, deps: ConversationsDeps):
             tiep_quan = True
         return {"ok": True, "message_id": r.get("message_id"), "tiep_quan": tiep_quan,
                 "conversation": conversations.chi_tiet(conv_id)}
+
+    @router.post("/conversations/{conv_id}/goi-y")
+    async def conversations_goi_y(conv_id: int):
+        """Bot soạn NHÁP câu trả lời cho tin khách cuối. Không gửi gì: chủ đọc, sửa, tự gửi."""
+        import chatbot_runtime
+        c = conversations.chi_tiet(conv_id)
+        if not c:
+            return _404()
+        tin = _tin_khach_cuoi(conv_id)
+        r = await chatbot_runtime.soan_cau_tra_loi(c, tin)
+        return r if r.get("ok") else JSONResponse(r, status_code=400)
+
+    @router.post("/conversations/{conv_id}/tra-loi-giup")
+    async def conversations_tra_loi_giup(conv_id: int):
+        """Bot trả lời tin khách cuối NGAY, kể cả khi bộ phán xử đã chọn im. Gửi dưới vai bot
+        và KHÔNG tiếp quản: đây vẫn là bot nói, chủ chỉ bấm hộ nó."""
+        import chatbot_runtime
+        c = conversations.chi_tiet(conv_id)
+        if not c:
+            return _404()
+        r = await chatbot_runtime.soan_cau_tra_loi(c, _tin_khach_cuoi(conv_id))
+        if not r.get("ok"):
+            return JSONResponse(r, status_code=400)
+        ok, loi, raw = await _gui_cho_khach(c, r["text"])
+        if not ok:
+            return JSONResponse({"ok": False, "ly_do": "gui_loi", "error": loi or "không gửi được"},
+                                status_code=400)
+        conversations.ghi_su_kien({
+            "channel": c.get("channel"), "account_id": raw, "account_name": c.get("account_name") or "",
+            "bot_id": c.get("bot_id") or "", "external_chat_id": c.get("external_chat_id"),
+            "chat_type": c.get("chat_type"),
+            "chat_title": c.get("title") if c.get("chat_type") == "group" else "",
+            "sender_type": "ai", "sender_name": "Bot", "message_type": "text", "text": r["text"],
+            "metadata": {"tra_loi_giup": True},
+        })
+        return {"ok": True, "text": r["text"]}
+
+    @router.get("/conversations/{conv_id}/phan-xu")
+    async def conversations_phan_xu(conv_id: int):
+        """Quyết định gần nhất của bộ phán xử ở cuộc chat này (để vẽ dòng "Bot im: lý do")."""
+        import chatbot_phan_xu
+        c = conversations.chi_tiet(conv_id)
+        if not c:
+            return _404()
+        bid = str(c.get("bot_id") or "")
+        cid = str(c.get("external_chat_id") or "")
+        ds = [r for r in chatbot_phan_xu.nhat_ky(bid, 200) if r.get("chat_id") == cid][:5] if bid else []
+        return {"ok": True, "items": ds, "bot_id": bid}
 
     @router.post("/conversations/{conv_id}/mode")
     async def conversations_mode(conv_id: int, mode: str = Form(...)):

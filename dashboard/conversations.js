@@ -483,6 +483,7 @@
       '</div>' +
       (human ? '<div class="ht-note warn">' + ic("hand") + ' ' + esc(window.t("ht.dang_tiep_quan")) + '</div>' : "") +
       '<div class="ht-msgs">' + dauKhung(c) + _msgs.map(veTin).join("") + '</div>' +
+      (laBot ? '<div class="ht-botbar"></div>' : "") +
       (guiDuoc ? veCompose(c, laBot, human) :
         '<div class="ht-foot">' + esc(window.t("ht.kenh_khong_gui", { kenh: nhanKenh(c.channel) })) + '</div>');
     box.querySelector(".ht-back").onclick = dongThread;
@@ -495,6 +496,7 @@
     m.addEventListener("scroll", function () { if (m.scrollTop < 60) taiCu(); }, { passive: true });
     // 40 tin chưa đầy khung thì không có gì để cuộn, nên tự tải thêm tin cũ cho tới khi đầy.
     if (!_hetCu && m.scrollHeight <= m.clientHeight + 4) setTimeout(taiCu, 0);
+    if (laBot) veBotBar(c, box.querySelector(".ht-botbar"));
     var ta = box.querySelector(".ht-compose textarea");
     if (ta) {
       ta.value = nhapDo;
@@ -564,6 +566,71 @@
       '<div class="ht-msg-h">' + esc(ai) + (ai ? ' · ' : '') + esc(gio(t.created_at)) + '</div>' +
       '<div class="ht-bubble">' + loai + than + '</div>' + loi +
     '</div>';
+  }
+
+  // Thanh của bot ngay trên ô soạn: lý do bot im ở tin khách cuối (kèm Đúng/Sai để bộ phán xử
+  // học), nút soạn nháp và nút bảo bot trả lời giúp tin đó.
+  var _px = { id: 0, ts: 0, items: [] };
+  async function taiPhanXu(c) {
+    if (_px.id === c.id && Date.now() - _px.ts < 15000) return;
+    _px = { id: c.id, ts: Date.now(), items: _px.id === c.id ? _px.items : [] };
+    try {
+      var d = await api("/conversations/" + c.id + "/phan-xu");
+      _px.items = d.items || [];
+    } catch (e) { _px.items = []; }
+  }
+  function veBotBar(c, bar) {
+    if (!bar) return;
+    var qd = (_px.id === c.id && _px.items[0]) || null;
+    var im = qd && !qd.noi && !qd.phan_hoi;
+    bar.innerHTML =
+      (qd && !qd.noi
+        ? '<div class="ht-im">' + ic("volume-x") + ' <span>' + esc(window.t("ht.bot_im")) + ': ' +
+            esc((qd.ly_do || []).join("; ") || window.t("ht.khong_ly_do")) + '</span>' +
+            (im ? '<button type="button" class="s-btn-ghost ht-px" data-d="1">' + esc(window.t("ht.im_dung")) + '</button>' +
+                  '<button type="button" class="s-btn-ghost ht-px" data-d="0">' + esc(window.t("ht.im_sai")) + '</button>' : "") +
+          '</div>' : "") +
+      '<div class="ht-botbtns">' +
+        '<button type="button" class="s-btn-ghost ht-goiy">' + ic("sparkles") + ' ' + esc(window.t("ht.goi_y")) + '</button>' +
+        '<button type="button" class="s-btn-ghost ht-giup">' + ic("bot") + ' ' + esc(window.t("ht.tra_loi_giup")) + '</button>' +
+      '</div>';
+    Array.prototype.forEach.call(bar.querySelectorAll(".ht-px"), function (b) {
+      b.onclick = async function () {
+        try {
+          await api("/chatbots/" + c.bot_id + "/phan-xu/phan-hoi", { method: "POST",
+            body: fd({ qd_id: qd.id, dung: b.getAttribute("data-d") }) });
+          qd.phan_hoi = b.getAttribute("data-d") === "1" ? "dung" : "sai";
+        } catch (e) { alert(e.message); }
+        veBotBar(c, bar);
+      };
+    });
+    bar.querySelector(".ht-goiy").onclick = function () { goiY(c, bar); };
+    bar.querySelector(".ht-giup").onclick = function () { traLoiGiup(c, bar); };
+    taiPhanXu(c).then(function () {
+      if (_px.id === c.id && JSON.stringify((_px.items[0] || {}).id) !== JSON.stringify(qd && qd.id)) veBotBar(c, bar);
+    });
+  }
+  async function goiY(c, bar) {
+    var nut = bar.querySelector(".ht-goiy");
+    nut.disabled = true;
+    try {
+      var d = await api("/conversations/" + c.id + "/goi-y", { method: "POST" });
+      var ta = _host.querySelector(".ht-compose textarea");
+      if (ta) { ta.value = d.text; ta.focus(); }
+      else alert(d.text);
+    } catch (e) { alert(window.t("ht.loi_goi_y") + " " + e.message); }
+    nut.disabled = false;
+  }
+  async function traLoiGiup(c, bar) {
+    if (!confirm(window.t("ht.xac_nhan_giup"))) return;
+    var nut = bar.querySelector(".ht-giup");
+    nut.disabled = true;
+    try {
+      await api("/conversations/" + c.id + "/tra-loi-giup", { method: "POST" });
+    } catch (e) { alert(window.t("ht.loi_giup") + " " + e.message); }
+    nut.disabled = false;
+    await taiTin(true);
+    tai(true);
   }
 
   async function doiMode(id, mode) {

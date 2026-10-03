@@ -709,6 +709,53 @@ def ghi_tin_bot(cfg: dict, meta: dict, text: str, loi: str = "", files=None) -> 
         print(f"[chatbot conversations] {type(e).__name__}: {e}", file=sys.stderr)
 
 
+async def soan_cau_tra_loi(conv: dict, tin_khach: dict) -> dict:
+    """Soạn NHÁP câu bot sẽ trả cho một tin khách trong Hộp thư, KHÔNG gửi, KHÔNG ghi nhật ký,
+    KHÔNG tính bộ đếm bí. Dùng cho "Gợi ý câu trả lời" (chủ sửa rồi tự gửi) và "Trả lời giúp"
+    (gửi luôn). Cố ý bỏ qua luật im lặng và chế độ tiếp quản: chủ đã bấm tay thì phải có câu,
+    kể cả khi bộ phán xử đang cho là nên im.
+
+    Trả {"ok", "text", "ly_do"?}. Không có bot nào gắn với cuộc chat thì từ chối."""
+    bot_id = str(conv.get("bot_id") or "")
+    cfg = chatbot_store.get_bot(bot_id) if bot_id else None
+    if not cfg:
+        return {"ok": False, "ly_do": "khong_co_bot"}
+    text = str((tin_khach or {}).get("text") or "").strip()
+    if not text:
+        return {"ok": False, "ly_do": "khong_co_tin_khach"}
+    chat_id = str(conv.get("external_chat_id") or "")
+    key = str(conv.get("channel_account_id") or "")
+    aid = key.split(":", 1)[1] if ":" in key else key
+    kenh = str(conv.get("channel") or "")
+    meta = {"chat_id": chat_id, "chat_type": conv.get("chat_type") or "private",
+            "account_id": aid, "user_name": tin_khach.get("sender_name") or "",
+            "user_id": tin_khach.get("sender_id") or "", "message_id": ""}
+    ngu_canh = []
+    if meta["chat_type"] != "private":
+        ngu_canh = [m for m in conversations.tin_gan_day(kenh, aid, chat_id)
+                    if m.get("id") != tin_khach.get("id")
+                    and (m.get("id") or 0) < (tin_khach.get("id") or 1 << 60)]
+    tl = {"co": False, "khoi": "", "nguon": []}
+    try:
+        root = _deps["brain_root"](cfg["brain"])
+        tl = await asyncio.to_thread(chatbot_grounding.thu_thap, root, text)
+    except Exception as e:
+        print(f"[chatbot {bot_id}] nháp: tra tài liệu lỗi: {e}", file=sys.stderr)
+    cfg["_tai_lieu"] = tl
+    cfg["_kenh_luot"] = kenh
+    cfg["_ngu_canh_nhom"] = ngu_canh
+    try:
+        out = await _deps["answer"](text, meta, None, channel=kenh, bot=cfg)
+    except Exception as e:
+        return {"ok": False, "ly_do": "loi_engine", "chi_tiet": f"{type(e).__name__}: {e}"[:300]}
+    if isinstance(out, str):
+        return {"ok": False, "ly_do": "loi_engine", "chi_tiet": out[:300]}
+    dap = str((out or {}).get("text") or "").strip()
+    if not dap or IM_LANG.lower() in dap.lower():
+        return {"ok": False, "ly_do": "bot_chon_im"}
+    return {"ok": True, "text": dap}
+
+
 def _make_answer_fn(bot_id: str):
     async def _answer(text, meta=None, progress=None):
         cfg = chatbot_store.get_bot(bot_id)
