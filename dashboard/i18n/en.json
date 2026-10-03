@@ -3389,5 +3389,7 @@
   "cb.tv_tai_len": "Upload files",
   "cb.tv_trong": "No files yet.",
   "cb.tv_luu_truoc": "Save the bot first, then open Edit to upload files.",
-  "cb.tv_xac_nhan_xoa": "Remove this file from the library?"
+  "cb.tv_xac_nhan_xoa": "Remove this file from the library?",
+  "knn.app.viral_studio.ten": "MinMin Viral Studio",
+  "knn.app.viral_studio.mo_ta": "Track channel groups, rank connected content, create AI drafts and manage publishing. Activated with an app licence."
 }

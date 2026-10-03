@@ -3389,5 +3389,7 @@
   "cb.tv_tai_len": "Tải file lên",
   "cb.tv_trong": "Chưa có file nào.",
   "cb.tv_luu_truoc": "Lưu bot xong rồi mở Sửa để tải file lên.",
-  "cb.tv_xac_nhan_xoa": "Xoá file này khỏi thư viện?"
+  "cb.tv_xac_nhan_xoa": "Xoá file này khỏi thư viện?",
+  "knn.app.viral_studio.ten": "MinMin Viral Studio",
+  "knn.app.viral_studio.mo_ta": "Theo dõi nhóm kênh, xếp hạng nội dung từ nguồn đã kết nối, viết bản nháp AI và quản lý lịch đăng. Mở khoá theo giấy phép ứng dụng."
 }

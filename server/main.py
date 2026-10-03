@@ -19936,6 +19936,8 @@ def _xv_chep(brain: str, files) -> list:
 
 
 xuong_video_routes.register(app, _xv_ask, _xv_chep)
+import routes.viral_studio as viral_studio_routes
+viral_studio_routes.register(app)
 
 
 @app.on_event("shutdown")

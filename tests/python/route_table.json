@@ -4700,6 +4700,66 @@
  {
   "order": 472,
   "type": "APIRoute",
+  "path": "/apps/viral-studio",
+  "name": "root",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 473,
+  "type": "APIRoute",
+  "path": "/apps/viral-studio/",
+  "name": "page",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 474,
+  "type": "APIRoute",
+  "path": "/apps/viral-studio/assets/{name}",
+  "name": "assets",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 475,
+  "type": "APIRoute",
+  "path": "/apps/viral-studio/api/state",
+  "name": "state",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 476,
+  "type": "APIRoute",
+  "path": "/apps/viral-studio/api/action/{action}",
+  "name": "action",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 477,
+  "type": "APIRoute",
+  "path": "/apps/viral-studio/api/export/{kind}",
+  "name": "export",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 478,
+  "type": "APIRoute",
   "path": "/share/rename",
   "name": "share_rename",
   "methods": [
