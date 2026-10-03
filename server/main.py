@@ -19448,6 +19448,33 @@ async def chatbots_groups(bot_id: str, chat_id: str = Form(...), on: str = Form(
     return {"ok": True, "groups": (chatbot_store.get_bot(bot_id) or {}).get("groups") or []}
 
 
+@app.get("/chatbots/{bot_id}/phan-xu")
+async def chatbots_phan_xu(bot_id: str, limit: int = 50):
+    """Nhật ký bộ phán xử: mỗi tin trong nhóm bot đã cân nhắc, nói hay im, vì sao."""
+    import chatbot_phan_xu
+    if not chatbot_store.get_bot(bot_id):
+        return JSONResponse({"ok": False, "error": "Không có bot này"}, status_code=404)
+    return {"ok": True, "items": chatbot_phan_xu.nhat_ky(bot_id, limit)}
+
+
+@app.post("/chatbots/{bot_id}/phan-xu/phan-hoi")
+async def chatbots_phan_xu_phan_hoi(bot_id: str, qd_id: int = Form(...), dung: str = Form("1")):
+    """Chủ chấm một quyết định Đúng/Sai; Sai thì ngưỡng của nhóm đó lệch đi một nấc."""
+    import chatbot_phan_xu
+    if not chatbot_store.get_bot(bot_id):
+        return JSONResponse({"ok": False, "error": "Không có bot này"}, status_code=404)
+    return chatbot_phan_xu.phan_hoi(bot_id, qd_id, str(dung).strip() not in ("0", "false", ""))
+
+
+@app.post("/chatbots/{bot_id}/phan-xu/quen")
+async def chatbots_phan_xu_quen(bot_id: str, chat_id: str = Form("")):
+    import chatbot_phan_xu
+    if not chatbot_store.get_bot(bot_id):
+        return JSONResponse({"ok": False, "error": "Không có bot này"}, status_code=404)
+    chatbot_phan_xu.quen_het(bot_id, chat_id)
+    return {"ok": True}
+
+
 @app.get("/chatbots/{bot_id}/log")
 async def chatbots_log(bot_id: str, limit: int = 50):
     """Nhật ký hội thoại khách + danh sách CÂU BOT TRẢ LỜI KHÔNG NỔI.

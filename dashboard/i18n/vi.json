@@ -1209,6 +1209,8 @@
   "cb.lb_reply_when": "Trong nhóm thì khi nào bot lên tiếng",
   "cb.rw_mention": "Chỉ khi được gọi tên hoặc trả lời vào nó (mặc định)",
   "cb.rw_always": "Mọi tin trong nhóm đã cho phép",
+  "cb.rw_judge": "Tự phán đoán: bot đọc ngữ cảnh rồi tự quyết nói hay im",
+  "cb.tl_judge": "khi tự phán đoán là nên nói",
   "cb.rw_moi_tin": "Mọi tin",
   "cb.hint_rw_1": "chỉ hợp với nhóm nhỏ, và còn phải tắt chế độ riêng tư ở @BotFather (",
   "cb.hint_rw_2": "→ Disable) thì Telegram mới chuyển hết tin cho bot. Bot chen vào mọi câu khách nói với nhau thì phiền hơn là giúp.",
