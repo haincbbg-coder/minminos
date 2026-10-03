@@ -19911,6 +19911,31 @@ zalo_forwarder_routes.register(app)
 # Tải Hoá Đơn TCT + Quét hoá đơn Gmail trên trình duyệt (26.10.6).
 import routes.hoa_don as hoa_don_routes   # noqa: E402
 hoa_don_routes.register(app)
+# Xưởng video (26.10.63): sản xuất video hàng loạt rồi tự đăng. Kịch bản đi qua engine của MinMin.
+import routes.xuong_video as xuong_video_routes   # noqa: E402
+
+
+async def _xv_ask(yeu_cau: str, brain: str, _files) -> str:
+    """Một lượt engine KHÔNG lưu vào lịch sử chat: kịch bản là việc máy, không phải hội thoại."""
+    out = await _tg_answer(yeu_cau, {"chat_id": "xuong-video"}, None, channel="cli", phien_kho="", ghi_kho=False)
+    return str(out.get("text") if isinstance(out, dict) else out or "")
+
+
+def _xv_chep(brain: str, files) -> list:
+    """Chép ảnh/khung hình tham khảo vào brain để engine đọc được; trả đường dẫn tương đối brain."""
+    import shutil as _sh
+    goc = Path(_brain_root(brain))
+    dich = goc / "attachments" / "xuong-video"
+    dich.mkdir(parents=True, exist_ok=True)
+    out = []
+    for f in files:
+        d = dich / f"{uuid.uuid4().hex[:8]}-{Path(f).name}"
+        _sh.copyfile(str(f), str(d))
+        out.append(str(d.relative_to(goc)).replace("\\", "/"))
+    return out
+
+
+xuong_video_routes.register(app, _xv_ask, _xv_chep)
 
 
 @app.on_event("shutdown")

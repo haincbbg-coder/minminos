@@ -116,6 +116,7 @@
     tai_hoa_don: ["knn.app.tai_hoa_don.ten", "knn.app.tai_hoa_don.mo_ta"],
     quet_hoa_don_gmail: ["knn.app.quet_hoa_don_gmail.ten", "knn.app.quet_hoa_don_gmail.mo_ta"],
     bo_chung_tu_ke_toan: ["knn.app.bo_chung_tu_ke_toan.ten", "knn.app.bo_chung_tu_ke_toan.mo_ta"],
+    xuong_video: ["knn.app.xuong_video.ten", "knn.app.xuong_video.mo_ta"],
     dieu_khien_may: ["knn.app.dieu_khien_may.ten", "knn.app.dieu_khien_may.mo_ta"],
   };
   function tenApp(id) { return KHOA_APP[id] ? t(KHOA_APP[id][0]) : id; }

@@ -102,7 +102,7 @@ with TestClient(app) as tc:
     check("GET trả mã máy, danh sách app và điều khoản chưa đồng ý",
           d["ma_may"] == m1 and {u["id"] for u in d["ung_dung"]} == {
               "zalo_forwarder", "tai_hoa_don", "quet_hoa_don_gmail",
-              "bo_chung_tu_ke_toan", "dieu_khien_may",
+              "bo_chung_tu_ke_toan", "xuong_video", "dieu_khien_may",
           } and d["dieu_khoan"]["chung"] is False)
     r = tc.post("/ket-noi-ngoai/kich-hoat", data={"ma": ma_moi_may})
     check("chưa đồng ý điều khoản thì không kích hoạt được (403)", r.status_code == 403)
