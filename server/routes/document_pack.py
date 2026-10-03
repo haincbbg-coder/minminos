@@ -183,11 +183,11 @@ def documents(hd, d, p, s):
 
 def combined(hd, docs, style):
     bodies=[]
-    for _,data in docs:
+    for name,data in docs:
         text=data.decode('utf-8'); body=re.search(r'<body>(.*)</body>',text,re.S).group(1)
-        bodies.append('<section class="document">'+body+'</section>')
+        bodies.append('<section class="document'+(' spreadsheet' if name.endswith('.print') else '')+'">'+body+'</section>')
     html=hd._doc_frame('Hồ sơ đã chọn — in gộp',''.join(bodies),style)
-    return html.replace('</style>', '.document{break-before:page}.document:first-child{break-before:auto}.page{border:0;box-shadow:none;padding:0}thead{display:table-header-group}tr{break-inside:avoid}@media print{body{background:white}.print-button{display:none}}\n</style>').replace('<body>','<body><button class="print-button" onclick="window.print()">In toàn bộ hồ sơ đã chọn</button>')
+    return html.replace('</style>', '@page spreadsheet{size:A4 landscape;margin:12mm}.spreadsheet{page:spreadsheet;font-size:9pt}.spreadsheet td,.spreadsheet th{padding:3px;overflow-wrap:anywhere}.spreadsheet table{table-layout:fixed}.document{break-before:page}.document:first-child{break-before:auto}.page{border:0;box-shadow:none;padding:0}thead{display:table-header-group}tr{break-inside:avoid}@media print{body{background:white}.print-button{display:none}}\n</style>').replace('<body>','<body><button class="print-button" onclick="window.print()">In toàn bộ hồ sơ đã chọn</button>')
 
 def export(hd,d,p,s):
     docs,sheets=documents(hd,d,p,s); html=combined(hd,docs,d.get('kieu_mau','ke_toan'))

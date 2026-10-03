@@ -399,7 +399,8 @@
     $('#ctTemplates').querySelectorAll('[data-ct-preview]').forEach(function(b){b.onclick=async function(){b.disabled=true;try{var d=phamViChungTu([b.dataset.ctPreview]);var r=await goi('chung-tu/xem-mau',{json:d});$('#ctPreviewFrame').srcdoc=r.html;$('#ctPreviewTitle').textContent=ctCatalog.find(function(m){return m.id===b.dataset.ctPreview;}).title;$('#ctPreview').showModal();}catch(e){bao(e.message);}finally{b.disabled=false;}};});
     ctCount();
   }
-  function ctCount(){var n=ctVisible().filter(function(m){return ctSelected.has(m.id);}).length;$('#ctDownloadCount').textContent='Đã chọn '+n+' loại chứng từ · Chỉ xuất mục đang mở';$('#nutBoChungTu').disabled=!n || !dn;}
+  var ctBusy=false;
+  function ctCount(){var n=ctVisible().filter(function(m){return ctSelected.has(m.id);}).length;$('#ctDownloadCount').textContent='Đã chọn '+n+' loại chứng từ · Chỉ xuất mục đang mở';$('#nutBoChungTu').disabled=ctBusy || !n || !dn;}
   function renderCtInvoices(rows){
     if(!$('#ctInvoices'))return;var pages=Math.max(1,Math.ceil(rows.length/10));ctPage=Math.min(ctPage,pages);
     $('#ctInvoices').innerHTML=rows.slice((ctPage-1)*10,ctPage*10).map(function(r,i){return '<tr><td>'+((ctPage-1)*10+i+1)+'</td><td>'+esc(ngayVN(r.ngay||''))+'</td><td>'+esc(r.so||'')+' / '+esc(r.ky_hieu||'')+'</td><td>'+esc(r.doi_tac||'')+'<br>'+esc(r.mst_doi_tac||'')+'</td><td>'+tien(r.tien_hang)+'</td><td>'+tien(r.thue)+'</td><td>'+tien(r.tong)+'</td><td><a target="_blank" rel="noopener" href="api/xem/'+encodeURIComponent(dn)+'/'+loai+'/'+encodeURIComponent(r.key)+'">Xem hóa đơn</a></td></tr>';}).join('') || '<tr><td colspan="8">Chưa có hóa đơn trong phạm vi này. Chọn hóa đơn ở tab TCT.</td></tr>';
@@ -734,7 +735,7 @@
   function gan() {
     document.querySelectorAll(".tab button").forEach(function (b) { b.onclick = function () { moTab(b.dataset.tab); }; });
     if ($("#ctLamMoi")) $("#ctLamMoi").onclick = function(){ if (dn) taiBang(); else veChungTu(); };
-    if ($("#nutBoChungTu")) $("#nutBoChungTu").onclick = async function(){ this.disabled = true; this.textContent="Đang tạo ZIP và bản in gộp…"; try { await taiFile("bo-chung-tu", phamViChungTu()); } catch(e) { bao(e.message); } finally { this.textContent="Tải các chứng từ đã chọn (ZIP)"; ctCount(); } };
+    if ($("#nutBoChungTu")) $("#nutBoChungTu").onclick = async function(){ ctBusy=true; this.disabled = true; this.textContent="Đang tạo ZIP và bản in gộp…"; try { await taiFile("bo-chung-tu", phamViChungTu()); } catch(e) { bao(e.message); } finally { ctBusy=false; this.textContent="Tải các chứng từ đã chọn (ZIP)"; ctCount(); } };
     ["#ctKieu", "#ctPhamVi"].forEach(function(id){ if($(id)) $(id).onchange = veChungTu; });
     ["#ctNhomHoaDon", "#ctNhomKiemTra", "#ctLoaiHd"].forEach(function(id){ if($(id)) $(id).querySelectorAll("input").forEach(function(c){ c.onchange = veChungTu; }); });
     if ($("#ctTabs")) $("#ctTabs").querySelectorAll("[data-doc-tab]").forEach(function(b){ b.onclick = function(){ veDocTabs(b.dataset.docTab); }; });
