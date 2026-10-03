@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.62] - 2026-10-04
+### Thêm mới
+- **Bot gửi ảnh, video, tài liệu cho khách**: ở form Sửa bot có mục **File bot được gửi cho khách**, tải lên bảng giá, catalogue, ảnh sản phẩm, video hướng dẫn (tối đa 25MB mỗi file). Khi khách cần và có file khớp, bot trả lời rồi gửi kèm file. Chạy trên Zalo cá nhân (mới), Telegram và Zalo Bot.
+- Bot CHỈ gửi được file trong thư viện này. Máy tự kiểm tên, đuôi, kích thước và đường dẫn, nên khách (kể cả người lạ) không thể bắt bot gửi file khác trong brain.
+### Sửa lỗi
+- Zalo cá nhân: ảnh/file bot vừa gửi không còn bị tính là chủ tự tay nhắn (làm bot tự câm trong cuộc chat đó).
+
 ## [26.10.61] - 2026-10-04
 ### Sửa lỗi
 - **Hộp thư bị đơ cứng khi mở một cuộc chat của bot**: thanh bot (lý do bot im, nút Gợi ý, Trả lời giúp, chọn Nhóm khách) vẽ lại vô tận khi cuộc chat chưa có nhật ký phán xử, làm trình duyệt treo ngay lúc bấm vào hội thoại hoặc gõ tin. Nay chỉ vẽ lại khi dữ liệu thật sự đổi. Lỗi có từ bản 26.10.50.

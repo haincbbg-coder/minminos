@@ -3381,5 +3381,11 @@
   "cb.nl_im": "Bot stays silent with strangers",
   "cb.nl_hint": "Strangers = in no group and not allowed, e.g. someone adding you to ask about a job. If enabled, give a narrow scope, e.g. recruitment only.",
   "ht.nhom_khach": "Customer group",
-  "ht.nk_khong": "Stranger (no group)"
+  "ht.nk_khong": "Stranger (no group)",
+  "cb.tv_tieu_de": "Files the bot may send to customers (images, video, documents)",
+  "cb.tv_hint": "Upload price lists, catalogues, product photos, how-to videos. The bot can only send these files (nothing else in the brain), when the customer needs them. Max 25MB each; works on personal Zalo, Telegram and Zalo Bot.",
+  "cb.tv_tai_len": "Upload files",
+  "cb.tv_trong": "No files yet.",
+  "cb.tv_luu_truoc": "Save the bot first, then open Edit to upload files.",
+  "cb.tv_xac_nhan_xoa": "Remove this file from the library?"
 }
