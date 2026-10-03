@@ -581,8 +581,16 @@
       _px.nk = d.nhom_khach || []; _px.nh = d.nhom_hien_tai || "";
     } catch (e) { _px.items = []; }
   }
+  // Chữ ký của những gì thanh bot đang hiển thị. Vẽ lại chỉ khi chữ ký ĐỔI sau khi tải xong: bản
+  // 26.10.50 so `undefined` (chưa có quyết định nào) với "null" nên luôn khác, vẽ lại vô tận
+  // trong chuỗi microtask và treo cứng cả tab ngay khi mở một cuộc chat chưa có nhật ký phán xử.
+  function chuKyBot() {
+    return [(_px.items[0] || {}).id || 0, (_px.items[0] || {}).phan_hoi || "", _px.can ? 1 : 0,
+            _px.da ? 1 : 0, _px.nh || "", (_px.nk || []).length].join("|");
+  }
   function veBotBar(c, bar) {
     if (!bar) return;
+    var chuKyTruoc = chuKyBot();
     var qd = (_px.id === c.id && _px.items[0]) || null;
     var im = qd && !qd.noi && !qd.phan_hoi;
     bar.innerHTML =
@@ -633,7 +641,7 @@
     bar.querySelector(".ht-goiy").onclick = function () { goiY(c, bar); };
     bar.querySelector(".ht-giup").onclick = function () { traLoiGiup(c, bar); };
     taiPhanXu(c).then(function () {
-      if (_px.id === c.id && JSON.stringify((_px.items[0] || {}).id) !== JSON.stringify(qd && qd.id)) veBotBar(c, bar);
+      if (_px.id === c.id && chuKyBot() !== chuKyTruoc && document.body.contains(bar)) veBotBar(c, bar);
     });
   }
   async function goiY(c, bar) {
