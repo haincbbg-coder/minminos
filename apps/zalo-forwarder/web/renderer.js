@@ -83,7 +83,7 @@ async function init() {
   if (!config.ui) config.ui = { theme: "light", lang: "vi" };
   migrateAIConfig();
 
-  applyTheme(config.ui.theme || "light");
+  applyTheme(window.javisTheme ? (window.javisTheme.isLight() ? "light" : "dark") : (config.ui.theme || "light"));
   applyLang(config.ui.lang || "vi", true);
 
   await refreshAccounts();
@@ -104,11 +104,9 @@ async function init() {
 }
 
 // ---------- Giao diện Pro: theme, ngôn ngữ, bản quyền ----------
-function applyTheme() {
-  // Theo tông của MinMin OS (cùng nguồn gốc nên đọc được localStorage).
-  var v = "light";
-  try { v = localStorage.getItem("javis.theme") === "dark" ? "dark" : "light"; } catch (e) {}
-  document.body.setAttribute("data-theme", v);
+function applyTheme(theme) {
+  if (window.javisTheme) theme = window.javisTheme.isLight() ? "light" : "dark";
+  document.body.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
 }
 function applyLang(lang, silent) {
   window.i18n.setLang(lang);
@@ -128,10 +126,11 @@ function reRenderAll() {
 }
 
 function bindProControls() {
+  window.addEventListener("javis-theme-change", () => applyTheme());
   $("#btn-theme").addEventListener("click", async () => {
-    config.ui.theme = document.body.getAttribute("data-theme") === "dark" ? "light" : "dark";
-    try { localStorage.setItem("javis.theme", config.ui.theme); } catch (e) {}
-    applyTheme();
+    config.ui.theme = (window.javisTheme ? window.javisTheme.isLight() : (config.ui.theme || "light") === "light") ? "dark" : "light";
+    if (window.javisTheme) window.javisTheme.apply(config.ui.theme === "light", true);
+    applyTheme(config.ui.theme);
     await saveConfig();
   });
   $("#btn-lang").addEventListener("click", async () => {
@@ -271,7 +270,7 @@ function bindGlobal() {
           if (!config.ruleSets) config.ruleSets = {};
           if (!config.routes) config.routes = [];
           if (!config.ui) config.ui = { theme: "light", lang: "vi" };
-          applyTheme(config.ui.theme || "light");
+          applyTheme(window.javisTheme ? (window.javisTheme.isLight() ? "light" : "dark") : (config.ui.theme || "light"));
           applyLang(config.ui.lang || "vi", true);
           reRenderAll();
           toast("Đã khôi phục cấu hình.");

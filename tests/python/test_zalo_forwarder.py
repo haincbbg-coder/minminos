@@ -13,6 +13,7 @@ import re
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 _STATE = tempfile.mkdtemp(prefix="javis-zf-")
 os.environ["JAVIS_STATE_DIR"] = _STATE
@@ -51,7 +52,16 @@ check("mọi hàm giao diện gọi đều nằm trong danh sách cho phép", ha
 check("danh sách cho phép khớp đúng các hàm tiến trình Node có", zf.HAM == ham_node, zf.HAM ^ ham_node)
 html = (APP / "web" / "index.html").read_text(encoding="utf-8")
 scripts = set(re.findall(r'<(?:script src|link rel="stylesheet" href)="([^"]+)"', html))
-check("index.html chỉ nạp file có trong danh sách phục vụ", scripts <= zf.WEB_FILES, scripts - zf.WEB_FILES)
+shared_assets = {"/static/theme.js", "/static/app-theme.css"}
+asset_paths = {urlsplit(src).path for src in scripts}
+check("tài nguyên giao diện chỉ dùng cùng máy chủ",
+      all(not urlsplit(src).scheme and not urlsplit(src).netloc for src in scripts))
+check("index.html chỉ nạp file app hoặc giao diện MinMin dùng chung",
+      asset_paths <= zf.WEB_FILES | shared_assets,
+      asset_paths - zf.WEB_FILES - shared_assets)
+check("tài nguyên giao diện dùng chung đều có thật trong dashboard",
+      all((Path(ROOT) / "dashboard" / src.removeprefix("/static/")).is_file()
+          for src in shared_assets))
 check("web-api.js nạp TRƯỚC renderer.js (renderer đọc window.api lúc nạp)",
       html.index("web-api.js") < html.index("renderer.js"))
 check("bản web không còn bootstrap.js của Electron", "bootstrap.js" not in html)
@@ -65,10 +75,15 @@ check("đăng nhập QR truyền user agent riêng của tài khoản", "userAge
 
 # ---- cửa: chưa mở khoá
 app = FastAPI()
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory=str(Path(ROOT) / "dashboard")), name="static")
 zf.register(app)
 B = zf.GOC
 
 with TestClient(app) as c:
+    check("tài nguyên MinMin dùng chung và bảng màu tải được qua HTTP",
+          all(c.get(src).status_code == 200
+              for src in shared_assets | {"/static/surface-tokens.css"}))
     r = c.get(B + "/")
     check("chưa mở khoá: trang trả 403 kèm lời chỉ đường", r.status_code == 403 and "mã kích hoạt" in r.text)
     r = c.post(B + "/api/rpc/listAccounts", json={"args": []})

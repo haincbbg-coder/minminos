@@ -89,6 +89,16 @@
   };
 
   function init() {
+    syncButton(isLight());
+    var b = document.getElementById("themeToggle");
+    if (b) b.addEventListener("click", toggle);
+
+    // Mở Javis ở nhiều tab: đổi tông ở tab này thì tab kia đổi theo.
+    window.addEventListener("storage", function (e) {
+      if (e.key === KEY || e.key === null) apply(read() !== "dark", false);
+    });
+  }
+
     var saved = read();
     if (saved === "dim") { saved = "dark"; write("dark"); }   // quy đổi tông tối-nhạt cũ, chỉ chạy một lần
     // 0.64.90: tông sáng giờ là giao diện NỔI MỀM và là MẶC ĐỊNH. Lần đầu mở bản này, ai cũng
@@ -98,14 +108,6 @@
     } catch (e) {}
     apply(saved !== "dark", false);
 
-    var b = document.getElementById("themeToggle");
-    if (b) b.addEventListener("click", toggle);
-
-    // Mở Javis ở nhiều tab: đổi tông ở tab này thì tab kia đổi theo.
-    window.addEventListener("storage", function (e) {
-      if (e.key === KEY) apply(e.newValue === "light", false);
-    });
-  }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

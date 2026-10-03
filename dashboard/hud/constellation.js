@@ -32,6 +32,14 @@ export class Constellation {
     this.onSelect = opts.onSelect || null;
     this.reduced = !!opts.reducedMotion;
     this.nodes = DOMAINS.map((d, i) => ({ ...d, color: TONES[d.tone], heat: 0, count: 0, i, kind: "domain" }));
+    const syncTheme = () => {
+      this.light = document.documentElement.getAttribute("data-theme") === "light";
+      const tones = this.light ? { warm:"#a54f12", cool:"#5335be", dim:"#675d72", agent:"#137653" } : TONES;
+      this.nodes.forEach(n => { n.color = tones[n.kind === "agent" ? "agent" : n.tone]; });
+    };
+    this.syncTheme = syncTheme;
+    syncTheme();
+    window.addEventListener("javis-theme-change", syncTheme);
     this.sparks = [];
     this.hover = null;
     this.thinking = false;
@@ -57,6 +65,7 @@ export class Constellation {
         kind: "agent", i, match: null, desc: a.description || "" });
     });
     this._layout();
+    this.syncTheme();
   }
 
   resize() {
@@ -163,7 +172,7 @@ export class Constellation {
       if (left && n.x - 16 - tw < 8) left = false;
       if (!left && n.x + 16 + tw > this.w - 8) left = true;
       g.textAlign = left ? "right" : "left";
-      g.fillStyle = hexA(n.heat > 0.3 ? "#ffe6c2" : "#e9e2ff", 0.62 + n.heat * 0.38 + (n === this.hover ? 0.3 : 0));
+      g.fillStyle = hexA(this.light ? "#2a2234" : (n.heat > 0.3 ? "#ffe6c2" : "#e9e2ff"), 0.62 + n.heat * 0.38 + (n === this.hover ? 0.3 : 0));
       g.fillText(n.label, n.x + (left ? -16 : 16), n.y);
       if (n.count) {
         g.font = `500 10px "JetBrains Mono", ui-monospace, monospace`;
