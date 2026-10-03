@@ -207,102 +207,40 @@
 
     <!-- ================= BỘ CHỨNG TỪ ================= -->
     <section id="tab-chungtu" class="trang" hidden>
-      <div class="doc-hero doc-hero-split">
-        <div>
-          <p class="eyebrow">BỘ CHỨNG TỪ TỰ ĐỘNG</p>
-          <h2>In hồ sơ từ hoá đơn TCT và dữ liệu nhân sự</h2>
-          <p>Chọn một hoặc nhiều hoá đơn ở tab Tải Hoá Đơn TCT, sau đó MinMin tham chiếu sang đây để tạo phiếu nhập/xuất, bàn giao, hợp đồng, thanh toán và công nợ. Hồ sơ lao động, BHXH và PCCC được tách riêng để nhập đúng dữ liệu trước khi in.</p>
-        </div>
-        <div class="doc-hero-card">
-          <b id="ctDn">Chưa chọn doanh nghiệp</b>
-          <span id="ctScope">Chọn doanh nghiệp ở tab Tải Hoá Đơn TCT để lấy dữ liệu.</span>
-          <button type="button" class="nut chinh" id="nutBoChungTu">Tạo bộ chứng từ ZIP</button>
-        </div>
-      </div>
-
+      <section class="the doc-panel">
+        <p class="eyebrow">BỘ CHỨNG TỪ</p><h2>Chọn hồ sơ cần tạo và in</h2>
+        <div class="hang"><label>Doanh nghiệp<select id="ctCompany"><option value="">Chọn doanh nghiệp</option></select></label><b id="ctDn"></b></div>
+        <p id="ctScope" class="selection-summary"></p>
+        <p>Mẫu khung cần được rà soát, bổ sung trước khi ký. ZIP chỉ chứa các mẫu được tích trong mục đang mở.</p>
+      </section>
       <div class="doc-tabs" id="ctTabs">
         <button type="button" class="on" data-doc-tab="invoice">1. Chứng từ theo hoá đơn</button>
-        <button type="button" data-doc-tab="labor">2. Lao động & BHXH</button>
-        <button type="button" data-doc-tab="compliance">3. Thuế, lưu trữ & PCCC</button>
+        <button type="button" data-doc-tab="labor">2. Lao động &amp; BHXH</button>
+        <button type="button" data-doc-tab="compliance">3. Thuế, lưu trữ &amp; PCCC</button>
       </div>
-
-      <section class="doc-tabpane on" data-doc-pane="invoice">
-        <div class="doc-grid">
-          <section class="the doc-panel">
-            <div class="hang giua">
-              <div>
-                <p class="eyebrow">DỮ LIỆU TỪ HOÁ ĐƠN</p>
-                <h2>Hoá đơn đang tham chiếu</h2>
-                <p class="nho">Ưu tiên các dòng đang tích chọn bên tab Tải Hoá Đơn TCT. Nếu chưa tích dòng nào, MinMin dùng toàn bộ hoá đơn đang lọc.</p>
-              </div>
-              <button type="button" class="nut" id="ctLamMoi">Cập nhật số liệu</button>
-            </div>
-            <div class="doc-stats" id="ctStats"></div>
-            <div class="doc-check" id="ctCheck"></div>
-          </section>
-
-          <section class="the doc-panel">
-            <p class="eyebrow">LOẠI HÌNH HỒ SƠ</p>
-            <h2>Công ty này bán gì?</h2>
-            <p class="nho">Chọn đúng loại hoạt động để mẫu hợp đồng, phiếu giao nhận và nghiệm thu dùng câu chữ phù hợp.</p>
-            <div class="doc-segment" id="ctLoaiHd">
-              <label><input type="radio" name="ctLoaiHd" value="thuong_mai" checked><span><b>Thương mại</b><small>Mua bán hàng hoá, phiếu nhập/xuất, đơn đặt hàng.</small></span></label>
-              <label><input type="radio" name="ctLoaiHd" value="dich_vu"><span><b>Dịch vụ</b><small>Nghiệm thu dịch vụ, đề nghị thanh toán, công nợ.</small></span></label>
-              <label><input type="radio" name="ctLoaiHd" value="san_xuat_gia_cong"><span><b>Sản xuất / gia công</b><small>Định mức, giao nhận gia công, nghiệm thu sản phẩm.</small></span></label>
-            </div>
-            <div class="doc-options compact" id="ctNhomHoaDon">
-              <label><input type="checkbox" value="mua_vao" checked /> <span><b>Hồ sơ mua vào</b><small>Phiếu nhập kho, đề nghị thanh toán, phiếu chi/UNC, bàn giao, công nợ phải trả.</small></span></label>
-              <label><input type="checkbox" value="ban_ra" checked /> <span><b>Hồ sơ bán ra</b><small>Phiếu xuất kho, phiếu thu, bàn giao/nghiệm thu, công nợ phải thu.</small></span></label>
-              <label><input type="checkbox" value="hop_dong" checked /> <span><b>Hợp đồng / đơn hàng</b><small>Hợp đồng nguyên tắc, hợp đồng mua bán, đơn đặt hàng, nghiệm thu/thanh lý.</small></span></label>
-            </div>
-            <div class="hang">
-              <label>Kiểu mẫu<select id="ctKieu"><option value="ke_toan">Chuẩn kế toán</option><option value="trang_trong">Trang trọng</option><option value="toi_gian">Tối giản dễ in</option></select></label>
-              <label>Phạm vi<select id="ctPhamVi"><option value="dang_chon">Hoá đơn đang chọn/đang lọc</option><option value="ky_hien_tai">Cả kỳ đang xem</option></select></label>
-            </div>
-          </section>
-        </div>
+      <section class="doc-tabpane on the doc-panel" data-doc-pane="invoice">
+        <div class="hang giua"><h2>Hóa đơn nguồn</h2><button type="button" class="nut" id="ctLamMoi">Cập nhật số liệu</button><button type="button" class="nut" id="ctBack">Chọn hóa đơn tại TCT</button></div>
+        <p>Ưu tiên hóa đơn đã tích chọn; nếu chưa chọn, dùng đúng kết quả đang lọc. Chuyển tab giữ nguyên lựa chọn.</p>
+        <div class="doc-stats" id="ctStats"></div><div class="doc-check" id="ctCheck"></div>
+        <div class="doc-table-wrap"><table class="bang"><thead><tr><th>STT</th><th>Ngày</th><th>Số / ký hiệu</th><th>Đối tác / MST</th><th>Tiền hàng</th><th>Thuế</th><th>Tổng</th><th>Chi tiết</th></tr></thead><tbody id="ctInvoices"></tbody></table></div>
+        <div class="hang"><button class="nut" id="ctPrev">Trang trước</button><span id="ctPage"></span><button class="nut" id="ctNext">Trang sau</button></div>
       </section>
-
-      <section class="doc-tabpane" data-doc-pane="labor">
-        <section class="the doc-panel">
-          <div class="hang giua">
-            <div>
-              <p class="eyebrow">HỒ SƠ NGƯỜI LAO ĐỘNG</p>
-              <h2>Nhập theo bảng để sinh HĐLĐ, quyết định và BHXH</h2>
-              <p class="nho">Mỗi dòng là một người lao động. Các file sinh ra sẽ được tách thư mục theo từng người để in ký ngay.</p>
-            </div>
-            <div class="hang"><button type="button" class="nut" id="ctThemNhanSu">Thêm người</button><button type="button" class="nut" id="ctNhanSuMau">Dòng mẫu</button></div>
-          </div>
-          <div class="doc-table-wrap">
-            <table class="bang doc-input-table">
-              <thead><tr><th>Họ tên</th><th>Ngày sinh</th><th>CCCD</th><th>Địa chỉ</th><th>Chức vụ</th><th>Lương</th><th>Ngày vào làm</th><th>Mã BHXH</th><th></th></tr></thead>
-              <tbody id="ctNhanSuBody"></tbody>
-            </table>
-          </div>
-          <div class="hang giua"><span class="nho" id="ctNhanSuDem">0 người lao động</span><label class="tich"><input type="checkbox" id="ctGomBhxh" checked /> Tạo cả hồ sơ BHXH/TK1-TS/D02-LT từ bảng này</label></div>
-        </section>
+      <section class="doc-tabpane the doc-panel" data-doc-pane="labor">
+        <h2>Danh sách người lao động</h2>
+        <div class="hang"><a class="nut" href="api/chung-tu/nhan-su-mau" download>Tải mẫu Excel nhân sự</a><label class="nut">Nhập Excel<input type="file" id="ctStaffFile" accept=".xlsx" /></label><button type="button" class="nut" id="ctThemNhanSu">Thêm người</button></div>
+        <p>Khớp theo tên cột, không phụ thuộc thứ tự. CCCD và mã BHXH phải để kiểu Text để giữ số 0 đầu.</p>
+        <div id="ctImport" hidden><h3>Xem trước nhập Excel</h3><p id="ctImportInfo"></p><div class="doc-table-wrap" id="ctImportRows"></div><label>Áp dụng<select id="ctImportMode"><option value="merge">Thêm mới / cập nhật theo CCCD, mã BHXH</option><option value="replace">Thay thế toàn bộ bảng đang nhập</option></select></label><button class="nut chinh" id="ctImportApply">Áp dụng vào bảng</button><button class="nut" id="ctImportCancel">Hủy nhập</button></div>
+        <div class="doc-table-wrap"><table class="bang doc-input-table"><thead><tr><th>Họ tên</th><th>Ngày sinh</th><th>CCCD</th><th>Địa chỉ</th><th>Chức vụ</th><th>Lương</th><th>Ngày vào làm</th><th>Mã BHXH</th><th></th></tr></thead><tbody id="ctNhanSuBody"></tbody></table></div>
+        <p id="ctNhanSuDem" class="selection-summary"></p>
       </section>
-
-      <section class="doc-tabpane" data-doc-pane="compliance">
-        <div class="doc-grid">
-          <section class="the doc-panel">
-            <p class="eyebrow">THUẾ & LƯU TRỮ</p>
-            <h2>Hồ sơ kiểm tra, giải trình, lưu chứng từ</h2>
-            <div class="doc-options compact" id="ctNhomKiemTra">
-              <label><input type="checkbox" value="thue_bhxh" checked /> <span><b>Thuế & BHXH</b><small>Bảng kê VAT, giải trình chênh lệch, checklist XML/PDF gốc, khung D02-LT/TK1-TS.</small></span></label>
-              <label><input type="checkbox" value="pccc_luu_tru" checked /> <span><b>PCCC & kiểm tra nội bộ</b><small>Checklist lưu trữ, biên bản tự kiểm tra PCCC, phân công người phụ trách, lịch kiểm tra định kỳ.</small></span></label>
-              <label><input type="checkbox" value="lao_dong" checked /> <span><b>Đính kèm hồ sơ lao động</b><small>HĐ thử việc/HĐLĐ, quyết định nhân sự, cam kết bàn giao theo dữ liệu ở bảng người lao động.</small></span></label>
-            </div>
-          </section>
-          <section class="the doc-panel">
-            <p class="eyebrow">DANH MỤC MẪU</p>
-            <h2>Các chứng từ có thể sinh</h2>
-            <div class="doc-template-list">
-              <span>Phiếu nhập/xuất kho</span><span>Đề nghị thanh toán</span><span>Phiếu chi/phiếu thu</span><span>Ủy nhiệm chi</span><span>Biên bản giao nhận</span><span>Đối chiếu công nợ</span><span>Hợp đồng nguyên tắc</span><span>Hợp đồng mua bán</span><span>Đơn đặt hàng</span><span>Nghiệm thu/thanh lý</span><span>HĐLĐ/thử việc</span><span>Quyết định nhân sự</span><span>Bảng kê VAT</span><span>D02-LT/TK1-TS</span><span>Checklist PCCC</span><span>Biên bản tự kiểm tra PCCC</span><span>Sổ theo dõi lưu trữ</span>
-            </div>
-          </section>
-        </div>
+      <section class="doc-tabpane the doc-panel" data-doc-pane="compliance"><h2>Thuế, lưu trữ &amp; PCCC</h2><p>Chỉ chọn hồ sơ cần tải ở danh mục bên dưới. Hồ sơ lao động và hồ sơ mua bán được xuất riêng trong hai mục còn lại.</p></section>
+      <section class="the doc-panel">
+        <div class="hang giua"><h2>Chọn chứng từ cần tải</h2><button class="nut" id="ctSelectAll">Chọn tất cả mẫu trong mục</button><button class="nut" id="ctClearAll">Bỏ chọn mẫu trong mục</button></div>
+        <div id="ctTemplates" class="ct-template-grid"></div>
+        <div class="hang"><label>Kiểu mẫu<select id="ctKieu"><option value="ke_toan">Chuẩn kế toán</option><option value="trang_trong">Trang trọng</option><option value="toi_gian">Tối giản dễ in</option></select></label><strong id="ctDownloadCount"></strong><button type="button" class="nut chinh" id="nutBoChungTu">Tải các chứng từ đã chọn (ZIP)</button></div>
+        <p>ZIP gồm file lẻ đã chọn và <b>00_IN_GOP.pdf</b> để in một lần khi máy chủ có trình duyệt in PDF. Luôn kèm <b>00_IN_GOP.html</b>: mở rồi bấm In để in toàn bộ. Không kèm bảng hay thư mục ngoài lựa chọn.</p>
       </section>
+      <dialog id="ctPreview"><div class="hang giua"><h2 id="ctPreviewTitle">Xem mẫu</h2><button class="nut" id="ctPreviewClose">Đóng xem mẫu</button></div><p>Xem trước chứng từ đầu tiên trong phạm vi đang chọn.</p><iframe id="ctPreviewFrame" title="Nội dung mẫu chứng từ" sandbox=""></iframe></dialog>
     </section>
 
     <!-- ================= GMAIL ================= -->

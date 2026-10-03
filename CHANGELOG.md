@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.56] - 2026-10-03
+### Cải thiện
+- Chọn đúng từng chứng từ cần tải, xem hóa đơn nguồn và in gộp hồ sơ đã chọn.
+- Tải mẫu Excel và nhập danh sách người lao động theo cột.
+
 ## [26.10.55] - 2026-10-03
 ### Thêm mới
 - Chế độ Tự phán đoán nhận ra **khách bức xúc / khiếu nại** trong nhóm (giao sai, hoàn tiền, hàng lỗi, lừa đảo, thất vọng...): bot **im**, không trả lời máy móc trước mặt cả nhóm, và **báo chủ qua chuông thông báo của MinMin** (kèm tên nhóm, người nhắn, câu gốc). Một nhóm báo tối đa một lần mỗi nửa giờ để khách giận nhắn liên tục không làm chuông kêu dồn. Telegram có khai người trực thì nhắn thêm cho người đó.

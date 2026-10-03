@@ -14,6 +14,7 @@ hoá bằng Fernet, khoá nằm ở `<STATE>/tai-hoa-don/.khoa` (quyền 600). M
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import importlib
 import importlib.util
@@ -1312,7 +1313,10 @@ def _doc_bytes(tieu_de: str, body: str, kieu: str) -> bytes:
 
 
 def _hoa_don_id(inv: dict) -> str:
-    return f"{inv.get('khhdon') or inv.get('ky_hieu') or ''}-{inv.get('shdon') or inv.get('so') or ''}".strip("-") or khoa_hd(inv)
+    series = str(inv.get("khhdon") or inv.get("ky_hieu") or "")
+    prefix = str(inv.get("khmshdon") or "")
+    if prefix and not series.startswith(prefix): series = prefix + series
+    return f"{series}-{inv.get('shdon') or inv.get('so') or ''}".strip("-") or khoa_hd(inv)
 
 
 def _dong_tien(inv: dict) -> str:
@@ -2000,6 +2004,9 @@ def register(app: FastAPI) -> None:
             return _loi(e)
 
 
+    from routes import document_pack
+    document_pack.register(app, sys.modules[__name__], _chon)
+
     @app.post(A + "/bo-chung-tu")
     async def hd_bo_chung_tu(request: Request):
         if (c := _chan_chung_tu()):
@@ -2008,14 +2015,11 @@ def register(app: FastAPI) -> None:
         try:
             mst = chuan_mst(d.get("mst"))
             (p_ds, s_ds), tu, den = _chon(mst, d)
-            if not (p_ds or s_ds):
-                raise ValueError("Chưa có hoá đơn nào để tạo bộ chứng từ.")
-            nhom = set(x for x in (d.get("nhom") or []) if x in {"mua_vao", "ban_ra", "hop_dong", "lao_dong", "thue_bhxh"})
-            if not nhom:
-                raise ValueError("Chọn ít nhất một bộ hồ sơ cần tạo.")
-            kieu = d.get("kieu_mau") if d.get("kieu_mau") in {"ke_toan", "trang_trong", "toi_gian"} else "ke_toan"
-            data = _tao_zip_chung_tu(mst, p_ds, s_ds, nhom, kieu, d.get("nhan_su"), str(d.get("loai_hoat_dong") or "thuong_mai"))
-            nhan = ten_excel(mst, "", tu, den, cai_dat_tai()).replace(".xlsx", "")
+            if mst not in doc_cau_hinh().get('doanh_nghiep', {}):
+                raise ValueError('Chọn doanh nghiệp trước khi tạo hồ sơ.')
+            d['mst'] = mst
+            data = await asyncio.to_thread(document_pack.export, sys.modules[__name__], d, p_ds, s_ds)
+            nhan = d['document_tab'] + '_' + mst
             return _tai_ve(data, "BoChungTu_" + nhan + ".zip", "application/zip")
         except Exception as e:
             return _loi(e)

@@ -4210,6 +4210,46 @@
  {
   "order": 423,
   "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/chung-tu/mau",
+  "name": "catalog",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 424,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/chung-tu/nhan-su-mau",
+  "name": "template",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 425,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/chung-tu/nhan-su-nhap",
+  "name": "intake",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 426,
+  "type": "APIRoute",
+  "path": "/apps/tai-hoa-don/api/chung-tu/xem-mau",
+  "name": "preview",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 427,
+  "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/bo-chung-tu",
   "name": "hd_bo_chung_tu",
   "methods": [
@@ -4218,7 +4258,7 @@
   "trong": null
  },
  {
-  "order": 424,
+  "order": 428,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/canh-bao",
   "name": "hd_canh_bao",
@@ -4228,7 +4268,7 @@
   "trong": null
  },
  {
-  "order": 425,
+  "order": 429,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/cau-hinh",
   "name": "gm_ch",
@@ -4238,7 +4278,7 @@
   "trong": null
  },
  {
-  "order": 426,
+  "order": 430,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/cau-hinh",
   "name": "gm_ch_luu",
@@ -4248,7 +4288,7 @@
   "trong": null
  },
  {
-  "order": 427,
+  "order": 431,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/tai-khoan/{email}",
   "name": "gm_xoa",
@@ -4258,7 +4298,7 @@
   "trong": null
  },
  {
-  "order": 428,
+  "order": 432,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/client",
   "name": "gm_google_client",
@@ -4268,7 +4308,7 @@
   "trong": null
  },
  {
-  "order": 429,
+  "order": 433,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/bat-dau",
   "name": "gm_google_bat_dau",
@@ -4278,7 +4318,7 @@
   "trong": null
  },
  {
-  "order": 430,
+  "order": 434,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/ve",
   "name": "gm_google_ve",
@@ -4288,7 +4328,7 @@
   "trong": null
  },
  {
-  "order": 431,
+  "order": 435,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/quet",
   "name": "gm_quet",
@@ -4298,7 +4338,7 @@
   "trong": null
  },
  {
-  "order": 432,
+  "order": 436,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/ket-qua",
   "name": "gm_kq",
@@ -4308,7 +4348,7 @@
   "trong": null
  },
  {
-  "order": 433,
+  "order": 437,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/tep/{rid}/{kieu}",
   "name": "gm_tep",
@@ -4318,7 +4358,7 @@
   "trong": null
  },
  {
-  "order": 434,
+  "order": 438,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/xem/{rid}",
   "name": "gm_xem",
@@ -4328,7 +4368,7 @@
   "trong": null
  },
  {
-  "order": 435,
+  "order": 439,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/ghep-lai",
   "name": "gm_ghep_lai",
@@ -4338,7 +4378,7 @@
   "trong": null
  },
  {
-  "order": 436,
+  "order": 440,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/xuat",
   "name": "gm_xuat",
@@ -4348,7 +4388,7 @@
   "trong": null
  },
  {
-  "order": 437,
+  "order": 441,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/zip",
   "name": "gm_zip",
@@ -4358,7 +4398,7 @@
   "trong": null
  },
  {
-  "order": 438,
+  "order": 442,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/pdf-gop",
   "name": "gm_gop",
@@ -4368,7 +4408,7 @@
   "trong": null
  },
  {
-  "order": 439,
+  "order": 443,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/tai",
   "name": "gm_tai",
@@ -4378,7 +4418,7 @@
   "trong": null
  },
  {
-  "order": 440,
+  "order": 444,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/ma-tra-cuu",
   "name": "gm_ma",
@@ -4388,7 +4428,7 @@
   "trong": null
  },
  {
-  "order": 441,
+  "order": 445,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/{ten}",
   "name": "hd_tinh",
@@ -4398,7 +4438,7 @@
   "trong": null
  },
  {
-  "order": 442,
+  "order": 446,
   "type": "APIRoute",
   "path": "/share/rename",
   "name": "share_rename",
