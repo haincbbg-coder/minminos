@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.61] - 2026-10-04
+### Sửa lỗi
+- **Hộp thư bị đơ cứng khi mở một cuộc chat của bot**: thanh bot (lý do bot im, nút Gợi ý, Trả lời giúp, chọn Nhóm khách) vẽ lại vô tận khi cuộc chat chưa có nhật ký phán xử, làm trình duyệt treo ngay lúc bấm vào hội thoại hoặc gõ tin. Nay chỉ vẽ lại khi dữ liệu thật sự đổi. Lỗi có từ bản 26.10.50.
+
 ## [26.10.60] - 2026-10-04
 ### Thêm mới
 - **Nhóm khách cho bot**: tạo nhiều nhóm, mỗi nhóm có người riêng (chọn từ danh bạ Zalo), phạm vi trả lời riêng (được nói gì, cấm nói gì, từ khoá cấm, ngoài phạm vi thì từ chối hay im), nguồn trả lời riêng và có thể dùng Agent riêng. Ví dụ nhóm Khách mua hàng chỉ hỏi size, tồn kho, giao hàng; nhóm Nội bộ được hỏi chuyện của MinMin. Có thể bật/tắt từng nhóm.
