@@ -58,6 +58,24 @@ async def _gui_cho_khach(c: dict, txt: str):
     return ok, loi, raw
 
 
+_LOI_SOAN = {
+    "khong_co_bot": "Cuộc chat này chưa gắn với bot nào nên không có ai để soạn câu trả lời.",
+    "khong_co_tin_khach": "Chưa có tin nào của khách để trả lời.",
+    "loi_engine": "Bộ não AI của bot đang lỗi hoặc không chạy được lượt này. Kiểm tra trang Bộ não AI.",
+    "bot_chon_im": "Bot đọc tin này và chọn không trả lời (nó viết [IM_LANG]). Bố tự gõ câu trả lời ở ô bên dưới.",
+    "gui_loi": "Soạn được câu trả lời nhưng gửi qua kênh bị lỗi.",
+}
+
+
+def _loi_soan(r: dict, status: int = 400):
+    """Trả lỗi có CÂU TIẾNG VIỆT trong `error`: giao diện chỉ hiện trường đó, thiếu nó là chủ
+    chỉ thấy "Lỗi 400" mà không biết bot im, bot hỏng hay chưa gắn bot."""
+    r = dict(r)
+    ct = str(r.get("chi_tiet") or "")
+    r["error"] = _LOI_SOAN.get(r.get("ly_do"), "Không soạn được câu trả lời.") + (f" ({ct})" if ct else "")
+    return JSONResponse(r, status_code=status)
+
+
 def _tin_khach_cuoi(conv_id: int) -> dict:
     for m in reversed(conversations.tin_nhan(conv_id, limit=60)):
         if m.get("sender_type") == "customer" and str(m.get("text") or "").strip():
@@ -176,7 +194,7 @@ def register(app, deps: ConversationsDeps):
             return _404()
         tin = _tin_khach_cuoi(conv_id)
         r = await chatbot_runtime.soan_cau_tra_loi(c, tin)
-        return r if r.get("ok") else JSONResponse(r, status_code=400)
+        return r if r.get("ok") else _loi_soan(r)
 
     @router.post("/conversations/{conv_id}/tra-loi-giup")
     async def conversations_tra_loi_giup(conv_id: int):
@@ -188,11 +206,10 @@ def register(app, deps: ConversationsDeps):
             return _404()
         r = await chatbot_runtime.soan_cau_tra_loi(c, _tin_khach_cuoi(conv_id))
         if not r.get("ok"):
-            return JSONResponse(r, status_code=400)
+            return _loi_soan(r)
         ok, loi, raw = await _gui_cho_khach(c, r["text"])
         if not ok:
-            return JSONResponse({"ok": False, "ly_do": "gui_loi", "error": loi or "không gửi được"},
-                                status_code=400)
+            return _loi_soan({"ok": False, "ly_do": "gui_loi", "chi_tiet": loi or ""})
         conversations.ghi_su_kien({
             "channel": c.get("channel"), "account_id": raw, "account_name": c.get("account_name") or "",
             "bot_id": c.get("bot_id") or "", "external_chat_id": c.get("external_chat_id"),

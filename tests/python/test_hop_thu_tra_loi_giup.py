@@ -22,8 +22,8 @@ import chatbot_store  # noqa: E402
 _fails = []
 
 
-def check(name, cond):
-    print(("ok   " if cond else "FAIL ") + name)
+def check(name, cond, them=""):
+    print(("ok   " if cond else "FAIL ") + name + ((" [" + str(them) + "]") if them and not cond else ""))
     if not cond:
         _fails.append(name)
 
@@ -71,6 +71,15 @@ async def _chon_im(text, meta, progress, channel=None, bot=None):
 chatbot_runtime.wire(answer=_chon_im, brain_root=lambda b: BRAIN, read_agent=lambda *a, **k: "")
 check("bot chọn im thì nháp trả lý do rõ",
       asyncio.run(chatbot_runtime.soan_cau_tra_loi(conv, tin)).get("ly_do") == "bot_chon_im")
+
+import routes.conversations as rc  # noqa: E402
+import json as _j  # noqa: E402
+for ly in ("khong_co_bot", "khong_co_tin_khach", "loi_engine", "bot_chon_im", "gui_loi"):
+    d = _j.loads(rc._loi_soan({"ok": False, "ly_do": ly}).body)
+    check(f"lỗi '{ly}' có câu tiếng Việt cho giao diện (không chỉ 'Lỗi 400')",
+          d["error"] and "400" not in d["error"] and d["ly_do"] == ly, d)
+check("kèm chi tiết kỹ thuật khi có",
+      "boom" in _j.loads(rc._loi_soan({"ly_do": "loi_engine", "chi_tiet": "boom"}).body)["error"])
 
 for f in (ROOT / "server" / "routes" / "conversations.py", ROOT / "dashboard" / "conversations.js"):
     t = f.read_text(encoding="utf-8")
