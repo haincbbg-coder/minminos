@@ -3330,5 +3330,17 @@
   "mmw.cancelled": "Đã dừng theo yêu cầu",
   "mmw.cancelled_hint": "Bạn có thể gửi yêu cầu tiếp theo",
   "mmw.idle": "Sẵn sàng",
-  "mmw.work_error": "Chưa hoàn tất"
+  "mmw.work_error": "Chưa hoàn tất",
+  "cb.lb_agent_phu": "Agent phụ (tối đa 5)",
+  "cb.hint_agent_phu": "Bot vẫn lấy giọng của Agent chính, và biết thêm các vai phụ này để trả lời đúng chuyên môn khi khách hỏi đúng chủ đề.",
+  "cb.lb_rieng": "Ai được nhắn riêng cho bot",
+  "cb.rieng_mac_dinh": "Mặc định (Zalo cá nhân: chỉ người chủ cho phép)",
+  "cb.rieng_tat_ca": "Trả lời mọi người nhắn riêng",
+  "cb.rieng_chon": "Chỉ trả lời người chủ cho phép",
+  "cb.ph_rieng_cho": "Mỗi dòng một id cuộc chat được phép (hoặc bấm Cho bot trả lời ở Hộp thư)",
+  "cb.hint_rieng": "Zalo cá nhân là danh bạ của bố nên mặc định bot im với người chưa được cho phép. Các nhóm vẫn theo danh sách nhóm ở trên.",
+  "ht.da_cho": "Bot đang được phép trả lời người này",
+  "ht.chua_cho": "Bot đang im với người này (chưa được cho phép)",
+  "ht.cho_tl": "Cho bot trả lời",
+  "ht.thoi_cho": "Thôi cho trả lời"
 }

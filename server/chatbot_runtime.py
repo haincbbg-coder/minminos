@@ -243,6 +243,25 @@ def build_bot_prompt(bot: dict) -> str:
         phan.append("\nNGÔN NGỮ: trả lời bằng ĐÚNG ngôn ngữ khách đang nhắn.")
     if than.strip():
         phan.append("\n" + than.strip())
+    # Agent PHỤ (26.10.58): một bot đảm nhận nhiều vai. Không có bộ định tuyến riêng: cả đội
+    # nằm trong cùng prompt và model chọn vai hợp với câu khách hỏi. Đỡ một lượt gọi model chỉ
+    # để chọn vai, và vai nào cũng thấy lịch sử cuộc chat nên chuyển vai giữa chừng vẫn mạch lạc.
+    phu_ok = []
+    for sl in ((bot or {}).get("agents_phu") or [])[:5]:
+        try:
+            m2, t2 = (_deps.get("read_agent") or (lambda *a: ({}, "")))(a.get("brain") or "brain", sl)
+        except Exception as e:
+            print(f"[chatbot prompt] đọc agent phụ {sl} lỗi: {e}", file=sys.stderr)
+            continue
+        if m2 or str(t2).strip():
+            phu_ok.append((str(m2.get("name") or sl), str(m2.get("role") or ""), str(t2).strip()[:6000]))
+    if phu_ok:
+        phan.append("\n\nBẠN ĐẢM NHẬN NHIỀU VAI. Vai chính ở trên. Với mỗi câu khách hỏi, chọn vai HỢP "
+                    "NHẤT với nội dung câu hỏi và trả lời đúng theo quy định của vai đó; câu không "
+                    "thuộc mảng nào của vai phụ thì dùng vai chính. Không nói với khách là bạn đang "
+                    "đổi vai.")
+        for ten2, vai2, than2 in phu_ok:
+            phan.append(f"\n### Vai phụ: {ten2}" + (f" ({vai2})" if vai2 else "") + ("\n" + than2 if than2 else ""))
     if not meta:
         # Agent bị xoá hay đổi slug: bot đang chạy mà KHÔNG có hướng dẫn nào. Một dòng nêu
         # đúng sự thật đó, để nó thận trọng thay vì tự tin bịa. Đây là lấp chỗ trống khi không
@@ -330,6 +349,12 @@ def _ly_do_im(bot_cfg: dict, meta: dict, text: str = "") -> str:
     """
     loai = str((meta or {}).get("chat_type") or "private")
     if loai == "private":
+        # Phạm vi chat riêng (26.10.58): 'chon' thì chỉ cuộc chat chủ đã cho phép. Zalo cá nhân
+        # mặc định 'chon' để bot không tự trả lời cả danh bạ của chủ.
+        if chatbot_store.pham_vi_rieng(bot_cfg) == "chon":
+            cho = {str(x) for x in (bot_cfg.get("rieng_cho_phep") or [])}
+            if str((meta or {}).get("chat_id") or "") not in cho:
+                return "rieng_chua_cho"
         return ""
     nhom = [str(x) for x in (bot_cfg.get("groups") or [])]
     # Chưa khai nhóm nào thì bot không tự nhận việc trong nhóm lạ. Cùng một lý do với nhóm đã

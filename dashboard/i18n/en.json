@@ -3330,5 +3330,17 @@
   "mmw.cancelled": "Stopped at your request",
   "mmw.cancelled_hint": "You can send another request",
   "mmw.idle": "Ready",
-  "mmw.work_error": "Not completed"
+  "mmw.work_error": "Not completed",
+  "cb.lb_agent_phu": "Extra Agents (max 5)",
+  "cb.hint_agent_phu": "The bot keeps the main Agent's voice and also knows these extra roles for matching topics.",
+  "cb.lb_rieng": "Who may DM the bot",
+  "cb.rieng_mac_dinh": "Default (personal Zalo: allowed chats only)",
+  "cb.rieng_tat_ca": "Answer everyone who DMs",
+  "cb.rieng_chon": "Only answer chats the owner allows",
+  "cb.ph_rieng_cho": "One allowed chat id per line (or use Let bot reply in the inbox)",
+  "cb.hint_rieng": "A personal Zalo is your contact list, so by default the bot stays silent with people not allowed. Groups follow the group list above.",
+  "ht.da_cho": "The bot may answer this person",
+  "ht.chua_cho": "The bot is silent with this person (not allowed yet)",
+  "ht.cho_tl": "Let bot reply",
+  "ht.thoi_cho": "Stop letting bot reply"
 }

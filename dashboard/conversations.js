@@ -577,6 +577,7 @@
     try {
       var d = await api("/conversations/" + c.id + "/phan-xu");
       _px.items = d.items || [];
+      _px.can = !!d.can_cho_phep; _px.da = !!d.da_cho_phep;
     } catch (e) { _px.items = []; }
   }
   function veBotBar(c, bar) {
@@ -584,6 +585,9 @@
     var qd = (_px.id === c.id && _px.items[0]) || null;
     var im = qd && !qd.noi && !qd.phan_hoi;
     bar.innerHTML =
+      (_px.id === c.id && _px.can
+        ? '<div class="ht-im"><span>' + esc(window.t(_px.da ? "ht.da_cho" : "ht.chua_cho")) + '</span>' +
+          '<button type="button" class="s-btn-ghost ht-cho">' + esc(window.t(_px.da ? "ht.thoi_cho" : "ht.cho_tl")) + '</button></div>' : "") +
       (qd && !qd.noi
         ? '<div class="ht-im">' + ic("moon") + ' <span>' + esc(window.t("ht.bot_im")) + ': ' +
             esc((qd.ly_do || []).join("; ") || window.t("ht.khong_ly_do")) + '</span>' +
@@ -604,6 +608,14 @@
         veBotBar(c, bar);
       };
     });
+    var nc = bar.querySelector(".ht-cho");
+    if (nc) nc.onclick = async function () {
+      try {
+        await api("/conversations/" + c.id + "/cho-phep", { method: "POST", body: fd({ bat: _px.da ? "0" : "1" }) });
+        _px.da = !_px.da;
+      } catch (e) { alert(e.message); }
+      veBotBar(c, bar);
+    };
     bar.querySelector(".ht-goiy").onclick = function () { goiY(c, bar); };
     bar.querySelector(".ht-giup").onclick = function () { traLoiGiup(c, bar); };
     taiPhanXu(c).then(function () {

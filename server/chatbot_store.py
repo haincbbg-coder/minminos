@@ -243,6 +243,55 @@ def _clean_groups(v: Any) -> List[str]:
     return out[:50]
 
 
+MAX_AGENT_PHU = 5
+RIENG_PHAM_VI = ("tat_ca", "chon")
+
+
+def _clean_agents_phu(v: Any, chinh: str = "") -> List[str]:
+    """Danh sách Agent PHỤ của một bot (đứng cạnh Agent chính). Bỏ slug hỏng, trùng, hoặc
+    trùng Agent chính; tối đa MAX_AGENT_PHU để prompt không phình."""
+    if isinstance(v, str):
+        items = re.split(r"[,;\n]+", v)
+    elif isinstance(v, (list, tuple)):
+        items = list(v)
+    else:
+        items = []
+    out: List[str] = []
+    for x in items:
+        x = str(x).strip()
+        if x and x != chinh and x not in out and _agent_slug_ok(x):
+            out.append(x)
+    return out[:MAX_AGENT_PHU]
+
+
+def _clean_rieng_cho_phep(v: Any) -> List[str]:
+    """Id các cuộc chat RIÊNG được phép cho bot trả lời (khi phạm vi là 'chon')."""
+    if isinstance(v, str):
+        items = re.split(r"[,;\s]+", v)
+    elif isinstance(v, (list, tuple)):
+        items = list(v)
+    else:
+        items = []
+    out: List[str] = []
+    for x in items:
+        x = str(x).strip()
+        if _CHAT_ID_RE.match(x) and x not in out:
+            out.append(x)
+    return out[:500]
+
+
+def pham_vi_rieng(bot: dict) -> str:
+    """'tat_ca' = trả lời mọi người nhắn riêng; 'chon' = chỉ cuộc chat chủ đã cho phép.
+
+    Chưa khai thì: Zalo CÁ NHÂN mặc định 'chon', vì nick đó là danh bạ của chủ (bạn bè, người
+    nhà, đối tác) và bot nói dưới tên chính chủ. Các kênh bot (Telegram, Zalo Bot) vốn dành
+    cho khách nên giữ 'tat_ca' như trước, bản ghi cũ không đổi hành vi."""
+    v = str((bot or {}).get("rieng_pham_vi") or "")
+    if v in RIENG_PHAM_VI:
+        return v
+    return "chon" if str((bot or {}).get("channel") or "") == "zalo_personal" else "tat_ca"
+
+
 def _clean_kenh(v: Any) -> str:
     """Kênh lạ thì rơi về Telegram chứ KHÔNG lưu nguyên: `chatbot_runtime` tra bảng lớp vận
     chuyển bằng chuỗi này, và một chuỗi không có trong bảng nghĩa là bot không bao giờ bật
@@ -492,6 +541,9 @@ def create_bot(data: dict) -> tuple[Optional[str], str]:
             "accounts": acc,
             "bot_username": str(data.get("bot_username") or "").strip().lstrip("@"),
             "groups": _clean_groups(data.get("groups")),
+            "agents_phu": _clean_agents_phu(data.get("agents_phu"), agent_slug),
+            "rieng_pham_vi": (data.get("rieng_pham_vi") if data.get("rieng_pham_vi") in RIENG_PHAM_VI else ""),
+            "rieng_cho_phep": _clean_rieng_cho_phep(data.get("rieng_cho_phep")),
             "reply_when": (data.get("reply_when") if data.get("reply_when") in REPLY_WHEN else "mention"),
             "nguon_tra_loi": (data.get("nguon_tra_loi") if data.get("nguon_tra_loi") in NGUON
                               else NGUON_DEFAULT),
@@ -529,7 +581,8 @@ def _nhan_brain_cho_tk(bot: dict) -> None:
 # thêm trường mới vào bản ghi mà quên loại khỏi danh sách đen là mở một đường ghi không ai ngờ.
 _PATCHABLE = ("name", "icon", "groups", "reply_when", "handoff_to", "rate_limit",
               "agent_slug", "agent_brain", "brain", "bot_username", "token", "enabled",
-              "nguon_tra_loi", "muc_quyen", "ngon_ngu", "account_ids")
+              "nguon_tra_loi", "muc_quyen", "ngon_ngu", "account_ids",
+              "agents_phu", "rieng_pham_vi", "rieng_cho_phep")
 # `channel` CỐ Ý đứng ngoài danh sách trắng. Đổi kênh của một bot đã tạo là đổi sang một CON
 # BOT KHÁC: token khác, danh tính khác, khách khác, và cả đống id nhóm đang lưu lập tức vô
 # nghĩa. Cho sửa tại chỗ thì bản ghi còn nguyên tên và lịch sử của con cũ trong khi nó đã là
@@ -593,6 +646,13 @@ def update_bot(bot_id: str, patch: dict) -> tuple[bool, str]:
                     b["handoff_to"] = str(v or "").strip()
                 elif k == "rate_limit":
                     b["rate_limit"] = _clean_rate(v)
+                elif k == "agents_phu":
+                    b["agents_phu"] = _clean_agents_phu(v, str((b.get("agent") or {}).get("slug") or ""))
+                elif k == "rieng_pham_vi":
+                    if v in RIENG_PHAM_VI or v == "":
+                        b["rieng_pham_vi"] = v
+                elif k == "rieng_cho_phep":
+                    b["rieng_cho_phep"] = _clean_rieng_cho_phep(v)
                 elif k == "agent_slug":
                     # Đã kiểm ở đầu hàm, tới đây chắc chắn hợp lệ.
                     b.setdefault("agent", {})["slug"] = str(v).strip()

@@ -230,7 +230,32 @@ def register(app, deps: ConversationsDeps):
         bid = str(c.get("bot_id") or "")
         cid = str(c.get("external_chat_id") or "")
         ds = [r for r in chatbot_phan_xu.nhat_ky(bid, 200) if r.get("chat_id") == cid][:5] if bid else []
-        return {"ok": True, "items": ds, "bot_id": bid}
+        bot = chatbot_store.get_bot(bid) if bid else None
+        rieng = c.get("chat_type") != "group" and bool(bot) and chatbot_store.pham_vi_rieng(bot) == "chon"
+        cho = bool(bot) and cid in {str(x) for x in (bot.get("rieng_cho_phep") or [])}
+        return {"ok": True, "items": ds, "bot_id": bid, "can_cho_phep": rieng, "da_cho_phep": cho}
+
+    @router.post("/conversations/{conv_id}/cho-phep")
+    async def conversations_cho_phep(conv_id: int, bat: str = Form("1")):
+        """Cho (hoặc thôi cho) bot trả lời cuộc chat RIÊNG này khi bot đang ở phạm vi 'chọn'."""
+        c = conversations.chi_tiet(conv_id)
+        if not c:
+            return _404()
+        bid = str(c.get("bot_id") or "")
+        bot = chatbot_store.get_bot(bid) if bid else None
+        if not bot:
+            return JSONResponse({"ok": False, "error": "Cuộc chat này không thuộc bot nào."}, status_code=400)
+        cid = str(c.get("external_chat_id") or "")
+        ds = [str(x) for x in (bot.get("rieng_cho_phep") or [])]
+        if str(bat) not in ("", "0", "false"):
+            if cid not in ds:
+                ds.append(cid)
+        else:
+            ds = [x for x in ds if x != cid]
+        ok, err = chatbot_store.update_bot(bid, {"rieng_cho_phep": ds})
+        if not ok:
+            return JSONResponse({"ok": False, "error": err}, status_code=400)
+        return {"ok": True, "da_cho_phep": str(bat) not in ("", "0", "false")}
 
     @router.post("/conversations/{conv_id}/mode")
     async def conversations_mode(conv_id: int, mode: str = Form(...)):
