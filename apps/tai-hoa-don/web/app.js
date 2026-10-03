@@ -337,13 +337,16 @@
   function chungTuRows() {
     if (!dn) return [];
     if (chon.size) return dsHd.filter(function(r){ return chon.has(r.key); });
-    return (hdLoc && hdLoc.length ? hdLoc : dsHd).slice();
+    return hdLoc.slice();
   }
   function veChungTu() {
     var rows = chungTuRows();
+    if (dn) { try { sessionStorage.setItem("minmin.documentScope", JSON.stringify({dn:dn,loai:loai,tu:$("#tu").value,den:$("#den").value,keys:Array.from(chon),filters:readFilter("hd")})); } catch(e) {} }
+    renderCtInvoices(rows);
+    if ($("#ctCompany") && dn) $("#ctCompany").value=dn;
     var hasDn = !!dn;
     if ($("#ctDn")) $("#ctDn").textContent = hasDn ? "MST " + dn + " · " + (loai === "purchase" ? "mua vào" : "bán ra") : "Chưa chọn doanh nghiệp";
-    if ($("#ctScope")) $("#ctScope").textContent = hasDn ? (chon.size ? "Đang chọn " + rows.length + " hoá đơn." : "Đang dùng " + rows.length + " hoá đơn trong bộ lọc.") : "Chọn doanh nghiệp ở tab Tải Hoá Đơn TCT để lấy dữ liệu.";
+    if ($("#ctScope")) $("#ctScope").textContent = hasDn ? (chon.size ? "Đang chọn " + rows.length + " hoá đơn." : "Đang dùng " + rows.length + " hoá đơn trong bộ lọc.") : "Chọn doanh nghiệp ở danh sách phía trên hoặc tab TCT.";
     if (!$("#ctStats")) return;
     var sum = rows.reduce(function(a,r){ a.tien += Number(r.tien_hang||0); a.thue += Number(r.thue||0); a.tong += Number(r.tong||0); if(r.co_xml)a.xml++; if(r.co_goc)a.goc++; return a; }, {tien:0,thue:0,tong:0,xml:0,goc:0});
     $("#ctStats").innerHTML = [
@@ -356,11 +359,12 @@
     if (rows.some(function(r){ return !r.co_goc; })) missing.push("Một số hoá đơn chưa có PDF gốc NCC; gói vẫn tạo chứng từ và ghi rõ trạng thái còn thiếu.");
     $("#ctCheck").innerHTML = (missing.length ? missing : ["Dữ liệu đủ để tạo bộ chứng từ in được."]).map(function(m,i){return '<p class="'+(missing.length?'can':'ok')+'">'+(missing.length?'Cần rà soát: ':'Sẵn sàng: ')+esc(m)+'</p>';}).join('');
   }
+  var nsLabels = ["Họ tên", "Ngày sinh", "CCCD", "Địa chỉ", "Chức vụ", "Lương", "Ngày vào làm", "Mã BHXH"];
   var nsCols = ["ho_ten", "ngay_sinh", "cccd", "dia_chi", "chuc_vu", "luong", "ngay_vao", "ma_bhxh"];
   function dongNhanSu(data) {
     data = data || {};
     var tr = document.createElement("tr");
-    tr.innerHTML = nsCols.map(function(k){ return '<td><input data-ns="'+k+'" value="'+esc(data[k]||'')+'" /></td>'; }).join("") + '<td><button type="button" class="nut phu" data-xoa-ns>×</button></td>';
+    tr.innerHTML = nsCols.map(function(k){ return '<td><input aria-label="'+nsLabels[nsCols.indexOf(k)]+'" data-ns="'+k+'" value="'+esc(data[k]||'')+'" /></td>'; }).join("") + '<td><button type="button" class="nut phu" data-xoa-ns>×</button></td>';
     tr.querySelectorAll("input").forEach(function(i){ i.oninput = veNhanSuDem; });
     tr.querySelector("[data-xoa-ns]").onclick = function(){ tr.remove(); veNhanSuDem(); };
     return tr;
@@ -382,19 +386,71 @@
   }
   function veNhanSuDem() { if ($("#ctNhanSuDem")) $("#ctNhanSuDem").textContent = docNhanSu().length + " người lao động"; }
   function veDocTabs(name) {
+    ctTab=name; renderCtTemplates();
     document.querySelectorAll("#ctTabs [data-doc-tab]").forEach(function(b){ b.classList.toggle("on", b.dataset.docTab === name); });
     document.querySelectorAll("[data-doc-pane]").forEach(function(p){ p.classList.toggle("on", p.dataset.docPane === name); });
   }
-  function phamViChungTu() {
-    var d = phamViXuat({ kieu_mau: $("#ctKieu").value, pham_vi_chung_tu: $("#ctPhamVi").value });
-    d.nhom = Array.prototype.map.call(document.querySelectorAll("#ctNhomHoaDon input:checked, #ctNhomKiemTra input:checked"), function(c){ return c.value; });
-    d.nhan_su = docNhanSu();
-    var loai = document.querySelector('input[name="ctLoaiHd"]:checked');
-    d.loai_hoat_dong = loai ? loai.value : "thuong_mai";
-    if ($("#ctGomBhxh") && $("#ctGomBhxh").checked && d.nhan_su.length && d.nhom.indexOf("thue_bhxh") < 0) d.nhom.push("thue_bhxh");
-    if (d.nhan_su.length && d.nhom.indexOf("lao_dong") < 0) d.nhom.push("lao_dong");
-    if (!d.nhom.length) throw new Error("Chọn ít nhất một bộ hồ sơ cần tạo.");
+  var ctTab='invoice', ctCatalog=[], ctSelected=new Set(), ctPage=1, ctImportData=null;
+  function ctVisible(){return ctCatalog.filter(function(m){return m.tab===ctTab && (m.source!=='purchase' && m.source!=='sold' || m.source===loai);});}
+  function renderCtTemplates(){
+    if(!$('#ctTemplates'))return;
+    $('#ctTemplates').innerHTML=ctVisible().map(function(m){return '<div class="ct-template"><label><input type="checkbox" data-ct-template="'+m.id+'" '+(ctSelected.has(m.id)?'checked':'')+'> '+esc(m.title)+'</label><button class="nut" data-ct-preview="'+m.id+'">Xem mẫu</button></div>';}).join('');
+    $('#ctTemplates').querySelectorAll('[data-ct-template]').forEach(function(c){c.onchange=function(){if(c.checked)ctSelected.add(c.dataset.ctTemplate);else ctSelected.delete(c.dataset.ctTemplate);ctCount();};});
+    $('#ctTemplates').querySelectorAll('[data-ct-preview]').forEach(function(b){b.onclick=async function(){b.disabled=true;try{var d=phamViChungTu([b.dataset.ctPreview]);var r=await goi('chung-tu/xem-mau',{json:d});$('#ctPreviewFrame').srcdoc=r.html;$('#ctPreviewTitle').textContent=ctCatalog.find(function(m){return m.id===b.dataset.ctPreview;}).title;$('#ctPreview').showModal();}catch(e){bao(e.message);}finally{b.disabled=false;}};});
+    ctCount();
+  }
+  function ctCount(){var n=ctVisible().filter(function(m){return ctSelected.has(m.id);}).length;$('#ctDownloadCount').textContent='Đã chọn '+n+' loại chứng từ · Chỉ xuất mục đang mở';$('#nutBoChungTu').disabled=!n || !dn;}
+  function renderCtInvoices(rows){
+    if(!$('#ctInvoices'))return;var pages=Math.max(1,Math.ceil(rows.length/10));ctPage=Math.min(ctPage,pages);
+    $('#ctInvoices').innerHTML=rows.slice((ctPage-1)*10,ctPage*10).map(function(r,i){return '<tr><td>'+((ctPage-1)*10+i+1)+'</td><td>'+esc(ngayVN(r.ngay||''))+'</td><td>'+esc(r.so||'')+' / '+esc(r.ky_hieu||'')+'</td><td>'+esc(r.doi_tac||'')+'<br>'+esc(r.mst_doi_tac||'')+'</td><td>'+tien(r.tien_hang)+'</td><td>'+tien(r.thue)+'</td><td>'+tien(r.tong)+'</td><td><a target="_blank" rel="noopener" href="api/xem/'+encodeURIComponent(dn)+'/'+loai+'/'+encodeURIComponent(r.key)+'">Xem hóa đơn</a></td></tr>';}).join('') || '<tr><td colspan="8">Chưa có hóa đơn trong phạm vi này. Chọn hóa đơn ở tab TCT.</td></tr>';
+    $('#ctPage').textContent='Trang '+ctPage+'/'+pages+' · '+rows.length+' hóa đơn';$('#ctPrev').disabled=ctPage===1;$('#ctNext').disabled=ctPage===pages;
+    renderCtTemplates();
+  }
+  function phamViChungTu(ids) {
+    if(!dn)throw new Error('Chọn doanh nghiệp trước khi tạo hồ sơ.');
+    var d=phamViXuat({kieu_mau:$('#ctKieu').value,document_tab:ctTab});
+    d.templates=ids || ctVisible().filter(function(m){return ctSelected.has(m.id);}).map(function(m){return m.id;});
+    d.nhan_su=ctTab==='labor'?docNhanSu():[];
+    if(!d.templates.length)throw new Error('Tích chọn ít nhất một mẫu trong mục đang mở.');
     return d;
+  }
+  async function setupDocumentPack(){
+    $('#ctBack').onclick=function(){moTab('tai');};
+    $('#ctPrev').onclick=function(){ctPage--;veChungTu();};$('#ctNext').onclick=function(){ctPage++;veChungTu();};
+    $('#ctSelectAll').onclick=function(){ctVisible().forEach(function(m){ctSelected.add(m.id);});renderCtTemplates();};
+    $('#ctClearAll').onclick=function(){ctVisible().forEach(function(m){ctSelected.delete(m.id);});renderCtTemplates();};
+    $('#ctPreviewClose').onclick=function(){$('#ctPreview').close();$('#ctPreviewFrame').srcdoc='';};
+    $('#ctStaffFile').onchange=async function(){var f=this.files[0];if(!f)return;this.disabled=true;try{
+      if(f.size>5*1024*1024)throw new Error('Excel tối đa 5 MB.');
+      var data=await new Promise(function(resolve,reject){var r=new FileReader();r.onload=function(){resolve(r.result.split(',')[1]);};r.onerror=reject;r.readAsDataURL(f);});
+      ctImportData=await goi('chung-tu/nhan-su-nhap',{json:{data:data}});$('#ctImport').hidden=false;
+      $('#ctImportInfo').textContent='Khớp cột: '+ctImportData.columns.join(', ')+'. '+ctImportData.rows.length+' người hợp lệ; '+ctImportData.errors.length+' dòng lỗi. '+(ctImportData.errors.length?'Sửa file rồi nhập lại; chưa thay đổi bảng.':'Kiểm tra trước khi áp dụng.');
+      $('#ctImportRows').innerHTML=ctImportData.errors.map(function(e){return '<p class="can">Dòng '+e.line+': '+esc(e.message)+'</p>';}).join('')+'<table class="bang"><thead><tr>'+nsCols.map(function(k){return '<th>'+esc(nsLabels[nsCols.indexOf(k)])+'</th>';}).join('')+'</tr></thead><tbody>'+ctImportData.rows.map(function(r){return '<tr>'+nsCols.map(function(k){return '<td>'+esc(r[k])+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
+      $('#ctImportApply').disabled=!!ctImportData.errors.length || !ctImportData.rows.length;
+    }catch(e){bao(e.message);}finally{this.disabled=false;this.value='';}};
+    $('#ctImportCancel').onclick=function(){$('#ctImport').hidden=true;ctImportData=null;};
+    $('#ctImportApply').onclick=function(){if(!ctImportData||ctImportData.errors.length)return;
+      var list=$('#ctImportMode').value==='replace'?[]:docNhanSu().filter(function(r){return r.ho_ten;});
+      ctImportData.rows.forEach(function(r){var found=list.findIndex(function(x){return r.cccd?x.cccd===r.cccd:r.ma_bhxh?x.ma_bhxh===r.ma_bhxh:false;});if(found<0)list.push(r);else list[found]=r;});
+      if(list.length>500){bao('Tối đa 500 người trong bảng.');return;}
+      $('#ctNhanSuBody').innerHTML='';list.forEach(themNhanSu);$('#ctImport').hidden=true;ctImportData=null;bao('Đã nhập danh sách vào bảng.');
+    };
+    try{
+      var result=await goi('chung-tu/mau');ctCatalog=result.templates;
+      // Start with no hidden defaults. Each download states exactly what was selected.
+      renderCtTemplates();
+      var companies=await goi('doanh-nghiep');$('#ctCompany').innerHTML='<option value="">Chọn doanh nghiệp</option>'+companies.ds.map(function(c){return '<option value="'+esc(c.mst)+'">'+esc(c.ten||c.mst)+' · '+esc(c.mst)+'</option>';}).join('');
+      var stored=null;try{stored=JSON.parse(sessionStorage.getItem('minmin.documentScope')||'null');}catch(e){}
+      if(stored && companies.ds.some(function(c){return c.mst===stored.dn;})){
+        dn=stored.dn;loai=stored.loai==='sold'?'sold':'purchase';$('#tu').value=stored.tu;$('#den').value=stored.den;chon=new Set(stored.keys||[]);$('#ctCompany').value=dn;await taiBang();
+        $('#chuaChon').hidden=true;$('#vungDn').hidden=false;
+        var f=stored.filters||{};$('#loc').value=f.q||'';invoiceGroups.hd=f.group||'all';
+        ['Supplier','Number','Min','Max','File','Sort','Publisher','Status'].forEach(function(k){if(f[k.toLowerCase()]!==undefined)$('#hd'+k).value=f[k.toLowerCase()];});
+        veBang();
+      }
+      $('#ctCompany').onchange=function(){if(this.value)chonDn(this.value);else {dn=null;dsHd=[];hdLoc=[];chon.clear();veChungTu();}};
+      veChungTu();
+    }catch(e){bao(e.message);}
   }
 
   // ---------------- cài đặt tải
@@ -678,7 +734,7 @@
   function gan() {
     document.querySelectorAll(".tab button").forEach(function (b) { b.onclick = function () { moTab(b.dataset.tab); }; });
     if ($("#ctLamMoi")) $("#ctLamMoi").onclick = function(){ if (dn) taiBang(); else veChungTu(); };
-    if ($("#nutBoChungTu")) $("#nutBoChungTu").onclick = async function(){ this.disabled = true; try { await taiFile("bo-chung-tu", phamViChungTu()); } catch(e) { bao(e.message); } finally { this.disabled = false; } };
+    if ($("#nutBoChungTu")) $("#nutBoChungTu").onclick = async function(){ this.disabled = true; this.textContent="Đang tạo ZIP và bản in gộp…"; try { await taiFile("bo-chung-tu", phamViChungTu()); } catch(e) { bao(e.message); } finally { this.textContent="Tải các chứng từ đã chọn (ZIP)"; ctCount(); } };
     ["#ctKieu", "#ctPhamVi"].forEach(function(id){ if($(id)) $(id).onchange = veChungTu; });
     ["#ctNhomHoaDon", "#ctNhomKiemTra", "#ctLoaiHd"].forEach(function(id){ if($(id)) $(id).querySelectorAll("input").forEach(function(c){ c.onchange = veChungTu; }); });
     if ($("#ctTabs")) $("#ctTabs").querySelectorAll("[data-doc-tab]").forEach(function(b){ b.onclick = function(){ veDocTabs(b.dataset.docTab); }; });
@@ -788,6 +844,7 @@
     setupTools();
     gan();
     setupRecovery();
+    await setupDocumentPack();
     var s;
     try { s = await goi("trang-thai"); } catch (e) { bao(e.message); return; }
     tt.tai = s.tai_hoa_don; tt.gmail = s.gmail; tt.chungtu = s.bo_chung_tu || s.tai_hoa_don;
