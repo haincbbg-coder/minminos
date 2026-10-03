@@ -1,4 +1,4 @@
-@import url("surface-tokens.css?v=26.10.42");
+@import url("surface-tokens.css?v=26.10.47");
 /* Scoped adapters: keep each application's layout and behavior, share MinMin surfaces. */
 :root { color-scheme:dark; }
 :root[data-theme="light"] { color-scheme:light; }
@@ -45,7 +45,7 @@ body[data-mm-app="zalo"] {
  --success:var(--mm-ok); --danger:var(--mm-bad); --warn:var(--mm-warn);
 }
 body[data-mm-app="zalo"] .sidebar { background:var(--mm-panel); border-right:0; box-shadow:var(--mm-out); }
-[data-mm-app="zalo"] :is(.card,.block,.log-wrap,.modal,.gate-card) { border-radius:22px; box-shadow:var(--mm-out); }
+[data-mm-app="zalo"] :is(.card,.block,.log-wrap,.modal,.gate-box) { border-radius:22px; box-shadow:var(--mm-out); }
 [data-mm-app="zalo"] :is(.btn,.nav-item) { box-shadow:var(--mm-out-sm); border-radius:12px; }
 [data-mm-app="zalo"] .nav-item { margin-bottom:5px; }
 [data-mm-app="zalo"] :is(.nav-item.active,.btn.primary,.brand-logo) { background:var(--mm-primary); color:var(--mm-on-brand); box-shadow:var(--mm-primary-shadow); }
@@ -79,3 +79,5 @@ body[data-mm-app="hud"] {
 [data-mm-app="hud"] :is(.talk-st[data-k="err"],.may-st.bad) { color:var(--mm-bad); }
 [data-mm-app="hud"] .slog li.v { color:var(--mm-link); }
 @media(prefers-reduced-motion:reduce) { body[data-mm-app] *,body[data-mm-app] *::before,body[data-mm-app] *::after { scroll-behavior:auto; transition:none; } }
+
+[data-mm-app="invoice"] #themeToggle { display:inline-flex; align-items:center; justify-content:center; min-height:36px; }
