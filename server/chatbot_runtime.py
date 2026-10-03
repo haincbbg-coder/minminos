@@ -357,6 +357,8 @@ def _ly_do_im(bot_cfg: dict, meta: dict, text: str = "") -> str:
                 ten_nhom=str((meta or {}).get("chat_title") or (meta or {}).get("chat_name") or ""))
             if kq.get("noi"):
                 return ""
+            if kq.get("khieu_nai"):
+                _bao_chu_khieu_nai(bot_cfg, meta or {}, text)
             return "phan_xu_im"
         except Exception as ex:
             print(f"[phan_xu] {type(ex).__name__}: {ex}", file=sys.stderr)
@@ -587,6 +589,43 @@ def _bao_nhan_vien(bot_cfg: dict, chat_id: str, ly_do: str) -> str:
     asyncio.ensure_future(_gui_nhan_vien(bot_cfg, dich, chat_id, ly_do))
     return ("Cái này để em chuyển cho người phụ trách hỗ trợ anh chị ạ. "
             "Anh chị chờ một chút nhé.")
+
+
+_DA_BAO_KHIEU_NAI: Dict[tuple, float] = {}
+KHIEU_NAI_NGHI = 1800    # giây: cùng một nhóm báo chủ nhiều nhất một lần mỗi chừng này
+
+
+def _bao_chu_khieu_nai(cfg: dict, meta: dict, text: str) -> None:
+    """Khách bức xúc trong nhóm: bot im và BÁO CHỦ. Báo vào hòm thư MinMin (chuông) vì đó là
+    đường chạy cho MỌI kênh; riêng Telegram còn nhắn thêm tới người trực nếu có khai. Chống
+    dội: một nhóm chỉ báo một lần mỗi `KHIEU_NAI_NGHI` giây, kẻo khách giận nhắn mười câu là
+    chuông kêu mười lần."""
+    khoa = (str(cfg.get("id") or ""), str((meta or {}).get("chat_id") or ""))
+    now = time.time()
+    if now - _DA_BAO_KHIEU_NAI.get(khoa, 0) < KHIEU_NAI_NGHI:
+        return
+    if len(_DA_BAO_KHIEU_NAI) > 500:
+        _DA_BAO_KHIEU_NAI.clear()
+    _DA_BAO_KHIEU_NAI[khoa] = now
+    nhom = str((meta or {}).get("chat_title") or (meta or {}).get("chat_id") or "")
+    ten = str((meta or {}).get("user_name") or "một khách")
+    try:
+        import inbox
+        inbox.add(f"{ten} trong nhóm {nhom} có vẻ đang bức xúc:\n\n\"{str(text)[:400]}\"\n\n"
+                  f"Bot \"{cfg.get('name')}\" đã im để chủ xử lý. Mở Hộp thư hội thoại để trả lời "
+                  f"hoặc bấm Trả lời giúp.",
+                  kind="system", title=f"Khách bức xúc ở {nhom}", source="chatbot",
+                  channel=str((meta or {}).get("channel") or ""))
+    except Exception as e:
+        print(f"[chatbot khiếu nại] hòm thư lỗi: {e}", file=sys.stderr)
+    if cfg.get("handoff_to") and _poller_dau(cfg.get("id") or "") is not None \
+            and hasattr(_poller_dau(cfg.get("id") or ""), "_url"):
+        try:
+            asyncio.get_running_loop().create_task(_gui_nhan_vien(
+                cfg, str(cfg["handoff_to"]), str((meta or {}).get("chat_id") or ""),
+                f"Khách bức xúc trong nhóm: {str(text)[:200]}"))
+        except RuntimeError:
+            pass
 
 
 async def _gui_nhan_vien(bot_cfg: dict, dich: str, chat_id: str, ly_do: str) -> None:
