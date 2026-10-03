@@ -1,0 +1,58 @@
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id), labels = {facebook:'Facebook',tiktok:'TikTok',douyin:'Douyin',xiaohongshu:'Xiaohongshu',youtube:'YouTube',instagram:'Instagram',threads:'Threads'};
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = v => v == null ? '—' : Number(v).toLocaleString('vi-VN'), date = v => v ? new Date(typeof v === 'number' ? v*1000 : v).toLocaleString('vi-VN') : 'Chưa có';
+  const statusNames = {draft:'Bản nháp',approved:'Đã duyệt',scheduled:'Đã hẹn giờ',publishing:'Đang gửi',published:'Đã đăng',needs_check:'Cần kiểm tra trên Trang'};
+  let state = {channels:[],posts:[],drafts:[],settings:{}}, page = 1;
+  const notify = t => { $('toast').textContent=t; setTimeout(()=>{$('toast').textContent='';},6500); };
+  function fail(e) { $('error').hidden=false; $('error').textContent=e.message || 'Không thực hiện được. Vui lòng thử lại.'; }
+  async function api(path, data) {
+    const r = await fetch('api/'+path, data === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok) throw new Error(d.error || d.detail || 'Không thể truy cập. Kiểm tra đăng nhập và giấy phép trong MinMin.');
+    return d;
+  }
+  async function busy(button, fn) { if(button) button.disabled=true; $('error').hidden=true; try { await fn(); } catch(e) { fail(e); notify(e.message); } finally { if(button) button.disabled=false; } }
+  const options = Object.entries(labels).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  document.querySelectorAll('.platforms').forEach(el=>el.innerHTML=options); $('platform').insertAdjacentHTML('beforeend',options);
+  function tab(id) { document.querySelectorAll('.pane').forEach(el=>el.hidden=el.id!==id); document.querySelectorAll('[data-tab]').forEach(el=>el.classList.toggle('active',el.dataset.tab===id)); }
+  document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>tab(el.dataset.tab));
+  document.querySelectorAll('[data-close]').forEach(el=>el.onclick=()=>el.closest('dialog').close());
+  function channel(id) {return state.channels.find(c=>c.id===id) || {};}
+  function filtered() {
+    const q=$('query').value.toLocaleLowerCase(), platform=$('platform').value, group=$('group').value, min=Number($('minviews').value), sort=$('sort').value;
+    return state.posts.filter(p=>(!q || (p.caption+' '+(channel(p.channel_id).name||'')).toLocaleLowerCase().includes(q))&&(!platform||p.platform===platform)&&(!group||channel(p.channel_id).group===group)&&(!min||p.views>=min)&&(!$('savedOnly').checked||p.saved)).sort((a,b)=>(b[sort]??-1)-(a[sort]??-1));
+  }
+  function renderFeed() {
+    const posts=filtered(), pages=Math.max(1,Math.ceil(posts.length/20));page=Math.min(page,pages);
+    $('resultCount').textContent=`${fmt(posts.length)} bài trong bộ lọc · ${fmt(state.posts.length)} bài đã lưu dữ liệu`;
+    $('pageText').textContent=`Trang ${page}/${pages} · 20 bài/trang`; $('prev').disabled=page===1; $('next').disabled=page===pages;
+    $('feed').innerHTML=posts.slice((page-1)*20,page*20).map((p,i)=>`<article class="post"><div class="rank">${(page-1)*20+i+1}</div><div class="postbody"><div class="toolbar"><strong>${esc(channel(p.channel_id).name||'Kênh nguồn')}</strong><span class="badge">${labels[p.platform]}</span></div><p>${esc(p.caption.slice(0,650)||'Nguồn không cung cấp lời bài viết.')}</p><div class="metrics">${[['Lượt xem',p.views],['Thích',p.likes],['Bình luận',p.comments],['Chia sẻ',p.shares],['Điểm/giờ',p.score]].map(([k,v])=>`<span><b>${fmt(v)}</b><small>${k}</small></span>`).join('')}</div><p class="muted small">${esc(p.source)} · Ghi nhận ${date(p.observed)} · Đăng ${date(p.published)}</p><div class="toolbar"><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Xem bài nguồn ↗</a><button data-save="${p.id}">${p.saved?'Bỏ lưu':'Lưu ý tưởng'}</button><button data-ai="${p.id}" class="primary">Viết bằng AI</button></div></div></article>`).join('') || '<div class="empty"><h2>Chưa có bài trong bộ lọc.</h2><p>Thêm kênh ở Kênh theo dõi, kết nối nguồn Apify hoặc nhập dữ liệu JSON của bạn.</p></div>';
+  }
+  function render() {
+    const group=$('group').value; $('group').innerHTML='<option value="">Tất cả nhóm</option>'+[...new Set(state.channels.map(c=>c.group))].sort().map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');$('group').value=group;
+    $('stats').innerHTML=[['Kênh theo dõi',state.channels.filter(c=>c.active).length],['Bài tham khảo',state.posts.length],['Ý tưởng đã lưu',state.posts.filter(p=>p.saved).length],['Bản nháp',state.drafts.filter(d=>d.status==='draft').length]].map(([k,v])=>`<div><strong>${fmt(v)}</strong><span>${k}</span></div>`).join('');
+    $('coverage').textContent=`${state.channels.filter(c=>c.active&&c.task).length} kênh có Task nguồn · ${state.settings.auto_sync?'Đọc nguồn mỗi giờ':'Cập nhật thủ công'}`;
+    $('channelList').innerHTML=state.channels.map(c=>`<article class="panel"><p class="eyebrow">${labels[c.platform]} · ${esc(c.group)}</p><h2>${esc(c.name)}</h2><p>${c.active?'Đang theo dõi':'Đã tạm dừng'}</p><a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Mở kênh ↗</a><p class="muted">${c.task?'Task: '+esc(c.task):'Chưa kết nối nguồn tự động'}</p><p class="small">Lần quét nguồn: ${date(c.source_run)}<br>Đọc vào MinMin: ${date(c.last_sync)}</p>${c.error?`<p class="notice">${esc(c.error)}</p>`:''}<button data-channel="${c.id}">Sửa kênh & nhóm</button></article>`).join('')||'<div class="empty"><h2>Bắt đầu từ các kênh bạn quan tâm.</h2><p>Bấm Thêm kênh để lưu link, phân nhóm và kết nối nguồn.</p></div>';
+    $('draftList').innerHTML=[...state.drafts].sort((a,b)=>b.created-a.created).map(d=>`<article class="panel"><p class="eyebrow">${labels[d.platform]} · ${statusNames[d.status]||esc(d.status)}</p><p class="drafttext">${esc(d.body.slice(0,450))}</p>${d.scheduled?`<p>Hẹn đăng: ${date(d.scheduled)}</p>`:''}${d.error?`<p class="notice">${esc(d.error)}</p>`:''}${d.remote_id?`<p>Mã bài Facebook: ${esc(d.remote_id)}</p>`:''}<div class="toolbar"><button data-draft="${d.id}">Xem / sửa</button>${d.status==='approved'?`<button data-publish="${d.id}" class="primary">Đăng lên Page ${esc(d.page_id)}</button>`:''}</div></article>`).join('')||'<div class="empty"><h2>Nội dung mới bắt đầu tại đây.</h2><p>Tạo bản nháp, hoặc chọn Viết bằng AI từ một bài tham khảo.</p></div>';
+    renderFeed();
+  }
+  async function load(settingsToo=false) { state=await api('state');render(); if(settingsToo){const f=$('settings');for(const k of ['brand','voice','ai_provider','ai_model','page_id','graph_version'])f.elements[k].value=state.settings[k]||(k==='ai_provider'?'gemini':'');f.elements.auto_sync.checked=!!state.settings.auto_sync;}$('keyState').textContent=['apify_token','ai_key','page_token'].filter(k=>state.settings[k+'_set']).map(k=>({apify_token:'Apify',ai_key:'AI',page_token:'Facebook'}[k])).join(', ')+' · khóa riêng đã lưu'; }
+  function openChannel(c={}) {const f=$('channelForm');f.reset();for(const k of ['id','name','url','group','task'])f.elements[k].value=c[k]||'';f.elements.platform.value=c.platform||'facebook';f.elements.active.checked=c.active!==false;f.elements.mapping.value=JSON.stringify(c.mapping||{},null,2);$('channelDialog').showModal();}
+  function openDraft(d={}) {const f=$('draftForm');f.reset();for(const k of ['id','body'])f.elements[k].value=d[k]||'';f.elements.platform.value=d.platform||'facebook';f.elements.status.value=d.status==='scheduled'?'scheduled':'draft';if(d.scheduled){const dt=new Date(d.scheduled*1000);dt.setMinutes(dt.getMinutes()-dt.getTimezoneOffset());f.elements.scheduled.value=dt.toISOString().slice(0,16);}const locked=['published','publishing','needs_check'].includes(d.status);Array.from(f.elements).forEach(e=>{if(!e.hasAttribute('data-close'))e.disabled=locked;});$('draftSource').textContent=d.source_url?'Tham khảo: '+d.source_url:'Nội dung tự soạn';$('publishTarget').textContent='Trang đích: '+(state.settings.page_id||'Chưa kết nối Facebook Page')+'. Lưu với trạng thái đã duyệt / hẹn giờ là cho phép đăng nội dung này.';$('draftDialog').showModal();}
+  $('newChannel').onclick=()=>openChannel();$('newDraft').onclick=()=>openDraft();
+  $('refreshDrafts').onclick=e=>busy(e.currentTarget,()=>load());
+  $('importBtn').onclick=()=>{if(!state.channels.length)return notify('Thêm kênh trước khi nhập dữ liệu.');$('importForm').elements.channel.innerHTML=state.channels.map(c=>`<option value="${c.id}">${esc(c.name)} · ${labels[c.platform]}</option>`).join('');$('importResult').textContent='';$('importDialog').showModal();};
+  ['query','platform','group','minviews','sort','savedOnly'].forEach(id=>$(id).addEventListener('input',()=>{page=1;renderFeed();}));
+  $('prev').onclick=()=>{page--;renderFeed();};$('next').onclick=()=>{page++;renderFeed();};
+  $('sync').onclick=e=>busy(e.currentTarget,async()=>{notify('Đang đọc các nguồn đã kết nối…');const r=await api('action/sync',{});await load();notify(r.results.length?`${r.results.length} nguồn đã kiểm tra; ${r.results.filter(x=>x.error).length} nguồn có lỗi. Xem tại Kênh theo dõi.`:'Chưa có kênh đang theo dõi kèm Task ID.');});
+  document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.channel)openChannel(channel(b.dataset.channel));if(b.dataset.draft)openDraft(state.drafts.find(d=>d.id===b.dataset.draft));if(b.dataset.save)busy(b,async()=>{const p=state.posts.find(p=>p.id===b.dataset.save);await api('action/bookmark',{id:p.id,saved:!p.saved,note:p.note});await load();});if(b.dataset.ai){const p=state.posts.find(p=>p.id===b.dataset.ai);$('aiForm').elements.id.value=p.id;$('aiSource').textContent=p.caption.slice(0,350);$('aiDialog').showModal();}if(b.dataset.publish){const d=state.drafts.find(d=>d.id===b.dataset.publish);if(confirm(`Đăng ngay nội dung đã duyệt lên Facebook Page ${d.page_id}?`))busy(b,async()=>{const r=await api('action/publish',{id:d.id});await load();notify(statusNames[r.status]);});}if(b.dataset.export)busy(b,async()=>{const r=await fetch('api/export/'+b.dataset.export);if(!r.ok)throw new Error('Không xuất được dữ liệu. Kiểm tra quyền sử dụng.');const u=URL.createObjectURL(await r.blob()),a=document.createElement('a');a.href=u;a.download='viral-'+b.dataset.export+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),30000);});});
+  function form(id, fn){$(id).onsubmit=e=>{e.preventDefault();const f=e.currentTarget;busy(f.querySelector('button.primary'),()=>fn(f,Object.fromEntries(new FormData(f))));};}
+  form('channelForm',async(f,d)=>{d.active=f.elements.active.checked;d.mapping=JSON.parse(d.mapping||'{}');await api('action/channel',d);$('channelDialog').close();await load();});
+  form('importForm',async(f,d)=>{d.posts=JSON.parse(d.posts);const r=await api('action/import',d);$('importResult').textContent=`Đã nhập ${r.imported} bài.\n`+r.errors.map(x=>`Dòng ${x.row}: ${x.error}`).join('\n');await load();});
+  form('settings',async(f,d)=>{d.auto_sync=f.elements.auto_sync.checked;await api('action/settings',d);['apify_token','ai_key','page_token'].forEach(k=>f.elements[k].value='');await load();notify('Đã lưu kết nối.');});
+  form('draftForm',async(f,d)=>{d.scheduled=d.scheduled?new Date(d.scheduled).toISOString():null;await api('action/draft',d);$('draftDialog').close();await load();notify('Đã lưu nội dung.');});
+  form('aiForm',async(f,d)=>{notify('AI đang viết bản nháp…');const draft=await api('action/generate',d);$('aiDialog').close();await load();tab('drafts');openDraft(draft);});
+  busy(null,()=>load(true));
+})();

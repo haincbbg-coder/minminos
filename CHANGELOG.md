@@ -2,11 +2,14 @@
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
 
-Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [26.10.63] - 2026-10-04
-### Thêm mới
-- MinMin Viral Studio: theo dõi kênh, gom ý tưởng và chuẩn bị nội dung đa nền tảng trong Kết nối ngoài.
+Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
-## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
+## [26.10.64] - 2026-10-04
+### Thêm mới
+- MinMin Viral Studio trong Kết nối ngoài, cấp giấy phép riêng theo máy và thời hạn. Giao diện đồng bộ MinMin.
+- Lưu kênh theo nhóm, nhập JSON hoặc đọc lần chạy Apify Task thành công mới nhất; lọc bài, lưu ý tưởng, xuất CSV. Hỗ trợ chuẩn hóa nguồn Facebook, TikTok, Douyin, Xiaohongshu, YouTube, Instagram và Threads.
+- Xưởng nội dung AI dùng API đã kết nối; bản nháp, duyệt và hẹn giờ bài chữ Facebook Page. Nền tảng khác xuất nội dung; chưa tự đăng video.
+- Khóa API mã hóa, không trả lại trình duyệt. Kết quả đăng không rõ ràng được giữ để kiểm tra, không tự gửi lại.
 
 ## [26.10.63] - 2026-10-04
 ### Thêm mới

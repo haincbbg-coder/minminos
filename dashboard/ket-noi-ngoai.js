@@ -112,6 +112,7 @@
   var THANG = [1, 3, 6, 12, 0];
   // Khoá dịch của từng app viết NGUYÊN VĂN (bộ quét i18n chỉ nhận khoá viết liền trong lời gọi).
   var KHOA_APP = {
+    viral_studio: ["knn.app.viral_studio.ten", "knn.app.viral_studio.mo_ta"],
     zalo_forwarder: ["knn.app.zalo_forwarder.ten", "knn.app.zalo_forwarder.mo_ta"],
     tai_hoa_don: ["knn.app.tai_hoa_don.ten", "knn.app.tai_hoa_don.mo_ta"],
     quet_hoa_don_gmail: ["knn.app.quet_hoa_don_gmail.ten", "knn.app.quet_hoa_don_gmail.mo_ta"],

@@ -61,6 +61,8 @@ _KHOA = threading.Lock()
 # Các app trong Kết nối ngoài. `san_sang=False`: app đang được chuyển lên web, thẻ hiện "Sắp ra
 # mắt" và chưa mở được kể cả khi đã có mã (mã vẫn kích hoạt trước được).
 UNG_DUNG = (
+    {"id": "viral_studio", "icon": "search", "san_sang": True, "dieu_khoan_rieng": "",
+     "duong_dan": "/apps/viral-studio/"},
     {"id": "zalo_forwarder", "icon": "send", "san_sang": True, "dieu_khoan_rieng": "zalo",
      "duong_dan": "/apps/zalo-forwarder/"},
     {"id": "tai_hoa_don", "icon": "file-text", "san_sang": True, "dieu_khoan_rieng": "",
@@ -334,3 +336,4 @@ def _main(argv=None) -> int:
 
 if __name__ == "__main__":
     sys.exit(_main())
+
