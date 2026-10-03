@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.46] - 2026-10-03
+### Sửa lỗi
+- Thanh đầu trên điện thoại: nút menu, chuông, chip model và nút thêm dùng bóng nổi nhỏ và sát, không còn quầng mờ tràn lên vùng tai thỏ và đè lên quả cầu; thanh đầu được tách lớp vẽ riêng.
+
 ## [26.10.45] - 2026-10-03
 ### Sửa lỗi
 - Quả cầu tri thức trên điện thoại quay lại bình thường: trước đây rời sang trang khác rồi quay về màn chính là quả cầu bị dừng hẳn dù đã chọn tốc độ.

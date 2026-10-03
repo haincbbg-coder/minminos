@@ -92,3 +92,16 @@ body.on-chat .chatpage-main.edit-on > .chatpage-slot > .hud-voice { grid-row:8; 
 }
 html.mm-galaxy[data-theme="light"] .hud-center { background:var(--nm-bg); }
 html.mm-galaxy[data-theme="light"] .hud-center::after { inset:auto; top:50%; left:50%; width:min(70%, 350px); aspect-ratio:1; height:auto; transform:translate(-50%, -50%); border-radius:50%; background:radial-gradient(circle at 32% 25%, #ffffff90, #ffffff08 55%, #b9a89528 100%); box-shadow:inset 9px 9px 24px #ffffff65, inset -10px -12px 26px #aa99b82b, 10px 14px 28px #c9bfb533; pointer-events:none; }
+
+/* Điện thoại: nút ở thanh đầu dùng bóng nổi NHỎ và sát. Bóng sáng -7px -7px / bóng tối +7px +7px
+   16px blur tràn ra ngoài thanh đầu, lên cả vùng tai thỏ và đè lên quả cầu, nhìn như một vệt mờ
+   kéo từ góc trái trên qua nút menu và chuông. */
+@media(max-width:860px) {
+  :root[data-theme="light"] .hud-top :is(.nav-toggle-btn, .notification-trigger, .new-chat-btn, .hud-icon-btn, .mb-chip) {
+    box-shadow: 3px 3px 6px var(--nm-lo), -2px -2px 5px var(--nm-hi);
+  }
+  :root[data-theme="light"] .hud-top :is(.nav-toggle-btn, .notification-trigger, .new-chat-btn, .hud-icon-btn, .mb-chip):is(:active, [aria-pressed="true"], .on, .active) {
+    box-shadow: var(--nm-in-sm);
+  }
+  .hud-top { isolation:isolate; transform:translateZ(0); -webkit-transform:translateZ(0); }
+}
