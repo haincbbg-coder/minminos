@@ -585,7 +585,7 @@
     var im = qd && !qd.noi && !qd.phan_hoi;
     bar.innerHTML =
       (qd && !qd.noi
-        ? '<div class="ht-im">' + ic("volume-x") + ' <span>' + esc(window.t("ht.bot_im")) + ': ' +
+        ? '<div class="ht-im">' + ic("moon") + ' <span>' + esc(window.t("ht.bot_im")) + ': ' +
             esc((qd.ly_do || []).join("; ") || window.t("ht.khong_ly_do")) + '</span>' +
             (im ? '<button type="button" class="s-btn-ghost ht-px" data-d="1">' + esc(window.t("ht.im_dung")) + '</button>' +
                   '<button type="button" class="s-btn-ghost ht-px" data-d="0">' + esc(window.t("ht.im_sai")) + '</button>' : "") +
