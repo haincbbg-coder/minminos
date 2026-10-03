@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.52] - 2026-10-03
+### Thêm mới
+- Tìm bản gốc từ XML, PDF hoặc ZIP; tìm lại hàng loạt trong kho và xem rõ nguồn đã thử.
+- Đối chiếu Gmail và thông tin hóa đơn trước khi lưu bản gốc; nhận diện M-Invoice chi nhánh TP.HCM.
+
 ## [26.10.51] - 2026-10-03
 ### Sửa lỗi
 - Dòng "Bot im: lý do" trong Hộp thư dùng một icon không có trong bộ icon của MinMin nên hiện trống và làm CI đỏ. Đổi sang icon có sẵn (mặt trăng).
