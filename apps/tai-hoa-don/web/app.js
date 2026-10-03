@@ -169,7 +169,7 @@
     $('#recoveryPrev').onclick=function(){page--;draw();};$('#recoveryNext').onclick=function(){page++;draw();};
     panel.addEventListener('toggle',function(){if(panel.open)load().catch(function(e){message(e.message);});});
     [['#nutTai','tct'],['#gTai','gmail']].forEach(function(pair){var b=document.createElement('button');b.type='button';b.className='nut';b.textContent='Tìm lại bản gốc';$(pair[0]).after(b);b.onclick=async function(){try{var payload=pair[1]==='tct'?phamViXuat({}):{gmail_ids:gmailScope().ids};var d=await goi('tim-ban-goc/kho',{json:payload});selected=new Set(d.ids);panel.open=true;await load();panel.scrollIntoView({behavior:'smooth',block:'start'});message('Đang tìm lại '+d.ids.length+' hóa đơn.');run(d.ids);}catch(e){bao(e.message);}};});
-    var job=localStorage.getItem('minmin.invoiceRecoveryJob');if(job){panel.open=true;running=true;watch(job);}
+    var job=localStorage.getItem('minmin.invoiceRecoveryJob');if(job){panel.open=true;running=true;goi('viec/'+job).then(function(){watch(job);}).catch(function(){running=false;localStorage.removeItem('minmin.invoiceRecoveryJob');message('Máy chủ đã khởi động lại. Kết quả đã lưu vẫn còn; chọn các hóa đơn cần tìm và bấm Tìm lại.');load().catch(function(e){message(e.message);});});}
   }
   function moTab(t) {
     if (!tt[t]) t = tt.tai ? "tai" : tt.gmail ? "gmail" : "chungtu";
