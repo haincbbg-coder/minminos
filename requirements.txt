@@ -64,6 +64,8 @@ requests>=2.31
 pypdf>=4.0
 # Pillow: đọc kích thước ảnh captcha kéo trượt để tính đúng độ dịch chuyển.
 Pillow>=10.4
+# Read lookup QR codes embedded as PDF images without sending documents to an OCR service.
+zxing-cpp>=3.0,<4
 # uv: KHÔNG phải thư viện app import, mà là runner cho các connector MCP khai `command: uvx`
 # trong system/mcp-catalog.json (google-keep, google-sheets, google-search-console, google-ads,
 # tiktok-ads). Cài qua đây là đủ cho cả Docker lẫn máy cá nhân - `pip install uv` sinh ra sẵn

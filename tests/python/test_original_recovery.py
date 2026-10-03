@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 import routes.hoa_don as hd
-from routes.invoice_recovery import unpack, hints
+from routes.invoice_recovery import unpack, hints, pdf_qr
 
 A = '/apps/tai-hoa-don/api/tim-ban-goc'
 XML = '''<HDon><DLHDon><TTChung><KHMSHDon>2</KHMSHDon><KHHDon>C26MYY</KHHDon><SHDon>168</SHDon><NLap>2026-10-02</NLap><MSTTCGP>0106026495-001</MSTTCGP></TTChung><NDHDon><NBan><MST>001203013937</MST><Ten>PHƯƠNG HUY</Ten></NBan><NMua><MST>2401063265</MST><Ten>HALIMI</Ten></NMua><TToan><TgTTTBSo>30000000</TgTTTBSo></TToan></NDHDon><TTKhac><TTin><TTruong>Mã tra cứu</TTruong><DLieu>B0E189FA72670372</DLieu></TTin></TTKhac></DLHDon></HDon>'''.encode()
@@ -96,6 +96,17 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(hints('Mã tra cứu: AbCd1234')[0],'AbCd1234')
         text='<img src="https://email.kiemtrahoadon.vn/o/beacon"><a href="https://tracuuhoadon.minvoice.com.vn/">Tra cứu</a>'
         self.assertEqual(hd.thd('gmail_scan')._find_lookup_link(text),'https://tracuuhoadon.minvoice.com.vn/')
+
+    def test_embedded_qr_retains_lookup_link_and_code(self):
+        import zxingcpp
+        from PIL import Image
+        from types import SimpleNamespace
+        url='https://tracuu.example.com/invoice?code=AbCd1234'
+        qr=zxingcpp.create_barcode(url,zxingcpp.BarcodeFormat.QRCode)
+        image=Image.fromarray(qr.to_image(scale=4))
+        values=pdf_qr(SimpleNamespace(images=[SimpleNamespace(image=image)]))
+        self.assertEqual(values,[url])
+        self.assertEqual(hints(values[0]),('AbCd1234',url))
 
 
 if __name__=='__main__':unittest.main()

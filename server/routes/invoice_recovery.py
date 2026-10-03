@@ -43,14 +43,37 @@ def unpack(name, data):
 
 
 def hints(text):
-    from urllib.parse import urlsplit
+    from urllib.parse import urlsplit, parse_qs
     # Retain the case of secret lookup codes, remove accents only for matching labels.
     from routes import hoa_don as hd
     match = re.search(r'(?:m[ãa]\s*tra\s*c[ứu]u|m[ãa]\s*b[ảa]o\s*m[ậa]t)\s*[:：]\s*([a-z0-9_-]{5,100})', text, re.I)
     code = match.group(1) if match else ''
     urls = re.findall(r'https://[^\s<>"\']+', text)
     urls = [u.rstrip('.,);') for u in urls if not re.search(r'/(?:o|pixel|track|open)/', urlsplit(u).path, re.I)]
-    return code, next((u for u in urls if any(x in u.lower() for x in ('tracuu', 'invoice', 'hoadon'))), '')
+    url = next((u for u in urls if any(x in u.lower() for x in ('tracuu', 'invoice', 'hoadon'))), '')
+    if not code and url:
+        query = {k.lower(): v for k, v in parse_qs(urlsplit(url).query).items()}
+        for key in ('mtc', 'code', 'matracuu', 'reservationcode', 'securekey', 'vsecurekey', 'invoicecode'):
+            if query.get(key):
+                code = query[key][0][:200]
+                break
+    return code, url
+
+
+def pdf_qr(page):
+    """Read embedded image QR only, bounded to one page and small images."""
+    import itertools
+    import zxingcpp
+    results = []
+    for item in itertools.islice(page.images, 16):
+        try:
+            image = item.image
+            if image.width * image.height > 12_000_000:
+                continue
+            results.extend(b.text[:2000] for b in zxingcpp.read_barcodes(image) if b.valid)
+        except Exception:
+            continue
+    return results
 
 
 def register(app, hd):
@@ -129,6 +152,12 @@ def register(app, hd):
             reader = PdfReader(str(path))
             raw = reader.pages[0].extract_text() if reader.pages else ''
             if reader.pages:
+                try:
+                    qr = pdf_qr(reader.pages[0])
+                    raw = (raw or '') + '\n' + '\n'.join(qr)
+                    row['qr_found'] = len(qr)
+                except Exception:
+                    row['qr_found'] = 0
                 for annotation in (reader.pages[0].get('/Annots') or [])[:50]:
                     action = annotation.get_object().get('/A')
                     if action:
