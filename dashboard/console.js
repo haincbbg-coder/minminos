@@ -232,7 +232,9 @@
   let _fmSauKhiDong = null;    // việc trang Tệp tin cần làm khi đóng trình sửa (nạp lại danh sách)
   let graphEnabled = true;
   const isNarrow = () => window.matchMedia("(max-width: 860px)").matches;
-  const liteMode = () => !graphEnabled || isNarrow();
+  // Quả cầu tri thức VẪN hiện và phải quay trên điện thoại; trước đây màn hẹp bị coi là "lite"
+  // nên rời trang rồi quay về là đồ thị bị dừng hẳn (đứng im dù đã chọn tốc độ x6).
+  const liteMode = () => !graphEnabled;
 
   const esc = (s) => (s || "").toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   // Chỉ cho link http(s) HOẶC đường dẫn cùng origin (chặn javascript:/data: XSS); dùng kèm
