@@ -169,9 +169,10 @@ def cho_giao_dien() -> List[dict]:
             "lay_token": s.lay_token, "tom_tat": s.tom_tat, "tien_to_ten": s.tien_to_ten,
             "nang_luc": dict(s.nang_luc),
             # Hai cờ cũ giao diện Chatbot đang đọc; giữ để không đổi hai chỗ cùng lúc.
-            # `co_nhom` là câu hỏi của form BOT: bot có đứng được trong nhóm không. Zalo cá nhân
-            # ghi được tin nhóm nhưng bot ở đó chỉ trả lời chat riêng (0.64.80), nên không tính.
-            "co_nhom": s.nl("nhom") and s.kind == "bot", "gui_tai_lieu": s.nl("gui_file"),
+            # `co_nhom` là câu hỏi của form BOT: bot có đứng được trong nhóm không. Từ MinMin
+            # 26.10.53 Zalo cá nhân cũng đứng được trong nhóm (nhóm phải được chủ bật, im nếu
+            # chưa bật), nên tính cả kênh này.
+            "co_nhom": s.nl("nhom") and (s.kind == "bot" or s.id == "zalo_personal"), "gui_tai_lieu": s.nl("gui_file"),
         })
     return out
 

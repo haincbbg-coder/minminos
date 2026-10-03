@@ -466,6 +466,24 @@ def _la_tieng_vong(conn_id: str, thread: str, text: str) -> bool:
     return False
 
 
+def la_tra_loi_bot(conn_id: str, thread: str, reply_to) -> bool:
+    """Tin này là TRẢ LỜI một câu bot vừa nói không (khách bấm Trả lời vào tin của bot).
+    Đối chiếu nội dung tin được trích với những câu bot đã gửi gần đây; không có thông tin
+    trích thì False, không đoán."""
+    if not reply_to:
+        return False
+    trich = reply_to.get("text") or reply_to.get("content") or reply_to.get("msg") \
+        if isinstance(reply_to, dict) else reply_to
+    t = _chuan(trich if isinstance(trich, str) else "")
+    if len(t) < 8:
+        return False
+    now = time.time()
+    for ts, gui in _DA_GUI.get((str(conn_id), str(thread)), []):
+        if now - ts < 6 * 3600 and gui and (gui.startswith(t[:60]) or t.startswith(gui[:60])):
+            return True
+    return False
+
+
 def chu_vua_nhan_tay(conn_id: str, thread: str, now: Optional[float] = None) -> bool:
     """Chủ vừa tự tay nhắn cuộc chat này (trong `TAY_IM` giây) - bot nhường."""
     t = _TAY.get((str(conn_id), str(thread)))

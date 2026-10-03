@@ -451,6 +451,10 @@ def _make_precheck_fn(bot_id: str):
         if _ly_do_im(gia_dinh, meta or {}):
             return {}
         _ghi_nhom_cho(bot_id, meta or {}, text)
+        # Zalo CÁ NHÂN nói dưới tên chính chủ shop: tự chen vào một nhóm lạ để xin được bật là
+        # nhân danh chủ làm điều chủ chưa hề giao. Chỉ báo lên trang Chatbot, trong nhóm im.
+        if _tai_khoan_cua(cfg, meta or {})[1] == "zalo_personal":
+            return {}
         khoa = (bot_id, str((meta or {}).get("chat_id") or ""))
         if khoa in _DA_BAO_NHOM:
             return {}

@@ -4,6 +4,16 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.53] - 2026-10-03
+### Thêm mới
+- Bot trên **Zalo cá nhân đứng được trong NHÓM**. Trước đây bot bỏ qua mọi tin nhóm và ảnh nên chế độ phán xử không có chỗ chạy. Nay: nhóm phải do chủ bật (form bot có ô khai nhóm cho kênh Zalo), nhóm chưa bật thì bot IM hẳn, chỉ lên hàng chờ ở trang Chatbot để chủ bấm Cho phép (không nhân danh chủ chen vào nhóm lạ xin được bật).
+- Nhận ra bị gọi tên trong nhóm: theo tag @ đúng vị trí và cả chữ @Tên gõ tay, so với tên bot và tên tài khoản. Khách bấm Trả lời vào câu của bot cũng tính là gọi bot.
+- Trả lời trong nhóm **tag người vừa hỏi**; mọi "@Tên" khác trong câu được đổi thành tag thật nếu khớp ĐÚNG MỘT thành viên đã nói trong nhóm, mơ hồ thì không đoán. Tag thật đi bằng lệnh `msg send --mention` của chính zalo-agent-cli (cùng bản đã ghim, cùng thư mục đăng nhập); hỏng thì tự rơi về chữ thường qua MCP, câu vẫn tới nhóm.
+- Ảnh/file **có caption** trong nhóm tính như một tin ("@Bot giá cái này?" kèm ảnh thì bot trả lời); ảnh không lời thì bỏ qua.
+### Sửa lỗi
+- Tin gửi vào nhóm Zalo qua MCP đi như tin riêng vì tham số loại tin sai tên (bản zalo-agent-cli ghim là `threadType`, MinMin gửi `type` nên bị bỏ). Nay gửi cả hai.
+- Chưa kiểm tra với tài khoản Zalo thật: phần tag thật bằng CLI cần thử một lần trong nhóm của bố.
+
 ## [26.10.52] - 2026-10-03
 ### Thêm mới
 - Tìm bản gốc từ XML, PDF hoặc ZIP; tìm lại hàng loạt trong kho và xem rõ nguồn đã thử.

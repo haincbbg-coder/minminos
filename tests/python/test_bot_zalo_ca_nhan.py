@@ -9,7 +9,7 @@ công tắc từng người (nick này chủ tự quản lý, đã có Hộp th�
 
 Vì tin gửi đi mang TÊN CHỦ nên các rào dưới đây là phần quan trọng nhất của file này:
 
-  1. Chỉ chat RIÊNG dạng CHỮ: nhóm, ảnh, tiếng, file bỏ qua.
+  1. Chat RIÊNG: chỉ dạng CHỮ. Nhóm (26.10.53): chỉ nhóm chủ đã bật, tin chữ hoặc ảnh có caption.
   2. Tin CŨ (bộ đệm MCP lúc mới bật) bỏ qua, kẻo dội lại câu hỏi của hôm qua.
   3. Chủ vừa TỰ TAY nhắn cuộc chat đó thì bot nhường.
   4. Câu bot vừa gửi quay về ở vòng đọc (tin của chính chủ) KHÔNG được ghi lần hai và KHÔNG được
@@ -91,8 +91,8 @@ zp = channels.spec("zalo_personal")
 check("Zalo cá nhân gắn được bot (có Transport) dù là kênh kind=account",
       zp and zp.kind == "account" and zp.nl("bot"))
 check("nhưng KHÔNG dùng được để tạo tài khoản bằng token", "zalo_personal" not in channels.bot_token_ids())
-check("form bot không đòi cờ nhóm cho kênh này (bot ở đây chỉ trả lời chat riêng)",
-      not next(k for k in channels.cho_giao_dien() if k["id"] == "zalo_personal")["co_nhom"])
+check("form bot cho khai nhóm ở kênh này (26.10.53: bot Zalo cá nhân đứng được trong nhóm)",
+      next(k for k in channels.cho_giao_dien() if k["id"] == "zalo_personal")["co_nhom"])
 tk = channel_accounts.get_account("zalo-1")
 check("kết nối Zalo hiện thành tài khoản kênh (bản ảo, mang đúng id kết nối)",
       tk and tk["id"] == "zalo-1" and tk["channel"] == "zalo_personal" and tk["token_set"], tk)
