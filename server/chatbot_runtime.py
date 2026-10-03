@@ -40,6 +40,7 @@ import channel_accounts
 import channels
 import chatbot_grounding
 import chatbot_log
+import chatbot_phan_xu
 import chatbot_store
 import conversations
 
@@ -313,7 +314,7 @@ def _khop_nhom(danh_sach, chat_id: str) -> bool:
     return cid in ds or bool(khac and khac in ds)
 
 
-def _ly_do_im(bot_cfg: dict, meta: dict) -> str:
+def _ly_do_im(bot_cfg: dict, meta: dict, text: str = "") -> str:
     """Vì sao bot KHÔNG mở miệng ở lượt này. "" nghĩa là cứ trả lời.
 
     Tin nhắn riêng: luôn trả lời. Trong NHÓM: chỉ nhóm đã khai, và theo `reply_when`.
@@ -339,12 +340,32 @@ def _ly_do_im(bot_cfg: dict, meta: dict) -> str:
         return ""
     if (meta or {}).get("mentioned") or (meta or {}).get("reply_to_bot"):
         return ""
+    if bot_cfg.get("reply_when") == "judge" and str(text or "").strip():
+        # Tự phán đoán (MinMin 26.10.49): không ai gọi tên thì đọc ngữ cảnh rồi chấm điểm.
+        # Chỉ chạy khi có `text` thật: chỗ hỏi "giả định nhóm đã bật" không truyền text nên
+        # không bao giờ ghi một quyết định ma.
+        try:
+            aid, kenh = _tai_khoan_cua(bot_cfg, meta or {})
+            cid = str((meta or {}).get("chat_id") or "")
+            nc = conversations.tin_gan_day(kenh, aid, cid)
+            if nc and nc[-1].get("sender_type") == "customer" \
+                    and str(nc[-1].get("text") or "").strip() == str(text).strip():
+                nc = nc[:-1]
+            kq = chatbot_phan_xu.quyet_dinh(
+                str(bot_cfg.get("id") or ""), cid, text, nc,
+                khoa_tin=str((meta or {}).get("message_id") or ""),
+                ten_nhom=str((meta or {}).get("chat_title") or (meta or {}).get("chat_name") or ""))
+            if kq.get("noi"):
+                return ""
+            return "phan_xu_im"
+        except Exception as ex:
+            print(f"[phan_xu] {type(ex).__name__}: {ex}", file=sys.stderr)
     return "khong_goi_ten"
 
 
-def _nen_tra_loi(bot_cfg: dict, meta: dict) -> bool:
+def _nen_tra_loi(bot_cfg: dict, meta: dict, text: str = "") -> bool:
     """Có mở miệng không. Vỏ bool của `_ly_do_im`, giữ cho chỗ gọi chỉ cần biết có/không."""
-    return not _ly_do_im(bot_cfg, meta)
+    return not _ly_do_im(bot_cfg, meta, text)
 
 
 # ============================================================
@@ -412,7 +433,7 @@ def _make_precheck_fn(bot_id: str):
         cfg = chatbot_store.get_bot(bot_id)
         if not cfg:
             return {}
-        ly_do = _ly_do_im(cfg, meta or {})
+        ly_do = _ly_do_im(cfg, meta or {}, text)
         if not ly_do:
             return None
         if ly_do != "nhom_chua_bat":
@@ -696,7 +717,7 @@ def _make_answer_fn(bot_id: str):
         # Lớp thứ HAI của cùng một luật (`precheck_fn` đã chặn ở tầng kênh). Giữ cả hai vì hai
         # cái canh hai thứ khác nhau: chốt kia để không nhấp nháy tin trạng thái trước mặt
         # người ngoài, chốt này để một kênh tương lai quên nối chốt kia vẫn không lọt.
-        if not _nen_tra_loi(cfg, meta or {}):
+        if not _nen_tra_loi(cfg, meta or {}, text):
             return {"text": "", "files": [], "im_lang": True}
         chat_id = str((meta or {}).get("chat_id") or "")
         if _qua_han_muc(bot_id, chat_id, cfg.get("rate_limit")):

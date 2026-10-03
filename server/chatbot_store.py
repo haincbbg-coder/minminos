@@ -64,7 +64,7 @@ KENH_DEFAULT = "telegram" if "telegram" in KENH else (KENH[0] if KENH else "tele
 KENH_NHAN = {k: channels.nhan(k) for k in KENH}
 KENH_NGUON_TOKEN = {k: (channels.spec(k).lay_token if channels.spec(k) else "") for k in KENH}
 
-REPLY_WHEN = ("mention", "always")
+REPLY_WHEN = ("mention", "always", "judge")
 RATE_MIN, RATE_MAX, RATE_DEFAULT = 1, 200, 20
 
 # Bot lấy câu trả lời từ đâu khi tài liệu không phủ được câu hỏi.

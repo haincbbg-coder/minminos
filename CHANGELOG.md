@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.49] - 2026-10-03
+### Thêm mới
+- Bot trong nhóm có chế độ **Tự phán đoán**: không ai gọi tên thì bot đọc vài tin gần nhất rồi tự quyết nên nói hay im (tin hỏi giá, còn hàng, size thì nói; xã giao, khách nói với nhau, bot vừa nói xong thì im). Chấm bằng luật nên không tốn lượt gọi model cho mỗi tin trong nhóm đông.
+- Mọi quyết định, kể cả im, được ghi kèm lý do (xem `GET /chatbots/{id}/phan-xu`). Chủ chấm Đúng/Sai (`POST /chatbots/{id}/phan-xu/phan-hoi`): Sai thì ngưỡng của riêng nhóm đó lệch một nấc, có chặn trên chặn dưới. `POST .../phan-xu/quen` xoá phần đã học.
+- Thiết kế học theo cách Javis 0.65 làm, nhưng viết lại riêng cho MinMin.
+
 ## [26.10.48] - 2026-10-03
 ### Sửa lỗi
 - Nghe thử giọng ChatGPT Live phát được âm thanh: bổ sung 9 file mẫu giọng (arbor, breeze, cove, ember, juniper, maple, sol, spruce, vale) mà trang Giọng nói gọi tới nhưng trong MinMin bị thiếu nên bấm Nghe thử không ra tiếng. Lấy từ Javis 0.65.17.

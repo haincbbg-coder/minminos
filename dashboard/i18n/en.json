@@ -1209,6 +1209,8 @@
   "cb.lb_reply_when": "When the bot speaks up in a group",
   "cb.rw_mention": "Only when mentioned or replied to (default)",
   "cb.rw_always": "Every message in allowed groups",
+  "cb.rw_judge": "Judge: the bot reads context and decides to speak or stay quiet",
+  "cb.tl_judge": "when it judges it should speak",
   "cb.rw_moi_tin": "Every message",
   "cb.hint_rw_1": "only suits small groups, and you must also turn off privacy mode in @BotFather (",
   "cb.hint_rw_2": "→ Disable) before Telegram forwards every message to the bot. A bot butting into every sentence customers say to each other is more of a nuisance than a help.",

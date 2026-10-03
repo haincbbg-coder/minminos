@@ -333,7 +333,7 @@
         '<div class="cb-meta">' +
           '<span>' + esc(!coNhom(b) ? window.t("cb.chi_rieng") : (b.groups || []).length
             ? (window.t("cb.n_nhom", { count: b.groups.length }) + ", " +
-               (b.reply_when === "always" ? window.t("cb.tl_moi_tin") : window.t("cb.tl_goi_ten")))
+               (b.reply_when === "always" ? window.t("cb.tl_moi_tin") : b.reply_when === "judge" ? window.t("cb.tl_judge") : window.t("cb.tl_goi_ten")))
             : window.t("cb.chi_rieng")) + '</span>' +
           '<span>' + esc(b.nguon_tra_loi === "tai_lieu" ? window.t("cb.nguon_tl_ngan")
                                                         : window.t("cb.nguon_ag_ngan")) + '</span>' +
@@ -748,6 +748,8 @@
                   esc(window.t("cb.rw_mention")) + '</option>' +
                 '<option value="always"' + (b && b.reply_when === "always" ? " selected" : "") + '>' +
                   esc(window.t("cb.rw_always")) + '</option>' +
+                '<option value="judge"' + (b && b.reply_when === "judge" ? " selected" : "") + '>' +
+                  esc(window.t("cb.rw_judge")) + '</option>' +
               '</select>' +
               '<div class="cb-hint"><b>' + esc(window.t("cb.rw_moi_tin")) + '</b> ' +
               esc(window.t("cb.hint_rw_1")) + '<b>/setprivacy</b> ' +
