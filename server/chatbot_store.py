@@ -305,6 +305,103 @@ def co_tu_khoa_cam(bot: dict, text: str) -> bool:
     return any(k.lower() in t for k in ((bot or {}).get("cam_tu_khoa") or []))
 
 
+MAX_NHOM_KHACH = 12
+
+
+def _clean_pham_vi(d: dict) -> dict:
+    """Phần PHẠM VI dùng chung giữa nhóm khách và người lạ."""
+    return {
+        "agent_slug": (str(d.get("agent_slug")).strip() if _agent_slug_ok(str(d.get("agent_slug") or "").strip()) else ""),
+        "nguon_tra_loi": (d.get("nguon_tra_loi") if d.get("nguon_tra_loi") in NGUON else ""),
+        "noi_duoc": _clean_chu_de(d.get("noi_duoc")),
+        "noi_cam": _clean_chu_de(d.get("noi_cam")),
+        "cam_tu_khoa": _clean_tu_khoa(d.get("cam_tu_khoa")),
+        "ngoai_pham_vi": (d.get("ngoai_pham_vi") if d.get("ngoai_pham_vi") in NGOAI_PHAM_VI else "tu_choi"),
+    }
+
+
+def _json_hoac(v: Any):
+    if isinstance(v, str):
+        try:
+            return json.loads(v) if v.strip() else None
+        except Exception:
+            return None
+    return v
+
+
+def _clean_nhom_khach(v: Any) -> List[dict]:
+    """Các NHÓM KHÁCH của một bot. Mỗi nhóm: tên, thành viên (id chat riêng hoặc nhóm), bật/tắt,
+    và phạm vi trả lời RIÊNG (Agent, nguồn, được/cấm nói gì, từ khoá cấm)."""
+    v = _json_hoac(v)
+    out: List[dict] = []
+    seen = set()
+    for d in (v if isinstance(v, list) else []):
+        if not isinstance(d, dict):
+            continue
+        nid = re.sub(r"[^a-z0-9]", "", str(d.get("id") or "").lower())[:12] or uuid.uuid4().hex[:8]
+        if nid in seen:
+            nid = uuid.uuid4().hex[:8]
+        seen.add(nid)
+        ten = re.sub(r"\s+", " ", str(d.get("ten") or "")).strip()[:60] or "Nhóm khách"
+        item = {"id": nid, "ten": ten, "bat": d.get("bat") not in (False, "0", "false", 0),
+                "thanh_vien": _clean_rieng_cho_phep(d.get("thanh_vien"))}
+        item.update(_clean_pham_vi(d))
+        out.append(item)
+    return out[:MAX_NHOM_KHACH]
+
+
+def _clean_nguoi_la(v: Any) -> dict:
+    """Chính sách cho NGƯỜI LẠ (không thuộc nhóm khách nào, chưa được cho phép). `bat` None =
+    theo mặc định của kênh (Zalo cá nhân: tắt)."""
+    v = _json_hoac(v)
+    if not isinstance(v, dict) or not v:
+        return {}
+    b = v.get("bat")
+    item = {"bat": (None if b in (None, "") else b not in (False, "0", "false", 0))}
+    item.update(_clean_pham_vi(v))
+    return item
+
+
+def nhom_cua(bot: dict, chat_id: str) -> Optional[dict]:
+    cid = str(chat_id or "").strip()
+    for n in (bot or {}).get("nhom_khach") or []:
+        if cid and cid in {str(x) for x in (n.get("thanh_vien") or [])}:
+            return n
+    return None
+
+
+def _ap_pham_vi(cfg: dict, pv: dict) -> dict:
+    """Bản sao `cfg` mang phạm vi của một nhóm/người lạ. Phạm vi nhóm THAY HẲN phạm vi chung
+    của bot (ô trống = không giới hạn), để nhóm nội bộ được nói điều bot chung bị cấm."""
+    c = dict(cfg)
+    for k in ("noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi"):
+        c[k] = pv.get(k) if k != "ngoai_pham_vi" else (pv.get(k) or "tu_choi")
+    if pv.get("nguon_tra_loi"):
+        c["nguon_tra_loi"] = pv["nguon_tra_loi"]
+    if pv.get("agent_slug"):
+        c["agent"] = dict(cfg.get("agent") or {}, slug=pv["agent_slug"])
+        c["agents_phu"] = []
+    return c
+
+
+def hieu_luc(bot: dict, chat_id: str, chat_type: str = "private") -> tuple:
+    """(cfg hiệu lực cho cuộc chat này, nhãn, được_nói). Nhãn: tên nhóm khách | "Người lạ" | "".
+    Thứ tự: nhóm khách chứa cuộc chat > cuộc chat đã được cho phép (Hộp thư/ô id) > người lạ.
+    Nhóm (group chat) chỉ tính nhóm khách; gate theo danh sách nhóm vẫn ở `_ly_do_im`."""
+    n = nhom_cua(bot, chat_id)
+    if n:
+        return _ap_pham_vi(bot, n), n["ten"], bool(n.get("bat"))
+    if chat_type != "private":
+        return bot, "", True
+    if str(chat_id) in {str(x) for x in (bot.get("rieng_cho_phep") or [])}:
+        return bot, "", True
+    nl = bot.get("nguoi_la") or {}
+    bat = nl.get("bat")
+    if bat is None:
+        bat = pham_vi_rieng(bot) == "tat_ca"
+    return (_ap_pham_vi(bot, nl) if nl else bot), "Người lạ", bool(bat)
+
+
 def pham_vi_rieng(bot: dict) -> str:
     """'tat_ca' = trả lời mọi người nhắn riêng; 'chon' = chỉ cuộc chat chủ đã cho phép.
 
@@ -569,6 +666,8 @@ def create_bot(data: dict) -> tuple[Optional[str], str]:
             "agents_phu": _clean_agents_phu(data.get("agents_phu"), agent_slug),
             "rieng_pham_vi": (data.get("rieng_pham_vi") if data.get("rieng_pham_vi") in RIENG_PHAM_VI else ""),
             "rieng_cho_phep": _clean_rieng_cho_phep(data.get("rieng_cho_phep")),
+            "nhom_khach": _clean_nhom_khach(data.get("nhom_khach")),
+            "nguoi_la": _clean_nguoi_la(data.get("nguoi_la")),
             "noi_duoc": _clean_chu_de(data.get("noi_duoc")),
             "noi_cam": _clean_chu_de(data.get("noi_cam")),
             "cam_tu_khoa": _clean_tu_khoa(data.get("cam_tu_khoa")),
@@ -612,7 +711,7 @@ _PATCHABLE = ("name", "icon", "groups", "reply_when", "handoff_to", "rate_limit"
               "agent_slug", "agent_brain", "brain", "bot_username", "token", "enabled",
               "nguon_tra_loi", "muc_quyen", "ngon_ngu", "account_ids",
               "agents_phu", "rieng_pham_vi", "rieng_cho_phep",
-              "noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi")
+              "noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi", "nhom_khach", "nguoi_la")
 # `channel` CỐ Ý đứng ngoài danh sách trắng. Đổi kênh của một bot đã tạo là đổi sang một CON
 # BOT KHÁC: token khác, danh tính khác, khách khác, và cả đống id nhóm đang lưu lập tức vô
 # nghĩa. Cho sửa tại chỗ thì bản ghi còn nguyên tên và lịch sử của con cũ trong khi nó đã là
@@ -681,6 +780,10 @@ def update_bot(bot_id: str, patch: dict) -> tuple[bool, str]:
                 elif k == "rieng_pham_vi":
                     if v in RIENG_PHAM_VI or v == "":
                         b["rieng_pham_vi"] = v
+                elif k == "nhom_khach":
+                    b[k] = _clean_nhom_khach(v)
+                elif k == "nguoi_la":
+                    b[k] = _clean_nguoi_la(v)
                 elif k in ("noi_duoc", "noi_cam"):
                     b[k] = _clean_chu_de(v)
                 elif k == "cam_tu_khoa":

@@ -3419,3 +3419,11 @@ body.ne-full-on .cview { z-index: 250; }
 .cb-db { margin-top: 8px; }
 .cb-db-panel { margin-top: 8px; }
 .cb-db-panel .cb-db-q { width: 100%; margin-bottom: 6px; }
+
+/* Nhóm khách của bot (26.10.60) */
+.cb-nk-tieude { margin: 18px 0 4px; font-size: 14px; font-weight: 700; color: var(--text); }
+.cb-nk { margin: 10px 0; padding: 10px 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--text) 4%, transparent); }
+.cb-nk-dau { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cb-nk-dau .nk-ten { flex: 1 1 160px; min-width: 0; }
+.cb-nk textarea, .cb-nk input.nk-tukhoa, .cb-nk select { width: 100%; }
+.cb-nk-dau select { width: auto; flex: 1 1 200px; }

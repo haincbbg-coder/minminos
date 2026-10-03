@@ -370,18 +370,22 @@ def _ly_do_im(bot_cfg: dict, meta: dict, text: str = "") -> str:
     đúng và phải im tuyệt đối.
     """
     loai = str((meta or {}).get("chat_type") or "private")
+    cid_ = str((meta or {}).get("chat_id") or "")
+    # Nhóm khách (26.10.60): cuộc chat thuộc nhóm nào thì theo phạm vi của nhóm đó; không thuộc
+    # nhóm nào thì là người lạ (chat riêng). `eff` là bản cấu hình đã mang phạm vi tương ứng.
+    eff, _nhan, duoc = chatbot_store.hieu_luc(bot_cfg, cid_, loai)
     # Từ khoá chủ cấm: chặn bằng code, đứng trước mọi luật khác, áp cả chat riêng lẫn nhóm.
-    if str(text or "").strip() and chatbot_store.co_tu_khoa_cam(bot_cfg, text):
+    if str(text or "").strip() and chatbot_store.co_tu_khoa_cam(eff, text):
         return "tu_khoa_cam"
     if loai == "private":
-        # Phạm vi chat riêng (26.10.58): 'chon' thì chỉ cuộc chat chủ đã cho phép. Zalo cá nhân
-        # mặc định 'chon' để bot không tự trả lời cả danh bạ của chủ.
-        if chatbot_store.pham_vi_rieng(bot_cfg) == "chon":
-            cho = {str(x) for x in (bot_cfg.get("rieng_cho_phep") or [])}
-            if str((meta or {}).get("chat_id") or "") not in cho:
-                return "rieng_chua_cho"
+        if not duoc:
+            return "nhom_khach_tat" if _nhan and _nhan != "Người lạ" else "rieng_chua_cho"
         return ""
     nhom = [str(x) for x in (bot_cfg.get("groups") or [])]
+    if chatbot_store.nhom_cua(bot_cfg, cid_):
+        if not duoc:
+            return "nhom_khach_tat"
+        nhom = nhom + [cid_]    # nhóm đã nằm trong một nhóm khách đang bật thì coi như được phép
     # Chưa khai nhóm nào thì bot không tự nhận việc trong nhóm lạ. Cùng một lý do với nhóm đã
     # khai nhưng không phải nhóm này, nên cùng một mã: cả hai đều sửa bằng cách cho phép nhóm.
     if not nhom or not _khop_nhom(nhom, (meta or {}).get("chat_id")):
@@ -817,6 +821,7 @@ async def soan_cau_tra_loi(conv: dict, tin_khach: dict) -> dict:
     if not text:
         return {"ok": False, "ly_do": "khong_co_tin_khach"}
     chat_id = str(conv.get("external_chat_id") or "")
+    cfg = chatbot_store.hieu_luc(cfg, chat_id, str(conv.get("chat_type") or "private"))[0]
     key = str(conv.get("channel_account_id") or "")
     aid = key.split(":", 1)[1] if ":" in key else key
     kenh = str(conv.get("channel") or "")
@@ -860,6 +865,8 @@ def _make_answer_fn(bot_id: str):
         if not _nen_tra_loi(cfg, meta or {}, text):
             return {"text": "", "files": [], "im_lang": True}
         chat_id = str((meta or {}).get("chat_id") or "")
+        # Áp phạm vi của nhóm khách (Agent riêng, được/cấm nói gì...) cho lượt này.
+        cfg = chatbot_store.hieu_luc(cfg, chat_id, str((meta or {}).get("chat_type") or "private"))[0]
         if _qua_han_muc(bot_id, chat_id, cfg.get("rate_limit")):
             return {"text": "Anh chị nhắn hơi nhanh, em xin phép trả lời lại sau ít phút ạ.",
                     "files": []}

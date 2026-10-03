@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.60] - 2026-10-04
+### Thêm mới
+- **Nhóm khách cho bot**: tạo nhiều nhóm, mỗi nhóm có người riêng (chọn từ danh bạ Zalo), phạm vi trả lời riêng (được nói gì, cấm nói gì, từ khoá cấm, ngoài phạm vi thì từ chối hay im), nguồn trả lời riêng và có thể dùng Agent riêng. Ví dụ nhóm Khách mua hàng chỉ hỏi size, tồn kho, giao hàng; nhóm Nội bộ được hỏi chuyện của MinMin. Có thể bật/tắt từng nhóm.
+- **Nhóm Người lạ**: người chưa thuộc nhóm nào (ví dụ người lạ kết bạn hỏi tuyển dụng) có chính sách riêng: bot im, hoặc trả lời trong phạm vi hẹp như chỉ nói về tuyển dụng.
+- Ở Hộp thư, mỗi cuộc chat có ô chọn **Nhóm khách** để xếp người đó vào nhóm ngay tại chỗ.
+
 ## [26.10.59] - 2026-10-04
 ### Thêm mới
 - **Chọn người và nhóm từ danh bạ Zalo, không phải chép id**: ở form bot, bấm **Chọn từ danh bạ Zalo**, gõ tên để tìm (không cần dấu) rồi tích. Dùng cho cả "ai được nhắn riêng" và "nhóm được phép".

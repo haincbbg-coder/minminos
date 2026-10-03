@@ -578,6 +578,7 @@
       var d = await api("/conversations/" + c.id + "/phan-xu");
       _px.items = d.items || [];
       _px.can = !!d.can_cho_phep; _px.da = !!d.da_cho_phep;
+      _px.nk = d.nhom_khach || []; _px.nh = d.nhom_hien_tai || "";
     } catch (e) { _px.items = []; }
   }
   function veBotBar(c, bar) {
@@ -585,7 +586,12 @@
     var qd = (_px.id === c.id && _px.items[0]) || null;
     var im = qd && !qd.noi && !qd.phan_hoi;
     bar.innerHTML =
-      (_px.id === c.id && _px.can
+      (_px.id === c.id && (_px.nk || []).length
+        ? '<div class="ht-im"><span>' + esc(window.t("ht.nhom_khach")) + '</span>' +
+          '<select class="ht-nk"><option value="">' + esc(window.t("ht.nk_khong")) + '</option>' +
+          _px.nk.map(function (n) { return '<option value="' + esc(n.id) + '"' + (n.id === _px.nh ? " selected" : "") + '>' + esc(n.ten) + '</option>'; }).join("") +
+          '</select></div>' : "") +
+      (_px.id === c.id && _px.can && !(_px.nk || []).length
         ? '<div class="ht-im"><span>' + esc(window.t(_px.da ? "ht.da_cho" : "ht.chua_cho")) + '</span>' +
           '<button type="button" class="s-btn-ghost ht-cho">' + esc(window.t(_px.da ? "ht.thoi_cho" : "ht.cho_tl")) + '</button></div>' : "") +
       (qd && !qd.noi
@@ -608,6 +614,14 @@
         veBotBar(c, bar);
       };
     });
+    var sk = bar.querySelector(".ht-nk");
+    if (sk) sk.onchange = async function () {
+      try {
+        await api("/conversations/" + c.id + "/nhom-khach", { method: "POST", body: fd({ nhom_id: sk.value }) });
+        _px.nh = sk.value;
+      } catch (e) { alert(e.message); }
+      veBotBar(c, bar);
+    };
     var nc = bar.querySelector(".ht-cho");
     if (nc) nc.onclick = async function () {
       try {
