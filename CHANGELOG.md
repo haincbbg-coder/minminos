@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.50] - 2026-10-03
+### Thêm mới
+- Hộp thư, cuộc chat có bot: nút **Gợi ý câu trả lời** (bot soạn nháp vào ô gõ, bố sửa rồi tự gửi, không gửi gì cả) và nút **Trả lời giúp tin này** (bot trả lời tin khách cuối và gửi ngay, kể cả khi bộ phán xử đã chọn im; vẫn là bot nói nên không tự tiếp quản cuộc chat).
+- Dòng **Bot im: lý do** hiện ngay trong cuộc chat khi bộ phán xử chọn im, kèm hai nút "Im là đúng" / "Lẽ ra phải nói" để bot học ngưỡng riêng của nhóm đó.
+- Thiết kế học theo Javis 0.65, viết lại riêng cho MinMin.
+
 ## [26.10.49] - 2026-10-03
 ### Thêm mới
 - Bot trong nhóm có chế độ **Tự phán đoán**: không ai gọi tên thì bot đọc vài tin gần nhất rồi tự quyết nên nói hay im (tin hỏi giá, còn hàng, size thì nói; xã giao, khách nói với nhau, bot vừa nói xong thì im). Chấm bằng luật nên không tốn lượt gọi model cho mỗi tin trong nhóm đông.
