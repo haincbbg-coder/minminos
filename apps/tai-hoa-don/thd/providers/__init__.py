@@ -73,6 +73,8 @@ def provider_names() -> list[str]:
 
 # MSTTCGP (MST tổ chức cung cấp giải pháp hóa đơn) -> tên NHÀ PHÁT HÀNH, để hiện trên bảng.
 TCGP_NAME = {
+    "0106026495": "M-Invoice",
+    "0106026495001": "M-Invoice (CN TP.HCM)",
     "0401486901": "VIN-HOADON (Visnam)",
     "0402024593": "VIN-HOADON",
     "0105232093": "CyberBill (xCyber)",
@@ -135,6 +137,13 @@ def manual_download_info(xml_bytes: bytes, inv: Optional[dict] = None) -> Option
     code = C.tcgp(txt)
     mst = C.seller_mst(txt)
     sh = C.shdon(txt)
+
+    if code in ("0106026495", "0106026495001", "0304281106"):
+        lookup = str((inv or {}).get('_ma_tra_cuu') or '')
+        for field in ('Mã tra cứu', 'MaTraCuu', 'Matracuu', 'MTCuu', 'TransactionID'):
+            lookup = lookup or C.ttkhac(txt, field)
+        return {'provider': TCGP_NAME[code], 'url': 'https://tracuuhoadon.minvoice.com.vn/tra-cuu-hoa-don',
+                'code': lookup, 'method': 'Mã trong XML; đối chiếu Gmail nếu cổng hãng chưa trả file', 'mst': mst}
 
     def std(d, sh_=""):
         """Gắn tham số chuẩn hddt_* vào URL để EXTENSION trình duyệt tự điền vào ô.

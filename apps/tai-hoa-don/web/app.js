@@ -121,6 +121,56 @@
   var viecGmail = { hop: $("#gViec"), ten: $("#gViecTen"), so: $("#gViecSo"), thanh: $("#gThanh"), log: $("#gLog"), dung: $("#gDung") };
 
   // ---------------- tab
+  function setupRecovery() {
+    var panel=document.createElement('details'); panel.className='the recovery'; panel.id='recovery';
+    panel.innerHTML='<summary>Tìm bản gốc từ XML/PDF</summary><p>Gửi chứng từ hoặc chọn hóa đơn trong kho. MinMin đối chiếu Gmail, mã tra cứu và cổng nhà phát hành; chỉ lưu bản gốc đã khớp thông tin.</p>'+
+      '<label class="recovery-drop" id="recoveryDrop">Kéo thả XML, PDF Trống đồng hoặc ZIP vào đây<input id="recoveryFiles" type="file" accept=".xml,.pdf,.zip" multiple><small>Tối đa 20 MB/file, 100 mục/ZIP. PDF đầu vào dùng để tìm kiếm, không tự coi là bản gốc.</small></label>'+
+      '<div class="hang"><button class="nut" id="recoveryRefresh">Làm mới kết quả</button><label class="tich"><input type="checkbox" id="recoveryRescan"> Quét Gmail bổ sung theo ngày hóa đơn (±7 ngày)</label><button class="nut chinh" id="recoveryRun">Tìm bản gốc đã chọn</button><span id="recoveryCount" role="status"></span></div>'+
+      '<p id="recoveryMessage" role="status"></p><div class="cuon"><table id="recoveryTable"><thead><tr><th><input type="checkbox" id="recoveryAll" aria-label="Chọn toàn bộ chứng từ cần tìm"></th><th>Chứng từ / nhà phát hành</th><th>Kết quả và nguồn đã thử</th><th>Thao tác</th></tr></thead><tbody></tbody></table></div>'+
+      '<div class="hang"><button class="nut" id="recoveryPrev">Trang trước</button><span id="recoveryPage"></span><button class="nut" id="recoveryNext">Trang sau</button></div>'+
+      '<div id="rViec" class="viec" hidden><strong id="rTen"></strong> <span id="rSo"></span> <button id="rDung" class="nut">Dừng</button><progress id="rThanh"></progress><details><summary>Nhật ký tìm bản gốc</summary><pre id="rLog"></pre></details></div>';
+    document.querySelector('main').prepend(panel);
+    var rows=[], selected=new Set(), page=1, running=false;
+    var task={hop:$('#rViec'),ten:$('#rTen'),so:$('#rSo'),thanh:$('#rThanh'),log:$('#rLog'),dung:$('#rDung')};
+    function draw(){
+      var pages=Math.max(1,Math.ceil(rows.length/30)); page=Math.min(page,pages);
+      $('#recoveryPage').textContent='Trang '+page+' / '+pages;
+      $('#recoveryCount').textContent=rows.length+' chứng từ · Đã chọn '+selected.size;
+      $('#recoveryPrev').disabled=page===1; $('#recoveryNext').disabled=page===pages;
+      $('#recoveryRun').disabled=running || !selected.size;
+      $('#recoveryAll').checked=!!rows.length && selected.size===rows.length;
+      $('#recoveryAll').indeterminate=selected.size>0 && selected.size<rows.length;
+      $('#recoveryTable tbody').innerHTML=rows.slice((page-1)*30,page*30).map(function(r){
+        return '<tr><td><input type="checkbox" data-rid="'+esc(r.id)+'" aria-label="Chọn '+esc(r.label||r.name||r.id)+'"'+(selected.has(r.id)?' checked':'')+'></td><td><strong>'+esc(r.label||r.name||r.id)+'</strong><br>'+esc(r.provider||'Chưa nhận diện hãng')+'</td><td><strong>'+esc(r.status==='done'?'Đã có bản gốc':r.status==='ready'?'Sẵn sàng':'Cần bổ sung nguồn')+'</strong><p>'+esc(r.reason)+'</p>'+(r.attempts&&r.attempts.length?'<details><summary>Nguồn đã thử ('+r.attempts.length+')</summary><ol>'+r.attempts.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ol></details>':'')+'</td><td>'+(r.status==='done'&&r.download?'<a class="nut" href="'+esc(r.download)+'">Tải PDF gốc</a>':'')+'<details><summary>Bổ sung mã/link</summary><label>Mã tra cứu<input data-code="'+esc(r.id)+'" value="'+esc(r.code||'')+'"></label><label>Link tra cứu HTTPS<input type="url" data-url="'+esc(r.id)+'" value="'+esc(r.url||'')+'"></label><button class="nut" data-save="'+esc(r.id)+'">Lưu nguồn</button></details><button class="nut" data-run="'+esc(r.id)+'"'+(running?' disabled':'')+'>Tìm lại</button></td></tr>';
+      }).join('') || '<tr><td colspan="4">Chưa có chứng từ. Gửi file hoặc chọn “Tìm lại bản gốc” trong danh sách hóa đơn.</td></tr>';
+      panel.querySelectorAll('[data-rid]').forEach(function(el){el.onchange=function(){el.checked?selected.add(el.dataset.rid):selected.delete(el.dataset.rid);draw();};});
+      panel.querySelectorAll('[data-run]').forEach(function(el){el.onclick=function(){run([el.dataset.run]);};});
+      panel.querySelectorAll('[data-save]').forEach(function(el){el.onclick=async function(){try{var id=el.dataset.save; await goi('tim-ban-goc/nguon',{json:{id:id,code:panel.querySelector('[data-code="'+id+'"]').value,url:panel.querySelector('[data-url="'+id+'"]').value}}); await load(); message('Đã lưu nguồn; bấm Tìm lại để tiếp tục.');}catch(e){message(e.message);}};});
+    }
+    function message(s){$('#recoveryMessage').textContent=s;}
+    async function load(){var d=await goi('tim-ban-goc');rows=d.rows;draw();}
+    async function run(ids){
+      if(running)return;running=true;draw();
+      try{var d=await goi('tim-ban-goc/chay',{json:{ids:ids,rescan:$('#recoveryRescan').checked}});localStorage.setItem('minmin.invoiceRecoveryJob',d.viec);watch(d.viec);}
+      catch(e){running=false;draw();message(e.message);}
+    }
+    function watch(id){theoDoi(id,task,async function(v){running=false;localStorage.removeItem('minmin.invoiceRecoveryJob');await load();if(dn)await taiBang();await taiGmail();message(v.trang_thai==='xong'?'Đã tìm xong. Xem kết quả từng hóa đơn bên trên.':v.loi||'Đã dừng; các file đã tìm được được giữ lại.');});}
+    async function upload(files){
+      if(!files.length)return; $('#recoveryFiles').disabled=true;panel.open=true;
+      try{var list=Array.from(files).sort(function(a,b){return Number(!a.name.toLowerCase().endsWith('.xml'))-Number(!b.name.toLowerCase().endsWith('.xml'));});
+        for(var f of list){if(f.size>20*1024*1024)throw new Error(f.name+': vượt 20 MB.');message('Đang đọc '+f.name+'…');var b64=await new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result.split(',')[1]);};reader.onerror=reject;reader.readAsDataURL(f);});var d=await goi('tim-ban-goc/nhap',{json:{name:f.name,data:b64}});d.rows.forEach(function(r){selected.add(r.id);});}
+        await load();message('Đã đọc chứng từ. Kiểm tra danh sách rồi bấm Tìm bản gốc đã chọn.');
+      }catch(e){message(e.message);}finally{$('#recoveryFiles').disabled=false;$('#recoveryFiles').value='';}
+    }
+    $('#recoveryFiles').onchange=function(){upload(this.files);};
+    $('#recoveryDrop').ondragover=function(e){e.preventDefault();};$('#recoveryDrop').ondrop=function(e){e.preventDefault();upload(e.dataTransfer.files);};
+    $('#recoveryRun').onclick=function(){run(Array.from(selected));};$('#recoveryRefresh').onclick=function(){load().catch(function(e){message(e.message);});};
+    $('#recoveryAll').onchange=function(){selected=this.checked?new Set(rows.map(function(r){return r.id;})):new Set();draw();};
+    $('#recoveryPrev').onclick=function(){page--;draw();};$('#recoveryNext').onclick=function(){page++;draw();};
+    panel.addEventListener('toggle',function(){if(panel.open)load().catch(function(e){message(e.message);});});
+    [['#nutTai','tct'],['#gTai','gmail']].forEach(function(pair){var b=document.createElement('button');b.type='button';b.className='nut';b.textContent='Tìm lại bản gốc';$(pair[0]).after(b);b.onclick=async function(){try{var payload=pair[1]==='tct'?phamViXuat({}):{gmail_ids:gmailScope().ids};var d=await goi('tim-ban-goc/kho',{json:payload});selected=new Set(d.ids);panel.open=true;await load();panel.scrollIntoView({behavior:'smooth',block:'start'});message('Đang tìm lại '+d.ids.length+' hóa đơn.');run(d.ids);}catch(e){bao(e.message);}};});
+    var job=localStorage.getItem('minmin.invoiceRecoveryJob');if(job){panel.open=true;running=true;watch(job);}
+  }
   function moTab(t) {
     if (!tt[t]) t = tt.tai ? "tai" : tt.gmail ? "gmail" : "chungtu";
     document.querySelectorAll(".tab button").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === t); });
@@ -737,6 +787,7 @@
     datNgayMacDinh($("#gTu"), $("#gDen"));
     setupTools();
     gan();
+    setupRecovery();
     var s;
     try { s = await goi("trang-thai"); } catch (e) { bao(e.message); return; }
     tt.tai = s.tai_hoa_don; tt.gmail = s.gmail; tt.chungtu = s.bo_chung_tu || s.tai_hoa_don;

@@ -130,10 +130,15 @@ _URL_SKIP_KW = ("unsubscribe", "facebook.com", "zalo.me", "youtube.com", "google
 
 
 def _find_lookup_link(body: str) -> str:
+    from urllib.parse import urlsplit
     """Tìm URL trang tra cứu/tải hóa đơn trong email (dùng cho NCC chưa có bộ đọc riêng)."""
-    for m in _RE_ANY_URL.finditer(body or ""):
+    # Image beacons such as email.kiemtrahoadon.vn/o/... are not lookup pages.
+    body = re.sub(r'<img\b[^>]*>', '', body or '', flags=re.I)
+    for m in _RE_ANY_URL.finditer(body):
         url = m.group(0).rstrip(".,);'\"")
         low = url.lower()
+        if re.search(r'/(?:o|pixel|track|open)/', urlsplit(url).path, re.I):
+            continue
         if any(b in low for b in _URL_SKIP_KW):
             continue
         if any(k in low for k in _LOOKUP_URL_KW):

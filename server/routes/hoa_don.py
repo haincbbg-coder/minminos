@@ -1541,6 +1541,8 @@ XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def register(app: FastAPI) -> None:
+    from routes.invoice_recovery import register as register_recovery
+    register_recovery(app, sys.modules[__name__])
     A = GOC + "/api"
 
     # ---------------- giao diện
