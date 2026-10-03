@@ -278,9 +278,10 @@ def register(app, hd):
                         except Exception as e:
                             log(str(e))
                 if pdf:
-                    folder = hd.goc_du_lieu() / 'tim-ban-goc' / 'verified'
+                    scope = hashlib.sha256(f'{mst}/{loai}/{key}'.encode()).hexdigest()[:24]
+                    folder = hd.goc_du_lieu() / 'tim-ban-goc' / 'verified' / scope
                     folder.mkdir(parents=True, exist_ok=True)
-                    dest = folder / (hashlib.sha256(pdf).hexdigest() + '.pdf')
+                    dest = folder / (hd.ten_file(inv) + '_goc.pdf')
                     dest.write_bytes(pdf)
                     inv.update(_goc_path=hd._tuong_doi(str(dest)), _goc_nguon=source)
                     inv.pop('_goc_loi', None)
