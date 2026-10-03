@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.59] - 2026-10-04
+### Thêm mới
+- **Chọn người và nhóm từ danh bạ Zalo, không phải chép id**: ở form bot, bấm **Chọn từ danh bạ Zalo**, gõ tên để tìm (không cần dấu) rồi tích. Dùng cho cả "ai được nhắn riêng" và "nhóm được phép".
+- **Phạm vi trả lời của bot**: khai bot ĐƯỢC trả lời về gì, KHÔNG ĐƯỢC trả lời về gì, và câu ngoài phạm vi thì từ chối lịch sự hay im lặng. Thêm **từ khoá cấm**: tin có từ đó là bot im hẳn, máy chặn cứng chứ không nhờ bot tự hiểu.
+### Sửa lỗi
+- Ô tick Agent phụ nằm lệch xuống dòng riêng, nay nằm cùng dòng với tên.
+
 ## [26.10.58] - 2026-10-03
 ### Thêm mới
 - **Một bot gắn nhiều Agent**: ngoài Agent chính (giọng của bot), chọn thêm tối đa 5 Agent phụ ở form bot. Bot biết thêm các vai phụ để trả lời đúng chuyên môn khi khách hỏi đúng chủ đề.

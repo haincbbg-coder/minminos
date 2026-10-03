@@ -19345,7 +19345,9 @@ async def chatbots_create(name: str = Form(...), agent_slug: str = Form(...),
                           channel: str = Form(""), xac_nhan_rui_ro: str = Form(""),
                           ngon_ngu: str = Form(""), account_ids: str = Form(""),
                           account_label: str = Form(""), agents_phu: str = Form(""),
-                          rieng_pham_vi: str = Form(""), rieng_cho_phep: str = Form("")):
+                          rieng_pham_vi: str = Form(""), rieng_cho_phep: str = Form(""),
+                          noi_duoc: str = Form(""), noi_cam: str = Form(""),
+                          cam_tu_khoa: str = Form(""), ngoai_pham_vi: str = Form("")):
     # Bot sống TRONG một brain: Agent nó dùng và tài liệu nó đọc là cùng một chỗ. Nhận cả hai
     # tên tham số và tự bù cho nhau, nên người gọi chỉ cần gửi một cái.
     br = (brain or agent_brain or "").strip()
@@ -19367,10 +19369,27 @@ async def chatbots_create(name: str = Form(...), agent_slug: str = Form(...),
         # nói cùng một thứ tiếng. Cố ý KHÔNG thừa hưởng ngôn ngữ của chủ, xem chatbot_store.
         "ngon_ngu": ngon_ngu,
         "agents_phu": agents_phu, "rieng_pham_vi": rieng_pham_vi, "rieng_cho_phep": rieng_cho_phep,
+        "noi_duoc": noi_duoc, "noi_cam": noi_cam, "cam_tu_khoa": cam_tu_khoa,
+        "ngoai_pham_vi": ngoai_pham_vi,
     })
     if err:
         return JSONResponse({"ok": False, "error": err}, status_code=400)
     return {"ok": True, "id": bid}
+
+
+@app.get("/chatbots/danh-ba")
+async def chatbots_danh_ba(account_id: str = "", q: str = "", loai: str = ""):
+    """Danh bạ (bạn bè + nhóm) của một tài khoản Zalo cá nhân để tích chọn trong form bot."""
+    import channel_accounts
+    import zalo_personal_channel
+    # Chỉ tài khoản ẢO (Zalo cá nhân): get_token của tài khoản thường trả token thật.
+    if account_id not in {a["id"] for a in channel_accounts.tai_khoan_ao()}:
+        return JSONResponse({"ok": False, "error": "Chỉ dùng được với tài khoản Zalo cá nhân."}, status_code=400)
+    cid = account_id
+    if loai not in ("", "private", "group"):
+        loai = ""
+    r = await zalo_personal_channel.danh_ba(cid, q, loai)
+    return JSONResponse(r, status_code=200 if r.get("ok") else 400)
 
 
 @app.post("/chatbots/{bot_id}/update")

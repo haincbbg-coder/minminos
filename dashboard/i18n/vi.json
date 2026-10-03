@@ -3342,5 +3342,22 @@
   "ht.da_cho": "Bot đang được phép trả lời người này",
   "ht.chua_cho": "Bot đang im với người này (chưa được cho phép)",
   "ht.cho_tl": "Cho bot trả lời",
-  "ht.thoi_cho": "Thôi cho trả lời"
+  "ht.thoi_cho": "Thôi cho trả lời",
+  "cb.lb_noi_duoc": "Bot ĐƯỢC trả lời về",
+  "cb.ph_noi_duoc": "Ví dụ: giá, size, còn hàng, giao hàng, đổi trả của các sản phẩm bên mình. Để trống = không giới hạn.",
+  "cb.lb_noi_cam": "Bot KHÔNG ĐƯỢC trả lời về",
+  "cb.ph_noi_cam": "Ví dụ: chính trị, giá nhập, chuyện nội bộ, so sánh với đối thủ, tư vấn y tế.",
+  "cb.lb_tu_khoa": "Từ khoá cấm (tin có từ này bot im hẳn)",
+  "cb.ph_tu_khoa": "Cách nhau bằng dấu phẩy, ví dụ: giá sỉ, đại lý, lương",
+  "cb.lb_ngoai_pv": "Câu hỏi ngoài phạm vi thì",
+  "cb.npv_tu_choi": "Từ chối lịch sự bằng một câu",
+  "cb.npv_im": "Im lặng, không nói gì",
+  "cb.hint_pham_vi": "Hai ô chủ đề do bot tự hiểu và tuân theo. Từ khoá cấm thì máy chặn cứng, không phụ thuộc bot hiểu đúng hay sai.",
+  "cb.db_chon_nguoi": "Chọn từ danh bạ Zalo",
+  "cb.db_chon_nhom": "Chọn nhóm từ danh bạ Zalo",
+  "cb.db_tim": "Gõ tên để tìm...",
+  "cb.db_dang_tai": "Đang lấy danh bạ...",
+  "cb.db_trong": "Không thấy ai khớp. Thử tên khác.",
+  "cb.db_nhom": "Nhóm",
+  "cb.db_ca_nhan": "Cá nhân"
 }
