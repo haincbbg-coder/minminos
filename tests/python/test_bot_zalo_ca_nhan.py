@@ -106,7 +106,8 @@ check("token ảo là chính id kết nối (bộ giám sát coi là có thứ �
 # 2. Tạo bot gắn vào Zalo cá nhân
 # ============================================================
 bid, loi = chatbot_store.create_bot({"name": "Lan", "agent_slug": "lan", "brain": "b",
-                                     "account_ids": ["zalo-1"], "muc_quyen": "suggest"})
+                                     "account_ids": ["zalo-1"], "muc_quyen": "suggest",
+                                     "rieng_pham_vi": "tat_ca"})
 check("tạo được bot gắn Zalo cá nhân", bool(bid) and not loi, loi)
 b = chatbot_store.get_bot(bid)
 check("bot báo có token (để form không coi là thiếu) và kênh là Zalo cá nhân",

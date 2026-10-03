@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.58] - 2026-10-03
+### Thêm mới
+- **Một bot gắn nhiều Agent**: ngoài Agent chính (giọng của bot), chọn thêm tối đa 5 Agent phụ ở form bot. Bot biết thêm các vai phụ để trả lời đúng chuyên môn khi khách hỏi đúng chủ đề.
+- **Lọc người được nhắn riêng**: bot Zalo cá nhân mặc định CHỈ trả lời người chủ đã cho phép (danh bạ của chủ có bạn bè, người nhà, nên không còn trả lời tất cả). Bấm **Cho bot trả lời** ngay ở Hộp thư, hoặc dán id vào form bot, hoặc chọn "Trả lời mọi người nhắn riêng". Bot Telegram và Zalo Bot giữ nguyên như cũ.
+
 ## [26.10.57] - 2026-10-03
 ### Sửa lỗi
 - Nút **Trả lời giúp** và **Gợi ý câu trả lời** ở Hộp thư báo "Lỗi 400" trống trơn khi không soạn được. Nay báo đúng lý do bằng tiếng Việt: cuộc chat chưa gắn bot, chưa có tin khách, bộ não AI lỗi, bot đã chọn im (viết [IM_LANG]) hoặc gửi qua kênh bị lỗi.

@@ -527,6 +527,16 @@
                      : '<option value="">' + esc(window.t("cb.khong_agent")) + '</option>';
   }
 
+  // Agent PHỤ: ô tick, tối đa 5. Agent chính không hiện ở đây (đã chọn ở ô trên).
+  function htmlAgentPhu(ds, dangChon, chinh) {
+    var ra = ds.filter(function (a) { return a.slug !== chinh; }).map(function (a) {
+      var on = (dangChon || []).indexOf(a.slug) >= 0;
+      return '<label class="cb-chk"><input type="checkbox" class="cbAgentPhuCk" value="' + esc(a.slug) + '"' +
+             (on ? " checked" : "") + '> ' + esc(a.name) + '</label>';
+    });
+    return ra.length ? ra.join("") : '<span class="cb-hint">' + esc(window.t("cb.khong_agent")) + '</span>';
+  }
+
   // Mô tả một dòng cho mỗi mức, hiện ngay trong ô chọn. Cảnh báo ĐẦY ĐỦ nằm ở khối dưới và do
   // server cấp; ba dòng này chỉ để chọn cho đúng ngay từ đầu.
   var MUC_TOM = {
@@ -684,6 +694,21 @@
           '<div class="cb-hint">' + esc(window.t("cb.hint_agent_1")) + ' <b>' + esc(br) + '</b>' +
           esc(window.t("cb.hint_agent_2")) + ' <b>' + esc(window.t("cb.tao_agent")) + '</b> ' +
           esc(window.t("cb.hint_agent_3")) + '</div>' +
+
+          '<label>' + esc(window.t("cb.lb_agent_phu")) + '</label>' +
+          '<div class="cb-agent-phu" id="cbAgentPhu">' + htmlAgentPhu(agents, (b && b.agents_phu) || [],
+            (b && (b.agent || {}).slug) || "") + '</div>' +
+          '<div class="cb-hint">' + esc(window.t("cb.hint_agent_phu")) + '</div>' +
+
+          '<label>' + esc(window.t("cb.lb_rieng")) + '</label>' +
+          '<select id="cbRiengPhamVi">' +
+            '<option value=""' + (!b || !b.rieng_pham_vi ? " selected" : "") + '>' + esc(window.t("cb.rieng_mac_dinh")) + '</option>' +
+            '<option value="tat_ca"' + (b && b.rieng_pham_vi === "tat_ca" ? " selected" : "") + '>' + esc(window.t("cb.rieng_tat_ca")) + '</option>' +
+            '<option value="chon"' + (b && b.rieng_pham_vi === "chon" ? " selected" : "") + '>' + esc(window.t("cb.rieng_chon")) + '</option>' +
+          '</select>' +
+          '<textarea id="cbRiengCho" rows="2" placeholder="' + esc(window.t("cb.ph_rieng_cho")) + '">' +
+            esc(((b && b.rieng_cho_phep) || []).join("\n")) + '</textarea>' +
+          '<div class="cb-hint">' + esc(window.t("cb.hint_rieng")) + '</div>' +
 
           // Lựa chọn này quyết định bot "ăn nhập với Agent" hay không, nên đặt ngay dưới Agent
           // chứ không giấu trong khối Cài đặt thêm: nó là thứ người dùng cần hiểu TRƯỚC khi
@@ -900,7 +925,11 @@
       var chung = { name: ten, agent_slug: ag, agent_brain: br, brain: br,
                     handoff_to: ho, nguon_tra_loi: ngu, muc_quyen: muc, xac_nhan_rui_ro: "1",
                     ngon_ngu: (document.getElementById("cbNgonNgu") || {}).value || "auto",
-                    groups: gr, reply_when: rw, account_ids: ids.join(",") };
+                    groups: gr, reply_when: rw, account_ids: ids.join(","),
+                    agents_phu: Array.prototype.map.call(box.querySelectorAll(".cbAgentPhuCk:checked"),
+                      function (x) { return x.value; }).filter(function (x) { return x !== ag; }).join(","),
+                    rieng_pham_vi: (box.querySelector("#cbRiengPhamVi") || {}).value || "",
+                    rieng_cho_phep: ((box.querySelector("#cbRiengCho") || {}).value || "") };
       try {
         if (sua) {
           await api("/chatbots/" + encodeURIComponent(b.id) + "/update", { method: "POST", body: fd(chung) });
