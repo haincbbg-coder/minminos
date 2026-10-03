@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.48] - 2026-10-03
+### Sửa lỗi
+- Nghe thử giọng ChatGPT Live phát được âm thanh: bổ sung 9 file mẫu giọng (arbor, breeze, cove, ember, juniper, maple, sol, spruce, vale) mà trang Giọng nói gọi tới nhưng trong MinMin bị thiếu nên bấm Nghe thử không ra tiếng. Lấy từ Javis 0.65.17.
+### Bảo mật
+- Màn đăng nhập che kín hẳn: nền đặc, chưa đăng nhập thì không còn thấy lờ mờ bố cục phía sau. Lấy từ Javis 0.70.2.
+
 ## [26.10.47] - 2026-10-03
 ### Cải thiện
 - Đồng bộ chiều sâu, nút, ô nhập và hộp thoại của Hóa đơn/Gmail, Zalo và Bộ chứng từ với MinMin. Màn hình phụ theo cùng tông sáng/tối, cả đồ họa hạt và nhãn.
