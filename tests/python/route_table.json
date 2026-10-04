@@ -4590,6 +4590,26 @@
  {
   "order": 461,
   "type": "APIRoute",
+  "path": "/apps/xuong-video/api/tiktok/ket-noi",
+  "name": "xv_tt_ket_noi",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 462,
+  "type": "APIRoute",
+  "path": "/apps/xuong-video/api/tiktok/callback",
+  "name": "xv_tt_callback",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 463,
+  "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an",
   "name": "xv_ds",
   "methods": [
@@ -4598,7 +4618,7 @@
   "trong": null
  },
  {
-  "order": 462,
+  "order": 464,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an",
   "name": "xv_tao",
@@ -4608,7 +4628,7 @@
   "trong": null
  },
  {
-  "order": 463,
+  "order": 465,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}",
   "name": "xv_xem",
@@ -4618,7 +4638,7 @@
   "trong": null
  },
  {
-  "order": 464,
+  "order": 466,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}",
   "name": "xv_xoa",
@@ -4628,7 +4648,7 @@
   "trong": null
  },
  {
-  "order": 465,
+  "order": 467,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}",
   "name": "xv_sua",
@@ -4638,7 +4658,7 @@
   "trong": null
  },
  {
-  "order": 466,
+  "order": 468,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/tai-lieu",
   "name": "xv_tai_lieu",
@@ -4648,7 +4668,7 @@
   "trong": null
  },
  {
-  "order": 467,
+  "order": 469,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/tep",
   "name": "xv_tep",
@@ -4658,7 +4678,7 @@
   "trong": null
  },
  {
-  "order": 468,
+  "order": 470,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/chay",
   "name": "xv_chay",
@@ -4668,7 +4688,7 @@
   "trong": null
  },
  {
-  "order": 469,
+  "order": 471,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/duyet",
   "name": "xv_duyet",
@@ -4678,7 +4698,7 @@
   "trong": null
  },
  {
-  "order": 470,
+  "order": 472,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/dang-ngay",
   "name": "xv_dang_ngay",
@@ -4688,7 +4708,7 @@
   "trong": null
  },
  {
-  "order": 471,
+  "order": 473,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/lo",
   "name": "xv_lo",
@@ -4698,7 +4718,7 @@
   "trong": null
  },
  {
-  "order": 472,
+  "order": 474,
   "type": "APIRoute",
   "path": "/apps/viral-studio",
   "name": "root",
@@ -4708,7 +4728,7 @@
   "trong": null
  },
  {
-  "order": 473,
+  "order": 475,
   "type": "APIRoute",
   "path": "/apps/viral-studio/",
   "name": "page",
@@ -4718,7 +4738,7 @@
   "trong": null
  },
  {
-  "order": 474,
+  "order": 476,
   "type": "APIRoute",
   "path": "/apps/viral-studio/assets/{name}",
   "name": "assets",
@@ -4728,7 +4748,7 @@
   "trong": null
  },
  {
-  "order": 475,
+  "order": 477,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/state",
   "name": "state",
@@ -4738,7 +4758,7 @@
   "trong": null
  },
  {
-  "order": 476,
+  "order": 478,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/action/{action}",
   "name": "action",
@@ -4748,7 +4768,7 @@
   "trong": null
  },
  {
-  "order": 477,
+  "order": 479,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/export/{kind}",
   "name": "export",
@@ -4758,7 +4778,7 @@
   "trong": null
  },
  {
-  "order": 478,
+  "order": 480,
   "type": "APIRoute",
   "path": "/share/rename",
   "name": "share_rename",

@@ -25,6 +25,8 @@ DICH_VU: Dict[str, dict] = {
     "elevenlabs": {"truong": ("api_key", "voice_id"), "bi_mat": ("api_key",)},
     "youtube": {"truong": ("client_id", "client_secret", "refresh_token", "kenh"),
                 "bi_mat": ("client_secret", "refresh_token")},
+    "tiktok": {"truong": ("client_key", "client_secret", "refresh_token", "rieng_tu", "ten_kenh"),
+               "bi_mat": ("client_secret", "refresh_token")},
     "facebook": {"truong": ("page_id", "page_token", "ten_trang"), "bi_mat": ("page_token",)},
 }
 
