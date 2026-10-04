@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.65] - 2026-10-04
+### Thêm mới
+- **Xưởng video đăng được TikTok**: ở tab Khoá và kết nối nhập Client key, Client secret của ứng dụng TikTok rồi bấm Kết nối tài khoản. Video được gắn nhãn nội dung do AI tạo.
+- Ứng dụng TikTok chưa qua kiểm duyệt (audit) của TikTok thì bài chỉ lên ở chế độ riêng tư (SELF_ONLY), đây là luật của TikTok. Sau khi audit xong, đổi "Chế độ hiển thị" thành PUBLIC_TO_EVERYONE để đăng công khai.
+- Mất mạng ở mảnh video cuối hoặc TikTok chưa xác nhận kịp được ghi là "chưa rõ" và không tự đăng lại, tránh đăng đúp.
+
 ## [26.10.64] - 2026-10-04
 ### Thêm mới
 - MinMin Viral Studio trong Kết nối ngoài, cấp giấy phép riêng theo máy và thời hạn. Giao diện đồng bộ MinMin.

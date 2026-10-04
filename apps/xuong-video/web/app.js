@@ -260,6 +260,7 @@
     openai: ["OpenAI (ChatGPT Image, tạo ảnh)", { api_key: "API key" }],
     elevenlabs: ["ElevenLabs (giọng đọc)", { api_key: "API key", voice_id: "Voice ID" }],
     youtube: ["YouTube (Google Cloud OAuth)", { client_id: "Client ID", client_secret: "Client Secret" }],
+    tiktok: ["TikTok (Content Posting API)", { client_key: "Client key", client_secret: "Client secret", rieng_tu: "Chế độ hiển thị (SELF_ONLY, FOLLOWER_OF_CREATOR, MUTUAL_FOLLOW_FRIENDS, PUBLIC_TO_EVERYONE)", ten_kenh: "Tên kênh (@...) để tạo link bài" }],
     facebook: ["Facebook Page (đăng Reels)", { page_id: "Page ID", page_token: "Page access token", ten_trang: "Tên Trang (để nhớ)" }]
   };
   function veKetNoi() {
@@ -280,17 +281,17 @@
         } }, "Lưu");
         var xoa = h("button", { class: "btn phu", onclick: function () { if (confirm("Xoá khoá này?")) api("/khoa/" + dv, { method: "DELETE" }).then(veKetNoi); } }, "Xoá");
         var them = null;
-        if (dv === "youtube") {
+        if (dv === "youtube" || dv === "tiktok") {
           them = h("button", { class: "btn phu", onclick: function () {
-            api("/youtube/ket-noi").then(function (r) {
+            api(dv === "tiktok" ? "/tiktok/ket-noi" : "/youtube/ket-noi").then(function (r) {
               if (!r.ok) { toast(r.error); return; }
-              toast("Thêm đường dẫn này vào Authorized redirect URIs của Google Cloud: " + r.redirect_uri);
+              toast("Thêm đường dẫn này vào danh sách redirect URI đã đăng ký: " + r.redirect_uri);
               window.open(r.url, "_blank", "noopener");
             });
-          } }, cur.refresh_token ? "Kết nối lại YouTube" : "Kết nối YouTube");
+          } }, cur.refresh_token ? "Kết nối lại" : "Kết nối tài khoản");
         }
         ra.push(h("div", { class: "card" }, h("div", { class: "dong" }, h("h3", {}, NHAN[dv][0]),
-          cur.da_dat ? h("span", { class: "tt ok" }, dv === "youtube" && !cur.refresh_token ? "chưa cấp quyền" : "đã cài") : h("span", { class: "tt" }, "chưa cài")),
+          cur.da_dat ? h("span", { class: "tt ok" }, (dv === "youtube" || dv === "tiktok") && !cur.refresh_token ? "chưa cấp quyền" : "đã cài") : h("span", { class: "tt" }, "chưa cài")),
           h("div", { class: "hang" }, rows), h("p", {}, nut, " ", them, " ", cur.da_dat ? xoa : null)));
       });
       var s = {

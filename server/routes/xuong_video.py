@@ -168,6 +168,32 @@ def register(app: FastAPI, ask: Callable[[str, str, List[str]], Awaitable[str]],
             return HTMLResponse(f"<meta charset=utf-8><p>{html.escape(str(e))}</p>", 400)
         return HTMLResponse("<meta charset=utf-8><p>Đã kết nối YouTube. Đóng tab này và quay lại Xưởng video.</p>")
 
+    @app.get(A + "/tiktok/ket-noi")
+    def xv_tt_ket_noi(request: Request):
+        if (c := _chan()):
+            return c
+        st = secrets.token_urlsafe(16)
+        _state_oauth["tt:" + st] = time.time()
+        ru = str(request.base_url).rstrip("/") + GOC + "/api/tiktok/callback"
+        try:
+            return {"ok": True, "url": dang.tiktok_auth_url(ru, st), "redirect_uri": ru}
+        except dang.LoiDang as e:
+            return _loi(e)
+
+    @app.get(A + "/tiktok/callback")
+    async def xv_tt_callback(request: Request, code: str = "", state: str = "", error: str = ""):
+        if (c := _chan()):
+            return c
+        if error or ("tt:" + state) not in _state_oauth:
+            return HTMLResponse("<meta charset=utf-8><p>Kết nối TikTok không thành công hoặc đã quá hạn. Đóng tab và thử lại.</p>", 400)
+        _state_oauth.pop("tt:" + state, None)
+        try:
+            await dang.tiktok_doi_code(code, str(request.base_url).rstrip("/") + GOC + "/api/tiktok/callback")
+        except dang.LoiDang as e:
+            import html
+            return HTMLResponse(f"<meta charset=utf-8><p>{html.escape(str(e))}</p>", 400)
+        return HTMLResponse("<meta charset=utf-8><p>Đã kết nối TikTok. Đóng tab này và quay lại Xưởng video.</p>")
+
     # ---------------- dự án
     @app.get(A + "/du-an")
     def xv_ds():

@@ -173,7 +173,7 @@ try:
 except dang.LoiDang as e:
     chua_ro = e.chua_ro
 check("mất mạng giữa lúc tải lên YouTube: đánh dấu CHƯA RÕ (không được tự thử lại)", chua_ro is True)
-for nt in ("tiktok", "instagram", "x", "threads", "zalo"):
+for nt in ("instagram", "x", "threads", "zalo"):
     try:
         chay_async(dang.dang(nt, pp, v_tam)); lop = False
     except dang.LoiDang as e:
@@ -185,6 +185,69 @@ try:
 except dang.LoiDang:
     loi_tl = True
 check("Shorts bắt buộc video dọc", loi_tl)
+
+
+# ---- TikTok
+check("chia mảnh: file nhỏ một mảnh, file lớn mảnh cuối gom phần dư",
+      dang.tt_chia_manh(3_000_000) == (3_000_000, 1) and dang.tt_chia_manh(7_000_000) == (7_000_000, 1)
+      and dang.tt_chia_manh(25_000_000) == (dang.TT_CHUNK, 2))
+khoa.dat("tiktok", {"client_key": "ck", "client_secret": "csecret", "refresh_token": "rt1", "rieng_tu": "BAY_BA", "ten_kenh": "@kenh"})
+tt = {"puts": [], "init": None, "trang_thai": ["PROCESSING_UPLOAD", "PUBLISH_COMPLETE"], "put_loi_cuoi": False}
+async def khong_ngu2(_): return None
+dang._ngu = khong_ngu2
+def h_tt(req):
+    u = str(req.url)
+    if u.endswith("/oauth/token/"):
+        return httpx.Response(200, json={"access_token": "TTAT", "refresh_token": "rt2"})
+    if u.endswith("/video/init/"):
+        tt["init"] = json.loads(req.content)
+        return httpx.Response(200, json={"data": {"publish_id": "P1", "upload_url": "https://up.tt/u"}, "error": {"code": "ok"}})
+    if req.method == "PUT":
+        if tt["put_loi_cuoi"]:
+            raise httpx.ReadTimeout("hết giờ")
+        tt["puts"].append(req.headers["content-range"])
+        return httpx.Response(201 if len(tt["puts"]) else 206)
+    if u.endswith("/status/fetch/"):
+        st = tt["trang_thai"].pop(0) if len(tt["trang_thai"]) > 1 else tt["trang_thai"][0]
+        return httpx.Response(200, json={"data": {"status": st, "fail_reason": "video_pull_failed", "publicaly_available_post_id": ["777"]}})
+    return httpx.Response(404)
+dang._client = gia_http(h_tt)
+r = chay_async(dang.dang("tiktok", pp, v_tam))
+check("TikTok: mặc định riêng tư khi cài đặt sai, gắn nhãn AIGC, link bài theo tên kênh",
+      tt["init"]["post_info"]["privacy_level"] == "SELF_ONLY" and tt["init"]["post_info"]["is_aigc"] is True
+      and r["url"] == "https://www.tiktok.com/@kenh/video/777" and tt["puts"] == ["bytes 0-99/100"], (r, tt))
+check("TikTok: refresh token mới được lưu lại", khoa.lay("tiktok")["refresh_token"] == "rt2")
+khoa.dat("tiktok", {"rieng_tu": "PUBLIC_TO_EVERYONE"}); tt["puts"].clear(); tt["trang_thai"] = ["PUBLISH_COMPLETE"]
+chay_async(dang.dang("tiktok", pp, v_tam))
+check("TikTok: đã audit thì dùng chế độ công khai theo cài đặt", tt["init"]["post_info"]["privacy_level"] == "PUBLIC_TO_EVERYONE")
+tt["trang_thai"] = ["FAILED"]
+try:
+    chay_async(dang.dang("tiktok", pp, v_tam)); loi_tt = None
+except dang.LoiDang as e:
+    loi_tt = e
+check("TikTok báo FAILED: lỗi rõ ràng, an toàn để thử lại", loi_tt and "video_pull_failed" in str(loi_tt) and not loi_tt.chua_ro)
+tt["put_loi_cuoi"] = True
+try:
+    chay_async(dang.dang("tiktok", pp, v_tam)); loi_tt = None
+except dang.LoiDang as e:
+    loi_tt = e
+check("TikTok mất mạng ở mảnh cuối: CHƯA RÕ, không tự đăng lại", loi_tt and loi_tt.chua_ro)
+tt["put_loi_cuoi"] = False
+dang.TT_HAN_CHO = -1.0; tt["trang_thai"] = ["PROCESSING_UPLOAD"]
+try:
+    chay_async(dang.dang("tiktok", pp, v_tam)); loi_tt = None
+except dang.LoiDang as e:
+    loi_tt = e
+check("TikTok quá hạn chờ xác nhận: CHƯA RÕ", loi_tt and loi_tt.chua_ro)
+dang.TT_HAN_CHO = 240.0
+dang._client = gia_http(lambda r: httpx.Response(200, json={"access_token": "T"}) if str(r.url).endswith("/oauth/token/") else httpx.Response(403, json={"error": {"code": "unaudited_client_can_only_post_to_private_accounts", "message": "x"}}))
+try:
+    chay_async(dang.dang("tiktok", pp, v_tam)); msg = ""
+except dang.LoiDang as e:
+    msg = str(e)
+check("TikTok chưa audit: giải thích bằng tiếng Việt", "kiểm duyệt" in msg, msg)
+check("URL xin quyền TikTok đúng scope và có state", "video.publish" in dang.tiktok_auth_url("https://x/cb", "st1") and "state=st1" in dang.tiktok_auth_url("https://x/cb", "st1"))
+check("khoá TikTok không lộ ra giao diện", "csecret" not in json.dumps(khoa.tinh_trang()) and "rt2" not in json.dumps(khoa.tinh_trang()))
 
 # ---- dây chuyền đầy đủ với nhà cung cấp giả
 async def gia_anh(prompt, ti_le, tc, cfg): return PNG
