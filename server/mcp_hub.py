@@ -25,6 +25,8 @@ from urllib.parse import quote, unquote
 from fastapi.responses import JSONResponse, Response
 
 import config
+import hub_trace
+import localefmt
 import mcp_catalog
 import mcp_client
 import mcp_store
@@ -43,6 +45,7 @@ _CACHE_TTL = 60
 _CACHE_TTL_THIEU = 10
 _cache = {}          # (mode, vault_root) -> {"tools", "route", "ts", "mtime"}
 _rate = {}           # conn_id -> deque[timestamps]
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".heic"}
 
 
 # ============================================================
@@ -575,6 +578,12 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
                     f"dùng vừa đính kèm vào khung chat.")
         if not p.is_file():
             return f"ERROR: không có file '{rel}'"
+        if p.suffix.lower() in _IMAGE_SUFFIXES:
+            # Reading a photo as text hands the model a page of mojibake it then "describes" with confidence. Say what the
+            # file is and how to actually see it (0.73.0).
+            return (f"'{rel}' là file ẢNH ({p.stat().st_size // 1024} KB), tool này chỉ đọc chữ nên không cho bạn thấy ảnh. "
+                    f"Muốn biết trong ảnh có gì, gọi tool javis_describe_image với images=['{rel}'] (ChatGPT nhìn ảnh thật "
+                    f"rồi tả lại). Muốn người dùng xem ảnh thì nhúng ![]({rel}) vào câu trả lời.")
         text = p.read_text(encoding="utf-8", errors="replace")
         return text[:100_000] + (f"\n… [cắt, file dài {len(text):,} ký tự]" if len(text) > 100_000 else "")
 
@@ -1379,6 +1388,18 @@ async def handle_http(request):
                                  raw_vault=request.headers.get("x-javis-vault"))
 
 
+async def _handle_one_traced(msg, *args, **kwargs):
+    """`_handle_one` plus a trace of the startup requests (initialize, tools/list).
+
+    A Claude Code startup timeout reads this trace to tell "Claude never reached the hub" from
+    "the hub answered late". See hub_trace."""
+    ev = hub_trace.begin(msg.get("method") if isinstance(msg, dict) else None)
+    try:
+        return await _handle_one(msg, *args, **kwargs)
+    finally:
+        hub_trace.end(ev)
+
+
 async def tra_loi_jsonrpc(request, mode, include_plugins=True, include_ambient=False,
                           raw_vault=None):
     """Đọc thân JSON-RPC của `request`, chạy qua hub, trả Response. KHÔNG xác thực gì cả.
@@ -1395,14 +1416,14 @@ async def tra_loi_jsonrpc(request, mode, include_plugins=True, include_ambient=F
         return JSONResponse(_rpc_error(None, -32700, "parse error"), status_code=400)
     try:
         if isinstance(body, list):
-            out = [r for r in [await _handle_one(m, mode, include_plugins, include_ambient,
-                                                 vault_root, vault_nguon, vault_header_hong)
+            out = [r for r in [await _handle_one_traced(m, mode, include_plugins, include_ambient,
+                                                        vault_root, vault_nguon, vault_header_hong)
                                for m in body] if r is not None]
             if not out:
                 return Response(status_code=202)
             return JSONResponse(out)
-        res = await _handle_one(body, mode, include_plugins, include_ambient, vault_root,
-                                vault_nguon, vault_header_hong)
+        res = await _handle_one_traced(body, mode, include_plugins, include_ambient, vault_root,
+                                       vault_nguon, vault_header_hong)
         if res is None:
             return Response(status_code=202)
         return JSONResponse(res)

@@ -20,6 +20,7 @@ from typing import AsyncIterator, Optional
 
 # Chỉ để dùng strip_provider_markers. engine KHÔNG import ngược claude_cli nên không có vòng.
 import engine
+import localefmt
 
 
 # Registry các tiến trình Claude đang chạy - để ngắt giữa chừng.
@@ -1035,6 +1036,27 @@ def _home_dir() -> Path:
     return Path("")
 
 
+_CODEX_VERSIONS: dict = {}
+
+
+def _codex_version(path: str) -> Optional[tuple]:
+    """(major, minor, patch) của một binary Codex, nhớ theo (đường dẫn, mtime) để chỉ tốn một
+    tiến trình `--version` mỗi bản, và tự đo lại khi bản đó được cập nhật."""
+    try:
+        key = (path, os.stat(path).st_mtime)
+    except OSError:
+        return None
+    if key not in _CODEX_VERSIONS:
+        try:
+            out = subprocess.run([path, "--version"], capture_output=True, text=True,
+                                 timeout=15, creationflags=_no_window()).stdout
+            m = re.search(r"(\d+)\.(\d+)\.(\d+)", out or "")
+            _CODEX_VERSIONS[key] = tuple(int(x) for x in m.groups()) if m else None
+        except Exception:
+            _CODEX_VERSIONS[key] = None
+    return _CODEX_VERSIONS[key]
+
+
 def find_codex_cli() -> Optional[str]:
     envp = os.environ.get("JAVIS_CODEX_BIN")     # cửa thoát: chỉ thẳng chỗ cài lạ
     if envp:
@@ -1052,18 +1074,32 @@ def find_codex_cli() -> Optional[str]:
         home / ".codex" / ".sandbox-bin" / "codex",
     ]
     # Windows Store có thể đặt app-execution alias ``codex.exe`` lên PATH nhưng
-    # service/tiến trình nền không được quyền chạy alias đó (WinError 5). Bản
-    # executable Codex Desktop xuất trong ~/.codex chạy được thật, nên ưu tiên
-    # nó trên Windows. POSIX vẫn tôn trọng PATH trước như thông lệ.
+    # service/tiến trình nền không được quyền chạy alias đó (WinError 5), nên alias
+    # đó chỉ là đường lui cuối. POSIX vẫn tôn trọng PATH trước như thông lệ.
     cli = tim_binary("codex")
-    if cli and (os.name != "nt" or "windowsapps" not in cli.lower()):
+    if cli and os.name != "nt":
         return cli
+    co = []
+    if cli and "windowsapps" not in cli.lower():
+        co.append(cli)
     for p in cands:
         try:
             if p.exists():
-                return str(p)
+                co.append(str(p))
         except Exception:
             pass
+    # Một máy Windows hay có NHIỀU bản Codex cùng lúc: Codex Desktop xuất một bản vào
+    # ~/.codex/.sandbox-bin và không phải lúc nào cũng cập nhật nó, npm đặt bản khác. Trước
+    # 0.71.1 bản đứng đầu danh sách thắng, và chủ repo đo 03/10/2026: sandbox-bin kẹt ở 0.147
+    # (tháng 8) trong khi npm đã 0.160, nên `model/list` chỉ trả đời GPT-5.6 và trang Models
+    # không có GPT-6.1-Sol. Danh sách model là lời của CHÍNH binary được hỏi, nên phải hỏi bản
+    # MỚI NHẤT. Không đọc được số phiên bản thì giữ thứ tự cũ.
+    if len(co) > 1:
+        best = max(co, key=lambda p: _codex_version(p) or ())
+        if _codex_version(best):
+            return best
+    if co:
+        return co[0]
     if cli:
         return cli
     for p in ("/usr/local/bin/codex", "~/.local/bin/codex"):
@@ -1085,7 +1121,7 @@ def _codex_run(sub_args, timeout=30):
         return None
     return subprocess.run([cli] + list(sub_args), capture_output=True, text=True,
                           encoding="utf-8", errors="replace", timeout=timeout,
-                          creationflags=_no_window())
+                          creationflags=_no_window(), env=codex_env())
 
 
 def codex_mcp_parse_list(out):
@@ -1248,11 +1284,11 @@ def codex_mcp_open_login_terminal(name):
     try:
         if os.name == "nt":
             subprocess.Popen(f'start "Javis - Dang nhap MCP Codex" cmd /k codex mcp login {safe}',
-                             shell=True)
+                             shell=True, env=codex_env())
         else:
             for term in ("x-terminal-emulator", "gnome-terminal", "konsole", "xterm"):
                 if shutil.which(term):
-                    subprocess.Popen([term, "-e", cli, "mcp", "login", safe])
+                    subprocess.Popen([term, "-e", cli, "mcp", "login", safe], env=codex_env())
                     break
             else:
                 return {"ok": False, "error": "Không tìm thấy terminal"}
@@ -1319,6 +1355,55 @@ _RECONNECT_RE = re.compile(r"^\s*(Reconnecting\.\.\.|Falling back from WebSocket
 def _codex_home() -> Path:
     home = os.getenv("CODEX_HOME")
     return Path(home) if home else _home_dir() / ".codex"
+
+
+# Báo lỗi khách 04/10/2026 (Windows, 0.71.0): mọi lượt chat ChatGPT chết với "Codex lỗi (exit 1):
+# WARNING: proceeding, even though we could not create PATH aliases: Could not find home
+# directory". Codex tự tìm home bằng `dirs::home_dir()`: trên Windows hàm đó hỏi thẳng hồ sơ người
+# dùng của Windows (SHGetKnownFolderPath), KHÔNG đọc USERPROFILE, nên hồ sơ hỏng, hồ sơ tạm hay
+# tài khoản không có hồ sơ là Codex mù home, không thấy auth.json, trong khi Javis (đọc
+# USERPROFILE/HOME qua `_home_dir`) vẫn thấy đăng nhập ChatGPT đầy đủ. Đặt CODEX_HOME thì Codex
+# bỏ qua hẳn bước hỏi Windows, và cả hai bên nhìn cùng một thư mục.
+def codex_env() -> dict:
+    """Biến môi trường cho MỌI tiến trình Codex mà Javis bật."""
+    env = dict(os.environ)
+    if str(env.get("CODEX_HOME") or "").strip():
+        return env                      # người dùng tự trỏ chỗ khác: tôn trọng
+    home = _home_dir()
+    if str(home) in ("", "."):
+        return env                      # Javis cũng không biết home: để Codex tự xoay như cũ
+    codex_home = home / ".codex"
+    try:
+        # Codex bắt CODEX_HOME phải tồn tại sẵn (nó canonicalize), máy chưa từng đăng nhập thì chưa có.
+        codex_home.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return env
+    env["CODEX_HOME"] = str(codex_home)
+    if os.name == "nt":
+        if not env.get("USERPROFILE"):
+            env["USERPROFILE"] = str(home)
+    elif not env.get("HOME"):
+        env["HOME"] = str(home)
+    return env
+
+
+def codex_error_text(returncode, stderr_lines) -> str:
+    """Câu lỗi khi Codex thoát giữa chừng. Lỗi không tìm thấy home thì nói bằng lời người
+    dùng hiểu và chỉ cách xử lý, dòng gốc của Codex vẫn giữ ở dưới để chẩn đoán."""
+    raw = "\n".join(stderr_lines[-5:])
+    if any("could not find home directory" in str(l).lower() for l in stderr_lines):
+        return localefmt.chu(
+            "Codex không tìm thấy thư mục người dùng trên máy này nên không đọc được đăng nhập "
+            "ChatGPT. Hay gặp khi Windows đang dùng hồ sơ tạm hoặc Javis được bật bằng một tài "
+            "khoản khác. Đăng xuất Windows rồi đăng nhập lại (hoặc khởi động lại máy), sau đó bật "
+            "lại Javis bằng chính tài khoản đó.\n\nChi tiết từ Codex (exit "
+            + str(returncode) + "):\n" + raw,
+            "Codex could not find the user folder on this computer, so it cannot read the ChatGPT "
+            "sign-in. This usually happens when Windows is on a temporary profile or Javis was "
+            "started under another account. Sign out of Windows and back in (or restart), then "
+            "start Javis again from that same account.\n\nDetails from Codex (exit "
+            + str(returncode) + "):\n" + raw)
+    return "Codex lỗi (exit " + str(returncode) + "):\n" + raw
 
 
 def _codex_dung_provider_rieng() -> bool:
@@ -1473,6 +1558,7 @@ class CodexCLI:
                     args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     cwd=self.cwd, text=True, encoding="utf-8", errors="replace", bufsize=1,
                     creationflags=creationflags, start_new_session=(os.name != "nt"),
+                    env=codex_env(),
                 )
                 with _PROC_LOCK:
                     _ACTIVE_PROCS[proc] = self.tag
@@ -1546,7 +1632,7 @@ class CodexCLI:
                 st.join(timeout=2)
                 if proc.returncode not in (0, None) and stderr_lines and not tinfo["timed_out"]:
                     asyncio.run_coroutine_threadsafe(
-                        queue.put({"__error__": "Codex lỗi (exit " + str(proc.returncode) + "):\n" + "\n".join(stderr_lines[-5:])}), loop)
+                        queue.put({"__error__": codex_error_text(proc.returncode, stderr_lines)}), loop)
             except Exception as e:
                 traceback.print_exc()
                 asyncio.run_coroutine_threadsafe(queue.put({"__error__": f"Codex subprocess: {type(e).__name__}: {e}"}), loop)

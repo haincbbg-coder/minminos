@@ -19,6 +19,7 @@ import unittest
 from pathlib import Path
 
 import sessions
+import voice_live
 
 
 class ChatGPTLiveRouteTests(unittest.IsolatedAsyncioTestCase):
@@ -95,7 +96,11 @@ class ChatGPTLiveRouteTests(unittest.IsolatedAsyncioTestCase):
                 asyncio=asyncio, json=json, sys=sys, WebSocket=Socket, Query=lambda x: x,
                 cfgmod=types.SimpleNamespace(gate_active=lambda: False,
                                              read_settings=lambda: {"voice": {"live_provider": "chatgpt"}}),
-                voice_live=types.SimpleNamespace(make_provider=make_provider, MEMORY_CHARS=4000, is_speech_stop=lambda text: False),
+                voice_live=types.SimpleNamespace(
+                    make_provider=make_provider, MEMORY_CHARS=4000, is_speech_stop=lambda text: False,
+                    # the route's long-job heartbeat reads these as soon as a job starts
+                    STATUS_FIRST_S=voice_live.STATUS_FIRST_S, STATUS_EVERY_S=voice_live.STATUS_EVERY_S,
+                    STATUS_TICK_S=voice_live.STATUS_TICK_S),
                 openai_oauth=types.SimpleNamespace(write_codex_auth=write_auth),
                 _brain_memory_dir=lambda root: mem_dir, _brain_root=lambda b: directory,
                 _fit_memory_index=lambda mem, cap=None: mem[:cap],

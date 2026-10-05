@@ -22,6 +22,7 @@ from typing import Dict, Tuple
 # rơi về tiếng Việt thì tệ nhất cũng chỉ là trả lời sai ngôn ngữ cho một người nước ngoài,
 # còn rơi về tiếng Anh thì mọi người dùng hiện tại bị đổi ngôn ngữ trong im lặng.
 MAC_DINH = "vi"
+DU_PHONG_GIAO_DIEN = "en"
 
 
 @dataclass(frozen=True)
@@ -189,6 +190,20 @@ def get(code: str) -> Lang:
     lời chỉ vì ai đó lưu nhầm mã ngôn ngữ vào settings.
     """
     return LANGS.get(chuan_hoa(code) or MAC_DINH, LANGS[MAC_DINH])
+
+
+def chon_ban_dich(code: str, ban: dict) -> str:
+    """Chọn bản chữ cho ngôn ngữ `code` từ `{"vi": ..., "en": ...}`.
+
+    Thứ tự: đúng ngôn ngữ đó -> DU_PHONG_GIAO_DIEN -> MAC_DINH -> bản nào có chữ. Không bao giờ
+    trả rỗng khi còn một bản có chữ: chữ sai ngôn ngữ vẫn hơn một ô trống trên màn hình.
+    """
+    for k in (chuan_hoa(code), DU_PHONG_GIAO_DIEN, MAC_DINH):
+        v = ban.get(k) if k else None
+        if v:
+            return v
+    return next((v for v in ban.values() if v), "")
+
 
 
 def ma_list() -> Tuple[str, ...]:
