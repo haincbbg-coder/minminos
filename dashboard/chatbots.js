@@ -353,6 +353,8 @@
           '<button class="s-btn-ghost cb-toggle" type="button">' +
             (b.enabled ? ic("circle-stop") + " " + esc(window.t("cb.tat"))
                        : ic("play") + " " + esc(window.t("cb.bat"))) + '</button>' +
+          '<button class="s-btn-ghost cb-thu" type="button">' + ic("sparkles") + ' ' +
+            esc(window.t("cb.thu_bot")) + '</button>' +
           '<button class="s-btn-ghost cb-log" type="button">' + ic("history") + ' ' +
             esc(window.t("cb.nhat_ky")) + '</button>' +
           '<button class="s-btn-ghost cb-hoi-thoai" type="button">' + ic("messages-square") + ' ' +
@@ -363,6 +365,7 @@
       '</div>');
     c.querySelector(".cb-toggle").onclick = function () { bat(b, !b.enabled); };
     c.querySelector(".cb-log").onclick = function () { moNhatKy(b); };
+    c.querySelector(".cb-thu").onclick = function () { moThuBot(b); };
     c.querySelector(".cb-hoi-thoai").onclick = function () {
       if (window.JavisConversations) window.JavisConversations.mo({ bot_id: b.id });
     };
@@ -391,6 +394,49 @@
   // Mở tab "Bot bí" TRƯỚC, không phải tab hội thoại. Hội thoại chỉ để soi lại khi nghi ngờ,
   // còn danh sách câu bot trả lời không nổi mới là thứ chủ cần LÀM GÌ ĐÓ với nó: mỗi dòng ở
   // đó là một chỗ tài liệu đang thiếu, viết bổ sung vào brain là lần sau bot trả lời được.
+  // THỬ BOT: hỏi thử một câu, xem bot sẽ trả lời gì. Server ép chỉ-đọc và không ghi gì vào Hộp thư.
+  function moThuBot(b) {
+    var box = el('<div class="cb-modal"><div class="cb-form cb-log-form">' +
+      '<h3>' + esc(window.t("cb.thu_tieu_de")) + ' - ' + esc(b.name) + '</h3>' +
+      '<div class="cb-sum">' + esc(window.t("cb.thu_mo_ta")) + '</div>' +
+      '<textarea class="cb-thu-q" rows="3" placeholder="' + esc(window.t("cb.thu_ph")) + '"></textarea>' +
+      (coNhom(b) ? '<label class="cb-thu-nhom"><input type="checkbox" class="cb-thu-g"> ' +
+        esc(window.t("cb.thu_nhom")) + '</label>' : '') +
+      '<div class="cb-thu-kq"></div>' +
+      '<div class="cb-form-acts"><button class="s-btn" id="cbThuHoi" type="button">' + esc(window.t("cb.thu_hoi")) + '</button>' +
+      '<button class="s-btn-ghost" id="cbThuDong" type="button">' + esc(window.t("common.close")) + '</button></div>' +
+      '</div></div>');
+    document.body.appendChild(box);
+    var dong = function () { if (box.parentNode) box.parentNode.removeChild(box); };
+    box.onmousedown = function (e) { if (e.target === box) dong(); };
+    box.querySelector("#cbThuDong").onclick = dong;
+    var q = box.querySelector(".cb-thu-q"), kq = box.querySelector(".cb-thu-kq"), nut = box.querySelector("#cbThuHoi");
+    async function hoi() {
+      var cau = (q.value || "").trim();
+      if (!cau || nut.disabled) return;
+      nut.disabled = true;
+      kq.textContent = window.t("cb.thu_dang");
+      try {
+        var g = box.querySelector(".cb-thu-g");
+        var d = await api("/chatbots/" + encodeURIComponent(b.id) + "/thu", { method: "POST",
+          body: fd({ cau_hoi: cau, chat_type: g && g.checked ? "group" : "private" }) });
+        var h = '';
+        if (d.im_lang) h += '<div class="cb-sum">' + esc(window.t("cb.thu_im")) + '</div>';
+        else h += '<div class="cb-thu-tl">' + esc(d.text || "") + '</div>';
+        h += '<div class="cb-sum">' +
+          (d.co_tai_lieu ? esc(window.t("cb.thu_nguon")) + ': ' + esc((d.nguon || []).join(", "))
+                         : esc(window.t("cb.thu_khong_tl"))) +
+          ' · ' + esc(window.t("cb.thu_giay", { giay: d.giay })) +
+          (d.bi ? '<br>' + esc(window.t("cb.thu_bi")) : '') + '</div>';
+        kq.innerHTML = h;
+      } catch (e) { kq.textContent = e.message; }
+      nut.disabled = false;
+    }
+    nut.onclick = hoi;
+    q.onkeydown = function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) hoi(); };
+    q.focus();
+  }
+
   async function moNhatKy(b) {
     var box = el('<div class="cb-modal"><div class="cb-form cb-log-form">' +
       '<h3>' + esc(window.t("cb.nhat_ky")) + ' - ' + esc(b.name) + '</h3>' +
@@ -590,6 +636,7 @@
   // server cấp; ba dòng này chỉ để chọn cho đúng ngay từ đầu.
   var MUC_TOM = {
     suggest: "cb.muctom_suggest",
+    doc: "cb.muctom_doc",
     auto: "cb.muctom_auto",
     full: "cb.muctom_full",
   };

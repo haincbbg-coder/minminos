@@ -747,7 +747,8 @@ async def anthropic_stream(api_key, model, messages, reasoning="off"):
     gỡ (xem claude_auth.py). Gói Claude Code nay đi qua binary `claude`, không qua đây.
     """
     sys_parts = [m.get("content", "") for m in messages if m.get("role") == "system"]
-    conv = [{"role": m["role"], "content": m.get("content", "")}
+    import bot_anh
+    conv = [{"role": m["role"], "content": bot_anh.sang_anthropic(m.get("content", ""))}
             for m in messages if m.get("role") in ("user", "assistant")]
     headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01",
                "content-type": "application/json"}
@@ -1059,6 +1060,10 @@ def _codex_input(messages):
             instructions.append(content)
             continue
         ctype = "input_text" if role == "user" else "output_text"
+        if isinstance(content, list) and role == "user":
+            import bot_anh
+            inp.append({"type": "message", "role": role, "content": bot_anh.sang_responses(content)})
+            continue
         inp.append({"type": "message", "role": role, "content": [{"type": ctype, "text": content}]})
     return "\n\n".join(s for s in instructions if s), inp
 

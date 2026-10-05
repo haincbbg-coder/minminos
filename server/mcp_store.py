@@ -67,6 +67,11 @@ def _load():
     if not raw:
         return {"version": 2, "connections": []}
     if raw.get("version") == 2 and "connections" in raw:
+        for c in raw.get("connections") or []:
+            try:
+                mcp_catalog.nang_lenh(c)    # kết nối cũ tự lên lệnh mới, lệnh sửa tay giữ nguyên
+            except Exception:
+                pass
         return raw
     return _migrate_v1(raw, path)
 
@@ -238,6 +243,10 @@ def add_connection(connector_id, data):
         "deny_tools": data.get("deny_tools") or [],
         "is_default": not any(c.get("connector_id") == connector_id for c in d["connections"]),
     }
+    if con and con.get("command"):
+        # bản chép lệnh catalog lúc tạo: nhờ nó mới biết sau này lệnh có bị người dùng sửa tay không
+        conn["lenh_catalog"] = {"command": str(con.get("command") or "").strip(),
+                                "args": list(con.get("args") or [])}
     d["connections"].append(conn)
     _save(d)
     return conn["id"], None

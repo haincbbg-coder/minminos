@@ -200,3 +200,10 @@ if __name__ == "__main__":
         print("bỏ qua: chưa cài pytest")
         sys.exit(0)
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+def test_dem_md_co_han_thoi_gian(tmp_path):
+    """Hạn giờ đã hết thì đếm trả None (không biết) thay vì quét tiếp."""
+    _cay_sau(tmp_path, nhanh=3, moi_nhanh=50)
+    assert main._count_md_goc(str(tmp_path), 500, time.monotonic() - 1.0) is None
+    assert main._count_md(str(tmp_path), cap=500, han_giay=5.0) == 150
