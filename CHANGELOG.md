@@ -1,3 +1,8 @@
+## 26.10.66 — 2026-10-05
+
+### Đang phát triển
+- Đối chiếu nâng cấp độ ổn định và trải nghiệm từ Javis 0.66–0.77.1, giữ các tính năng riêng của MinMin.
+
 # Nhật ký cập nhật
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
