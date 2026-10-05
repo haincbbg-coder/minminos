@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.68] - 2026-10-05
+### Cải thiện
+- Bot nhìn ảnh bằng model đã chọn; thêm Thử bot và quyền Đọc tài liệu để kiểm tra câu trả lời trước khi phục vụ khách.
+- Kết nối MCP cập nhật bản phát hành chính thức, giữ cấu hình tự chỉnh và phân loại quyền thao tác rõ hơn.
+### Sửa lỗi
+- Giữ nguyên khóa kết nối đã mã hóa khi chuyển máy thiếu khóa giải mã; giới hạn thời gian đếm thư mục lớn.
+
 ## [26.10.67] - 2026-10-05
 ### Cải thiện
 - Hộp thư hiện ảnh trong tin nhắn Zalo, bấm xem lớn; ảnh không tải được có thông báo và đường dẫn mở bản gốc.
