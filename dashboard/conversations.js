@@ -343,7 +343,7 @@
             '<small class="ht-item-time">' + esc(gio(c.last_message_at)) + '</small></span>' +
           '<span class="ht-item-sub">' + logoKenh(c.channel) +
             (c.mode === "human" ? '<span class="ht-mode">' + esc(window.t("ht.mode_human")) + '</span>' : "") +
-            '<small>' + esc(ai + (c.last_message || "")) + '</small>' +
+            '<small>' + esc(ai + (anhTin({ message_type: "image", text: c.last_message }) ? window.t("ht.photo") : (c.last_message || ""))) + '</small>' +
             (c.unread_count ? '<span class="ht-badge">' + c.unread_count + '</span>' : "") +
           '</span>' +
         '</span></button>';
@@ -490,6 +490,7 @@
     var mb = box.querySelector(".ht-mode-btn");
     if (mb) mb.onclick = function () { doiMode(c.id, human ? "ai" : "human"); };
     var m = box.querySelector(".ht-msgs");
+    ganAnh(m);
     if (giu) m.scrollTop = m.scrollHeight - giu.cao + giu.dinh;     // vừa chèn tin cũ lên trên
     else if (oDay) m.scrollTop = m.scrollHeight;
     else m.scrollTop = dinhCu;
@@ -545,6 +546,53 @@
     if (ta2) ta2.focus();
   }
 
+  // Old messages kept the full CDN URL in text; newer adapters also keep image_url.
+  // Embed only known image hosts, never arbitrary URLs supplied by a chat participant.
+  function anhTin(t) {
+    if (t.message_type !== "image") return "";
+    var md = t.metadata || {};
+    var candidates = [md.image_url, md.mediaUrl, md.url].concat(String(t.text || "").match(/https:\/\/[^\s<>"']+/g) || []);
+    for (var raw of candidates) {
+      try {
+        var u = new URL(raw);
+        if (u.protocol === "https:" && !u.username && !u.password && (!u.port || u.port === "443") &&
+            /(^|\.)zdn\.vn$/i.test(u.hostname)) return u.href;
+      } catch (e) {}
+    }
+    return "";
+  }
+
+  function ganAnh(box) {
+    box.querySelectorAll(".ht-photo img").forEach(function (img) {
+      function ready() { img.parentElement.classList.toggle("failed", !img.naturalWidth); }
+      img.addEventListener("load", ready);
+      img.addEventListener("error", ready);
+      if (img.complete) ready();
+    });
+    box.querySelectorAll(".ht-photo").forEach(function (link) {
+      link.onclick = function (e) {
+        e.preventDefault();
+        var modal = el('<div class="ht-modal ht-photo-modal" role="dialog" aria-modal="true" aria-label="' + esc(window.t("ht.photo_view")) + '">' +
+          '<div class="ht-photo-dialog"><button type="button" class="s-btn ht-photo-close">' + esc(window.t("common.close")) + '</button>' +
+          '<img referrerpolicy="no-referrer" alt="' + esc(window.t("ht.photo")) + '" src="' + esc(link.href) + '">' +
+          '<a target="_blank" rel="noopener noreferrer" href="' + esc(link.href) + '">' + esc(window.t("ht.photo_original")) + '</a></div></div>');
+        function close() { modal.remove(); if (link.isConnected) link.focus(); }
+        modal.querySelector("button").onclick = close;
+        modal.onclick = function (ev) { if (ev.target === modal) close(); };
+        modal.onkeydown = function (ev) {
+          if (ev.key === "Escape") close();
+          if (ev.key === "Tab") {
+            var first = modal.querySelector("button"), last = modal.querySelector("a");
+            if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+            else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+          }
+        };
+        modal.querySelector("img").onerror = function () { this.alt = window.t("ht.photo_error"); };
+        document.body.appendChild(modal); modal.querySelector("button").focus();
+      };
+    });
+  }
+
   function veTin(t) {
     var lop = t.sender_type === "customer" ? "khach" : t.sender_type === "ai" ? "bot"
             : t.sender_type === "human" ? "nguoi" : "hethong";
@@ -557,9 +605,19 @@
     } else {
       than = esc(t.text || "");
     }
+    var photo = anhTin(t);
+    if (photo) {
+      var caption = String(t.text || "").replace(photo, "").trim();
+      than = '<a class="ht-photo" href="' + esc(photo) + '" target="_blank" rel="noopener noreferrer" aria-label="' + esc(window.t("ht.photo_view")) + '">' +
+        '<img src="' + esc(photo) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="' + esc(window.t("ht.photo")) + '">' +
+        '<span class="ht-photo-error">' + esc(window.t("ht.photo_error")) + '</span></a>' +
+        '<a class="ht-photo-original" href="' + esc(photo) + '" target="_blank" rel="noopener noreferrer">' + esc(window.t("ht.photo_original")) + '</a>' +
+        (caption ? '<div class="ht-photo-caption">' + esc(caption) + '</div>' : '');
+    }
     var loai = t.message_type && t.message_type !== "text"
       ? '<span class="ht-loai">' + ic(t.message_type === "image" ? "image" : t.message_type === "audio" ? "mic" : "paperclip") +
         ' ' + esc(t.message_type) + '</span>' : "";
+    if (photo) loai = "";
     var loi = t.metadata && t.metadata.loi
       ? '<div class="ht-msg-loi">' + ic("triangle-alert") + ' ' + esc(t.metadata.loi) + '</div>' : "";
     return '<div class="ht-msg ' + lop + '">' +
