@@ -21,7 +21,7 @@ const ROOT = path.join(__dirname, "..", "..");
 const D = (f) => fs.readFileSync(path.join(ROOT, "dashboard", f), "utf8");
 const SU = D("sessions-ui.js");
 const CSS = D("style.css");
-const PY = fs.readFileSync(path.join(ROOT, "server", "main.py"), "utf8");
+const PY = fs.readFileSync(path.join(ROOT, "server", "main.py"), "utf8").replace(/\r\n/g, "\n");
 const PYS = fs.readFileSync(path.join(ROOT, "server", "sessions.py"), "utf8");
 const VI = JSON.parse(D(path.join("i18n", "vi.json")));
 const EN = JSON.parse(D(path.join("i18n", "en.json")));

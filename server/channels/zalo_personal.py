@@ -192,7 +192,7 @@ class Transport:
         """Quyết định có trả lời một tin khách không, và trả lời nếu có.
 
         Các rào, theo thứ tự rẻ tới đắt (cái nào chặn thì KHÔNG tốn một lượt model):
-          - chỉ chat RIÊNG dạng CHỮ (nhóm và ảnh/tiếng/file bỏ qua: chủ chưa giao việc đó);
+          - chat riêng nhận chữ và ảnh có chú thích; nhóm dùng các luật riêng;
           - tin cũ quá `TUOI_TOI_DA` bỏ qua (bộ đệm MCP lúc mới bật);
           - chủ vừa TỰ TAY nhắn cuộc chat này thì nhường;
           - rồi tới các luật chung của bot (Tiếp quản, giới hạn tần suất) trong `answer_fn`;
@@ -204,11 +204,11 @@ class Transport:
         loai = str(ev.get("message_type") or "text")
         text = str(ev.get("text") or "").strip()
         thread = str(ev.get("external_chat_id") or "")
-        # Chat riêng: chỉ tin chữ. Nhóm: tin chữ, và ảnh/file CÓ CAPTION (chữ đi kèm ảnh tính
+        # Chat riêng: chữ hoặc ảnh có chú thích. Nhóm: tin chữ, và ảnh/file CÓ CAPTION (chữ đi kèm ảnh tính
         # như một tin: "@Bot giá cái này?" gửi kèm ảnh thì bot phải trả lời).
-        if not nhom and (ev.get("chat_type") != "private" or loai != "text"):
+        if not nhom and (ev.get("chat_type") != "private" or loai not in ("text", "image")):
             return
-        if nhom and not zalo_nhom.la_chu_thich(loai, text):
+        if (nhom or loai == "image") and not zalo_nhom.la_chu_thich(loai, text):
             return
         if not text or not thread:
             return
@@ -224,6 +224,10 @@ class Transport:
             "message_id": str(ev.get("external_message_id") or ""),
             "account_id": self.conn_id,
         }
+        if loai == "image":
+            meta["co_anh"] = True
+            # 0.74.1: the photo's link, so the bot can actually look at it (see `chatbot_runtime.anh_cho_bot`).
+            meta["image_url"] = str((ev.get("metadata") or {}).get("image_url") or "")
         if nhom:
             md = ev.get("metadata") or {}
             meta["mentioned"] = zalo_nhom.co_goi_ten(text, md.get("mentions"), self._ten_goi())

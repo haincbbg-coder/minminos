@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.66] - 2026-10-05
+### Cải thiện
+- Trang Kỹ năng có công tắc bật/tắt riêng, khung chi tiết, lọc và sắp xếp; chọn nhiều kỹ năng để xuất ZIP, nhập gói nhiều kỹ năng đầy đủ. Đổi trạng thái giữ nguyên trang đang xem và lưu lỗi báo rõ lý do.
+- Giao diện chính, màn hình phụ và các ứng dụng dùng chung chế độ Sáng, Tối hoặc Tự động theo giờ từng thiết bị. Máy chưa chọn dùng lịch 06:00–18:00; lựa chọn đã lưu được giữ nguyên.
+### Sửa lỗi
+- Đổi mật khẩu admin qua biến môi trường rồi khởi động lại có tác dụng, giữ 2FA và đăng xuất phiên cũ; môi trường không đổi thì giữ mật khẩu đã đổi trong dashboard. Thêm nút xem mật khẩu; sửa tìm thư mục Codex trên Windows, chọn CLI mới nhất và báo rõ lỗi khởi động Claude.
+- ChatGPT Live trả lời tiến độ từ việc đang chạy và nhận việc mới song song. Bot Zalo xem được ảnh có chú thích qua ChatGPT đã kết nối; nếu không xem được thì nói rõ, không đoán nội dung ảnh.
+
 ## [26.10.65] - 2026-10-04
 ### Thêm mới
 - **Xưởng video đăng được TikTok**: ở tab Khoá và kết nối nhập Client key, Client secret của ứng dụng TikTok rồi bấm Kết nối tài khoản. Video được gắn nhãn nội dung do AI tạo.
