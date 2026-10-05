@@ -89,13 +89,19 @@ SAFE_PART = re.compile(r"[^0-9A-Za-z_-]")
 
 
 def url_allowed(url: str) -> bool:
-    """Only https on a hostname, never localhost or a literal IP: the link comes from a chat message, so it is untrusted input."""
+    """Fetch only the Zalo image CDN; message URLs and redirects are untrusted."""
     try:
         u = urlparse(str(url or ""))
     except ValueError:
         return False
     host = (u.hostname or "").lower()
-    if u.scheme != "https" or not host or host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+    if (u.scheme != "https" or u.username or u.password
+            or not (host == "zdn.vn" or host.endswith(".zdn.vn"))):
+        return False
+    try:
+        if u.port not in (None, 443):
+            return False
+    except ValueError:
         return False
     try:
         ipaddress.ip_address(host)

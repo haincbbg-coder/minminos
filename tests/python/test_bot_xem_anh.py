@@ -156,12 +156,19 @@ for tag, why in (("redirect", "127.0.0.1"), ("big", ""), ("html", ""), ("gone", 
           and not any("127.0.0.1" in u for u in HTTP), HTTP)
 o = see(META | {"message_id": "h1", "image_url": "http://f9.zdn.vn/a.jpg"})
 check("http link refused before any request", o.startswith(LABEL) and HTTP == [])
+for url in ("https://attacker.example/image.jpg", "https://f9.zdn.vn.evil.example/a.jpg",
+            "https://f9.zdn.vn:8443/a.jpg", "https://user:secret@f9.zdn.vn/a.jpg",
+            "https://127.0.0.1.nip.io/a.jpg"):
+    HTTP.clear()
+    o = see(META | {"message_id": "untrusted-host", "image_url": url})
+    check("non-CDN, credentials and custom ports refused before HTTP", o.startswith(LABEL) and HTTP == [], url)
+
 o = see(META | {"chat_id": "../../etc", "message_id": "..\\x"})
 check("chat and message ids cannot climb out of attachments/zalo",
       all(p.resolve().is_relative_to((brain / "attachments" / "zalo").resolve()) for p in brain.rglob("*.jpg")))
 
 # ============================================================
-# 4. Both reply paths use the eyes
+# 4. Live replies use the eyes
 # ============================================================
 src = (SERVER / "chatbot_runtime.py").read_text(encoding="utf-8")
 check("live reply uses vision before calling the engine",

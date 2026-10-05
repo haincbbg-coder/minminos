@@ -134,6 +134,8 @@ class StatusSpeechTests(unittest.IsolatedAsyncioTestCase):
     async def test_status_is_spoken_when_the_model_is_idle(self):
         self.assertTrue(await self.prov.say_status("Em vẫn đang làm."))
         self.assertTrue(await self.until(lambda: self.fake.spoken() == ["Em vẫn đang làm."]))
+        self.assertFalse(any(m == "thread/realtime/appendText" for _, m, _ in self.fake.calls),
+                         "a progress line must not tell the model that work has completed")
 
     async def test_a_status_still_queued_is_dropped_when_the_real_result_arrives(self):
         self.fake.push("thread/realtime/transcript/delta", role="assistant", delta=" Dạ, để em")

@@ -1311,11 +1311,12 @@ class ChatGPTLive(LiveProvider):
                 self._speech_done.clear()
                 self._pushed_at = time.monotonic()
                 try:
-                    await self.srv.request("thread/realtime/appendText", {
-                        "threadId": self.thread_id,
-                        "text": "Kết quả đã hoàn tất, không cần kiểm tra hay giao việc lại. "
-                                "Đoạn tiếp theo là nội dung cần đọc đầy đủ: " + text,
-                    })
+                    if not isinstance(text, _Status):
+                        await self.srv.request("thread/realtime/appendText", {
+                            "threadId": self.thread_id,
+                            "text": "Kết quả đã hoàn tất, không cần kiểm tra hay giao việc lại. "
+                                    "Đoạn tiếp theo là nội dung cần đọc đầy đủ: " + text,
+                        })
                     await self.srv.request("thread/realtime/appendSpeech", {"threadId": self.thread_id, "text": text})
                     # A receipt from appendSpeech is not proof that the text was spoken.
                     await asyncio.wait_for(self._speech_done.wait(), self.SPEECH_READ_TIMEOUT or max(12.0, len(text) / 6.0))
