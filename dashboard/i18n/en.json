@@ -1,4 +1,8 @@
 {
+  "ht.photo": "Image",
+  "ht.photo_view": "View full image",
+  "ht.photo_original": "Open original image",
+  "ht.photo_error": "Unable to load image. Try opening the original image.",
   "settings.vc_latest": "Latest default",
   "settings.vc_live_pace": "Live speaking pace",
   "settings.vc_pace_slow": "Slow and clear",

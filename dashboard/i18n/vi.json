@@ -1,4 +1,8 @@
 {
+  "ht.photo": "Ảnh",
+  "ht.photo_view": "Xem ảnh lớn",
+  "ht.photo_original": "Mở ảnh gốc",
+  "ht.photo_error": "Không tải được ảnh. Bạn có thể thử mở ảnh gốc.",
   "settings.vc_latest": "Mặc định mới nhất",
   "settings.vc_live_pace": "Nhịp nói Live",
   "settings.vc_pace_slow": "Chậm, rõ ràng",
