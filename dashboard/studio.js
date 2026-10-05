@@ -1046,7 +1046,7 @@
     /* Màn vừa (laptop nhỏ, máy tính bảng): khung chi tiết thành ngăn kéo bên phải đè lên trang
        thay vì chen cột thứ ba bóp danh sách. */
     @media (max-width:1180px){
-      .sk3-detail{position:fixed;top:0;right:0;bottom:0;z-index:60;width:min(420px,100vw);max-width:none;border-radius:0;overflow:auto}
+      .sk3-detail{position:fixed;top:var(--topbar-h,52px);right:0;bottom:0;z-index:60;width:min(420px,100vw);max-width:none;border-radius:0;overflow:auto}
       .sk3-scrim:not([hidden]){display:block}
     }
     /* ===== Mobile (<=860px) ===== xep DOC: nhom thanh dai chip cuon ngang o tren, danh sach
