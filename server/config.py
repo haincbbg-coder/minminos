@@ -804,6 +804,31 @@ def write_settings(cfg):
                 t["secret"] = cu
     except Exception:
         pass
+    # KHOÁ MÃ HOÁ LỆCH (dựng lại volume, mất .secret_key): read_settings giải mã mọi secret ra "",
+    # nên MỘT lần lưu cài đặt bất kỳ sẽ ghi "" đè lên bản mã cũ và key API, đăng nhập ChatGPT,
+    # token Telegram mất vĩnh viễn. Chỗ nào giờ rỗng mà file cũ có bản mã khoá hiện tại KHÔNG mở
+    # được thì giữ nguyên bản mã cũ: trả đúng khoá về là mọi kết nối quay lại. Khoá vẫn đúng thì
+    # đường này không chạy: xoá hay đổi key vẫn như thường, key gõ mới luôn được lưu.
+    try:
+        if SETTINGS_PATH.exists():
+            import secrets_store
+            raw_cu = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+            for path in _SECRET_PATHS:
+                if path == "auth.totp.secret":
+                    continue        # đã có luật riêng ở trên (giữ blob khi 2FA đang bật, tắt thật vẫn xoá được)
+                for parent_cu, key in _secret_keys(raw_cu, path):
+                    cu_val = parent_cu.get(key)
+                    if not secrets_store.cannot_decrypt(cu_val):
+                        continue
+                    # tìm đúng cặp tương ứng trong `out` theo cùng đường dẫn
+                    parts = path.split(".")
+                    dst = out
+                    for p in parts[:-1]:
+                        dst = dst.get(p) if isinstance(dst, dict) else None
+                    if isinstance(dst, dict) and not str(dst.get(key) or ""):
+                        dst[key] = cu_val
+    except Exception:
+        pass
     SETTINGS_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 
 

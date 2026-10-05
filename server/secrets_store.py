@@ -72,6 +72,25 @@ def decrypt(value):
     return value
 
 
+def cannot_decrypt(value) -> bool:
+    """True khi `value` là bản mã `enc:` mà khoá HIỆN TẠI không mở được (khoá bị lệch: dựng lại
+    volume, mất `.secret_key`). Giá trị rỗng, `plain:` hay không prefix thì không bao giờ "lệch".
+
+    Dùng để KHÔNG ghi đè bản mã cũ bằng chuỗi rỗng: `decrypt` trả "" khi lệch khoá, và nếu chỗ
+    gọi đem "" đó lưu xuống thì key API, đăng nhập ChatGPT, token Telegram mất vĩnh viễn, ngay
+    cả khi sau đó trả đúng khoá về."""
+    if not isinstance(value, str) or not value.startswith("enc:"):
+        return False
+    f = _get_fernet()
+    if not f:
+        return True
+    try:
+        f.decrypt(value[len("enc:"):].encode("ascii"))
+        return False
+    except Exception:
+        return True
+
+
 def encryption_available() -> bool:
     """Evidence/tool artifact dùng fail-closed; không chấp nhận fallback ``plain:``."""
     return _get_fernet() is not None

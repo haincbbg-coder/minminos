@@ -4,12 +4,19 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
-## [26.10.68] - 2026-10-05
+## [26.10.68] - 2026-10-06
+### Thêm mới
+- Thử bot: nút trên thẻ bot, hỏi thử một câu để xem bot sẽ trả lời gì trước khi phục vụ khách. Chỉ đọc, không gửi cho ai, không ghi vào Hộp thư, không tính thống kê.
+- Mức quyền Đọc tài liệu: bot tự liệt kê, tìm và mở thêm tài liệu của chính nó, không ghi được gì và không thấy thư mục khách gửi lên hay ghi chú riêng.
 ### Cải thiện
-- Bot nhìn ảnh bằng model đã chọn; thêm Thử bot và quyền Đọc tài liệu để kiểm tra câu trả lời trước khi phục vụ khách.
-- Kết nối MCP cập nhật bản phát hành chính thức, giữ cấu hình tự chỉnh và phân loại quyền thao tác rõ hơn.
+- Bot tự nhìn ảnh khách gửi bằng chính model đang chạy nó (OpenAI, Gemini, Claude API, OpenRouter, Groq, Ollama, gói ChatGPT), không cần ChatGPT tả hộ. Model không nhận ảnh thì tự lùi về chữ và nói thật là không xem được.
+- Kết nối MCP của Google (Workspace, Tasks, Keep, Search Console, NotebookLM) chạy bản mới nhất; kết nối đã tạo từ trước tự lên lệnh mới, lệnh bạn tự sửa tay vẫn giữ nguyên.
+- Google Ads chạy bản chính thức của Google trên PyPI, không cần cài Git, bỏ ô Google Cloud Project ID.
+### Bảo mật
+- Google Workspace: công cụ chạy hàm Apps Script cần Toàn quyền, công cụ nhập tệp tính là ghi.
 ### Sửa lỗi
-- Giữ nguyên khóa kết nối đã mã hóa khi chuyển máy thiếu khóa giải mã; giới hạn thời gian đếm thư mục lớn.
+- Khoá mã hoá bị lệch (dựng lại máy, mất file khoá) không còn xoá sạch key API và token khi lưu cài đặt; trả đúng khoá về là kết nối quay lại.
+- Duyệt thư mục lớn có giới hạn thời gian, không còn đứng hình khi đếm tài liệu.
 
 ## [26.10.67] - 2026-10-05
 ### Cải thiện

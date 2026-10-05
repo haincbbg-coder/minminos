@@ -87,16 +87,18 @@ NGUON_DEFAULT = "agent"
 # cho một con bot đang nói chuyện với NGƯỜI LẠ.
 #
 #   "suggest" - chỉ đọc. Không có tool nào cả (xem `main._bot_tra_loi`). MẶC ĐỊNH.
+#   "doc"     - Chỉ đọc + tự liệt kê, tìm, mở thêm tài liệu của bot (ba tool đọc trong
+#               `chatbot_doc_tools`, đúng phạm vi bộ tra cứu cho phép). Không ghi, không MCP.
 #   "auto"    - đọc + GHI file trong brain của chính bot, gọi được MCP đã đấu ở mức đọc/ghi.
 #               Hub chặn nhóm THAO TÁC RA NGOÀI (`mcp_catalog` xếp loại 'danger').
 #   "full"    - toàn quyền, kể cả nhóm ra ngoài. Người lạ nói chuyện với bot điều khiển được
 #               những tool đó, và thao tác ra ngoài thì không hoàn tác được.
-MUC_QUYEN = ("suggest", "auto", "full")
+MUC_QUYEN = ("suggest", "doc", "auto", "full")
 MUC_QUYEN_DEFAULT = "suggest"
 MUC_NANG = ("auto", "full")     # hai mức phải có xác nhận rủi ro mới đặt được
 
 # Nhãn tiếng Việt, để server và giao diện gọi cùng một tên cho cùng một mức.
-MUC_NHAN = {"suggest": "Chỉ đọc", "auto": "Được ghi", "full": "Toàn quyền"}
+MUC_NHAN = {"suggest": "Chỉ đọc", "doc": "Đọc tài liệu", "auto": "Được ghi", "full": "Toàn quyền"}
 
 # Rủi ro của từng mức, viết bằng lời người. Trả về DANH SÁCH câu chứ không phải một đoạn văn:
 # giao diện vẽ thành gạch đầu dòng, kênh chữ in thành nhiều dòng, và test đếm được từng ý.
@@ -111,6 +113,12 @@ MUC_NHAN = {"suggest": "Chỉ đọc", "auto": "Được ghi", "full": "Toàn qu
 # tưởng cảnh báo không áp cho mình. Nên tả theo LOẠI THAO TÁC (gửi đi, thanh toán, đặt/huỷ,
 # xoá, công bố) - đúng cách `mcp_catalog` phân loại, và đúng cho mọi nguồn dữ liệu đấu vào.
 _CANH_BAO = {
+    "doc": [
+        "Bot tự mở thêm tài liệu của chính nó khi khối tra sẵn chưa đủ: liệt kê, tìm và đọc file.",
+        "Chỉ đọc đúng những tài liệu bộ tra cứu của bot được dùng. Không thấy thư mục khách gửi lên, "
+        "ghi chú riêng, bộ nhớ, brain khác.",
+        "Không ghi được gì, không gọi nguồn dữ liệu nào, không thao tác ra ngoài.",
+    ],
     "auto": [
         "Bot GHI ĐƯỢC file trong brain của chính nó. Người nhắn cho bot một câu là nội dung "
         "trong brain đổi thật, không có bước duyệt.",

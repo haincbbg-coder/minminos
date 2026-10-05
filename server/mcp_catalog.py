@@ -413,6 +413,49 @@ def _loai_theo_call_rule(rule, args):
     return muc
 
 
+# Lệnh chạy MẶC ĐỊNH CŨ của vài connector catalog, trước khi ghim @latest / đổi gói. Kết nối tạo từ
+# lúc đó giữ nguyên bản chép lệnh nên không bao giờ nhận được bản sửa trong app. Lệnh nào khớp đúng
+# một dòng ở đây là "chưa ai sửa tay" nên được nâng lên lệnh catalog hiện hành; lệnh khác là người
+# dùng tự chỉnh nên giữ nguyên. Chỉ cần liệt kê lệnh ĐÃ TỪNG phát hành, không phải đoán tương lai.
+LENH_CU = {
+    "google-workspace": [("uvx", ["workspace-mcp", "--tool-tier", "core"])],
+    "google-tasks": [("uvx", ["workspace-mcp", "--tools", "tasks", "--tool-tier", "complete"])],
+    "google-search-console": [("npx", ["-y", "mcp-server-gsc"])],
+    "google-keep": [("uvx", ["--from", "keep-mcp", "python", "-m", "server"])],
+    "notebooklm": [("uvx", ["--from", "notebooklm-py[mcp]", "notebooklm-mcp"])],
+    "google-ads": [("uvx", ["--from", "git+https://github.com/googleads/google-ads-mcp.git", "google-ads-mcp"])],
+    "google-sheets": [("uvx", ["mcp-google-sheets"]), ("uvx", ["--with", "mcp<2", "mcp-google-sheets"])],
+    "zalo": [("npx", ["-y", "zalo-agent-cli", "mcp", "start"])],
+}
+
+
+def nang_lenh(conn):
+    """Nâng lệnh chạy của MỘT kết nối catalog lên lệnh hiện hành nếu chưa bị sửa tay.
+    Sửa conn tại chỗ, trả True khi có đổi. Idempotent."""
+    con = get((conn or {}).get("connector_id") or "")
+    if not con or not con.get("command") or (con.get("transport") or "stdio") != "stdio":
+        return False
+    moi = (str(con.get("command") or "").strip(), list(con.get("args") or []))
+    hien = (str(conn.get("command") or "").strip(), list(conn.get("args") or []))
+    snap = conn.get("lenh_catalog")
+    if isinstance(snap, dict) and snap.get("command") is not None:
+        goc = (str(snap.get("command") or "").strip(), list(snap.get("args") or []))
+        chua_sua = hien == goc
+    else:
+        chua_sua = hien == moi or any(
+            hien == (c, list(a)) for c, a in LENH_CU.get(conn.get("connector_id"), []))
+    if not chua_sua:
+        return False
+    doi = hien != moi
+    if doi:
+        conn["command"], conn["args"] = moi[0], list(moi[1])
+    ghi = {"command": moi[0], "args": list(moi[1])}
+    if conn.get("lenh_catalog") != ghi:
+        conn["lenh_catalog"] = ghi
+        doi = True
+    return doi
+
+
 def call_rule(connector, tool):
     """Luật phân loại theo hành động con của tool cổng, hoặc None."""
     rules = (connector or {}).get("call_rules") or {}

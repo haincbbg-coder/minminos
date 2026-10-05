@@ -10928,7 +10928,9 @@ async def _start_scheduler():
         # để module tự import main - vòng import là thứ byte-compile không thấy, chỉ chết lúc
         # khởi động (xem bước "Import thật main" trong CI).
         chatbot_runtime.wire(answer=_tg_answer, brain_root=_brain_root,
-                             read_agent=lambda b, slug: _read_md(_agents_dir(b) / f"{slug}.md"))
+                             read_agent=lambda b, slug: _read_md(_agents_dir(b) / f"{slug}.md"),
+                             engine_anh=lambda bot: _chat_provider_bot(
+                                 cfgmod.read_settings().get("model", {}), bot)[0])
         kq = chatbot_runtime.sync_all()
         if kq.get("errors"):
             print(f"[chatbot] bật lỗi: {kq['errors']}", file=__import__('sys').stderr)
@@ -10945,9 +10947,16 @@ async def _start_scheduler():
 _BROWSE_MD_CAP = 500        # trần đếm .md cho mỗi thư mục con
 _BROWSE_HERE_CAP = 1000     # trần đếm .md ngay tại thư mục đang đứng
 _BROWSE_DEPTH = 8           # tầng sâu tối đa khi đếm
+_BROWSE_MOT_THUMUC_GIAY = 0.15   # trần THỜI GIAN đếm .md cho mỗi thư mục con (tránh C:\\Windows treo hộp chọn brain)
+_BROWSE_TONG_GIAY = 4.0          # trần thời gian đếm cho cả một lần duyệt; hết thì các thư mục còn lại để dấu "?"
 
 
-def _count_md(root: str, cap: int) -> int:
+def _count_md(root: str, cap: int, han_giay: float = 0.0):
+    """Xem `_count_md_goc`. `han_giay` > 0: hết hạn thì trả None (đếm chưa đầy đủ) thay vì chờ tới cùng."""
+    return _count_md_goc(root, cap, (time.monotonic() + han_giay) if han_giay and han_giay > 0 else 0.0)
+
+
+def _count_md_goc(root: str, cap: int, han: float = 0.0):
     """Đếm file .md dưới root, có TRẦN THẬT: chạm cap là dừng ngay, không đi nốt cây.
 
     Bản cũ dùng `glob.glob(..., recursive=True)[:500]` - lát cắt chỉ áp lên KẾT QUẢ nên
@@ -10959,11 +10968,17 @@ def _count_md(root: str, cap: int) -> int:
     trần độ sâu, và lỗi quyền ở một nhánh không giết cả lần đếm."""
     n = 0
     stack = [(root, 0)]
+    dem_moc = 0
     while stack:
         cur, depth = stack.pop()
+        if han and time.monotonic() > han:
+            return None
         try:
             with os.scandir(cur) as it:
                 for entry in it:
+                    dem_moc += 1
+                    if han and not (dem_moc & 255) and time.monotonic() > han:
+                        return None     # một thư mục có hàng trăm nghìn file: cũng phải dừng GIỮA CHỪNG
                     try:
                         if entry.is_dir(follow_symlinks=False):
                             if depth < _BROWSE_DEPTH and not entry.name.startswith((".", "$")):
@@ -11010,15 +11025,16 @@ def _browse_sync(path: str, dem_md: bool = True) -> dict:
 
     try:
         dirs = []
+        het_gio = time.monotonic() + _BROWSE_TONG_GIAY
         for name in sorted(os.listdir(path), key=str.lower):
             if name.startswith(".") or name.startswith("$"):
                 continue
             full = os.path.join(path, name)
             if os.path.isdir(full):
                 md = None
-                if dem_md:
+                if dem_md and time.monotonic() < het_gio:
                     try:
-                        md = _count_md(full, _BROWSE_MD_CAP)
+                        md = _count_md(full, _BROWSE_MD_CAP, _BROWSE_MOT_THUMUC_GIAY)   # None = chưa đếm xong
                     except Exception:
                         md = 0
                 dirs.append({"name": name, "path": full, "md": md, "git": _la_repo(full)})
@@ -11027,7 +11043,7 @@ def _browse_sync(path: str, dem_md: bool = True) -> dict:
         parent = os.path.dirname(path.rstrip("\\/")) or None
         if os.name == "nt" and parent and len(parent) <= 2:
             parent = ""  # về danh sách ổ đĩa
-        here_md = _count_md(path, _BROWSE_HERE_CAP) if dem_md else None
+        here_md = _count_md(path, _BROWSE_HERE_CAP, _BROWSE_MOT_THUMUC_GIAY * 4) if dem_md else None
         return {"path": path, "parent": parent, "here_md": here_md,
                 "git": _la_repo(path), "dirs": dirs}
     except PermissionError:
@@ -17848,7 +17864,7 @@ def _bot_ket(out, lich_su):
 
 
 async def _bot_tra_loi(text, *, sess, sysprompt, prov, api_key, api_model, reasoning,
-                       progress, runtime_trace, brain=None, chat_id=""):
+                       progress, runtime_trace, brain=None, chat_id="", anh=None, canh_bao=""):
     """Một lượt của Bot chuyên trách. MỘT đường duy nhất cho CẢ TÁM bộ não.
 
     Vì sao không đi theo bốn nhánh engine như đường chat của chủ:
@@ -17887,9 +17903,27 @@ async def _bot_tra_loi(text, *, sess, sysprompt, prov, api_key, api_model, reaso
     messages = [{"role": "system", "content": sysprompt}] + lich_su
     _bot_ghim_duong(runtime_trace, prov, api_model, messages)
 
-    out, loi = await _bot_doc_stream(
-        _api_stream(prov, api_key, api_model, messages, reasoning),
-        progress=progress, runtime_trace=runtime_trace, prov=prov, api_model=api_model)
+    # ẢNH KHÁCH GỬI đi thẳng vào tin user của lượt này (chỉ lượt này: lịch sử giữ bản chữ, không
+    # ôm base64 qua các lượt sau). Model không nhận ảnh sẽ từ chối bằng lỗi HTTP: khi đó chạy lại
+    # đúng lượt ấy bằng phần chữ có nhãn "bạn không xem được ảnh" để khách vẫn có câu trả lời.
+    out, loi = "", []
+    if isinstance(anh, dict) and anh.get("data_url"):
+        import bot_anh
+        messages_anh = messages[:-1] + [{"role": "user",
+                                         "content": bot_anh.noi_dung_co_anh(text, anh["data_url"])}]
+        out, loi = await _bot_doc_stream(
+            _api_stream(prov, api_key, api_model, messages_anh, reasoning),
+            progress=progress, runtime_trace=runtime_trace, prov=prov, api_model=api_model)
+        if not out:
+            print(f"[bot {prov}] model không nhận ảnh, chạy lại bằng chữ: {(loi or [''])[0][:200]}",
+                  file=__import__('sys').stderr)
+            text_du_phong = str(anh.get("text_du_phong") or text)
+            lich_su[-1]["content"] = text_du_phong
+            messages = messages[:-1] + [{"role": "user", "content": text_du_phong}]
+    if not out:
+        out, loi = await _bot_doc_stream(
+            _api_stream(prov, api_key, api_model, messages, reasoning),
+            progress=progress, runtime_trace=runtime_trace, prov=prov, api_model=api_model)
 
     if not out:
         lich_su.pop()   # lượt hỏng thì đừng để câu hỏi treo lơ lửng không có câu trả lời
@@ -17901,7 +17935,10 @@ async def _bot_tra_loi(text, *, sess, sysprompt, prov, api_key, api_model, reaso
         return "⚠ " + (loi[0] if loi else "Không nhận được nội dung nào.")
     # Không gửi kèm file: bot ở mức này không tạo được file (không có tool), và quét thư mục
     # brain để tìm file "mới" thì lại là một đường rò tài liệu ra ngoài.
-    return _bot_ket(out, lich_su)
+    ket = _bot_ket(out, lich_su)
+    if canh_bao:
+        ket["canh_bao"] = canh_bao
+    return ket
 
 
 # ============================================================
@@ -17997,7 +18034,13 @@ async def _bot_tra_loi_co_tool(text, *, sess, sysprompt, prov, api_key, api_mode
     # của chủ vào đây là mở toang đúng thứ cả tính năng này đang giữ.
     tools, route = [], {}
     try:
-        tools, route = await mcp_hub.discover_all(muc_quyen, vault_root=_brain_root(brain))
+        if muc_quyen == "doc":
+            # "Đọc tài liệu": ba tool đọc trong tiến trình, KHÔNG qua hub (hub đọc được cả ghi chú
+            # riêng của chủ trong cùng brain). Xem chatbot_doc_tools.
+            import chatbot_doc_tools
+            tools, route = chatbot_doc_tools.tao(_brain_root(brain))
+        else:
+            tools, route = await mcp_hub.discover_all(muc_quyen, vault_root=_brain_root(brain))
     except Exception as e:
         print(f"[bot {prov} chat {chat_id}] nạp tool hỏng: {type(e).__name__}: {e}",
               file=__import__('sys').stderr)
@@ -18118,6 +18161,15 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         # Fail-closed là bắt buộc ở đây: đoán sai theo hướng kia là cấp tool cho một con bot
         # đang nói chuyện với người lạ.
         _muc = str((bot or {}).get("muc_quyen") or "").strip().lower()
+        # "Đọc tài liệu" chạy tool ĐỌC ngay trong tiến trình nên chỉ các engine API (và gói ChatGPT)
+        # dùng được. Gói Claude Code, Grok Build, Antigravity chạy qua binary riêng: lượt đó rơi về
+        # Chỉ đọc, và nói rõ cho chủ biết ở câu trả lời (`canh_bao`) chứ không im lặng hạ mức.
+        _doc_roi_ve = _muc == "doc" and prov in ("anthropic-cli", "grok-cli", "antigravity-cli")
+        if _muc == "doc" and not _doc_roi_ve:
+            return await _bot_tra_loi_co_tool(
+                text, sess=sess, sysprompt=_sys_bot, prov=prov, api_key=api_key,
+                api_model=api_model, reasoning=reasoning, progress=_p,
+                runtime_trace=runtime_trace, brain=brain, chat_id=chat_id, muc_quyen="doc")
         if _muc in chatbot_store.MUC_NANG:
             return await _bot_tra_loi_co_tool(
                 text, sess=sess, sysprompt=_sys_bot, prov=prov, api_key=api_key,
@@ -18126,7 +18178,12 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         return await _bot_tra_loi(text, sess=sess, sysprompt=_sys_bot,
                                   prov=prov, api_key=api_key, api_model=api_model,
                                   reasoning=reasoning, progress=_p, runtime_trace=runtime_trace,
-                                  brain=brain, chat_id=chat_id)
+                                  brain=brain, chat_id=chat_id,
+                                  anh=(meta or {}).pop("_anh_goc", None),
+                                  canh_bao=(f"Bot đang ở mức Đọc tài liệu nhưng engine ({_api_label(prov)}) không "
+                                            f"chạy được công cụ trong tiến trình, nên lượt này trả lời ở mức Chỉ "
+                                            f"đọc. Đổi engine sang một nhà API ở trang Models nếu cần bot tự mở "
+                                            f"thêm tài liệu.") if _doc_roi_ve else "")
     # ===== Hệ Tiết kiệm cho kênh NGOÀI dashboard =====
     #
     # Tới 0.23.1, cả Tối ưu lẫn Siêu tiết kiệm chỉ được nối vào đúng handler WebSocket của
@@ -19613,6 +19670,19 @@ async def chatbots_phan_xu_quen(bot_id: str, chat_id: str = Form("")):
         return JSONResponse({"ok": False, "error": "Không có bot này"}, status_code=404)
     chatbot_phan_xu.quen_het(bot_id, chat_id)
     return {"ok": True}
+
+
+@app.post("/chatbots/{bot_id}/thu")
+async def chatbots_thu(bot_id: str, cau_hoi: str = Form(...), chat_type: str = Form("private")):
+    """THỬ BOT: hỏi thử một câu, xem bot sẽ trả lời gì. Chỉ đọc, không gửi, không ghi Hộp thư."""
+    if not chatbot_store.get_bot(bot_id):
+        return JSONResponse({"ok": False, "error": "Không có bot này"}, status_code=404)
+    r = await chatbot_runtime.thu_bot(bot_id, cau_hoi, chat_type)
+    if not r.get("ok"):
+        tin = {"khong_co_cau_hoi": "Gõ câu hỏi để thử.",
+               "loi_engine": "Bot chạy lỗi: " + str(r.get("chi_tiet") or "")}.get(r.get("ly_do"), "Không thử được.")
+        return JSONResponse({"ok": False, "error": tin, "ly_do": r.get("ly_do")}, status_code=400)
+    return r
 
 
 @app.get("/chatbots/{bot_id}/log")
