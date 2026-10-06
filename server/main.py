@@ -5208,11 +5208,17 @@ def _khoi_coding(row) -> str:
     return ""
 
 
-def _muc_quyen_luot_chat(row) -> str:
+def _muc_quyen_luot_chat(row, brain=None) -> str:
     """Mức quyền của lượt: phiên coding lấy theo chip trên trang, còn lại giữ `full` như cũ.
 
     Khung chat thường xưa nay chạy `full` (mặc định của `_apply_mcp`); đổi mặc định đó ở đây
     là âm thầm siết mọi cuộc trò chuyện đang có.
+
+    Ngoại lệ từ 26.10.96: phiên chat TRỰC TIẾP với một agent (trang Cộng sự, kênh `agent:<slug>`)
+    lấy mức `muc_quyen` của chính agent đó. Agent nhận từ người khác qua Chợ chia sẻ mang
+    `muc_quyen: suggest`; trước bản này nó chỉ bị chặn cứng trong workflow, còn chat trực tiếp
+    vẫn chạy toàn quyền với một dòng dặn trong prompt. Agent tự tạo không có trường đó nên vẫn
+    là full, không ai bị siết âm thầm.
     """
     try:
         sid = (row or {}).get("id") or ""
@@ -5220,7 +5226,33 @@ def _muc_quyen_luot_chat(row) -> str:
             return coding_store.muc_quyen_cua_phien(sid)
     except Exception:
         pass
+    try:
+        p = workflow_chat.persona_cua_phien(row)
+        if p and p[0] == "agent" and brain is not None and skill_router.valid_slug(p[1]):
+            meta, _ = _read_md(_agents_dir(brain) / f"{p[1]}.md")
+            return _muc_quyen_md(meta)
+    except Exception:
+        # Đọc file agent lỗi mà phiên lại là phiên agent: không biết mức thì chọn mức CHẶT.
+        if str((row or {}).get("channel") or "").startswith("agent:"):
+            return "suggest"
     return "full"
+
+
+def _siet_claude_theo_muc(cli, mode: str):
+    """Mức dưới full cho engine Claude Code ở khung chat: hub đã chặn MCP ra ngoài qua
+    X-Javis-Mode, nhưng tool NATIVE của Claude (Bash, Write, Edit, WebFetch) không đi qua hub.
+    Nên phải khoá thêm ở allowlist của chính CLI, cùng cách loop mức nhẹ làm."""
+    if mode == "full":
+        return cli
+    allow = list(SAFE_FILE_TOOLS if mode == "auto" else READONLY_TOOLS)
+    try:
+        allow += list(_loop_mcp_allow() or [])
+    except Exception:
+        pass
+    cli.allowed_tools = allow
+    chan = ["Bash", "WebFetch", "WebSearch", "Task"]
+    cli.disallowed_tools = chan + [d for d in (cli.disallowed_tools or []) if d not in chan]
+    return cli
 
 
 def _brain_key(brain) -> str:
@@ -14195,10 +14227,11 @@ async def websocket_endpoint(ws: WebSocket):
                     "grok-cli", actual_model or "", kind)
                 kcli = grok_cli.GrokCLI(cwd=_cwd_luot_chat(_row0, brain), model=actual_model,
                                         tag=turn_tag, instructions=sysprompt)
-                kcli.mode = _muc_quyen_luot_chat(_row0)
+                kcli.mode = _muc_quyen_luot_chat(_row0, brain)
                 # Hub trỏ BRAIN kể cả khi cwd là repo: MCP, cron và nhắc hẹn thuộc bộ não của
-                # người dùng, không thuộc cây mã nguồn đang mở.
-                _apply_grok_hub(kcli, _brain_root(brain))
+                # người dùng, không thuộc cây mã nguồn đang mở. Mode đi theo lượt (26.10.96):
+                # trước đây header luôn là full kể cả khi CLI đang ở mức thấp.
+                _apply_grok_hub(kcli, _brain_root(brain), mode=kcli.mode)
                 if not kcli.is_available():
                     final_text = ("⚠ Chưa cài Grok Build CLI trên máy này. Cài một lần:\n\n"
                                   f"`{grok_cli.lenh_cai()}`\n\n"
@@ -14285,9 +14318,9 @@ async def websocket_endpoint(ws: WebSocket):
                     "antigravity-cli", actual_model or "", kind)
                 acli = antigravity_cli.AntigravityCLI(cwd=_cwd_luot_chat(_row0, brain), model=actual_model,
                                                       tag=turn_tag, instructions=sysprompt)
-                acli.mode = _muc_quyen_luot_chat(_row0)
+                acli.mode = _muc_quyen_luot_chat(_row0, brain)
                 # Hub trỏ BRAIN kể cả khi cwd là repo - xem chú thích ở nhánh Grok.
-                _apply_antigravity_hub(acli, _brain_root(brain))
+                _apply_antigravity_hub(acli, _brain_root(brain), mode=acli.mode)
                 if not acli.is_available():
                     final_text = ("⚠ Chưa cài Antigravity CLI trên máy này. Cài một lần:\n\n"
                                   f"`{antigravity_cli.lenh_cai()}`\n\n"
@@ -14356,6 +14389,13 @@ async def websocket_endpoint(ws: WebSocket):
                 # Hub vẫn trỏ BRAIN kể cả khi cwd là repo: MCP, cron và nhắc hẹn thuộc về bộ
                 # não của người dùng, không thuộc về cây mã nguồn đang mở.
                 _apply_codex_hub(ccli, _brain_root(brain))   # MCP + đúng brain cho cron/nhắc hẹn
+                _muc_codex = _muc_quyen_luot_chat(_row0, brain)
+                if _muc_codex != "full":
+                    # Codex không có allowlist per-call: chặn file bằng sandbox, chặn MCP bằng
+                    # header mode ghi đè theo tiến trình (profile chung vẫn là full).
+                    from claude_cli import codex_sandbox_cho_mode
+                    ccli.sandbox = codex_sandbox_cho_mode(_muc_codex)
+                    mcp_hub.dat_codex_mode(ccli.extra_config, _muc_codex)
                 stored_codex_thread = (_row0.get("codex_thread_id") or "").strip()
                 # Mạch Codex đã phình quá ngưỡng thì THÔI resume: mở mạch mới rồi mồi lại
                 # bằng transcript trong SQLite. Không làm bước này thì mỗi lượt tiếp theo
@@ -14710,6 +14750,7 @@ async def websocket_endpoint(ws: WebSocket):
                             gen = await _api_stream_mcp(
                                 prov, api_key, api_model, or_messages, reasoning, brain=brain,
                                 force_lazy=(_phase8_plan.action == "use" or _attempt > 1),
+                                mode=_muc_quyen_luot_chat(_row0, brain),
                             )
                             async for ev in gen:
                                 if ev["type"] == "meta":
@@ -14820,7 +14861,10 @@ async def websocket_endpoint(ws: WebSocket):
                 cli.system_prompt = sysprompt
                 # mode: `full` cho mọi phiên như xưa nay; riêng phiên coding lấy theo chip Mức
                 # quyền của trang đó, vì ở trang ấy người dùng CHỌN mức chứ không thừa kế.
-                _apply_mcp(cli, mode=_muc_quyen_luot_chat(_row0), brain=brain)   # gắn MCP do Javis quản lý (nhiều shop POSCake...)
+                _muc_luot = _muc_quyen_luot_chat(_row0, brain)
+                _apply_mcp(cli, mode=_muc_luot, brain=brain)   # gắn MCP do Javis quản lý (nhiều shop POSCake...)
+                if _muc_luot != "full" and _persona and _persona[0] == "agent":
+                    _siet_claude_theo_muc(cli, _muc_luot)   # agent nhận về: khoá cả tool native
                 _streamed = ""      # phần đã stream - phương án dự phòng khi luồng đứt trước 'final'
                 _cli_sid = None
                 _cost = None

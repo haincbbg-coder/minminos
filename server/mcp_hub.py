@@ -1600,6 +1600,25 @@ def codex_vault_override(vault_root):
     return f"{CODEX_VAULT_KEY}={_toml_str(ma_hoa_vault(vault))}"
 
 
+CODEX_MODE_KEY = "mcp_servers.javis.http_headers.X-Javis-Mode"
+
+
+def dat_codex_mode(extra_config, mode):
+    """Ghi đè header X-Javis-Mode cho MỘT tiến trình Codex (26.10.96).
+
+    Profile javis dùng chung luôn ghi `full`, nên trước bản này Codex chạy ở mức suggest/auto
+    (loop nhẹ, agent nhận từ Chợ chia sẻ) chỉ bị sandbox chặn ghi FILE, còn tool MCP ra ngoài
+    (gửi tin, tạo đơn) vẫn đi qua hub với nhãn full. Override argv giống dat_codex_vault: không
+    đụng profile chung nên không race với cuộc chat full đang chạy song song. Mode lạ -> suggest
+    (chặt nhất), không bao giờ nới."""
+    m = str(mode or "").strip().lower()
+    m = m if m in ("suggest", "auto", "full") else "suggest"
+    extra_config[:] = [x for x in extra_config if not str(x).startswith(CODEX_MODE_KEY + "=")]
+    if m != "full":
+        extra_config.append(f"{CODEX_MODE_KEY}={_toml_str(m)}")
+    return extra_config
+
+
 def dat_codex_vault(extra_config, vault_root):
     """Gắn override brain vào danh sách `-c` của MỘT CodexCLI, THAY override brain cũ nếu có.
 
