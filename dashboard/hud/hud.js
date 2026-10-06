@@ -1,5 +1,5 @@
 // MinMin HUD - dieu phoi: noi canh 3D, chom sao, giong noi va su kien tu may chu.
-import { MinMinScene } from "./scene.js?v=12";
+import { MinMinScene } from "./scene.js?v=13";
 import { Constellation, DOMAINS, domainForTool } from "./constellation.js";
 import { VoiceIO } from "./voice.js";
 import { Bridge, fetchAgents, fetchKpi } from "./bridge.js";
