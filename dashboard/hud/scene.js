@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { humanPoints, SHOULDER, ELBOW } from "./body.js";
 import { robotPoints } from "./robot.js";
 import { bustPoints } from "./bust.js?v=8";
-import { PhotoFigure } from "./figure.js?v=5";
+import { PhotoFigure } from "./figure.js?v=6";
 
 const N = 60000;                       // so hat; may yeu tu giam (quality=low)
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -314,7 +314,7 @@ export class MinMinScene {
     this.rings.position.y = 0.2;
     this.scene.add(this.rings);
 
-    this.fig = new PhotoFigure(THREE, this.body, new URL("./figure.bin?v=5", import.meta.url).href);
+    this.fig = new PhotoFigure(THREE, this.body, new URL("./figure.bin?v=7", import.meta.url).href);
     const applyTheme = () => {
       const light = document.documentElement.getAttribute("data-theme") === "light";
       const style = getComputedStyle(document.documentElement);
@@ -463,11 +463,9 @@ export class MinMinScene {
     u.uHeadYaw.value = this.lookNow.x * 0.55;
     u.uHeadPitch.value = this.lookNow.y * 0.32;
     this.spinNow += (this.spin - this.spinNow) * 0.12;
-    // Hinh "Nguoi hat" la tam anh phang: xoay se thanh lat mong. Chi cho nghieng rat nhe.
-    const figFlat = this.form === "figure" && this.fig && this.fig.ready;
-    this.body.rotation.y = figFlat
-      ? Math.max(-0.12, Math.min(0.12, this.spinNow * 0.1)) + this.lookNow.x * 0.05
-      : this.spinNow + this.lookNow.x * 0.16 + uMorphV * t * 0.12 * speed;
+    // Nguoi hat gio la khoi that (mat truoc + mat sau): keo chuot xoay 360 do, luc nghi lac nhe de thay khoi.
+    const figVol = this.form === "figure" && this.fig && this.fig.ready;
+    this.body.rotation.y = this.spinNow + this.lookNow.x * 0.16 + (figVol ? Math.sin(t * 0.45) * 0.22 * (this.reduced ? 0 : 1) : uMorphV * t * 0.12 * speed);
 
     this.zoomNow += (this.zoom - this.zoomNow) * 0.12;
     const vao = this.reduced ? 0 : Math.pow(1 - u.uAssemble.value, 2);       // mo man: camera lui xa roi day vao
