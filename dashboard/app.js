@@ -3990,6 +3990,7 @@ async function initAuthGate() {
   // cookie phiên rất có thể vẫn còn hợp lệ, chỉ là chưa hỏi được. Cứ để nguyên UI, mọi lệnh
   // gọi API thật sự (chat, file...) tự lộ ra nếu phiên đã hết hạn thật.
   if (!s) return;
+  if (s.role === "member") { location.replace("/static/member/index.html"); return; }   // thanh vien: khu rieng
   if (s.authed) { initSetup(); return; }
   if (s.needs_setup) {
     _wizardMandatory = !!s.require_login;
