@@ -6536,12 +6536,14 @@
     let basicVoice = "";
     if (call.engine === "chatgpt") {
       const p = (o.live_providers || []).find(x => x.id === "chatgpt") || {};
-      sel.innerHTML = (p.voices || []).map(x => opt(x, x, o.chatgpt_voice || p.default_voice)).join("");
+      const vi0 = p.voice_info || {};
+      sel.innerHTML = (p.voices || []).map(x => opt(x, vi0[x] ? x + " (" + vi0[x] + ")" : x, o.chatgpt_voice || p.default_voice)).join("");
     } else if (call.engine === "api") {
       const p = (o.live_providers || []).find(x => x.id === call.live_provider) || {};
       const voices = p.voices || [];
       const cur = voices.includes(v.live_voice) ? v.live_voice : (p.default_voice || voices[0] || "");
-      sel.innerHTML = voices.map(x => opt(x, x, cur)).join("");
+      const vi1 = p.voice_info || {};
+      sel.innerHTML = voices.map(x => opt(x, vi1[x] ? x + " (" + vi1[x] + ")" : x, cur)).join("");
     } else {
       // Đường Cơ bản: giọng Edge (miễn phí), giọng OpenAI khi đã có key ở trang Models, và giọng
       // ElevenLabs riêng (key và Voice ID ở Nâng cao). Chọn giọng là chọn luôn nhà cung cấp.
@@ -6566,6 +6568,8 @@
     modelSelect.onchange = async () => { await luuGiong({ live_model: modelSelect.value }); };
     $("vcLivePace").value = v.live_pace || "normal";
     $("vcLivePace").onchange = async () => { await luuGiong({ live_pace: $("vcLivePace").value }); };
+    $("vcLiveAccent").value = v.live_accent || "";
+    $("vcLiveAccent").onchange = async () => { await luuGiong({ live_accent: $("vcLiveAccent").value }); };
     $("vcOpenaiNote").hidden = !basic || !!tts.openai_key_set;
     $("vcEleven").hidden = !isEleven();
     $("vcElKeySet").hidden = !tts.elevenlabs_key_set;

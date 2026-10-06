@@ -140,7 +140,9 @@
       if (!anchor || document.getElementById("memBtn")) return !!document.getElementById("memBtn");
       var b = document.createElement("button");
       b.className = "graph-folder-btn"; b.id = "memBtn"; b.type = "button"; b.title = T("mem.btn");
-      b.innerHTML = '<i data-ic="users"></i>';
+      // Vẽ SVG ngay bằng ic(): nút tạo muộn nên bộ quét <i data-ic> có thể đã chạy xong và bỏ sót.
+      b.innerHTML = (typeof window.ic === "function") ? window.ic("users") : "";
+      if (!b.innerHTML) b.textContent = "\uD83D\uDC65";
       b.addEventListener("click", open);
       anchor.parentNode.insertBefore(b, anchor);
       try { window.JavisIcons && window.JavisIcons.refresh && window.JavisIcons.refresh(); } catch (e) {}

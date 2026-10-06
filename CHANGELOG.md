@@ -4,6 +4,17 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.79] - 2026-10-06
+### Thêm mới
+- Học viên vào bằng tài khoản được cấp ở trang chủ MinMin giờ thấy đồ thị não ngay (cùng bộ vẽ với MinMin) trong phạm vi brain được cấp, chạm vào chấm để mở ghi chú. Có tab Tệp để duyệt và sửa nếu được quyền. Bản riêng vẫn cho giao diện MinMin đầy đủ.
+- Giọng nghe thử có ghi chú từng giọng: nam hay nữ, miền, cao hay trầm, tính cách; chọn được giọng vùng (Bắc, Nam, Trung) cho ChatGPT Live.
+- Hub robot mở màn kiểu Apex: thân hiện từ bụng lên đầu với mép sáng quét lên, camera lùi xa rồi đẩy vào.
+### Sửa lỗi
+- Nút thêm người dùng không còn bị mờ trống, đã có biểu tượng và tên.
+- ChatGPT Live báo rõ lý do (hết hạn mức gói, mất kết nối...) bằng tiếng Việt thay vì lỗi chung.
+### Cải thiện
+- Hub robot đổi sang thân lực lưỡng: cổ dày, cơ thang, vai tròn, ngực nở, bụng sáu múi, đổ bóng theo khối cơ, mặt có sống mũi, gò má, cằm.
+
 ## [26.10.78] - 2026-10-06
 ### Thêm mới
 - Bản riêng cho học viên: mỗi học viên có một MinMin tách biệt hoàn toàn (brain, bộ nhớ, đăng nhập AI, kết nối POS, Ads, Higgsfield đều riêng) nhưng vào CHUNG tên miền. Đăng nhập bằng email, mật khẩu và 2FA như thành viên; sau đó cổng chuyển thẳng họ sang bản của họ, cả chat trực tiếp.

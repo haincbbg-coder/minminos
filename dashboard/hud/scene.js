@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { humanPoints, SHOULDER, ELBOW } from "./body.js";
 import { robotPoints } from "./robot.js";
-import { bustPoints } from "./bust.js";
+import { bustPoints } from "./bust.js?v=8";
 
 const N = 60000;                       // so hat; may yeu tu giam (quality=low)
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -41,7 +41,7 @@ uniform vec4 uArms;                 // canh tay trai (tren, cang), phai (tren, c
 attribute vec3 aRobot, aHuman, aBust, aSphere, aScatter, aInfoR, aInfoH, aInfoB, aNrmB;
 attribute vec2 aArmR, aArmH;
 attribute float aSeed;
-varying float vZone, vGlow, vAlpha, vRim;
+varying float vZone, vGlow, vAlpha, vRim, vLit;
 
 float hash(float n){ return fract(sin(n)*43758.5453); }
 vec3 wobble(vec3 p, float t, float s){
@@ -86,7 +86,12 @@ void main(){
   vec3 info = aInfoR * uForm.x + aInfoH * uForm.y + vec3(0.0, 1.0, 0.0) * uForm.z + aInfoB * uForm.w;
   float aZone = info.x;
   float uMorph = uForm.z;
-  float ease = smoothstep(0.0, 1.0, clamp(uAssemble*1.35 - aSeed*0.35, 0.0, 1.0));
+  // 26.10.79: tuong ban than hien len tu BUNG len DAU (kieu Apex): hat thap vao truoc, hat cao vao sau
+  float cao = clamp((target.y + 1.6) / 3.5, 0.0, 1.0);
+  float tre = mix(aSeed*0.35, cao*0.55 + aSeed*0.12, uForm.w);
+  float raw = clamp(uAssemble*1.75 - tre, 0.0, 1.0);
+  float ease = smoothstep(0.0, 1.0, raw);
+  float mepSang = smoothstep(0.0, 0.12, raw) * (1.0 - smoothstep(0.55, 1.0, raw)) * uForm.w;
   vec3 p = mix(aScatter, target, ease);
 
   // ---- SONG DONG LIEN TUC (0.64.87): hat khong con dung im ----
@@ -130,13 +135,16 @@ void main(){
   vRim = pow(rim, 1.8) * uForm.w;
   // vien sang lung linh: gon song chay vong quanh dau va vai
   vRim *= 0.72 + 0.28*sin(atan(p.z, p.x)*3.0 - uTime*1.3 + p.y*5.0);
+  // anh sang chinh (tu tren-trai-truoc): khoi co bap nao quay ve anh sang thi sang, quay di thi toi
+  float lit = max(0.0, dot(nv, normalize(vec3(-0.45, 0.75, 0.8)))) * uForm.w;
+  vLit = lit;
   float size = uSize * (0.7 + hash(aSeed*91.0)*0.6 + aZone*1.1*(0.5+uEnergy)) * (1.0 - 0.1*uForm.w + vRim*1.6);
   size *= 0.82 + 0.36*nhay + xung*1.6 + song*0.5;
   gl_PointSize = size * uPixel * (3.2 / -mv.z);
 
   vZone = aZone;
-  vGlow = band * thinking + aZone * (0.4 + uEnergy*0.9) + speaking*uEnergy*0.2 + song*0.45 + xung*1.4;
-  vAlpha = mix(0.35, 1.0, ease) * info.y * mix(1.0, 0.55 + 0.45*max(vRim*1.4, aZone), uForm.w);
+  vGlow = mepSang * 1.6 + band * thinking + aZone * (0.4 + uEnergy*0.9) + speaking*uEnergy*0.2 + song*0.45 + xung*1.4;
+  vAlpha = mix(0.35, 1.0, ease) * info.y * mix(1.0, 0.5 + 0.5*max(max(vRim*1.4, aZone), lit*1.25), uForm.w);
   vAlpha *= 0.62 + 0.38*nhay;
   vAlpha *= mix(1.0, (1.0 - bay) * smoothstep(0.0, 0.15, bay) * 1.6, tanLua);
 }`;
@@ -144,7 +152,7 @@ void main(){
 const FRAG = /* glsl */`
 uniform vec3 uCool, uWarm, uHot, uRim;
 uniform float uErr, uBoost;
-varying float vZone, vGlow, vAlpha, vRim;
+varying float vZone, vGlow, vAlpha, vRim, vLit;
 void main(){
   vec2 c = gl_PointCoord - 0.5;
   float d = length(c);
@@ -154,7 +162,7 @@ void main(){
   col = mix(col, uHot, clamp(vGlow - 0.35, 0.0, 1.0));
   col = mix(col, uRim, clamp(vRim * 1.5, 0.0, 1.0));
   col = mix(col, vec3(1.0, 0.25, 0.3), uErr);
-  gl_FragColor = vec4(col * (0.75 + vGlow*0.9 + vRim*1.2) * uBoost, soft * vAlpha * (0.55 + vGlow*0.45));
+  gl_FragColor = vec4(col * (0.75 + vGlow*0.9 + vRim*1.2 + vLit*0.9) * uBoost, soft * vAlpha * (0.55 + vGlow*0.45));
 }`;
 
 // ---------- Nen (26.10.69, kieu Apex) ----------
@@ -393,7 +401,7 @@ export class MinMinScene {
     const w = this.canvas.clientWidth || window.innerWidth, h = this.canvas.clientHeight || window.innerHeight;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    this._baseZ = w / h < 1 ? 9.4 : 6.6;
+    this._baseZ = w / h < 1 ? 9.8 : 6.6;
     this.camera.updateProjectionMatrix();
     this.bgMat.uniforms.uRes.value.set(w, h);
   }
@@ -429,7 +437,7 @@ export class MinMinScene {
       vv[i] += (at[i] - av[k]) * 0.09; vv[i] *= 0.72; av[k] += vv[i];
     });
     const uMorphV = fv.z;
-    if (u.uAssemble.value < 1) u.uAssemble.value = Math.min(1, t / 2.6);
+    if (u.uAssemble.value < 1) u.uAssemble.value = Math.min(1, t / 3.8);
     u.uErr.value += ((this.state === "error" ? 0.6 : 0) - u.uErr.value) * 0.08;
 
     // Khong ai dong vao 6 giay: dau tu nhin quanh nhe nhang
@@ -444,7 +452,8 @@ export class MinMinScene {
     this.body.rotation.y = this.spinNow + this.lookNow.x * 0.16 + uMorphV * t * 0.12 * speed;
 
     this.zoomNow += (this.zoom - this.zoomNow) * 0.12;
-    const z = this._baseZ * (1 - 0.1 * u.uForm.value.w) / this.zoomNow;
+    const vao = this.reduced ? 0 : Math.pow(1 - u.uAssemble.value, 2);       // mo man: camera lui xa roi day vao
+    const z = this._baseZ * (1 - 0.1 * u.uForm.value.w) * (1 + 0.28 * vao) / this.zoomNow;
     // phong to thi camera ha dan xuong ngang mat
     const cy = 0.5 + 0.2 * fv.w + (this.zoomNow - 1) * 0.35 * (1 - uMorphV);
     this.camera.position.set(0, cy + 0.35, z);

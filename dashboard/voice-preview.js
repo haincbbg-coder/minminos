@@ -49,7 +49,8 @@
       if (current === finish) current = null;
     };
     current = finish;
-    const fail = () => { status("Không phát được giọng nghe thử. Hãy thử lại."); finish(); };
+    let _lyDo = "";
+    const fail = (why) => { if (!_lyDo) _lyDo = (typeof why === "string" && why) ? why : ""; status(_lyDo || "Không phát được giọng nghe thử. Hãy thử lại."); finish(); };
     timer = setTimeout(fail, 60000);
     status("Đang mở giọng nghe thử " + (pcm ? "Gemini Live" : "ChatGPT Live") + "…");
     // The realtime model advances with incoming audio. Generate zeros, never capture a mic.
@@ -155,7 +156,7 @@
             return;
           }
           doneTimer = setTimeout(() => { status("Đã nghe thử giọng Min Min."); finish(); }, pcm ? Math.max(3000, (nextAudio - audioContext.currentTime) * 1000 + 300) : 3000);
-        } else if (data.type === "error") fail();
+        } else if (data.type === "error") fail(data.message);
       } catch (_) { if (!ended) fail(); }
     };
   }
