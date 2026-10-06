@@ -52,7 +52,7 @@ export class Bridge {
   send(text, sessionId) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
     const ctx = "[KÊNH: HUD màn phụ, người dùng nói bằng giọng. Trả lời ngắn gọn như đang nói, không bảng biểu.]";
-    this.ws.send(JSON.stringify({ message: `${ctx}\n\n${text}`, brain: this.brain, session_id: sessionId, voice: true, voice_input: true }));
+    this.ws.send(JSON.stringify({ message: `${ctx}\n\n${text}`, brain: this.brain, session_id: sessionId, voice: true, voice_input: true, voice_fast: true }));
     return true;
   }
 
@@ -78,7 +78,7 @@ export class Bridge {
         "Có chữ trên vật thì đọc nguyên văn. Nói liền mạch như đang nói chuyện, không gạch đầu dòng, khoảng 4 đến 8 câu.\n" +
         (goiY ? `Nhận diện sơ bộ trên máy người dùng (chỉ tham khảo, có thể sai): ${goiY}.\n` : "") +
         "Chỉ đọc, KHÔNG tự lưu ảnh đi đâu.]";
-      this.ws.send(JSON.stringify({ message: `${ctx}\n\n${text}`, brain: this.brain, session_id: sessionId, voice: true, voice_input: true }));
+      this.ws.send(JSON.stringify({ message: `${ctx}\n\n${text}`, brain: this.brain, session_id: sessionId, voice: true, voice_input: true, voice_fast: true }));
       return true;
     } catch (e) { this.loi = e.message || String(e); return false; }
   }

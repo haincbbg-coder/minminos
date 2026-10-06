@@ -3510,5 +3510,6 @@
   "sess.sel_clear": "Bỏ chọn",
   "sess.sel_done": "Xong",
   "sess.gom_nen_tang": "Gom theo nền tảng AI",
-  "sess.gom_done": "Đã gom {n} hội thoại vào các project theo nền tảng (Claude, ChatGPT, Gemini...)."
+  "sess.gom_done": "Đã gom {n} hội thoại vào các project theo nền tảng (Claude, ChatGPT, Gemini...).",
+  "mmw.jump": "Xem tin gốc"
 }

@@ -4,7 +4,37 @@
   function create({ input, button, status, beforeStart, language, onError }) {
     let active = false, writing = false, finishing = false, received = false;
     let recognition = null, epoch = 0, prefix = "", suffix = "", committed = "", heard = "";
-    let timer, finalTimer, startTimer;
+    let timer, finalTimer, startTimer, fixTimer;
+    // Web Speech không nhận từ điển riêng nên "Javis" về thành "Da Vít". Chữ thô được hỏi server
+    // (/voice/sua: từ vựng cá nhân + tên rút từ bộ nhớ/wiki), kết quả nhớ theo chữ thô để lần vẽ
+    // sau dùng ngay. Server lỗi hay chậm thì cứ giữ chữ thô, không bao giờ chặn việc gõ.
+    const fixCache = new Map();
+    const shown = raw => fixCache.get(raw) || raw;
+    function write() {
+      writing = true;
+      input.value = prefix + shown(heard) + suffix;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      writing = false;
+    }
+    async function askFix(raw, immediate) {
+      if (!raw || fixCache.has(raw) || typeof fetch !== "function") return;
+      try {
+        const fd = new FormData(); fd.append("text", raw);
+        const r = await (await fetch("/voice/sua", { method: "POST", body: fd })).json();
+        if (!r || typeof r.text !== "string") return;
+        fixCache.set(raw, r.text);
+        if (fixCache.size > 50) fixCache.delete(fixCache.keys().next().value);
+        if (r.text !== raw) {
+          if (active && heard === raw) write();
+          else if (!active && input.value === prefix + raw + suffix) { writing = true; input.value = prefix + r.text + suffix; input.dispatchEvent(new Event("input", { bubbles: true })); writing = false; }
+        }
+      } catch (_) {}
+    }
+    function scheduleFix(raw, final) {
+      clearTimeout(fixTimer);
+      if (final) { askFix(raw); return; }
+      fixTimer = setTimeout(() => askFix(raw), 350);
+    }
     const show = key => { status.hidden = false; status.textContent = window.t(key); };
     function paint() {
       button.classList.toggle("recording", active);
@@ -21,6 +51,7 @@
       if (old) { old.onend = old.onresult = old.onerror = old.onstart = null; try { old.abort(); } catch (_) {} }
       paint();
       if (wasActive) show(received ? "dictation.review" : "dictation.empty");
+      if (wasActive && heard) askFix(heard);
     }
     function finish() {
       if (!active || finishing) return;
@@ -57,10 +88,10 @@
         }
         heard = window.JavisVoice.ghepManh(committed, text).trim();
         if (!heard) return;
-        received = true; writing = true;
-        input.value = prefix + heard + suffix;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        writing = false;
+        received = true;
+        write();
+        const last = ev.results[ev.results.length - 1];
+        scheduleFix(heard, !!(last && last.isFinal));
       };
       r.onerror = ev => {
         if (ticket !== epoch || ev.error === "no-speech") return;

@@ -15085,7 +15085,7 @@ async def websocket_endpoint(ws: WebSocket):
             _nghe_tho = ""
             if payload.get("voice_input", payload.get("voice")):
                 try:
-                    _tv = nghe_sua.tu_vung(_cfg_luot)
+                    _tv = nghe_sua.tu_vung_day_du(_cfg_luot, _default_brain_dir())
                     _ctx, _speech = nghe_sua.split_ui_context(user_message)
                     _sua = nghe_sua.sua(_speech, _tv)
                     if _sua != _speech:
@@ -15234,6 +15234,23 @@ async def websocket_endpoint(ws: WebSocket):
                     _vconf = voice_brain.config_from_settings(cfgmod.read_settings())
                 except Exception:
                     _vconf = None
+                # Màn Hub (robot) xin LÀN NHANH cho riêng nó: người ta nói chuyện với robot thì cần
+                # tiếng đáp tức thì, không chờ bộ não chính dựng tiến trình. Không đổi cài đặt
+                # toàn cục: chỉ khi tin mang cờ voice_fast và có bộ não giọng tự dùng được trên
+                # gói (auto_brain). Hỏng thì run_voice_turn tự rơi về run_turn như cũ.
+                if payload.get("voice_fast") and _vconf and _vconf.get("mode") != "fast":
+                    try:
+                        _cfg_v = cfgmod.read_settings()
+                        _tu_dong = _vconf.get("provider") or voice_brain.auto_brain(_cfg_v)
+                        if _tu_dong:
+                            _vconf = dict(_vconf, mode="fast", provider=_tu_dong,
+                                          model=voice_brain.brain_model_for(
+                                              (_cfg_v.get("voice") or {}), _tu_dong))
+                            kf = (voice_brain.BRAIN_PROVIDERS.get(_tu_dong) or {}).get("key_field") or ""
+                            if kf:
+                                _vconf["api_key"] = str((_cfg_v.get("model") or {}).get(kf, ""))
+                    except Exception:
+                        pass
                 _bao_lan_nhanh_bo_qua(_vconf)
             if _vconf and _vconf.get("mode") == "fast" and _vconf.get("provider"):
                 _voice_coro = run_voice_turn(
@@ -15540,6 +15557,26 @@ def _ts_trong_brain(broot: Path, duong: Path):
     return rp
 
 
+_DUOI_TAI_LIEU = ("mp4|mov|webm|m4v|png|jpe?g|gif|webp|avif|pdf|xlsx?|docx?|pptx?|csv|zip|txt|md|mp3|wav|m4a|json|html")
+_REL_BACKTICK_RE = re.compile(r"`([^`\n]{1,200}?\.(?:" + _DUOI_TAI_LIEU + r"))`", re.I)
+_REL_BARE_RE = re.compile(r"(?<![\w/.\\:@-])((?:[\w\-.]+/)+[\w\-.]+\.(?:" + _DUOI_TAI_LIEU + r"))(?![\w])", re.I)
+
+
+def _duong_dan_tuong_doi(text: str) -> list:
+    """Đường dẫn TƯƠNG ĐỐI (vd attachments/video.mp4) viết trong văn xuôi hoặc trong `backtick`.
+
+    extract_paths chỉ nhận đường dẫn tuyệt đối nên file Javis nhắc kiểu này không bao giờ lên
+    cột phải. Chỉ là ứng viên: nơi gọi giữ khi file CÓ THẬT trong brain.
+    """
+    out = []
+    for rx in (_REL_BACKTICK_RE, _REL_BARE_RE):
+        for m in rx.finditer(text or ""):
+            v = m.group(1).strip().lstrip("./")
+            if v and "://" not in v and not v.startswith(("/", "~")) and ".." not in v.split("/"):
+                out.append(v)
+    return out
+
+
 @app.get("/sessions/{session_id}/assets")
 async def sessions_assets(session_id: str, brain: str = Query("")):
     """File Javis đã tạo và link đã nhắc trong CUỘC TRÒ CHUYỆN này.
@@ -15567,6 +15604,7 @@ async def sessions_assets(session_id: str, brain: str = Query("")):
         if not noi_dung:
             continue
         ts = m.get("ts") or 0
+        mid = m.get("id")
         for tg in channel_context.markdown_targets(noi_dung):
             raw = tg["raw"]
             if "://" in raw or raw.startswith(("#", "mailto:", "data:", "tel:")):
@@ -15576,15 +15614,28 @@ async def sessions_assets(session_id: str, brain: str = Query("")):
             if not rp:
                 continue
             files.setdefault(os.path.normcase(str(rp)),
-                             {"p": rp, "nhan": tg["nhan"], "hinh": tg["hinh"], "ts": ts})["ts"] = ts
+                             {"p": rp, "nhan": tg["nhan"], "hinh": tg["hinh"], "ts": ts,
+                              "mid": mid, "ts_dau": ts})["ts"] = ts
         for raw in channel_context.extract_paths(noi_dung):
             rp = _ts_trong_brain(broot, Path(raw))
             if not rp or not rp.is_file():
                 continue
             files.setdefault(os.path.normcase(str(rp)),
-                             {"p": rp, "nhan": "", "hinh": False, "ts": ts})["ts"] = ts
+                             {"p": rp, "nhan": "", "hinh": False, "ts": ts,
+                              "mid": mid, "ts_dau": ts})["ts"] = ts
+        for rel in _duong_dan_tuong_doi(noi_dung):
+            try:
+                rp = _ts_trong_brain(broot, broot / rel)
+            except Exception:
+                rp = None
+            if not rp or not rp.is_file():
+                continue
+            files.setdefault(os.path.normcase(str(rp)),
+                             {"p": rp, "nhan": "", "hinh": False, "ts": ts,
+                              "mid": mid, "ts_dau": ts})["ts"] = ts
         for u in channel_context.extract_urls(noi_dung):
-            links.setdefault(u, {"url": u, "ts": ts, "vai": m.get("role") or ""})
+            links.setdefault(u, {"url": u, "ts": ts, "vai": m.get("role") or "",
+                                 "mid": mid, "ts_dau": ts})
 
     ra_file = []
     for v in files.values():
@@ -15604,6 +15655,8 @@ async def sessions_assets(session_id: str, brain: str = Query("")):
             "size": st.st_size if st else 0,
             "ts": v["ts"],
             "manual": False,
+            "mid": v.get("mid"),
+            "ts_dau": v.get("ts_dau") or v["ts"],
             "_that": str(rp),
         })
     ra_file.sort(key=lambda x: x["ts"], reverse=True)
@@ -19251,13 +19304,26 @@ async def _stt_nghe(data, ten=""):
            or lang_registry.chuan_hoa(_lc2.get("ui_lang") or ""))
     # Cùng bộ từ vựng và lớp sửa nghe nhầm như mic trên dashboard (nghe_sua): tin thoại Telegram
     # hay Zalo nói "David" cũng phải ra "Javis" trước khi vào bộ não.
-    _tv = nghe_sua.tu_vung(_cfg)
+    _tv = nghe_sua.tu_vung_day_du(_cfg, _default_brain_dir())
     res = await stt.groq_nghe(data, ten, key,
                               ngon_ngu=(lang_registry.get(_ma).stt if _ma else ""),
                               hotwords=nghe_sua.goi_y_whisper(_tv))
     if res.get("ok") and res.get("text"):
         res["text"] = nghe_sua.sua(res["text"], _tv)
     return res
+
+
+@app.post("/voice/sua")
+async def voice_sua_chu(text: str = Form(""), brain: str = Form("")):
+    """Sửa chữ nghe nhầm (Da Vít -> Javis...) cho mic ĐÁNH CHỮ trong ô chat: Web Speech của
+    trình duyệt không nhận từ điển riêng nên chữ về thẳng ô nhập là sai chính tả tên riêng.
+    Tất định, rẻ (không gọi mạng/AI), idempotent."""
+    if len(text) > 4000:
+        return JSONResponse({"error": "quá dài"}, status_code=413)
+    root = _brain_root(brain) if brain else _default_brain_dir()
+    tv = nghe_sua.tu_vung_day_du(cfgmod.read_settings(), root)
+    ra = nghe_sua.sua(text, tv)
+    return {"text": ra, "changed": ra != text}
 
 
 # ============================================================

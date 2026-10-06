@@ -108,8 +108,15 @@
       const name = f.label || f.name || f.url, available = f.exists !== false;
       const date = f.ts ? new Date(f.ts < 1e12 ? f.ts * 1000 : f.ts).toLocaleDateString(root.JavisI18n?.locale?.() || "vi-VN") : "";
       const row = document.createElement("article"); row.className = "mm-asset";
-      const image = m.tab === "media" && !/\.(mp4|webm|mov)$/i.test(f.name || f.path);
-      row.innerHTML = (image && available ? '<img loading="lazy" alt="' + esc(name) + '" src="' + esc(url) + '">' : '<div class="mm-file-symbol">' + root.ic(m.tab === "links" ? "link" : "file-text") + '</div>') + '<div class="mm-asset-info"><b>' + esc(name) + '</b><small>' + esc(available ? [date, f.size ? Math.ceil(f.size/1024) + ' KB' : ""].filter(Boolean).join(" · ") : t("missing")) + '</small></div><div class="mm-asset-actions">' + (available ? '<a target="_blank" rel="noopener noreferrer" href="' + esc(url) + '">' + esc(t("open")) + '</a>' + (m.tab !== "links" ? '<a href="' + esc(url + '&dl=1') + '" download>' + esc(t("download")) + '</a>' : "") : "") + '</div>';
+      const isVideo = m.tab === "media" && /\.(mp4|webm|mov|m4v)$/i.test(f.name || f.path);
+      const image = m.tab === "media" && !isVideo;
+      row.innerHTML = (image && available ? '<img loading="lazy" alt="' + esc(name) + '" src="' + esc(url) + '">' : isVideo && available ? '<video preload="metadata" muted playsinline src="' + esc(url) + '#t=0.1"></video>' : '<div class="mm-file-symbol">' + root.ic(m.tab === "links" ? "link" : "file-text") + '</div>') + '<div class="mm-asset-info"><b>' + esc(name) + '</b><small>' + esc(available ? [date, f.size ? Math.ceil(f.size/1024) + ' KB' : ""].filter(Boolean).join(" · ") : t("missing")) + '</small></div><div class="mm-asset-actions">' + (f.mid != null ? '<button type="button" class="mm-jump" data-mid="' + esc(f.mid) + '">' + esc(t("jump")) + '</button>' : "") + (available ? '<a target="_blank" rel="noopener noreferrer" href="' + esc(url) + '">' + esc(t("open")) + '</a>' + (m.tab !== "links" ? '<a href="' + esc(url + '&dl=1') + '" download>' + esc(t("download")) + '</a>' : "") : "") + '</div>';
+      const nutNhay = row.querySelector(".mm-jump");
+      if (nutNhay) nutNhay.onclick = async () => {
+        const J = root.JavisSessions; if (!J || !J.jumpTo) return;
+        if (!(await J.jumpTo(nutNhay.dataset.mid)) && J.open) { await J.open(current()); await J.jumpTo(nutNhay.dataset.mid); }
+        if (root.innerWidth < 1280) { const pg = m.page; if (pg) { pg.classList.add("library-closed"); pg.classList.remove("library-open"); } }
+      };
       list.appendChild(row);
     });
   }
