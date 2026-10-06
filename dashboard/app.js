@@ -1743,6 +1743,7 @@ let _moiTinCu = null, _quanSatMoi = null;
 // Dựng lại MỘT tin đã lưu thành bong bóng, trả về mục tương ứng cho convo (null nếu bỏ qua).
 // Dùng chung cho lượt mở hội thoại và lượt chèn ngược, để hai đường không trôi lệch nhau.
 function veTinDaLuu(m, brainCua) {
+  _midDangVe = m && m.id != null ? m.id : null;   // chatAppend gắn data-mid rồi tự xoá
   const ts = m.ts ? Math.round(m.ts * 1000) : 0;   // server lưu epoch giây (sessions.py)
   // convo là thứ được ghi xuống localStorage rồi dựng lại ở lần F5 sau. Nhét bản CÒN khối
   // vào đây là lỗi sống dai qua mọi lần tải lại, dù bong bóng lượt này đã sạch.
@@ -1845,6 +1846,7 @@ async function taiTinCu() {
     _neoChenCu = _moiTinCu ? _moiTinCu.nextSibling : dauKhungChat();
     const them = [];
     ds.forEach(m => { const t = veTinDaLuu(m, st.brain); if (t) them.push(t); });
+    _midDangVe = null;
     _neoChenCu = null; _dangChenCu = false;
     convo = them.concat(convo);
     st.ts = ds[0].ts; st.id = ds[0].id; st.con = !!d.has_more;
@@ -1877,6 +1879,7 @@ async function openStoredSession(id, stillCurrent) {
     chatArea.innerHTML = "";
     const ds = sess.messages || [];
     ds.forEach(m => { const t = veTinDaLuu(m, sess.brain); if (t) convo.push(t); });
+    _midDangVe = null;
     _tinCu = ds.length
       ? { sid: id, brain: sess.brain, ts: ds[0].ts, id: ds[0].id, con: !!sess.has_more, dangTai: false }
       : null;
@@ -1926,7 +1929,22 @@ function newChat() {
   resetChatView();
   try { chatInput.focus(); } catch (e) {}
 }
-window.JavisSessions = { open: openStoredSession, new: newChat, brain: () => currentBrainPath(), current: () => savedSessionId, messages: () => convo.map(m => ({role:m.role, text:m.text, ts:m.ts})) };
+// Nhảy tới tin gốc theo mã tin DB: tải dần tin cũ cho tới khi tin hiện ra rồi cuộn + nháy sáng.
+async function nhayToiTin(mid) {
+  const tim = () => chatArea.querySelector('[data-mid="' + String(mid).replace(/[^0-9]/g, "") + '"]');
+  for (let i = 0; i < 60 && !tim(); i++) {
+    if (!_tinCu || !_tinCu.con) break;
+    await taiTinCu();
+  }
+  const el = tim();
+  if (!el) return false;
+  stickBottom = false;
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.classList.add("mm-nhay-sang");
+  setTimeout(() => el.classList.remove("mm-nhay-sang"), 2400);
+  return true;
+}
+window.JavisSessions = { jumpTo: nhayToiTin, open: openStoredSession, new: newChat, brain: () => currentBrainPath(), current: () => savedSessionId, messages: () => convo.map(m => ({role:m.role, text:m.text, ts:m.ts})) };
 // Báo các UI khác (sidebar Lịch sử trong chat workspace) biết phiên/danh sách vừa đổi
 function notifySessions() { try { window.dispatchEvent(new Event("javis:sessions-changed")); } catch (e) {} }
 
@@ -2254,7 +2272,9 @@ window.addEventListener("javis:i18n", () => veNutXuong(newMsgBtn.classList.conta
 // tham số cho appendUserMessage/appendJavisMessage: hai hàm đó được gọi từ cả chục chỗ, thêm
 // tham số là mười chỗ phải nhớ truyền đúng.
 let _neoChenCu = null, _dangChenCu = false;
+let _midDangVe = null;   // mã tin DB của tin đang dựng lại từ lịch sử (cho nút "xem tin gốc")
 function chatAppend(el) {
+  if (_midDangVe != null && el && el.dataset) { el.dataset.mid = String(_midDangVe); _midDangVe = null; }
   if (newMsgBtn.parentNode !== chatArea) chatArea.appendChild(newMsgBtn);
   chatArea.insertBefore(el, _neoChenCu || newMsgBtn);
 }

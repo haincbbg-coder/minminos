@@ -3510,5 +3510,6 @@
   "sess.sel_clear": "Clear",
   "sess.sel_done": "Done",
   "sess.gom_nen_tang": "Group by AI platform",
-  "sess.gom_done": "Grouped {n} chats into projects by platform (Claude, ChatGPT, Gemini...)."
+  "sess.gom_done": "Grouped {n} chats into projects by platform (Claude, ChatGPT, Gemini...).",
+  "mmw.jump": "Go to message"
 }

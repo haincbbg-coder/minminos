@@ -4,6 +4,15 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.72] - 2026-10-06
+### Sửa lỗi
+- Cột phải của cuộc trò chuyện không còn trống khi trong chat có file, ảnh, video: các file Javis nhắc bằng đường dẫn ngắn như attachments/video.mp4 giờ được nhận ra.
+### Thêm mới
+- Mỗi file, ảnh, video, link ở cột phải có nút "Xem tin gốc": bấm là chat cuộn tới đúng tin nhắn nhắc nó, nháy sáng, kể cả tin rất cũ. Video có ảnh xem trước.
+- Mic gõ chữ tự sửa tên riêng nghe nhầm ("Da Vít" thành "Javis", "Hà Li Mi" thành "Halimi") theo từ vựng cá nhân và tên MinMin tự rút từ bộ nhớ, wiki, tên trợ lý.
+### Cải thiện
+- Màn Hub robot dùng làn nhanh của giọng nói: trả lời ngay, việc nặng chạy nền ở bộ não chính.
+
 ## [26.10.71] - 2026-10-06
 ### Thêm mới
 - Tích chọn nhiều hội thoại rồi chuyển sang project khác, có nút Bỏ chọn.

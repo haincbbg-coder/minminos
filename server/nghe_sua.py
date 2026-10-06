@@ -278,9 +278,11 @@ def sua(text, tv) -> str:
                 if (any(toks[j].group(0).lower() in PROTECTED_WORDS for j in range(i, i + n))
                         and "".join(uv.lower().split()) != "".join(term.lower().split())):
                     continue
-                if n > so_tieng + 1:
-                    continue           # không ghép quá số tiếng của từ vựng (+1 cho ca bị tách)
                 d = 1.0 if uv.lower() == term.lower() else do_giong(k, kt)
+                # không ghép quá số tiếng của từ vựng (+1 cho ca bị tách); tên riêng dài bị tách
+                # thành 3 tiếng ("Hà Li Mi") chỉ được ghép khi khoá âm khớp HOÀN TOÀN.
+                if n > so_tieng + 1 and not (n == so_tieng + 2 and d >= 0.999):
+                    continue
                 if d < 1.0 and len(k) < KHOA_MIN_MO:
                     continue
                 if n >= 2 and any(_diem_don(j) >= d for j in range(i, i + n)):
@@ -308,3 +310,90 @@ def sua(text, tv) -> str:
         return s
     ra.append(s[pos:])
     return "".join(ra)
+
+
+# ---------------------------------------------------------------------------------------------
+# Từ vựng TỰ RÚT từ bộ nhớ, wiki, tên trợ lý/quy trình của brain (người dùng khỏi khai tay).
+# Chỉ lấy tên viết bằng chữ Latinh không dấu: tên tiếng Việt có dấu thì máy nghe vốn chép đúng,
+# còn tên Anh/Nhật/thương hiệu (Javis, Halimi, Pancake, MeiMei) mới bị chép thành "Da Vít".
+# ---------------------------------------------------------------------------------------------
+_TEN_LATINH = re.compile(r"\b[A-Z][A-Za-z0-9]{3,19}\b")
+_TU_PHO_BIEN = frozenset("""
+This That With From When What Where Which Those These There Their About After Before Because
+Should Would Could Using Used User Users Also Only Each Every Other Than Then Them They Have
+Will Your Just Like More Most Some Such Into Over Under Note Notes True False None Null
+""".split())
+_cache_tu_nao = {}
+
+
+def _ten_hop_le(t: str) -> bool:
+    return (4 <= len(t) <= 20 and t.isascii() and t not in _TU_PHO_BIEN
+            and not t.isupper() and not t.isdigit())
+
+
+def tu_vung_tu_nao(root, toi_da: int = 40) -> list:
+    """Tên riêng rút từ brain `root`: tên trợ lý, quy trình, tên file wiki, và từ viết hoa lặp lại
+    trong MEMORY.md. Có bộ nhớ đệm 2 phút. Lỗi đọc file thì bỏ qua, không bao giờ ném ra."""
+    import time
+    from collections import Counter
+    from pathlib import Path
+    try:
+        root = Path(root)
+    except Exception:
+        return []
+    k = str(root)
+    hit = _cache_tu_nao.get(k)
+    if hit and time.time() - hit[0] < 120:
+        return list(hit[1])
+    dem = Counter()
+    ten_dau = []
+
+    def _them(t, trong=1):
+        t = (t or "").strip()
+        if _ten_hop_le(t):
+            dem[t] += trong
+            if t not in ten_dau:
+                ten_dau.append(t)
+
+    try:
+        for sub in ("agents", "workflows"):
+            for f in sorted((root / sub).glob("*.md"))[:60]:
+                try:
+                    for ln in f.read_text(encoding="utf-8", errors="ignore").splitlines()[:12]:
+                        if ln.lower().startswith("name:"):
+                            for w in re.findall(r"[A-Za-z0-9]+", ln[5:]):
+                                _them(w, 2)
+                            break
+                except OSError:
+                    pass
+        for wiki in list(root.glob("*[Ww]iki*"))[:3]:
+            for f in sorted(wiki.rglob("*.md"))[:200]:
+                for w in re.findall(r"[A-Za-z0-9]+", f.stem):
+                    _them(w, 2)
+        for f in [root / "memory" / "MEMORY.md"] + sorted((root / "memory" / "facts").glob("*.md"))[:80]:
+            try:
+                txt = f.read_text(encoding="utf-8", errors="ignore")[:20000]
+            except OSError:
+                continue
+            for m in _TEN_LATINH.finditer(txt):
+                dem[m.group(0)] += 1
+                if _ten_hop_le(m.group(0)) and m.group(0) not in ten_dau:
+                    ten_dau.append(m.group(0))
+    except Exception:
+        pass
+    # ưu tiên từ xuất hiện nhiều lần; từ chỉ gặp 1 lần trong văn bản thì bỏ (dễ là đầu câu)
+    ra = [t for t, c in dem.most_common() if c >= 2 and _ten_hop_le(t)][:toi_da]
+    _cache_tu_nao[k] = (time.time(), ra)
+    return list(ra)
+
+
+def tu_vung_day_du(cfg: dict, root=None) -> list:
+    """Bộ từ vựng nghe đầy đủ: gốc + người dùng khai + tự rút từ brain. Tổng không quá MAX_TU_VUNG."""
+    ra = tu_vung(cfg)
+    da = {t.lower() for t in ra}
+    if root:
+        for t in tu_vung_tu_nao(root):
+            if t.lower() not in da and len(ra) < MAX_TU_VUNG:
+                da.add(t.lower())
+                ra.append(t)
+    return ra
