@@ -3590,5 +3590,19 @@
   "cs.mode_safe": "Safe",
   "cs.mode_full": "Full",
   "cs.trust": "Trust",
-  "cs.trust_ask": "Give \"{ten}\" full permission? It will be able to send messages, create orders and run ads like agents you made yourself."
+  "cs.trust_ask": "Give \"{ten}\" full permission? It will be able to send messages, create orders and run ads like agents you made yourself.",
+  "cs.scan_clean": "Rule scan: no known dangerous patterns found.",
+  "cs.scan_high": "Rule scan: {n} HIGH-RISK signs",
+  "cs.scan_mid": "Rule scan: {n} points to review",
+  "cs.line": "line {n}",
+  "cs.ai_reading": "The AI is reading the package to summarize it...",
+  "cs.ai_failed": "No AI summary: {e}. The rule scan above still applies.",
+  "cs.ai_high": "AI verdict: HIGH risk",
+  "cs.ai_mid": "AI verdict: medium risk",
+  "cs.ai_low": "AI verdict: low risk",
+  "cs.ai_actions": "What the package will do outside:",
+  "cs.ai_suspicious": "Suspicious points:",
+  "cs.ai_note": "The AI summary helps you understand quickly and may be wrong. The rule scan is what blocks.",
+  "cs.accept_risk": "I have read the high-risk signs and still want to install",
+  "cs.accept_risk_need": "The package shows high-risk signs. Read and confirm first."
 }
