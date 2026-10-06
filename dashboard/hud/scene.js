@@ -102,9 +102,9 @@ void main(){
   float song = 1.0 - smoothstep(0.0, 0.045, abs((p.y+1.6)/3.6 - quet));
   p += normalize(vec3(p.x, 0.0001, p.z)) * song * 0.018;
   // 4) tan lua: 3% so hat bay len roi tat, lap lai
-  float tanLua = step(0.97, h2);
+  float tanLua = step(0.97 - 0.045*uForm.w, h2);      // tuong ban than: nhieu bui bay hon (kieu Apex)
   float bay = fract(uTime*(0.05 + h3*0.06) + aSeed*3.0);
-  p += vec3(sin(uTime*0.7 + aSeed*9.0)*0.05, bay*0.55, cos(uTime*0.5 + aSeed*5.0)*0.05) * tanLua * ease;
+  p += vec3(sin(uTime*0.7 + aSeed*9.0)*0.05, bay*(0.55 + 0.6*uForm.w), cos(uTime*0.5 + aSeed*5.0)*0.05) * tanLua * ease;
   // 5) nhap nhay: moi hat co nhip rieng
   float nhay = 0.5 + 0.5*sin(uTime*(1.2 + h1*3.3) + aSeed*62.83);
   // 6) xung than kinh: vai hat loe sang chop nhoang
@@ -143,7 +143,7 @@ void main(){
 
 const FRAG = /* glsl */`
 uniform vec3 uCool, uWarm, uHot, uRim;
-uniform float uErr;
+uniform float uErr, uBoost;
 varying float vZone, vGlow, vAlpha, vRim;
 void main(){
   vec2 c = gl_PointCoord - 0.5;
@@ -154,29 +154,58 @@ void main(){
   col = mix(col, uHot, clamp(vGlow - 0.35, 0.0, 1.0));
   col = mix(col, uRim, clamp(vRim * 1.5, 0.0, 1.0));
   col = mix(col, vec3(1.0, 0.25, 0.3), uErr);
-  gl_FragColor = vec4(col * (0.75 + vGlow*0.9 + vRim*1.2), soft * vAlpha * (0.55 + vGlow*0.45));
+  gl_FragColor = vec4(col * (0.75 + vGlow*0.9 + vRim*1.2) * uBoost, soft * vAlpha * (0.55 + vGlow*0.45));
 }`;
 
-// ---------- Nen plasma tim ----------
+// ---------- Nen (26.10.69, kieu Apex) ----------
+// Nen toi: xanh than sau, quang xanh sau lung tuong, hai day nui NANG LUONG o hai ben (duong
+// dinh nui sang xanh, tia chop cam chay doc dinh nhu dien). Nen sang giu net cu nhung ve bang
+// muc xanh. Tat ca la toan hoc trong shader, khong dung anh nao.
 const BG_FRAG = /* glsl */`
 uniform float uTime, uEnergy, uLight;
 uniform vec3 uBase;
 uniform vec2 uRes;
 varying vec2 vUv;
-float wave(vec2 p, float f, float s, float ph){ return sin(p.x*f + uTime*s + ph + sin(p.y*1.7+uTime*0.3)*1.5); }
+float h11(float n){ return fract(sin(n*127.1)*43758.5453); }
+float vn(float x){ float i = floor(x), f = fract(x); f = f*f*(3.0-2.0*f); return mix(h11(i), h11(i+1.0), f); }
+float fbm(float x){ return vn(x)*0.5 + vn(x*2.1+7.0)*0.25 + vn(x*4.3+13.0)*0.125 + vn(x*8.9+3.0)*0.0625; }
 void main(){
   vec2 p = (vUv - 0.5) * vec2(uRes.x/uRes.y, 1.0) * 3.0;
-  float w = 0.0;
+  float ax = abs(p.x);
+  // ---- nen toi ----
+  vec3 col = mix(vec3(0.004,0.010,0.035), vec3(0.010,0.045,0.130), smoothstep(-1.5, 1.1, p.y));
+  float quang = exp(-dot(p - vec2(0.0, 0.55), p - vec2(0.0, 0.55)) * 0.55);
+  col += vec3(0.020, 0.150, 0.420) * quang * (0.55 + uEnergy*0.5);
+  // ---- hai day nui nang luong ----
+  float lightning = 0.0, fill = 0.0;
+  for (int i = 0; i < 3; i++){
+    float fi = float(i);
+    float x = ax * (1.0 + fi*0.22) + fi*3.7;
+    float dinh = -0.55 + fi*0.14 + (fbm(x*1.5 + fi*5.0) - 0.35) * (1.25 - fi*0.2);
+    dinh += 0.12*smoothstep(0.35, 1.9, ax);              // nui cao dan ra mep
+    float d = p.y - dinh;
+    float duong = 0.0045 / (abs(d) + 0.0035);               // duong dinh sang
+    float mask = smoothstep(0.30 + fi*0.05, 0.80, ax);      // chua trong khoang giua cho nguoi
+    float chop = pow(vn(ax*9.0 - uTime*(1.6 + fi*0.5) + fi*11.0), 6.0);   // tia chop chay doc dinh
+    lightning += (duong * (0.35 + chop*2.2)) * mask * (1.0 - fi*0.22);
+    fill += smoothstep(0.0, -0.9, d) * 0.07 * mask * (1.0 - fi*0.25);
+  }
+  vec3 xanh = vec3(0.10, 0.52, 1.0), cam = vec3(1.0, 0.55, 0.12);
+  float noiCam = pow(vn(ax*5.0 - uTime*0.9), 5.0);
+  vec3 dien = mix(xanh, cam, clamp(noiCam*1.3, 0.0, 1.0));
+  col += dien * min(lightning, 3.0) * (0.55 + uEnergy*0.35);
+  col += xanh * fill * 1.5;
+  // ---- vien toi ----
+  col *= smoothstep(1.9, 0.35, length(vUv-0.5)*1.9) * 0.85 + 0.15;
+  // ---- tong sang: giu net cu, doi sang muc xanh ----
+  float wv = 0.0;
   for (int i = 0; i < 4; i++){
     float fi = float(i);
-    float y = wave(p, 1.2 + fi*0.35, 0.25 + fi*0.07, fi*1.9) * (0.35 + fi*0.12);
-    w += 0.008 / abs(p.y - y + fi*0.08) ;
+    float y = sin(p.x*(1.2+fi*0.35) + uTime*(0.25+fi*0.07) + fi*1.9 + sin(p.y*1.7+uTime*0.3)*1.5) * (0.35 + fi*0.12);
+    wv += 0.008 / abs(p.y - y + fi*0.08);
   }
-  vec3 base = mix(vec3(0.020,0.012,0.045), vec3(0.055,0.020,0.090), vUv.y);
-  vec3 line = mix(vec3(0.42,0.20,0.85), vec3(1.0,0.55,0.18), 0.25 + 0.25*sin(uTime*0.2));
-  float vig = smoothstep(1.25, 0.2, length(vUv-0.5)*1.6);
-  vec3 dark = base + line * min(w, 0.9) * (0.14 + uEnergy*0.22) * vig;
-  gl_FragColor = vec4(mix(dark, uBase - vec3(0.025,0.035,0.015)*min(w,0.9)*vig, uLight), 1.0);
+  vec3 sang = uBase - vec3(0.050,0.030,0.010)*min(wv,0.9);
+  gl_FragColor = vec4(mix(col, sang, uLight), 1.0);
 }`;
 
 const STATES = { standby: 0, listening: 1, thinking: 2, speaking: 3, error: 4 };
@@ -233,12 +262,12 @@ export class MinMinScene {
         uTime: { value: 0 }, uEnergy: { value: 0 }, uForm: { value: new THREE.Vector4(...FORMS[this._formOf(opts.form)]) },
         uArms: { value: new THREE.Vector4() },
         uAssemble: { value: this.reduced ? 1 : 0 }, uState: { value: 0 }, uPixel: { value: this.pixel },
-        uSize: { value: lowPower ? 3.0 : 2.2 }, uErr: { value: 0 },
+        uSize: { value: lowPower ? 3.0 : 2.2 }, uErr: { value: 0 }, uBoost: { value: 1 },
         uHeadYaw: { value: 0 }, uHeadPitch: { value: 0 },
-        uCool: { value: new THREE.Color("#8f6bff") },
-        uWarm: { value: new THREE.Color("#ff9a3c") },
-        uHot: { value: new THREE.Color("#ffe2b0") },
-        uRim: { value: new THREE.Color("#d9ccff") },
+        uCool: { value: new THREE.Color("#1c9bff") },
+        uWarm: { value: new THREE.Color("#ff8a1e") },
+        uHot: { value: new THREE.Color("#ffd9a0") },
+        uRim: { value: new THREE.Color("#8fe6ff") },
       },
     });
     this.points = new THREE.Points(geo, this.mat);
@@ -261,7 +290,7 @@ export class MinMinScene {
     // vong quy dao
     this.rings = new THREE.Group();
     const ringMat = (c, o) => new THREE.LineBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending });
-    [[1.85, "#ff9a3c", 0.35], [2.15, "#8f6bff", 0.22], [2.55, "#8f6bff", 0.12]].forEach(([r, c, o], i) => {
+    [[1.85, "#ff8a1e", 0.30], [2.15, "#1c9bff", 0.20], [2.55, "#1c9bff", 0.10]].forEach(([r, c, o], i) => {
       const pts = [];
       for (let k = 0; k <= 256; k++) { const a = k / 256 * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)); }
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat(c, o));
@@ -281,11 +310,15 @@ export class MinMinScene {
       // Shader outputs display-space color; keep the shared surface's exact sRGB tone.
       this.bgMat.uniforms.uBase.value.set(style.getPropertyValue("--mm-bg").trim() || "#efe9e2").convertLinearToSRGB();
       this.mat.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
-      const colors = light ? ["#5335be","#a54f12","#6a4bd6","#564b63"] : ["#8f6bff","#ff9a3c","#ffe2b0","#d9ccff"];
+      // Tong toi = kieu Apex: duong dong muc xanh dien, loi cam, vien xanh nhat. Tong sang giu
+      // muc dam de doc duoc tren nen sang, cung hue xanh.
+      const colors = light ? ["#1b4fb8","#b4510e","#2a6be0","#2b4a78"] : ["#1c9bff","#ff8a1e","#ffd9a0","#8fe6ff"];
       ["uCool","uWarm","uHot","uRim"].forEach((key,i) => this.mat.uniforms[key].value.set(colors[i]));
+      this.mat.uniforms.uBoost.value = light ? 1 : 1.3;
+      this.apex = !light;
       this.rings.children.forEach((ring,i) => {
         ring.material.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
-        ring.material.color.set(light ? (i ? "#6a4bd6" : "#a54f12") : (i ? "#8f6bff" : "#ff9a3c"));
+        ring.material.color.set(light ? (i ? "#2a6be0" : "#b4510e") : (i ? "#1c9bff" : "#ff8a1e"));
       });
     };
     applyTheme();
@@ -433,6 +466,18 @@ export class MinMinScene {
     this.core.scale.set(sc, sc, 1);
     this.core.material.opacity = Math.min(1, 0.45 + e * 0.6 + pulse);
     this.core.material.color.set(this.state === "error" ? "#ff5d73" : this.state === "listening" ? "#bff5e8" : "#ffffff");
+
+    // Tho (kieu Apex): ca tuong phong nhe len xuong cung nhip voi do sang cua loi cam.
+    const tho = this.reduced ? 0 : Math.sin(t * 1.25);
+    const thoK = 1 + 0.010 * tho * (0.4 + fv.w);
+    this.body.scale.set(thoK, thoK, thoK);
+    if (fv.w > 0.5) {
+      const dark = this.apex;
+      const sb = (1.45 + 0.12 * tho) * (1 + e * 0.9 + pulse) * fv.w;     // loi cam trong dau
+      this.core.scale.set(Math.max(sc, sb), Math.max(sc, sb), 1);
+      this.core.material.opacity = Math.min(1, (dark ? 0.62 : 0.0) + 0.1 * tho + e * 0.5 + pulse);
+      if (dark && this.state === "standby") this.core.material.color.set("#ff9a40");
+    }
 
     this.renderer.render(this.scene, this.camera);
 

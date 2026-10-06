@@ -49,7 +49,7 @@ export function bustPoints(n) {
     const L = Math.hypot(nx, ny, nz) || 1;
     nrm[i * 3] = nx / L; nrm[i * 3 + 1] = ny / L; nrm[i * 3 + 2] = nz / L;
   };
-  const nVo = Math.floor(n * 0.84), nThan = Math.floor(n * 0.04), nBui = n - nVo - nThan;
+  const nVo = Math.floor(n * 0.77), nThan = Math.floor(n * 0.05), nBui = n - nVo - nThan;   // 26.10.69: nhieu bui quanh dau hon (kieu Apex)
 
   // 1) Vo: vong dong muc. Chon lat cat theo chu vi de mat do deu.
   for (let k = 0; k < nVo; k++) {
@@ -103,7 +103,7 @@ export function bustPoints(n) {
   // 3) Bui sang quanh vien hinh
   for (let k = 0; k < nBui && b.i < n; k++) {
     const xa = 1.03 + Math.pow(Math.random(), 2.2) * 0.3;
-    if (Math.random() < 0.4) {                       // quanh dau: vo cau
+    if (Math.random() < 0.55) {                      // quanh dau: vo cau
       const u = rnd(-1, 1), a = Math.random() * TAU, k = Math.sqrt(1 - u * u);
       const nx = k * Math.cos(a), ny = u, nz = k * Math.sin(a);
       put(nx * DAU.rx * xa, DAU.y + ny * DAU.ry * xa, nz * DAU.rz * xa, nx, ny, nz, 0.02, 0.6, 1);
