@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.92] - 2026-10-07
+### Cải thiện
+- Văn phòng AI 3D: ngồi làm việc giờ thân người đứng im, lưng và cổ thẳng, mắt nhìn thẳng màn hình, chỉ có hai bàn tay gõ. Hết cổ ngẹo, hết trườn tới lui.
+- Khi họp: giám đốc ngồi nghiêm, hai tay cử động lên xuống nhẹ lúc nói; nhân viên báo dữ liệu cũng có động tác tay.
+- Thêm giao diện **sáng** (mặc định, dịu mắt) và nút **Chế độ tối / Chế độ sáng** để đổi, nhớ lựa chọn.
+- Thêm bảng nút điều hướng cho điện thoại: đi tới, lùi, sang trái, sang phải, xoay, phóng to, thu nhỏ (giữ nút để di chuyển trong phòng).
+
 ## [26.10.91] - 2026-10-07
 ### Cải thiện
 - Văn phòng AI 3D: thêm nút **Ẩn chữ** (và **Hiện chữ**) để tắt hết bảng tên và câu thoại trên đầu các agent, nhớ lựa chọn cho lần sau.
