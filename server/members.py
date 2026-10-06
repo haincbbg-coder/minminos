@@ -40,6 +40,7 @@ def _doc() -> dict:
 
 
 def _ghi(d: dict) -> None:
+    _PHIEN_CACHE.clear()
     tmp = _PATH.with_suffix(".tmp")
     tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
     try:
@@ -70,7 +71,8 @@ def _bam(s: str) -> str:
 def _cong_khai(u: dict) -> dict:
     return {"email": u["email"], "name": u.get("name", ""), "grants": u.get("grants", {}),
             "disabled": bool(u.get("disabled")), "tfa": bool(u.get("tfa_enabled")),
-            "created": u.get("created", 0), "last_login": u.get("last_login", 0)}
+            "created": u.get("created", 0), "last_login": u.get("last_login", 0),
+            "tenant": (u.get("tenant") or {}).get("url", "")}
 
 
 def danh_sach() -> list:
@@ -239,7 +241,26 @@ def tao_phien(email: str, full: bool) -> str:
     return t
 
 
+_PHIEN_CACHE: dict = {}
+_PHIEN_CACHE_TTL = 5.0
+
+
 def phien(token: str):
+    """Có đệm 5 giây: cổng gọi hàm này cho MỌI request nên không đọc đĩa mỗi lần. Đổi trạng
+    thái (khóa, xóa, đóng phiên) đều xóa đệm ngay."""
+    if not token:
+        return None
+    k = _bam(token)
+    c = _PHIEN_CACHE.get(k)
+    now = time.time()
+    if c and now - c[0] < _PHIEN_CACHE_TTL:
+        return c[1]
+    r = _phien_that(token)
+    _PHIEN_CACHE[k] = (now, r)
+    return r
+
+
+def _phien_that(token: str):
     """Trả {'email', 'full', 'user'} nếu phiên còn hạn và user còn hoạt động, ngược lại None."""
     if not token:
         return None
@@ -255,6 +276,7 @@ def phien(token: str):
 
 
 def nang_phien(token: str) -> None:
+    _PHIEN_CACHE.clear()
     with _LOCK:
         d = _doc_phien()
         p = d.get(_bam(token))
@@ -264,6 +286,7 @@ def nang_phien(token: str) -> None:
 
 
 def dong_phien(email: str = "", token: str = "") -> None:
+    _PHIEN_CACHE.clear()
     with _LOCK:
         d = _doc_phien()
         if token:
@@ -272,3 +295,41 @@ def dong_phien(email: str = "", token: str = "") -> None:
             e = chuan_email(email)
             d = {k: v for k, v in d.items() if v.get("email") != e}
         _ghi_phien(d)
+
+
+# ---- Bản riêng (tenant): mỗi học viên một MinMin chạy container riêng ----
+def dat_tenant(email: str, url: str, user: str, password: str) -> dict:
+    """Gắn học viên với một bản MinMin riêng. Mật khẩu nội bộ của bản đó được mã hóa khi cất;
+    chỉ cổng (gateway) dùng nó để tự đăng nhập hộ, học viên không bao giờ thấy."""
+    url = str(url or "").strip().rstrip("/")
+    if not re.match(r"^https?://[A-Za-z0-9._-]+(:\d+)?$", url):
+        raise ValueError("Địa chỉ bản riêng không hợp lệ (dạng http://ten-container:7777)")
+    with _LOCK:
+        d = _doc()
+        u = d["users"].get(chuan_email(email))
+        if not u:
+            raise KeyError("Không có thành viên này")
+        u["tenant"] = {"url": url, "user": str(user or "admin"),
+                       "password": secrets_store.encrypt(str(password or ""))}
+        _ghi(d)
+        return _cong_khai(u)
+
+
+def xoa_tenant(email: str) -> None:
+    with _LOCK:
+        d = _doc()
+        u = d["users"].get(chuan_email(email))
+        if u and u.pop("tenant", None) is not None:
+            _ghi(d)
+    _TENANT_COOKIE.pop(chuan_email(email), None)
+
+
+def tenant_cua(u) -> dict:
+    t = (u or {}).get("tenant") or {}
+    if not t.get("url"):
+        return {}
+    return {"url": t["url"], "user": t.get("user", "admin"),
+            "password": secrets_store.decrypt(t.get("password", ""))}
+
+
+_TENANT_COOKIE: dict = {}      # email -> cookie phiên của bản riêng (chỉ trong RAM)

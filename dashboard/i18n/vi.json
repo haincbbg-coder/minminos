@@ -3582,5 +3582,19 @@
   "memp.new_file": "Tệp mới",
   "memp.new_ask": "Tên tệp mới (vd: ghi-chu.md):",
   "memp.err": "Không thực hiện được.",
-  "memp.too_big": "Tệp này không xem được ở đây."
+  "memp.too_big": "Tệp này không xem được ở đây.",
+  "mem.tenant": "Bản riêng",
+  "mem.tenant_on": "Bản riêng: đã cấp",
+  "mem.tenant_explain": "Bản riêng là một MinMin tách biệt hoàn toàn cho học viên này: brain, bộ nhớ, đăng nhập AI và kết nối POS, Ads của họ đều không lẫn với bản của bạn. Họ vẫn vào chung tên miền.",
+  "mem.tenant_create": "Tạo bản riêng tự động",
+  "mem.tenant_creating": "Đang tạo, chờ khoảng một phút...",
+  "mem.tenant_ready": "Đã tạo và sẵn sàng.",
+  "mem.tenant_notready": "Đã tạo nhưng chưa sẵn sàng, thử lại sau ít phút.",
+  "mem.tenant_nodocker": "MinMin chưa được gắn quyền Docker nên không tự tạo được. Chạy lệnh dưới đây trên VPS (thay mật khẩu nội bộ và tên mạng), rồi nhập địa chỉ và mật khẩu đó vào đây:",
+  "mem.tenant_url": "Địa chỉ nội bộ (http://ten-container:7777)",
+  "mem.tenant_pass": "Mật khẩu nội bộ",
+  "mem.tenant_save": "Lưu bản riêng",
+  "mem.tenant_remove": "Gỡ bản riêng",
+  "mem.tenant_remove_ask": "Gỡ bản riêng này? Bấm OK để XOÁ LUÔN dữ liệu của họ, Huỷ để chỉ dừng container và giữ dữ liệu.",
+  "mem.tenant_status": "Trạng thái"
 }
