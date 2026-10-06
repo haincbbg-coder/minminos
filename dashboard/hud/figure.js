@@ -10,7 +10,7 @@ const EYES = [{ x: 466, y: 309 }, { x: 642, y: 309 }];
 const VERT = /* glsl */`
 attribute float aZ, aSz, aSeed;
 attribute vec3 aCol;
-uniform float uTime, uOpen, uPix, uAssemble, uYaw, uPitch, uState, uGlow, uLight;
+uniform float uTime, uOpen, uSizeK, uPix, uAssemble, uYaw, uPitch, uState, uGlow, uLight;
 uniform vec4 uMouth, uEye;
 varying vec3 vCol;
 varying float vA, vEdge, vGlow, vMouth;
@@ -49,7 +49,7 @@ void main(){
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
   float sz = aSz * (1.0 + vGlow * 0.5 + vEdge * 0.8 + m * uOpen * 0.4);
-  gl_PointSize = sz * uPix * (6.2 / -mv.z) * mix(1.15, 1.0, uLight);
+  gl_PointSize = sz * uPix * (4.2 / -mv.z) * uSizeK * mix(1.15, 1.0, uLight);
   vCol = aCol;
   vA = mix(0.2, 1.0, ease);
 }`;
@@ -77,7 +77,7 @@ export class PhotoFigure {
       vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false,
       blending: THREE.AdditiveBlending,
       uniforms: {
-        uTime: { value: 0 }, uOpen: { value: 0 }, uPix: { value: 1 }, uAssemble: { value: 0 }, uYaw: { value: 0 },
+        uTime: { value: 0 }, uSizeK: { value: 1 }, uOpen: { value: 0 }, uPix: { value: 1 }, uAssemble: { value: 0 }, uYaw: { value: 0 },
         uPitch: { value: 0 }, uState: { value: 0 }, uGlow: { value: 0 }, uLight: { value: 0 }, uErr: { value: 0 },
         uMouth: { value: new THREE.Vector4(...px2w(MOUTH.x, MOUTH.y), MOUTH.rx * S, MOUTH.ry * S) },
         uEye: { value: new THREE.Vector4(...px2w(EYES[0].x, EYES[0].y), ...px2w(EYES[1].x, EYES[1].y)) },
@@ -112,6 +112,7 @@ export class PhotoFigure {
     this.points = new THREE.Points(g, this.mat);
     this.points.frustumCulled = false;
     this.points.visible = false;
+    this.n = n; this.setQuality(this.level || "high");
     this.scene.add(this.points);
     this.ready = true; this.t0 = performance.now();
   }
@@ -119,6 +120,14 @@ export class PhotoFigure {
     this.mat.uniforms.uLight.value = light ? 1 : 0;
     this.mat.blending = light ? this.THREE.NormalBlending : this.THREE.AdditiveBlending;
     this.mat.needsUpdate = true;
+  }
+  // 3 muc: Sac net (het 400k cham), Can bang (40%), Nhe (15%). Cham la ngau nhien deu nen cat bo
+  // phan duoi van giu nguyen hinh; cham to len mot chut de khong thung lo.
+  setQuality(level) {
+    this.level = level;
+    const K = { high: [1, 1], mid: [0.4, 1.5], low: [0.15, 2.4] }[level] || [1, 1];
+    this.mat.uniforms.uSizeK.value = K[1];
+    if (this.points) this.points.geometry.setDrawRange(0, Math.floor(this.n * K[0]));
   }
   show(v) { if (this.points) this.points.visible = !!v; }
   // Do mo mieng: theo muc am thanh that; dang noi ma chua co muc thi giu nhip am tiet gia lap
