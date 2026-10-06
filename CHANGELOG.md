@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.96] - 2026-10-07
+### Bảo mật
+- Chợ chia sẻ: vá chặn cứng (đang làm).
+
 ## [26.10.94] - 2026-10-07
 ### Cải thiện
 - Văn phòng AI 3D: nhân viên ngồi cách bàn thoải mái hơn, không còn dính bụng vào mép bàn (ghế lùi ra, bàn phím và chuột kéo gần người).
