@@ -41,7 +41,8 @@ _NHAN_LOAI = {"agent": ("Agent", "Agent"), "skill": ("Skill", "Skill"), "workflo
 
 
 def dung_trang(*, tieu_de: str, host: str, ten: str, van_tay: str, items: list, co_pin: bool,
-               het_han, con_luot, ma_day_du: str, qr_svg: str, link: str, nonce: str) -> str:
+               het_han, con_luot, ma_day_du: str, qr_svg: str, link: str, nonce: str,
+               ket_noi: list = None) -> str:
     c = localefmt.chu
     nguoi = _e(ten) if ten else _e(host)
     if items:
@@ -58,6 +59,11 @@ def dung_trang(*, tieu_de: str, host: str, ten: str, van_tay: str, items: list, 
         danh_sach = f'<p class="mo">{_e(c("Gói này có mã PIN. Nội dung hiện ra trong MinMin của bạn sau khi nhập đúng PIN.", "This package is PIN protected. Its contents appear in your MinMin once the PIN is entered."))}</p>'
     else:
         danh_sach = ""
+    can = ""
+    if ket_noi:
+        can = ('<p class="mo" style="margin:12px 0 0;font-size:13px">'
+               + _e(c("Cần kết nối: {ds}", "Needs: {ds}", ds=", ".join(k.get("ten", "") for k in ket_noi[:10])))
+               + "</p>")
     luot = ""
     if con_luot is not None:
         luot = " · " + _e(c("còn {n} lượt", "{n} uses left", n=con_luot))
@@ -95,6 +101,7 @@ button.chinh{{background:var(--tim);color:#fff;box-shadow:none;width:100%;margin
  <div class="tu">{_e(c("Từ", "From"))} <b>{nguoi}</b>{(" · " + _e(host)) if ten else ""}</div>
  {f'<span class="vt" title="{_e(c("Vân tay khoá của máy chủ chia sẻ", "Sharing server key fingerprint"))}">&#10003; {_e(van_tay)}</span>' if van_tay else ""}
  {danh_sach}
+ {can}
  <p class="mo" style="margin:14px 0 0;font-size:13px">{_e(c("Hạn tới", "Valid until"))} {_e(_ngay(het_han))}{luot}</p>
 </div>
 <div class="the">

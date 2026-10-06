@@ -279,6 +279,20 @@
         ${ds.map((c) => `<div style="margin-top:6px"><b>${esc(c.loai)}</b> <span class="cs-dim">${esc(c.file)}, ${esc(t("cs.line", { n: c.dong }))}</span>
           <div class="cs-code" style="font-weight:400;font-size:12px;opacity:.85">${esc(c.trich)}</div></div>`).join("")}</div>`;
     }
+    function veKetNoi(ds) {
+      if (!ds.length) return "";
+      const thieu = ds.filter((k) => k.trang_thai !== "da_co").length;
+      const dong = (k) => {
+        const tt = k.trang_thai === "da_co" ? `<span style="color:var(--mm-ok)">${esc(t("cs.conn_have"))}</span>`
+          : k.trang_thai === "dang_tat" ? `<span style="color:var(--mm-warn)">${esc(t("cs.conn_off"))}</span>`
+          : `<span style="color:var(--mm-bad)">${esc(t("cs.conn_missing"))}</span>`;
+        return `<div style="margin-top:4px"><b>${esc(k.ten)}</b> ${tt}
+          <span class="cs-dim">${esc(k.khai_bao ? t("cs.conn_declared") : t("cs.conn_guessed"))} · ${esc((k.o || []).join(", "))}</span></div>`;
+      };
+      return `<div class="cs-badge ${thieu ? "warn" : "ok"}"><b>${esc(thieu ? t("cs.conn_title_missing", { n: thieu }) : t("cs.conn_title_ok"))}</b>
+        ${ds.map(dong).join("")}
+        ${thieu ? `<div class="cs-dim" style="margin-top:6px">${esc(t("cs.conn_hint"))}</div>` : ""}</div>`;
+    }
     async function soiAi(r) {
       const box = $("csXemTruoc").querySelector("#csAi");
       if (!box) return;
@@ -308,6 +322,7 @@
           ${xm.ly_do ? `<br>${esc(xm.ly_do)}` : ""}</div>
         ${(r.canh_bao || []).map((w) => `<div class="cs-badge warn">${esc(w)}</div>`).join("")}
         ${veNguyCo(r.nguy_co || [])}
+        ${veKetNoi(r.ket_noi || [])}
         <div class="cs-badge" id="csAi" style="box-shadow:var(--mm-in-sm)">${esc(t("cs.ai_reading"))}</div>
         <div class="cs-list" id="csMuc">${(r.items || []).map((it) => `
           <label><input type="checkbox" value="${esc(it.type + ":" + it.slug)}" ${it.da_co ? "" : "checked"}>

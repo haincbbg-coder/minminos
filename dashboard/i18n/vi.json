@@ -3604,5 +3604,13 @@
   "cs.ai_suspicious": "Điều đáng ngờ:",
   "cs.ai_note": "AI tóm tắt để bạn hiểu nhanh và có thể sai. Phần quét luật mới là phần chặn.",
   "cs.accept_risk": "Tôi đã đọc các dấu hiệu nguy cơ cao và vẫn muốn cài",
-  "cs.accept_risk_need": "Gói có dấu hiệu nguy cơ cao. Hãy đọc và xác nhận trước."
+  "cs.accept_risk_need": "Gói có dấu hiệu nguy cơ cao. Hãy đọc và xác nhận trước.",
+  "cs.conn_title_ok": "Kết nối gói cần: bạn đã có đủ",
+  "cs.conn_title_missing": "Kết nối gói cần: còn thiếu {n}",
+  "cs.conn_have": "đã có",
+  "cs.conn_off": "đang tắt",
+  "cs.conn_missing": "chưa nối",
+  "cs.conn_declared": "người gửi khai",
+  "cs.conn_guessed": "có vẻ cần",
+  "cs.conn_hint": "Vẫn cài được, nhưng phần dùng kết nối còn thiếu sẽ chưa chạy. Nối ở trang Kết nối rồi dùng."
 }
