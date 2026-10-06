@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.77] - 2026-10-06
+### Thêm mới
+- Mời thành viên vào brain bằng email và mật khẩu riêng (nút người dùng cạnh các nút brain): chủ cấp từng brain ở mức Chỉ xem hoặc Được sửa, khoá, đổi mật khẩu, đặt lại 2FA hoặc xoá thành viên bất cứ lúc nào.
+- Thành viên BẮT BUỘC bật xác thực 2 lớp ở lần đăng nhập đầu (quét mã, có mã khôi phục dùng một lần). Chưa bật xong thì chưa xem được gì.
+- Thành viên có trang riêng để duyệt cây thư mục, tìm kiếm, xem ảnh/PDF và sửa tệp văn bản trong brain được cấp. Họ không vào được cài đặt, kết nối, khoá API hay brain khác của chủ.
+- Mọi lần thành viên sửa tệp đều ghi vào nhật ký member_audit.jsonl.
+- Chưa có chat AI cho thành viên (sẽ làm sau, mỗi người dùng tài khoản AI riêng của họ).
+
 ## [26.10.76] - 2026-10-06
 ### Sửa lỗi
 - Màn Hub robot luôn mở ở tông tối Apex (đường đồng mức xanh, lõi cam), không còn rơi về giao diện cũ khi trang chính đang ở tông sáng. Nút Sáng / Tối của Hub nhớ riêng, không ảnh hưởng tông của trang chính.

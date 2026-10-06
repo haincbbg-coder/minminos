@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MinMin OS</title>
+<link rel="icon" href="/brand-logo?v=5">
+<link rel="stylesheet" href="/static/member/member.css?v=26.10.77">
+</head>
+<body>
+<header><b id="mpTitle" data-i18n="memp.title"></b><span id="mpWho"></span><button id="mpOut" type="button" data-i18n="memp.logout"></button></header>
+<main id="mpTfa" hidden>
+  <h2 data-i18n="memp.tfa_title"></h2>
+  <p data-i18n="memp.tfa_note"></p>
+  <div id="mpQr"></div>
+  <p><span data-i18n="memp.tfa_secret"></span> <code id="mpSecret"></code></p>
+  <div class="row"><input id="mpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" data-i18n-ph="memp.tfa_code"><button id="mpGo" type="button" data-i18n="memp.tfa_go"></button></div>
+  <div id="mpRec" hidden><p data-i18n="memp.tfa_recovery"></p><pre id="mpRecList"></pre><button id="mpRecOk" type="button" data-i18n="memp.tfa_continue"></button></div>
+  <p id="mpTfaErr" class="err"></p>
+</main>
+<main id="mpApp" hidden>
+  <aside>
+    <select id="mpBrain"></select>
+    <input id="mpSearch" type="search" data-i18n-ph="memp.search">
+    <div class="row"><button id="mpUp" type="button" data-i18n="memp.back"></button><button id="mpNew" type="button" data-i18n="memp.new_file"></button></div>
+    <div id="mpPath" class="path"></div>
+    <ul id="mpList"></ul>
+  </aside>
+  <section>
+    <div class="row"><b id="mpFile"></b><span id="mpRole" class="tag"></span><button id="mpSave" type="button" hidden data-i18n="memp.save"></button></div>
+    <p id="mpMsg" class="err"></p>
+    <textarea id="mpText" hidden spellcheck="false"></textarea>
+    <img id="mpImg" hidden alt="">
+    <p id="mpHint" data-i18n="memp.pick"></p>
+  </section>
+</main>
+<script src="/static/theme.js?v=26.10.77"></script>
+<script src="/static/i18n/index.js?v=2"></script>
+<script src="/static/member/member.js?v=26.10.77"></script>
+</body>
+</html>
