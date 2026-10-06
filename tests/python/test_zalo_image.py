@@ -121,8 +121,9 @@ check("CANARY: chạy trong HOME của đúng kết nối Zalo (nếu không CLI
       _da_chay[0]["home"] == MOT[0]["home"])
 
 r = goi({"thread_id": "t1", "paths": ["bao-cao.pdf"]})
-check("file không phải ảnh thì đi đường send-file",
-      json.loads(r)["kind"] == "file" and "send-file" in _da_chay[0]["argv"])
+check("file không phải ảnh thì đi đường script bật listener (send-file của CLI treo)",
+      json.loads(r)["kind"] == "file" and "gui_tep.mjs" in " ".join(_da_chay[0]["argv"])
+      and "send-file" not in _da_chay[0]["argv"] and "-p" in _da_chay[0]["argv"])
 
 r = goi({"thread_id": "t1", "paths": ["attachments/anh.jpg", "bao-cao.pdf"]})
 check("trộn ảnh với file thì từ chối chứ không tự đoán", r.startswith("ERROR") and not _da_chay)
