@@ -23,10 +23,9 @@
   var agents = {};                    // khoá = tên viết thường -> robot
   var ds = [];                        // danh sách robot theo thứ tự bàn
   var lead = null;                    // MinMin (tổng chỉ huy)
-  var runs = {};                      // run -> { agents: {tên:1} }
   var tram = [];                      // các trạm dữ liệu
   var ban = null;                     // bàn họp
-  var cam = { az: 0.0, pol: 0.95, zoom: 1, tx: 0.9, tz: 0.6 };
+  var cam = { az: 0.0, pol: 0.95, zoom: 1, tx: 0.4, tz: 1.0 };
   var pick = null, raycaster = null, chon = null;
   var giamCD = false;
   try { giamCD = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
@@ -39,7 +38,12 @@
   function cat(s, n) { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
 
   // ---------- bố cục ----------
-  var AISLE = 3.5, DESK_Z = 6.3, STAND_Z = 4.8, CORR_X = -9.8;
+  // Phòng 28 x 21. Bàn làm việc của từng agent kê sát tường (sau, trái, trước), mỗi người một ghế.
+  // Giữa phòng là bàn họp dài dọc theo trục z: giám đốc MinMin ngồi ở ĐẦU bàn (phía tường sau, quay
+  // mặt ra phòng), các agent ngồi hai bên. Trạm dữ liệu dựa tường phải. Đi lại theo một vòng hành
+  // lang hình chữ nhật quanh bàn họp để không xuyên bàn.
+  var HX = 14.2, HZ = 10.4;
+  var LOOP = { x0: -9.6, x1: 9.0, z0: -6.5, z1: 6.5 };
   var STATION_DEFS = [
     { id: "brain", ten: "Bộ nhớ Brain", z: -6.5, re: /^(read|write|edit|glob|grep|notebook|vault|memory|javis_(use_skill|task)|ask_javis)/i },
     { id: "mcp", ten: "Dữ liệu ngoài", z: -2.2, re: /^mcp__/i },
@@ -51,19 +55,46 @@
     var mcp = /^mcp__([^_]+(?:_[^_]+)*)__/i.exec(tool);
     for (var i = 0; i < STATION_DEFS.length; i++) if (STATION_DEFS[i].re.test(tool)) {
       var t = tram[i];
-      return { st: t, nhan: i === 1 && mcp ? mcp[1].replace(/_/g, " ") : t.def.ten };
+      return { st: t, i: i, nhan: i === 1 && mcp ? mcp[1].replace(/_/g, " ") : t.def.ten };
     }
-    return { st: tram[3], nhan: tram[3].def.ten };
+    return { st: tram[3], i: 3, nhan: tram[3].def.ten };
   }
 
-  // ---------- đường đi: theo hành lang để không xuyên bàn ----------
-  function dau(z) { return z >= 0 ? 1 : -1; }
+  // ---------- đường đi ----------
+  var PER = (LOOP.x1 - LOOP.x0) * 2 + (LOOP.z1 - LOOP.z0) * 2, W_ = LOOP.x1 - LOOP.x0, H_ = LOOP.z1 - LOOP.z0;
+  function cl(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function entry(p) {
+    var k = p.kind;
+    if (k === "seat") { if (p.z < -4.4) return { x: 0, z: LOOP.z0 }; if (p.z > 4.4) return { x: 0, z: LOOP.z1 }; return { x: p.x < 0 ? LOOP.x0 : LOOP.x1, z: p.z }; }
+    if (k === "st") return { x: LOOP.x1, z: cl(p.z, LOOP.z0, LOOP.z1) };
+    if (p.z < -7) return { x: cl(p.x, LOOP.x0, LOOP.x1), z: LOOP.z0 };
+    if (p.z > 7) return { x: cl(p.x, LOOP.x0, LOOP.x1), z: LOOP.z1 };
+    if (p.x < -10) return { x: LOOP.x0, z: cl(p.z, LOOP.z0, LOOP.z1) };
+    return { x: LOOP.x1, z: cl(p.z, LOOP.z0, LOOP.z1) };
+  }
+  function tOf(p) {   // vị trí trên vòng hành lang, đo từ góc trái-trên theo chiều kim đồng hồ
+    var e = 0.01;
+    if (Math.abs(p.z - LOOP.z0) < e) return p.x - LOOP.x0;
+    if (Math.abs(p.x - LOOP.x1) < e) return W_ + (p.z - LOOP.z0);
+    if (Math.abs(p.z - LOOP.z1) < e) return W_ + H_ + (LOOP.x1 - p.x);
+    return W_ * 2 + H_ + (LOOP.z1 - p.z);
+  }
+  var GOC = function () { return [{ t: 0, x: LOOP.x0, z: LOOP.z0 }, { t: W_, x: LOOP.x1, z: LOOP.z0 }, { t: W_ + H_, x: LOOP.x1, z: LOOP.z1 }, { t: W_ * 2 + H_, x: LOOP.x0, z: LOOP.z1 }]; };
   function route(from, to) {
-    var aF = dau(from.z) * AISLE, aT = dau(to.z) * AISLE, p = [];
-    p.push({ x: from.x, z: aF });
-    if (aF !== aT) { p.push({ x: CORR_X, z: aF }); p.push({ x: CORR_X, z: aT }); }
-    p.push({ x: to.x, z: aT }); p.push({ x: to.x, z: to.z });
-    return p;
+    var pts = [];
+    if (from.kind === "seat" && to.kind === "seat" && (from.x < 0) === (to.x < 0) && Math.abs(from.z) < 4.4 && Math.abs(to.z) < 4.4) {
+      var sx = from.x < 0 ? -3.5 : 3.5; return [{ x: sx, z: from.z }, { x: sx, z: to.z }, { x: to.x, z: to.z }];
+    }
+    var a = entry(from), b = entry(to);
+    pts.push(a);
+    var ta = tOf(a), tb = tOf(b), d = (tb - ta + PER) % PER, tien = d <= PER / 2;
+    if (Math.hypot(a.x - b.x, a.z - b.z) > 0.01) {
+      GOC().forEach(function (g) { var dd = tien ? (g.t - ta + PER) % PER : (ta - g.t + PER) % PER, lim = tien ? d : PER - d; if (dd > 0.01 && dd < lim - 0.01) pts.push({ x: g.x, z: g.z, _d: dd }); });
+      var goc = pts.slice(1).sort(function (p, q) { return p._d - q._d; }); pts = [a].concat(goc);
+      pts.push(b);
+    }
+    pts.push({ x: to.x, z: to.z });
+    return pts;
   }
 
   // ---------- chữ trên sprite ----------
@@ -115,29 +146,38 @@
     return { g: g, dau: dau_, tayT: tayT, tayP: tayP, chanT: chanT, chanP: chanP, than: than, matM: matM, nhan: nhan, noi: noi, acc: acc, s: s };
   }
 
-  function taoAgent(ten, role, laLead, homeX, homeZ, huong) {
+  // ---------- dựng đồ vật ----------
+  function ghe(x, z, rot) {
+    var g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = rot;
+    var m = mat(sang() ? 0x93a4bd : 0x3a4c6c);
+    var seat = new T.Mesh(new T.BoxGeometry(0.95, 0.1, 0.95), m); seat.position.y = 0.55; g.add(seat);
+    var lung = new T.Mesh(new T.BoxGeometry(0.95, 0.85, 0.1), m); lung.position.set(0, 1.05, -0.48); g.add(lung);
+    var tru = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 0.5, 8), mat(0x6f7f98)); tru.position.y = 0.27; g.add(tru);
+    var de = new T.Mesh(new T.CylinderGeometry(0.4, 0.4, 0.05, 14), mat(0x6f7f98)); de.position.y = 0.03; g.add(de);
+    scene.add(g);
+  }
+  function taoAgent(ten, role, laLead, home, rot) {
     var r = dungRobot(ten, cat(role, 24), hue(ten), laLead);
-    var a = { ten: ten, role: role || "", r: r, lead: !!laLead, home: { x: homeX, z: homeZ }, huong: huong || 0,
-              x: homeX, z: homeZ, rot: huong || 0, q: [], cur: null, pose: "idle", task: "", noiHet: 0, man: null, trang: "Rảnh" };
-    r.g.position.set(homeX, 0, homeZ); r.g.rotation.y = a.rot; r.than.userData.agent = a;
+    var a = { ten: ten, role: role || "", r: r, lead: !!laLead, home: home, kind: home.kind || "desk", huong: rot || 0,
+              x: home.x, z: home.z, rot: rot || 0, q: [], cur: null, pose: "idle", task: "", noiHet: 0, man: null, trang: "Rảnh",
+              ngoi: true, seat: null, key: ten.toLowerCase() };
+    r.g.position.set(home.x, 0, home.z); r.g.rotation.y = a.rot; r.than.userData.agent = a;
     scene.add(r.g);
     return a;
   }
-
-  function dungBan(x, z, huong, a) {
-    var g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = huong;
+  function dungBan(slot, a) {
+    var g = new T.Group(); g.position.set(slot.desk.x, 0, slot.desk.z); g.rotation.y = slot.desk.rot;
     var go = mat(sang() ? 0xdfe6f2 : 0x2a3a58);
-    var mat_ = new T.Mesh(new T.BoxGeometry(2.6, 0.12, 1.3), go); mat_.position.set(0, 1.0, 0); g.add(mat_);
+    var mt = new T.Mesh(new T.BoxGeometry(2.6, 0.12, 1.3), go); mt.position.set(0, 1.0, 0); g.add(mt);
     [[-1.2, -0.55], [1.2, -0.55], [-1.2, 0.55], [1.2, 0.55]].forEach(function (p) { var ch = new T.Mesh(new T.BoxGeometry(0.1, 1.0, 0.1), mat(0x8fa0b8)); ch.position.set(p[0], 0.5, p[1]); g.add(ch); });
     var mh = mat(0x0f1626, { emissive: 0x1a4fff, emissiveIntensity: 0.15 });
     var mon = new T.Mesh(new T.BoxGeometry(1.1, 0.7, 0.06), mh); mon.position.set(0, 1.62, -0.35); g.add(mon);
     var ch2 = new T.Mesh(new T.BoxGeometry(0.1, 0.35, 0.1), mat(0x8fa0b8)); ch2.position.set(0, 1.2, -0.35); g.add(ch2);
-    a.man = mh;
-    scene.add(g);
+    a.man = mh; scene.add(g);
+    ghe(slot.stand.x, slot.stand.z, slot.rot);
   }
-
-  function dungTram(def, i) {
-    var g = new T.Group(), x = 11.2; g.position.set(x, 0, def.z); g.rotation.y = -Math.PI / 2;
+  function dungTram(def) {
+    var g = new T.Group(); g.position.set(12.6, 0, def.z); g.rotation.y = -Math.PI / 2;
     var acc = new T.Color().setHSL(hue(def.id) / 360, 0.75, 0.52);
     var thung = new T.Mesh(new T.BoxGeometry(1.5, 2.2, 1.0), mat(sang() ? 0xe3e9f4 : 0x23324d)); thung.position.y = 1.1; g.add(thung);
     var den = mat(acc.getHex(), { emissive: acc.getHex(), emissiveIntensity: 0.35 });
@@ -146,75 +186,73 @@
     var nh = spriteTu(veNhan(def.ten, "Trạm dữ liệu", "#" + acc.getHexString(), sang() ? "rgba(255,255,255,0.94)" : "rgba(18,28,46,0.92)"), 2.6);
     nh.position.set(0, 3.0, 0); g.add(nh);
     scene.add(g);
-    return { def: def, den: den, spot: { x: 9.1, z: def.z }, g: g };
+    return { def: def, den: den, spot: { x: 10.6, z: def.z, kind: "st" }, g: g };
   }
-
   function dungBanHop() {
-    var g = new T.Group();
-    var mt = new T.Mesh(new T.CylinderGeometry(2.2, 2.2, 0.14, 40), mat(sang() ? 0xdfe6f2 : 0x2a3a58)); mt.position.y = 1.0; g.add(mt);
-    var ch = new T.Mesh(new T.CylinderGeometry(0.4, 0.55, 1.0, 16), mat(0x8fa0b8)); ch.position.y = 0.5; g.add(ch);
-    var vong = new T.Mesh(new T.TorusGeometry(2.2, 0.03, 8, 60), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.8 })); vong.rotation.x = Math.PI / 2; vong.position.y = 1.08; g.add(vong);
-    var holo = new T.Mesh(new T.CylinderGeometry(0.9, 0.9, 0.02, 30), new T.MeshBasicMaterial({ color: 0x3fb2ff, transparent: true, opacity: 0.0 })); holo.position.y = 1.12; g.add(holo);
+    var g = new T.Group(), L = 8.6;
+    var mt = new T.Mesh(new T.BoxGeometry(2.3, 0.14, L), mat(sang() ? 0xd5deee : 0x2a3a58)); mt.position.y = 1.0; g.add(mt);
+    [-L / 2 + 0.6, L / 2 - 0.6].forEach(function (z) { var ch = new T.Mesh(new T.BoxGeometry(1.5, 1.0, 0.25), mat(0x8fa0b8)); ch.position.set(0, 0.5, z); g.add(ch); });
+    var vien = new T.Mesh(new T.BoxGeometry(0.06, 0.05, L), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.8 })); vien.position.set(0, 1.09, 0); g.add(vien);
+    var holo = new T.Mesh(new T.BoxGeometry(1.4, 0.02, L - 1), new T.MeshBasicMaterial({ color: 0x3fb2ff, transparent: true, opacity: 0.0, depthWrite: false })); holo.position.y = 1.1; g.add(holo);
     scene.add(g);
-    var ghe = [];
-    for (var i = 0; i < 8; i++) { var an = i / 8 * Math.PI * 2 + 0.3; ghe.push({ x: Math.cos(an) * 3.15, z: Math.sin(an) * 3.15, huong: Math.atan2(-Math.cos(an), -Math.sin(an)) }); }
-    return { ghe: ghe, holo: holo };
+    // ghế: đầu bàn (giám đốc) rồi lần lượt hai bên từ gần đầu tới xa, cuối cùng là ghế cuối bàn
+    var gs = [{ x: 0, z: -5.0, kind: "seat", rot: 0 }];
+    for (var i = 0; i < 8; i++) { var z = -3.5 + i; gs.push({ x: -2.0, z: z, kind: "seat", rot: Math.PI / 2 }); gs.push({ x: 2.0, z: z, kind: "seat", rot: -Math.PI / 2 }); }
+    gs.push({ x: 0, z: 5.0, kind: "seat", rot: Math.PI });
+    gs.forEach(function (s) { ghe(s.x, s.z, s.rot); s.by = null; });
+    return { ghe: gs, holo: holo };
   }
-
-  // ---------- dựng cảnh ----------
   function dungCanh() {
     var light = sang();
     scene = new T.Scene();
     scene.background = new T.Color(light ? 0xe9f0fa : 0x0d1524);
-    scene.fog = new T.Fog(light ? 0xe9f0fa : 0x0d1524, 40, 80);
+    scene.fog = new T.Fog(light ? 0xe9f0fa : 0x0d1524, 50, 100);
     scene.add(new T.HemisphereLight(0xffffff, light ? 0xbfcbe0 : 0x1b2740, light ? 1.15 : 0.9));
     var dl = new T.DirectionalLight(0xffffff, light ? 1.4 : 1.0); dl.position.set(-8, 18, 10); scene.add(dl);
-    var san = new T.Mesh(new T.BoxGeometry(25, 0.3, 17), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san);
-    var luoi = new T.GridHelper(25, 25, light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = 17 / 25; scene.add(luoi);
-    // viền tường thấp phía sau và bên phải cho có chiều sâu
+    var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san);
+    var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; scene.add(luoi);
     var tuong = mat(light ? 0xdde6f4 : 0x1e2d49);
-    var t1 = new T.Mesh(new T.BoxGeometry(25, 1.6, 0.3), tuong); t1.position.set(0, 0.8, -8.6); scene.add(t1);
-    var t2 = new T.Mesh(new T.BoxGeometry(0.3, 1.6, 17), tuong); t2.position.set(-12.6, 0.8, 0); scene.add(t2);
-    var vien = new T.Mesh(new T.BoxGeometry(25, 0.04, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 1.62, -8.6); scene.add(vien);
+    var t1 = new T.Mesh(new T.BoxGeometry(HX * 2, 1.8, 0.3), tuong); t1.position.set(0, 0.9, -HZ - 0.1); scene.add(t1);
+    var t2 = new T.Mesh(new T.BoxGeometry(0.3, 1.8, HZ * 2), tuong); t2.position.set(-HX - 0.1, 0.9, 0); scene.add(t2);
+    var vien = new T.Mesh(new T.BoxGeometry(HX * 2, 0.04, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 1.82, -HZ - 0.1); scene.add(vien);
     tram = STATION_DEFS.map(dungTram);
     ban = dungBanHop();
-    camera = new T.PerspectiveCamera(38, 1, 0.1, 200);
+    camera = new T.PerspectiveCamera(38, 1, 0.1, 250);
     raycaster = new T.Raycaster();
   }
-
   function datCamera() {
-    var cp = Math.cos(cam.pol), sp = Math.sin(cam.pol), dist = 26 * Math.max(1, 1.75 / camera.aspect) * cam.zoom;
+    var cp = Math.cos(cam.pol), sp = Math.sin(cam.pol), dist = 33 * Math.max(1, 1.6 / camera.aspect) * cam.zoom;
     camera.position.set(cam.tx + Math.sin(cam.az) * sp * dist, cp * dist, cam.tz + Math.cos(cam.az) * sp * dist);
     camera.lookAt(cam.tx, 0.6, cam.tz);
   }
 
-  // ---------- đồng bộ danh sách agent ----------
+  // ---------- đồng bộ danh sách agent: mỗi người một bàn + một ghế sát tường ----------
   function boTri(n) {
-    // n robot: hai hàng bàn, nửa trên z=-DESK_Z, nửa dưới z=+DESK_Z
-    var tren = Math.ceil(n / 2), res = [];
-    for (var i = 0; i < n; i++) {
-      var hang = i < tren ? -1 : 1, so = hang < 0 ? tren : n - tren, k = hang < 0 ? i : i - tren;
-      var x = (k - (so - 1) / 2) * 3.8;
-      res.push({ x: x, deskZ: hang * DESK_Z, standZ: hang * STAND_Z, huong: hang < 0 ? 0 : Math.PI });
-    }
+    var trai = Math.ceil(n * 0.3), con = n - trai, sau = Math.ceil(con / 2), truoc = con - sau, res = [], i;
+    function lerp(a, b, k, m) { return m <= 1 ? (a + b) / 2 : a + (b - a) * k / (m - 1); }
+    for (i = 0; i < sau; i++) { var x = lerp(-10, 8, i, sau); res.push({ desk: { x: x, z: -9.5, rot: 0 }, stand: { x: x, z: -7.9 }, rot: Math.PI }); }
+    for (i = 0; i < truoc; i++) { var x2 = lerp(-10, 8, i, truoc); res.push({ desk: { x: x2, z: 9.5, rot: Math.PI }, stand: { x: x2, z: 7.9 }, rot: 0 }); }
+    for (i = 0; i < trai; i++) { var z = lerp(-6.4, 6.4, i, trai); res.push({ desk: { x: -13.3, z: z, rot: Math.PI / 2 }, stand: { x: -11.8, z: z }, rot: -Math.PI / 2 }); }
     return res;
   }
   function dungNguoi(list) {
-    list = list.slice(0, 12);
+    list = list.slice(0, 24);
     var bt = boTri(list.length);
     list.forEach(function (ag, i) {
-      var p = bt[i], a = taoAgent(ag.name || ag.slug, ag.role, false, p.x, p.standZ, p.huong + Math.PI);   // robot quay mặt về bàn
-      dungBan(p.x, p.deskZ, p.huong, a);
+      var p = bt[i], a = taoAgent(ag.name || ag.slug, ag.role, false, { x: p.stand.x, z: p.stand.z, kind: "desk" }, p.rot);
+      dungBan(p, a);
       agents[(ag.name || ag.slug).toLowerCase()] = a; if (ag.slug) agents[ag.slug.toLowerCase()] = a;
-      ds.push(a);
+      a.group = ag.group || ""; ds.push(a);
     });
-    lead = taoAgent("MinMin", "Tổng chỉ huy AI", true, 6.2, 0.2, -Math.PI / 2);
+    // giám đốc: ngồi ở đầu bàn họp, quay mặt ra phòng
+    var gh = ban.ghe[0];
+    lead = taoAgent("MinMin", "Giám đốc AI", true, { x: gh.x, z: gh.z, kind: "seat" }, gh.rot);
+    lead.seat = gh; gh.by = lead; lead.kind = "seat"; lead.holdPose = "idle"; lead.trang = "Điều hành";
     agents["minmin"] = lead;
   }
   function khach(ten) {
-    // agent chưa có trong danh sách (mới tạo, hoặc tên khác): thêm vào khu nghỉ bên trái
     var k = ten.toLowerCase(); if (agents[k]) return agents[k];
-    var n = Object.keys(agents).length, a = taoAgent(ten, "Khách mời", false, -9.0 + (n % 3) * 1.4, -0.2 + ((n / 3) | 0) * 1.4, Math.PI / 2);
+    var n = ds.length, a = taoAgent(ten, "Khách mời", false, { x: -12.2 + (n % 2) * 1.5, z: 8.6 + 0, kind: "desk" }, 0);
     a.man = null; agents[k] = a; ds.push(a); return a;
   }
   function timAgent(ten) {
@@ -234,62 +272,106 @@
     if (a.trang === t) return; a.trang = t;
     capNhatSprite(a.r.nhan, veNhan(a.ten, cat(t, 26), "#" + a.r.acc.getHexString(), sang() ? "rgba(255,255,255,0.94)" : "rgba(18,28,46,0.92)"));
   }
-  function di(a, to) { a.q.push({ t: "walk", path: route({ x: a.x, z: a.z }, to) }); }
+  function di(a, to) { a.q.push({ t: "walk", path: route({ x: a.x, z: a.z, kind: a.kind }, to), kind: to.kind || "desk" }); }
   function dung_(a, ms, pose, nhin, text, tt) { a.q.push({ t: "stay", ms: ms, pose: pose, nhin: nhin, text: text, tt: tt }); }
-  function ve(a, pose, tt) {
-    di(a, a.home); a.q.push({ t: "face", huong: a.huong });
-    a.q.push({ t: "hold", pose: pose || "idle", tt: tt || (pose === "work" ? "Đang làm" : "Rảnh") });
-  }
   function cham(a) { a.q.length = 0; a.cur = null; }
-  function canh(a) { return { x: a.home.x + 1.5, z: a.home.z + (a.home.z < 0 ? 0.2 : -0.2) }; }
-  function lead_di_toi(a, text) {
-    if (!lead) return;
-    lead.q.length = 0; lead.cur = null;
-    di(lead, canh(a)); dung_(lead, 1600, "talk", a, text, "Giao việc"); ve(lead, "idle", "Điều phối");
+  function veBan(a, tt) {          // về bàn làm việc của mình
+    cham(a); di(a, a.home); a.q.push({ t: "face", huong: a.huong }); a.q.push({ t: "hold", pose: "idle", tt: tt || "Rảnh" });
+  }
+  function toiGhe(a, tt, pose) {   // tới ghế của mình ở bàn họp
+    var g = a.seat; if (!g) return;
+    di(a, g); a.q.push({ t: "face", huong: g.rot }); a.q.push({ t: "hold", pose: pose || "idle", tt: tt || "Họp" });
   }
 
+  // ---------- các phiên họp: mỗi lần chạy workflow và mỗi lượt chat là một phiên ----------
+  var phien = {};                  // khoá -> { set: {key: agent}, ten }
+  function conTrongPhien(a, tru) { for (var k in phien) if (k !== tru && phien[k].set[a.key]) return true; return false; }
+  function cap_ghe(a) {
+    if (a.seat) return a.seat;
+    for (var i = 1; i < ban.ghe.length; i++) if (!ban.ghe[i].by) { ban.ghe[i].by = a; a.seat = ban.ghe[i]; return a.seat; }
+    return null;
+  }
+  function vaoPhien(key, a, tt) {
+    var p = phien[key] || (phien[key] = { set: {}, ten: "" }); p.set[a.key] = a;
+    if (a.lead) return;
+    if (a.seat && a.kind === "seat") return;              // đã ngồi ở bàn họp rồi
+    if (!cap_ghe(a)) return;                              // hết ghế: ở yên bàn mình
+    cham(a); toiGhe(a, tt || "Họp", "idle");
+  }
+  function rutKhoiPhien(key, ok, loiNoi) {
+    var p = phien[key]; if (!p) return; delete phien[key];
+    Object.keys(p.set).forEach(function (k) {
+      var a = p.set[k]; if (a.lead || conTrongPhien(a)) return;
+      if (a.seat) { a.seat.by = null; a.seat = null; }
+      cham(a); noi_(a, ok ? "Xong, về làm tiếp" : "Cần xem lại", 2400); veBan(a, "Rảnh");
+    });
+    if (lead && loiNoi) noi_(lead, loiNoi, 3000);
+    if (ban && Object.keys(phien).length === 0) ban.sangDen = 0;
+  }
+  function lamTram(a, tool) {
+    var t = tramCua(tool); if (!a || now() - (a.luotTool || 0) < 2500) return; a.luotTool = now();
+    cham(a); di(a, t.st.spot);
+    dung_(a, 2300, "work", null, "Lấy dữ liệu: " + cat(t.nhan, 16), "Lấy dữ liệu " + cat(t.nhan, 10)); t.st.sang = now() + 2600;
+    if (a.lead) { a.q.push({ t: "walk", path: route({ x: t.st.spot.x, z: t.st.spot.z, kind: "st" }, a.seat || a.home), kind: "seat" }); a.q.push({ t: "face", huong: a.huong }); a.q.push({ t: "hold", pose: "idle", tt: "Điều hành" }); }
+    else if (a.seat && conTrongPhien(a)) toiGhe(a, "Họp", "idle"); else veBan(a, "Đang làm");
+  }
+
+  // ---------- chat: ai liên quan tới câu hỏi thì vào họp ----------
+  var NHOM = [
+    { q: /doanh thu|kinh doanh|bao cao|so lieu|ket qua|hom nay|tong quan/, t: ["bao cao", "dashboard", "ke toan", "giam sat", "sales", "ban hang", "ads", "quang cao"] },
+    { q: /don|hang|kho|ton|giao|van chuyen|dat hang/, t: ["kho", "ban hang", "sales", "dat hang", "don"] },
+    { q: /quang cao|ads|camp|ngan sach|facebook|tiktok/, t: ["ads", "quang cao", "marketing", "media", "lead"] },
+    { q: /khach|comment|inbox|cskh|tra loi|khieu nai|zalo/, t: ["cskh", "cham soc", "khach", "buyer", "conversation"] },
+    { q: /content|bai viet|viet|video|anh|hinh|dang bai|fanpage|kenh/, t: ["content", "video", "media", "anh", "bien tap", "dang bai", "dieu phoi"] },
+    { q: /thue|hoa don|luong|ke toan|chi phi|loi nhuan|tai chinh/, t: ["ke toan", "thue", "nhan su", "bang luong", "giam sat"] },
+    { q: /nghien cuu|tim hieu|phan tich|doi thu|thi truong/, t: ["research", "lead engine", "phan tich", "kiem chung"] }
+  ];
+  function bo(s) { return String(s || "").toLowerCase().replace(/đ/g, "d").normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+  function lienQuan(text) {
+    var q = bo(text), diem = [];
+    var tu = q.split(/[^a-z0-9]+/).filter(function (w) { return w.length >= 4; });
+    ds.forEach(function (a) {
+      var hay = bo(a.ten + " " + a.role + " " + (a.group || "")), d = 0;
+      NHOM.forEach(function (n) { if (n.q.test(q)) n.t.forEach(function (k) { if (hay.indexOf(k) >= 0) d += 2; }); });
+      tu.forEach(function (w) { if (hay.indexOf(w) >= 0) d += 1; });
+      if (d > 0) diem.push({ a: a, d: d });
+    });
+    diem.sort(function (x, y) { return y.d - x.d; });
+    return diem.slice(0, 5).map(function (x) { return x.a; });
+  }
+  function chonNguoiLayDuLieu(i) {   // MinMin gọi công cụ: cử người trong phòng họp có chuyên môn gần nhất đi lấy
+    var p = phien.chat; if (!p) return lead;
+    var ds2 = Object.keys(p.set).map(function (k) { return p.set[k]; }).filter(function (a) { return !a.lead && !a.cur && !a.q.length; });
+    if (!ds2.length) return lead;
+    var pref = [["kho", "ban hang", "sales", "ke toan"], ["bao cao", "dashboard", "ke toan"], ["research", "phan tich"], ["media", "content"]][i % 4] || [];
+    for (var j = 0; j < ds2.length; j++) { var h = bo(ds2[j].ten + " " + ds2[j].role); if (pref.some(function (k) { return h.indexOf(k) >= 0; })) return ds2[j]; }
+    return ds2[(luotCu++) % ds2.length];
+  }
+  var luotCu = 0;
+
   function suKien(ev) {
-    var k = ev.k, a, p;
+    var k = ev.k, a, p, key = ev.run || "chat";
     if (k === "run_start") {
-      runs[ev.run] = { agents: {}, ten: ev.name };
-      if (lead) { noi_(lead, "Nhận việc: " + cat(ev.name, 18), 3000); trangThai(lead, "Điều phối"); }
+      phien[key] = { set: {}, ten: ev.name }; if (ban) ban.sangDen = now() + 3600000;
+      if (lead) { noi_(lead, "Triệu tập họp: " + cat(ev.name, 16), 3200); trangThai(lead, "Chủ trì họp"); lead.holdPose = "talk"; }
     } else if (k === "step") {
-      a = timAgent(ev.agent); if (!a) return; var r = runs[ev.run]; if (r) r.agents[a.ten.toLowerCase()] = a;
-      p = ev.prev ? timAgent(ev.prev) : null; cham(a);
-      if (p && p !== a) {
-        di(a, canh(p)); dung_(a, 2000, "talk", p, "Cho em xin kết quả của " + cat(p.ten, 14), "Hỏi " + cat(p.ten, 12));
-        p.q.length = 0; p.cur = null; dung_(p, 2000, "talk", a, "Dạ, đây ạ", "Trả lời " + cat(a.ten, 12)); ve(p, "idle", "Rảnh");
-      } else if (!p) lead_di_toi(a, "Giao việc: " + cat(ev.task, 18));
-      ve(a, "work", cat(ev.task, 26) || "Đang làm");
-      a.q.push({ t: "say", text: cat(ev.task, 28) || "Bắt đầu làm", ms: 3200 });
-      a.task = ev.task || "";
+      a = timAgent(ev.agent); if (!a) return;
+      vaoPhien(key, a, "Họp: " + cat(ev.name || "", 12));
+      p = ev.prev ? timAgent(ev.prev) : null;
+      if (p && p !== a) { noi_(p, "Kết quả của tôi đây", 2600); }
+      a.task = ev.task || ""; a.q.push({ t: "say", text: cat(ev.task, 28) || "Bắt đầu làm", ms: 3600 });
+      if (lead && !p) noi_(lead, "Giao việc cho " + cat(a.ten, 14), 2600);
     } else if (k === "tool") {
-      a = timAgent(ev.agent) || lead; if (!a || now() - (a.luotTool || 0) < 2500) return; a.luotTool = now();
-      var t = tramCua(ev.tool); a.q.length = 0; a.cur = null;
-      di(a, t.st.spot); dung_(a, 2300, "work", null, "Lấy dữ liệu: " + cat(t.nhan, 16), "Lấy dữ liệu " + cat(t.nhan, 10)); t.st.sang = now() + 2600;
-      ve(a, a === lead ? "idle" : "work", a === lead ? "Điều phối" : "Đang làm");
+      a = timAgent(ev.agent) || lead; if (!a) return; lamTram(a, ev.tool);
     } else if (k === "verify") {
-      a = timAgent(ev.agent); p = timAgent(ev.target); if (!a || !p || a === p) return;
-      a.q.length = 0; a.cur = null; di(a, canh(p)); dung_(a, 2200, "talk", p, "Kiểm chứng kết quả", "Kiểm chứng " + cat(p.ten, 10));
-      p.q.length = 0; p.cur = null; dung_(p, 2200, "talk", a, "Dạ, anh xem giúp", "Trình bày"); ve(p, "work", "Chờ kiểm chứng"); ve(a, "idle", "Rảnh");
+      a = timAgent(ev.agent); p = timAgent(ev.target); if (!a || !p) return;
+      vaoPhien(key, a, "Kiểm chứng"); noi_(p, "Dạ, mời anh xem", 2400);
+      a.q.push({ t: "say", text: "Kiểm chứng kết quả", ms: 3000 });
     } else if (k === "step_done") {
       a = timAgent(ev.agent); if (!a) return; noi_(a, "Xong bước này", 2000); trangThai(a, "Vừa xong");
     } else if (k === "run_end") {
-      var run = runs[ev.run]; delete runs[ev.run]; if (!run) return;
-      var ds2 = Object.keys(run.agents).map(function (x) { return run.agents[x]; });
-      if (ds2.length < 2) { ds2.forEach(function (x) { cham(x); ve(x, "idle", "Rảnh"); }); if (lead) noi_(lead, ev.ok ? "Xong việc" : "Có lỗi, cần xem lại", 3000); return; }
-      hopNhom(ds2, ev.ok, run.ten);
+      rutKhoiPhien(key, ev.ok, ev.ok ? "Chốt xong, cảm ơn cả nhóm" : "Có lỗi, cần xem lại");
     }
-  }
-  function hopNhom(list, ok, ten) {
-    var seats = ban.ghe, all = list.slice(0, 7); if (lead) all.push(lead);
-    all.forEach(function (x, i) {
-      var g = seats[i % seats.length]; cham(x);
-      di(x, { x: g.x, z: g.z }); x.q.push({ t: "face", huong: g.huong });
-      dung_(x, 4200, "talk", null, x === lead ? (ok ? "Chốt kết quả" : "Có lỗi, họp xử lý") : (ok ? "Báo cáo xong" : "Cần xem lại"), "Họp: " + cat(ten, 14));
-      ve(x, x === lead ? "idle" : "idle", x === lead ? "Điều phối" : "Rảnh");
-    });
-    ban.sangDen = now() + 7000;
   }
 
   // ---------- mô phỏng ----------
@@ -297,20 +379,20 @@
   function chayMau() {
     var xs = ds.filter(function (x) { return !x.lead; }).slice(0, 4);
     if (xs.length < 2) { toast("Brain này chưa có agent nào để mô phỏng. Hãy tạo vài agent ở trang Cộng sự."); return; }
-    var id = "demo" + (++moPhong), tg = 0;
+    var id = "demo" + (++moPhong);
     function at(ms, ev) { setTimeout(function () { if (mo) suKien(ev); }, ms); }
     at(0, { k: "run_start", run: id, name: "Bán hàng dịp Tết" });
     at(900, { k: "step", run: id, agent: xs[0].ten, prev: "", task: "Kiểm tra tồn kho và sức bán" });
-    at(3500, { k: "tool", run: id, agent: xs[0].ten, tool: "mcp__pos__orders" });
-    at(7500, { k: "step_done", run: id, agent: xs[0].ten });
-    at(8000, { k: "step", run: id, agent: xs[1].ten, prev: xs[0].ten, task: "Lập phương án nguồn hàng" });
-    at(13000, { k: "tool", run: id, agent: xs[1].ten, tool: "WebSearch" });
-    at(17500, { k: "step_done", run: id, agent: xs[1].ten });
+    at(5500, { k: "tool", run: id, agent: xs[0].ten, tool: "mcp__pos__orders" });
+    at(11000, { k: "step_done", run: id, agent: xs[0].ten });
+    at(11500, { k: "step", run: id, agent: xs[1].ten, prev: xs[0].ten, task: "Lập phương án nguồn hàng" });
+    at(17000, { k: "tool", run: id, agent: xs[1].ten, tool: "WebSearch" });
+    at(22000, { k: "step_done", run: id, agent: xs[1].ten });
     var x3 = xs[2] || xs[0], x4 = xs[3] || xs[1];
-    at(18000, { k: "step", run: id, agent: x3.ten, prev: xs[1].ten, task: "Xây thông điệp chiến dịch" });
-    at(22000, { k: "verify", run: id, agent: x4.ten, target: x3.ten });
-    at(26500, { k: "step_done", run: id, agent: x3.ten });
-    at(27500, { k: "run_end", run: id, ok: true });
+    at(22500, { k: "step", run: id, agent: x3.ten, prev: xs[1].ten, task: "Xây thông điệp chiến dịch" });
+    at(27500, { k: "verify", run: id, agent: x4.ten, target: x3.ten });
+    at(32500, { k: "step_done", run: id, agent: x3.ten });
+    at(34000, { k: "run_end", run: id, ok: true });
   }
   function toast(t) {
     var el = $("mmOfficeToast"); if (!el) return; el.textContent = t; el.hidden = false;
@@ -323,17 +405,17 @@
     if (!c) {
       c = a.cur = a.q.shift() || null;
       if (c && c.t === "stay") { c.het = now() + c.ms; if (c.text) noi_(a, c.text, c.ms); if (c.tt) trangThai(a, c.tt); }
-      if (c && c.t === "walk") { c.i = 0; trangThai(a, "Đang đi"); }
+      if (c && c.t === "walk") { c.i = 0; trangThai(a, "Đang đi"); a.ngoi = false; }
       if (c && c.t === "say") { noi_(a, c.text, c.ms); a.cur = null; return buoc(a, 0, t); }
     }
     var dang = "idle";
     if (c) {
       if (c.t === "walk") {
         var p = c.path[c.i];
-        if (!p) { a.cur = null; }
+        if (!p) { a.cur = null; a.kind = c.kind; }
         else {
           var dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz), st = speed * dt;
-          if (d <= st) { a.x = p.x; a.z = p.z; c.i++; if (c.i >= c.path.length) a.cur = null; }
+          if (d <= st) { a.x = p.x; a.z = p.z; c.i++; if (c.i >= c.path.length) { a.cur = null; a.kind = c.kind; } }
           else { a.x += dx / d * st; a.z += dz / d * st; a.huongDich = Math.atan2(dx, dz); }
           dang = "walk";
         }
@@ -341,27 +423,30 @@
         if (c.nhin) a.huongDich = Math.atan2(c.nhin.x - a.x, c.nhin.z - a.z);
         dang = c.pose; if (now() >= c.het) a.cur = null;
       } else if (c.t === "face") { a.huongDich = c.huong; a.cur = null; }
-      else if (c.t === "hold") { dang = c.pose; a.pose = c.pose; if (c.tt) trangThai(a, c.tt); a.holdPose = c.pose; if (a.q.length) a.cur = null; }
+      else if (c.t === "hold") { dang = c.pose; a.holdPose = c.pose; a.ngoi = true; if (c.tt) trangThai(a, c.tt); if (a.q.length) a.cur = null; }
     } else dang = a.holdPose || "idle";
+    if (!c && a.kind !== "st" && a.kind !== "walk") a.ngoi = true;
     if (a.huongDich != null) { var dd = a.huongDich - a.rot; while (dd > Math.PI) dd -= Math.PI * 2; while (dd < -Math.PI) dd += Math.PI * 2; a.rot += dd * Math.min(1, dt * 9); }
-    r.g.position.set(a.x, 0, a.z); r.g.rotation.y = a.rot;
-    // dáng
+    var ngoi = a.ngoi && dang !== "walk" && (a.kind === "desk" || a.kind === "seat");
+    r.g.position.set(a.x, ngoi ? -0.3 * r.s : 0, a.z); r.g.rotation.y = a.rot;
     var sw = dang === "walk" ? Math.sin(t * 11) : 0, bob = dang === "walk" ? Math.abs(Math.sin(t * 11)) * 0.07 : Math.sin(t * 1.6 + a.x) * 0.012;
     r.than.position.y = 0.95 + bob; r.dau.position.y = 1.78 + bob;
-    r.chanT.rotation.x = sw * 0.7; r.chanP.rotation.x = -sw * 0.7;
+    var ch = ngoi ? -1.3 : sw * 0.7;
+    r.chanT.rotation.x += (ch - r.chanT.rotation.x) * 0.3; r.chanP.rotation.x += ((ngoi ? -1.3 : -sw * 0.7) - r.chanP.rotation.x) * 0.3;
     var ty = 0, tp = 0;
     if (dang === "walk") { ty = -sw * 0.6; tp = sw * 0.6; }
     else if (dang === "work") { ty = -0.9 + Math.sin(t * 14) * 0.18; tp = -0.9 + Math.sin(t * 14 + 2) * 0.18; }
     else if (dang === "talk") { ty = -0.2; tp = -1.3 + Math.sin(t * 6) * 0.35; r.dau.rotation.x = Math.sin(t * 5) * 0.08; }
+    else if (ngoi && a.kind === "desk") { ty = -0.7; tp = -0.7; }
     r.tayT.rotation.x += (ty - r.tayT.rotation.x) * 0.25; r.tayP.rotation.x += (tp - r.tayP.rotation.x) * 0.25;
     if (dang !== "talk") r.dau.rotation.x *= 0.85;
-    if (a.man) a.man.emissiveIntensity = dang === "work" ? 0.9 + Math.sin(t * 7) * 0.2 : 0.12;
+    if (a.man) a.man.emissiveIntensity = (dang === "work" || (a.trang && a.trang !== "Rảnh" && a.kind === "desk" && ngoi)) ? 0.9 + Math.sin(t * 7) * 0.2 : 0.12;
     if (r.noi.visible && now() > a.noiHet) r.noi.visible = false;
   }
 
   function khung() {
     rafId = requestAnimationFrame(khung);
-    var n = now(), dt = Math.min(0.05, (n - lanCuoi) / 1000); lanCuoi = n; var t = n / 1000;
+    var n = now(), dt = Math.min(0.05, (n - lanCuoi) / 1000) * (window.__mmOfficeSpeed || 1); lanCuoi = n; var t = n / 1000;
     var vua = host.clientWidth, cao = host.clientHeight;
     if (renderer.domElement.width !== Math.floor(vua * renderer.getPixelRatio()) || renderer.domElement.height !== Math.floor(cao * renderer.getPixelRatio())) {
       renderer.setSize(vua, cao, false); camera.aspect = vua / Math.max(1, cao);
@@ -426,7 +511,7 @@
   function xoaCanh() {
     if (rafId) cancelAnimationFrame(rafId); rafId = 0;
     if (renderer) { renderer.dispose(); if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
-    renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; runs = {};
+    renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; phien = {};
   }
   function dung(list) {
     xoaCanh();
@@ -481,12 +566,24 @@
     document.addEventListener("visibilitychange", function () { if (document.hidden && mo) { clearInterval(pollId); } else if (mo) { pollId = setInterval(hoi, 1500); } });
   }
 
+  var chatTimer = 0, chatTool = 0;
   window.MinMinOffice = {
     open: function () { khoiTao(); mo_(); }, close: dong, toggle: function () { mo ? dong() : mo_(); },
-    // công cụ MinMin gọi trong khung chat (app.js): chỉ có tác dụng khi văn phòng đang mở
+    // khung chat (app.js): MinMin nhận câu hỏi -> người liên quan vào họp; gọi công cụ -> cử người đi lấy dữ liệu
+    onChatStart: function (text) {
+      if (!mo || !lead) return; clearTimeout(chatTimer); chatTool = 0;
+      if (phien.chat) rutKhoiPhien("chat", true, "");
+      phien.chat = { set: {}, ten: "Chat" }; phien.chat.set.minmin = lead;
+      noi_(lead, "Triệu tập họp", 2500); trangThai(lead, "Chủ trì họp"); lead.holdPose = "talk";
+      var ls = lienQuan(text); ls.forEach(function (a, i) { setTimeout(function () { if (mo && phien.chat) { vaoPhien("chat", a, "Họp với MinMin"); noi_(a, "Có em", 2200); } }, 500 + i * 650); });
+    },
     onChatTool: function (data) {
       if (!mo || !lead) return; var tool = data && data.tool; if (!tool || tool === "ask_javis") return;
-      suKien({ k: "tool", agent: "MinMin", tool: tool });
+      var a = phien.chat ? chonNguoiLayDuLieu(tramCua(tool).i) : lead; lamTram(a, tool);
+    },
+    onChatEnd: function () {
+      if (!mo || !phien.chat) return; clearTimeout(chatTimer);
+      chatTimer = setTimeout(function () { rutKhoiPhien("chat", true, "Xong việc"); if (lead) { lead.holdPose = "idle"; trangThai(lead, "Điều hành"); } }, 3500);
     },
     demo: chayMau
   };
