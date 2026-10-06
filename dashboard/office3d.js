@@ -29,7 +29,9 @@
   var manHinh = [], matManOff = null, matManOn = [];
 
   function brain() { try { var q = new URLSearchParams(location.search).get("brain"); if (window.__mmOfficeSolo && q) return q; } catch (e0) {} try { return (window.currentBrainPath && window.currentBrainPath()) || "brain"; } catch (e) { return "brain"; } }
-  function sang() { try { return window.MinMinGalaxyIsLight ? window.MinMinGalaxyIsLight() : false; } catch (e) { return false; } }
+  // giao diện văn phòng: mặc định SÁNG (dịu mắt), nút trên thanh chuyển sáng/tối và nhớ lựa chọn
+  var themeOv = "light"; try { var tv = localStorage.getItem("mmOfficeTheme"); if (tv === "light" || tv === "dark") themeOv = tv; } catch (e) {}
+  function sang() { return themeOv === "light"; }
   function now() { return performance.now(); }
   function $(id) { return document.getElementById(id); }
   function hue(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
@@ -250,8 +252,12 @@
     var B = {}; ["Hips", "Spine02", "Spine01", "Spine", "neck", "Head", "head_end", "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand"].forEach(function (n) { B[n] = model.getObjectByName(n); });
     var hy = B.Hips.position.y || 100; var S = HS * (100.26 / hy), caoNguoi = 1.72 * S;
     pivot.scale.setScalar(S);
+    model.updateMatrixWorld(true);
+    var rest = {}, qm = new T.Quaternion(); model.getWorldQuaternion(qm); qm.invert();
+    ["Spine02", "Spine01", "Spine", "neck", "Head"].forEach(function (n) { if (B[n]) rest[n] = B[n].getWorldQuaternion(new T.Quaternion()).premultiply(qm); });
     var mixer = new T.AnimationMixer(model), act = {}, wt = {};
     NV_CLIPS.forEach(function (n, k) { var ac = mixer.clipAction(NV.clips[n]); ac.play(); ac.setEffectiveWeight(0); ac.time = (k * 0.7 + Math.random() * 3) % 3; act[n] = ac; wt[n] = 0; });
+    act.sit.time = 0; act.sit.paused = true;
     var than = new T.Mesh(new T.BoxGeometry(0.9, caoNguoi, 0.6), new T.MeshBasicMaterial({ visible: false })); than.position.y = caoNguoi / 2; g.add(than);
     var bong = new T.Mesh(new T.CircleGeometry(0.55, 20), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false }));
     bong.rotation.x = -Math.PI / 2; bong.position.y = 0.02; g.add(bong);
@@ -261,7 +267,7 @@
     var gb = new T.Group(); gb.scale.setScalar(100); var but = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.18, 6), mat(0x222222)); but.position.set(0, 0.06, 0); gb.add(but); gb.visible = false; B.RightHand.add(gb);
     var nhan = spriteTu(veNhan(ten, role, "#" + acc.getHexString(), nenNhan()), 2.5); nhan.position.set(0, caoNguoi + 0.55, 0); g.add(nhan);
     var noi = spriteTu(veNoi("…", "#" + acc.getHexString()), 3.6); noi.center.set(0.5, 0); noi.position.set(0, caoNguoi + 0.95, 0); noi.visible = false; g.add(noi);
-    return { hum: true, g: g, pivot: pivot, model: model, B: B, mixer: mixer, act: act, wt: wt, S: S, than: than, nhan: nhan, noi: noi, acc: acc, s: 0, vat: gv, but: gb, ikw: 0, vatGoc: sach, idx: idx };
+    return { hum: true, rest: rest, g: g, pivot: pivot, model: model, B: B, mixer: mixer, act: act, wt: wt, S: S, than: than, nhan: nhan, noi: noi, acc: acc, s: 0, vat: gv, but: gb, ikw: 0, vatGoc: sach, idx: idx };
   }
   // quay xương `bone` sao cho trục hướng tới `child` chỉ về `huong` (thế giới)
   function nhamXuong(bone, child, huong) {
@@ -271,6 +277,17 @@
     bone.getWorldQuaternion(_q1); _q1.premultiply(_q0);
     bone.parent.getWorldQuaternion(_q0); _q0.invert(); bone.quaternion.copy(_q0.multiply(_q1));
     bone.updateMatrixWorld(true);
+  }
+  // đặt xương về đúng hướng của dáng đứng thẳng ban đầu (đối với thân mô hình), cộng độ chúi `pitch` về trước, pha trộn `w`
+  var _qa = null, _qb = null, _vx = null;
+  function veRest(r, ten, pitch, w) {
+    var b = r.B[ten], q0 = r.rest[ten]; if (!b || !q0 || w <= 0.001) return;
+    if (!_qa) { _qa = new T.Quaternion(); _qb = new T.Quaternion(); _vx = new T.Vector3(1, 0, 0); }
+    b.parent.updateWorldMatrix(true, false);
+    r.model.getWorldQuaternion(_qa); _qb.setFromAxisAngle(_vx, pitch); _qa.multiply(_qb).multiply(q0);
+    b.parent.getWorldQuaternion(_qb).invert(); _qb.multiply(_qa);
+    if (w < 0.999) b.quaternion.slerp(_qb, w); else b.quaternion.copy(_qb);
+    b.updateMatrixWorld(true);
   }
   // như nhamXuong nhưng chỉ pha trộn một phần `w` (giữ dáng gốc của hoạt ảnh phần còn lại)
   function nhamMem(bone, child, huong, w) {
@@ -300,7 +317,7 @@
     if (!_p0) { _p0 = new T.Vector3(); _p1 = new T.Vector3(); _p2 = new T.Vector3(); _qi = new T.Quaternion(); _q0 = new T.Quaternion(); _q1 = new T.Quaternion(); _v0 = new T.Vector3(); _v1 = new T.Vector3(); }
     var ngoi = ngoiK > 0.5, mucTieu = {};
     if (a.walking) mucTieu.walk = 1;
-    else if (ngoi) mucTieu[dang === "talk" ? "sitans" : "sit"] = 1;
+    else if (ngoi) mucTieu.sit = 1;
     else mucTieu[dang === "talk" ? "talk" : (dang === "listen" ? "listen" : "idle")] = 1;
     var tong = 0, n, k = Math.min(1, dt * 7);
     for (n in r.act) { r.wt[n] += ((mucTieu[n] || 0) - r.wt[n]) * k; tong += r.wt[n]; }
@@ -315,30 +332,36 @@
     var sr0 = Math.sin(a.rot), cr0 = Math.cos(a.rot);
     r.pivot.position.set(ox * r.S, -hạ * (0.745 * r.S - 0.56), oz * r.S + (r.shz || 0) * (r.ikw || 0));
     r.model.updateMatrixWorld(true);
-    var tayDat = ngoi && (dang === "type" || dang === "listen");
+    var cuTa = dang === "talk", tayDat = ngoi && (dang === "type" || dang === "listen" || cuTa);
     r.ikw += ((tayDat ? 1 : 0) - r.ikw) * Math.min(1, dt * 6);
-    // lưng thẳng khi ngồi (hoạt ảnh ngồi gốc ngả lưng), hơi chồm về bàn khi gõ
-    if (hạ > 0.02 && B_.Spine02) {
-      var lean = dang === "type" ? 0.14 : 0.05, up = new T.Vector3(sr0 * lean, 1, cr0 * lean), wS = Math.min(1, hạ) * 0.92;
-      nhamMem(B_.Spine02, B_.Spine01, up.clone(), wS); nhamMem(B_.Spine01, B_.Spine, up.clone(), wS); nhamMem(B_.Spine, B_.neck, up.clone(), wS);
-    }
+    if (r.ikw < 0.05) r.shzT = 0;
+    // thân giữ im: lưng, cổ, đầu bám đúng dáng đứng thẳng của mô hình (không theo cái ngả lưng của hoạt ảnh ngồi), hơi chồm khi gõ
+    if (hạ > 0.02) {
+      var wS = Math.min(1, hạ), ln = dang === "type" ? 0.05 : 0.02, thở = Math.sin(t * 1.5 + a.seed) * 0.006;
+      veRest(r, "Spine02", ln + thở, wS); veRest(r, "Spine01", ln, wS); veRest(r, "Spine", ln, wS); veRest(r, "neck", 0.0, wS); veRest(r, "Head", 0.03, wS);
+    } else { veRest(r, "neck", 0, a.walking ? 0.8 : 0.85); veRest(r, "Head", 0, a.walking ? 0.8 : 0.85); }
     if (r.ikw > 0.01) {
-      var sr = Math.sin(a.rot), cr = Math.cos(a.rot), f = [sr, cr], lft = [cr, -sr], gõ = dang === "type", cao = gõ ? 0.92 : 0.9, xa = gõ ? 0.86 : 0.8;
+      var sr = Math.sin(a.rot), cr = Math.cos(a.rot), f = [sr, cr], lft = [cr, -sr], gõ = dang === "type", xaRef = gõ ? 0.86 : 0.8;
+      var lead = !!a.lead, bien = 0, tocDo = 1, cao = gõ ? 0.895 : 0.9, xa = xaRef, ngang = 0.2;
+      if (cuTa) { bien = lead ? 0.12 : 0.16; tocDo = lead ? 1.5 : 2.0; cao = 1.0; xa = 0.62; ngang = 0.3; }
+      else if (dang === "listen" && lead) { bien = 0.03; tocDo = 0.9; cao = 0.93; xa = 0.7; }
       var cg = r.g.position, B = r.B;
-      var mx = (B.LeftArm.getWorldPosition(_p0).x + B.RightArm.getWorldPosition(_p1).x) / 2, mz = (_p0.z + _p1.z) / 2;
-      B.LeftForeArm.getWorldPosition(_p1); B.LeftHand.getWorldPosition(_p2); B.LeftArm.getWorldPosition(_p0);
-      var armL = _p0.distanceTo(_p1) + _p1.distanceTo(_p2), dd_ = (cg.x + f[0] * xa - mx) * f[0] + (cg.z + f[1] * xa - mz) * f[1];
-      if (r.ikw > 0.5) r.shz = cl((r.shz || 0) + (dd_ - armL * 0.62) * Math.min(1, dt * 5), -0.1, 0.45);
+      // dịch cả thân về phía bàn một lần lúc vào ghế để khuỷu tay co (không cho tay duỗi thẳng); sau đó khoá, không trườn tới lui nữa
+      if (r.ikw > 0.5 && (r.shzT || 0) < 1.0) {
+        r.shzT = (r.shzT || 0) + dt;
+        var mx = (B.LeftArm.getWorldPosition(_p0).x + B.RightArm.getWorldPosition(_p1).x) / 2, mz = (_p0.z + _p1.z) / 2;
+        B.LeftForeArm.getWorldPosition(_p1); B.LeftHand.getWorldPosition(_p2); B.LeftArm.getWorldPosition(_p0);
+        var armL = _p0.distanceTo(_p1) + _p1.distanceTo(_p2), dd_ = (cg.x + f[0] * xaRef - mx) * f[0] + (cg.z + f[1] * xaRef - mz) * f[1];
+        r.shz = cl((r.shz || 0) + (dd_ - armL * 0.62) * Math.min(1, dt * 5), -0.1, 0.4);
+      }
       var bs = 0.5 + 0.5 * Math.sin(t * 17 + a.seed), bs2 = 0.5 + 0.5 * Math.sin(t * 13 + a.seed * 2.3);
       [[1, B.LeftArm, B.LeftForeArm, B.LeftHand, bs], [-1, B.RightArm, B.RightForeArm, B.RightHand, bs2]].forEach(function (h) {
-        var sd = h[0], j = gõ ? 0.02 * h[4] : 0, tg = new T.Vector3(cg.x + f[0] * (xa - 0.0) + lft[0] * sd * 0.2, cao + j, cg.z + f[1] * xa + lft[1] * sd * 0.2);
+        var sd = h[0], j = gõ ? 0.022 * h[4] : bien * Math.sin(t * tocDo + (sd > 0 ? 0 : 2.4) + a.seed), tg = new T.Vector3(cg.x + f[0] * xa + lft[0] * sd * ngang, cao + j, cg.z + f[1] * xa + lft[1] * sd * ngang);
         var cuc = new T.Vector3(lft[0] * sd * 0.6, -0.8, lft[1] * sd * 0.6);
         ikTay(h[1], h[2], h[3], tg, cuc, r.ikw);
         if (r.ikw > 0.01) { h[3].rotateY(-sd * 1.3 * r.ikw); h[3].updateMatrixWorld(true); }
       });
     }
-    // giữ đầu thẳng (hoạt ảnh gốc hay ngửa cổ): trục đầu hướng lên, cúi nhẹ nhìn màn hình khi gõ
-    if (r.B.head_end) { var cuiK = (ngoi && dang === "type") ? 0.16 : 0.03; nhamMem(r.B.Head, r.B.head_end, new T.Vector3(sr0 * cuiK, 1, cr0 * cuiK), a.walking ? 0.7 : 0.9); }
     // đầu quay nhìn người đang nói (quanh trục dọc thế giới), gật nhẹ khi nói
     var yaw = 0;
     if (nguoiNoi && nguoiNoi !== a && !a.walking) { var rel = Math.atan2(nguoiNoi.x - a.x, nguoiNoi.z - a.z) - a.rot; while (rel > Math.PI) rel -= Math.PI * 2; while (rel < -Math.PI) rel += Math.PI * 2; yaw = cl(rel, -1.0, 1.0); }
@@ -821,6 +844,7 @@
     if (anChu) { r.noi.visible = false; r.nhan.visible = false; } else r.nhan.visible = true;
   }
 
+  var camLuu = null;
   var anChu = false; try { anChu = localStorage.getItem("mmOfficeAnChu") === "1"; } catch (e) {}
   var lastManHinh = 0;
   function khung() {
@@ -927,6 +951,7 @@
       if (!mo) return;
       if (!r[0]) { toast("Máy này không dựng được cảnh 3D"); dong(); return; }
       try { dung(r[1]); } catch (e) { console.warn("[office]", e); toast("Không dựng được văn phòng 3D"); dong(); return; }
+      if (camLuu) { cam.az = camLuu.az; cam.pol = camLuu.pol; cam.dist = camLuu.dist; cam.tx = camLuu.tx; cam.ty = camLuu.ty; cam.tz = camLuu.tz; camLuu = null; }
       seq = 0; hoi(); pollId = setInterval(hoi, 1500); kpiId = setInterval(napKpi, 60000);
       if (!r[1].length) toast("Brain này chưa có agent nào. Tạo agent ở trang Cộng sự để họ xuất hiện ở đây.");
     });
@@ -945,7 +970,7 @@
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
     host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
-      '<button type="button" id="mmOfficeSim">Mô phỏng</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
+      '<button type="button" id="mmOfficeSim">Mô phỏng</button><button type="button" id="mmOfficeTheme">Chế độ tối</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
       '<div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
     var nut = document.createElement("button");
@@ -956,6 +981,27 @@
     nut.addEventListener("click", function () { mo ? dong() : mo_(); });
     $("mmOfficeX").addEventListener("click", dong);
     $("mmOfficeSim").addEventListener("click", chayMau);
+    var nutTheme = $("mmOfficeTheme");
+    function veNutTheme() { nutTheme.textContent = sang() ? "Chế độ tối" : "Chế độ sáng"; host.classList.toggle("mm-light", sang()); host.classList.toggle("mm-dark", !sang()); }
+    veNutTheme();
+    nutTheme.addEventListener("click", function () {
+      themeOv = sang() ? "dark" : "light"; try { localStorage.setItem("mmOfficeTheme", themeOv); } catch (e) {} veNutTheme();
+      if (mo) { camLuu = { az: cam.az, pol: cam.pol, dist: cam.dist, tx: cam.tx, ty: cam.ty, tz: cam.tz }; dong(); mo_(); }
+    });
+    // thanh điều hướng cho điện thoại: giữ nút để đi / xoay / phóng
+    var pad = document.createElement("div"); pad.className = "mm-office-pad";
+    function nutPad(cls, k, nhan, tit) {
+      var b = document.createElement("button"); b.type = "button"; b.className = cls; b.title = tit; b.setAttribute("aria-label", tit); b.textContent = nhan;
+      function on(e) { e.preventDefault(); phim[k] = true; try { b.setPointerCapture(e.pointerId); } catch (x) {} b.classList.add("on"); }
+      function off() { phim[k] = false; b.classList.remove("on"); }
+      b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off); b.addEventListener("pointercancel", off); b.addEventListener("pointerleave", off); b.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+      return b;
+    }
+    var dp = document.createElement("div"); dp.className = "mm-pad-dir";
+    dp.appendChild(nutPad("u", "arrowup", "\u25B2", "Đi tới")); dp.appendChild(nutPad("l", "arrowleft", "\u25C0", "Sang trái")); dp.appendChild(nutPad("r", "arrowright", "\u25B6", "Sang phải")); dp.appendChild(nutPad("d", "arrowdown", "\u25BC", "Lùi lại"));
+    var zp = document.createElement("div"); zp.className = "mm-pad-zoom";
+    zp.appendChild(nutPad("", "+", "+", "Phóng to")); zp.appendChild(nutPad("", "-", "\u2212", "Thu nhỏ")); zp.appendChild(nutPad("", "q", "\u21BA", "Xoay trái")); zp.appendChild(nutPad("", "e", "\u21BB", "Xoay phải"));
+    pad.appendChild(zp); pad.appendChild(dp); host.appendChild(pad);
     var nutTag = $("mmOfficeTag");
     function veNutTag() { nutTag.textContent = anChu ? "Hiện chữ" : "Ẩn chữ"; nutTag.setAttribute("aria-pressed", anChu ? "true" : "false"); }
     veNutTag();
