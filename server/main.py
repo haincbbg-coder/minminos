@@ -102,6 +102,9 @@ import skill_usage     # telemetry: đếm skill nào THẬT SỰ được dùng
 import share_bundle   # xuất/nhập gói agent/skill/workflow (.zip) để chia sẻ giữa brain/người dùng
 import chat_import    # nhập lịch sử chat từ Claude Code / ChatGPT / claude.ai
 import brain_share    # link chia sẻ gói agent/skill/workflow của một brain (/bs/<token>)
+import danh_tinh      # khoá ký riêng của máy này, để gói chia sẻ biết là của ai (26.10.92)
+import goi_chia_se    # ký / soi / làm an toàn gói chia sẻ giữa các MinMin (26.10.92)
+import share_trang    # trang nhận công khai /bs/<token> (26.10.92)
 import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
 import share_render   # dựng trang xem cho link chia sẻ (markdown -> html, khung trang)
@@ -5770,6 +5773,13 @@ async def rename_brain(name: str = Form(...), label: str = Form("")):
 # ============================================================
 # Chia sẻ brain (26.10.73): link /bs/<token>/goi.zip chứa agent, skill, workflow đã chọn.
 # Công khai theo token (như /s/), có hạn và thu hồi được. KHÔNG bao giờ chứa bộ nhớ, wiki, key.
+#
+# Chợ chia sẻ (26.10.92) dựng thêm trên đó, giữa các MÁY CHỦ MinMin khác nhau:
+#   - gói tải về được KÝ bằng khoá riêng của máy này (danh_tinh), bên nhận đối chiếu với khoá
+#     tên miền công bố ở /bs/danh-tinh và nhớ lần đầu gặp;
+#   - mã ngắn K7Q2X-9XPA3@ten-mien, QR, trang nhận đẹp /bs/<token>, PIN, link dùng một lần;
+#   - bên nhận XEM TRƯỚC (/brains/import/xem) rồi mới CÀI (/brains/import/cai), và mọi agent,
+#     workflow nhập về bị hạ về chế độ an toàn (goi_chia_se.lam_an_toan).
 # ============================================================
 def _dung_goi_chia_se(ban: dict):
     b = ban.get("brain") or "brain"
@@ -5798,9 +5808,36 @@ def _dung_goi_chia_se(ban: dict):
     return share_bundle.merge_bundles(parts, app_version=_app_version())
 
 
+def _goc_cong_khai(request: Request) -> str:
+    """'https://ten-mien' mà người ngoài dùng để tới máy này (cho QR và trang nhận). Sau proxy
+    (Caddy/Traefik) scheme nội bộ là http, nên tin X-Forwarded-Proto; Host lấy từ header nhưng
+    phải qua host_hop_le như mọi chỗ khác."""
+    host = request.headers.get("host", "")
+    if not web_security.host_hop_le(host):
+        host = "localhost"
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "https").split(",")[0].strip()
+    if proto not in ("http", "https"):
+        proto = "https"
+    return f"{proto}://{host}"
+
+
+def _qr_svg_nhung(noi_dung: str) -> str:
+    """QR SVG để NHÚNG vào trang (có viewBox, không khai báo XML). '' khi thiếu segno."""
+    try:
+        import io as _io
+        import segno
+        buf = _io.BytesIO()
+        segno.make(noi_dung, error="m").save(buf, kind="svg", scale=8, border=4, dark="#111",
+                                             light="#fff", xmldecl=False, svgns=True, omitsize=True)
+        return buf.getvalue().decode("utf-8")
+    except Exception:
+        return ""
+
+
 @app.post("/brains/share")
 async def brain_share_tao(brain: str = Form("brain"), items: str = Form("{}"), tat_ca: str = Form("0"),
-                          days: str = Form("7"), nhan: str = Form("")):
+                          days: str = Form("7"), nhan: str = Form(""), pin: str = Form(""),
+                          toi_da: str = Form("0")):
     try:
         it = json.loads(items or "{}")
         it = it if isinstance(it, dict) else {}
@@ -5810,10 +5847,12 @@ async def brain_share_tao(brain: str = Form("brain"), items: str = Form("{}"), t
     if xau:
         return JSONResponse({"ok": False, "error": f"slug không hợp lệ: {', '.join(map(str, xau[:5]))}"}, status_code=400)
     try:
-        ban = brain_share.tao(brain, it, ngay=days, nhan=nhan, tat_ca=tat_ca in ("1", "true", "True", "on"))
+        ban = brain_share.tao(brain, it, ngay=days, nhan=nhan, tat_ca=tat_ca in ("1", "true", "True", "on"),
+                              pin=pin, toi_da=toi_da)
     except ValueError as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
     return {"ok": True, "token": ban["token"], "path": "/bs/" + ban["token"] + "/goi.zip",
+            "trang": "/bs/" + ban["token"], "ma": brain_share.hien_ma(ban.get("ma", "")),
             "het_han": ban["het_han"]}
 
 
@@ -5823,7 +5862,11 @@ async def brain_share_ds(brain: str = Query("")):
     return {"ok": True, "shares": [{"token": b["token"], "nhan": b.get("nhan", ""), "tat_ca": b.get("tat_ca", False),
                                     "so_muc": sum(len(v) for v in (b.get("items") or {}).values()),
                                     "tao_luc": b.get("tao_luc"), "het_han": b.get("het_han"),
-                                    "con_han": b.get("con_han"), "tai": b.get("tai", 0),
+                                    "con_han": b.get("con_han") and not (
+                                        int(b.get("toi_da") or 0) and int(b.get("tai") or 0) >= int(b.get("toi_da") or 0)),
+                                    "tai": b.get("tai", 0), "toi_da": int(b.get("toi_da") or 0),
+                                    "co_pin": brain_share.co_pin(b), "ma": brain_share.hien_ma(b.get("ma", "")),
+                                    "trang": "/bs/" + b["token"],
                                     "path": "/bs/" + b["token"] + "/goi.zip"} for b in ra]}
 
 
@@ -5832,68 +5875,256 @@ async def brain_share_thu_hoi(token: str = Form(...)):
     return {"ok": brain_share.xoa(token)}
 
 
-@app.get("/bs/{token}")
-async def brain_share_xem(token: str):
-    ban = brain_share.doc(token)
+# Hai đường cố định dưới đây PHẢI khai TRƯỚC /bs/{token}: FastAPI chọn route theo thứ tự khai,
+# và "danh-tinh" khớp được mẫu {token}.
+@app.get("/bs/danh-tinh")
+async def bs_danh_tinh():
+    """Khoá công khai của máy này - bên nhận gói dùng để xác minh gói đúng là của tên miền này."""
+    return JSONResponse(danh_tinh.cong_bo(_app_version()), headers={"Cache-Control": "no-store"})
+
+
+_MA_SAI: dict = {}          # ip -> [mốc thời gian tra mã sai]
+_MA_SAI_TOI_DA = 60
+_MA_SAI_CUA_SO = 600
+
+
+@app.get("/bs/ma/{ma}")
+async def bs_tim_ma(ma: str, request: Request):
+    """Mã ngắn -> token. Công khai, nên đoán mã bị chặn: quá 60 lần sai trong 10 phút từ một IP
+    thì từ chối hẳn (kể cả mã đúng) cho tới khi cửa sổ trôi qua."""
+    ip = request.client.host if request.client else "?"
+    now = time.time()
+    ds = [t for t in _MA_SAI.get(ip, []) if now - t < _MA_SAI_CUA_SO]
+    _MA_SAI[ip] = ds
+    if len(_MA_SAI) > 5000:
+        for k in [k for k, v in _MA_SAI.items() if not v][:4000]:
+            _MA_SAI.pop(k, None)
+    if len(ds) >= _MA_SAI_TOI_DA:
+        return JSONResponse({"error": localefmt.chu("Tra mã sai quá nhiều lần, thử lại sau ít phút.",
+                                                    "Too many wrong codes, try again in a few minutes.")},
+                            status_code=429)
+    ban = brain_share.tim_ma(ma)
     if not ban:
-        return JSONResponse({"error": "Link không tồn tại, đã hết hạn hoặc bị thu hồi"}, status_code=404)
-    return {"nhan": ban.get("nhan", ""), "het_han": ban.get("het_han"),
+        ds.append(now)
+        return JSONResponse({"error": localefmt.chu("Mã không tồn tại, đã hết hạn hoặc bị thu hồi",
+                                                    "Code not found, expired or revoked")}, status_code=404)
+    return {"token": ban["token"], "trang": "/bs/" + ban["token"]}
+
+
+def _thong_tin_cong_khai(ban: dict) -> dict:
+    """Những gì người CHƯA nhập được phép thấy về một link. Có PIN thì không liệt kê nội dung."""
+    items = []
+    if not brain_share.co_pin(ban):
+        data, _ = _dung_goi_chia_se(ban)
+        if data:
+            items = goi_chia_se.soi_goi(data).get("items", [])
+    toi_da = int(ban.get("toi_da") or 0)
+    k = danh_tinh.cong_khai()
+    return {"nhan": ban.get("nhan", ""), "het_han": ban.get("het_han"), "co_pin": brain_share.co_pin(ban),
+            "con_luot": (max(0, toi_da - int(ban.get("tai") or 0)) if toi_da else None),
+            "ma": brain_share.hien_ma(ban.get("ma", "")), "ten": danh_tinh.ten(), "khoa": k,
+            "van_tay": danh_tinh.van_tay(k),
+            "items": [{x: it.get(x) for x in ("type", "slug", "name", "mo_ta")} for it in items],
             "goi": "/bs/" + ban["token"] + "/goi.zip"}
 
 
-@app.get("/bs/{token}/goi.zip")
-async def brain_share_goi(token: str):
+@app.get("/bs/{token}")
+async def brain_share_xem(token: str, request: Request):
+    ban = brain_share.doc(token)
+    muon_html = "text/html" in (request.headers.get("accept") or "") and request.query_params.get("format") != "json"
+    if not ban:
+        if muon_html:
+            return HTMLResponse("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+                                "<body style='font:16px system-ui;padding:40px;text-align:center'>"
+                                + share_trang._e(localefmt.chu("Link không tồn tại, đã hết hạn hoặc bị thu hồi.",
+                                                            "This link does not exist, has expired or was revoked."))
+                                + "</body>", status_code=404)
+        return JSONResponse({"error": "Link không tồn tại, đã hết hạn hoặc bị thu hồi"}, status_code=404)
+    tt = await asyncio.to_thread(_thong_tin_cong_khai, ban)
+    if not muon_html:
+        return JSONResponse(tt, headers={"Cache-Control": "no-store"})
+    goc = _goc_cong_khai(request)
+    host = goc.split("://", 1)[1]
+    link = f"{goc}/bs/{ban['token']}"
+    n = len(tt["items"])
+    tieu_de = tt["nhan"] or (localefmt.chu("{n} năng lực MinMin", "{n} MinMin capabilities", n=n) if n
+                             else localefmt.chu("Gói năng lực MinMin", "MinMin capability package"))
+    nonce = share_trang.nonce_moi()
+    trang = share_trang.dung_trang(
+        tieu_de=tieu_de, host=host, ten=tt["ten"], van_tay=tt["van_tay"], items=tt["items"],
+        co_pin=tt["co_pin"], het_han=tt["het_han"], con_luot=tt["con_luot"],
+        ma_day_du=f"{tt['ma']}@{host}", qr_svg=_qr_svg_nhung(link), link=link, nonce=nonce)
+    return HTMLResponse(trang, headers={"Content-Security-Policy": share_trang.csp(nonce),
+                                        "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+                                        "Referrer-Policy": "no-referrer"})
+
+
+@app.get("/bs/{token}/qr.svg")
+async def brain_share_qr(token: str, request: Request):
     ban = brain_share.doc(token)
     if not ban:
         return JSONResponse({"error": "Link không tồn tại, đã hết hạn hoặc bị thu hồi"}, status_code=404)
-    data, fname = _dung_goi_chia_se(ban)
+    svg = _qr_svg_nhung(f"{_goc_cong_khai(request)}/bs/{ban['token']}")
+    if not svg:
+        return JSONResponse({"error": "Máy chủ thiếu thư viện vẽ QR (segno)"}, status_code=501)
+    return Response(content=svg, media_type="image/svg+xml",
+                    headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+                             "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
+
+
+@app.get("/bs/{token}/goi.zip")
+async def brain_share_goi(token: str, x_minmin_pin: str = Header("")):
+    ban = brain_share.doc(token)
+    if not ban:
+        return JSONResponse({"error": "Link không tồn tại, đã hết hạn hoặc bị thu hồi"}, status_code=404)
+    kq = brain_share.kiem_pin(ban, x_minmin_pin)
+    if kq:
+        thong_bao = {"can_pin": localefmt.chu("Gói này cần mã PIN.", "This package needs a PIN."),
+                     "sai": localefmt.chu("Mã PIN không đúng.", "Wrong PIN."),
+                     "khoa": localefmt.chu("Sai PIN quá nhiều lần, link tạm khoá 15 phút.",
+                                           "Too many wrong PINs, link locked for 15 minutes.")}[kq]
+        return JSONResponse({"error": thong_bao, "can_pin": True, "pin": kq},
+                            status_code=429 if kq == "khoa" else 403)
+    data, fname = await asyncio.to_thread(_dung_goi_chia_se, ban)
     if not data:
         return JSONResponse({"error": "Không còn mục nào để chia sẻ"}, status_code=404)
+    data = await asyncio.to_thread(goi_chia_se.ky_goi, data)
     brain_share.ghi_tai(ban["token"])
     return Response(content=data, media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="{fname}"',
                              "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
 
 
+# ---------- bên NHẬN ----------
 _LINK_BS_RE = re.compile(r"^/bs/[A-Za-z0-9_-]{16,80}/goi\.zip$")
+_LINK_BS_BAT_KY_RE = re.compile(r"^/bs/([A-Za-z0-9_-]{16,80})(?:/goi\.zip|/qr\.svg)?/?$")
+_MA_HOST_RE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9 \-]{8,16})\s*@\s*([A-Za-z0-9.\-]+(?::\d{1,5})?)\s*/?\s*$")
+_HOST_RE = re.compile(r"^[a-z0-9]([a-z0-9\-]{0,62}\.)+[a-z0-9\-]{2,63}(:\d{1,5})?$")
 
 
-@app.post("/brains/import-link")
-async def brain_nhap_tu_link(url: str = Form(...), to_brain: str = Form("brain"), overwrite: str = Form("0")):
-    """Nhập gói chia sẻ từ link MinMin của người khác. Chỉ nhận đúng dạng https://host/bs/<token>/goi.zip,
-    host phải phân giải ra địa chỉ CÔNG KHAI (chặn gọi vào mạng nội bộ qua link này)."""
-    import httpx
+async def _host_cong_khai(hostport: str) -> str:
+    """'' khi host phân giải TOÀN BỘ ra địa chỉ công khai; ngược lại là câu lỗi. Chặn mọi đường
+    dùng tính năng nhập gói để gọi vào mạng nội bộ của máy chủ (SSRF)."""
     import ipaddress
     import socket
-    from urllib.parse import urlparse
+    h, _, p = hostport.partition(":")
     try:
-        u = urlparse((url or "").strip())
+        ips = {ai[4][0] for ai in await asyncio.to_thread(socket.getaddrinfo, h, int(p or 443), 0, socket.SOCK_STREAM)}
     except Exception:
-        u = None
-    if not u or u.scheme != "https" or not u.hostname or u.username or u.password or not _LINK_BS_RE.match(u.path or ""):
-        return JSONResponse({"ok": False, "error": "Link không đúng dạng https://…/bs/<mã>/goi.zip"}, status_code=400)
-    try:
-        ips = {ai[4][0] for ai in await asyncio.to_thread(socket.getaddrinfo, u.hostname, u.port or 443, 0, socket.SOCK_STREAM)}
-    except Exception:
-        return JSONResponse({"ok": False, "error": "Không phân giải được địa chỉ của link"}, status_code=400)
+        return localefmt.chu("Không phân giải được địa chỉ {h}", "Could not resolve {h}", h=h)
     if not ips or any(not ipaddress.ip_address(i.split("%")[0]).is_global for i in ips):
-        return JSONResponse({"ok": False, "error": "Link trỏ vào địa chỉ nội bộ, không được phép"}, status_code=400)
+        return localefmt.chu("Địa chỉ trỏ vào mạng nội bộ, không được phép", "That address points to a private network")
+    return ""
+
+
+async def _tai_https(url: str, headers: dict = None, tran: int = 25 * 1024 * 1024):
+    """(status, bytes, lỗi). Không theo redirect (redirect là đường vòng qua rào SSRF)."""
+    import httpx
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=False) as c:
-            async with c.stream("GET", url.strip()) as r:
-                if r.status_code != 200:
-                    return JSONResponse({"ok": False, "error": f"Link không dùng được (mã {r.status_code}): hết hạn hoặc bị thu hồi?"}, status_code=400)
+            async with c.stream("GET", url, headers=headers or {}) as r:
                 buf = bytearray()
                 async for chunk in r.aiter_bytes():
                     buf.extend(chunk)
-                    if len(buf) > 25 * 1024 * 1024:
-                        return JSONResponse({"ok": False, "error": "Gói quá lớn (>25MB)"}, status_code=413)
+                    if len(buf) > tran:
+                        return r.status_code, b"", localefmt.chu("Gói quá lớn (>25MB)", "Package too large (>25MB)")
+                return r.status_code, bytes(buf), ""
     except Exception as e:
-        return JSONResponse({"ok": False, "error": f"Không tải được gói: {type(e).__name__}"}, status_code=502)
+        return 0, b"", localefmt.chu("Không kết nối được: {e}", "Could not connect: {e}", e=type(e).__name__)
+
+
+async def _phan_tich_nguon(nguon: str):
+    """Link (trang /bs/<token> hoặc /bs/<token>/goi.zip) hay mã 'K7Q2X-9XPA3@ten-mien' -> (host, token, lỗi)."""
+    from urllib.parse import urlparse, parse_qs, unquote
+    s = (nguon or "").strip()
+    if "?nhap=" in s or "&nhap=" in s:   # dán nguyên link chuyển tiếp từ trang nhận
+        try:
+            s = unquote(parse_qs(urlparse(s).query).get("nhap", [s])[0])
+        except Exception:
+            pass
+    m = _MA_HOST_RE.match(s)
+    if m and "/" not in s:
+        ma = brain_share.chuan_ma(m.group(1))
+        host = m.group(2).lower()
+        if not ma or not _HOST_RE.match(host):
+            return "", "", localefmt.chu("Mã chưa đúng dạng XXXXX-XXXXX@ten-mien", "Code must look like XXXXX-XXXXX@domain")
+        loi = await _host_cong_khai(host)
+        if loi:
+            return "", "", loi
+        st, body, loi = await _tai_https(f"https://{host}/bs/ma/{ma}", tran=64 * 1024)
+        if loi or st != 200:
+            try:
+                loi = loi or json.loads(body or b"{}").get("error") or ""
+            except Exception:
+                pass
+            return "", "", loi or localefmt.chu("Máy chủ {h} không nhận mã này (mã {st})", "{h} did not accept this code ({st})", h=host, st=st)
+        try:
+            tok = str(json.loads(body).get("token") or "")
+        except Exception:
+            tok = ""
+        if not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", tok):
+            return "", "", localefmt.chu("Máy chủ trả lời không đúng dạng MinMin", "Server reply is not a MinMin reply")
+        return host, tok, ""
+    try:
+        u = urlparse(s)
+    except Exception:
+        u = None
+    mm = _LINK_BS_BAT_KY_RE.match((u.path if u else "") or "")
+    if not u or u.scheme != "https" or not u.hostname or u.username or u.password or not mm:
+        return "", "", localefmt.chu("Cần link https://…/bs/<mã> hoặc mã dạng XXXXX-XXXXX@ten-mien",
+                                     "Need an https://…/bs/<token> link or a code like XXXXX-XXXXX@domain")
+    host = u.hostname.lower() + (f":{u.port}" if u.port and u.port != 443 else "")
+    loi = await _host_cong_khai(host)
+    if loi:
+        return "", "", loi
+    return host, mm.group(1), ""
+
+
+async def _doi_chieu_chu_ky(data: bytes, host: str) -> dict:
+    """Chữ ký trong gói + khoá tên miền công bố + sổ đã gặp -> một trạng thái để hiện và để chặn.
+      da_xac_minh     ký đúng, khoá khớp tên miền, (lần đầu hoặc khớp lần trước)
+      khoa_doi        ký đúng, khớp tên miền NHƯNG tên miền này từng dùng khoá khác
+      chua_doi_chieu  ký đúng nhưng không hỏi được tên miền
+      chi_chu_ky      file tải tay: ký đúng nhưng không có tên miền để đối chiếu
+      khong_ky        gói không ký (MinMin cũ)
+      gia_mao         chữ ký sai/hỏng, hoặc khoá trong gói KHÁC khoá tên miền công bố -> chặn cài
+    """
+    ck = goi_chia_se.doc_chu_ky(data)
+    tt = {"host": host, "khoa": ck.get("khoa", ""), "van_tay": ck.get("van_tay", ""), "ten": ck.get("ten", "")}
+    st = ck.get("trang_thai")
+    if st in ("sai", "hong"):
+        return dict(tt, xac_minh="gia_mao", ly_do=localefmt.chu("Chữ ký không khớp nội dung: gói đã bị sửa sau khi ký.",
+                                                                "Signature does not match: the package was altered after signing."))
+    if st == "khong_ky":
+        return dict(tt, xac_minh="khong_ky")
+    if not host:
+        return dict(tt, xac_minh="chi_chu_ky")
+    stt, body, loi = await _tai_https(f"https://{host}/bs/danh-tinh", tran=64 * 1024)
+    try:
+        cong_bo = json.loads(body) if stt == 200 else {}
+    except Exception:
+        cong_bo = {}
+    if not cong_bo.get("khoa"):
+        return dict(tt, xac_minh="chua_doi_chieu")
+    if cong_bo.get("khoa") != tt["khoa"]:
+        return dict(tt, xac_minh="gia_mao", ly_do=localefmt.chu("Khoá ký trong gói KHÁC khoá mà {h} công bố.",
+                                                                "The signing key differs from the one {h} publishes.", h=host))
+    tt["ten"] = " ".join(str(cong_bo.get("ten") or tt["ten"]).split())[:60]
+    tofu = danh_tinh.doi_chieu_da_biet(host, tt["khoa"])
+    return dict(tt, xac_minh="khoa_doi" if tofu == "doi" else "da_xac_minh", lan_dau=(tofu == "moi"))
+
+
+def _cai_goi_an_toan(data: bytes, to_brain: str, overwrite: bool, thong_tin: dict, chon=None) -> dict:
+    """Đường cài DUY NHẤT cho gói đến từ người khác: hạ quyền, tắt workflow, ghi nguồn, rồi mới
+    giao share_bundle (rào zip-slip, trùng slug) ghi vào brain."""
     root = _brain_root(to_brain)
+    nguon = goi_chia_se.nhan_nguon(thong_tin.get("host", ""), thong_tin.get("van_tay", ""), _today())
+    safe = goi_chia_se.lam_an_toan(data, nguon=nguon, chon=chon)
     res = share_bundle.import_bundle(
-        bytes(buf), "chia-se.zip", agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain),
-        skills_root=_skills_dir(to_brain), overwrite=(overwrite in ("1", "true", "True", "on")))
+        safe, "chia-se.zip", agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain),
+        skills_root=_skills_dir(to_brain), overwrite=overwrite)
+    if res.get("imported"):
+        goi_chia_se.ghi_so(root, res["imported"], thong_tin)
     if any(str(k).startswith("skill:") for k in res.get("imported", [])):
         try:
             system_sync.mirror_skills(root)
@@ -5903,7 +6134,136 @@ async def brain_nhap_tu_link(url: str = Form(...), to_brain: str = Form("brain")
         rebuild_javis_index(root)
     except Exception:
         pass
+    return res
+
+
+@app.post("/brains/import/xem")
+async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: str = Form("brain"),
+                         goi: UploadFile = File(None)):
+    """Bước 1 của nhập: tải (hoặc nhận file), xác minh, soi. KHÔNG ghi gì vào brain."""
+    host = ""
+    if goi is not None and getattr(goi, "filename", ""):
+        data = await goi.read(25 * 1024 * 1024 + 1)
+        if len(data) > 25 * 1024 * 1024:
+            return JSONResponse({"ok": False, "error": "Gói quá lớn (>25MB)"}, status_code=413)
+    else:
+        host, tok, loi = await _phan_tich_nguon(nguon)
+        if loi:
+            return JSONResponse({"ok": False, "error": loi}, status_code=400)
+        hd = {"X-MinMin-Pin": pin.strip()} if pin.strip() else {}
+        st, data, loi = await _tai_https(f"https://{host}/bs/{tok}/goi.zip", headers=hd)
+        if loi:
+            return JSONResponse({"ok": False, "error": loi}, status_code=502)
+        if st != 200:
+            try:
+                j = json.loads(data or b"{}")
+            except Exception:
+                j = {}
+            if j.get("can_pin"):
+                return JSONResponse({"ok": False, "can_pin": True, "pin": j.get("pin"), "error": j.get("error", "")},
+                                    status_code=200)
+            return JSONResponse({"ok": False, "error": j.get("error") or localefmt.chu(
+                "Link không dùng được (mã {st}): hết hạn, hết lượt hoặc bị thu hồi?",
+                "Link not usable ({st}): expired, used up or revoked?", st=st)}, status_code=400)
+    xm = await _doi_chieu_chu_ky(data, host)
+    soi = goi_chia_se.soi_goi(data, agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain),
+                              skills_root=_skills_dir(to_brain))
+    if not soi.get("ok"):
+        return JSONResponse({"ok": False, "error": soi.get("error"), "xac_minh": xm}, status_code=400)
+    sha = goi_chia_se.cat_cho(data, xm)
+    return {"ok": True, "sha256": sha, "xac_minh": xm, "items": soi["items"], "canh_bao": soi["canh_bao"],
+            "kich_thuoc": soi["kich_thuoc"]}
+
+
+@app.post("/brains/import/cai")
+async def brain_nhap_cai(sha256: str = Form(...), to_brain: str = Form("brain"), overwrite: str = Form("0"),
+                         chon: str = Form(""), chap_nhan: str = Form("0")):
+    """Bước 2: cài ĐÚNG gói đã soi (theo sha256). Không tải lại, không tin gì thêm từ client."""
+    data, tt = goi_chia_se.lay_cho(sha256)
+    if data is None:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Bản xem trước đã hết hạn, hãy xem trước lại.",
+                                                                 "The preview expired, please preview again.")}, status_code=410)
+    xm = (tt or {}).get("xac_minh", "")
+    if xm == "gia_mao":
+        return JSONResponse({"ok": False, "error": (tt or {}).get("ly_do") or "Gói không qua được xác minh"}, status_code=400)
+    if xm == "khoa_doi" and chap_nhan not in ("1", "true", "on"):
+        return JSONResponse({"ok": False, "error": localefmt.chu("Tên miền này đã đổi khoá ký. Hãy xác nhận bạn tin gói này.",
+                                                                 "This domain changed its signing key. Confirm you trust this package."),
+                             "can_chap_nhan": True}, status_code=400)
+    tap = None
+    if chon.strip():
+        try:
+            ds = json.loads(chon)
+        except Exception:
+            ds = []
+        tap = {str(k) for k in ds if isinstance(k, str) and re.fullmatch(r"(agent|skill|workflow):[A-Za-z0-9][A-Za-z0-9._-]{0,63}", k)}
+        if not tap:
+            return JSONResponse({"ok": False, "error": "Chưa chọn mục nào để cài"}, status_code=400)
+    res = await asyncio.to_thread(_cai_goi_an_toan, data, to_brain, overwrite in ("1", "true", "True", "on"), tt or {}, tap)
+    if res.get("imported") and xm in ("da_xac_minh", "khoa_doi") and tt.get("host"):
+        danh_tinh.nho_host(tt["host"], tt.get("khoa", ""), tt.get("ten", ""))
+    goi_chia_se.bo_cho(sha256)
     return {"ok": not res.get("errors"), **res}
+
+
+@app.post("/brains/import-link")
+async def brain_nhap_tu_link(url: str = Form(...), to_brain: str = Form("brain"), overwrite: str = Form("0")):
+    """Đường nhập MỘT BƯỚC cũ (26.10.73), giữ cho client cũ. Từ 26.10.92 nó đi chung đường an
+    toàn với /brains/import/cai: gói giả mạo bị chặn, agent/workflow bị hạ quyền, có ghi nguồn."""
+    host, tok, loi = await _phan_tich_nguon(url)
+    if loi:
+        return JSONResponse({"ok": False, "error": loi}, status_code=400)
+    st, data, loi = await _tai_https(f"https://{host}/bs/{tok}/goi.zip")
+    if loi:
+        return JSONResponse({"ok": False, "error": loi}, status_code=502)
+    if st != 200:
+        return JSONResponse({"ok": False, "error": f"Link không dùng được (mã {st}): hết hạn hoặc bị thu hồi?"}, status_code=400)
+    xm = await _doi_chieu_chu_ky(data, host)
+    if xm.get("xac_minh") in ("gia_mao", "khoa_doi"):
+        return JSONResponse({"ok": False, "error": xm.get("ly_do") or "Gói cần xác nhận, hãy dùng màn Nhận để xem trước"}, status_code=400)
+    res = await asyncio.to_thread(_cai_goi_an_toan, data, to_brain, overwrite in ("1", "true", "True", "on"), xm)
+    return {"ok": not res.get("errors"), **res}
+
+
+@app.get("/brains/imported")
+async def brain_da_nhap(brain: str = Query("brain")):
+    """Các mục brain này đã nhập từ người khác, kèm chế độ đang chạy."""
+    so = goi_chia_se.doc_so(_brain_root(brain))
+    ra = []
+    for key, v in so.items():
+        typ, _, slug = key.partition(":")
+        p = (_agents_dir(brain) / f"{slug}.md" if typ == "agent" else
+             _workflows_dir(brain) / f"{slug}.md" if typ == "workflow" else _skills_dir(brain) / slug)
+        if not p.exists():
+            continue
+        mq = ""
+        if typ in ("agent", "workflow"):
+            meta, _ = _read_md(p)
+            mq = str(meta.get("muc_quyen") or "")
+        ra.append(dict(v, type=typ, slug=slug, muc_quyen=mq))
+    ra.sort(key=lambda x: x.get("luc") or 0, reverse=True)
+    return {"ok": True, "items": ra}
+
+
+@app.post("/brains/imported/trust")
+async def brain_tin_tuong(brain: str = Form("brain"), type: str = Form(...), slug: str = Form(...)):
+    if type not in ("agent", "workflow", "skill") or not skill_router.valid_slug(slug):
+        return JSONResponse({"ok": False, "error": "mục không hợp lệ"}, status_code=400)
+    ok = goi_chia_se.mo_khoa_muc(_brain_root(brain), type, slug, agents_dir=_agents_dir(brain),
+                                 workflows_dir=_workflows_dir(brain))
+    return {"ok": ok}
+
+
+@app.get("/danh-tinh")
+async def danh_tinh_xem():
+    k = danh_tinh.cong_khai()
+    return {"ok": True, "ten": danh_tinh.ten(), "van_tay": danh_tinh.van_tay(k),
+            "da_biet": danh_tinh.danh_sach_da_biet()[:50]}
+
+
+@app.post("/danh-tinh")
+async def danh_tinh_dat(ten: str = Form("")):
+    return {"ok": True, "ten": danh_tinh.dat_ten(ten)}
 
 
 _COPY_KIND = ("agent", "skill", "workflow")
@@ -8720,15 +9080,72 @@ async def _run_workflow_step(node, prompt, mk, agent_sysprompt, sink, router=Non
             "agent_name": agent_name}
 
 
-def _workflow_agent_helpers(brain, tools):
+# Mức quyền NHẸ của agent/workflow (frontmatter `muc_quyen`). Chợ chia sẻ (26.10.92) ghi
+# `muc_quyen: suggest` vào mọi agent, workflow nhập từ máy khác; chủ bấm "Tin tưởng" thì dòng đó
+# được gỡ. Không có dòng nào = full như mọi agent tự tạo (hành vi trước giờ, không đổi).
+_THU_TU_QUYEN = {"suggest": 0, "auto": 1, "full": 2}
+
+
+def _muc_quyen_md(meta) -> str:
+    v = str((meta or {}).get("muc_quyen") or "full").strip().lower()
+    return v if v in _THU_TU_QUYEN else "full"
+
+
+def _quyen_chat_hon(a: str, b: str) -> str:
+    return a if _THU_TU_QUYEN.get(a, 2) <= _THU_TU_QUYEN.get(b, 2) else b
+
+
+def _muc_quyen_workflow(brain, slug) -> str:
+    try:
+        meta, _ = _read_md(_workflows_dir(brain) / f"{slug}.md")
+    except Exception:
+        return "full"
+    return _muc_quyen_md(meta)
+
+
+def _workflow_agent_helpers(brain, tools, wf_mode="full"):
     """Trả (_mk, _agent_sysprompt) dùng CHUNG cho runner cũ và đường graph Phase 10.
 
     Tương đương giữa hai đường phải đến từ việc dùng chung code, không phải từ việc
     chép cho giống. Mọi thay đổi ở đây tự động áp cho cả hai.
+
+    `wf_mode`: mức quyền của CHÍNH workflow (xem _muc_quyen_workflow). Mỗi bước chạy ở mức
+    chặt hơn giữa workflow và agent của bước. Mức dưới full thì engine được dựng như loop mức
+    nhẹ: allowlist chỉ đọc (hoặc ghi nháp) + hub nhận đúng mode, nên chặn là lớp CỨNG ở hub chứ
+    không phải lời dặn trong prompt.
     """
     vault_root = str(_brain_root(brain))
+    # sysprompt -> mức quyền của agent sở hữu nó. _mk chỉ nhận sysprompt, nên đây là cách nối hai
+    # hàm mà không phải đổi chữ ký _mk ở mọi chỗ gọi (runner cũ, graph, verify_agent).
+    _che_do: dict = {}
+
+    def _mk_nhe(sysprompt, model, provider, mode):
+        """Engine cho bước chạy ở mức suggest/auto. Không đi nhánh Codex trực tiếp: aux_engine.swap
+        dựng Codex/Grok/API với sandbox theo đúng mode, còn nhánh Codex trên kia luôn toàn quyền."""
+        prov = _agent_model_provider(model, provider)
+        allow = list(SAFE_FILE_TOOLS if mode == "auto" else READONLY_TOOLS)
+        try:
+            allow += list(_loop_mcp_allow() or [])
+        except Exception:
+            pass
+        c = claude_engine(system_prompt=sysprompt, cwd=vault_root, tag="workflow", allowed_tools=allow)
+        c.model = ((model if prov == "anthropic-cli" else "") or _aux_model() or None)
+        _apply_mcp(c, mode=mode, brain=brain)
+        c.disallowed_tools = ["Bash", "WebFetch", "WebSearch", "Task"] + [
+            d for d in (c.disallowed_tools or []) if d not in ("Bash", "WebFetch", "WebSearch", "Task")]
+        c.max_wall_s = aux_engine.bg_max_wall_s()
+        if prov != "anthropic-cli":
+            try:
+                c = aux_engine.swap(c, mode=mode, tag="workflow", codex_profile=_write_codex_profile,
+                                    spec={"provider": prov, "model": (model or "")})
+            except Exception as e:
+                print(f"[agent engine nhe] {prov}: {type(e).__name__}: {e}", file=__import__('sys').stderr)
+        return c
 
     def _mk(sysprompt, model=None, provider=""):
+        mode = _che_do.get(sysprompt, "full")
+        if mode != "full" and tools is None:
+            return _mk_nhe(sysprompt, model, provider, mode)
         prov = _agent_model_provider(model, provider)
         if prov == "openai-oauth" and model and tools is None and find_codex_cli():
             openai_oauth.write_codex_auth()
@@ -8794,6 +9211,13 @@ def _workflow_agent_helpers(brain, tools):
             + _AGENT_TOOLKIT_BLOCK
             + "\nLàm việc trong vault. Tập trung hoàn thành nhiệm vụ, trả kết quả rõ ràng, ngắn gọn."
         )
+        mode = _quyen_chat_hon(wf_mode, _muc_quyen_md(ameta))
+        if mode != "full":
+            sysprompt += ("\n\n# Chế độ an toàn: bạn đang chạy ở mức "
+                          + ("CHỈ ĐỌC VÀ ĐỀ XUẤT" if mode == "suggest" else "GHI NHÁP")
+                          + ". Không gửi tin, không tạo đơn, không chạy quảng cáo, không đăng bài. "
+                            "Hãy nêu rõ việc bạn ĐỀ XUẤT để chủ tự quyết.")
+            _che_do[sysprompt] = mode
         return (ameta.get("name", aslug), sysprompt,
                 (ameta.get("model") or "").strip() or None,
                 (ameta.get("model_provider") or "").strip())
@@ -8884,7 +9308,7 @@ async def execute_workflow_graph(brain, slug, input="", tools=None, session_id="
     if admission.action != "execute":
         _CONTEXT_RUNTIME.finish(trace, "COMPLETED", admission.reason)
         return
-    mk, agent_sysprompt, log_run, learn = _workflow_agent_helpers(brain, tools)
+    mk, agent_sysprompt, log_run, learn = _workflow_agent_helpers(brain, tools, _muc_quyen_workflow(brain, slug))
     agent_policy = agent_runtime.AgentPolicy.from_settings(cfgmod.read_settings() or {})
     agent_admitted = graph.allows_replan and agent_policy.admits(
         graph.slug, session_id or f"wf:{slug}")[0]
@@ -9070,7 +9494,7 @@ async def _execute_workflow_raw(brain, slug, input="", tools=None, session_id=""
     except Exception:
         pass
 
-    _mk, _agent_sysprompt, _log, _learn = _workflow_agent_helpers(brain, tools)
+    _mk, _agent_sysprompt, _log, _learn = _workflow_agent_helpers(brain, tools, _muc_quyen_workflow(brain, slug))
 
     yield {"type": "start", "workflow": meta.get("name", slug), "steps": len(steps)}
     prev = ""
@@ -9292,7 +9716,7 @@ async def _execute_workflow_resume_raw(brain, slug, task_id, node_id, code, tool
         yield {"type": "error", "content": "Không tìm thấy hoặc không resume được task này."}
         return
     canary = _get_workflow_canary(brain)
-    mk, agent_sysprompt, log_run, learn = _workflow_agent_helpers(brain, tools)
+    mk, agent_sysprompt, log_run, learn = _workflow_agent_helpers(brain, tools, _muc_quyen_workflow(brain, slug))
     queue: asyncio.Queue = asyncio.Queue()
 
     async def sink(event):

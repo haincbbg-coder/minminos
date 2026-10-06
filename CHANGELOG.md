@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.93] - 2026-10-07
+### Thêm mới
+- **Chợ chia sẻ MinMin** (nút chia sẻ cạnh chọn brain): gửi agent, skill, workflow sang MinMin của người khác bằng link, mã ngắn kiểu `K7Q2X-9XPA3@ten-mien`, QR, email hoặc lời nhắn dán Zalo. Tuỳ chọn mã PIN và link dùng một lần.
+- Mở link trên điện thoại ra trang giới thiệu gói đẹp, bấm "Nhập vào MinMin của tôi" là về thẳng MinMin của người nhận.
+- Người nhận **xem trước** rồi mới cài: biết gói của ai, đã xác minh chưa (mỗi máy chủ có khoá ký riêng, gói bị sửa là chặn), có gì và cảnh báo gì.
+### Bảo mật
+- Agent và workflow nhận từ người khác chạy ở **chế độ an toàn** (chỉ đọc và đề xuất, workflow tắt sẵn). Bấm "Tin tưởng" ở thẻ Đã nhận để mở toàn quyền.
+
 ## [26.10.92] - 2026-10-07
 ### Cải thiện
 - Văn phòng AI 3D: ngồi làm việc giờ thân người đứng im, lưng và cổ thẳng, mắt nhìn thẳng màn hình, chỉ có hai bàn tay gõ. Hết cổ ngẹo, hết trườn tới lui.

@@ -204,7 +204,7 @@ def _gan_engine(kich_ban, prov="anthropic-cli"):
     hang = list(kich_ban)
     del da_hoi[:]
 
-    def _helpers(brain, tools):
+    def _helpers(brain, tools, wf_mode="full"):
         def _mk(sysprompt, model=None, provider=""):
             return _EngineGia(hang.pop(0) if hang else [{"type": "final", "content": ""}])
 
