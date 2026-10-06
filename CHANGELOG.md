@@ -6,7 +6,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.100] - 2026-10-07
 ### Cải thiện
-- Chợ chia sẻ: báo trước kết nối cần có (đang làm).
+- Chợ chia sẻ **báo trước kết nối gói cần**: lúc xem trước thấy ngay gói dùng Pancake, Facebook Ads, Zalo... và máy bạn đã nối cái nào, còn thiếu cái nào. Thiếu vẫn cài được, chỉ là phần đó chưa chạy.
+- Trang nhận công khai cũng ghi "Cần kết nối" để người nhận biết trước. Người viết skill có thể khai rõ bằng dòng `ket_noi: [pancake, facebook-ads]`.
 
 ## [26.10.99] - 2026-10-07
 ### Bảo mật

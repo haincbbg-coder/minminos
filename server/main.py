@@ -106,6 +106,7 @@ import danh_tinh      # khoá ký riêng của máy này, để gói chia sẻ b
 import goi_chia_se    # ký / soi / làm an toàn gói chia sẻ giữa các MinMin (26.10.92)
 import share_trang    # trang nhận công khai /bs/<token> (26.10.92)
 import soi_rui_ro     # soi nội dung gói chia sẻ: luật + AI (26.10.97)
+import ket_noi_can    # kết nối gói chia sẻ cần, so với máy nhận (26.10.100)
 import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
 import share_render   # dựng trang xem cho link chia sẻ (markdown -> html, khung trang)
@@ -5946,11 +5947,12 @@ async def bs_tim_ma(ma: str, request: Request):
 
 def _thong_tin_cong_khai(ban: dict) -> dict:
     """Những gì người CHƯA nhập được phép thấy về một link. Có PIN thì không liệt kê nội dung."""
-    items = []
+    items, ket_noi = [], []
     if not brain_share.co_pin(ban):
         data, _ = _dung_goi_chia_se(ban)
         if data:
             items = goi_chia_se.soi_goi(data).get("items", [])
+            ket_noi = [{"ten": k["ten"], "khai_bao": k["khai_bao"]} for k in ket_noi_can.phat_hien(data)]
     toi_da = int(ban.get("toi_da") or 0)
     k = danh_tinh.cong_khai()
     return {"nhan": ban.get("nhan", ""), "het_han": ban.get("het_han"), "co_pin": brain_share.co_pin(ban),
@@ -5958,6 +5960,7 @@ def _thong_tin_cong_khai(ban: dict) -> dict:
             "ma": brain_share.hien_ma(ban.get("ma", "")), "ten": danh_tinh.ten(), "khoa": k,
             "van_tay": danh_tinh.van_tay(k),
             "items": [{x: it.get(x) for x in ("type", "slug", "name", "mo_ta")} for it in items],
+            "ket_noi": ket_noi,
             "goi": "/bs/" + ban["token"] + "/goi.zip"}
 
 
@@ -5986,7 +5989,8 @@ async def brain_share_xem(token: str, request: Request):
     trang = share_trang.dung_trang(
         tieu_de=tieu_de, host=host, ten=tt["ten"], van_tay=tt["van_tay"], items=tt["items"],
         co_pin=tt["co_pin"], het_han=tt["het_han"], con_luot=tt["con_luot"],
-        ma_day_du=f"{tt['ma']}@{host}", qr_svg=_qr_svg_nhung(link), link=link, nonce=nonce)
+        ma_day_du=f"{tt['ma']}@{host}", qr_svg=_qr_svg_nhung(link), link=link, nonce=nonce,
+        ket_noi=tt.get("ket_noi") or [])
     return HTMLResponse(trang, headers={"Content-Security-Policy": share_trang.csp(nonce),
                                         "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
                                         "Referrer-Policy": "no-referrer"})
@@ -6207,8 +6211,35 @@ async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: s
     # Cờ mức cao đi cùng gói vào kho chờ: bước cài đọc từ ĐÂY, không tin cờ client gửi lên.
     sha = goi_chia_se.cat_cho(data, dict(xm, nguy_co_cao=soi_rui_ro.co_nguy_co_cao(nguy_co),
                                          items=[{k: it.get(k) for k in ("type", "slug")} for it in soi["items"]]))
+    ket_noi = ket_noi_can.doi_chieu(ket_noi_can.phat_hien(data), await asyncio.to_thread(_ket_noi_hien_co))
     return {"ok": True, "sha256": sha, "xac_minh": xm, "items": soi["items"], "canh_bao": soi["canh_bao"],
-            "nguy_co": nguy_co, "kich_thuoc": soi["kich_thuoc"]}
+            "nguy_co": nguy_co, "ket_noi": ket_noi, "kich_thuoc": soi["kich_thuoc"]}
+
+
+def _ket_noi_hien_co() -> list:
+    """Mọi thứ máy NÀY đang nối được, dạng [{ten, bat}] cho ket_noi_can.doi_chieu: kết nối MCP
+    (mã connector + tên + nhãn + namespace), gói mở rộng đã cài và plugin. Chỉ đọc tên, không
+    đụng tới secret nào."""
+    ra = []
+    try:
+        for c in mcp_store.list_connections():
+            con = mcp_catalog.get(c.get("connector_id")) or {}
+            ra.append({"ten": " ".join(str(x or "") for x in (c.get("connector_id"), con.get("name"),
+                                                                c.get("label"), c.get("slug"))),
+                       "bat": bool(c.get("enabled", True))})
+    except Exception as e:
+        print(f"[ket noi hien co] {type(e).__name__}: {e}", file=sys.stderr)
+    try:
+        for p in packs.installed():
+            ra.append({"ten": f"{p.get('id', '')} {p.get('name', '')}", "bat": not p.get("loi")})
+    except Exception:
+        pass
+    try:
+        for d in packs.plugin_dirs():
+            ra.append({"ten": Path(str(d)).name, "bat": True})
+    except Exception:
+        pass
+    return ra
 
 
 _SOI_AI_KHOA = asyncio.Lock()

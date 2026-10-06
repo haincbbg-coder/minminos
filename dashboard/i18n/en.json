@@ -3604,5 +3604,13 @@
   "cs.ai_suspicious": "Suspicious points:",
   "cs.ai_note": "The AI summary helps you understand quickly and may be wrong. The rule scan is what blocks.",
   "cs.accept_risk": "I have read the high-risk signs and still want to install",
-  "cs.accept_risk_need": "The package shows high-risk signs. Read and confirm first."
+  "cs.accept_risk_need": "The package shows high-risk signs. Read and confirm first.",
+  "cs.conn_title_ok": "Connections needed: you have them all",
+  "cs.conn_title_missing": "Connections needed: {n} missing",
+  "cs.conn_have": "connected",
+  "cs.conn_off": "switched off",
+  "cs.conn_missing": "not connected",
+  "cs.conn_declared": "declared by sender",
+  "cs.conn_guessed": "looks needed",
+  "cs.conn_hint": "You can still install, but parts using a missing connection will not work. Connect it on the Connections page first."
 }
