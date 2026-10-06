@@ -9199,6 +9199,9 @@ async def _ghi_lich_su(gen, *, brain, slug, name, input, source, session_id, run
     rid = run_id or st.bat_dau(brain=brain, slug=slug, name=name, input=input or "",
                                source=source or "other", session_id=session_id or "")
     ket = None
+    import office_bus
+    ob = {"cur": "", "prev": ""}      # agent đang làm / vừa làm xong: để robot biết đi lấy dữ liệu ở đâu
+    office_bus.emit("run_start", brain, run=rid, name=name or slug)
     try:
         async for ev in gen:
             t = ev.get("type")
@@ -9206,8 +9209,16 @@ async def _ghi_lich_su(gen, *, brain, slug, name, input, source, session_id, run
                 ev = dict(ev, run_id=rid)
             elif t == "step_start":
                 st.ghi_buoc(rid, int(ev.get("i", 0)), agent=ev.get("agent", ""), task=ev.get("task", ""))
+                office_bus.emit("step", brain, run=rid, agent=ev.get("agent", ""), prev=ob["cur"],
+                                task=ev.get("task", ""))
+                ob["cur"] = ev.get("agent", "") or ob["cur"]
+            elif t == "step_tool":
+                office_bus.emit("tool", brain, run=rid, agent=ob["cur"], tool=str(ev.get("tool", "")))
+            elif t == "step_verify":
+                office_bus.emit("verify", brain, run=rid, agent=ev.get("agent", ""), target=ob["cur"])
             elif t == "step_done":
                 st.ghi_buoc(rid, int(ev.get("i", 0)), output=ev.get("output", ""), verified=ev.get("verified"))
+                office_bus.emit("step_done", brain, run=rid, agent=ev.get("agent", "") or ob["cur"])
             elif t == "step_error":
                 st.ghi_buoc(rid, int(ev.get("i", 0)), error=ev.get("content", ""))
             elif t == "wait_user":
@@ -9221,6 +9232,7 @@ async def _ghi_lich_su(gen, *, brain, slug, name, input, source, session_id, run
                 st.ket_thuc(rid, "done", output=str(ev.get("result") or ""))
             yield ev
     finally:
+        office_bus.emit("run_end", brain, run=rid, ok=(ket in ("done", "waiting")))
         if ket is None:
             try:
                 st.ket_thuc(rid, "error", error="dừng giữa chừng")
@@ -20415,6 +20427,10 @@ hud_routes.register(app, hud_routes.HudDeps(
     dashboard_dir=Path(DASHBOARD_PATH),
     brain_root=lambda b: _brain_root(b),
 ))
+
+# Văn phòng AI 3D (GET /office/events) - routes/office.py. Đăng ký ở cuối vì cùng lý do với HUD.
+import routes.office as office_routes   # noqa: E402
+office_routes.register(app)
 
 # MinMin Mắt Nhà (camera ở nhà qua Frigate + cầu nối) - routes/mat_nha.py. Cũng đăng ký ở cuối.
 import routes.mat_nha as mat_nha_routes   # noqa: E402
