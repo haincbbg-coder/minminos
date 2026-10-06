@@ -94,6 +94,7 @@ import system_sync   # tầng năng lực HỆ THỐNG (skill/loop mặc định
 import skill_router   # nguồn chân lý khám phá skill (canonical <brain>/skills) dùng chung mọi engine
 import skill_usage     # telemetry: đếm skill nào THẬT SỰ được dùng qua javis_use_skill (tín hiệu DƯƠNG một chiều)
 import share_bundle   # xuất/nhập gói agent/skill/workflow (.zip) để chia sẻ giữa brain/người dùng
+import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
 import share_render   # dựng trang xem cho link chia sẻ (markdown -> html, khung trang)
 import usage_store   # đếm token/chi phí Javis tự đo (đa nhà cung cấp)
@@ -5698,6 +5699,7 @@ def _list_brains_sync() -> dict:
     except OSError:
         default_resolved = default
     out = []
+    _nhan = brain_labels.doc()
     try:
         for p in sorted(base.iterdir(), key=lambda x: x.name.lower()):
             if not p.is_dir() or p.name.startswith("."):
@@ -5712,7 +5714,7 @@ def _list_brains_sync() -> dict:
                 is_default = False
             out.append({"name": p.name, "path": str(p), "notes": notes,
                         "notes_capped": notes >= _BRAINS_MD_CAP,
-                        "is_default": is_default})
+                        "is_default": is_default, "label": _nhan.get(p.name, "")})
     except Exception as e:
         return {"dir": str(base), "brains": [], "error": str(e)}
     return {"dir": str(base), "brains": out}
@@ -5740,6 +5742,94 @@ async def new_brain(name: str = Form(...)):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
     git_brain.clear_tombstone(BRAINS_DIR, safe)   # dựng lại não cùng tên -> gỡ giấy báo tử để không bị xoá oan
     return {"ok": True, "name": safe, "path": str(root)}
+
+
+@app.post("/brains/rename")
+async def rename_brain(name: str = Form(...), label: str = Form("")):
+    """Đổi TÊN HIỂN THỊ của brain (không đổi thư mục). label rỗng = về tên thư mục."""
+    safe = _safe_brain_name(name)
+    if not safe or not (Path(BRAINS_DIR) / safe).is_dir():
+        return JSONResponse({"ok": False, "error": "Không thấy brain này"}, status_code=404)
+    try:
+        nhan = brain_labels.dat(safe, label)
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    return {"ok": True, "name": safe, "label": nhan}
+
+
+_COPY_KIND = ("agent", "skill", "workflow")
+
+
+@app.post("/brains/copy-items")
+async def copy_items_between_brains(from_brain: str = Form(...), to_brain: str = Form(...),
+                                    kind: str = Form(...), slugs: str = Form(...),
+                                    mode: str = Form("copy"), overwrite: str = Form("0"),
+                                    deps: str = Form("1")):
+    """Sao chép (hoặc CHUYỂN) agent / skill / workflow từ brain này sang brain khác.
+
+    Đi đúng đường xuất/nhập gói có sẵn (share_bundle: có rào zip-slip, bỏ qua skill hệ thống,
+    trùng slug thì bỏ qua trừ khi overwrite) nhưng làm thẳng trong bộ nhớ, khỏi tải về rồi nhập.
+    mode=move: sau khi nhập THÀNH CÔNG mới xoá bản ở brain nguồn, và chỉ xoá đúng các mục đã
+    nhập (mục bị bỏ qua vì trùng thì giữ nguyên ở nguồn).
+    """
+    if kind not in _COPY_KIND or mode not in ("copy", "move"):
+        return JSONResponse({"ok": False, "error": "kind/mode không hợp lệ"}, status_code=400)
+    if (from_brain or "").strip() == (to_brain or "").strip():
+        return JSONResponse({"ok": False, "error": "Brain nguồn và đích phải khác nhau"}, status_code=400)
+    lst = [s.strip() for s in (slugs or "").split(",") if s.strip()]
+    if not lst or len(lst) > 200:
+        return JSONResponse({"ok": False, "error": "chưa chọn mục nào (tối đa 200)"}, status_code=400)
+    xau = [s for s in lst if not skill_router.valid_slug(s)]
+    if xau:
+        return JSONResponse({"ok": False, "error": f"slug không hợp lệ: {', '.join(xau[:5])}"}, status_code=400)
+    data, _fname = share_bundle.build_bundle(
+        kind, lst if len(lst) > 1 else lst[0],
+        agents_dir=_agents_dir(from_brain), workflows_dir=_workflows_dir(from_brain),
+        skills_root=_skills_dir(from_brain), include_deps=deps in ("1", "true", "True", "on"),
+        system_slugs=system_sync.system_skill_slugs(), app_version=_app_version())
+    if not data:
+        return JSONResponse({"ok": False, "error": "Không tìm thấy mục nào để chép (skill hệ thống không chép được)"}, status_code=404)
+    root = _brain_root(to_brain)
+    res = share_bundle.import_bundle(
+        data, "chuyen-brain.zip",
+        agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain),
+        skills_root=_skills_dir(to_brain),
+        overwrite=(overwrite in ("1", "true", "True", "on")))
+    if any(str(k).startswith("skill:") for k in res.get("imported", [])):
+        try:
+            system_sync.mirror_skills(root)
+        except Exception:
+            pass
+    try:
+        rebuild_javis_index(root)
+    except Exception:
+        pass
+    daxoa = []
+    if mode == "move" and not res.get("errors"):
+        # chỉ xoá mục CHÍNH người dùng chọn và đã nhập được; phụ thuộc kèm theo giữ nguyên ở nguồn
+        nhap = {str(k) for k in res.get("imported", [])}
+        for s in lst:
+            if f"{kind}:{s}" not in nhap:
+                continue
+            if kind == "skill":
+                if system_sync.is_system_skill(s):
+                    continue
+                rs = Path(_brain_root(from_brain))
+                for d in (rs / "skills" / s, rs / "skills" / ".disabled" / s,
+                          rs / ".claude" / "skills" / s, rs / ".claude" / "skills" / ".disabled" / s,
+                          rs / ".agents" / s):
+                    if d.is_dir():
+                        shutil.rmtree(d, ignore_errors=True)
+            else:
+                d = (_agents_dir(from_brain) if kind == "agent" else _workflows_dir(from_brain)) / f"{s}.md"
+                if d.is_file():
+                    d.unlink()
+            daxoa.append(s)
+        try:
+            rebuild_javis_index(Path(_brain_root(from_brain)))
+        except Exception:
+            pass
+    return {"ok": not res.get("errors"), "mode": mode, "da_xoa_o_nguon": daxoa, **res}
 
 
 _DELETE_SYNC_TASKS = set()   # giữ ref mạnh cho eager-sync sau khi xóa não (tránh GC nuốt task)
@@ -15768,6 +15858,28 @@ async def sessions_set_project(session_id: str, project_id: str = Form(""),
     if not store.set_project(session_id, pid, brain=(brain or "").strip() or None):
         return JSONResponse({"error": "not found"}, status_code=404)
     return {"ok": True}
+
+
+@app.post("/sessions/bulk-project")
+async def sessions_bulk_project(ids: str = Form(...), project_id: str = Form("")):
+    """Chuyển NHIỀU hội thoại sang một project cùng lúc (project_id rỗng = gỡ nhãn). `ids` cách
+    nhau bằng dấu phẩy, tối đa 500. Dùng cho chế độ tích chọn ở danh sách hội thoại."""
+    pid = (project_id or "").strip()
+    store = get_store()
+    if pid and not store.get_project(pid):
+        return JSONResponse({"error": "project không tồn tại"}, status_code=404)
+    lst = [i.strip() for i in (ids or "").split(",") if i.strip()]
+    if not lst:
+        return JSONResponse({"error": "chưa chọn hội thoại nào"}, status_code=400)
+    return {"ok": True, "changed": store.set_project_many(lst, pid)}
+
+
+@app.post("/projects/gom-theo-nen-tang")
+async def projects_gom_theo_nen_tang(brain: str = Form("")):
+    """Xếp các hội thoại CHƯA có project vào project theo nền tảng AI (Claude, ChatGPT, Gemini,
+    Grok, Giọng nói). Hội thoại đã nằm trong project nào thì giữ nguyên."""
+    r = await asyncio.to_thread(get_store().gom_theo_nen_tang, (brain or "").strip() or None)
+    return {"ok": True, "tong": sum(r.values()), "theo_nen_tang": r}
 
 
 # ============================================================

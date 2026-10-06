@@ -3454,3 +3454,10 @@ body.ne-full-on .cview { z-index: 250; }
 .cb-tv-dong { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 4px; font-size: 13px; }
 .cb-tv-dong em { font-style: normal; color: var(--text3); font-size: 11.5px; margin-left: 6px; }
 .cb-tv-up { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; margin-top: 4px; }
+
+/* Tích chọn nhiều hội thoại */
+.cside-chon{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 8px}
+.cside-chon-n{font-size:12px;opacity:.8;margin-right:auto}
+.cside-chon-btn{font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid rgba(120,160,255,.3);background:transparent;color:inherit;cursor:pointer}
+.cside-chon-btn:disabled{opacity:.4;cursor:default}
+.ci-chon{vertical-align:middle;margin-right:4px}

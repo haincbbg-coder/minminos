@@ -334,6 +334,28 @@ def _sach_icon(icon: Optional[str]) -> Optional[str]:
     return v if _ICON_RE.match(v) else None
 
 
+# engine -> tên nền tảng AI. Engine là chuỗi do main.py ghi (xem get_or_create); không nhận ra thì
+# trả None để KHÔNG gom bừa vào một project lạ.
+_NEN_TANG = (
+    (("cli", "anthropic", "anthropic-cli", "claude"), "Claude"),
+    (("codex", "openai", "openai-oauth", "chatgpt"), "ChatGPT"),
+    (("gemini", "google", "antigravity-cli", "antigravity"), "Gemini"),
+    (("grok-cli", "grok", "xai"), "Grok"),
+)
+
+
+def nen_tang_cua_engine(engine: Optional[str]) -> Optional[str]:
+    e = (engine or "").strip().lower()
+    if not e:
+        return None
+    if e.startswith("voice-live"):
+        return "Giọng nói (Live)"
+    for khoa, ten in _NEN_TANG:
+        if e in khoa:
+            return ten
+    return None
+
+
 class SessionStore:
     """Kho hội thoại SQLite thread-safe (1 connection + app-lock, WAL)."""
 
@@ -513,8 +535,71 @@ class SessionStore:
                     (engine, model, time.time(), session_id),
                 ))
                 return session_id
-        return self.create_session(brain=brain, engine=engine, model=model,
-                                   session_id=session_id)
+        sid = self.create_session(brain=brain, engine=engine, model=model,
+                                  session_id=session_id)
+        # Chỉ xếp lúc TẠO MỚI, không xếp lại mỗi lượt: người dùng đã gỡ/chuyển tay thì thôi.
+        try:
+            self.tu_xep_theo_nen_tang(sid)
+        except Exception:
+            pass
+        return sid
+
+    # ── Gom hội thoại theo NỀN TẢNG AI (26.10.71) ──
+    # "Claude", "ChatGPT", "Gemini"... mỗi nền tảng một project để danh sách khỏi lẫn. engine là
+    # engine đang dùng ở lượt gần nhất (xem get_or_create), nên đây chỉ là gợi ý ban đầu.
+
+    def nen_tang_cua(self, engine: Optional[str]) -> Optional[str]:
+        return nen_tang_cua_engine(engine)
+
+    def _project_nen_tang(self, brain: str, ten: str) -> str:
+        for p in self.list_projects(brain):
+            if (p.get("name") or "") == ten:
+                return p["id"]
+        return self.create_project(ten, icon="bot", brain=brain)
+
+    def tu_xep_theo_nen_tang(self, session_id: str) -> Optional[str]:
+        """Hội thoại của CHỦ (kênh web) chưa có project thì xếp vào project của nền tảng nó dùng.
+        Trả tên project đã xếp, hoặc None."""
+        sess = self.get_session(session_id)
+        if not sess or (sess.get("project_id") or "").strip():
+            return None
+        if (sess.get("channel") or "web") != "web":
+            return None
+        ten = nen_tang_cua_engine(sess.get("engine"))
+        if not ten:
+            return None
+        pid = self._project_nen_tang(sess.get("brain") or "brain", ten)
+        self.set_project(session_id, pid)
+        return ten
+
+    def gom_theo_nen_tang(self, brain: Optional[str] = None) -> Dict[str, int]:
+        """Một lần cho cả danh sách cũ: xếp mọi hội thoại web CHƯA có project theo nền tảng.
+        Không đụng tới hội thoại đã nằm trong project nào (kể cả do người dùng tự xếp)."""
+        rows = self.list_sessions(limit=100000, brain=brain, include_archived=True, project="none")
+        dem: Dict[str, int] = {}
+        for r in rows:
+            ten = self.tu_xep_theo_nen_tang(r["id"])
+            if ten:
+                dem[ten] = dem.get(ten, 0) + 1
+        return dem
+
+    def set_project_many(self, session_ids: List[str], project_id: Optional[str]) -> int:
+        """Chuyển HÀNG LOẠT hội thoại sang một project (rỗng = gỡ nhãn). Trả số hội thoại đổi."""
+        pid = (project_id or "").strip() or None
+        ids = [i for i in dict.fromkeys(str(x) for x in session_ids or []) if i][:500]
+        if not ids:
+            return 0
+
+        def _do(conn):
+            n = 0
+            for i in range(0, len(ids), 200):
+                chunk = ids[i:i + 200]
+                cur = conn.execute(
+                    "UPDATE sessions SET project_id = ? WHERE id IN (%s)" % ",".join("?" * len(chunk)),
+                    [pid] + chunk)
+                n += cur.rowcount
+            return n
+        return self._write(_do)
 
     def append_message(self, session_id: str, role: str, content: Optional[str],
                        tool_calls: Any = None) -> int:

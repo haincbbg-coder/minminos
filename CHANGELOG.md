@@ -4,6 +4,15 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.71] - 2026-10-06
+### Thêm mới
+- Tích chọn nhiều hội thoại rồi chuyển sang project khác, có nút Bỏ chọn.
+- Đổi tên hiển thị của bất kỳ brain nào (bút cạnh ô chọn brain); nút + tạo brain luôn hiện, cả ở chế độ gọn.
+- Chép hoặc chuyển agent, skill, workflow từ brain này sang brain khác (brain mới vốn trống, không tự nối với brain cũ).
+- Hội thoại mới tự xếp vào project theo nền tảng AI (Claude, ChatGPT, Gemini, Grok); mục "Gom theo nền tảng AI" trong menu project xếp nốt các hội thoại cũ.
+### Sửa lỗi
+- Cài như app (PWA) không còn hiện tên cũ, giờ là MinMin OS.
+
 ## [26.10.70] - 2026-10-06
 ### Cải thiện
 - Màn Hub hình người kiểu Apex ở tông tối: đường đồng mức xanh điện, lõi cam phát sáng trong đầu thở nhịp nhàng, nhiều bụi sáng bay quanh đầu, nền xanh than với hai dãy núi năng lượng có tia chớp cam chạy dọc đỉnh. Tông sáng giữ bố cục cũ nhưng đổi sang mực xanh. Bấm "Sáng / Tối" để xem.
