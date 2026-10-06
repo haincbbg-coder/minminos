@@ -1,0 +1,52 @@
+/* cua-chinh.css - "Cửa chính" gọn (26.10.69).
+ *
+ * Ý chính: người dùng chỉ cần MỘT chỗ để nói/gõ. Mọi thứ khác vẫn còn nguyên, chỉ được GIẤU
+ * cho tới khi gọi tới: thanh điều hướng thành ngăn kéo (nút Menu), cột tổng quan bên phải ẩn.
+ * Bật/tắt bằng body.cua-chinh (cua-chinh.js giữ lựa chọn); gỡ class là về đúng bố cục cũ,
+ * nên đây là lớp ĐÈ lên CSS cũ chứ không sửa nó.
+ * Chỉ áp trên màn rộng: điện thoại đã có sẵn ngăn kéo + khung chat riêng (mobile-chat.js).
+ */
+@media (min-width: 861px) {
+  /* Không còn rail chiếm chỗ: các trang console (dùng --rail-w) tự giãn ra sát mép. */
+  body.cua-chinh, body.cua-chinh.rail-collapsed { --rail-w: 0px; --rail-w-collapsed: 0px; }
+  /* Thanh điều hướng: ẩn sang trái, kéo ra khi bấm Menu (cùng cơ chế body.nav-open của mobile). */
+  body.cua-chinh .rail {
+    width: 260px;                       /* --rail-w đã về 0 nên phải ghi rõ bề ngang ngăn kéo */
+    transform: translateX(-120%); transition: transform .22s ease; z-index: 60;
+    visibility: hidden;
+  }
+  body.cua-chinh.nav-open .rail {
+    transform: translateX(0); visibility: visible; box-shadow: 8px 0 40px var(--shadow-veil);
+  }
+  body.cua-chinh.has-rail .hud { margin-left: 0; width: 100%; }
+  body.cua-chinh .nav-backdrop { position: fixed; inset: 0; background: var(--scrim); z-index: 55; }
+  body.cua-chinh .nav-backdrop[hidden] { display: none; }
+  body.cua-chinh.nav-open .nav-backdrop { display: block; }
+  body.cua-chinh .nav-toggle-btn { display: inline-flex; margin-right: 10px; }
+  body.cua-chinh .hud-top { grid-template-columns: auto auto minmax(0, 1fr) auto; }
+
+  /* Cột tổng quan (số liệu, việc đang chạy) ẩn: vẫn mở được từ Menu hoặc tắt chế độ gọn. */
+  body.cua-chinh .hud-body > .hud-left { display: none; }
+  body.cua-chinh .hud-body { grid-template-columns: minmax(340px, 30%) minmax(0, 1fr); }
+  /* Nút quản trị brain (tạo/xoá/chọn thư mục) và số liệu: ẩn cho gọn, chọn brain vẫn còn. */
+  body.cua-chinh #newBrainBtn, body.cua-chinh #delBrainBtn,
+  body.cua-chinh #pickFolderBtn, body.cua-chinh #graphStats { display: none; }
+}
+
+/* Nút chuyển Gọn/Đầy đủ ở đáy ngăn kéo. */
+.cc-switch {
+  display: flex; align-items: center; gap: 8px; width: calc(100% - 12px); margin: 6px;
+  padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--border);
+  background: none; color: var(--text2); font-size: 12px; cursor: pointer; text-align: left;
+}
+.cc-switch:hover { color: var(--accent); border-color: var(--accent); }
+.cc-switch .cc-sub { display: block; font-size: 11px; color: var(--text3); }
+
+/* Chip "Hay dùng" đầu ngăn kéo. */
+.cc-hay-dung { padding: 4px 6px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.cc-hd-lbl { flex: 1 0 100%; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); }
+.cc-hd-chip {
+  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); background: none;
+  color: var(--text2); font-size: 12px; cursor: pointer;
+}
+.cc-hd-chip:hover { color: var(--accent); border-color: var(--accent); }

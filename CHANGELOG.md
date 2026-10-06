@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.69] - 2026-10-06
+### Thêm mới
+- Cửa chính gọn: màn chính chỉ còn khung chat, quả cầu tri thức và ô gõ. Thanh bên và bảng tổng quan được giấu, bấm nút Menu để kéo ra; nút "Hiện đầy đủ" trong Menu đưa bố cục cũ về, lựa chọn nhớ theo từng máy.
+- Mục "Hay dùng" đầu Menu: vài trang bạn hay mở nhất.
+- MinMin ghi lại cách bạn dùng (trang nào được mở, có gửi chat), tuyệt đối không lưu nội dung chat. Mới chỉ để đưa trang hay dùng lên đầu, chưa đổi hành vi nào của trợ lý.
+### Sửa lỗi
+- Gửi file hoặc video qua Zalo không còn treo tới hết giờ: lệnh gửi file cũ không bật kết nối nhận tin nên chờ mãi báo tải lên xong. Ảnh vẫn đi đường cũ.
+
 ## [26.10.68] - 2026-10-06
 ### Thêm mới
 - Thử bot: nút trên thẻ bot, hỏi thử một câu để xem bot sẽ trả lời gì trước khi phục vụ khách. Chỉ đọc, không gửi cho ai, không ghi vào Hộp thư, không tính thống kê.

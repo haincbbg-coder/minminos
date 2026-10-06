@@ -28,6 +28,7 @@ from pathlib import Path
 CONNECTOR_ID = "zalo"
 _CLI_PACKAGE = "zalo-agent-cli@1.6.2"   # ghim đúng bản mà connector Zalo đang chạy
 _MAX_FILES = 10                          # gửi cả chục file một lượt đã là bất thường
+_SCRIPT_TEP = Path(__file__).with_name("gui_tep.mjs")
 _TIMEOUT = 120                           # tải file lên Zalo có thể lâu, nhưng không lâu vô hạn
 
 # Đuôi Zalo hiểu là ẢNH. Còn lại đi đường send-file (docx, pdf, zip...). Gửi nhầm đường thì
@@ -177,11 +178,18 @@ async def _send(args, ctx):
     caption = str(args.get("caption") or "")
 
     npx = shutil.which("npx")
-    argv = [npx, "-y", _CLI_PACKAGE, "--json", "msg", lenh, thread_id]
-    argv += [str(f) for f in thuc]
-    argv += ["-t", str(ttype)]
-    if caption:
-        argv += ["-m", caption]
+    if lenh == "send-image":
+        argv = [npx, "-y", _CLI_PACKAGE, "--json", "msg", lenh, thread_id]
+        argv += [str(f) for f in thuc]
+        argv += ["-t", str(ttype)]
+        if caption:
+            argv += ["-m", caption]
+    else:
+        # FILE/VIDEO: `msg send-file` của CLI không bật listener nên treo (zca-js chờ websocket
+        # báo tải lên xong). Chạy script riêng, bật listener rồi mới gửi.
+        argv = [npx, "-y", "-p", _CLI_PACKAGE, "node", str(_SCRIPT_TEP), thread_id,
+                str(ttype), caption]
+        argv += [str(f) for f in thuc]
     if npx.lower().endswith((".cmd", ".bat")):
         argv = ["cmd.exe", "/c"] + argv
 
