@@ -3525,5 +3525,11 @@
   "brains.link_copied": "Đã chép link.",
   "brains.link_revoke_ask": "Thu hồi link này? Người đã có link sẽ không tải được nữa.",
   "brains.link_made": "Đã tạo link.",
-  "brains.in_ph": "Dán link chia sẻ vào đây"
+  "brains.in_ph": "Dán link chia sẻ vào đây",
+  "sess.imp_menu": "Nhập lịch sử chat từ nền tảng khác",
+  "sess.imp_title": "Nhập lịch sử chat",
+  "sess.imp_local_note": "Claude Code: nhập các phiên đã chạy trên máy chủ MinMin, đặt tên như bên Claude.",
+  "sess.imp_local": "Quét và nhập phiên Claude Code",
+  "sess.imp_file_note": "ChatGPT hoặc claude.ai: chọn tệp conversations.json (hoặc .zip) từ mục Xuất dữ liệu của họ.",
+  "sess.imp_done": "Xong: {moi} cuộc mới, {trung} cuộc đã có từ trước."
 }

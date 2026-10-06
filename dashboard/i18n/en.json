@@ -3525,5 +3525,11 @@
   "brains.link_copied": "Link copied.",
   "brains.link_revoke_ask": "Revoke this link? People who have it will no longer be able to download.",
   "brains.link_made": "Link created.",
-  "brains.in_ph": "Paste the share link here"
+  "brains.in_ph": "Paste the share link here",
+  "sess.imp_menu": "Import chat history from another platform",
+  "sess.imp_title": "Import chat history",
+  "sess.imp_local_note": "Claude Code: imports sessions that ran on the MinMin server, titled like in Claude.",
+  "sess.imp_local": "Scan and import Claude Code sessions",
+  "sess.imp_file_note": "ChatGPT or claude.ai: choose conversations.json (or the .zip) from their data export.",
+  "sess.imp_done": "Done: {moi} new, {trung} already present."
 }

@@ -177,6 +177,7 @@
     rows.push({ sep: true });
     rows.push({ label: window.t("sess.proj_new"), run: function () { newProject(); } });
     rows.push({ label: window.t("sess.gom_nen_tang"), icon: "layers", run: function () { gomTheoNenTang(); } });
+    rows.push({ label: window.t("sess.imp_menu"), icon: "download", run: function () { moNhapLichSu(); } });
     openMenu(anchor, rows);
   }
 
@@ -1808,6 +1809,37 @@
     renderChonBar();
     loadList();
   }
+
+  // ---- Nhập lịch sử chat từ nền tảng AI khác ----
+  function moNhapLichSu() {
+    var ov = el('<div class="cs-imp-ov" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px">' +
+      '<div style="background:var(--panel,#10192b);color:var(--fg,#e8eefc);border:1px solid rgba(120,160,255,.3);border-radius:14px;width:min(520px,100%);padding:16px;display:flex;flex-direction:column;gap:10px">' +
+      '<b>' + esc(window.t("sess.imp_title")) + '</b>' +
+      '<div style="font-size:12px;opacity:.8">' + esc(window.t("sess.imp_local_note")) + '</div>' +
+      '<button type="button" data-a="local">' + esc(window.t("sess.imp_local")) + '</button>' +
+      '<div style="font-size:12px;opacity:.8">' + esc(window.t("sess.imp_file_note")) + '</div>' +
+      '<input type="file" accept=".json,.zip" data-a="file">' +
+      '<div data-a="msg" style="font-size:12px;min-height:16px"></div>' +
+      '<div style="text-align:right"><button type="button" data-a="close">' + esc(window.t("sess.sel_done")) + '</button></div></div></div>');
+    document.body.appendChild(ov);
+    var $ = function (a) { return ov.querySelector('[data-a="' + a + '"]'); };
+    function xong(r) {
+      if (!r || r.error || r.ok === false) { $("msg").textContent = (r && r.error) || window.t("brains.share_failed"); return; }
+      $("msg").textContent = window.t("sess.imp_done", { moi: r.moi || 0, trung: r.trung || 0 });
+      loadProjects(); cached = null; loadList();
+    }
+    $("close").onclick = function () { ov.remove(); };
+    ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+    $("local").onclick = async function () { $("msg").textContent = "..."; xong(await post("/sessions/import-local", { brain: brain() })); };
+    $("file").onchange = async function () {
+      var f = $("file").files[0]; if (!f) return;
+      $("msg").textContent = "...";
+      var fd = new FormData(); fd.append("file", f); fd.append("brain", brain());
+      try { xong(await (await fetch("/sessions/import-file", { method: "POST", body: fd })).json()); }
+      catch (e) { xong({ error: String(e) }); }
+    };
+  }
+
   async function gomTheoNenTang() {
     var r = await post("/projects/gom-theo-nen-tang", { brain: brain() });
     await loadProjects();

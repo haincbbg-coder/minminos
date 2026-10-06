@@ -94,6 +94,7 @@ import system_sync   # tầng năng lực HỆ THỐNG (skill/loop mặc định
 import skill_router   # nguồn chân lý khám phá skill (canonical <brain>/skills) dùng chung mọi engine
 import skill_usage     # telemetry: đếm skill nào THẬT SỰ được dùng qua javis_use_skill (tín hiệu DƯƠNG một chiều)
 import share_bundle   # xuất/nhập gói agent/skill/workflow (.zip) để chia sẻ giữa brain/người dùng
+import chat_import    # nhập lịch sử chat từ Claude Code / ChatGPT / claude.ai
 import brain_share    # link chia sẻ gói agent/skill/workflow của một brain (/bs/<token>)
 import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
@@ -16051,6 +16052,30 @@ async def sessions_set_project(session_id: str, project_id: str = Form(""),
     if not store.set_project(session_id, pid, brain=(brain or "").strip() or None):
         return JSONResponse({"error": "not found"}, status_code=404)
     return {"ok": True}
+
+
+@app.post("/sessions/import-local")
+async def sessions_import_local(brain: str = Form("brain")):
+    """Quét phiên Claude Code lưu trên chính máy MinMin chạy rồi nhập (không trùng, tự đặt tên như bên Claude)."""
+    cuocs = await asyncio.to_thread(chat_import.quet_claude_code)
+    kq = await asyncio.to_thread(chat_import.ghi, get_store(), cuocs, brain or "brain")
+    return {"ok": True, "tim_thay": len(cuocs), **kq}
+
+
+@app.post("/sessions/import-file")
+async def sessions_import_file(file: UploadFile = File(...), brain: str = Form("brain")):
+    """Nhập conversations.json (hoặc .zip xuất dữ liệu) của ChatGPT hoặc claude.ai."""
+    data = await file.read()
+    if not data:
+        return JSONResponse({"ok": False, "error": "File rỗng"}, status_code=400)
+    if len(data) > 200 * 1024 * 1024:
+        return JSONResponse({"ok": False, "error": "File quá lớn (>200MB)"}, status_code=413)
+    try:
+        cuocs = await asyncio.to_thread(chat_import.doc_tep_xuat, data)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Không đọc được tệp: {type(e).__name__}"}, status_code=400)
+    kq = await asyncio.to_thread(chat_import.ghi, get_store(), cuocs, brain or "brain")
+    return {"ok": True, "tim_thay": len(cuocs), **kq}
 
 
 @app.post("/sessions/bulk-project")
