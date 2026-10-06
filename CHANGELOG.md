@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.81] - 2026-10-06
+### Thêm mới
+- Hub có hình mới "Người hạt" làm mặc định: tượng nam lực lưỡng dựng từ 150 nghìn chấm lấy từ ảnh mẫu, có mặt, mắt xanh sáng, ngực, bụng. Mở lên là thân hiện từ bụng lên đầu.
+- Khi MinMin nói, miệng và hàm chuyển động theo đúng nhịp giọng (khép khi im, mở theo âm lượng), mắt sáng lên khi nghe và nói.
+- Hub mặc định tông sáng kem như ảnh mẫu, vẫn bấm Sáng / Tối được. Các hình cũ (tượng hạt, robot giáp, người, quả cầu) vẫn chọn lại được.
+
 ## [26.10.80] - 2026-10-06
 ### Cải thiện
 - Gỡ hẳn tính năng thành viên được mời (nút Thành viên, trang riêng, 2FA thành viên, bản riêng, cổng chuyển). Các tệp tài khoản thành viên cũ (users.json, phiên) tự xoá khi MinMin khởi động.

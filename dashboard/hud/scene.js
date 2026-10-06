@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { humanPoints, SHOULDER, ELBOW } from "./body.js";
 import { robotPoints } from "./robot.js";
 import { bustPoints } from "./bust.js?v=8";
+import { PhotoFigure } from "./figure.js?v=4";
 
 const N = 60000;                       // so hat; may yeu tu giam (quality=low)
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -220,8 +221,8 @@ void main(){
 
 const STATES = { standby: 0, listening: 1, thinking: 2, speaking: 3, error: 4 };
 // Ba hinh: robot giap (mac dinh), nguoi, qua cau - trong so tron trong shader
-const FORMS = { bust: [0, 0, 0, 1], robot: [1, 0, 0, 0], portrait: [0, 1, 0, 0], orb: [0, 0, 1, 0] };
-const THU_TU = ["bust", "robot", "portrait", "orb"];
+const FORMS = { figure: [0, 0, 0, 1], bust: [0, 0, 0, 1], robot: [1, 0, 0, 0], portrait: [0, 1, 0, 0], orb: [0, 0, 1, 0] };
+const THU_TU = ["figure", "bust", "robot", "portrait", "orb"];
 
 export class MinMinScene {
   constructor(canvas, opts = {}) {
@@ -313,6 +314,7 @@ export class MinMinScene {
     this.rings.position.y = 0.2;
     this.scene.add(this.rings);
 
+    this.fig = new PhotoFigure(THREE, this.body, new URL("./figure.bin?v=4", import.meta.url).href);
     const applyTheme = () => {
       const light = document.documentElement.getAttribute("data-theme") === "light";
       const style = getComputedStyle(document.documentElement);
@@ -320,6 +322,7 @@ export class MinMinScene {
       // Shader outputs display-space color; keep the shared surface's exact sRGB tone.
       this.bgMat.uniforms.uBase.value.set(style.getPropertyValue("--mm-bg").trim() || "#efe9e2").convertLinearToSRGB();
       this.mat.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+      this.fig.setLight(light);
       // Tong toi = kieu Apex: duong dong muc xanh dien, loi cam, vien xanh nhat. Tong sang giu
       // muc dam de doc duoc tren nen sang, cung hue xanh.
       const colors = light ? ["#1b4fb8","#b4510e","#2a6be0","#2b4a78"] : ["#1c9bff","#ff8a1e","#ffd9a0","#8fe6ff"];
@@ -414,7 +417,7 @@ export class MinMinScene {
     this.mat.uniforms.uState.value = STATES[s];
   }
   setEnergy(v) { this._energyTarget = clamp(v, 0, 1); }
-  _formOf(f) { return FORMS[f] ? f : "bust"; }
+  _formOf(f) { return FORMS[f] ? f : "figure"; }
   setForm(form) { this.form = this._formOf(form); this._formTarget = FORMS[this.form]; }
   toggleForm() { this.setForm(THU_TU[(THU_TU.indexOf(this.form) + 1) % THU_TU.length]); return this.form; }
   // Canh tay bat chuoc (radian): trai/phai = phia man hinh; null = tha long
@@ -455,7 +458,8 @@ export class MinMinScene {
 
     this.zoomNow += (this.zoom - this.zoomNow) * 0.12;
     const vao = this.reduced ? 0 : Math.pow(1 - u.uAssemble.value, 2);       // mo man: camera lui xa roi day vao
-    const z = this._baseZ * (1 - 0.1 * u.uForm.value.w) * (1 + 0.28 * vao) / this.zoomNow;
+    const gan = this.form === "figure" && this.fig.ready ? 0.8 : 1;       // hinh nguoi hat to hon
+    const z = this._baseZ * (1 - 0.1 * u.uForm.value.w) * (1 + 0.28 * vao) * gan / this.zoomNow;
     // phong to thi camera ha dan xuong ngang mat
     const cy = 0.5 + 0.2 * fv.w + (this.zoomNow - 1) * 0.35 * (1 - uMorphV);
     this.camera.position.set(0, cy + 0.35, z);
@@ -490,6 +494,14 @@ export class MinMinScene {
       if (dark && this.state === "standby") this.core.material.color.set("#ff9a40");
     }
 
+    // Hinh nguoi hat: thay bo hat cu khi da tai xong anh mau
+    const figOn = this.form === "figure" && this.fig.ready;
+    this.fig.show(figOn);
+    this.points.visible = !figOn;
+    if (figOn) {
+      this.rings.visible = false; this.core.visible = false;
+      this.fig.update(t, { energy: this.energy, state: this.state, yaw: u.uHeadYaw.value * 0.35, pitch: u.uHeadPitch.value, pixel: this.pixel, reduced: this.reduced });
+    } else { this.core.visible = true; }
     this.renderer.render(this.scene, this.camera);
 
     this._frames++;
