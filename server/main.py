@@ -19695,7 +19695,9 @@ async def zalo_bot_test_anh():
     from pathlib import Path as _P
     f = _P(tempfile.mkdtemp()) / "test-anh.png"
     f.write_bytes(png)
-    ok, err = await _ZALO_BOT.send_file(str(f), caption="Ảnh thử từ MinMin")
+    # Bot dựng lúc khởi động có thể chưa có danh sách chat (thêm sau khi chạy): lấy từ cài đặt.
+    ids = tg_parse_ids((cfgmod.read_settings().get("zalo_bot") or {}).get("chat_id"))
+    ok, err = await _ZALO_BOT.send_file(str(f), caption="Ảnh thử từ MinMin", chat=(ids[0] if ids else None))
     return {"ok": ok, "error": err, "message_id": _ZALO_BOT.last_message_id if ok else ""}
 
 
