@@ -362,11 +362,14 @@ class _ApiAuxEngine:
                 return
 
         tools, route = [], {}
-        try:
-            tools, route = await mcp_hub.discover_all(self.javis_mode or "full",
-                                                      vault_root=self.vault_root)
-        except Exception as e:
-            print(f"[aux discover] {e}", file=sys.stderr)
+        # `khong_tool` (26.10.97): việc chỉ cần ĐỌC CHỮ được đưa sẵn trong prompt (soi gói chia sẻ
+        # của người lạ) thì không cấp tool nào, kể cả tool đọc file của hub.
+        if not getattr(self, "khong_tool", False):
+            try:
+                tools, route = await mcp_hub.discover_all(self.javis_mode or "full",
+                                                          vault_root=self.vault_root)
+            except Exception as e:
+                print(f"[aux discover] {e}", file=sys.stderr)
 
         messages = []
         sysprompt = self.system_prompt or ""

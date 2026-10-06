@@ -3590,5 +3590,19 @@
   "cs.mode_safe": "An toàn",
   "cs.mode_full": "Toàn quyền",
   "cs.trust": "Tin tưởng",
-  "cs.trust_ask": "Mở toàn quyền cho \"{ten}\"? Mục này sẽ được tự gửi tin, tạo đơn, chạy quảng cáo như agent bạn tự tạo."
+  "cs.trust_ask": "Mở toàn quyền cho \"{ten}\"? Mục này sẽ được tự gửi tin, tạo đơn, chạy quảng cáo như agent bạn tự tạo.",
+  "cs.scan_clean": "Quét luật: không thấy dấu hiệu nguy hiểm đã biết.",
+  "cs.scan_high": "Quét luật: {n} dấu hiệu NGUY CƠ CAO",
+  "cs.scan_mid": "Quét luật: {n} điểm cần xem",
+  "cs.line": "dòng {n}",
+  "cs.ai_reading": "AI đang đọc gói để tóm tắt...",
+  "cs.ai_failed": "Không có tóm tắt của AI: {e}. Phần quét luật ở trên vẫn có hiệu lực.",
+  "cs.ai_high": "AI đánh giá: rủi ro CAO",
+  "cs.ai_mid": "AI đánh giá: rủi ro trung bình",
+  "cs.ai_low": "AI đánh giá: rủi ro thấp",
+  "cs.ai_actions": "Việc gói sẽ làm ra bên ngoài:",
+  "cs.ai_suspicious": "Điều đáng ngờ:",
+  "cs.ai_note": "AI tóm tắt để bạn hiểu nhanh và có thể sai. Phần quét luật mới là phần chặn.",
+  "cs.accept_risk": "Tôi đã đọc các dấu hiệu nguy cơ cao và vẫn muốn cài",
+  "cs.accept_risk_need": "Gói có dấu hiệu nguy cơ cao. Hãy đọc và xác nhận trước."
 }

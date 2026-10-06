@@ -265,14 +265,39 @@
       if (!r || !r.ok) { $("csMsg").textContent = (r && r.error) || t("cs.failed"); return; }
       $("csMsg").textContent = "";
       veXemTruoc(r);
+      soiAi(r);
     }
     $("csXem").onclick = () => { if ($("csNguon").value.trim()) xem(null); };
     $("csNguon").addEventListener("keydown", (e) => { if (e.key === "Enter") $("csXem").click(); });
     $("csPinNhan").addEventListener("keydown", (e) => { if (e.key === "Enter") $("csXem").click(); });
     $("csFile").onchange = () => { const fl = $("csFile").files[0]; if (fl) xem(fl); };
 
+    function veNguyCo(ds) {
+      if (!ds.length) return `<div class="cs-badge ok">${esc(t("cs.scan_clean"))}</div>`;
+      const cao = ds.filter((c) => c.muc === "cao").length;
+      return `<div class="cs-badge ${cao ? "bad" : "warn"}"><b>${esc(cao ? t("cs.scan_high", { n: cao }) : t("cs.scan_mid", { n: ds.length }))}</b>
+        ${ds.map((c) => `<div style="margin-top:6px"><b>${esc(c.loai)}</b> <span class="cs-dim">${esc(c.file)}, ${esc(t("cs.line", { n: c.dong }))}</span>
+          <div class="cs-code" style="font-weight:400;font-size:12px;opacity:.85">${esc(c.trich)}</div></div>`).join("")}</div>`;
+    }
+    async function soiAi(r) {
+      const box = $("csXemTruoc").querySelector("#csAi");
+      if (!box) return;
+      const j = await post("/brains/import/soi-ai", { sha256: r.sha256 });
+      if (!box.isConnected) return;
+      if (!j || !j.ok) { box.className = "cs-badge warn"; box.textContent = t("cs.ai_failed", { e: (j && j.error) || "" }); return; }
+      const a = j.ai || {};
+      if (a.loi) { box.className = "cs-badge warn"; box.textContent = t("cs.ai_failed", { e: a.loi }); return; }
+      const muc = a.muc_rui_ro === "cao" ? "bad" : a.muc_rui_ro === "thap" ? "ok" : "warn";
+      const nhanMuc = a.muc_rui_ro === "cao" ? t("cs.ai_high") : a.muc_rui_ro === "thap" ? t("cs.ai_low") : t("cs.ai_mid");
+      box.className = "cs-badge " + muc;
+      box.innerHTML = `<b>${esc(nhanMuc)}</b><br>${esc(a.tom_tat || "")}
+        ${(a.hanh_dong_ra_ngoai || []).length ? `<div style="margin-top:6px"><b>${esc(t("cs.ai_actions"))}</b>${a.hanh_dong_ra_ngoai.map((x) => `<div>• ${esc(x)}</div>`).join("")}</div>` : ""}
+        ${(a.dang_ngo || []).length ? `<div style="margin-top:6px"><b>${esc(t("cs.ai_suspicious"))}</b>${a.dang_ngo.map((x) => `<div>• ${esc(x)}</div>`).join("")}</div>` : ""}
+        <div class="cs-dim" style="margin-top:6px">${esc(t("cs.ai_note"))}</div>`;
+    }
     function veXemTruoc(r) {
       const xm = r.xac_minh || {};
+      const coCao = (r.nguy_co || []).some((c) => c.muc === "cao");
       const muc = NHAN_XM[xm.xac_minh] || "warn";
       const ai = xm.ten ? `${xm.ten}${xm.host ? " · " + xm.host : ""}` : (xm.host || t("cs.unknown_sender"));
       const box = $("csXemTruoc");
@@ -282,12 +307,15 @@
           ${xm.lan_dau ? `<br>${esc(t("cs.first_time"))}` : ""}
           ${xm.ly_do ? `<br>${esc(xm.ly_do)}` : ""}</div>
         ${(r.canh_bao || []).map((w) => `<div class="cs-badge warn">${esc(w)}</div>`).join("")}
+        ${veNguyCo(r.nguy_co || [])}
+        <div class="cs-badge" id="csAi" style="box-shadow:var(--mm-in-sm)">${esc(t("cs.ai_reading"))}</div>
         <div class="cs-list" id="csMuc">${(r.items || []).map((it) => `
           <label><input type="checkbox" value="${esc(it.type + ":" + it.slug)}" ${it.da_co ? "" : "checked"}>
             <span><span class="cs-chip">${esc(kindName(it.type))}</span> ${esc(it.name)}${it.da_co ? ` <span class="cs-dim">(${esc(t("cs.exists"))})</span>` : ""}
             <small>${esc(it.mo_ta || "")}</small></span></label>`).join("")}</div>
         <label class="cs-row"><input type="checkbox" id="csGhiDe"> ${esc(t("cs.overwrite"))}</label>
         ${xm.xac_minh === "khoa_doi" ? `<label class="cs-row"><input type="checkbox" id="csChapNhan"> ${esc(t("cs.accept_key"))}</label>` : ""}
+        ${coCao ? `<label class="cs-row"><input type="checkbox" id="csRuiRo"> ${esc(t("cs.accept_risk"))}</label>` : ""}
         <button class="cs-btn p" id="csCai" ${xm.xac_minh === "gia_mao" ? "disabled" : ""}>${esc(t("cs.install"))}</button>
         <div class="cs-msg" id="csKq"></div></div>`;
       const q = (id) => box.querySelector("#" + id);
@@ -299,9 +327,12 @@
         if (!chon.length) { q("csKq").textContent = t("cs.pick"); return; }
         const ck = q("csChapNhan");
         if (ck && !ck.checked) { q("csKq").textContent = t("cs.accept_key_need"); return; }
+        const rr = q("csRuiRo");
+        if (rr && !rr.checked) { q("csKq").textContent = t("cs.accept_risk_need"); return; }
         q("csCai").disabled = true;
         const kq = await post("/brains/import/cai", { sha256: r.sha256, to_brain: brain, chon: JSON.stringify(chon),
-          overwrite: q("csGhiDe").checked ? "1" : "0", chap_nhan: ck && ck.checked ? "1" : "0" });
+          overwrite: q("csGhiDe").checked ? "1" : "0", chap_nhan: ck && ck.checked ? "1" : "0",
+          chap_nhan_rui_ro: rr && rr.checked ? "1" : "0" });
         if (!kq || !kq.ok) { q("csCai").disabled = false; q("csKq").textContent = (kq && kq.error) || t("cs.failed"); return; }
         q("csKq").textContent = t("cs.installed", { n: (kq.imported || []).length, skip: (kq.skipped || []).length });
         try { window.JavisBrains && window.JavisBrains.reload && window.JavisBrains.reload(); } catch (e) {}

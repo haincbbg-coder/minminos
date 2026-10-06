@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.99] - 2026-10-07
+### Bảo mật
+- Chợ chia sẻ **soi nội dung gói trước khi cài**: bắt câu dụ AI bỏ qua chỉ dẫn, dặn giấu người dùng, đòi đọc khoá bí mật, gửi dữ liệu tới địa chỉ lạ, lệnh xoá hàng loạt, ký tự ẩn. Có dấu hiệu nguy cơ cao thì phải tích xác nhận mới cài được.
+- AI đọc gói và tóm tắt "gói này làm gì, sẽ làm gì ra bên ngoài, điều gì đáng ngờ". AI chạy không có quyền gì, chỉ để bạn hiểu nhanh; phần quét luật mới là phần chặn.
+
 ## [26.10.98] - 2026-10-07
 ### Cải thiện
 - Văn phòng AI 3D, toàn màn hình và điện thoại: có ô "Giao việc" ngay trong văn phòng. Bấm, gõ việc, gửi; nhân viên liên quan vào họp và làm việc ngay trước mắt, không cần thoát toàn màn hình.

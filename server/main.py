@@ -105,6 +105,7 @@ import brain_share    # link chia sẻ gói agent/skill/workflow của một bra
 import danh_tinh      # khoá ký riêng của máy này, để gói chia sẻ biết là của ai (26.10.92)
 import goi_chia_se    # ký / soi / làm an toàn gói chia sẻ giữa các MinMin (26.10.92)
 import share_trang    # trang nhận công khai /bs/<token> (26.10.92)
+import soi_rui_ro     # soi nội dung gói chia sẻ: luật + AI (26.10.97)
 import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
 import share_render   # dựng trang xem cho link chia sẻ (markdown -> html, khung trang)
@@ -6202,14 +6203,74 @@ async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: s
                               skills_root=_skills_dir(to_brain))
     if not soi.get("ok"):
         return JSONResponse({"ok": False, "error": soi.get("error"), "xac_minh": xm}, status_code=400)
-    sha = goi_chia_se.cat_cho(data, xm)
+    nguy_co = soi_rui_ro.quet(data)
+    # Cờ mức cao đi cùng gói vào kho chờ: bước cài đọc từ ĐÂY, không tin cờ client gửi lên.
+    sha = goi_chia_se.cat_cho(data, dict(xm, nguy_co_cao=soi_rui_ro.co_nguy_co_cao(nguy_co),
+                                         items=[{k: it.get(k) for k in ("type", "slug")} for it in soi["items"]]))
     return {"ok": True, "sha256": sha, "xac_minh": xm, "items": soi["items"], "canh_bao": soi["canh_bao"],
-            "kich_thuoc": soi["kich_thuoc"]}
+            "nguy_co": nguy_co, "kich_thuoc": soi["kich_thuoc"]}
+
+
+_SOI_AI_KHOA = asyncio.Lock()
+
+
+@app.post("/brains/import/soi-ai")
+async def brain_nhap_soi_ai(sha256: str = Form(...)):
+    """Lớp AI của bước soi: bộ não việc nền đọc gói đang chờ và tóm tắt nó làm gì, điều gì đáng
+    ngờ. Engine chạy KHÔNG có tool nào (không đọc file, không lệnh, không MCP) trong một thư mục
+    trống, vì chính nội dung gói có thể chứa câu dụ AI. Kết quả AI chỉ để hiểu, không bao giờ hạ
+    cờ của luật hay mở khoá bước cài."""
+    data, tt = goi_chia_se.lay_cho(sha256)
+    if data is None:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Bản xem trước đã hết hạn, hãy xem trước lại.",
+                                                                 "The preview expired, please preview again.")}, status_code=410)
+    if isinstance((tt or {}).get("soi_ai"), dict):
+        return {"ok": True, "ai": tt["soi_ai"], "cache": True}
+    import tempfile as _tf
+    prompt = soi_rui_ro.dung_prompt_ai(data, (tt or {}).get("items") or [])
+    async with _SOI_AI_KHOA:    # mỗi lần một gói: soi là việc hiếm, không để ai bấm dồn ăn hết hạn mức
+        with _tf.TemporaryDirectory(prefix="minmin-soi-") as trong:
+            cli = claude_engine(system_prompt=soi_rui_ro.HE_THONG_AI, cwd=trong, tag="soi-goi",
+                                allowed_tools=["__khong_co_tool__"])
+            mcpf = _empty_mcp_file()
+            if mcpf:
+                cli.mcp_config = mcpf
+                cli.mcp_strict = True
+            cli.disallowed_tools = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "LS", "WebFetch",
+                                    "WebSearch", "Task", "NotebookEdit", "TodoWrite"]
+            cli = _aux_swap(cli, mode="suggest", tag="soi-goi")
+            cli.khong_tool = True       # engine API: không xin tool nào từ hub
+            try:
+                cli.profile = None      # Codex (kể cả mắt dự phòng trong chuỗi): không nạp profile MCP
+            except Exception:
+                pass
+            if not cli.is_available():
+                return {"ok": False, "error": localefmt.chu("Bộ não việc nền chưa sẵn sàng (xem trang Model).",
+                                                            "The background brain is not ready (see the Models page).")}
+            final, loi = "", ""
+            try:
+                async def _chay():
+                    nonlocal final, loi
+                    async for ev in cli.query(prompt):
+                        if ev.get("type") == "final":
+                            final = ev.get("content", "") or ""
+                        elif ev.get("type") == "error":
+                            loi = str(ev.get("content") or "")[:200]
+                await asyncio.wait_for(_chay(), timeout=150)
+            except asyncio.TimeoutError:
+                loi = localefmt.chu("AI đọc quá lâu, thử lại sau.", "The AI took too long, try again later.")
+            except Exception as e:
+                loi = type(e).__name__
+    if not final:
+        return {"ok": False, "error": loi or localefmt.chu("AI không trả lời.", "The AI did not answer.")}
+    kq = soi_rui_ro.doc_ket_qua_ai(final)
+    goi_chia_se.cat_cho(data, dict(tt or {}, soi_ai=kq))
+    return {"ok": True, "ai": kq}
 
 
 @app.post("/brains/import/cai")
 async def brain_nhap_cai(sha256: str = Form(...), to_brain: str = Form("brain"), overwrite: str = Form("0"),
-                         chon: str = Form(""), chap_nhan: str = Form("0")):
+                         chon: str = Form(""), chap_nhan: str = Form("0"), chap_nhan_rui_ro: str = Form("0")):
     """Bước 2: cài ĐÚNG gói đã soi (theo sha256). Không tải lại, không tin gì thêm từ client."""
     data, tt = goi_chia_se.lay_cho(sha256)
     if data is None:
@@ -6218,6 +6279,11 @@ async def brain_nhap_cai(sha256: str = Form(...), to_brain: str = Form("brain"),
     xm = (tt or {}).get("xac_minh", "")
     if xm == "gia_mao":
         return JSONResponse({"ok": False, "error": (tt or {}).get("ly_do") or "Gói không qua được xác minh"}, status_code=400)
+    if (tt or {}).get("nguy_co_cao") and chap_nhan_rui_ro not in ("1", "true", "on"):
+        return JSONResponse({"ok": False, "error": localefmt.chu(
+            "Gói có dấu hiệu nguy cơ cao. Hãy đọc cảnh báo và xác nhận nếu vẫn muốn cài.",
+            "The package shows high-risk signs. Read the warnings and confirm if you still want it."),
+            "can_chap_nhan_rui_ro": True}, status_code=400)
     if xm == "khoa_doi" and chap_nhan not in ("1", "true", "on"):
         return JSONResponse({"ok": False, "error": localefmt.chu("Tên miền này đã đổi khoá ký. Hãy xác nhận bạn tin gói này.",
                                                                  "This domain changed its signing key. Confirm you trust this package."),
@@ -6251,6 +6317,8 @@ async def brain_nhap_tu_link(url: str = Form(...), to_brain: str = Form("brain")
     if st != 200:
         return JSONResponse({"ok": False, "error": f"Link không dùng được (mã {st}): hết hạn hoặc bị thu hồi?"}, status_code=400)
     xm = await _doi_chieu_chu_ky(data, host)
+    if soi_rui_ro.co_nguy_co_cao(soi_rui_ro.quet(data)):
+        return JSONResponse({"ok": False, "error": "Gói có dấu hiệu nguy cơ cao, hãy dùng Chợ chia sẻ > Nhận về để xem trước"}, status_code=400)
     if xm.get("xac_minh") in ("gia_mao", "khoa_doi"):
         return JSONResponse({"ok": False, "error": xm.get("ly_do") or "Gói cần xác nhận, hãy dùng màn Nhận để xem trước"}, status_code=400)
     res = await asyncio.to_thread(_cai_goi_an_toan, data, to_brain, overwrite in ("1", "true", "True", "on"), xm)
