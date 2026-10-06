@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.70] - 2026-10-06
+### Cải thiện
+- Màn Hub hình người kiểu Apex ở tông tối: đường đồng mức xanh điện, lõi cam phát sáng trong đầu thở nhịp nhàng, nhiều bụi sáng bay quanh đầu, nền xanh than với hai dãy núi năng lượng có tia chớp cam chạy dọc đỉnh. Tông sáng giữ bố cục cũ nhưng đổi sang mực xanh. Bấm "Sáng / Tối" để xem.
+### Sửa lỗi
+- Danh sách hội thoại: hàng nhãn dài (kênh, engine, số tin) không còn đẩy nhóm nút ghim, đổi tên, xóa ra ngoài khung nên nút xóa không bị che nữa.
+
 ## [26.10.69] - 2026-10-06
 ### Thêm mới
 - Cửa chính gọn: màn chính chỉ còn khung chat, quả cầu tri thức và ô gõ. Thanh bên và bảng tổng quan được giấu, bấm nút Menu để kéo ra; nút "Hiện đầy đủ" trong Menu đưa bố cục cũ về, lựa chọn nhớ theo từng máy.
