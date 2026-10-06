@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.75] - 2026-10-06
+### Thêm mới
+- Bot Zalo chính thức lưu lại id tin nhắn Zalo trả về mỗi lần gửi, và có lệnh gửi ảnh thử để kiểm tra bot gửi ảnh được hay không.
+
 ## [26.10.74] - 2026-10-06
 ### Thêm mới
 - Nhập lịch sử chat từ nền tảng khác (menu project, mục "Nhập lịch sử chat từ nền tảng khác"): phiên Claude Code trên máy chủ MinMin (đặt tên như bên Claude, phiên MinMin cùng mạch chưa có tên cũng được đặt tên), tệp xuất dữ liệu của ChatGPT và claude.ai. Mỗi nền tảng vào project riêng, nhập lại nhiều lần không bị trùng.
