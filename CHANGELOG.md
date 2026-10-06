@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.88] - 2026-10-06
+### Cải thiện
+- Văn phòng AI 3D: camera tự do hoàn toàn. Kéo chuột trái để xoay, kéo chuột phải hoặc phím mũi tên/WASD để đi quanh phòng, cuộn để phóng to nhỏ (phóng tới chỗ con trỏ), hai ngón để phóng và kéo trên điện thoại, bấm đúp hoặc phím R để về góc nhìn đầu.
+- Bảng dashboard số liệu thật chuyển ra bức tường sau lưng giám đốc MinMin. Trước mặt giám đốc có một chiếc laptop trên mặt bàn họp.
+
 ## [26.10.87] - 2026-10-06
 ### Cải thiện
 - Văn phòng AI 3D làm lại cho thật hơn: bàn họp xoay ngang, giám đốc MinMin ngồi ở đầu bàn nhìn bao quát cả phòng. Mỗi agent mặc một màu áo riêng, bàn có máy tính, bàn phím, chuột, màn hình sáng, đèn dịu và các khẩu hiệu trên tường.

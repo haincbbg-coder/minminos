@@ -23,7 +23,8 @@
   var host = null, cv = null, renderer = null, scene = null, camera = null;
   var rafId = 0, pollId = 0, kpiId = 0, seq = 0, mo = false, daDung = false, lanCuoi = 0;
   var agents = {}, ds = [], lead = null, tram = [], ban = null, phien = {};
-  var cam = { az: 0.0, pol: 0.95, zoom: 1, tx: 0.4, tz: 1.0 };
+  var cam = { az: -0.62, pol: 0.95, dist: 0, tx: 0.4, ty: 0.6, tz: 1.0 }, camMacDinh = null, phim = {}, kd = null, ku = null;
+  function anBat() { return mo; }
   var raycaster = null, bang = null, kpiDuLieu = null, nguoiNoi = null, tNow = 0;
   var manHinh = [], matManOff = null, matManOn = [];
 
@@ -355,6 +356,13 @@
     [-TL / 2 + 0.7, TL / 2 - 0.7].forEach(function (x) { var ch = new T.Mesh(new T.BoxGeometry(0.25, 1.0, 1.5), mat(0x8fa0b8)); ch.position.set(x, 0.5, 0); g.add(ch); });
     var vien = new T.Mesh(new T.BoxGeometry(TL, 0.05, 0.06), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.8 })); vien.position.set(0, 1.09, 0); g.add(vien);
     var holo = new T.Mesh(new T.BoxGeometry(TL - 1, 0.02, 1.2), new T.MeshBasicMaterial({ color: 0x3fb2ff, transparent: true, opacity: 0.0, depthWrite: false })); holo.position.y = 1.1; g.add(holo);
+    var lap = new T.Group(); lap.position.set(TL / 2 - 0.9, 1.07, 0); lap.rotation.y = Math.PI / 2; g.add(lap);
+    var dayL = new T.Mesh(new T.BoxGeometry(0.62, 0.035, 0.42), mat(0x9aa8c0)); dayL.position.y = 0.02; lap.add(dayL);
+    var bpL = new T.Mesh(new T.BoxGeometry(0.5, 0.012, 0.2), mat(0x1c2538)); bpL.position.set(0, 0.043, 0.06); lap.add(bpL);
+    var banhL = new T.Mesh(new T.BoxGeometry(0.16, 0.008, 0.1), mat(0x6d7b95)); banhL.position.set(0, 0.043, 0.16); lap.add(banhL);
+    var le = new T.Group(); le.position.set(0, 0.04, -0.2); le.rotation.x = -0.3; lap.add(le);
+    var vo = new T.Mesh(new T.BoxGeometry(0.62, 0.4, 0.025), mat(0x9aa8c0)); vo.position.y = 0.2; le.add(vo);
+    var manL = new T.Mesh(new T.PlaneGeometry(0.56, 0.34), matManOn.length ? matManOn[0] : matManOff); manL.position.set(0, 0.2, 0.0135); le.add(manL);
     scene.add(g);
     var tham = new T.Mesh(new T.PlaneGeometry(TL + 3.5, TW + 5), new T.MeshBasicMaterial({ color: sang() ? 0xdbe6f7 : 0x1c2c4a })); tham.rotation.x = -Math.PI / 2; tham.position.y = 0.02; scene.add(tham);
     // ghế: đầu bàn bên phải là giám đốc; người khác ngồi hai bên, từ gần giám đốc ra xa, cuối cùng ghế cuối bàn
@@ -380,26 +388,46 @@
     var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san);
     var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; scene.add(luoi);
     var tuong = mat(light ? 0xdde6f4 : 0x1b2a46);
-    var t1 = new T.Mesh(new T.BoxGeometry(HX * 2, 5.4, 0.3), tuong); t1.position.set(0, 2.7, -HZ - 0.15); scene.add(t1);
-    var t2 = new T.Mesh(new T.BoxGeometry(0.3, 5.4, HZ * 2), tuong); t2.position.set(-HX - 0.15, 2.7, 0); scene.add(t2);
-    var vien = new T.Mesh(new T.BoxGeometry(HX * 2, 0.05, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 5.4, -HZ - 0.15); scene.add(vien);
+    var t1 = new T.Mesh(new T.BoxGeometry(HX * 2, 5.8, 0.3), tuong); t1.position.set(0, 2.9, -HZ - 0.15); scene.add(t1);
+    var t2 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t2.position.set(-HX - 0.15, 2.9, 0); scene.add(t2);
+    var t3 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t3.position.set(HX + 0.15, 2.9, 0); scene.add(t3);
+    var vien = new T.Mesh(new T.BoxGeometry(HX * 2, 0.05, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 5.8, -HZ - 0.15); scene.add(vien);
     khoiTaoLuoi(); taoManHinh();
     // bảng điều hành (số liệu thật) giữa tường sau; khẩu hiệu hai bên và trên tường trái
-    bang = new T.Mesh(new T.PlaneGeometry(10.5, 4.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangDieuHanh()), toneMapped: false })); bang.material.map.colorSpace = T.SRGBColorSpace;
-    bang.position.set(0.5, 3.35, -HZ + 0.02); scene.add(bang);
+    bang = new T.Mesh(new T.PlaneGeometry(9, 3.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangDieuHanh()), toneMapped: false })); bang.material.map.colorSpace = T.SRGBColorSpace;
+    bang.position.set(HX - 0.02, 3.95, 0); bang.rotation.y = -Math.PI / 2; scene.add(bang);   // sau lưng giám đốc
     function kh(i, x, y, z, ry, w) { var m = new T.Mesh(new T.PlaneGeometry(w, w * 260 / 900), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veKhauHieu(i)), toneMapped: false })); m.material.map.colorSpace = T.SRGBColorSpace; m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); }
-    kh(0, -10.2, 3.5, -HZ + 0.02, 0, 5.0); kh(1, 11.2, 3.5, -HZ + 0.02, 0, 5.0);
+    kh(0, -8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(1, 8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(6, 0, 3.5, -HZ + 0.02, 0, 5.0);
     kh(2, -HX + 0.02, 3.5, -6.2, Math.PI / 2, 5.0); kh(3, -HX + 0.02, 3.5, 0, Math.PI / 2, 5.0); kh(4, -HX + 0.02, 3.5, 6.2, Math.PI / 2, 5.0);
-    kh(5, -5.0, 1.0 + 4.6, -HZ + 0.02, 0, 0.001); // (đặt chỗ, không hiện)
-    den(-12.9, -9.2, 0xffd9a0); den(12.9, -9.2, 0xffd9a0); den(-12.9, 9.2, 0xffd9a0); den(12.9, 9.2, 0xffd9a0);
+        den(-12.9, -9.2, 0xffd9a0); den(12.9, -9.2, 0xffd9a0); den(-12.9, 9.2, 0xffd9a0); den(12.9, 9.2, 0xffd9a0);
     tram = STATION_DEFS.map(dungTram);
     ban = dungBanHop();
     camera = new T.PerspectiveCamera(38, 1, 0.1, 250); raycaster = new T.Raycaster();
   }
   function datCamera() {
-    var cp = Math.cos(cam.pol), sp = Math.sin(cam.pol), dist = 33 * Math.max(1, 1.6 / camera.aspect) * cam.zoom;
-    camera.position.set(cam.tx + Math.sin(cam.az) * sp * dist, cp * dist, cam.tz + Math.cos(cam.az) * sp * dist);
-    camera.lookAt(cam.tx, 0.6, cam.tz);
+    if (!cam.dist) { cam.dist = 37 * Math.max(1, 1.6 / camera.aspect); camMacDinh = { az: cam.az, pol: cam.pol, dist: cam.dist, tx: cam.tx, ty: cam.ty, tz: cam.tz }; }
+    var cp = Math.cos(cam.pol), sp = Math.sin(cam.pol), d = cam.dist;
+    var cy = cam.ty + cp * d;
+    if (cy < 0.35) { cy = 0.35; }
+    camera.position.set(cam.tx + Math.sin(cam.az) * sp * d, cy, cam.tz + Math.cos(cam.az) * sp * d);
+    camera.lookAt(cam.tx, cam.ty, cam.tz);
+  }
+  function giuCam() {
+    if (cam.dist) cam.dist = Math.max(2, Math.min(75, cam.dist)); cam.pol = Math.max(0.05, Math.min(1.62, cam.pol));
+    cam.tx = Math.max(-HX - 3, Math.min(HX + 3, cam.tx)); cam.tz = Math.max(-HZ - 3, Math.min(HZ + 3, cam.tz)); cam.ty = Math.max(0, Math.min(4, cam.ty));
+  }
+  // dịch điểm nhìn trên mặt sàn theo hướng camera (dx sang phải, dz tiến lên)
+  function panCam(dx, dz) {
+    var fx = -Math.sin(cam.az), fz = -Math.cos(cam.az), rx = Math.cos(cam.az), rz = -Math.sin(cam.az);
+    cam.tx += rx * dx + fx * dz; cam.tz += rz * dx + fz * dz; giuCam();
+  }
+  function veCamMacDinh() { if (camMacDinh) { for (var k in camMacDinh) cam[k] = camMacDinh[k]; } }
+  function phimCam(dt) {
+    var v = cam.dist * 0.9 * dt, k = phim;
+    if (k.arrowleft || k.a) panCam(-v, 0); if (k.arrowright || k.d) panCam(v, 0); if (k.arrowup || k.w) panCam(0, v); if (k.arrowdown || k.s) panCam(0, -v);
+    if (k.q) cam.az += 1.4 * dt; if (k.e) cam.az -= 1.4 * dt;
+    if (k["+"] || k["="] || k.pageup) cam.dist *= 1 - 1.4 * dt; if (k["-"] || k["_"] || k.pagedown) cam.dist *= 1 + 1.4 * dt;
+    giuCam();
   }
 
   // ---------- đồng bộ danh sách agent: mỗi người một bàn + một ghế sát tường ----------
@@ -660,7 +688,7 @@
   var lastManHinh = 0;
   function khung() {
     rafId = requestAnimationFrame(khung);
-    var n = now(), dt = Math.min(0.05, (n - lanCuoi) / 1000) * (window.__mmOfficeSpeed || 1); lanCuoi = n; tNow += dt; var t = tNow;
+    var n = now(), dt = Math.min(0.05, (n - lanCuoi) / 1000) * (window.__mmOfficeSpeed || 1); lanCuoi = n; tNow += dt; var t = tNow; phimCam(dt);
     var vua = host.clientWidth, cao = host.clientHeight;
     if (renderer.domElement.width !== Math.floor(vua * renderer.getPixelRatio()) || renderer.domElement.height !== Math.floor(cao * renderer.getPixelRatio())) {
       renderer.setSize(vua, cao, false); camera.aspect = vua / Math.max(1, cao);
@@ -674,25 +702,38 @@
   }
 
   function nhapTay() {
-    var el = renderer.domElement, ptr = {}, lastD = 0, moved = 0;
-    el.style.touchAction = "none";
-    el.addEventListener("pointerdown", function (e) { el.setPointerCapture(e.pointerId); ptr[e.pointerId] = { x: e.clientX, y: e.clientY }; moved = 0; });
+    var el = renderer.domElement, ptr = {}, lastD = 0, lastM = null, moved = 0;
+    el.style.touchAction = "none"; el.tabIndex = 0; el.style.outline = "none";
+    el.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    el.addEventListener("pointerdown", function (e) { el.setPointerCapture(e.pointerId); el.focus(); ptr[e.pointerId] = { x: e.clientX, y: e.clientY, b: e.button, sh: e.shiftKey || e.ctrlKey }; moved = 0; lastD = 0; lastM = null; });
     el.addEventListener("pointermove", function (e) {
-      var p = ptr[e.pointerId]; if (!p) return; var ids = Object.keys(ptr);
-      if (ids.length === 2) {
-        var o = ptr[ids.filter(function (i) { return +i !== e.pointerId; })[0]]; var d = Math.hypot(e.clientX - o.x, e.clientY - o.y);
-        if (lastD) cam.zoom = Math.max(0.35, Math.min(1.7, cam.zoom * lastD / d)); lastD = d;
+      var p = ptr[e.pointerId]; if (!p) return; var ids = Object.keys(ptr), px = e.clientX - p.x, py = e.clientY - p.y, k = cam.dist * 0.0021;
+      if (ids.length >= 2) {
+        var o = ptr[ids.filter(function (i) { return +i !== e.pointerId; })[0]]; var d = Math.hypot(e.clientX - o.x, e.clientY - o.y), mx = (e.clientX + o.x) / 2, my = (e.clientY + o.y) / 2;
+        if (lastD) cam.dist *= lastD / d; if (lastM) panCam(-(mx - lastM.x) * k, (my - lastM.y) * k); lastD = d; lastM = { x: mx, y: my };
+      } else if (p.b === 2 || p.b === 1 || p.sh) {
+        panCam(-px * k, py * k);
       } else {
-        cam.az -= (e.clientX - p.x) * 0.006; cam.pol = Math.max(0.35, Math.min(1.35, cam.pol - (e.clientY - p.y) * 0.005));
+        cam.az -= px * 0.006; cam.pol -= py * 0.005;
       }
-      moved += Math.abs(e.clientX - p.x) + Math.abs(e.clientY - p.y); p.x = e.clientX; p.y = e.clientY;
+      giuCam(); moved += Math.abs(px) + Math.abs(py); p.x = e.clientX; p.y = e.clientY;
     });
     function len(e) {
-      delete ptr[e.pointerId]; lastD = 0;
-      if (moved < 6) chamRobot(e);
+      delete ptr[e.pointerId]; lastD = 0; lastM = null;
+      if (moved < 6 && e.button === 0) chamRobot(e);
     }
-    el.addEventListener("pointerup", len); el.addEventListener("pointercancel", function (e) { delete ptr[e.pointerId]; lastD = 0; });
-    el.addEventListener("wheel", function (e) { e.preventDefault(); cam.zoom = Math.max(0.35, Math.min(1.7, cam.zoom * (1 + e.deltaY * 0.001))); }, { passive: false });
+    el.addEventListener("pointerup", len); el.addEventListener("pointercancel", function (e) { delete ptr[e.pointerId]; lastD = 0; lastM = null; });
+    el.addEventListener("dblclick", veCamMacDinh);
+    el.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      // phóng tới con trỏ: dời điểm nhìn một chút về phía chuột
+      var rc = el.getBoundingClientRect(), nx = ((e.clientX - rc.left) / rc.width) * 2 - 1, f = Math.exp(Math.max(-200, Math.min(200, e.deltaY)) * 0.0012), dn = cam.dist * (f - 1);
+      if (f < 1) panCam(nx * -dn * 0.35, 0);
+      cam.dist *= f; giuCam();
+    }, { passive: false });
+    kd = function (e) { if (!anBat() || /input|textarea/i.test((e.target && e.target.tagName) || "")) return; var key = (e.key || "").toLowerCase(); if (key === "r" || key === "home") { veCamMacDinh(); return; } phim[key] = true; };
+    ku = function (e) { delete phim[(e.key || "").toLowerCase()]; };
+    window.addEventListener("keydown", kd); window.addEventListener("keyup", ku);
   }
   function chamRobot(e) {
     var rc = renderer.domElement.getBoundingClientRect();
@@ -723,6 +764,8 @@
   }
   function xoaCanh() {
     if (rafId) cancelAnimationFrame(rafId); rafId = 0;
+    if (kd) { window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku); kd = ku = null; } phim = {};
+    cam.az = -0.62; cam.pol = 0.95; cam.dist = 0; cam.tx = 0.4; cam.ty = 0.6; cam.tz = 1.0;
     if (renderer) { renderer.dispose(); if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
     renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; phien = {}; bang = null; manHinh = []; nguoiNoi = null;
   }
@@ -764,7 +807,7 @@
     try { gl = testGL.getContext("webgl2") || testGL.getContext("webgl"); } catch (e) {}
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
-    host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo để xoay · cuộn để phóng · chạm robot để xem việc</span>' +
+    host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
       '<button type="button" id="mmOfficeSim">Mô phỏng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
       '<div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
