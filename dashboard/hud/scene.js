@@ -158,11 +158,13 @@ void main(){
   float d = length(c);
   if (d > 0.5) discard;
   float soft = smoothstep(0.5, 0.0, d);
-  vec3 col = mix(uCool, uWarm, clamp(vZone*1.4, 0.0, 1.0));
+  // 26.10.80: ruot toi xanh sam, vien trang-xanh chop, mat sang anh den ve cam: duong net noi han len
+  vec3 col = mix(uCool * 0.62, uWarm, clamp(vZone*1.4, 0.0, 1.0));
+  col = mix(col, uWarm, clamp(vLit * 0.55, 0.0, 0.5));
   col = mix(col, uHot, clamp(vGlow - 0.35, 0.0, 1.0));
-  col = mix(col, uRim, clamp(vRim * 1.5, 0.0, 1.0));
+  col = mix(col, uRim, clamp(vRim * 2.4, 0.0, 1.0));
   col = mix(col, vec3(1.0, 0.25, 0.3), uErr);
-  gl_FragColor = vec4(col * (0.75 + vGlow*0.9 + vRim*1.2 + vLit*0.9) * uBoost, soft * vAlpha * (0.55 + vGlow*0.45));
+  gl_FragColor = vec4(col * (0.58 + vGlow*0.9 + vRim*2.3 + vLit*0.75) * uBoost, soft * vAlpha * (0.55 + vGlow*0.45));
 }`;
 
 // ---------- Nen (26.10.69, kieu Apex) ----------

@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.80] - 2026-10-06
+### Cải thiện
+- Gỡ hẳn tính năng thành viên được mời (nút Thành viên, trang riêng, 2FA thành viên, bản riêng, cổng chuyển). Các tệp tài khoản thành viên cũ (users.json, phiên) tự xoá khi MinMin khởi động.
+- Hub robot: ruột tối xanh, viền sáng trắng-xanh rõ hơn, mặt hướng sáng ánh cam, nên đường nét thân nổi hẳn lên.
+
 ## [26.10.79] - 2026-10-06
 ### Thêm mới
 - Học viên vào bằng tài khoản được cấp ở trang chủ MinMin giờ thấy đồ thị não ngay (cùng bộ vẽ với MinMin) trong phạm vi brain được cấp, chạm vào chấm để mở ghi chú. Có tab Tệp để duyệt và sửa nếu được quyền. Bản riêng vẫn cho giao diện MinMin đầy đủ.

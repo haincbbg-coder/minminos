@@ -63,8 +63,13 @@ import terminal        # tab Code: pseudo-terminal thật trong dashboard (pty t
 import coding_store    # trang Coding: phiên gắn repo nào, nhánh nào, worktree nào, mức quyền nào
 import antigravity_cli   # bộ não thứ 10: Antigravity CLI (`agy`) - bản Google chỉ định thay Gemini CLI
 import grok_cli          # bộ não thứ 11: Grok Build CLI (`grok`) - gói SuperGrok / X Premium+
-import members as members_mod   # thành viên được mời (email + mật khẩu + 2FA bắt buộc)
 import totp            # xác thực 2 lớp (TOTP) cho cổng đăng nhập - thuần toán, không đụng cấu hình
+# 26.10.80: tính năng thành viên được mời đã gỡ bỏ. Xoá dữ liệu cũ (tài khoản, mã 2FA, phiên) nếu còn.
+for _tenFile in ("users.json", ".member_sessions.json"):
+    try:
+        (cfgmod.STATE_DIR / _tenFile).unlink()
+    except OSError:
+        pass
 import claude_auth     # gói Claude Code xác thực bằng gì: phiên subscription hay API key
 import aux_engine   # engine việc nền: Claude / Codex / API rẻ
 import mcp_store
@@ -283,12 +288,6 @@ async def _auth_guard(request: Request, call_next):
                   # GET cùng đường (đọc sự kiện) vẫn phải đăng nhập.
                   or (path, request.method) == _MAT_NHA_CONG_KHAI)
         if not public and not cfgmod.valid_session(request.cookies.get("javis_session", "")):
-            # Thành viên được mời: chỉ đi qua /m/* (deny-by-default). Phiên của họ nằm kho riêng
-            # nên mọi cổng admin khác (WebSocket, token, /files/*...) vẫn từ chối họ.
-            if members_mod.phien(request.cookies.get("javis_session", "")):
-                if path.startswith("/m/"):
-                    return await call_next(request)
-                return JSONResponse({"error": "forbidden", "member": True}, status_code=403)
             # Client ngoài trình duyệt (CLI, script, cron) không có cookie. Nhánh token là
             # đường DUY NHẤT của chúng - xem docs/dev/2026-08-cli-spec.md. Đặt SAU nhánh
             # cookie để dashboard không phải đọc file token mỗi request.
@@ -1306,11 +1305,6 @@ async def auth_status(request: Request):
     has_session = cfgmod.valid_session(request.cookies.get("javis_session", ""))
     # authed: có session thật; HOẶC bản local không bắt buộc login + chưa đặt mật khẩu (giữ UX cũ).
     authed = has_session or (not enabled and not require)
-    _mem = None if has_session else members_mod.phien(request.cookies.get("javis_session", ""))
-    if _mem:
-        return {"needs_setup": False, "auth_required": True, "require_login": True,
-                "authed": True, "role": "member", "member_email": _mem["email"],
-                "member_full": _mem["full"]}
     return {"needs_setup": not enabled, "auth_required": enabled or require,
             "require_login": require, "authed": authed,
             # 2FA lộ ra ở đây là CỐ Ý và không phải rò rỉ: màn đăng nhập cần biết có hỏi ô mã
@@ -1365,32 +1359,6 @@ def _login_fail(ip):
     _LOGIN_FAILS[ip] = rec
 
 
-async def _member_login(request, ip, username, password, code):
-    """Đăng nhập thành viên: mật khẩu trước, rồi 2FA (BẮT BUỘC). Chưa bật 2FA thì cấp phiên
-    "chưa đầy đủ" chỉ dùng được /m/2fa/* cho tới khi quét mã xong."""
-    u = members_mod.kiem_mat_khau(username, password)
-    if not u:
-        _login_fail(ip)
-        await asyncio.sleep(0.5)
-        return JSONResponse({"ok": False, "error": "Sai tài khoản hoặc mật khẩu"}, status_code=401)
-    if u.get("tfa_enabled"):
-        ma = (code or "").strip()
-        if not ma:
-            return JSONResponse({"ok": False, "needs_2fa": True, "error": "Nhập mã xác thực 2 lớp."},
-                                status_code=401)
-        if not members_mod.tfa_kiem(u["email"], ma):
-            _login_fail(ip)
-            await asyncio.sleep(0.5)
-            return JSONResponse({"ok": False, "needs_2fa": True,
-                                 "error": "Mã xác thực không đúng hoặc đã dùng rồi."}, status_code=401)
-        _LOGIN_FAILS.pop(ip, None)
-        return _session_cookie(JSONResponse({"ok": True, "role": "member"}),
-                               members_mod.tao_phien(u["email"], True), request)
-    _LOGIN_FAILS.pop(ip, None)
-    return _session_cookie(JSONResponse({"ok": True, "role": "member", "needs_2fa_setup": True}),
-                           members_mod.tao_phien(u["email"], False), request)
-
-
 @app.post("/auth/login")
 async def auth_login(request: Request, username: str = Form(...), password: str = Form(...),
                      code: str = Form("")):
@@ -1405,8 +1373,6 @@ async def auth_login(request: Request, username: str = Form(...), password: str 
     cfg = cfgmod.read_settings()
     if not cfgmod.auth_enabled(cfg):
         return {"ok": True, "note": "auth chưa bật"}
-    if username.strip() != cfg["auth"].get("username") and "@" in username:
-        return await _member_login(request, ip, username, password, code)
     if username.strip() != cfg["auth"].get("username") or not cfgmod.verify_password(password, cfg):
         _login_fail(ip)
         await asyncio.sleep(0.5)   # làm chậm brute-force online
@@ -12424,20 +12390,6 @@ async def branding_logo_reset():
 # Vị trí lời gọi register quyết định thứ tự route - xem routes/__init__.py.
 import routes.domain as domain_routes   # noqa: E402
 domain_routes.register(app, domain_routes.DomainDeps(deploy_mode=lambda: _deploy_mode()))
-
-# Khu vực thành viên: quản lý (admin) + /m/* (thành viên). Xem routes/member_area.py.
-import routes.member_area as member_routes   # noqa: E402
-
-member_routes.register(app, member_routes.MemberDeps(
-    brains_dir=lambda: BRAINS_DIR,
-    ten_workspace=lambda: os.getenv("APP_NAME", "MinMin OS"),
-))
-
-# Cổng chuyển học viên có "bản riêng" sang container của họ (HTTP + WebSocket). Thêm SAU CÙNG
-# trong nhóm này để nằm ngoài cùng: thấy request trước mọi middleware khác.
-import member_gateway   # noqa: E402
-
-app.add_middleware(member_gateway.MemberGateway)
 
 
 # ============================================
