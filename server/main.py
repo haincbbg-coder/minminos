@@ -19676,6 +19676,29 @@ async def zalo_bot_test():
     return {"ok": sent > 0, "sent": sent, "total": len(ids), "error": "; ".join(errs)[:300]}
 
 
+@app.post("/zalo-bot/test-anh")
+async def zalo_bot_test_anh():
+    """Gửi MỘT ảnh thử (ô vuông xanh 64x64) tới chat ID đầu tiên trong whitelist qua sendPhoto,
+    trả nguyên kết quả và id tin. Dùng để biết thật bot gửi ảnh được hay không."""
+    import struct
+    import zlib
+    if not _ZALO_BOT:
+        return {"ok": False, "error": "Bot Zalo chưa chạy"}
+    w = h = 64
+    raw = b"".join(b"\x00" + b"\x1f\x6f\xff" * w for _ in range(h))
+
+    def ck(t, d):
+        c = struct.pack(">I", len(d)) + t + d
+        return c + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+    png = b"\x89PNG\r\n\x1a\n" + ck(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + ck(b"IDAT", zlib.compress(raw)) + ck(b"IEND", b"")
+    import tempfile
+    from pathlib import Path as _P
+    f = _P(tempfile.mkdtemp()) / "test-anh.png"
+    f.write_bytes(png)
+    ok, err = await _ZALO_BOT.send_file(str(f), caption="Ảnh thử từ MinMin")
+    return {"ok": ok, "error": err, "message_id": _ZALO_BOT.last_message_id if ok else ""}
+
+
 def restart_telegram():
     """Bật lại bot theo cấu hình settings.telegram (tắt bot cũ nếu có)."""
     global _TG_BOT

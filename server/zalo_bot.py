@@ -136,6 +136,12 @@ def _chat_type(raw) -> str:
     return "private"
 
 
+def _lay_message_id(d) -> str:
+    """Zalo trả id tin ở `result.message_id`; lấy ra để lưu, không có thì rỗng."""
+    r = (d or {}).get("result") or {}
+    return str((r.get("message_id") if isinstance(r, dict) else "") or "")
+
+
 class ZaloBot(HangLuot):
     """Giữ ĐÚNG khế ước của `TelegramBot` để `chatbot_runtime` không phải biết mình đang cầm
     kênh nào. Thiếu `callback_fn` vì Zalo không có nút bấm."""
@@ -448,6 +454,8 @@ class ZaloBot(HangLuot):
             return _with_cap(f"[Người dùng gửi một ảnh qua Zalo nhưng tải về hỏng: "
                              f"{type(e).__name__}: {e}]")
 
+    last_message_id = ""   # id tin Zalo trả về ở lần gửi thành công gần nhất (chữ hoặc ảnh)
+
     async def send_text(self, chat, text):
         """Gửi MỘT tin chữ và nói kết quả: (ok, lỗi). Cùng lý do với `TelegramBot.send_text`."""
         text = str(text or "").strip()
@@ -463,6 +471,7 @@ class ZaloBot(HangLuot):
                     d = await self._api(client, "sendMessage", **payload)
                     if d.get("ok"):
                         loi = ""
+                        self.last_message_id = _lay_message_id(d)
                         break
                     loi = str(d.get("description") or "Zalo từ chối")
                     if d.get("loi_mang"):
@@ -505,6 +514,7 @@ class ZaloBot(HangLuot):
                 except Exception:
                     pass
                 if d.get("ok"):
+                    self.last_message_id = _lay_message_id(d)
                     return True, ""
                 return False, (str(d.get("description") or f"sendPhoto HTTP {r.status_code}") +
                                " (Zalo có thể chỉ nhận ảnh qua URL công khai)")
