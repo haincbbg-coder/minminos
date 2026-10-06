@@ -2,7 +2,13 @@
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
 
-Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
+Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [26.10.95] - 2026-10-07
+### Cải thiện
+- Văn phòng AI 3D: nhân viên ngồi hẳn lên ghế, lưng gần tựa ghế; ghế đẩy vào gầm bàn nên người không còn bị chèn sát vào mép bàn. Bàn phím và chuột đặt gần người hơn.
+- Cầm sách: tay trái đỡ cuốn sách trên lòng bàn tay ngửa trước ngực (hoặc trên bàn khi ngồi họp), bàn tay không còn xuyên qua sách.
+- Ảnh nhân vật nét hơn: dùng kết cấu 2048 (đúng độ phân giải bản gốc Higgsfield) thay vì 1024. Dữ liệu nhân vật khoảng 13 MB, chỉ tải khi mở văn phòng.
+
+## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
 ## [26.10.96] - 2026-10-07
 ### Bảo mật
