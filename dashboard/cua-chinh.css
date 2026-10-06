@@ -28,8 +28,8 @@
   /* Cột tổng quan (số liệu, việc đang chạy) ẩn: vẫn mở được từ Menu hoặc tắt chế độ gọn. */
   body.cua-chinh .hud-body > .hud-left { display: none; }
   body.cua-chinh .hud-body { grid-template-columns: minmax(340px, 30%) minmax(0, 1fr); }
-  /* Nút quản trị brain (tạo/xoá/chọn thư mục) và số liệu: ẩn cho gọn, chọn brain vẫn còn. */
-  body.cua-chinh #newBrainBtn, body.cua-chinh #delBrainBtn,
+  /* Nút quản trị brain (xoá/chọn thư mục; còn giữ + tạo, đổi tên, chép) và số liệu: ẩn cho gọn, chọn brain vẫn còn. */
+  body.cua-chinh #delBrainBtn,
   body.cua-chinh #pickFolderBtn, body.cua-chinh #graphStats { display: none; }
 }
 

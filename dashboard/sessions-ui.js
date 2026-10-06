@@ -176,6 +176,7 @@
     });
     rows.push({ sep: true });
     rows.push({ label: window.t("sess.proj_new"), run: function () { newProject(); } });
+    rows.push({ label: window.t("sess.gom_nen_tang"), icon: "layers", run: function () { gomTheoNenTang(); } });
     openMenu(anchor, rows);
   }
 
@@ -1484,6 +1485,7 @@
         '</div>';
       listEl = side.querySelector(".cside-list");
       searchEl = side.querySelector(".cside-search");
+      dungThanhChon();
       projBar = null;
       cayEl = null;
       noiODoTimVaNutMoi();
@@ -1510,6 +1512,7 @@
     listEl = side.querySelector(".cside-list");
     searchEl = side.querySelector(".cside-search");
     projBar = side.querySelector(".cside-proj");
+    dungThanhChon();
     cayEl = side.querySelector('[data-pane="files"]');
     noiODoTimVaNutMoi();
     side.querySelectorAll(".cside-tab").forEach(function (b) {
@@ -1655,6 +1658,7 @@
       // (chủ dự án chốt 16/09 sau khi dùng bản 0.59.20).
       var item = el('<div class="cside-item' + (s.id === cur ? " active" : "") + (isRun ? " running" : "") + (s.pinned ? " ghim" : "") + '">' +
         '<div class="ci-title">' + (isRun ? '<span class="ci-run" title="' + esc(window.t("sess.running")) + '">' + ic("loader", { cls: "ic-spin" }) + '</span> ' : '') +
+        (chonMode ? '<input type="checkbox" class="ci-chon"' + (chonSet[s.id] ? " checked" : "") + '> ' : "") +
         (tt.dau || "") +
         esc(s.title || s.preview || window.t("sess.untitled")) + '</div>' +
         '<div class="ci-meta"><span>' + fmtT(s.updated_at) + '</span>' + (tt.meta || "") +
@@ -1681,6 +1685,15 @@
       // một <svg> (ic() trả chuỗi SVG), nên chạm vào icon thì e.target LÀ cái svg chứ không
       // phải cái span - so classList kiểu cũ luôn trượt và click rơi xuống openSession.
       // Đó chính là lỗi "hover vào không xoá/đổi tên được": nút có hiện, bấm lại mở hội thoại.
+      if (chonMode) {
+        item.addEventListener("click", function (e) {
+          if (e.target && e.target.closest && e.target.closest(".act")) return;
+          e.stopPropagation(); e.preventDefault();
+          if (chonSet[s.id]) delete chonSet[s.id]; else chonSet[s.id] = 1;
+          var cb = item.querySelector(".ci-chon"); if (cb) cb.checked = !!chonSet[s.id];
+          renderChonBar();
+        }, true);
+      }
       item.onclick = function (e) {
         var hit = e.target && e.target.closest ? e.target.closest(".ren, .del") : null;
         if (hit && hit.classList.contains("del")) { e.stopPropagation(); delSession(s); return; }
@@ -1740,6 +1753,69 @@
     await post("/sessions/" + encodeURIComponent(s.id) + "/pin", { pinned: s.pinned ? "0" : "1" });
     cached = null;   // thứ tự vừa đổi → cache cũ vẽ ra danh sách sai thứ tự
     loadList();
+  }
+
+
+  // ---- Tích chọn nhiều hội thoại để chuyển project ----
+  var chonMode = false, chonSet = {}, chonBar = null;
+  function chonCount() { return Object.keys(chonSet).length; }
+  function renderChonBar() {
+    if (!chonBar) return;
+    if (!chonMode) {
+      chonBar.innerHTML = '<button class="cside-chon-btn" type="button" data-a="on">' + esc(window.t("sess.sel_on")) + '</button>';
+    } else {
+      var n = chonCount();
+      chonBar.innerHTML =
+        '<span class="cside-chon-n">' + esc(window.t("sess.sel_n", { n: n })) + '</span>' +
+        '<button class="cside-chon-btn" type="button" data-a="move"' + (n ? "" : " disabled") + '>' + esc(window.t("sess.sel_move")) + '</button>' +
+        '<button class="cside-chon-btn" type="button" data-a="clear"' + (n ? "" : " disabled") + '>' + esc(window.t("sess.sel_clear")) + '</button>' +
+        '<button class="cside-chon-btn" type="button" data-a="off">' + esc(window.t("sess.sel_done")) + '</button>';
+    }
+    chonBar.querySelectorAll("button").forEach(function (b) {
+      b.onclick = function () {
+        var a = b.getAttribute("data-a");
+        if (a === "on") { chonMode = true; chonSet = {}; renderChonBar(); loadList(); }
+        else if (a === "off") { chonMode = false; chonSet = {}; renderChonBar(); loadList(); }
+        else if (a === "clear") { chonSet = {}; renderChonBar(); loadList(); }
+        else if (a === "move") { chonMoveMenu(b); }
+      };
+    });
+  }
+  function dungThanhChon() {
+    if (!listEl || !listEl.parentNode) return;
+    chonBar = el('<div class="cside-chon"></div>');
+    listEl.parentNode.insertBefore(chonBar, listEl);
+    renderChonBar();
+  }
+  function chonMoveMenu(anchor) {
+    var rows = [{ label: window.t("sess.move_none"), run: function () { chonMoveTo(""); } }];
+    if (projects.length) rows.push({ sep: true });
+    projects.forEach(function (p) {
+      rows.push({ label: p.name, icon: p.icon || "folder", run: function () { chonMoveTo(p.id); } });
+    });
+    openMenu(anchor, rows);
+  }
+  async function chonMoveTo(pid) {
+    var ids = Object.keys(chonSet);
+    if (!ids.length) return;
+    var r = await post("/sessions/bulk-project", { ids: ids.join(","), project_id: pid, brain: brain() });
+    if (r && r.error && !r.ok) { alert(r.error); return; }
+    chonSet = {};
+    await loadProjects();
+    quenPhienProj();
+    renderProjChip();
+    cached = null;
+    renderChonBar();
+    loadList();
+  }
+  async function gomTheoNenTang() {
+    var r = await post("/projects/gom-theo-nen-tang", { brain: brain() });
+    await loadProjects();
+    cached = null;
+    loadList();
+    var n = 0;
+    if (r && typeof r === "object") Object.keys(r).forEach(function (k) { if (typeof r[k] === "number") n += r[k]; });
+    alert(window.t("sess.gom_done", { n: n }));
   }
 
   function moveMenu(anchor, s) {

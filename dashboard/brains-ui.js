@@ -16,7 +16,7 @@
     const n = b.notes ? " · " + b.notes + (b.notes_capped ? "+" : "") : "";
     // Không gắn icon: <option> chỉ nhận chữ. Thư mục ngoài được app.js xếp vào
     // <optgroup> riêng nên vẫn phân biệt được mà không cần ký hiệu nào.
-    return b.name + n;
+    return (b.label || b.name) + n;
   }
 
   // Chuẩn hoá path để so trùng: bỏ dấu phân cách cuối, \ -> /, thường hoá (Windows không phân biệt hoa/thường).
@@ -79,6 +79,8 @@
     });
   }
 
+  let _brainList = [];
+
   async function loadBrains(selectPath, restoreSaved) {
     let data;
     try {
@@ -87,6 +89,7 @@
       return; // server chưa sẵn sàng → giữ nguyên dropdown, thử lại lần sau
     }
     const brains = (data && data.brains) || [];
+    _brainList = brains;
     [...sel.querySelectorAll("option[data-brain]")].forEach((o) => o.remove());
 
     const defOpt = sel.querySelector('option[value="brain"]');
@@ -184,6 +187,116 @@
     sel.dispatchEvent(new Event("change"));
     alert(window.t("brains.deleted", { ten: name }));
   }
+
+
+  // ---- Đổi tên hiển thị brain (không đổi thư mục) ----
+  function brainDangChon() {
+    const v = sel.value;
+    if (v === "brain") return _brainList.find((b) => b.is_default) || null;
+    const p = v.replace(/^path:/, "");
+    return _brainList.find((b) => normPath(b.path) === normPath(p)) || null;
+  }
+
+  async function renameBrain() {
+    const b = brainDangChon();
+    if (!b) { alert(window.t("brains.rename_only_listed")); return; }
+    const cur = b.label || b.name;
+    const v = window.prompt(window.t("brains.rename_prompt"), cur);
+    if (v === null) return;
+    const fd = new FormData();
+    fd.append("name", b.name);
+    fd.append("label", v.trim());
+    let r;
+    try { r = await (await fetch("/brains/rename", { method: "POST", body: fd })).json(); }
+    catch (e) { alert(window.t("brains.create_net_err")); return; }
+    if (!r || !r.ok) { alert((r && r.error) || window.t("brains.rename_failed")); return; }
+    await loadBrains(null, false);
+  }
+
+  // ---- Chép / chuyển agent, skill, workflow sang brain khác ----
+  const KINDS = [["agent", "agents", "agents"], ["skill", "skills", "skills"], ["workflow", "workflows", "workflows"]];
+  const kindLabel = (k) => (k === "agent" ? window.t("brains.kind_agent") : k === "skill" ? window.t("brains.kind_skill") : window.t("brains.kind_workflow"));
+  const esc = (x) => String(x == null ? "" : x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const brainVal = (b) => (b.is_default ? "brain" : b.path);
+
+  function openShare() {
+    const src = brainDangChon();
+    if (!src) return;
+    const dests = _brainList.filter((b) => b !== src);
+    if (!dests.length) { alert(window.t("brains.share_need_two")); return; }
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px";
+    ov.innerHTML = '<div style="background:var(--panel,#10192b);color:var(--fg,#e8eefc);border:1px solid rgba(120,160,255,.3);border-radius:14px;width:min(560px,100%);max-height:86vh;display:flex;flex-direction:column;padding:16px;gap:10px">' +
+      '<b>' + esc(window.t("brains.share_title", { ten: src.label || src.name })) + '</b>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+      '<select id="bsKind">' + KINDS.map((k) => '<option value="' + k[0] + '">' + esc(kindLabel(k[0])) + '</option>').join("") + '</select>' +
+      '<span>→</span><select id="bsDest">' + dests.map((b) => '<option value="' + esc(brainVal(b)) + '">' + esc(b.label || b.name) + '</option>').join("") + '</select>' +
+      '<select id="bsMode"><option value="copy">' + esc(window.t("brains.mode_copy")) + '</option><option value="move">' + esc(window.t("brains.mode_move")) + '</option></select></div>' +
+      '<div id="bsList" style="overflow:auto;border:1px solid rgba(120,160,255,.2);border-radius:8px;padding:6px;min-height:120px;flex:1"></div>' +
+      '<div id="bsMsg" style="font-size:12px;opacity:.8"></div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end"><button id="bsClose">' + esc(window.t("brains.share_close")) + '</button><button id="bsGo">' + esc(window.t("brains.share_go")) + '</button></div></div>';
+    document.body.appendChild(ov);
+    const $ = (i) => ov.querySelector("#" + i);
+    const srcVal = brainVal(src);
+    async function loadList() {
+      const kind = $("bsKind").value;
+      const k = KINDS.find((x) => x[0] === kind);
+      $("bsList").textContent = "...";
+      let arr = [];
+      try {
+        const j = await (await fetch("/" + k[1] + "?brain=" + encodeURIComponent(srcVal) + (kind === "agent" ? "&prompt=0" : ""))).json();
+        arr = j[k[2]] || [];
+      } catch (e) { /* để trống */ }
+      arr = arr.filter((x) => !x.system && !x.is_system);
+      $("bsList").innerHTML = arr.length ? arr.map((x) => {
+        const slug = x.slug || x.id || x.name;
+        return '<label style="display:flex;gap:8px;padding:3px 2px;cursor:pointer"><input type="checkbox" value="' + esc(slug) + '"> <span>' + esc(x.name || slug) + '</span></label>';
+      }).join("") : "<i>" + esc(window.t("brains.share_empty")) + "</i>";
+    }
+    $("bsKind").addEventListener("change", loadList);
+    $("bsClose").addEventListener("click", () => ov.remove());
+    ov.addEventListener("click", (e) => { if (e.target === ov) ov.remove(); });
+    $("bsGo").addEventListener("click", async () => {
+      const slugs = [...ov.querySelectorAll("#bsList input:checked")].map((i) => i.value);
+      if (!slugs.length) { $("bsMsg").textContent = window.t("brains.share_pick"); return; }
+      const fd = new FormData();
+      fd.append("from_brain", srcVal);
+      fd.append("to_brain", $("bsDest").value);
+      fd.append("kind", $("bsKind").value);
+      fd.append("slugs", slugs.join(","));
+      fd.append("mode", $("bsMode").value);
+      $("bsGo").disabled = true;
+      let r;
+      try { r = await (await fetch("/brains/copy-items", { method: "POST", body: fd })).json(); }
+      catch (e) { r = { ok: false, error: window.t("brains.create_net_err") }; }
+      $("bsGo").disabled = false;
+      if (!r || !r.ok) { $("bsMsg").textContent = (r && r.error) || window.t("brains.share_failed"); return; }
+      const sk = (r.skipped || []).length;
+      $("bsMsg").textContent = window.t("brains.share_done", { n: (r.imported || []).length, skip: sk });
+      loadList();
+    });
+    loadList();
+  }
+
+  // Chèn 2 nút mới cạnh nút xoá: đổi tên (bút) và chép/chuyển sang brain khác.
+  (function addButtons() {
+   try {
+    const anchor = document.getElementById("delBrainBtn");
+    if (!anchor) return;
+    const mk = (id, ic, title, fn) => {
+      const b = document.createElement("button");
+      b.className = "graph-folder-btn"; b.id = id; b.title = title; b.type = "button";
+      b.innerHTML = '<i data-ic="' + ic + '"></i>';
+      b.addEventListener("click", fn);
+      anchor.parentNode.insertBefore(b, anchor);
+      return b;
+    };
+    const T = (k) => (typeof window.t === "function" ? window.t(k) : k);
+    mk("renBrainBtn", "pencil", T("brains.rename_title"), renameBrain);
+    mk("shareBrainBtn", "copy", T("brains.share_btn"), openShare);
+    try { window.JavisIcons && window.JavisIcons.refresh && window.JavisIcons.refresh(); } catch (e) {}
+   } catch (e) { /* nút phụ, không được làm hỏng chọn brain */ }
+  })();
 
   const nb = document.getElementById("newBrainBtn");
   if (nb) nb.addEventListener("click", newBrain);
