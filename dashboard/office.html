@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Văn phòng AI 3D - MinMin</title>
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/office3d.css?v=5">
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1524; overflow: hidden; }
+  .hud-center { position: fixed; inset: 0; }
+  body.mm-office-solo #officeToggleBtn, body.mm-office-solo #mmOfficeX, body.mm-office-solo #mmOfficeWin { display: none !important; }
+  .mm-office-bar { right: 12px; color: #dfe8f7; }
+</style>
+</head>
+<body>
+<div class="hud-center"></div>
+<script>window.__mmOfficeSolo = true;</script>
+<script src="/static/office3d.js?v=5"></script>
+<script>window.addEventListener("load", function () { window.MinMinOffice.open(); });</script>
+</body>
+</html>

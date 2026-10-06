@@ -28,7 +28,7 @@
   var raycaster = null, bang = null, kpiDuLieu = null, nguoiNoi = null, tNow = 0;
   var manHinh = [], matManOff = null, matManOn = [];
 
-  function brain() { try { return (window.currentBrainPath && window.currentBrainPath()) || "brain"; } catch (e) { return "brain"; } }
+  function brain() { try { var q = new URLSearchParams(location.search).get("brain"); if (window.__mmOfficeSolo && q) return q; } catch (e0) {} try { return (window.currentBrainPath && window.currentBrainPath()) || "brain"; } catch (e) { return "brain"; } }
   function sang() { try { return window.MinMinGalaxyIsLight ? window.MinMinGalaxyIsLight() : false; } catch (e) { return false; } }
   function now() { return performance.now(); }
   function $(id) { return document.getElementById(id); }
@@ -202,7 +202,7 @@
     dau_.add(new T.Mesh(new T.SphereGeometry(0.46, 24, 18), trang));
     var kinh = new T.Mesh(new T.SphereGeometry(0.4, 20, 14), toi); kinh.scale.set(1, 0.62, 0.55); kinh.position.set(0, 0.02, 0.28); dau_.add(kinh);
     var matM = mat(0x9ff3ff, { emissive: 0x6fe6ff, emissiveIntensity: 1.2 });
-    [-0.14, 0.14].forEach(function (x) { var e = new T.Mesh(new T.SphereGeometry(0.06, 10, 8), matM); e.scale.set(1, 1.3, 0.6); e.position.set(x, 0.03, 0.46); dau_.add(e); });
+    var mat_mat = []; [-0.14, 0.14].forEach(function (x) { var e = new T.Mesh(new T.SphereGeometry(0.06, 10, 8), matM); e.scale.set(1, 1.3, 0.6); e.position.set(x, 0.03, 0.46); dau_.add(e); mat_mat.push(e); });
     var anten = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.25, 6), toi); anten.position.y = 0.55; dau_.add(anten);
     var bi = new T.Mesh(new T.SphereGeometry(0.06, 10, 8), mat(acc.getHex(), { emissive: acc.getHex(), emissiveIntensity: 0.9 })); bi.position.y = 0.7; dau_.add(bi);
     var tT = dungTay(g, -1, ao, trang), tP = dungTay(g, 1, ao, trang);
@@ -218,7 +218,7 @@
     var nhan = spriteTu(veNhan(ten, role, "#" + acc.getHexString(), nenNhan()), 2.5);
     nhan.position.set(0, 3.15 * s, 0); g.add(nhan);
     var noi = spriteTu(veNoi("…", "#" + acc.getHexString()), 3.6); noi.center.set(0.5, 0); noi.position.set(0, 3.55 * s, 0); noi.visible = false; g.add(noi);
-    return { g: g, dau: dau_, tT: tT, tP: tP, chanT: chanT, chanP: chanP, than: than, matM: matM, nhan: nhan, noi: noi, acc: acc, s: s, vat: sach, but: but };
+    return { mat_mat: mat_mat, g: g, dau: dau_, tT: tT, tP: tP, chanT: chanT, chanP: chanP, than: than, matM: matM, nhan: nhan, noi: noi, acc: acc, s: s, vat: sach, but: but };
   }
 
   // ---------- màn hình máy tính: bốn kiểu nội dung chuyển động, dùng chung ----------
@@ -662,8 +662,8 @@
     // ---- tay và ngón tay ----
     var Lx = 0.05, Lz = 0.04, Le = -0.15, Rx = 0.05, Rz = -0.04, Re = -0.15, ck = [0.25, 0.25], sn = Math.sin;
     if (dang === "walk") { Lx = -sw * 0.6; Rx = sw * 0.6; Le = -0.25; Re = -0.25; }
-    else if (dang === "type") { Lx = Rx = -0.9; Le = Re = -0.94; ck = [-1, -1]; }
-    else if (dang === "listen") { Lx = -0.95; Le = -0.9; Rx = -0.9; Re = -0.94 + sn(t * 9 + a.seed) * 0.06; ck = [0.55, 0.7]; }
+    else if (dang === "type") { var gm = sn(t * 9 + a.seed) * 0.05, gm2 = sn(t * 7.3 + a.seed + 1.7) * 0.05; Lx = -1.45 + gm; Rx = -1.45 + gm2; Le = -0.12 + gm2; Re = -0.12 + gm; Lz = 0.35; Rz = -0.35; ck = [-1, -1]; }
+    else if (dang === "listen") { Lx = -1.4; Le = -0.15; Lz = 0.3; Rx = -1.4; Re = -0.15 + sn(t * 9 + a.seed) * 0.06; Rz = -0.3; ck = [0.55, 0.7]; }
     else if (dang === "talk") { Lx = -0.85; Le = -1.25; Rx = -0.9 + sn(t * 2.6 + a.seed) * 0.35; Rz = -0.5 + sn(t * 1.7) * 0.2; Re = -1.0 + sn(t * 3.3) * 0.55; ck = [0.55, 0.12]; }
     function datTay(h, sx, sz, ex) { h.sh.rotation.x = lerp(h.sh.rotation.x, sx, 0.22); h.sh.rotation.z = lerp(h.sh.rotation.z, sz, 0.22); h.el.rotation.x = lerp(h.el.rotation.x, ex, 0.22); }
     datTay(r.tT, Lx, Lz, Le); datTay(r.tP, Rx, Rz, Re);
@@ -673,6 +673,10 @@
         h.ngon[i].rotation.x = lerp(h.ngon[i].rotation.x, -cu, 0.3);
       }
     });
+    // ---- chớp mắt: mỗi người một nhịp riêng, khoảng 3 đến 5 giây chớp một lần ----
+    var chu = 3.2 + (a.seed % 1.7), ph = (t + a.seed) % chu, ch = ph < 0.16 ? 1 - Math.abs(ph - 0.08) / 0.08 : 0;
+    if (ph > 1.1 && ph < 1.22 && a.seed > 50) ch = 1 - Math.abs(ph - 1.16) / 0.06;           // thỉnh thoảng chớp đôi
+    for (var ei = 0; ei < r.mat_mat.length; ei++) r.mat_mat[ei].scale.y = 1.3 * (1 - 0.9 * Math.max(0, ch));
     // ---- đầu: nhìn người đang nói / nhìn quanh / gật khi nói ----
     var yaw = 0;
     if (dang === "talk") r.dau.rotation.x = sn(t * 5 + a.seed) * 0.08;
@@ -808,7 +812,7 @@
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
     host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
-      '<button type="button" id="mmOfficeSim">Mô phỏng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
+      '<button type="button" id="mmOfficeSim">Mô phỏng</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
       '<div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
     var nut = document.createElement("button");
@@ -819,15 +823,27 @@
     nut.addEventListener("click", function () { mo ? dong() : mo_(); });
     $("mmOfficeX").addEventListener("click", dong);
     $("mmOfficeSim").addEventListener("click", chayMau);
+    $("mmOfficeFs").addEventListener("click", function () {
+      try { if (document.fullscreenElement) document.exitFullscreen(); else if (host.requestFullscreen) host.requestFullscreen(); else if (host.webkitRequestFullscreen) host.webkitRequestFullscreen(); } catch (e) {}
+    });
+    $("mmOfficeWin").addEventListener("click", function () {
+      var w = null; try { w = window.open("/office-3d?brain=" + encodeURIComponent(brain()), "mmOfficeWin", "popup=yes,width=1500,height=900"); } catch (e) {}
+      if (!w) toast("Trình duyệt chặn cửa sổ mới. Hãy cho phép cửa sổ bật lên cho trang này."); else dong();
+    });
+    if (window.__mmOfficeSolo) { document.body.classList.add("mm-office-solo"); }
     document.addEventListener("visibilitychange", function () { if (document.hidden && mo) { clearInterval(pollId); } else if (mo) { pollId = setInterval(hoi, 1500); } });
   }
 
-  var chatTimer = 0;
+  var chatTimer = 0, kenh = null;
+  try { if (window.BroadcastChannel) kenh = new BroadcastChannel("minmin-office"); } catch (e) { kenh = null; }
+  function phat(loai, d) { if (kenh && !window.__mmOfficeSolo) { try { kenh.postMessage({ loai: loai, d: d }); } catch (e) {} } }
+  if (kenh && window.__mmOfficeSolo) kenh.onmessage = function (ev) { var m = ev.data || {}; var O = window.MinMinOffice; if (!O) return; if (m.loai === "start") O.onChatStart(m.d); else if (m.loai === "tool") O.onChatTool(m.d); else if (m.loai === "end") O.onChatEnd(m.d); };
   window.MinMinOffice = {
     open: function () { khoiTao(); mo_(); }, close: dong, toggle: function () { mo ? dong() : mo_(); },
     // khung chat (app.js): MinMin nhận câu hỏi -> người liên quan vào họp; gọi công cụ -> cử người đi lấy dữ liệu;
     // trả lời xong -> MinMin đứng dậy trình bày chính câu trả lời thật
     onChatStart: function (text) {
+      phat("start", text);
       if (!mo || !lead) return; clearTimeout(chatTimer);
       if (phien.chat) rutKhoiPhien("chat", true, "");
       phien.chat = { set: {}, ten: "Họp với MinMin" }; phien.chat.set.minmin = lead;
@@ -835,16 +851,18 @@
       lienQuan(text).forEach(function (a, i) { setTimeout(function () { if (mo && phien.chat) { vaoPhien("chat", a, "Họp với MinMin"); } }, 500 + i * 700); });
     },
     onChatTool: function (data) {
+      phat("tool", data && { tool: data.tool });
       if (!mo || !lead) return; var tool = data && data.tool; if (!tool || tool === "ask_javis") return;
       var a = phien.chat ? chonNguoiLayDuLieu(tramCua(tool).i) : lead; lamTram(a, tool);
     },
     onChatEnd: function (text) {
+      phat("end", String(text || "").slice(0, 600));
       if (!mo || !phien.chat) return; clearTimeout(chatTimer);
       var tom = String(text || "").replace(/[#*`>_\-]+/g, " ").replace(/\s+/g, " ").trim();
       if (tom && lead) phatBieu(lead, cat(tom, 190), 8000, "Trả lời");
       chatTimer = setTimeout(function () { rutKhoiPhien("chat", true, ""); if (lead) trangThai(lead, "Điều hành"); }, tom ? 9500 : 3500);
     },
-    demo: chayMau
+    demo: chayMau, cam: cam
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", khoiTao); else khoiTao();
 })();
