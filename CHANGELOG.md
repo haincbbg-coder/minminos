@@ -8,6 +8,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Mới
 - Văn phòng AI 3D thành biệt thự nhiều phòng: giữ văn phòng hiện tại, thêm phòng Sale (bên trái, có cả nhân viên kho) và phòng Marketing (bên phải), sàn gỗ, cây cảnh. Ba nút "Phòng Sale", "Văn phòng", "Phòng Marketing" đưa camera tới từng phòng.
 - Mỗi người trong phòng là một nhân vật ngồi bàn, tên đúng như trong Pancake POS; trên đầu hiện số đơn, doanh thu và hạng. Bảng trên tường xếp hạng nhân viên theo số liệu thật; phòng Marketing thêm chi phí ads, ROAS và tổng quảng cáo.
+- Đồ dùng tạo bằng Higgsfield: sàn gỗ sồi, bàn làm việc gỗ chân kim loại, ghế xoay lưới, ghế giám đốc da cao cấp ở đầu bàn họp, đèn cây, chậu cây cảnh. Không tải được thì tự dùng hình dựng bằng code như trước. Thêm khoảng 3 MB, chỉ tải khi mở văn phòng.
 - Số liệu đọc từ file 00 - Dashboard/pancake-office.json của brain (staff: name, dept sale/kho/marketing, orders, revenue, spend, roas, packed; ads: tổng), làm mới mỗi 60 giây. Chưa có file thì bảng ghi rõ chưa có số liệu và phòng để trống.
 
 ## [26.10.100] - 2026-10-07

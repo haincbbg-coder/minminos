@@ -237,10 +237,25 @@
       return Promise.all(ps).then(function (r) {
         var clips = {}; NV_CLIPS.forEach(function (n, k) { clips[n] = r[10 + k].animations[0]; });
         r.slice(0, 10).forEach(function (g) { g.scene.traverse(function (o) { if (o.isMesh && o.material) { var ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(function (m) { ['map', 'normalMap', 'roughnessMap', 'metalnessMap'].forEach(function (k) { if (m[k]) { m[k].anisotropy = 8; m[k].needsUpdate = true; } }); }); } }); });
-        NV = { chars: r.slice(0, 10).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils }; return true;
-      });
+        NV = { chars: r.slice(0, 10).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils, props: {}, sanGo: null }; return true;
+      }).then(function () {
+        // đồ dùng tạo bằng Higgsfield (ghế, bàn, cây, đèn, sàn gỗ): thiếu cái nào thì dùng hình dựng bằng code
+        return Promise.all(["office_chair", "director_chair", "plant", "lamp", "desk"].map(function (n) {
+          return tai(NV_DIR + "props/" + n + ".glb").then(function (g) { NV.props[n] = g.scene; }, function () {});
+        })).then(function () {
+          return new Promise(function (ok) { new T.TextureLoader().load(NV_DIR + "props/floor_wood.jpg?v=" + NV_V, function (tx) { tx.colorSpace = T.SRGBColorSpace; tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.anisotropy = 8; NV.sanGo = tx; ok(); }, null, function () { ok(); }); });
+        });
+      }).then(function () { return true; });
     }).catch(function (e) { console.warn("[office] không nạp được người 3D, dùng robot", e); NV = null; return false; });
   }
+  // đồ Higgsfield đã chuẩn hoá cao 1 (trục Y từ -0.5 đến 0.5): đặt chân chạm sàn, cao `cao`, quay `yaw`
+  var PROP_YAW = { office_chair: 0, director_chair: 0, plant: 0, lamp: 0, desk: Math.PI / 2 };
+  function vatProp(ten, cao, sx) {
+    var src = NV && NV.props && NV.props[ten]; if (!src) return null;
+    var w = new T.Group(), c = NV.SU.clone(src); c.scale.setScalar(cao); c.position.y = 0.5 * cao; c.rotation.y = PROP_YAW[ten] || 0; w.add(c);
+    c.traverse(function (o) { if (o.isMesh) { o.frustumCulled = false; } }); return w;
+  }
+  function sanGoMoi(rx, rz) { if (!NV || !NV.sanGo) return null; var t = NV.sanGo.clone(); t.needsUpdate = true; t.repeat.set(rx, rz); return t; }
   // lệch gốc của từng hoạt ảnh (cm, theo hông): clip ngồi giả định ghế nằm sau lưng, kéo về đúng chỗ ghế
   var NV_OFF = { sit: [-21.3, 67.4], sitans: [13.1, 35.2] };
   var _qi = null, _p0 = null, _p1 = null, _p2 = null, _q0 = null, _q1 = null, _v0 = null, _v1 = null;
@@ -494,8 +509,10 @@
   }
 
   // ---------- đồ vật ----------
-  function ghe(x, z, rot, laStool) {
+  function ghe(x, z, rot, laStool, laGD) {
     var g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = rot;
+    var vc = vatProp(laGD ? "director_chair" : "office_chair", laGD ? 1.45 : 1.12);
+    if (vc) { g.add(vc); scene.add(g); return; }
     var m = mat(sang() ? 0x93a4bd : 0x3a4c6c);
     var seat = laStool ? new T.Mesh(new T.CylinderGeometry(0.42, 0.42, 0.1, 18), m) : new T.Mesh(new T.BoxGeometry(0.95, 0.1, 0.95), m); seat.position.y = 0.4; g.add(seat);
     if (!laStool) { var lung = new T.Mesh(new T.BoxGeometry(0.95, 0.7, 0.1), m); lung.position.set(0, 0.85, -0.5); g.add(lung); }
@@ -530,8 +547,12 @@
   }
   function dungBan(slot, a, idx) {
     var g = new T.Group(); g.position.set(slot.desk.x, NV ? -0.2 : 0, slot.desk.z); g.rotation.y = slot.desk.rot;
-    var mt = new T.Mesh(new T.BoxGeometry(2.6, 0.12, 1.3), mat(sang() ? 0xdfe6f2 : 0x2a3a58)); mt.position.set(0, 1.0, 0); g.add(mt);
-    [[-1.2, -0.55], [1.2, -0.55], [-1.2, 0.55], [1.2, 0.55]].forEach(function (p) { var ch = new T.Mesh(new T.BoxGeometry(0.1, 1.0, 0.1), mat(0x8fa0b8)); ch.position.set(p[0], 0.5, p[1]); g.add(ch); });
+    var bk = vatProp("desk", 1);
+    if (bk) { var cb = bk.children[0]; cb.scale.set(2.6, 1.83, 2.6); cb.position.y = 0.29 * 1.83; g.add(bk); }
+    else {
+      var mt = new T.Mesh(new T.BoxGeometry(2.6, 0.12, 1.3), mat(sang() ? 0xdfe6f2 : 0x2a3a58)); mt.position.set(0, 1.0, 0); g.add(mt);
+      [[-1.2, -0.55], [1.2, -0.55], [-1.2, 0.55], [1.2, 0.55]].forEach(function (p) { var ch = new T.Mesh(new T.BoxGeometry(0.1, 1.0, 0.1), mat(0x8fa0b8)); ch.position.set(p[0], 0.5, p[1]); g.add(ch); });
+    }
     var vien = new T.Mesh(new T.BoxGeometry(1.2, 0.76, 0.06), mat(0x0f1626)); vien.position.set(0, 1.66, -0.38); g.add(vien);
     var man = new T.Mesh(new T.PlaneGeometry(1.1, 0.66), matManOff); man.position.set(0, 1.66, -0.345); g.add(man); a.screen = man; a.screenIdx = idx % 4;
     var de = new T.Mesh(new T.BoxGeometry(0.1, 0.35, 0.1), mat(0x8fa0b8)); de.position.set(0, 1.22, -0.38); g.add(de);
@@ -577,14 +598,16 @@
     var gs = [{ x: TL / 2 + 1.1, z: 0, kind: "seat", rot: -Math.PI / 2 }];
     for (var i = 7; i >= 0; i--) { var x = -4.55 + 1.3 * i; gs.push({ x: x, z: -2.05, kind: "seat", rot: 0 }); gs.push({ x: x, z: 2.05, kind: "seat", rot: Math.PI }); }
     gs.push({ x: -TL / 2 - 1.1, z: 0, kind: "seat", rot: Math.PI / 2 });
-    gs.forEach(function (s) { ghe(s.x, s.z, s.rot, true); chanTron(s.x, s.z, 0.52); s.by = null; });
+    gs.forEach(function (s, gi_) { ghe(s.x, s.z, s.rot, true, gi_ === 0); chanTron(s.x, s.z, 0.52); s.by = null; });
     return { ghe: gs, holo: holo };
   }
   function den(x, z, hex) {
     var g = new T.Group(); g.position.set(x, 0, z);
+    var vl = vatProp("lamp", 2.9);
+    if (vl) g.add(vl); else {
     var tru = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 2.6, 8), mat(0x6f7f98)); tru.position.y = 1.3; g.add(tru);
     var de = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, 0.06, 14), mat(0x6f7f98)); de.position.y = 0.03; g.add(de);
-    var chup = new T.Mesh(new T.CylinderGeometry(0.28, 0.4, 0.5, 14), new T.MeshBasicMaterial({ color: hex })); chup.position.y = 2.7; g.add(chup);
+    var chup = new T.Mesh(new T.CylinderGeometry(0.28, 0.4, 0.5, 14), new T.MeshBasicMaterial({ color: hex })); chup.position.y = 2.7; g.add(chup); }
     var pl = new T.PointLight(hex, 0.9, 20, 1.6); pl.position.y = 2.6; g.add(pl);
     scene.add(g); chanTron(x, z, 0.4);
   }
@@ -609,6 +632,7 @@
   }
   function caySan(x, z, cao) {
     var g = new T.Group(); g.position.set(x, 0, z);
+    var vp = vatProp("plant", 1.35 + cao * 0.35); if (vp) { vp.rotation.y = x * 1.7; g.add(vp); scene.add(g); return g; }
     var chau = new T.Mesh(new T.CylinderGeometry(0.34, 0.26, 0.55, 16), mat(0xe9e4da, { roughness: 0.8 })); chau.position.y = 0.275; g.add(chau);
     var dat = new T.Mesh(new T.CylinderGeometry(0.31, 0.31, 0.04, 16), mat(0x3a2a1c)); dat.position.y = 0.55; g.add(dat);
     var xanh = [0x2f8f4e, 0x3aa65d, 0x277a43];
@@ -662,9 +686,9 @@
   function dungPhongBan() {
     var light = sang(); nvPhong = []; vatPhong = []; bangPhong = {};
     var dat = new T.Mesh(new T.PlaneGeometry(240, 140), mat(light ? 0xd6e6d8 : 0x0f1b2c, { roughness: 1 })); dat.rotation.x = -Math.PI / 2; dat.position.y = -0.32; scene.add(dat); canhSan.push(dat);
-    var go = veSanGo(light); go.repeat.set(RW / 3, HZ * 2 / 3);
+    var go = sanGoMoi(RW / 4, HZ * 2 / 4) || veSanGo(light); if (!tgo_()) go.repeat.set(RW / 3, HZ * 2 / 3);
     PHONG.forEach(function (ph) {
-      var san = new T.Mesh(new T.BoxGeometry(RW, 0.3, HZ * 2), new T.MeshStandardMaterial({ map: go, roughness: 0.55, metalness: 0.02 })); san.position.set(ph.cx, -0.15, 0); scene.add(san); canhSan.push(san);
+      var san = new T.Mesh(new T.BoxGeometry(RW, 0.3, HZ * 2), new T.MeshStandardMaterial({ map: go, color: tgo_() ? (light ? 0xe6dcd0 : 0x8a8a8a) : 0xffffff, roughness: 0.55, metalness: 0.02 })); san.position.set(ph.cx, -0.15, 0); scene.add(san); canhSan.push(san);
       var tuongM = mat(light ? ph.mau : ph.mauToi), dir = ph.cx < 0 ? -1 : 1, xo = ph.cx + dir * (RW / 2 + 0.15);
       var sau = new T.Mesh(new T.BoxGeometry(RW + 0.6, 5.8, 0.3), tuongM); sau.position.set(ph.cx, 2.9, -HZ - 0.15); scene.add(sau);
       var ngoai = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuongM); ngoai.position.set(xo, 2.9, 0); scene.add(ngoai);
@@ -709,6 +733,7 @@
       xepNhanVien();
     }).catch(function () {});
   }
+  function tgo_() { return !!(NV && NV.sanGo); }
   function dungCanh() {
     var light = sang(), nen = light ? 0xe9f0fa : 0x0d1524;
     scene = new T.Scene(); scene.background = new T.Color(nen); scene.fog = new T.Fog(nen, 55, 110);
@@ -716,7 +741,8 @@
     var dl = new T.DirectionalLight(0xffffff, light ? 1.2 : 0.7); dl.position.set(-8, 18, 10); scene.add(dl);
     canhTuong = []; canhSan = [];
     var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san); canhSan.push(san);
-    var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; scene.add(luoi); canhSan.push(luoi);
+    var tgo = sanGoMoi(HX * 2 / 4, HZ * 2 / 4); if (tgo) { san.material.map = tgo; san.material.color.set(light ? 0xe6dcd0 : 0x8a8a8a); san.material.roughness = 0.5; san.material.needsUpdate = true; }
+    var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; if (!tgo_()) { scene.add(luoi); canhSan.push(luoi); }
     var tuong = mat(light ? 0xdde6f4 : 0x1b2a46);
     var t1 = new T.Mesh(new T.BoxGeometry(HX * 2, 5.8, 0.3), tuong); t1.position.set(0, 2.9, -HZ - 0.15); scene.add(t1);
     var t2 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t2.position.set(-HX - 0.15, 2.9, 0); scene.add(t2);
