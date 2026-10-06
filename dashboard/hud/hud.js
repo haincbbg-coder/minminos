@@ -43,17 +43,18 @@ function hudSession() {
 const HUD_SID = hudSession();
 
 // ---------- dung giao dien ----------
-const TEN_HINH = { bust: "TƯỢNG HẠT", robot: "ROBOT GIÁP", portrait: "NGƯỜI", orb: "QUẢ CẦU" };
+const TEN_HINH = { figure: "NGƯỜI HẠT", bust: "TƯỢNG HẠT", robot: "ROBOT GIÁP", portrait: "NGƯỜI", orb: "QUẢ CẦU" };
 let form = (() => {
   const p = params.get("form");
   if (TEN_HINH[p]) return p;
-  try { const f = localStorage.getItem("minmin.hud.form3"); if (TEN_HINH[f]) return f; } catch (e) {}
-  return "bust";
+  try { const f = localStorage.getItem("minmin.hud.form4"); if (TEN_HINH[f]) return f; } catch (e) {}
+  return "figure";
 })();
 const scene = new MinMinScene($("scene"), {
   reducedMotion, form, quality: params.get("quality") || "high",
   onFps: (f) => { $("fps").textContent = f.toFixed(0) + " FPS"; watchFps(f); },
 });
+if (params.get("debug")) window.__mmScene = scene;
 $("formText").textContent = TEN_HINH[form] || form;
 
 const web = new Constellation($("web"), { reducedMotion, onSelect: openCard });
@@ -417,7 +418,7 @@ $("scene").addEventListener("dblclick", () => document.documentElement.requestFu
 function doiHinh(f) {
   form = f || scene.toggleForm();
   if (f) scene.setForm(f);
-  try { localStorage.setItem("minmin.hud.form3", form); } catch (e) {}
+  try { localStorage.setItem("minmin.hud.form4", form); } catch (e) {}
   $("formText").textContent = TEN_HINH[form] || form;
 }
 function nhoLai(k, v) { try { localStorage.setItem("minmin.hud." + k, v ? "1" : "0"); } catch (e) {} }
