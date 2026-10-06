@@ -19,7 +19,9 @@
 // Các lớp vẽ bằng canvas (starfield, knowledge graph) KHÔNG đọc được biến CSS,
 // nên chúng nghe sự kiện "javis-theme-change" rồi tự vẽ lại bằng bảng màu tương ứng.
 (function () {
-  var KEY = "javis.theme";
+  // Trang đặc biệt (màn Hub) có thể đặt TRƯỚC khi nạp file này: JAVIS_THEME_KEY = khoá lưu riêng,
+  // JAVIS_THEME_DEFAULT = "dark" để máy chưa từng chọn ở trang đó không rơi về tự động theo giờ.
+  var KEY = window.JAVIS_THEME_KEY || "javis.theme";
   var KEY_SCHED = "javis.theme.schedule";
   var DEFAULT_SCHED = { light: "06:00", dark: "18:00" };
   var root = document.documentElement;
@@ -44,7 +46,8 @@
 
   function mode() {
     var v = read(KEY);
-    return v === "light" || v === "dark" ? v : "auto";
+    if (v === "light" || v === "dark") return v;
+    return window.JAVIS_THEME_DEFAULT === "dark" ? "dark" : "auto";
   }
 
   function schedule() {

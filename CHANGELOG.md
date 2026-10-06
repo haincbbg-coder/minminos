@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.76] - 2026-10-06
+### Sửa lỗi
+- Màn Hub robot luôn mở ở tông tối Apex (đường đồng mức xanh, lõi cam), không còn rơi về giao diện cũ khi trang chính đang ở tông sáng. Nút Sáng / Tối của Hub nhớ riêng, không ảnh hưởng tông của trang chính.
+- Lệnh gửi ảnh thử của bot Zalo lấy chat ID từ cài đặt khi bot chưa nạp danh sách.
+
 ## [26.10.75] - 2026-10-06
 ### Thêm mới
 - Bot Zalo chính thức lưu lại id tin nhắn Zalo trả về mỗi lần gửi, và có lệnh gửi ảnh thử để kiểm tra bot gửi ảnh được hay không.
