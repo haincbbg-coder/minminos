@@ -221,6 +221,114 @@
     return { mat_mat: mat_mat, g: g, dau: dau_, tT: tT, tP: tP, chanT: chanT, chanP: chanP, than: than, matM: matM, nhan: nhan, noi: noi, acc: acc, s: s, vat: sach, but: but };
   }
 
+
+  // ---------- người 3D có xương (Higgsfield + Meshy), dựng trong office3d: 10 nhân vật, 6 hoạt ảnh ----------
+  var NV = null, NV_CLIPS = ["walk", "idle", "sit", "talk", "listen", "sitans"], nvDem = 0, HS = 1.15;
+  var NV_DIR = "/static/office/", NV_V = "1";
+  function napNguoi() {
+    return import(NV_DIR + "gltf-addons.js?v=" + NV_V).then(function (m) {
+      var L = new m.GLTFLoader();
+      function tai(u) { return new Promise(function (ok, ko) { L.load(u + "?v=" + NV_V, ok, null, ko); }); }
+      var ps = [], i;
+      for (i = 0; i < 10; i++) ps.push(tai(NV_DIR + "c" + i + ".glb"));
+      NV_CLIPS.forEach(function (n) { ps.push(tai(NV_DIR + "a_" + n + ".glb")); });
+      return Promise.all(ps).then(function (r) {
+        var clips = {}; NV_CLIPS.forEach(function (n, k) { clips[n] = r[10 + k].animations[0]; });
+        NV = { chars: r.slice(0, 10).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils }; return true;
+      });
+    }).catch(function (e) { console.warn("[office] không nạp được người 3D, dùng robot", e); NV = null; return false; });
+  }
+  // lệch gốc của từng hoạt ảnh (cm, theo hông): clip ngồi giả định ghế nằm sau lưng, kéo về đúng chỗ ghế
+  var NV_OFF = { sit: [-21.3, 67.4], sitans: [13.1, 35.2] };
+  var _qi = null, _p0 = null, _p1 = null, _p2 = null, _q0 = null, _q1 = null, _v0 = null, _v1 = null;
+  function dungNguoi3D(ten, role, hueV, laLead) {
+    var acc = hsl(hueV, 0.75, 0.52), idx = laLead ? 0 : 1 + (nvDem++ % 9);
+    var g = new T.Group(), pivot = new T.Group(); g.add(pivot);
+    var model = NV.SU.clone(NV.chars[idx]); pivot.add(model);
+    model.traverse(function (o) { if (o.isSkinnedMesh) o.frustumCulled = false; });
+    var B = {}; ["Hips", "Spine", "neck", "Head", "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand"].forEach(function (n) { B[n] = model.getObjectByName(n); });
+    var hy = B.Hips.position.y || 100; var S = HS * (100.26 / hy), caoNguoi = 1.72 * S;
+    pivot.scale.setScalar(S);
+    var mixer = new T.AnimationMixer(model), act = {}, wt = {};
+    NV_CLIPS.forEach(function (n, k) { var ac = mixer.clipAction(NV.clips[n]); ac.play(); ac.setEffectiveWeight(0); ac.time = (k * 0.7 + Math.random() * 3) % 3; act[n] = ac; wt[n] = 0; });
+    var than = new T.Mesh(new T.BoxGeometry(0.9, caoNguoi, 0.6), new T.MeshBasicMaterial({ visible: false })); than.position.y = caoNguoi / 2; g.add(than);
+    var bong = new T.Mesh(new T.CircleGeometry(0.55, 20), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false }));
+    bong.rotation.x = -Math.PI / 2; bong.position.y = 0.02; g.add(bong);
+    if (laLead) { var vong = new T.Mesh(new T.TorusGeometry(0.6, 0.035, 8, 40), mat(0xffb020, { emissive: 0xffb020, emissiveIntensity: 0.8 })); vong.rotation.x = Math.PI / 2; vong.position.y = 0.05; g.add(vong); }
+    // sách / máy tính bảng ở tay trái, bút ở tay phải (chỉ hiện khi đi họp); thang xương là cm nên nhân 100
+    var gv = new T.Group(); gv.scale.setScalar(100 / 1); var sach = dungVat(hueV % 2, hsl(hueV, 0.5, 0.35).getHex()); sach.position.set(0, 0.07, 0.0); sach.rotation.set(0, 0, 0); gv.add(sach); gv.visible = false; B.LeftHand.add(gv);
+    var gb = new T.Group(); gb.scale.setScalar(100); var but = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.18, 6), mat(0x222222)); but.position.set(0, 0.06, 0); gb.add(but); gb.visible = false; B.RightHand.add(gb);
+    var nhan = spriteTu(veNhan(ten, role, "#" + acc.getHexString(), nenNhan()), 2.5); nhan.position.set(0, caoNguoi + 0.55, 0); g.add(nhan);
+    var noi = spriteTu(veNoi("…", "#" + acc.getHexString()), 3.6); noi.center.set(0.5, 0); noi.position.set(0, caoNguoi + 0.95, 0); noi.visible = false; g.add(noi);
+    return { hum: true, g: g, pivot: pivot, model: model, B: B, mixer: mixer, act: act, wt: wt, S: S, than: than, nhan: nhan, noi: noi, acc: acc, s: 0, vat: gv, but: gb, ikw: 0, vatGoc: sach, idx: idx };
+  }
+  // quay xương `bone` sao cho trục hướng tới `child` chỉ về `huong` (thế giới)
+  function nhamXuong(bone, child, huong) {
+    bone.updateWorldMatrix(true, false); child.updateWorldMatrix(true, false);
+    bone.getWorldPosition(_p0); child.getWorldPosition(_p1); _v0.copy(_p1).sub(_p0).normalize();
+    _q0.setFromUnitVectors(_v0, huong.normalize());
+    bone.getWorldQuaternion(_q1); _q1.premultiply(_q0);
+    bone.parent.getWorldQuaternion(_q0); _q0.invert(); bone.quaternion.copy(_q0.multiply(_q1));
+    bone.updateMatrixWorld(true);
+  }
+  // IK hai khúc: vai -> khuỷu -> cổ tay chạm điểm `dich` (thế giới), khuỷu nghiêng về phía `cuc`
+  function ikTay(up, fo, ha, dich, cuc, w) {
+    if (w <= 0.001) return;
+    var oU = up.quaternion.clone(), oF = fo.quaternion.clone();
+    up.updateWorldMatrix(true, true);
+    up.getWorldPosition(_p0); fo.getWorldPosition(_p1); ha.getWorldPosition(_p2);
+    var l1 = _p0.distanceTo(_p1), l2 = _p1.distanceTo(_p2);
+    var d = dich.clone().sub(_p0), dist = Math.min(Math.max(d.length(), Math.abs(l1 - l2) + 0.02), (l1 + l2) * 0.995); d.normalize();
+    var cosA = (l1 * l1 + dist * dist - l2 * l2) / (2 * l1 * dist), sinA = Math.sqrt(Math.max(0, 1 - cosA * cosA));
+    var perp = cuc.clone().sub(d.clone().multiplyScalar(cuc.dot(d))).normalize();
+    var khuyu = _p0.clone().add(d.clone().multiplyScalar(l1 * cosA)).add(perp.multiplyScalar(l1 * sinA));
+    nhamXuong(up, fo, khuyu.clone().sub(_p0));
+    var cuoi = _p0.clone().add(d.clone().multiplyScalar(dist));
+    nhamXuong(fo, ha, cuoi.sub(khuyu));
+    ha.quaternion.slerp(_qi, Math.min(1, w * 1.2)); ha.updateMatrixWorld(true);
+    if (w < 0.999) { var nU = up.quaternion.clone(), nF = fo.quaternion.clone(); up.quaternion.copy(oU).slerp(nU, w); fo.quaternion.copy(oF).slerp(nF, w); up.updateMatrixWorld(true); }
+  }
+  function nguoiKhung(a, r, dang, dt, t, ngoiK) {
+    if (!_p0) { _p0 = new T.Vector3(); _p1 = new T.Vector3(); _p2 = new T.Vector3(); _qi = new T.Quaternion(); _q0 = new T.Quaternion(); _q1 = new T.Quaternion(); _v0 = new T.Vector3(); _v1 = new T.Vector3(); }
+    var ngoi = ngoiK > 0.5, mucTieu = {};
+    if (a.walking) mucTieu.walk = 1;
+    else if (ngoi) mucTieu[dang === "talk" ? "sitans" : "sit"] = 1;
+    else mucTieu[dang === "talk" ? "talk" : (dang === "listen" ? "listen" : "idle")] = 1;
+    var tong = 0, n, k = Math.min(1, dt * 7);
+    for (n in r.act) { r.wt[n] += ((mucTieu[n] || 0) - r.wt[n]) * k; tong += r.wt[n]; }
+    var ox = 0, oz = 0, hạ = 0;
+    for (n in r.act) {
+      var w = tong > 0 ? r.wt[n] / tong : 0; r.act[n].setEffectiveWeight(w);
+      if (NV_OFF[n]) { ox += NV_OFF[n][0] * 0.01 * w; oz += NV_OFF[n][1] * 0.01 * w; }
+      if (n === "sit" || n === "sitans") hạ += w;
+    }
+    r.act.walk.timeScale = 1.3;
+    r.mixer.update(dt);
+    r.pivot.position.set(ox * r.S, -hạ * (0.745 * r.S - 0.56), oz * r.S);
+    r.model.updateMatrixWorld(true);
+    var tayDat = ngoi && (dang === "type" || dang === "listen");
+    r.ikw += ((tayDat ? 1 : 0) - r.ikw) * Math.min(1, dt * 6);
+    if (r.ikw > 0.01) {
+      var sr = Math.sin(a.rot), cr = Math.cos(a.rot), f = [sr, cr], lft = [cr, -sr], gõ = dang === "type", cao = gõ ? 0.92 : 0.9, xa = gõ ? 0.86 : 0.8;
+      var cg = r.g.position, B = r.B, bs = 0.5 + 0.5 * Math.sin(t * 17 + a.seed), bs2 = 0.5 + 0.5 * Math.sin(t * 13 + a.seed * 2.3);
+      [[1, B.LeftArm, B.LeftForeArm, B.LeftHand, bs], [-1, B.RightArm, B.RightForeArm, B.RightHand, bs2]].forEach(function (h) {
+        var sd = h[0], j = gõ ? 0.02 * h[4] : 0, tg = new T.Vector3(cg.x + f[0] * (xa - 0.0) + lft[0] * sd * 0.2, cao + j, cg.z + f[1] * xa + lft[1] * sd * 0.2);
+        var cuc = new T.Vector3(lft[0] * sd * 0.6, -0.8, lft[1] * sd * 0.6);
+        ikTay(h[1], h[2], h[3], tg, cuc, r.ikw);
+        if (r.ikw > 0.01) { h[3].rotateY(-sd * 1.3 * r.ikw); h[3].updateMatrixWorld(true); }
+      });
+    }
+    // đầu quay nhìn người đang nói (quanh trục dọc thế giới), gật nhẹ khi nói
+    var yaw = 0;
+    if (nguoiNoi && nguoiNoi !== a && !a.walking) { var rel = Math.atan2(nguoiNoi.x - a.x, nguoiNoi.z - a.z) - a.rot; while (rel > Math.PI) rel -= Math.PI * 2; while (rel < -Math.PI) rel += Math.PI * 2; yaw = cl(rel, -1.0, 1.0); }
+    else if (!a.walking && ngoi) yaw = Math.sin(t * 0.45 + a.seed) * 0.18;
+    r.yawC = lerp(r.yawC || 0, yaw, 0.12);
+    if (Math.abs(r.yawC) > 0.002) {
+      var hd = r.B.Head; hd.updateWorldMatrix(true, false); hd.getWorldQuaternion(_q1); _q0.setFromAxisAngle(_v1.set(0, 1, 0), r.yawC * 0.8); _q1.premultiply(_q0);
+      hd.parent.getWorldQuaternion(_q0); _q0.invert(); hd.quaternion.copy(_q0.multiply(_q1));
+    }
+  }
+
   // ---------- màn hình máy tính: bốn kiểu nội dung chuyển động, dùng chung ----------
   function taoManHinh() {
     manHinh = [0, 1, 2, 3].map(function (k) {
@@ -313,7 +421,7 @@
     scene.add(g);
   }
   function taoAgent(ten, role, laLead, home, rot) {
-    var r = dungRobot(ten, cat(role, 24), hue(ten), laLead);
+    var r = NV ? dungNguoi3D(ten, cat(role, 24), hue(ten), laLead) : dungRobot(ten, cat(role, 24), hue(ten), laLead);
     var a = { ten: ten, role: role || "", r: r, lead: !!laLead, home: home, kind: home.kind || "desk", huong: rot || 0,
               x: home.x, z: home.z, rot: rot || 0, q: [], cur: null, task: "", noiHet: 0, screen: null, trang: "Rảnh",
               seat: null, key: ten.toLowerCase(), walking: false, dd: 0, bam: 0, seed: Math.random() * 100, holdPose: "type", stuck: 0 };
@@ -322,7 +430,7 @@
     return a;
   }
   function dungBan(slot, a, idx) {
-    var g = new T.Group(); g.position.set(slot.desk.x, 0, slot.desk.z); g.rotation.y = slot.desk.rot;
+    var g = new T.Group(); g.position.set(slot.desk.x, NV ? -0.2 : 0, slot.desk.z); g.rotation.y = slot.desk.rot;
     var mt = new T.Mesh(new T.BoxGeometry(2.6, 0.12, 1.3), mat(sang() ? 0xdfe6f2 : 0x2a3a58)); mt.position.set(0, 1.0, 0); g.add(mt);
     [[-1.2, -0.55], [1.2, -0.55], [-1.2, 0.55], [1.2, 0.55]].forEach(function (p) { var ch = new T.Mesh(new T.BoxGeometry(0.1, 1.0, 0.1), mat(0x8fa0b8)); ch.position.set(p[0], 0.5, p[1]); g.add(ch); });
     var vien = new T.Mesh(new T.BoxGeometry(1.2, 0.76, 0.06), mat(0x0f1626)); vien.position.set(0, 1.66, -0.38); g.add(vien);
@@ -351,7 +459,7 @@
     return { def: def, den: den, spot: { x: 10.7, z: def.z, kind: "st" }, g: g };
   }
   function dungBanHop() {
-    var g = new T.Group();
+    var g = new T.Group(); g.position.y = NV ? -0.2 : 0;
     var mt = new T.Mesh(new T.BoxGeometry(TL, 0.14, TW), mat(sang() ? 0xd5deee : 0x2a3a58)); mt.position.y = 1.0; g.add(mt);
     [-TL / 2 + 0.7, TL / 2 - 0.7].forEach(function (x) { var ch = new T.Mesh(new T.BoxGeometry(0.25, 1.0, 1.5), mat(0x8fa0b8)); ch.position.set(x, 0.5, 0); g.add(ch); });
     var vien = new T.Mesh(new T.BoxGeometry(TL, 0.05, 0.06), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.8 })); vien.position.set(0, 1.09, 0); g.add(vien);
@@ -611,7 +719,7 @@
   }
   function banDo() { return ds.concat(lead ? [lead] : []); }
   function buoc(a, dt, t) {
-    var r = a.r, c = a.cur, speed = 3.3;
+    var r = a.r, c = a.cur, speed = r.hum ? 2.5 : 3.3;
     if (!c) {
       c = a.cur = a.q.shift() || null;
       if (c) {
@@ -655,6 +763,7 @@
     var chongoi = !a.walking && (a.kind === "desk" || a.kind === "seat"), ngoiK = chongoi ? 1 - a.dd : 0;
     var ox = chongoi ? -Math.sin(a.rot) * 0.6 * a.dd : 0, oz = chongoi ? -Math.cos(a.rot) * 0.6 * a.dd : 0;
     r.g.position.set(a.x + ox, -0.13 * r.s * ngoiK, a.z + oz); r.g.rotation.y = a.rot;
+    if (r.hum) nguoiKhung(a, r, dang, dt, t, ngoiK); else {
     var bob = a.walking ? Math.abs(Math.sin(t * 11)) * 0.07 : Math.sin(t * 1.6 + a.seed) * 0.012;
     r.than.position.y = 0.95 + bob; r.dau.position.y = 1.78 + bob;
     var gc = -1.35 * ngoiK;
@@ -684,6 +793,7 @@
     if (nguoiNoi && nguoiNoi !== a && !a.walking) { var rel = Math.atan2(nguoiNoi.x - a.x, nguoiNoi.z - a.z) - a.rot; while (rel > Math.PI) rel -= Math.PI * 2; while (rel < -Math.PI) rel += Math.PI * 2; yaw = cl(rel, -1.1, 1.1); }
     else if (!a.walking) yaw = sn(t * 0.45 + a.seed) * 0.22 * (dang === "type" ? 1 : 0.5);
     r.dau.rotation.y = lerp(r.dau.rotation.y, yaw, 0.12);
+    }
     // ---- màn hình sáng khi đang dùng ----
     if (a.screen) { var dungMay = a.kind === "desk" && !a.walking && ngoiK > 0.5, m = dungMay ? matManOn[a.screenIdx] : matManOff; if (a.screen.material !== m) a.screen.material = m; }
     if (r.noi.visible && now() > a.noiHet) r.noi.visible = false;
@@ -790,7 +900,7 @@
     if (mo) return; mo = true;
     host.hidden = false; document.documentElement.classList.add("mm-office-on");
     var nut = $("officeToggleBtn"); if (nut) nut.setAttribute("aria-pressed", "true");
-    Promise.all([nap(), mon()]).then(function (r) {
+    Promise.all([nap().then(function (ok) { return ok ? napNguoi().then(function () { return ok; }) : ok; }), mon()]).then(function (r) {
       if (!mo) return;
       if (!r[0]) { toast("Máy này không dựng được cảnh 3D"); dong(); return; }
       try { dung(r[1]); } catch (e) { console.warn("[office]", e); toast("Không dựng được văn phòng 3D"); dong(); return; }
@@ -839,6 +949,7 @@
   function phat(loai, d) { if (kenh && !window.__mmOfficeSolo) { try { kenh.postMessage({ loai: loai, d: d }); } catch (e) {} } }
   if (kenh && window.__mmOfficeSolo) kenh.onmessage = function (ev) { var m = ev.data || {}; var O = window.MinMinOffice; if (!O) return; if (m.loai === "start") O.onChatStart(m.d); else if (m.loai === "tool") O.onChatTool(m.d); else if (m.loai === "end") O.onChatEnd(m.d); };
   window.MinMinOffice = {
+    nv: function () { return NV; }, ag: function () { return agents; },
     open: function () { khoiTao(); mo_(); }, close: dong, toggle: function () { mo ? dong() : mo_(); },
     // khung chat (app.js): MinMin nhận câu hỏi -> người liên quan vào họp; gọi công cụ -> cử người đi lấy dữ liệu;
     // trả lời xong -> MinMin đứng dậy trình bày chính câu trả lời thật
