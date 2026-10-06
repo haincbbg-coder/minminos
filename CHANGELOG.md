@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.86] - 2026-10-06
+### Cải thiện
+- Văn phòng AI 3D bố trí lại như một văn phòng thật: mỗi agent có một bàn làm việc và một ghế riêng kê quanh phòng (đủ cả 20 agent, trước đây chỉ vẽ 12), giám đốc MinMin ngồi ở đầu một bàn họp dài ở giữa phòng.
+- Khi có việc, người liên quan tự đứng dậy đi tới bàn họp ngồi hai bên bàn rồi họp, xong thì về bàn của mình. Workflow thì cả nhóm các bước họp chung đến hết lần chạy. Khi hỏi MinMin trong khung chat, các agent có chuyên môn gần câu hỏi (đoán theo tên và vai trò) vào họp cùng, và người trong phòng họp được cử đi lấy dữ liệu ở trạm.
+
 ## [26.10.85] - 2026-10-06
 ### Thêm mới
 - Văn phòng AI 3D trong khoang não: nút hình robot cạnh quả cầu mở một văn phòng 3D, mỗi agent của brain là một robot ngồi bàn của mình. Có MinMin là tổng chỉ huy, bàn họp ở giữa và bốn trạm dữ liệu (Bộ nhớ Brain, Dữ liệu ngoài, Mạng và web, Máy chạy lệnh).

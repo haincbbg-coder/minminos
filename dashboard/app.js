@@ -1121,6 +1121,7 @@ function handleMessage(data) {
     } catch (e) {}
     return;
   }
+  if (window.MinMinOffice && (data.type === "turn_done" || data.type === "error")) { try { window.MinMinOffice.onChatEnd(); } catch (e) {} }
   if (window.MinMinWorkspace && data.type !== "turn_done") window.MinMinWorkspace.event(sid, data);
   if (data.type === "status") {
     if (t) t.running = true;
@@ -1595,6 +1596,7 @@ function sendMessage(text, opts) {
                           voice_input: _tuGiong, voice_turn_id: String(turns[sid].id),
                           wf_run: !!(opts && opts.wfRun), ...(adaptiveMeta || {}) };
   if(adaptiveMeta) { adaptiveCurrent.set(sid,adaptiveMeta.utterance_id);adaptiveOutbox.set(adaptiveMeta.utterance_id,{payload,element:userElement,since:performance.now()}); }
+  try { if (window.MinMinOffice) window.MinMinOffice.onChatStart(msg || outMsg); } catch (e) {}
   ws.send(JSON.stringify(payload));
   _tuGiong = false;
 }
