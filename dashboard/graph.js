@@ -200,7 +200,7 @@ class JavisGraph {
   }
 
   async load(query = "source=all") {
-    const res = await fetch(typeof window.JAVIS_GRAPH_URL === "function" ? window.JAVIS_GRAPH_URL() : `/graph?${query}&orphans=1`);   // trang thành viên trỏ sang /m/graph   // 2D hiện CẢ note cô đơn (như graph view Obsidian)
+    const res = await fetch(`/graph?${query}&orphans=1`);   // 2D hiện CẢ note cô đơn (như graph view Obsidian)
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || graphTw("graph.load_failed", { status: res.status }));
     const nodes = Array.isArray(data.nodes) ? data.nodes : [];
