@@ -263,8 +263,11 @@
     bong.rotation.x = -Math.PI / 2; bong.position.y = 0.02; g.add(bong);
     if (laLead) { var vong = new T.Mesh(new T.TorusGeometry(0.6, 0.035, 8, 40), mat(0xffb020, { emissive: 0xffb020, emissiveIntensity: 0.8 })); vong.rotation.x = Math.PI / 2; vong.position.y = 0.05; g.add(vong); }
     // sách / máy tính bảng ở tay trái, bút ở tay phải (chỉ hiện khi đi họp); thang xương là cm nên nhân 100
-    var gv = new T.Group(); gv.scale.setScalar(100 / 1); var sach = dungVat(hueV % 2, hsl(hueV, 0.5, 0.35).getHex()); sach.position.set(0, 0.07, 0.0); sach.rotation.set(0, 0, 0); gv.add(sach); gv.visible = false; B.LeftHand.add(gv);
-    var gb = new T.Group(); gb.scale.setScalar(100); var but = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.18, 6), mat(0x222222)); but.position.set(0, 0.06, 0); gb.add(but); gb.visible = false; B.RightHand.add(gb);
+    var gv = new T.Group(); gv.scale.setScalar(100 / 1); var sach = dungVat(hueV % 2, hsl(hueV, 0.5, 0.35).getHex()); sach.scale.setScalar(0.8);
+    // trục tay (mô hình dạng chữ T): ngón = Y, pháp tuyến lòng bàn tay = (X+Z)/√2, ngón cái = (Z-X)/√2. Sách: bề ngang theo ngón cái, bề dày theo lòng bàn tay, chiều dài theo ngón; bàn tay nắm phần dưới cuốn sách
+    (function () { var a = Math.SQRT1_2, m = new T.Matrix4().makeBasis(new T.Vector3(-a, 0, a), new T.Vector3(a, 0, a), new T.Vector3(0, 1, 0)); sach.quaternion.setFromRotationMatrix(m); sach.position.set(a * 0.055, 0.09, a * 0.055); })();
+    gv.add(sach); gv.visible = false; B.LeftHand.add(gv);
+    var gb = new T.Group(); gb.scale.setScalar(100); var but = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.18, 6), mat(0x222222)); but.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), new T.Vector3(-Math.SQRT1_2, 0, Math.SQRT1_2)); but.position.set(0.012, 0.045, 0.03); gb.add(but); gb.visible = false; B.RightHand.add(gb);
     var nhan = spriteTu(veNhan(ten, role, "#" + acc.getHexString(), nenNhan()), 2.5); nhan.position.set(0, caoNguoi + 0.55, 0); g.add(nhan);
     var noi = spriteTu(veNoi("…", "#" + acc.getHexString()), 3.6); noi.center.set(0.5, 0); noi.position.set(0, caoNguoi + 0.95, 0); noi.visible = false; g.add(noi);
     return { hum: true, rest: rest, g: g, pivot: pivot, model: model, B: B, mixer: mixer, act: act, wt: wt, S: S, than: than, nhan: nhan, noi: noi, acc: acc, s: 0, vat: gv, but: gb, ikw: 0, vatGoc: sach, idx: idx };
@@ -352,7 +355,7 @@
         var mx = (B.LeftArm.getWorldPosition(_p0).x + B.RightArm.getWorldPosition(_p1).x) / 2, mz = (_p0.z + _p1.z) / 2;
         B.LeftForeArm.getWorldPosition(_p1); B.LeftHand.getWorldPosition(_p2); B.LeftArm.getWorldPosition(_p0);
         var armL = _p0.distanceTo(_p1) + _p1.distanceTo(_p2), dd_ = (cg.x + f[0] * xaRef - mx) * f[0] + (cg.z + f[1] * xaRef - mz) * f[1];
-        r.shz = cl((r.shz || 0) + (dd_ - armL * 0.62) * Math.min(1, dt * 5), -0.1, 0.4);
+        r.shz = cl((r.shz || 0) + (dd_ - armL * 0.62) * Math.min(1, dt * 5), -0.2, 0.06);
       }
       var bs = 0.5 + 0.5 * Math.sin(t * 17 + a.seed), bs2 = 0.5 + 0.5 * Math.sin(t * 13 + a.seed * 2.3);
       [[1, B.LeftArm, B.LeftForeArm, B.LeftHand, bs], [-1, B.RightArm, B.RightForeArm, B.RightHand, bs2]].forEach(function (h) {
@@ -480,9 +483,9 @@
     var vien = new T.Mesh(new T.BoxGeometry(1.2, 0.76, 0.06), mat(0x0f1626)); vien.position.set(0, 1.66, -0.38); g.add(vien);
     var man = new T.Mesh(new T.PlaneGeometry(1.1, 0.66), matManOff); man.position.set(0, 1.66, -0.345); g.add(man); a.screen = man; a.screenIdx = idx % 4;
     var de = new T.Mesh(new T.BoxGeometry(0.1, 0.35, 0.1), mat(0x8fa0b8)); de.position.set(0, 1.22, -0.38); g.add(de);
-    var bp = new T.Mesh(new T.BoxGeometry(0.85, 0.03, 0.3), mat(0x2b3550)); bp.position.set(0, 1.075, 0.15); g.add(bp);       // bàn phím
-    for (var r = 0; r < 3; r++) { var hang = new T.Mesh(new T.BoxGeometry(0.78, 0.012, 0.055), mat(0x8fa0b8)); hang.position.set(0, 1.095, 0.06 + r * 0.085); g.add(hang); }
-    var ch = new T.Mesh(new T.SphereGeometry(0.07, 10, 8), mat(0x2b3550)); ch.scale.set(0.8, 0.5, 1.2); ch.position.set(0.62, 1.085, 0.15); g.add(ch);   // chuột
+    var bp = new T.Mesh(new T.BoxGeometry(0.85, 0.03, 0.3), mat(0x2b3550)); bp.position.set(0, 1.075, NV ? 0.3 : 0.15); g.add(bp);       // bàn phím
+    for (var r = 0; r < 3; r++) { var hang = new T.Mesh(new T.BoxGeometry(0.78, 0.012, 0.055), mat(0x8fa0b8)); hang.position.set(0, 1.095, (NV ? 0.21 : 0.06) + r * 0.085); g.add(hang); }
+    var ch = new T.Mesh(new T.SphereGeometry(0.07, 10, 8), mat(0x2b3550)); ch.scale.set(0.8, 0.5, 1.2); ch.position.set(0.62, 1.085, NV ? 0.3 : 0.15); g.add(ch);   // chuột
     var cap = new T.Mesh(new T.CylinderGeometry(0.06, 0.05, 0.1, 10), mat(0x6f8fff)); cap.position.set(-0.95, 1.11, -0.2); g.add(cap);                    // cốc
     scene.add(g);
     ghe(slot.stand.x, slot.stand.z, slot.rot, false);
@@ -595,7 +598,9 @@
     list = list.slice(0, 24);
     var bt = boTri(list.length);
     list.forEach(function (ag, i) {
-      var p = bt[i], a = taoAgent(ag.name || ag.slug, ag.role, false, { x: p.stand.x, z: p.stand.z, kind: "desk" }, p.rot);
+      var p = bt[i];
+      if (NV) { var kx = Math.sign(p.stand.x - p.desk.x), kz = Math.sign(p.stand.z - p.desk.z); p.stand = { x: p.stand.x + kx * 0.2, z: p.stand.z + kz * 0.2 }; }
+      var a = taoAgent(ag.name || ag.slug, ag.role, false, { x: p.stand.x, z: p.stand.z, kind: "desk" }, p.rot);
       dungBan(p, a, i);
       agents[(ag.name || ag.slug).toLowerCase()] = a; if (ag.slug) agents[ag.slug.toLowerCase()] = a;
       a.group = ag.group || ""; ds.push(a);
