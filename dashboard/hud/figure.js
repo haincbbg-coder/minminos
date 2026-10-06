@@ -3,6 +3,7 @@
 // toi vien nen xoay nhe van co khoi. Khi noi: moi/ham chuyen dong theo nhip giong, mat sang len.
 const S = 3.45 / 1880;              // 1 pixel anh = bao nhieu don vi the gioi
 const TOP = 1.95;
+const ZS = 0.55;                    // nua be day co the (don vi the gioi): mat truoc +ZS, mat sau -ZS
 const px2w = (x, y) => [(x - 551.5) * S, TOP - y * S];
 // Toa do (pixel trong anh da cat) cua miệng va hai mat
 const MOUTH = { x: 555, y: 487, rx: 78, ry: 58 };
@@ -26,11 +27,12 @@ void main(){
   float jaw = smoothstep(uMouth.y - 0.02, uMouth.y - 0.18, oy) * (1.0 - smoothstep(uMouth.y - 0.36, uMouth.y - 0.55, oy))
             * (1.0 - smoothstep(0.30, 0.62, abs(p.x)));
   p.y -= uOpen * 0.05 * jaw;
-  vMouth = m;
+  float side = aZ >= 0.0 ? 1.0 : -1.0;       // mat truoc / mat sau cua khoi nguoi
+  vMouth = m * step(0.0, side);
   // ---- mat sang ----
   float e1 = exp(-dot(p.xy - uEye.xy, p.xy - uEye.xy) * 3200.0);
   float e2 = exp(-dot(p.xy - uEye.zw, p.xy - uEye.zw) * 3200.0);
-  vGlow = max(e1, e2) * (0.75 + 0.25 * sin(uTime * 2.2) + uGlow);
+  vGlow = step(0.0, side) * max(e1, e2) * (0.75 + 0.25 * sin(uTime * 2.2) + uGlow);
   // ---- xoay nhe theo nguoi nhin: dau xoay nhieu, than it ----
   float head = smoothstep(uMouth.y - 0.45, uMouth.y + 0.1, p.y);
   float ya = uYaw * (0.35 + 0.65 * head), c = cos(ya), s = sin(ya);
@@ -51,7 +53,9 @@ void main(){
   float sz = aSz * (1.0 + vGlow * 0.5 + vEdge * 0.8 + m * uOpen * 0.4);
   gl_PointSize = sz * uPix * (4.2 / -mv.z) * uSizeK * mix(1.15, 1.0, uLight);
   vCol = aCol;
-  vA = mix(0.2, 1.0, ease);
+  // mat nao quay ve phia nguoi xem thi hien, mat khuat mo di (xoay 360 do van la khoi dac)
+  float nz = (mat3(modelMatrix) * vec3(0.0, 0.0, side)).z;
+  vA = mix(0.2, 1.0, ease) * smoothstep(-0.55, 0.25, nz);
 }`;
 const FRAG = /* glsl */`
 uniform float uLight, uOpen, uErr, uState;
@@ -99,9 +103,9 @@ export class PhotoFigure {
     const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), sz = new Float32Array(n), seed = new Float32Array(n), zz = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       const [wx, wy] = px2w(X[i] / 16, Y[i] / 16);
-      pos[i * 3] = wx; pos[i * 3 + 1] = wy; pos[i * 3 + 2] = (Z[i] / 255 - 0.4) * 0.7;
+      pos[i * 3] = wx; pos[i * 3 + 1] = wy; pos[i * 3 + 2] = ((Z[i] - 127.5) / 127.5) * ZS;
       col[i * 3] = C[i * 3] / 255; col[i * 3 + 1] = C[i * 3 + 1] / 255; col[i * 3 + 2] = C[i * 3 + 2] / 255;
-      sz[i] = Sz[i] / 120; seed[i] = Math.random(); zz[i] = Z[i] / 255;
+      sz[i] = Sz[i] / 120; seed[i] = Math.random(); zz[i] = (Z[i] - 127.5) / 127.5;
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -121,7 +125,7 @@ export class PhotoFigure {
     this.mat.blending = light ? this.THREE.NormalBlending : this.THREE.AdditiveBlending;
     this.mat.needsUpdate = true;
   }
-  // 3 muc: Sac net (het 400k cham), Can bang (40%), Nhe (15%). Cham la ngau nhien deu nen cat bo
+  // 3 muc: Sac net (het 560k cham), Can bang (40%), Nhe (15%). Cham la ngau nhien deu nen cat bo
   // phan duoi van giu nguyen hinh; cham to len mot chut de khong thung lo.
   setQuality(level) {
     this.level = level;
