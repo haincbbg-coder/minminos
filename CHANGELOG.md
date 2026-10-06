@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.91] - 2026-10-07
+### Cải thiện
+- Văn phòng AI 3D: thêm nút **Ẩn chữ** (và **Hiện chữ**) để tắt hết bảng tên và câu thoại trên đầu các agent, nhớ lựa chọn cho lần sau.
+- Nhân vật to hơn, cân đối với bàn ghế và máy tính; ảnh da, mặt, quần áo nét hơn (kết cấu 1024 thay vì 512).
+- Hết dáng "xác sống": lưng ngồi thẳng, đầu không còn ngửa ra sau mà cúi nhẹ nhìn màn hình, tay co khuỷu đặt lên bàn phím thay vì duỗi thẳng, bàn tay úp phẳng.
+- Bước chân khớp tốc độ di chuyển nên hết trượt chân, đi nhịp nhàng hơn.
+- Bàn làm việc và bàn họp được hạ thấp cho vừa tầm người ngồi.
+
 ## [26.10.90] - 2026-10-07
 ### Cải thiện
 - Văn phòng AI 3D: mỗi agent giờ là một người thật có xương, mặt và dáng khác nhau (10 nhân vật tạo bằng Higgsfield, giám đốc MinMin mặc vest). Đi bộ có bước chân, ngồi gõ phím, đứng nói, nghe họp, quay đầu nhìn người đang nói.

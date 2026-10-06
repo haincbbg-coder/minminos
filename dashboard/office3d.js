@@ -223,8 +223,8 @@
 
 
   // ---------- người 3D có xương (Higgsfield + Meshy), dựng trong office3d: 10 nhân vật, 6 hoạt ảnh ----------
-  var NV = null, NV_CLIPS = ["walk", "idle", "sit", "talk", "listen", "sitans"], nvDem = 0, HS = 1.15;
-  var NV_DIR = "/static/office/", NV_V = "1";
+  var NV = null, NV_CLIPS = ["walk", "idle", "sit", "talk", "listen", "sitans"], nvDem = 0, HS = 1.3;
+  var NV_DIR = "/static/office/", NV_V = "2";
   function napNguoi() {
     return import(NV_DIR + "gltf-addons.js?v=" + NV_V).then(function (m) {
       var L = new m.GLTFLoader();
@@ -234,6 +234,7 @@
       NV_CLIPS.forEach(function (n) { ps.push(tai(NV_DIR + "a_" + n + ".glb")); });
       return Promise.all(ps).then(function (r) {
         var clips = {}; NV_CLIPS.forEach(function (n, k) { clips[n] = r[10 + k].animations[0]; });
+        r.slice(0, 10).forEach(function (g) { g.scene.traverse(function (o) { if (o.isMesh && o.material) { var ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(function (m) { ['map', 'normalMap', 'roughnessMap', 'metalnessMap'].forEach(function (k) { if (m[k]) { m[k].anisotropy = 8; m[k].needsUpdate = true; } }); }); } }); });
         NV = { chars: r.slice(0, 10).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils }; return true;
       });
     }).catch(function (e) { console.warn("[office] không nạp được người 3D, dùng robot", e); NV = null; return false; });
@@ -246,7 +247,7 @@
     var g = new T.Group(), pivot = new T.Group(); g.add(pivot);
     var model = NV.SU.clone(NV.chars[idx]); pivot.add(model);
     model.traverse(function (o) { if (o.isSkinnedMesh) o.frustumCulled = false; });
-    var B = {}; ["Hips", "Spine", "neck", "Head", "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand"].forEach(function (n) { B[n] = model.getObjectByName(n); });
+    var B = {}; ["Hips", "Spine02", "Spine01", "Spine", "neck", "Head", "head_end", "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand"].forEach(function (n) { B[n] = model.getObjectByName(n); });
     var hy = B.Hips.position.y || 100; var S = HS * (100.26 / hy), caoNguoi = 1.72 * S;
     pivot.scale.setScalar(S);
     var mixer = new T.AnimationMixer(model), act = {}, wt = {};
@@ -271,6 +272,12 @@
     bone.parent.getWorldQuaternion(_q0); _q0.invert(); bone.quaternion.copy(_q0.multiply(_q1));
     bone.updateMatrixWorld(true);
   }
+  // như nhamXuong nhưng chỉ pha trộn một phần `w` (giữ dáng gốc của hoạt ảnh phần còn lại)
+  function nhamMem(bone, child, huong, w) {
+    if (!bone || !child || w <= 0.001) return;
+    var o = bone.quaternion.clone(); nhamXuong(bone, child, huong);
+    if (w < 0.999) { bone.quaternion.copy(o).slerp(bone.quaternion.clone(), w); bone.updateMatrixWorld(true); }
+  }
   // IK hai khúc: vai -> khuỷu -> cổ tay chạm điểm `dich` (thế giới), khuỷu nghiêng về phía `cuc`
   function ikTay(up, fo, ha, dich, cuc, w) {
     if (w <= 0.001) return;
@@ -289,6 +296,7 @@
     if (w < 0.999) { var nU = up.quaternion.clone(), nF = fo.quaternion.clone(); up.quaternion.copy(oU).slerp(nU, w); fo.quaternion.copy(oF).slerp(nF, w); up.updateMatrixWorld(true); }
   }
   function nguoiKhung(a, r, dang, dt, t, ngoiK) {
+    var B_ = r.B;
     if (!_p0) { _p0 = new T.Vector3(); _p1 = new T.Vector3(); _p2 = new T.Vector3(); _qi = new T.Quaternion(); _q0 = new T.Quaternion(); _q1 = new T.Quaternion(); _v0 = new T.Vector3(); _v1 = new T.Vector3(); }
     var ngoi = ngoiK > 0.5, mucTieu = {};
     if (a.walking) mucTieu.walk = 1;
@@ -302,15 +310,26 @@
       if (NV_OFF[n]) { ox += NV_OFF[n][0] * 0.01 * w; oz += NV_OFF[n][1] * 0.01 * w; }
       if (n === "sit" || n === "sitans") hạ += w;
     }
-    r.act.walk.timeScale = 1.3;
+    r.act.walk.timeScale = 1.9 / (0.72 * r.S);
     r.mixer.update(dt);
-    r.pivot.position.set(ox * r.S, -hạ * (0.745 * r.S - 0.56), oz * r.S);
+    var sr0 = Math.sin(a.rot), cr0 = Math.cos(a.rot);
+    r.pivot.position.set(ox * r.S, -hạ * (0.745 * r.S - 0.56), oz * r.S + (r.shz || 0) * (r.ikw || 0));
     r.model.updateMatrixWorld(true);
     var tayDat = ngoi && (dang === "type" || dang === "listen");
     r.ikw += ((tayDat ? 1 : 0) - r.ikw) * Math.min(1, dt * 6);
+    // lưng thẳng khi ngồi (hoạt ảnh ngồi gốc ngả lưng), hơi chồm về bàn khi gõ
+    if (hạ > 0.02 && B_.Spine02) {
+      var lean = dang === "type" ? 0.14 : 0.05, up = new T.Vector3(sr0 * lean, 1, cr0 * lean), wS = Math.min(1, hạ) * 0.92;
+      nhamMem(B_.Spine02, B_.Spine01, up.clone(), wS); nhamMem(B_.Spine01, B_.Spine, up.clone(), wS); nhamMem(B_.Spine, B_.neck, up.clone(), wS);
+    }
     if (r.ikw > 0.01) {
       var sr = Math.sin(a.rot), cr = Math.cos(a.rot), f = [sr, cr], lft = [cr, -sr], gõ = dang === "type", cao = gõ ? 0.92 : 0.9, xa = gõ ? 0.86 : 0.8;
-      var cg = r.g.position, B = r.B, bs = 0.5 + 0.5 * Math.sin(t * 17 + a.seed), bs2 = 0.5 + 0.5 * Math.sin(t * 13 + a.seed * 2.3);
+      var cg = r.g.position, B = r.B;
+      var mx = (B.LeftArm.getWorldPosition(_p0).x + B.RightArm.getWorldPosition(_p1).x) / 2, mz = (_p0.z + _p1.z) / 2;
+      B.LeftForeArm.getWorldPosition(_p1); B.LeftHand.getWorldPosition(_p2); B.LeftArm.getWorldPosition(_p0);
+      var armL = _p0.distanceTo(_p1) + _p1.distanceTo(_p2), dd_ = (cg.x + f[0] * xa - mx) * f[0] + (cg.z + f[1] * xa - mz) * f[1];
+      if (r.ikw > 0.5) r.shz = cl((r.shz || 0) + (dd_ - armL * 0.62) * Math.min(1, dt * 5), -0.1, 0.45);
+      var bs = 0.5 + 0.5 * Math.sin(t * 17 + a.seed), bs2 = 0.5 + 0.5 * Math.sin(t * 13 + a.seed * 2.3);
       [[1, B.LeftArm, B.LeftForeArm, B.LeftHand, bs], [-1, B.RightArm, B.RightForeArm, B.RightHand, bs2]].forEach(function (h) {
         var sd = h[0], j = gõ ? 0.02 * h[4] : 0, tg = new T.Vector3(cg.x + f[0] * (xa - 0.0) + lft[0] * sd * 0.2, cao + j, cg.z + f[1] * xa + lft[1] * sd * 0.2);
         var cuc = new T.Vector3(lft[0] * sd * 0.6, -0.8, lft[1] * sd * 0.6);
@@ -318,6 +337,8 @@
         if (r.ikw > 0.01) { h[3].rotateY(-sd * 1.3 * r.ikw); h[3].updateMatrixWorld(true); }
       });
     }
+    // giữ đầu thẳng (hoạt ảnh gốc hay ngửa cổ): trục đầu hướng lên, cúi nhẹ nhìn màn hình khi gõ
+    if (r.B.head_end) { var cuiK = (ngoi && dang === "type") ? 0.16 : 0.03; nhamMem(r.B.Head, r.B.head_end, new T.Vector3(sr0 * cuiK, 1, cr0 * cuiK), a.walking ? 0.7 : 0.9); }
     // đầu quay nhìn người đang nói (quanh trục dọc thế giới), gật nhẹ khi nói
     var yaw = 0;
     if (nguoiNoi && nguoiNoi !== a && !a.walking) { var rel = Math.atan2(nguoiNoi.x - a.x, nguoiNoi.z - a.z) - a.rot; while (rel > Math.PI) rel -= Math.PI * 2; while (rel < -Math.PI) rel += Math.PI * 2; yaw = cl(rel, -1.0, 1.0); }
@@ -719,7 +740,7 @@
   }
   function banDo() { return ds.concat(lead ? [lead] : []); }
   function buoc(a, dt, t) {
-    var r = a.r, c = a.cur, speed = r.hum ? 2.5 : 3.3;
+    var r = a.r, c = a.cur, speed = r.hum ? 1.9 : 3.3;
     if (!c) {
       c = a.cur = a.q.shift() || null;
       if (c) {
@@ -797,8 +818,10 @@
     // ---- màn hình sáng khi đang dùng ----
     if (a.screen) { var dungMay = a.kind === "desk" && !a.walking && ngoiK > 0.5, m = dungMay ? matManOn[a.screenIdx] : matManOff; if (a.screen.material !== m) a.screen.material = m; }
     if (r.noi.visible && now() > a.noiHet) r.noi.visible = false;
+    if (anChu) { r.noi.visible = false; r.nhan.visible = false; } else r.nhan.visible = true;
   }
 
+  var anChu = false; try { anChu = localStorage.getItem("mmOfficeAnChu") === "1"; } catch (e) {}
   var lastManHinh = 0;
   function khung() {
     rafId = requestAnimationFrame(khung);
@@ -922,7 +945,7 @@
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
     host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
-      '<button type="button" id="mmOfficeSim">Mô phỏng</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
+      '<button type="button" id="mmOfficeSim">Mô phỏng</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
       '<div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
     var nut = document.createElement("button");
@@ -933,6 +956,10 @@
     nut.addEventListener("click", function () { mo ? dong() : mo_(); });
     $("mmOfficeX").addEventListener("click", dong);
     $("mmOfficeSim").addEventListener("click", chayMau);
+    var nutTag = $("mmOfficeTag");
+    function veNutTag() { nutTag.textContent = anChu ? "Hiện chữ" : "Ẩn chữ"; nutTag.setAttribute("aria-pressed", anChu ? "true" : "false"); }
+    veNutTag();
+    nutTag.addEventListener("click", function () { anChu = !anChu; try { localStorage.setItem("mmOfficeAnChu", anChu ? "1" : "0"); } catch (e) {} veNutTag(); });
     $("mmOfficeFs").addEventListener("click", function () {
       try { if (document.fullscreenElement) document.exitFullscreen(); else if (host.requestFullscreen) host.requestFullscreen(); else if (host.webkitRequestFullscreen) host.webkitRequestFullscreen(); } catch (e) {}
     });
