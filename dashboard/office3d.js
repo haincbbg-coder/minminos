@@ -90,7 +90,7 @@
     function ok(i, j) {
       if (i < 0 || j < 0 || i >= GW || j >= GH) return false;
       var x = cx(i), z = cz(j);
-      if (Math.hypot(x - sx, z - sz) < 0.9 || Math.hypot(x - gx, z - gz) < 0.9) return Math.abs(x) <= HX - 0.7 && Math.abs(z) <= HZ - 0.7 && !(Math.abs(x) <= TL / 2 + 0.3 && Math.abs(z) <= TW / 2 + 0.3);
+      if (Math.hypot(x - sx, z - sz) < 0.62 || Math.hypot(x - gx, z - gz) < 0.62) return Math.abs(x) <= HX - 0.7 && Math.abs(z) <= HZ - 0.7 && !(Math.abs(x) <= TL / 2 + 0.3 && Math.abs(z) <= TW / 2 + 0.3);
       if (blocked[j * GW + i]) return false;
       for (var k = 0; k < occ.length; k++) if (Math.hypot(x - occ[k].x, z - occ[k].z) < 0.85) return false;
       return true;
@@ -426,35 +426,63 @@
     g.fillText(t1, W / 2, 98); g.font = "500 32px system-ui,Segoe UI,Roboto,sans-serif"; g.fillStyle = "rgba(255,255,255,0.85)"; g.fillText(KHAU_HIEU[i % KHAU_HIEU.length][1], W / 2, 175);
     return c;
   }
+  function xuongDong(g, text, x, y, maxW, lh, maxLines) {
+    var words = String(text).split(/\s+/), line = "", n = 0;
+    for (var i = 0; i < words.length; i++) {
+      var t = line ? line + " " + words[i] : words[i];
+      if (g.measureText(t).width > maxW && line) { g.fillText(line, x, y + n * lh); n++; line = words[i]; if (n >= maxLines) return n; } else line = t;
+    }
+    if (line && n < maxLines) { g.fillText(line, x, y + n * lh); n++; }
+    return n;
+  }
   function veBangDieuHanh() {
     var c = document.createElement("canvas"), W = 1400, H = 560; c.width = W; c.height = H; var g = c.getContext("2d"), light = sang();
+    var ink = light ? "#12233f" : "#e8f0ff", mute = light ? "#5a6b86" : "#9fb4d8", card = light ? "#ffffff" : "#13264a", F = "system-ui,Segoe UI,Roboto,sans-serif";
     g.fillStyle = light ? "#f3f7ff" : "#0c1830"; rr(g, 4, 4, W - 8, H - 8, 28); g.fill(); g.strokeStyle = "#2a6bff"; g.lineWidth = 6; rr(g, 4, 4, W - 8, H - 8, 28); g.stroke();
-    g.textBaseline = "middle"; g.fillStyle = light ? "#12233f" : "#e8f0ff"; g.font = "800 44px system-ui,Segoe UI,Roboto,sans-serif"; g.textAlign = "left";
-    g.fillText("BẢNG ĐIỀU HÀNH", 44, 58);
-    g.font = "500 26px system-ui,sans-serif"; g.fillStyle = light ? "#5a6b86" : "#9fb4d8";
-    var tt = kpiDuLieu ? (kpiDuLieu.updated ? "Cập nhật: " + kpiDuLieu.updated : "Số liệu thật của brain") : "Đang tải số liệu…";
-    g.textAlign = "right"; g.fillText(cat(tt, 50), W - 44, 58); g.textAlign = "left";
-    var ks = kpiDuLieu && kpiDuLieu.kpis || [];
+    var d = kpiDuLieu || {}, ten = d.company || brain() || "Công ty";
+    g.textBaseline = "middle"; g.textAlign = "left"; g.fillStyle = ink; g.font = "800 46px " + F; g.fillText(cat(ten, 28), 44, 54);
+    g.font = "600 22px " + F; g.fillStyle = "#2a6bff"; g.fillText("BẢNG ĐIỀU HÀNH", 44, 96);
+    g.font = "500 24px " + F; g.fillStyle = mute; g.textAlign = "right";
+    g.fillText(cat(kpiDuLieu ? (d.updated ? "Cập nhật: " + d.updated : "Số liệu thật của brain") : "Đang tải số liệu…", 50), W - 44, 54); g.textAlign = "left";
+    var ks = d.kpis || [];
     if (!ks.length) {
-      g.fillStyle = light ? "#5a6b86" : "#9fb4d8"; g.font = "600 30px system-ui,sans-serif";
-      g.fillText(kpiDuLieu ? "Chưa có số liệu thật cho brain này." : "Đang lấy số liệu…", 44, 190);
-      g.font = "500 24px system-ui,sans-serif"; g.fillText("Số liệu hiện ở đây khi brain có file 00 - Dashboard/minmin-dashboard.json.", 44, 240);
+      g.fillStyle = mute; g.font = "600 30px " + F; g.fillText(kpiDuLieu ? "Chưa có số liệu thật cho brain này." : "Đang lấy số liệu…", 44, 200);
+      g.font = "500 24px " + F; g.fillText("Thêm file 00 - Dashboard/minmin-dashboard.json (kpis, company, plan, targets, proposals).", 44, 250);
+      return c;
     }
-    var cols = 4, tw = 316, th = 150, gap = 24;
-    ks.slice(0, 8).forEach(function (k, i) {
-      var x = 44 + (i % cols) * (tw + gap), y = 100 + Math.floor(i / cols) * (th + 18);
-      g.fillStyle = light ? "#ffffff" : "#13264a"; rr(g, x, y, tw, th, 18); g.fill();
+    var cols = 4, tw = 316, th = 118, gap = 24;
+    ks.slice(0, 4).forEach(function (k, i) {
+      var x = 44 + i * (tw + gap), y = 120;
+      g.fillStyle = card; rr(g, x, y, tw, th, 18); g.fill();
       var tone = k.tone === "up" ? "#1fb86a" : k.tone === "down" ? "#e5484d" : k.tone === "warn" ? "#f5a623" : "#6fa8ff";
-      g.fillStyle = tone; g.fillRect(x, y + 18, 6, th - 36);
-      g.fillStyle = light ? "#5a6b86" : "#9fb4d8"; g.font = "500 24px system-ui,sans-serif"; g.fillText(cat(k.label, 24), x + 24, y + 34);
-      g.fillStyle = light ? "#12233f" : "#ffffff"; g.font = "800 50px system-ui,sans-serif"; g.fillText(cat(String(k.value) + (k.unit ? " " + k.unit : ""), 13), x + 24, y + 86);
-      if (k.delta) { g.fillStyle = tone; g.font = "600 24px system-ui,sans-serif"; g.fillText(cat(k.delta, 22), x + 24, y + 124); }
+      g.fillStyle = tone; g.fillRect(x, y + 16, 6, th - 32);
+      g.fillStyle = mute; g.font = "500 22px " + F; g.fillText(cat(k.label, 24), x + 22, y + 28);
+      g.fillStyle = ink; g.font = "800 44px " + F; g.fillText(cat(String(k.value) + (k.unit ? " " + k.unit : ""), 13), x + 22, y + 70);
+      if (k.delta) { g.fillStyle = tone; g.font = "600 20px " + F; g.fillText(cat(k.delta, 26), x + 22, y + 102); }
     });
-    var al = kpiDuLieu && kpiDuLieu.alerts || [];
-    if (al.length) {
-      g.font = "600 24px system-ui,sans-serif"; var y0 = ks.length > 4 ? 440 : 290;
-      al.slice(0, 3).forEach(function (a, i) { g.fillStyle = a.level === "critical" || a.level === "serious" ? "#e5484d" : a.level === "warning" ? "#f5a623" : "#1fb86a"; g.fillText("\u25cf " + cat(a.text, 100), 44, y0 + i * 34); });
-    }
+    // cột trái: kế hoạch + chỉ tiêu; cột phải: đề xuất + cần chú ý
+    var y0 = 266, LX = 44, RX = 724, CW = 632;
+    g.fillStyle = card; rr(g, LX, y0, CW, 270, 18); g.fill(); rr(g, RX, y0, CW, 270, 18); g.fill();
+    g.fillStyle = "#2a6bff"; g.font = "700 24px " + F; g.fillText("KẾ HOẠCH VÀ CHỈ TIÊU", LX + 22, y0 + 30); g.fillText("ĐỀ XUẤT", RX + 22, y0 + 30);
+    var y = y0 + 62, i;
+    g.font = "500 22px " + F; g.fillStyle = ink;
+    (d.plan || []).slice(0, 2).forEach(function (t) { var n = xuongDong(g, "\u2022 " + t, LX + 22, y, CW - 44, 26, 2); y += n * 26 + 4; });
+    var ts = d.targets || [], rowH = ts.length > 2 ? 48 : 56;
+    ts.slice(0, 3).forEach(function (t) {
+      var ym = Math.max(y, y0 + 62) + 12; y = ym + rowH;
+      g.fillStyle = ink; g.font = "600 21px " + F; g.fillText(cat(t.label, 26), LX + 22, ym);
+      g.textAlign = "right"; g.fillStyle = mute; g.font = "500 20px " + F; g.fillText(cat(t.current + " / " + t.target, 34), LX + CW - 22, ym); g.textAlign = "left";
+      var bw = CW - 44 - 80, p = Math.max(0, Math.min(100, t.pct));
+      g.fillStyle = light ? "#e3eaf6" : "#1e3560"; rr(g, LX + 22, ym + 16, bw, 14, 7); g.fill();
+      g.fillStyle = t.pct >= 100 ? "#1fb86a" : t.pct >= 60 ? "#2a6bff" : "#f5a623"; if (p > 0) { rr(g, LX + 22, ym + 16, Math.max(14, bw * p / 100), 14, 7); g.fill(); }
+      g.fillStyle = ink; g.font = "700 22px " + F; g.textAlign = "right"; g.fillText(t.pct + "%", LX + CW - 22, ym + 24); g.textAlign = "left";
+    });
+    if (!(d.plan || []).length && !ts.length) { g.fillStyle = mute; g.font = "500 22px " + F; g.fillText("Chưa có kế hoạch và chỉ tiêu.", LX + 22, y0 + 70); g.fillText("Thêm plan và targets vào file dashboard.", LX + 22, y0 + 100); }
+    y = y0 + 62; g.fillStyle = ink; g.font = "500 22px " + F;
+    var pr = d.proposals || [];
+    pr.slice(0, 3).forEach(function (t) { var n = xuongDong(g, "\u2022 " + t, RX + 22, y, CW - 44, 26, 2); y += n * 26 + 8; });
+    if (!pr.length) { g.fillStyle = mute; g.fillText("Chưa có đề xuất nào.", RX + 22, y); y += 34; }
+    (d.alerts || []).slice(0, 2).forEach(function (a) { if (y > y0 + 238) return; g.fillStyle = a.level === "critical" || a.level === "serious" ? "#e5484d" : a.level === "warning" ? "#f5a623" : "#1fb86a"; g.font = "600 20px " + F; g.fillText("\u25cf " + cat(a.text, 56), RX + 22, y + 6); y += 32; });
     return c;
   }
   function capNhatBang() { if (bang) capNhatSprite2(bang, veBangDieuHanh()); }
@@ -484,6 +512,22 @@
     scene.add(r.g);
     return a;
   }
+  function chaiNuoc(x, y, z) {
+    var g = new T.Group(); g.position.set(x, y, z);
+    var th = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 0.24, 14), new T.MeshStandardMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0.1 })); th.position.y = 0.12; g.add(th);
+    var nuoc = new T.Mesh(new T.CylinderGeometry(0.044, 0.044, 0.16, 14), new T.MeshStandardMaterial({ color: 0x5fb6ff, transparent: true, opacity: 0.6, roughness: 0.05 })); nuoc.position.y = 0.09; g.add(nuoc);
+    var co = new T.Mesh(new T.CylinderGeometry(0.02, 0.03, 0.05, 12), mat(0x2a6bff)); co.position.y = 0.27; g.add(co);
+    var nap = new T.Mesh(new T.CylinderGeometry(0.024, 0.024, 0.025, 12), mat(0x1a3fa0)); nap.position.y = 0.31; g.add(nap);
+    return g;
+  }
+  function coc(x, y, z, kieu) {
+    var g = new T.Group(); g.position.set(x, y, z);
+    var mau = [0xffffff, 0xffe0b8, 0xbfe3ff][kieu % 3];
+    var th = new T.Mesh(new T.CylinderGeometry(0.058, 0.045, 0.11, 16), mat(mau, { roughness: 0.4 })); th.position.y = 0.055; g.add(th);
+    var tra = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 0.006, 16), mat(kieu === 1 ? 0x4a2c14 : 0x3a2412)); tra.position.y = 0.1; g.add(tra);
+    var tay = new T.Mesh(new T.TorusGeometry(0.03, 0.008, 8, 14, Math.PI), mat(mau, { roughness: 0.4 })); tay.rotation.z = -Math.PI / 2; tay.position.set(0.066, 0.055, 0); g.add(tay);
+    return g;
+  }
   function dungBan(slot, a, idx) {
     var g = new T.Group(); g.position.set(slot.desk.x, NV ? -0.2 : 0, slot.desk.z); g.rotation.y = slot.desk.rot;
     var mt = new T.Mesh(new T.BoxGeometry(2.6, 0.12, 1.3), mat(sang() ? 0xdfe6f2 : 0x2a3a58)); mt.position.set(0, 1.0, 0); g.add(mt);
@@ -494,12 +538,12 @@
     var bp = new T.Mesh(new T.BoxGeometry(0.85, 0.03, 0.3), mat(0x2b3550)); bp.position.set(0, 1.075, NV ? 0.45 : 0.15); g.add(bp);       // bàn phím
     for (var r = 0; r < 3; r++) { var hang = new T.Mesh(new T.BoxGeometry(0.78, 0.012, 0.055), mat(0x8fa0b8)); hang.position.set(0, 1.095, (NV ? 0.36 : 0.06) + r * 0.085); g.add(hang); }
     var ch = new T.Mesh(new T.SphereGeometry(0.07, 10, 8), mat(0x2b3550)); ch.scale.set(0.8, 0.5, 1.2); ch.position.set(0.62, 1.085, NV ? 0.45 : 0.15); g.add(ch);   // chuột
-    var cap = new T.Mesh(new T.CylinderGeometry(0.06, 0.05, 0.1, 10), mat(0x6f8fff)); cap.position.set(-0.95, 1.11, -0.2); g.add(cap);                    // cốc
+    g.add(chaiNuoc(-1.05, 1.06, 0.12)); g.add(coc(-0.8, 1.06, 0.3, idx % 3)); if (idx % 2) g.add(coc(1.08, 1.06, -0.15, 1));
     scene.add(g);
     var gk = NV ? 0.25 : 0; ghe(slot.stand.x + Math.sign(slot.desk.x - slot.stand.x) * gk, slot.stand.z + Math.sign(slot.desk.z - slot.stand.z) * gk, slot.rot, false);
     var w = slot.desk.rot;
     chanHinhChuNhat(slot.desk.x, slot.desk.z, w === Math.PI / 2 ? 1.3 : 2.6, w === Math.PI / 2 ? 2.6 : 1.3, 0, 0.45);
-    chanTron(slot.stand.x, slot.stand.z, 0.5);
+    chanTron(slot.stand.x, slot.stand.z, 0.5); chanTron(slot.stand.x + Math.sign(slot.desk.x - slot.stand.x) * gk, slot.stand.z + Math.sign(slot.desk.z - slot.stand.z) * gk, 0.55);
   }
   function dungTram(def) {
     var g = new T.Group(); g.position.set(12.6, 0, def.z); g.rotation.y = -Math.PI / 2;
@@ -526,13 +570,14 @@
     var le = new T.Group(); le.position.set(0, 0.04, -0.2); le.rotation.x = -0.3; lap.add(le);
     var vo = new T.Mesh(new T.BoxGeometry(0.62, 0.4, 0.025), mat(0x9aa8c0)); vo.position.y = 0.2; le.add(vo);
     var manL = new T.Mesh(new T.PlaneGeometry(0.56, 0.34), matManOn.length ? matManOn[0] : matManOff); manL.position.set(0, 0.2, 0.0135); le.add(manL);
+    for (var ci = 0; ci < 7; ci++) { var cxm = -4.7 + ci * 1.35, sg = ci % 2 ? 1 : -1; if (ci % 2 === 0) { var cb = chaiNuoc(cxm, 1.07, sg * 0.3); g.add(cb); } else { var cc = coc(cxm, 1.07, sg * 0.3, ci % 3); g.add(cc); } }
     scene.add(g);
-    var tham = new T.Mesh(new T.PlaneGeometry(TL + 3.5, TW + 5), new T.MeshBasicMaterial({ color: sang() ? 0xdbe6f7 : 0x1c2c4a })); tham.rotation.x = -Math.PI / 2; tham.position.y = 0.02; scene.add(tham);
+    var tham = new T.Mesh(new T.PlaneGeometry(TL + 3.5, TW + 5), new T.MeshBasicMaterial({ color: sang() ? 0xdbe6f7 : 0x1c2c4a })); tham.rotation.x = -Math.PI / 2; tham.position.y = 0.02; scene.add(tham); canhSan.push(tham);
     // ghế: đầu bàn bên phải là giám đốc; người khác ngồi hai bên, từ gần giám đốc ra xa, cuối cùng ghế cuối bàn
     var gs = [{ x: TL / 2 + 1.1, z: 0, kind: "seat", rot: -Math.PI / 2 }];
     for (var i = 7; i >= 0; i--) { var x = -4.55 + 1.3 * i; gs.push({ x: x, z: -2.05, kind: "seat", rot: 0 }); gs.push({ x: x, z: 2.05, kind: "seat", rot: Math.PI }); }
     gs.push({ x: -TL / 2 - 1.1, z: 0, kind: "seat", rot: Math.PI / 2 });
-    gs.forEach(function (s) { ghe(s.x, s.z, s.rot, true); s.by = null; });
+    gs.forEach(function (s) { ghe(s.x, s.z, s.rot, true); chanTron(s.x, s.z, 0.52); s.by = null; });
     return { ghe: gs, holo: holo };
   }
   function den(x, z, hex) {
@@ -548,23 +593,25 @@
     scene = new T.Scene(); scene.background = new T.Color(nen); scene.fog = new T.Fog(nen, 55, 110);
     scene.add(new T.HemisphereLight(0xffffff, light ? 0xbfcbe0 : 0x24365a, light ? 1.0 : 0.75));
     var dl = new T.DirectionalLight(0xffffff, light ? 1.2 : 0.7); dl.position.set(-8, 18, 10); scene.add(dl);
-    var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san);
-    var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; scene.add(luoi);
+    canhTuong = []; canhSan = [];
+    var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san); canhSan.push(san);
+    var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; scene.add(luoi); canhSan.push(luoi);
     var tuong = mat(light ? 0xdde6f4 : 0x1b2a46);
     var t1 = new T.Mesh(new T.BoxGeometry(HX * 2, 5.8, 0.3), tuong); t1.position.set(0, 2.9, -HZ - 0.15); scene.add(t1);
     var t2 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t2.position.set(-HX - 0.15, 2.9, 0); scene.add(t2);
     var t3 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t3.position.set(HX + 0.15, 2.9, 0); scene.add(t3);
-    var vien = new T.Mesh(new T.BoxGeometry(HX * 2, 0.05, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 5.8, -HZ - 0.15); scene.add(vien);
+    var vien = new T.Mesh(new T.BoxGeometry(HX * 2, 0.05, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 5.8, -HZ - 0.15); scene.add(vien); canhTuong.push(t1, t2, t3, vien);
     khoiTaoLuoi(); taoManHinh();
     // bảng điều hành (số liệu thật) giữa tường sau; khẩu hiệu hai bên và trên tường trái
     bang = new T.Mesh(new T.PlaneGeometry(9, 3.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangDieuHanh()), toneMapped: false })); bang.material.map.colorSpace = T.SRGBColorSpace;
-    bang.position.set(HX - 0.02, 3.95, 0); bang.rotation.y = -Math.PI / 2; scene.add(bang);   // sau lưng giám đốc
-    function kh(i, x, y, z, ry, w) { var m = new T.Mesh(new T.PlaneGeometry(w, w * 260 / 900), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veKhauHieu(i)), toneMapped: false })); m.material.map.colorSpace = T.SRGBColorSpace; m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); }
+    bang.position.set(HX - 0.02, 3.95, 0); bang.rotation.y = -Math.PI / 2; scene.add(bang); canhTuong.push(bang);   // sau lưng giám đốc
+    function kh(i, x, y, z, ry, w) { var m = new T.Mesh(new T.PlaneGeometry(w, w * 260 / 900), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veKhauHieu(i)), toneMapped: false })); m.material.map.colorSpace = T.SRGBColorSpace; m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); canhTuong.push(m); }
     kh(0, -8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(1, 8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(6, 0, 3.5, -HZ + 0.02, 0, 5.0);
     kh(2, -HX + 0.02, 3.5, -6.2, Math.PI / 2, 5.0); kh(3, -HX + 0.02, 3.5, 0, Math.PI / 2, 5.0); kh(4, -HX + 0.02, 3.5, 6.2, Math.PI / 2, 5.0);
         den(-12.9, -9.2, 0xffd9a0); den(12.9, -9.2, 0xffd9a0); den(-12.9, 9.2, 0xffd9a0); den(12.9, 9.2, 0xffd9a0);
     tram = STATION_DEFS.map(dungTram);
     ban = dungBanHop();
+    apKhongGian();
     camera = new T.PerspectiveCamera(38, 1, 0.1, 250); raycaster = new T.Raycaster();
   }
   function datCamera() {
@@ -738,6 +785,10 @@
     } else if (k === "step_done") {
       a = timAgent(ev.agent); if (!a) return;
       phatBieu(a, ev.out ? "Kết quả: " + cat(ev.out, 170) : "Đã xong bước này", 7000, "Báo cáo kết quả");
+    } else if (k === "join") {
+      a = timAgent(ev.agent); if (a) vaoPhien(key, a, (phien[key] && phien[key].ten) || "");
+    } else if (k === "talk") {
+      a = ev.agent === "@lead" ? lead : timAgent(ev.agent); if (a) phatBieu(a, ev.text, ev.ms || 6000, ev.tt || "Đang trình bày");
     } else if (k === "run_end") {
       rutKhoiPhien(key, ev.ok, ev.ok ? "Chốt xong. Cảm ơn cả nhóm." : "Lần chạy có lỗi, cần xem lại.");
     }
@@ -745,23 +796,70 @@
 
   // ---------- mô phỏng ----------
   var moPhong = 0;
-  function chayMau() {
-    var xs = ds.filter(function (x) { return !x.lead; }).slice(0, 4);
+  var KICH_BAN = [
+    { id: "hop", ten: "Họp toàn công ty", mo: "Cả công ty vào phòng họp, lãnh đạo chốt hướng đi" },
+    { id: "tet", ten: "Bán hàng dịp Tết", mo: "Kiểm kho, tìm nguồn hàng, xây thông điệp chiến dịch" },
+    { id: "ads", ten: "Chạy quảng cáo cuối tuần", mo: "Soát ngân sách ads, đổi mẫu quảng cáo, kiểm chứng" },
+    { id: "don", ten: "Xử lý đơn giao trễ", mo: "Kho, vận chuyển và chăm sóc khách phối hợp" },
+    { id: "bc", ten: "Báo cáo cuối ngày", mo: "Từng người lấy số liệu rồi báo cáo với giám đốc" }
+  ];
+  function xaoTron(arr) { var r = arr.slice(); for (var i = r.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = r[i]; r[i] = r[j]; r[j] = t; } return r; }
+  function kichBan(loai, xs, tat) {
+    var ev = [], A = function (i) { return xs[i % xs.length].ten; }, R = function (ms, e) { ev.push([ms, e]); };
+    if (loai === "hop") {
+      var n = Math.min(tat.length, 14);
+      R(0, { k: "run_start", name: "Họp toàn công ty (mô phỏng)" });
+      for (var i = 0; i < n; i++) R(600 + i * 800, { k: "join", agent: tat[i].ten });
+      var t0 = 600 + n * 800 + 1500;
+      R(t0, { k: "talk", agent: "@lead", text: "Chào cả nhà. Hôm nay tôi chốt ba việc ưu tiên của tuần.", ms: 5000, tt: "Chủ trì họp" });
+      R(t0 + 6000, { k: "talk", agent: A(0), text: "Doanh số đang tăng, em đề xuất giữ nhịp khuyến mãi tới cuối tuần.", ms: 5500 });
+      R(t0 + 12500, { k: "talk", agent: A(1), text: "Tồn kho ổn, hai mã sắp hết em đã báo bộ phận nhập.", ms: 5500 });
+      R(t0 + 19000, { k: "talk", agent: A(2), text: "Nội dung tuần này em tập trung video ngắn và bài dạng so sánh.", ms: 5500 });
+      R(t0 + 25500, { k: "talk", agent: "@lead", text: "Tốt. Mọi người triển khai, chiều nay báo cáo lại cho tôi.", ms: 5000, tt: "Chốt họp" });
+      R(t0 + 32000, { k: "run_end", ok: true });
+    } else if (loai === "tet") {
+      R(0, { k: "run_start", name: "Bán hàng dịp Tết (mô phỏng)" });
+      R(900, { k: "step", agent: A(0), task: "Kiểm tra tồn kho và sức bán" }); R(9000, { k: "tool", agent: A(0), tool: "mcp__pos__orders" });
+      R(16000, { k: "step_done", agent: A(0), out: "Tồn kho đủ cho 9 mã bán chạy, 2 mã sắp hết cần nhập thêm." });
+      R(17000, { k: "step", agent: A(1), task: "Lập phương án nguồn hàng" }); R(22000, { k: "tool", agent: A(1), tool: "WebSearch" });
+      R(29000, { k: "step_done", agent: A(1), out: "Đề xuất nhập thêm 2 mã từ nhà cung cấp gần nhất, về trong 3 ngày." });
+      R(30000, { k: "step", agent: A(2), task: "Xây thông điệp chiến dịch" }); R(36000, { k: "verify", agent: A(3), target: A(2) });
+      R(43000, { k: "step_done", agent: A(2), out: "Thông điệp chính: Quà Tết đẹp, giao nhanh, đổi trả dễ." }); R(51000, { k: "run_end", ok: true });
+    } else if (loai === "ads") {
+      R(0, { k: "run_start", name: "Quảng cáo cuối tuần (mô phỏng)" });
+      R(900, { k: "step", agent: A(0), task: "Soát ngân sách và ROAS các chiến dịch" }); R(8000, { k: "tool", agent: A(0), tool: "mcp__facebook-ads__insights" });
+      R(15000, { k: "step_done", agent: A(0), out: "Hai chiến dịch ROAS trên 5, một chiến dịch đang đốt tiền, nên tạm dừng." });
+      R(16000, { k: "step", agent: A(1), task: "Viết ba mẫu quảng cáo mới" }); R(22000, { k: "tool", agent: A(1), tool: "mcp__pos__products" });
+      R(29000, { k: "step_done", agent: A(1), out: "Đã có ba mẫu quảng cáo, nhấn vào giao nhanh và quà tặng kèm." });
+      R(30000, { k: "verify", agent: A(2), target: A(1) }); R(38000, { k: "run_end", ok: true });
+    } else if (loai === "don") {
+      R(0, { k: "run_start", name: "Xử lý đơn giao trễ (mô phỏng)" });
+      R(900, { k: "step", agent: A(0), task: "Lọc các đơn giao trễ trên hệ thống" }); R(8000, { k: "tool", agent: A(0), tool: "mcp__pos__orders" });
+      R(15000, { k: "step_done", agent: A(0), out: "Có 7 đơn trễ quá 2 ngày, 4 đơn thuộc cùng một đơn vị vận chuyển." });
+      R(16000, { k: "step", agent: A(1), task: "Làm việc với đơn vị vận chuyển" }); R(22000, { k: "tool", agent: A(1), tool: "WebSearch" });
+      R(28000, { k: "step_done", agent: A(1), out: "Đơn vị vận chuyển cam kết giao trong ngày mai, đền phí cho 4 đơn." });
+      R(29000, { k: "step", agent: A(2), task: "Nhắn xin lỗi và báo lịch giao mới cho khách" }); R(35000, { k: "tool", agent: A(2), tool: "mcp__zalo__send" });
+      R(41000, { k: "step_done", agent: A(2), out: "Đã nhắn cả 7 khách, kèm mã giảm cho lần mua sau." }); R(46000, { k: "run_end", ok: true });
+    } else {
+      var m = Math.min(tat.length, 6);
+      R(0, { k: "run_start", name: "Báo cáo cuối ngày (mô phỏng)" });
+      for (var q = 0; q < m; q++) {
+        R(1000 + q * 6500, { k: "step", agent: tat[q].ten, task: "Tổng hợp số liệu trong ngày" });
+        R(3500 + q * 6500, { k: "tool", agent: tat[q].ten, tool: q % 2 ? "mcp__ads__report" : "mcp__pos__orders" });
+      }
+      for (var w = 0; w < Math.min(m, 3); w++) R(1000 + m * 6500 + w * 6000, { k: "talk", agent: tat[w].ten, text: ["Doanh thu hôm nay đạt 92% mục tiêu ngày.", "Chi phí quảng cáo thấp hơn hôm qua, đơn mới tăng.", "Còn 3 khiếu nại đang xử lý, dự kiến xong trong ngày."][w], ms: 5000, tt: "Báo cáo kết quả" });
+      R(1000 + m * 6500 + 19000, { k: "talk", agent: "@lead", text: "Cảm ơn mọi người. Hẹn sáng mai.", ms: 4000, tt: "Chốt ngày" });
+      R(1000 + m * 6500 + 24500, { k: "run_end", ok: true });
+    }
+    return ev;
+  }
+  function chayMau(loai) {
+    var tat = xaoTron(ds.filter(function (x) { return !x.lead; })), xs = tat.slice(0, 4);
     if (xs.length < 2) { toast("Brain này chưa có agent nào để mô phỏng. Hãy tạo vài agent ở trang Cộng sự."); return; }
+    if (typeof loai !== "string" || loai === "rand") loai = KICH_BAN[Math.floor(Math.random() * KICH_BAN.length)].id;
     var id = "demo" + (++moPhong);
-    function at(ms, ev) { setTimeout(function () { if (mo) suKien(ev); }, ms); }
-    at(0, { k: "run_start", run: id, name: "Bán hàng dịp Tết (mô phỏng)" });
-    at(900, { k: "step", run: id, agent: xs[0].ten, task: "Kiểm tra tồn kho và sức bán" });
-    at(9000, { k: "tool", run: id, agent: xs[0].ten, tool: "mcp__pos__orders" });
-    at(16000, { k: "step_done", run: id, agent: xs[0].ten, out: "Tồn kho đủ cho 9 mã bán chạy, 2 mã sắp hết cần nhập thêm." });
-    at(17000, { k: "step", run: id, agent: xs[1].ten, task: "Lập phương án nguồn hàng" });
-    at(22000, { k: "tool", run: id, agent: xs[1].ten, tool: "WebSearch" });
-    at(29000, { k: "step_done", run: id, agent: xs[1].ten, out: "Đề xuất nhập thêm 2 mã từ nhà cung cấp gần nhất, về trong 3 ngày." });
-    var x3 = xs[2] || xs[0], x4 = xs[3] || xs[1];
-    at(30000, { k: "step", run: id, agent: x3.ten, task: "Xây thông điệp chiến dịch" });
-    at(36000, { k: "verify", run: id, agent: x4.ten, target: x3.ten });
-    at(43000, { k: "step_done", run: id, agent: x3.ten, out: "Thông điệp chính: Quà Tết đẹp, giao nhanh, đổi trả dễ." });
-    at(51000, { k: "run_end", run: id, ok: true });
+    kichBan(loai, xs, tat).forEach(function (e) { e[1].run = id; setTimeout(function () { if (mo) suKien(e[1]); }, e[0]); });
+    var ten = KICH_BAN.filter(function (k) { return k.id === loai; })[0]; if (ten) toast("Đang mô phỏng: " + ten.ten);
   }
   function toast(t) {
     var el = $("mmOfficeToast"); if (!el) return; el.textContent = t; el.hidden = false;
@@ -771,7 +869,7 @@
   // ---------- chạy mỗi khung hình ----------
   function viTriDi(x, z, c) {                  // chỗ đứng có hợp lệ không (gần điểm đầu/cuối thì được phép)
     if (Math.abs(x) > HX - 0.6 || Math.abs(z) > HZ - 0.6) return false;
-    if (Math.hypot(x - c.to.x, z - c.to.z) < 1.0 || Math.hypot(x - c.from.x, z - c.from.z) < 1.0) return true;
+    if (Math.hypot(x - c.to.x, z - c.to.z) < 0.7 || Math.hypot(x - c.from.x, z - c.from.z) < 0.7) return true;
     return !blocked[gj(z) * GW + gi(x)];
   }
   function banDo() { return ds.concat(lead ? [lead] : []); }
@@ -858,6 +956,8 @@
   }
 
   var camLuu = null;
+  var canhTuong = [], canhSan = [], khongGian = 0; try { khongGian = Math.max(0, Math.min(2, parseInt(localStorage.getItem("mmOfficeKG") || "0", 10) || 0)); } catch (e) {}
+  function apKhongGian() { canhTuong.forEach(function (o) { o.visible = khongGian === 0; }); canhSan.forEach(function (o) { o.visible = khongGian < 2; }); }
   var anChu = false; try { anChu = localStorage.getItem("mmOfficeAnChu") === "1"; } catch (e) {}
   var lastManHinh = 0;
   function khung() {
@@ -983,8 +1083,8 @@
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
     host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
-      '<button type="button" id="mmOfficeSim">Mô phỏng</button><button type="button" id="mmOfficeTheme">Chế độ tối</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
-      '<div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
+      '<button type="button" id="mmOfficeSim" aria-haspopup="true">Mô phỏng</button><button type="button" id="mmOfficeKG">Ẩn tường</button><button type="button" id="mmOfficeTheme">Chế độ tối</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
+      '<div class="mm-office-simmenu" id="mmOfficeSimMenu" hidden></div><div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
     var nut = document.createElement("button");
     nut.id = "officeToggleBtn"; nut.type = "button"; nut.className = "brain-overlay-toggle mm-office-btn";
@@ -993,7 +1093,30 @@
     root.appendChild(nut);
     nut.addEventListener("click", function () { mo ? dong() : mo_(); });
     $("mmOfficeX").addEventListener("click", dong);
-    $("mmOfficeSim").addEventListener("click", chayMau);
+    var menuSim = $("mmOfficeSimMenu");
+    KICH_BAN.concat([{ id: "rand", ten: "Ngẫu nhiên", mo: "Máy chọn một kịch bản bất kỳ" }]).forEach(function (k) {
+      var b = document.createElement("button"); b.type = "button"; b.innerHTML = "<b></b><span></span>"; b.firstChild.textContent = k.ten; b.lastChild.textContent = k.mo;
+      b.addEventListener("click", function () { menuSim.hidden = true; chayMau(k.id); }); menuSim.appendChild(b);
+    });
+    $("mmOfficeSim").addEventListener("click", function () { menuSim.hidden = !menuSim.hidden; });
+    var nutKG = $("mmOfficeKG"), TEN_KG = ["Ẩn tường", "Ẩn cả nhà", "Hiện nhà"];
+    function veNutKG() { nutKG.textContent = TEN_KG[khongGian]; nutKG.title = ["Đang hiện đủ nhà. Bấm để ẩn tường và bảng", "Đang ẩn tường. Bấm để ẩn cả sàn, chỉ còn người và đồ", "Đang chỉ hiện người và đồ. Bấm để hiện lại nhà"][khongGian]; }
+    veNutKG();
+    nutKG.addEventListener("click", function () { khongGian = (khongGian + 1) % 3; try { localStorage.setItem("mmOfficeKG", String(khongGian)); } catch (e) {} apKhongGian(); veNutKG(); });
+    // ô giao việc: gõ ngay trong văn phòng (kể cả toàn màn hình, điện thoại) để vừa giao việc vừa xem agent làm
+    if (!window.__mmOfficeSolo) {
+      var dock = document.createElement("form"); dock.className = "mm-office-dock"; dock.autocomplete = "off";
+      dock.innerHTML = '<button type="button" class="mm-dock-t" aria-expanded="false">Giao việc</button><div class="mm-dock-b" hidden><input type="text" id="mmDockIn" placeholder="Giao việc cho MinMin..." enterkeyhint="send" autocomplete="off"><button type="submit">Gửi</button></div>';
+      host.appendChild(dock);
+      var dt = dock.querySelector(".mm-dock-t"), db = dock.querySelector(".mm-dock-b"), di_ = $("mmDockIn");
+      dt.addEventListener("click", function () { var open = db.hidden; db.hidden = !open; dt.setAttribute("aria-expanded", open ? "true" : "false"); dock.classList.toggle("open", open); if (open) setTimeout(function () { di_.focus(); }, 30); });
+      dock.addEventListener("submit", function (e) {
+        e.preventDefault(); var t = di_.value.trim(); if (!t) return;
+        if (typeof window.sendMessage !== "function" && typeof sendMessage !== "function") { toast("Chưa gửi được: khung chat chưa sẵn sàng."); return; }
+        di_.value = ""; try { (window.sendMessage || sendMessage)(t); toast("Đã giao việc. Xem nhân viên vào họp và làm việc."); } catch (x) { toast("Không gửi được: " + (x && x.message || "lỗi")); }
+      });
+    }
+    document.addEventListener("click", function (e) { if (!menuSim.hidden && !(e.target.closest && (e.target.closest("#mmOfficeSimMenu") || e.target.closest("#mmOfficeSim")))) menuSim.hidden = true; });
     var nutTheme = $("mmOfficeTheme");
     function veNutTheme() { nutTheme.textContent = sang() ? "Chế độ tối" : "Chế độ sáng"; host.classList.toggle("mm-light", sang()); host.classList.toggle("mm-dark", !sang()); }
     veNutTheme();
@@ -1059,7 +1182,7 @@
       if (tom && lead) phatBieu(lead, cat(tom, 190), 8000, "Trả lời");
       chatTimer = setTimeout(function () { rutKhoiPhien("chat", true, ""); if (lead) trangThai(lead, "Điều hành"); }, tom ? 9500 : 3500);
     },
-    demo: chayMau, cam: cam
+    demo: chayMau, kg: function (v) { khongGian = v; apKhongGian(); }, kichBan: KICH_BAN, cam: cam
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", khoiTao); else khoiTao();
 })();

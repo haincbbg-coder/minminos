@@ -109,6 +109,38 @@ def alerts_of(raw) -> list:
     return out
 
 
+def _lines(v, n=4, w=120) -> list:
+    """Danh sách dòng chữ ngắn (kế hoạch, đề xuất): nhận list chuỗi, list dict {text}, hoặc một chuỗi nhiều dòng."""
+    if isinstance(v, str):
+        v = [x for x in v.splitlines() if x.strip()]
+    out = []
+    for it in (v or [])[:n] if isinstance(v, list) else []:
+        t = it.get("text") or it.get("title") or it.get("ten") if isinstance(it, dict) else it
+        if t:
+            out.append(str(t).strip()[:w])
+    return out
+
+
+def targets_of(raw) -> list:
+    """Chỉ tiêu: [{label, target, current, unit}] -> thêm pct (0..100+) để vẽ thanh tiến độ."""
+    out = []
+    src = (raw.get("targets") or raw.get("chi_tieu") or raw.get("goals")) if isinstance(raw, dict) else None
+    for it in (src or [])[:5] if isinstance(src, list) else []:
+        if not isinstance(it, dict):
+            continue
+        label = it.get("label") or it.get("name") or it.get("ten")
+        tg, cur = it.get("target", it.get("muc_tieu")), it.get("current", it.get("hien_tai", it.get("value")))
+        if not label or not isinstance(tg, (int, float)) or isinstance(tg, bool) or not tg:
+            continue
+        cur = cur if isinstance(cur, (int, float)) and not isinstance(cur, bool) else 0
+        unit = str(it.get("unit") or it.get("don_vi") or "")
+        tv, tu = _fmt(tg, unit)
+        cv, cu = _fmt(cur, unit)
+        out.append({"label": str(label)[:36], "target": tv + (" " + tu if tu else ""), "current": cv + (" " + cu if cu else ""),
+                    "pct": round(cur / tg * 100)})
+    return out
+
+
 def register(app: FastAPI, deps: HudDeps) -> None:
     index = deps.dashboard_dir / "hud" / "index.html"
 
@@ -129,6 +161,10 @@ def register(app: FastAPI, deps: HudDeps) -> None:
             except Exception:
                 return JSONResponse({"kpis": [], "error": f"File {rel} không đọc được (JSON hỏng)."})
             upd = (raw.get("updated_at") or raw.get("updated") or raw.get("cap_nhat")) if isinstance(raw, dict) else None
+            info = raw if isinstance(raw, dict) else {}
             return {"kpis": normalize(raw), "alerts": alerts_of(raw), "source": rel,
+                    "company": str(info.get("company") or info.get("cong_ty") or info.get("name") or "")[:60],
+                    "plan": _lines(info.get("plan") or info.get("ke_hoach")), "targets": targets_of(raw),
+                    "proposals": _lines(info.get("proposals") or info.get("de_xuat") or info.get("suggestions")),
                     "updated": upd or time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(f.stat().st_mtime))}
         return {"kpis": [], "source": None}
