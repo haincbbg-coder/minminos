@@ -4,6 +4,16 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.98] - 2026-10-07
+### Cải thiện
+- Văn phòng AI 3D, toàn màn hình và điện thoại: có ô "Giao việc" ngay trong văn phòng. Bấm, gõ việc, gửi; nhân viên liên quan vào họp và làm việc ngay trước mắt, không cần thoát toàn màn hình.
+- Bảng điều hành trên tường có tên công ty, kế hoạch, chỉ tiêu (thanh tiến độ) và đề xuất, đọc từ file 00 - Dashboard/minmin-dashboard.json (thêm các khoá company, plan, targets, proposals). Thiếu khoá nào thì ô đó ghi "chưa có".
+- Nút "Ẩn tường" đổi ba mức: hiện đủ nhà, ẩn tường và bảng, chỉ còn người và đồ dùng.
+- Nút "Mô phỏng" mở menu 5 kịch bản (họp toàn công ty, bán hàng dịp Tết, chạy quảng cáo, xử lý đơn giao trễ, báo cáo cuối ngày) và một lựa chọn ngẫu nhiên.
+- Trên bàn có chai nước và cốc uống nước.
+### Sửa lỗi
+- Nhân viên không còn đi xuyên qua ghế họp và ghế bàn làm việc khi nhận việc: mọi ghế đều được tính là vật cản khi tìm đường.
+
 ## [26.10.97] - 2026-10-07
 ### Cải thiện
 - Văn phòng AI 3D: nhân viên ngồi hẳn lên ghế, lưng gần tựa ghế; ghế đẩy vào gầm bàn nên người không còn bị chèn sát vào mép bàn. Bàn phím và chuột đặt gần người hơn.
