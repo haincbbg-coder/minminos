@@ -94,6 +94,7 @@ import system_sync   # tầng năng lực HỆ THỐNG (skill/loop mặc định
 import skill_router   # nguồn chân lý khám phá skill (canonical <brain>/skills) dùng chung mọi engine
 import skill_usage     # telemetry: đếm skill nào THẬT SỰ được dùng qua javis_use_skill (tín hiệu DƯƠNG một chiều)
 import share_bundle   # xuất/nhập gói agent/skill/workflow (.zip) để chia sẻ giữa brain/người dùng
+import brain_share    # link chia sẻ gói agent/skill/workflow của một brain (/bs/<token>)
 import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
 import share_render   # dựng trang xem cho link chia sẻ (markdown -> html, khung trang)
@@ -193,7 +194,7 @@ app.add_middleware(CORSMiddleware,
 # `path.startswith(p)`, nên khai "/s" sẽ mở công khai LUÔN /settings, /skills, /sessions,
 # /stt và mọi đường bắt đầu bằng chữ s. Xem test_share_link.py, phép thử đó tồn tại chỉ để
 # canh đúng một ký tự này.
-_AUTH_PUBLIC_PREFIX = ("/static", "/health", "/s/")
+_AUTH_PUBLIC_PREFIX = ("/static", "/health", "/s/", "/bs/")
 # /brand-logo: hiện trên màn đăng nhập (trước session). /tls-check: Caddy gọi (không đăng nhập được).
 _AUTH_PUBLIC_EXACT = ("/", "/favicon.ico", "/auth/status", "/auth/login", "/auth/setup",
                       "/brand-logo", "/tls-check",
@@ -5755,6 +5756,145 @@ async def rename_brain(name: str = Form(...), label: str = Form("")):
     except ValueError as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
     return {"ok": True, "name": safe, "label": nhan}
+
+
+# ============================================================
+# Chia sẻ brain (26.10.73): link /bs/<token>/goi.zip chứa agent, skill, workflow đã chọn.
+# Công khai theo token (như /s/), có hạn và thu hồi được. KHÔNG bao giờ chứa bộ nhớ, wiki, key.
+# ============================================================
+def _dung_goi_chia_se(ban: dict):
+    b = ban.get("brain") or "brain"
+    ag, wf, sk = _agents_dir(b), _workflows_dir(b), _skills_dir(b)
+    he = system_sync.system_skill_slugs()
+
+    def _tat_ca(kind):
+        if kind == "agent":
+            return [f.stem for f in Path(ag).glob("*.md")] if Path(ag).is_dir() else []
+        if kind == "workflow":
+            return [f.stem for f in Path(wf).glob("*.md")] if Path(wf).is_dir() else []
+        return [d.name for d in Path(sk).iterdir()
+                if d.is_dir() and not d.name.startswith(".") and d.name not in he] if Path(sk).is_dir() else []
+
+    parts = []
+    for kind in brain_share.KINDS:
+        sl = _tat_ca(kind) if ban.get("tat_ca") else (ban.get("items") or {}).get(kind, [])
+        sl = [x for x in sl if skill_router.valid_slug(x)][:200]
+        if not sl:
+            continue
+        data, _ = share_bundle.build_bundle(
+            kind, sl if len(sl) > 1 else sl[0], agents_dir=ag, workflows_dir=wf, skills_root=sk,
+            include_deps=True, system_slugs=he, app_version=_app_version())
+        if data:
+            parts.append(data)
+    return share_bundle.merge_bundles(parts, app_version=_app_version())
+
+
+@app.post("/brains/share")
+async def brain_share_tao(brain: str = Form("brain"), items: str = Form("{}"), tat_ca: str = Form("0"),
+                          days: str = Form("7"), nhan: str = Form("")):
+    try:
+        it = json.loads(items or "{}")
+        it = it if isinstance(it, dict) else {}
+    except Exception:
+        it = {}
+    xau = [s for k in brain_share.KINDS for s in (it.get(k) or []) if not skill_router.valid_slug(str(s))]
+    if xau:
+        return JSONResponse({"ok": False, "error": f"slug không hợp lệ: {', '.join(map(str, xau[:5]))}"}, status_code=400)
+    try:
+        ban = brain_share.tao(brain, it, ngay=days, nhan=nhan, tat_ca=tat_ca in ("1", "true", "True", "on"))
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    return {"ok": True, "token": ban["token"], "path": "/bs/" + ban["token"] + "/goi.zip",
+            "het_han": ban["het_han"]}
+
+
+@app.get("/brains/shares")
+async def brain_share_ds(brain: str = Query("")):
+    ra = brain_share.danh_sach(brain)
+    return {"ok": True, "shares": [{"token": b["token"], "nhan": b.get("nhan", ""), "tat_ca": b.get("tat_ca", False),
+                                    "so_muc": sum(len(v) for v in (b.get("items") or {}).values()),
+                                    "tao_luc": b.get("tao_luc"), "het_han": b.get("het_han"),
+                                    "con_han": b.get("con_han"), "tai": b.get("tai", 0),
+                                    "path": "/bs/" + b["token"] + "/goi.zip"} for b in ra]}
+
+
+@app.post("/brains/shares/revoke")
+async def brain_share_thu_hoi(token: str = Form(...)):
+    return {"ok": brain_share.xoa(token)}
+
+
+@app.get("/bs/{token}")
+async def brain_share_xem(token: str):
+    ban = brain_share.doc(token)
+    if not ban:
+        return JSONResponse({"error": "Link không tồn tại, đã hết hạn hoặc bị thu hồi"}, status_code=404)
+    return {"nhan": ban.get("nhan", ""), "het_han": ban.get("het_han"),
+            "goi": "/bs/" + ban["token"] + "/goi.zip"}
+
+
+@app.get("/bs/{token}/goi.zip")
+async def brain_share_goi(token: str):
+    ban = brain_share.doc(token)
+    if not ban:
+        return JSONResponse({"error": "Link không tồn tại, đã hết hạn hoặc bị thu hồi"}, status_code=404)
+    data, fname = _dung_goi_chia_se(ban)
+    if not data:
+        return JSONResponse({"error": "Không còn mục nào để chia sẻ"}, status_code=404)
+    brain_share.ghi_tai(ban["token"])
+    return Response(content=data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"',
+                             "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+
+_LINK_BS_RE = re.compile(r"^/bs/[A-Za-z0-9_-]{16,80}/goi\.zip$")
+
+
+@app.post("/brains/import-link")
+async def brain_nhap_tu_link(url: str = Form(...), to_brain: str = Form("brain"), overwrite: str = Form("0")):
+    """Nhập gói chia sẻ từ link MinMin của người khác. Chỉ nhận đúng dạng https://host/bs/<token>/goi.zip,
+    host phải phân giải ra địa chỉ CÔNG KHAI (chặn gọi vào mạng nội bộ qua link này)."""
+    import httpx
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+    try:
+        u = urlparse((url or "").strip())
+    except Exception:
+        u = None
+    if not u or u.scheme != "https" or not u.hostname or u.username or u.password or not _LINK_BS_RE.match(u.path or ""):
+        return JSONResponse({"ok": False, "error": "Link không đúng dạng https://…/bs/<mã>/goi.zip"}, status_code=400)
+    try:
+        ips = {ai[4][0] for ai in await asyncio.to_thread(socket.getaddrinfo, u.hostname, u.port or 443, 0, socket.SOCK_STREAM)}
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Không phân giải được địa chỉ của link"}, status_code=400)
+    if not ips or any(not ipaddress.ip_address(i.split("%")[0]).is_global for i in ips):
+        return JSONResponse({"ok": False, "error": "Link trỏ vào địa chỉ nội bộ, không được phép"}, status_code=400)
+    try:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=False) as c:
+            async with c.stream("GET", url.strip()) as r:
+                if r.status_code != 200:
+                    return JSONResponse({"ok": False, "error": f"Link không dùng được (mã {r.status_code}): hết hạn hoặc bị thu hồi?"}, status_code=400)
+                buf = bytearray()
+                async for chunk in r.aiter_bytes():
+                    buf.extend(chunk)
+                    if len(buf) > 25 * 1024 * 1024:
+                        return JSONResponse({"ok": False, "error": "Gói quá lớn (>25MB)"}, status_code=413)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Không tải được gói: {type(e).__name__}"}, status_code=502)
+    root = _brain_root(to_brain)
+    res = share_bundle.import_bundle(
+        bytes(buf), "chia-se.zip", agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain),
+        skills_root=_skills_dir(to_brain), overwrite=(overwrite in ("1", "true", "True", "on")))
+    if any(str(k).startswith("skill:") for k in res.get("imported", [])):
+        try:
+            system_sync.mirror_skills(root)
+        except Exception:
+            pass
+    try:
+        rebuild_javis_index(root)
+    except Exception:
+        pass
+    return {"ok": not res.get("errors"), **res}
 
 
 _COPY_KIND = ("agent", "skill", "workflow")

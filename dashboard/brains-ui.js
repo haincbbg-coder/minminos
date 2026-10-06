@@ -226,7 +226,7 @@
     if (!dests.length) { alert(window.t("brains.share_need_two")); return; }
     const ov = document.createElement("div");
     ov.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px";
-    ov.innerHTML = '<div style="background:var(--panel,#10192b);color:var(--fg,#e8eefc);border:1px solid rgba(120,160,255,.3);border-radius:14px;width:min(560px,100%);max-height:86vh;display:flex;flex-direction:column;padding:16px;gap:10px">' +
+    ov.innerHTML = '<div style="background:var(--panel,#10192b);color:var(--fg,#e8eefc);border:1px solid rgba(120,160,255,.3);border-radius:14px;width:min(560px,100%);max-height:90vh;overflow:auto;display:flex;flex-direction:column;padding:16px;gap:10px">' +
       '<b>' + esc(window.t("brains.share_title", { ten: src.label || src.name })) + '</b>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
       '<select id="bsKind">' + KINDS.map((k) => '<option value="' + k[0] + '">' + esc(kindLabel(k[0])) + '</option>').join("") + '</select>' +
@@ -234,6 +234,16 @@
       '<select id="bsMode"><option value="copy">' + esc(window.t("brains.mode_copy")) + '</option><option value="move">' + esc(window.t("brains.mode_move")) + '</option></select></div>' +
       '<div id="bsList" style="overflow:auto;border:1px solid rgba(120,160,255,.2);border-radius:8px;padding:6px;min-height:120px;flex:1"></div>' +
       '<div id="bsMsg" style="font-size:12px;opacity:.8"></div>' +
+      '<hr style="border:0;border-top:1px solid rgba(120,160,255,.2);width:100%">' +
+      '<b>' + esc(window.t("brains.link_title")) + '</b>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+      '<label><input type="checkbox" id="bsAll"> ' + esc(window.t("brains.link_all")) + '</label>' +
+      '<select id="bsDays"><option value="7">7 ' + esc(window.t("brains.link_days")) + '</option><option value="30">30 ' + esc(window.t("brains.link_days")) + '</option><option value="90">90 ' + esc(window.t("brains.link_days")) + '</option></select>' +
+      '<button id="bsMake">' + esc(window.t("brains.link_make")) + '</button></div>' +
+      '<div id="bsLinks" style="font-size:12px;display:flex;flex-direction:column;gap:4px"></div>' +
+      '<div style="font-size:11px;opacity:.7">' + esc(window.t("brains.link_note")) + '</div>' +
+      '<b>' + esc(window.t("brains.in_title")) + '</b>' +
+      '<div style="display:flex;gap:8px"><input id="bsUrl" style="flex:1" placeholder="' + esc(window.t("brains.in_ph")) + '"><button id="bsGet">' + esc(window.t("brains.in_go")) + '</button></div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end"><button id="bsClose">' + esc(window.t("brains.share_close")) + '</button><button id="bsGo">' + esc(window.t("brains.share_go")) + '</button></div></div>';
     document.body.appendChild(ov);
     const $ = (i) => ov.querySelector("#" + i);
@@ -275,6 +285,48 @@
       $("bsMsg").textContent = window.t("brains.share_done", { n: (r.imported || []).length, skip: sk });
       loadList();
     });
+    async function loadLinks() {
+      let j = null;
+      try { j = await (await fetch("/brains/shares?brain=" + encodeURIComponent(srcVal))).json(); } catch (e) {}
+      const box = $("bsLinks"); box.innerHTML = "";
+      ((j && j.shares) || []).filter((x) => x.con_han).forEach((x) => {
+        const full = location.origin + x.path;
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap";
+        row.innerHTML = '<span style="flex:1;min-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(full) + '">' + esc(full) + '</span>' +
+          '<small>' + esc(window.t("brains.link_meta", { n: x.tai, d: new Date(x.het_han * 1000).toLocaleDateString() })) + '</small>' +
+          '<button data-a="copy">' + esc(window.t("brains.link_copy")) + '</button><button data-a="del">' + esc(window.t("brains.link_revoke")) + '</button>';
+        row.querySelector('[data-a="copy"]').onclick = async () => { try { await navigator.clipboard.writeText(full); $("bsMsg").textContent = window.t("brains.link_copied"); } catch (e) { window.prompt("", full); } };
+        row.querySelector('[data-a="del"]').onclick = async () => {
+          if (!window.confirm(window.t("brains.link_revoke_ask"))) return;
+          const fd = new FormData(); fd.append("token", x.token);
+          await fetch("/brains/shares/revoke", { method: "POST", body: fd }); loadLinks();
+        };
+        box.appendChild(row);
+      });
+    }
+    $("bsMake").addEventListener("click", async () => {
+      const kind = $("bsKind").value, all = $("bsAll").checked;
+      const slugs = [...ov.querySelectorAll("#bsList input:checked")].map((i) => i.value);
+      if (!all && !slugs.length) { $("bsMsg").textContent = window.t("brains.share_pick"); return; }
+      const fd = new FormData();
+      fd.append("brain", srcVal); fd.append("days", $("bsDays").value);
+      if (all) fd.append("tat_ca", "1"); else { const it = {}; it[kind] = slugs; fd.append("items", JSON.stringify(it)); }
+      let r; try { r = await (await fetch("/brains/share", { method: "POST", body: fd })).json(); } catch (e) { r = null; }
+      if (!r || !r.ok) { $("bsMsg").textContent = (r && r.error) || window.t("brains.share_failed"); return; }
+      $("bsMsg").textContent = window.t("brains.link_made"); loadLinks();
+    });
+    $("bsGet").addEventListener("click", async () => {
+      const u = $("bsUrl").value.trim(); if (!u) return;
+      const fd = new FormData(); fd.append("url", u); fd.append("to_brain", srcVal);
+      $("bsGet").disabled = true;
+      let r; try { r = await (await fetch("/brains/import-link", { method: "POST", body: fd })).json(); } catch (e) { r = null; }
+      $("bsGet").disabled = false;
+      if (!r || (!r.ok && !r.imported)) { $("bsMsg").textContent = (r && r.error) || window.t("brains.share_failed"); return; }
+      $("bsMsg").textContent = window.t("brains.share_done", { n: (r.imported || []).length, skip: (r.skipped || []).length });
+      loadList();
+    });
+    loadLinks();
     loadList();
   }
 
