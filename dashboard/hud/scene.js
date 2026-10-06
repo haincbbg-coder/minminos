@@ -463,7 +463,11 @@ export class MinMinScene {
     u.uHeadYaw.value = this.lookNow.x * 0.55;
     u.uHeadPitch.value = this.lookNow.y * 0.32;
     this.spinNow += (this.spin - this.spinNow) * 0.12;
-    this.body.rotation.y = this.spinNow + this.lookNow.x * 0.16 + uMorphV * t * 0.12 * speed;
+    // Hinh "Nguoi hat" la tam anh phang: xoay se thanh lat mong. Chi cho nghieng rat nhe.
+    const figFlat = this.form === "figure" && this.fig && this.fig.ready;
+    this.body.rotation.y = figFlat
+      ? Math.max(-0.12, Math.min(0.12, this.spinNow * 0.1)) + this.lookNow.x * 0.05
+      : this.spinNow + this.lookNow.x * 0.16 + uMorphV * t * 0.12 * speed;
 
     this.zoomNow += (this.zoom - this.zoomNow) * 0.12;
     const vao = this.reduced ? 0 : Math.pow(1 - u.uAssemble.value, 2);       // mo man: camera lui xa roi day vao

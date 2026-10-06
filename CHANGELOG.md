@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.83] - 2026-10-06
+### Sửa lỗi
+- Hình Người hạt không còn xoay 3D thành lát mỏng nhìn nghiêng. Kéo chuột, cử chỉ tay hay nhìn theo con trỏ chỉ làm hình nghiêng rất nhẹ, mặt luôn hướng thẳng.
+
 ## [26.10.82] - 2026-10-06
 ### Cải thiện
 - Hình Người hạt sắc nét hơn nhiều: 400 nghìn chấm (trước 150 nghìn), độ phân giải khung vẽ cao hơn.
