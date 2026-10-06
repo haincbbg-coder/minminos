@@ -1,5 +1,5 @@
 // MinMin HUD - dieu phoi: noi canh 3D, chom sao, giong noi va su kien tu may chu.
-import { MinMinScene } from "./scene.js?v=9";
+import { MinMinScene } from "./scene.js?v=12";
 import { Constellation, DOMAINS, domainForTool } from "./constellation.js";
 import { VoiceIO } from "./voice.js";
 import { Bridge, fetchAgents, fetchKpi } from "./bridge.js";
@@ -50,11 +50,26 @@ let form = (() => {
   try { const f = localStorage.getItem("minmin.hud.form4"); if (TEN_HINH[f]) return f; } catch (e) {}
   return "figure";
 })();
+// Chat luong hinh (26.10.82): high = sac net, mid = can bang, low = nhe. Khach tu chon, may yeu tu ha.
+const CL_TEN = { high: "Sắc nét", mid: "Cân bằng", low: "Nhẹ" };
+let clTuChon = false;
+const CL0 = (() => {
+  const q = params.get("quality");
+  if (CL_TEN[q]) { clTuChon = true; return q; }
+  try { const c = localStorage.getItem("minmin.hud.cl"); if (CL_TEN[c]) { clTuChon = true; return c; } } catch (e) {}
+  return "high";
+})();
 const scene = new MinMinScene($("scene"), {
-  reducedMotion, form, quality: params.get("quality") || "high",
+  reducedMotion, form, quality: CL0 === "low" ? "low" : "high",
   onFps: (f) => { $("fps").textContent = f.toFixed(0) + " FPS"; watchFps(f); },
 });
 if (params.get("debug")) window.__mmScene = scene;
+function datCL(c, luu) {
+  scene.setQuality(c); $("tCLtxt").textContent = CL_TEN[c]; $("tCL").dataset.cl = c;
+  if (luu) try { localStorage.setItem("minmin.hud.cl", c); } catch (e) {}
+}
+$("tCL").onclick = () => { clTuChon = true; datCL({ high: "mid", mid: "low", low: "high" }[$("tCL").dataset.cl || "high"], true); };
+datCL(CL0, false);
 $("formText").textContent = TEN_HINH[form] || form;
 
 const web = new Constellation($("web"), { reducedMotion, onSelect: openCard });
@@ -903,7 +918,14 @@ setInterval(doSong, 200);
 
 // ---------- may yeu: giam chat luong ----------
 let slow = 0;
-function watchFps(f) { if (f < 26) slow++; else slow = 0; if (slow === 3 && !params.has("quality")) { const u = new URL(location.href); u.searchParams.set("quality", "low"); location.replace(u); } }
+function watchFps(f) {
+  if (f < 26) slow++; else slow = 0;
+  if (slow === 3 && !clTuChon) {        // may yeu va khach chua tu chon: ha mot bac, doi do tiep
+    const c = $("tCL").dataset.cl || "high", n = { high: "mid", mid: "low" }[c];
+    slow = 0;
+    if (n) { datCL(n, false); feedAdd("ok", "Hình", "Máy hơi chậm, tự giảm sang " + CL_TEN[n].toLowerCase(), "XONG"); }
+  }
+}
 
 // ---------- khoi dong ----------
 const bridge = new Bridge(H);

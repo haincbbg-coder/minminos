@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.82] - 2026-10-06
+### Cải thiện
+- Hình Người hạt sắc nét hơn nhiều: 400 nghìn chấm (trước 150 nghìn), độ phân giải khung vẽ cao hơn.
+- Nút Chất lượng ở thanh công cụ Hub: Sắc nét / Cân bằng / Nhẹ, nhớ lựa chọn trên từng máy. Máy yếu thì tự hạ một bậc khi giật, trừ khi khách đã tự chọn. Thay cho kiểu tự tải lại trang ở bản cũ.
+
 ## [26.10.81] - 2026-10-06
 ### Thêm mới
 - Hub có hình mới "Người hạt" làm mặc định: tượng nam lực lưỡng dựng từ 150 nghìn chấm lấy từ ảnh mẫu, có mặt, mắt xanh sáng, ngực, bụng. Mở lên là thân hiện từ bụng lên đầu.

@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { humanPoints, SHOULDER, ELBOW } from "./body.js";
 import { robotPoints } from "./robot.js";
 import { bustPoints } from "./bust.js?v=8";
-import { PhotoFigure } from "./figure.js?v=4";
+import { PhotoFigure } from "./figure.js?v=5";
 
 const N = 60000;                       // so hat; may yeu tu giam (quality=low)
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -314,7 +314,7 @@ export class MinMinScene {
     this.rings.position.y = 0.2;
     this.scene.add(this.rings);
 
-    this.fig = new PhotoFigure(THREE, this.body, new URL("./figure.bin?v=4", import.meta.url).href);
+    this.fig = new PhotoFigure(THREE, this.body, new URL("./figure.bin?v=5", import.meta.url).href);
     const applyTheme = () => {
       const light = document.documentElement.getAttribute("data-theme") === "light";
       const style = getComputedStyle(document.documentElement);
@@ -418,6 +418,15 @@ export class MinMinScene {
   }
   setEnergy(v) { this._energyTarget = clamp(v, 0, 1); }
   _formOf(f) { return FORMS[f] ? f : "figure"; }
+  // Chat luong hinh: high | mid | low (hinh nguoi hat cat bot cham, giam do phan giai khung ve)
+  setQuality(level) {
+    this.quality = level;
+    this.fig.setQuality(level);
+    this.pixel = Math.min(window.devicePixelRatio || 1, level === "high" ? 2 : level === "mid" ? 1.5 : 1);
+    this.renderer.setPixelRatio(this.pixel);
+    this.mat.uniforms.uPixel.value = this.pixel;
+    this.resize();
+  }
   setForm(form) { this.form = this._formOf(form); this._formTarget = FORMS[this.form]; }
   toggleForm() { this.setForm(THU_TU[(THU_TU.indexOf(this.form) + 1) % THU_TU.length]); return this.form; }
   // Canh tay bat chuoc (radian): trai/phai = phia man hinh; null = tha long

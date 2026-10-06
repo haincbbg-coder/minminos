@@ -14,7 +14,7 @@ from PIL import Image
 from scipy import ndimage as ndi
 
 CROP = (945, 70, 2048, 1950)
-N = 150000
+N = 400000
 
 src = Image.open(sys.argv[1]).convert("RGB").crop(CROP)
 a = np.asarray(src).astype(np.float32)
