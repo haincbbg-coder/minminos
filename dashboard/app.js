@@ -1127,6 +1127,7 @@ function handleMessage(data) {
     setSessionRunning(sid, true);
     if (isActive) { runActions(turn.turnStart()); showActivity(escapeHtml(data.content || "")); syncActiveUI(); }
   } else if (data.type === "tool_call") {
+    if (window.MinMinOffice) { try { window.MinMinOffice.onChatTool(data); } catch (e) {} }
     if (t && window.JavisSteps) t.buoc = window.JavisSteps.nhan(t.buoc, data);
     if (isActive) {
       runActions(turn.toolCall(data.tool || ""));

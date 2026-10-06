@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.85] - 2026-10-06
+### Thêm mới
+- Văn phòng AI 3D trong khoang não: nút hình robot cạnh quả cầu mở một văn phòng 3D, mỗi agent của brain là một robot ngồi bàn của mình. Có MinMin là tổng chỉ huy, bàn họp ở giữa và bốn trạm dữ liệu (Bộ nhớ Brain, Dữ liệu ngoài, Mạng và web, Máy chạy lệnh).
+- Robot chạy theo việc thật: workflow tới bước nào thì agent đó đi tới bàn người làm bước trước để lấy kết quả, người kiểm chứng đi tới bàn người vừa làm, agent gọi công cụ thì ra trạm dữ liệu tương ứng, làm xong có từ 2 agent trở lên thì cả nhóm vào bàn họp chốt. Công cụ MinMin gọi trong khung chat cũng hiện ở đây.
+- Nút Mô phỏng chạy một tình huống mẫu để xem khi chưa có việc thật. Kéo để xoay, cuộn hoặc chụm để phóng, chạm robot để xem nó đang làm gì.
+
 ## [26.10.84] - 2026-10-06
 ### Cải thiện
 - Hình Người hạt giờ là khối 3D thật: có độ dày, có cả mặt sau (lưng, gáy) nên kéo chuột hay dùng cử chỉ tay xoay 360 độ đều thấy một người hoàn chỉnh, không còn là tấm ảnh phẳng. Lúc nghỉ hình lắc nhẹ để thấy khối.
