@@ -3511,5 +3511,19 @@
   "sess.sel_done": "Done",
   "sess.gom_nen_tang": "Group by AI platform",
   "sess.gom_done": "Grouped {n} chats into projects by platform (Claude, ChatGPT, Gemini...).",
-  "mmw.jump": "Go to message"
+  "mmw.jump": "Go to message",
+  "brains.link_title": "Share by link (others paste it into their MinMin to import)",
+  "brains.link_all": "All agents, skills, workflows",
+  "brains.link_days": "days",
+  "brains.link_make": "Create link",
+  "brains.link_note": "The link only contains agents, skills and workflows. Memory, wiki, notes and API keys are never shared. Anyone with the link can download until it expires or you revoke it.",
+  "brains.in_title": "Import from someone else's link (into the selected brain)",
+  "brains.in_go": "Import",
+  "brains.link_meta": "{n} downloads · expires {d}",
+  "brains.link_copy": "Copy link",
+  "brains.link_revoke": "Revoke",
+  "brains.link_copied": "Link copied.",
+  "brains.link_revoke_ask": "Revoke this link? People who have it will no longer be able to download.",
+  "brains.link_made": "Link created.",
+  "brains.in_ph": "Paste the share link here"
 }

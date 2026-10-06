@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.73] - 2026-10-06
+### Thêm mới
+- Chia sẻ brain bằng link: chọn agent, skill, workflow (hoặc tất cả) rồi tạo link có hạn 7, 30 hoặc 90 ngày. Người nhận dán link vào MinMin của họ để nhập. Bấm "Thu hồi" là link chết ngay.
+- Bộ nhớ, wiki, ghi chú và khoá API không bao giờ nằm trong gói chia sẻ.
+- Nhập gói từ link của người khác vào brain đang chọn (chỉ nhận link https tới máy chủ công khai).
+
 ## [26.10.72] - 2026-10-06
 ### Sửa lỗi
 - Cột phải của cuộc trò chuyện không còn trống khi trong chat có file, ảnh, video: các file Javis nhắc bằng đường dẫn ngắn như attachments/video.mp4 giờ được nhận ra.

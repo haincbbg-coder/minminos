@@ -168,6 +168,35 @@ def build_bundle(kind, slug, *, agents_dir, workflows_dir, skills_root,
     return buf.getvalue(), ten
 
 
+def merge_bundles(parts, app_version=""):
+    """Gộp nhiều gói build_bundle (mỗi gói một loại) thành MỘT gói. Trả (bytes, tên) hoặc (None, None)."""
+    files, items, seen = {}, [], set()
+    for data in parts:
+        if not data:
+            continue
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            for n in z.namelist():
+                if n == "javis-bundle.json":
+                    for it in json.loads(z.read(n)).get("items", []):
+                        k = (it.get("type"), it.get("slug"))
+                        if k not in seen:
+                            seen.add(k)
+                            items.append(it)
+                else:
+                    files.setdefault(n, z.read(n))
+    if not files:
+        return None, None
+    manifest = {"format": "javis-bundle", "version": 1, "kind": "mixed",
+                "primary": (items[0] if items else {}), "items": items, "app_version": app_version,
+                "created": localefmt.now().isoformat(timespec="seconds")}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("javis-bundle.json", json.dumps(manifest, ensure_ascii=False, indent=1))
+        for arc, d in files.items():
+            z.writestr(arc, d)
+    return buf.getvalue(), f"minmin-brain-x{len(items)}.javis.zip"
+
+
 # ────────────────────────── NHẬP ──────────────────────────
 
 def _dst_for(arc, agents_dir, workflows_dir, skills_root):

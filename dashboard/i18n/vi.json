@@ -3511,5 +3511,19 @@
   "sess.sel_done": "Xong",
   "sess.gom_nen_tang": "Gom theo nền tảng AI",
   "sess.gom_done": "Đã gom {n} hội thoại vào các project theo nền tảng (Claude, ChatGPT, Gemini...).",
-  "mmw.jump": "Xem tin gốc"
+  "mmw.jump": "Xem tin gốc",
+  "brains.link_title": "Chia sẻ bằng link (người khác dán vào MinMin của họ để nhập)",
+  "brains.link_all": "Tất cả agent, skill, workflow",
+  "brains.link_days": "ngày",
+  "brains.link_make": "Tạo link",
+  "brains.link_note": "Link chỉ chứa agent, skill, workflow. Bộ nhớ, wiki, ghi chú và khoá API không bao giờ được chia sẻ. Ai có link đều tải được cho tới khi hết hạn hoặc bạn thu hồi.",
+  "brains.in_title": "Nhập từ link của người khác (vào brain đang chọn)",
+  "brains.in_go": "Nhập",
+  "brains.link_meta": "{n} lượt tải · hạn {d}",
+  "brains.link_copy": "Chép link",
+  "brains.link_revoke": "Thu hồi",
+  "brains.link_copied": "Đã chép link.",
+  "brains.link_revoke_ask": "Thu hồi link này? Người đã có link sẽ không tải được nữa.",
+  "brains.link_made": "Đã tạo link.",
+  "brains.in_ph": "Dán link chia sẻ vào đây"
 }
