@@ -9218,7 +9218,8 @@ async def _ghi_lich_su(gen, *, brain, slug, name, input, source, session_id, run
                 office_bus.emit("verify", brain, run=rid, agent=ev.get("agent", ""), target=ob["cur"])
             elif t == "step_done":
                 st.ghi_buoc(rid, int(ev.get("i", 0)), output=ev.get("output", ""), verified=ev.get("verified"))
-                office_bus.emit("step_done", brain, run=rid, agent=ev.get("agent", "") or ob["cur"])
+                office_bus.emit("step_done", brain, run=rid, agent=ev.get("agent", "") or ob["cur"],
+                                out=" ".join(str(ev.get("output") or "").split())[:400])
             elif t == "step_error":
                 st.ghi_buoc(rid, int(ev.get("i", 0)), error=ev.get("content", ""))
             elif t == "wait_user":

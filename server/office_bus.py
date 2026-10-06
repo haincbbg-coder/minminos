@@ -11,7 +11,7 @@ Loại sự kiện (trường `k`):
                                           (nếu có) để robot đi lấy dữ liệu tận bàn người đó
 - tool       {run, agent, tool}           agent gọi công cụ (đi tới trạm dữ liệu của công cụ)
 - verify     {run, agent, target}         người kiểm chứng đi tới bàn người vừa làm
-- step_done  {run, agent}                 bước xong
+- step_done  {run, agent, out}            bước xong; `out` là đoạn đầu của đầu ra bước (để robot đứng dậy trình bày)
 - run_end    {run, ok}                    lần chạy kết thúc (ok False = lỗi)
 """
 import threading
@@ -31,7 +31,7 @@ def emit(k: str, brain: str = "", **kw) -> int:
             _SEQ += 1
             ev = {"seq": _SEQ, "t": round(time.time(), 2), "k": k, "brain": brain}
             for key, v in kw.items():
-                ev[key] = (v[:160] if isinstance(v, str) else v)
+                ev[key] = (v[:(400 if key == "out" else 160)] if isinstance(v, str) else v)
             _BUF.append(ev)
             return _SEQ
     except Exception:

@@ -1121,7 +1121,7 @@ function handleMessage(data) {
     } catch (e) {}
     return;
   }
-  if (window.MinMinOffice && (data.type === "turn_done" || data.type === "error")) { try { window.MinMinOffice.onChatEnd(); } catch (e) {} }
+  if (window.MinMinOffice && (data.type === "turn_done" || data.type === "error")) { try { window.MinMinOffice.onChatEnd((typeof t !== "undefined" && t && t.text) || ""); } catch (e) {} }
   if (window.MinMinWorkspace && data.type !== "turn_done") window.MinMinWorkspace.event(sid, data);
   if (data.type === "status") {
     if (t) t.running = true;
