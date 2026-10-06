@@ -565,6 +565,9 @@ def _build_codex(spec, claude_cli_obj, mode, tag, codex_profile=None):
     try:
         import mcp_hub
         mcp_hub.dat_codex_vault(cc.extra_config, getattr(claude_cli_obj, "javis_vault", None))
+        # Mode đi theo việc nền (26.10.96): profile chung luôn full, nên phải ghi đè từng tiến trình,
+        # không thì loop mức suggest chạy Codex vẫn gọi được tool MCP ra ngoài.
+        mcp_hub.dat_codex_mode(cc.extra_config, mode or getattr(claude_cli_obj, "javis_mode", None) or "full")
     except Exception as e:
         print(f"[aux codex vault] {e}", file=sys.stderr)
     return cc

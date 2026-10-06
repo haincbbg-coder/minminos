@@ -6,7 +6,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.96] - 2026-10-07
 ### Bảo mật
-- Chợ chia sẻ: vá chặn cứng (đang làm).
+- Agent nhận từ Chợ chia sẻ giờ bị **chặn cứng cả khi chat trực tiếp** ở trang Cộng sự (trước chỉ chặn trong workflow): chỉ đọc và đề xuất, không chạy lệnh, không gửi tin hay tạo đơn, với mọi bộ não. Bấm "Tin tưởng" là chạy lại bình thường.
+- Sửa lỗ: việc nền hoặc agent chạy bằng ChatGPT (Codex) ở mức nhẹ trước đây vẫn gọi được kết nối ra ngoài. Nay mức nhẹ được tôn trọng đúng.
 
 ## [26.10.94] - 2026-10-07
 ### Cải thiện
