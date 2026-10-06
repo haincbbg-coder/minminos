@@ -100,6 +100,75 @@ GPT_LIVE_PROMPT = (
 GPT_LIVE_APPEND_MAX = 1400
 
 
+# Nhãn cho từng giọng để chọn có cơ sở thay vì đoán: giới tính, tông, tính cách. Nguồn: mô tả của
+# chính nhà cung cấp (ChatGPT, OpenAI, Google AI Studio). Đây là giọng gốc tiếng Anh nói được tiếng
+# Việt: vùng miền (Bắc/Nam) KHÔNG nằm trong giọng mà do yêu cầu cách nói, xem ACCENTS.
+VOICE_INFO = {
+    "chatgpt": {
+        "juniper": "Nữ, tông vừa, cởi mở và tươi vui",
+        "maple": "Nữ, tông vừa cao, vui vẻ và thẳng thắn",
+        "spruce": "Nam, tông trầm vừa, bình tĩnh và đáng tin",
+        "ember": "Nam, tông trầm, tự tin và lạc quan",
+        "vale": "Nữ, tông cao, tò mò và nhanh nhẹn",
+        "breeze": "Trung tính, tông vừa, sôi nổi và chân thành",
+        "arbor": "Nam, tông vừa, dễ chịu và linh hoạt",
+        "sol": "Nữ, tông trầm, sành sỏi và thư thả",
+        "cove": "Nam, tông vừa, điềm đạm và đi thẳng vào việc",
+    },
+    "openai": {
+        "marin": "Nữ, tông vừa, tự nhiên nhất (chất lượng cao nhất)",
+        "cedar": "Nam, tông trầm, tự nhiên nhất (chất lượng cao nhất)",
+        "alloy": "Trung tính, tông vừa, cân bằng",
+        "ash": "Nam, tông trầm, rõ ràng và mềm",
+        "ballad": "Nam, tông vừa, ấm và giàu cảm xúc",
+        "coral": "Nữ, tông vừa, ấm áp và thân thiện",
+        "echo": "Nam, tông vừa, điềm tĩnh",
+        "sage": "Nữ, tông vừa, bình tĩnh và chín chắn",
+        "shimmer": "Nữ, tông cao, sáng và nhẹ",
+        "verse": "Nam, tông vừa, biểu cảm",
+    },
+    "gemini": {
+        "Zephyr": "Nữ, tông cao, sáng", "Puck": "Nam, tông vừa, vui nhộn", "Charon": "Nam, tông trầm, cung cấp thông tin rõ ràng",
+        "Kore": "Nữ, tông vừa, chắc chắn", "Fenrir": "Nam, tông vừa, hào hứng", "Leda": "Nữ, tông cao, trẻ trung",
+        "Orus": "Nam, tông trầm, chắc chắn", "Aoede": "Nữ, tông vừa, nhẹ nhàng thoáng", "Callirrhoe": "Nữ, tông vừa, dễ chịu",
+        "Autonoe": "Nữ, tông vừa, sáng", "Enceladus": "Nam, tông vừa, hơi thở nhẹ", "Iapetus": "Nam, tông vừa, rõ ràng",
+        "Umbriel": "Nam, tông vừa, dễ chịu", "Algieba": "Nam, tông trầm, mượt", "Despina": "Nữ, tông vừa, mượt",
+        "Erinome": "Nữ, tông vừa, rõ ràng", "Algenib": "Nam, tông rất trầm, khàn", "Rasalgethi": "Nam, tông vừa, giải thích rõ",
+        "Laomedeia": "Nữ, tông vừa, vui tươi", "Achernar": "Nữ, tông vừa, mềm", "Alnilam": "Nam, tông trầm, chắc chắn",
+        "Schedar": "Nam, tông vừa, đều đặn", "Gacrux": "Nữ, tông trầm, chững chạc", "Pulcherrima": "Nữ, tông vừa, thẳng thắn",
+        "Achird": "Nam, tông vừa, thân thiện", "Zubenelgenubi": "Nam, tông vừa, thoải mái", "Vindemiatrix": "Nữ, tông vừa, dịu dàng",
+        "Sadachbia": "Nam, tông vừa, sinh động", "Sadaltager": "Nam, tông vừa, hiểu biết", "Sulafat": "Nữ, tông vừa, ấm",
+    },
+}
+
+# Vùng miền: yêu cầu cho AI, KHÔNG phải một giọng riêng. Kết quả tốt hay không tùy mô hình.
+ACCENTS = {
+    "north": "Nói tiếng Việt bằng giọng miền Bắc (Hà Nội): phát âm chuẩn Bắc, d/gi/r đều đọc là z, ch/tr đọc rõ.",
+    "south": "Nói tiếng Việt bằng giọng miền Nam (Sài Gòn): âm điệu nhẹ, dùng cách phát âm miền Nam.",
+}
+
+
+def style_line(v: dict) -> str:
+    """Yêu cầu cách nói gộp: nhịp + vùng miền. Một chỗ duy nhất để mọi đường (gọi, nghe thử) giống nhau."""
+    v = v or {}
+    pace = {"slow": "Nói chậm rãi, ngắt nghỉ rõ giữa các ý.",
+            "normal": "Nói với tốc độ tự nhiên, vừa phải.",
+            "fast": "Nói nhanh gọn nhưng vẫn rõ từng từ."}.get(v.get("live_pace"), "")
+    acc = ACCENTS.get(v.get("live_accent") or "", "")
+    return " ".join(x for x in (pace, acc) if x)
+
+
+def friendly_error(text) -> str:
+    """Đổi lỗi thô của nhà cung cấp thành câu tiếng Việt, nhất là hết hạn mức gói (gây 'lỗi chung' khó hiểu)."""
+    s = str(text or "")
+    low = s.lower()
+    if "usage limit" in low or "hit your usage" in low or "rate limit" in low or "quota" in low or "429" in low:
+        return "Gói ChatGPT đã hết hạn mức dùng giọng Live. " + s[:160]
+    if "unauthorized" in low or "401" in low or "login" in low:
+        return "Phiên đăng nhập ChatGPT hết hạn, hãy nối lại ở trang Models."
+    return s
+
+
 def _recognition_language(value: str) -> str:
     value = str(value or "vi-VN").strip()
     if value.lower() == "auto":
@@ -1125,7 +1194,7 @@ class ChatGPTLive(LiveProvider):
             text = str(p.get("message") or "lỗi không rõ")
             if self._sdp is not None and not self._sdp.done():
                 self._sdp.set_exception(RuntimeError(f"ChatGPT Live không mở được: {text}"))
-            return [{"type": "error", "message": f"ChatGPT Live lỗi: {text}"}]
+            return [{"type": "error", "message": friendly_error(f"ChatGPT Live lỗi: {text}")}]
         # Chỉ thông báo `transcript/done` của người dùng mới tạo bong bóng chốt. Đo trên dashboard thật
         # (01/10): model hay BẮT ĐẦU trả lời trước khi chữ cuối của người dùng về ("... có khỏe" rồi
         # mới tới " không"), và handoff tới trước cả done. Chốt sớm theo những mốc đó sinh bong bóng
@@ -1387,9 +1456,7 @@ CHATGPT_UNAVAILABLE = {
 def make_provider(cfg: dict, system: str = "", recognition_lang: str = "vi-VN", memory_index: str = "") -> LiveProvider:
     """Dựng nhà cung cấp Live từ settings. Ném RuntimeError có câu người đọc hiểu được."""
     v = (cfg or {}).get("voice") or {}
-    pace = {"slow": "Nói chậm rãi, ngắt nghỉ rõ giữa các ý.",
-            "normal": "Nói với tốc độ tự nhiên, vừa phải.",
-            "fast": "Nói nhanh gọn nhưng vẫn rõ từng từ."}.get(v.get("live_pace"), "")
+    pace = style_line(v)
     m = (cfg or {}).get("model") or {}
     prov = str(v.get("live_provider") or "gemini").strip().lower()
     if prov not in PROVIDERS:
@@ -1425,4 +1492,5 @@ def catalog() -> dict:
     """Cho trang Cài đặt: nhà cung cấp, model gợi ý, giọng, kiểu truyền âm thanh."""
     return {k: {"label": p["label"], "default_model": p["default_model"], "voices": p["voices"],
                 "key_field": p["key_field"], "transport": p["transport"],
-                "default_voice": p["default_voice"]} for k, p in PROVIDERS.items()}
+                "default_voice": p["default_voice"], "voice_info": VOICE_INFO.get(k, {})}
+            for k, p in PROVIDERS.items()}

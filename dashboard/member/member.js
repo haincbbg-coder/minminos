@@ -53,7 +53,9 @@
       var o = document.createElement("option"); o.value = x.name; o.textContent = x.name; o.setAttribute("data-role", x.role); sel.appendChild(o);
     });
     if (!(b.brains || []).length) { sel.hidden = true; $("mpHint").textContent = T("memp.no_grants"); return; }
-    sel.onchange = pickBrain; pickBrain();
+    sel.onchange = function () { $("mpGBrain").value = sel.value; pickBrain(); graphLoad(); };
+    pickBrain();
+    graphInit(b.brains);
     $("mpUp").onclick = function () { state.dir = state.dir.split("/").slice(0, -1).join("/"); list(); };
     $("mpNew").onclick = newFile;
     $("mpSave").onclick = save;
@@ -124,6 +126,36 @@
     var r = await jpost("/m/files/write", { brain: state.brain, path: p, text: "" });
     if (!r.ok) { msg(r.error || T("memp.err")); return; }
     await list(); openFile(p);
+  }
+
+  // ---- Đồ thị não: cùng bộ vẽ với MinMin, dữ liệu lấy từ /m/graph (chỉ brain được cấp) ----
+  var G = null;
+  function tab(g) {
+    $("mpGraph").hidden = !g; $("mpApp").hidden = g;
+    $("mpTabG").classList.toggle("on", g); $("mpTabF").classList.toggle("on", !g);
+    if (g && G) { G.resize && G.resize(); G.refit && G.refit(0); }
+  }
+  function graphInit(brains) {
+    $("mpTabs").hidden = false;
+    var s = $("mpGBrain"); s.innerHTML = "";
+    brains.forEach(function (x) { var o = document.createElement("option"); o.value = x.name; o.textContent = x.name; s.appendChild(o); });
+    s.hidden = brains.length < 2;
+    s.onchange = function () { $("mpBrain").value = s.value; pickBrain(); graphLoad(); };
+    $("mpTabG").onclick = function () { tab(true); };
+    $("mpTabF").onclick = function () { tab(false); };
+    window.JAVIS_GRAPH_URL = function () { return "/m/graph?" + q({ brain: s.value }); };
+    window.onGraphNodeClick = function (n) {
+      if (!n || !n.path) return;
+      tab(false);
+      state.dir = n.path.split("/").slice(0, -1).join("/"); list(); openFile(n.path);
+    };
+    $("mpGHint").textContent = T("memp.graph_hint");
+    tab(true); graphLoad();
+  }
+  async function graphLoad() {
+    if (!window.JavisGraph) return;
+    if (!G) G = new window.JavisGraph($("graph2d"));
+    try { await G.load(); } catch (e) { $("mpGHint").textContent = String(e && e.message || e); }
   }
 
   function boot() { start(); }

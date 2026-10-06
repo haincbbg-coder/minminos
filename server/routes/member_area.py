@@ -397,6 +397,35 @@ def _make_router():
                     return {"ok": True, "hits": hits}
         return {"ok": True, "hits": hits}
 
+    @r.get("/m/graph")
+    async def do_thi(request: Request, brain: str):
+        """Đồ thị não của brain được cấp: cùng dữ liệu với đồ thị của chủ nhưng chỉ trong brain đó,
+        bỏ vùng ẩn (memory, plugins...), file nằm ngoài gốc (symlink) và đường dẫn tuyệt đối."""
+        p, e = _thanh_vien(request)
+        if e:
+            return e
+        goc, _ = _goc(p, brain)
+        if not goc:
+            return _loi("Không có quyền với brain này", 403)
+        from graph_builder import build_graph
+        g = await asyncio.to_thread(build_graph, [str(goc)], include_orphans=True)
+        giu = set()
+        nodes = []
+        for n in g.get("nodes", []):
+            fp = Path(str(n.get("fullpath") or ""))
+            try:
+                rel = fp.resolve().relative_to(goc).parts
+            except (ValueError, OSError):
+                continue
+            if _an(rel) or fp.is_symlink():
+                continue
+            n = {k: v for k, v in n.items() if k != "fullpath"}
+            n["path"] = "/".join(rel)
+            nodes.append(n)
+            giu.add(n["id"])
+        edges = [x for x in g.get("edges", []) if x.get("source") in giu and x.get("target") in giu]
+        return {"ok": True, "nodes": nodes, "edges": edges}
+
     return r
 
 

@@ -5,10 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MinMin OS</title>
 <link rel="icon" href="/brand-logo?v=5">
-<link rel="stylesheet" href="/static/member/member.css?v=26.10.78">
+<link rel="stylesheet" href="/static/member/member.css?v=26.10.79">
 </head>
 <body>
-<header><b id="mpTitle" data-i18n="memp.title"></b><span id="mpWho"></span><button id="mpOut" type="button" data-i18n="memp.logout"></button></header>
+<header><img class="logo" src="/brand-logo?v=5" alt=""><b id="mpTitle" data-i18n="memp.title"></b>
+  <nav id="mpTabs" hidden><button id="mpTabG" type="button" class="on" data-i18n="memp.tab_graph"></button><button id="mpTabF" type="button" data-i18n="memp.tab_files"></button></nav>
+  <span id="mpWho"></span><button id="mpOut" type="button" data-i18n="memp.logout"></button></header>
+<main id="mpGraph" hidden><select id="mpGBrain"></select><div id="graph2d"></div><div id="mpGHint"></div></main>
 <main id="mpTfa" hidden>
   <h2 data-i18n="memp.tfa_title"></h2>
   <p data-i18n="memp.tfa_note"></p>
@@ -35,7 +38,9 @@
   </section>
 </main>
 <script src="/static/theme.js?v=26.10.78"></script>
+<script src="/static/vendor/force-graph-1.51.4.min.js"></script>
+<script src="/static/graph.js?v=18"></script>
 <script src="/static/i18n/index.js?v=2"></script>
-<script src="/static/member/member.js?v=26.10.78"></script>
+<script src="/static/member/member.js?v=26.10.79"></script>
 </body>
 </html>

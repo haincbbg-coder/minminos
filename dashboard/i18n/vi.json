@@ -3572,6 +3572,9 @@
   "memp.tfa_go": "Xác nhận và bật",
   "memp.tfa_recovery": "Lưu các mã khôi phục này ở nơi an toàn. Mỗi mã dùng được một lần khi mất điện thoại:",
   "memp.tfa_continue": "Tôi đã lưu, tiếp tục",
+  "memp.tab_graph": "Đồ thị não",
+  "memp.tab_files": "Tệp",
+  "memp.graph_hint": "Chạm vào một chấm để mở ghi chú. Kéo để xoay, cuộn để phóng to.",
   "memp.view_only": "Chỉ xem",
   "memp.can_edit": "Được sửa",
   "memp.search": "Tìm trong brain",
@@ -3596,5 +3599,10 @@
   "mem.tenant_save": "Lưu bản riêng",
   "mem.tenant_remove": "Gỡ bản riêng",
   "mem.tenant_remove_ask": "Gỡ bản riêng này? Bấm OK để XOÁ LUÔN dữ liệu của họ, Huỷ để chỉ dừng container và giữ dữ liệu.",
-  "mem.tenant_status": "Trạng thái"
+  "mem.tenant_status": "Trạng thái",
+  "settings.vc_live_accent": "Vùng miền",
+  "settings.vc_accent_auto": "Mặc định của giọng",
+  "settings.vc_accent_north": "Miền Bắc",
+  "settings.vc_accent_south": "Miền Nam",
+  "settings.vc_accent_hint": "Vùng miền là yêu cầu cách nói gửi cho AI, không phải một giọng riêng nên độ chuẩn tùy mô hình. Giọng trong danh sách vốn là giọng quốc tế nói được tiếng Việt."
 }

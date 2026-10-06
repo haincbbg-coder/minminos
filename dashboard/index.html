@@ -412,6 +412,10 @@
                   <div class="qs-field"><label class="qs-lbl" for="vcLivePace" data-i18n="settings.vc_live_pace">Nhịp nói Live</label>
                     <select class="js-input" id="vcLivePace"><option value="slow" data-i18n="settings.vc_pace_slow">Chậm, rõ ràng</option><option value="normal" data-i18n="settings.vc_pace_normal">Tự nhiên</option><option value="fast" data-i18n="settings.vc_pace_fast">Nhanh, gọn</option></select>
                   </div>
+                  <div class="qs-field"><label class="qs-lbl" for="vcLiveAccent" data-i18n="settings.vc_live_accent">Vùng miền</label>
+                    <select class="js-input" id="vcLiveAccent"><option value="" data-i18n="settings.vc_accent_auto">Mặc định của giọng</option><option value="north" data-i18n="settings.vc_accent_north">Miền Bắc</option><option value="south" data-i18n="settings.vc_accent_south">Miền Nam</option></select>
+                  </div>
+                  <div class="qs-hint" data-i18n="settings.vc_accent_hint">Vùng miền là yêu cầu cách nói gửi cho AI, không phải một giọng riêng nên độ chuẩn tùy mô hình. Giọng trong danh sách vốn là giọng quốc tế nói được tiếng Việt.</div>
                   <div class="qs-hint" data-i18n="settings.vc_pace_hint">Áp dụng cho lượt gọi và nghe thử tiếp theo. Đây là yêu cầu cách nói cho AI, không phải hệ số tốc độ chính xác; không thay đổi thời gian xử lý của nhà cung cấp.</div>
                 </div>
                 <!-- Bộ não trả lời nhanh + Model: CHỈ hiện khi cuộc gọi chạy đường Cơ bản (0.65.31, chủ dự
@@ -878,7 +882,7 @@
   <script src="/static/voice-attention.js?v=2"></script>
   <script src="/static/voice-chunker.js?v=1"></script>
   <script src="/static/voice.js?v=27"></script>
-  <script src="/static/graph.js?v=17"></script>
+  <script src="/static/graph.js?v=18"></script>
   <script src="/static/minmin-galaxy.js?v=3"></script>
   <script src="/static/minmin-galaxy3d.js?v=5"></script>
   <script src="/static/chat-render.js?v=18"></script>
@@ -907,7 +911,7 @@
   <script src="/static/ui-context.js?v=1"></script>
   <script src="/static/ui-actions.js?v=4"></script>
   <!-- Voice V2: nghe nói thẳng (Live), app.js gọi lười khi bấm mic ở chế độ Live. -->
-  <script src="/static/voice-preview.js?v=3"></script>
+  <script src="/static/voice-preview.js?v=4"></script>
   <script src="/static/voice-live.js?v=7"></script>
   <script src="/static/screen-awake.js?v=1"></script>
   <script src="/static/dictation.js?v=2"></script>
@@ -925,7 +929,7 @@
   <script src="/static/quick-settings.js?v=11"></script>
   <script src="/static/chat-zoom.js?v=6"></script>
   <script src="/static/brains-ui.js?v=10"></script>
-  <script src="/static/members-ui.js?v=2"></script>
+  <script src="/static/members-ui.js?v=4"></script>
   <script src="/static/sessions-ui.js?v=22"></script>
   <script src="/static/studio.js?v=43"></script>
   <!-- Trang Cộng sự: nạp SAU studio.js (mượn trình sửa agent/workflow của Studio) và TRƯỚC
@@ -948,7 +952,7 @@
   <!-- Console layer: console.js đăng ký store TRƯỚC khi Alpine khởi động (defer) -->
   <!-- Phần đọc cấu hình của form "Tự thêm MCP" (thuần, có test node). Nạp TRƯỚC console.js. -->
   <script src="/static/mcp-form-parse.js?v=1"></script>
-  <script src="/static/console.js?v=203"></script>
+  <script src="/static/console.js?v=204"></script>
   <script src="/static/cap-nhat.js?v=1"></script>
   <script src="/static/ket-noi-ngoai.js?v=2"></script>
   <script src="/static/mobile-chat.js?v=11"></script>

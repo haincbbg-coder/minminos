@@ -4626,6 +4626,8 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
             v["chatgpt_voice"] = patch["chatgpt_voice"]
         if patch.get("live_pace") in ("slow", "normal", "fast"):
             v["live_pace"] = patch["live_pace"]
+        if patch.get("live_accent") in ("", "north", "south"):
+            v["live_accent"] = patch["live_accent"]
         # Đường gọi của nút mic (0.65.18): auto | chatgpt | api | basic (voice_call.ENGINES).
         if patch.get("call_engine") in voice_call.ENGINES:
             v["call_engine"] = patch["call_engine"]
@@ -12805,7 +12807,7 @@ async def voice_options(brains: int = 1):
         "voice": dict(
             {k: v.get(k, "") for k in ("mode", "brain_provider", "brain_model", "stt_provider",
                                        "stt_model", "live_provider", "live_model", "live_voice", "live_pace",
-                                       "hotwords")},
+                                       "live_accent", "hotwords")},
             # Model đã chọn theo từng bộ não giọng (0.65.26), {bộ não: model}.
             brain_models=v.get("brain_models") if isinstance(v.get("brain_models"), dict) else {},
             # Ô gạt, không phải ô chữ: mặc định BẬT, nên brain cũ chưa có khoá vẫn trả về true.
@@ -12832,7 +12834,8 @@ async def voice_options(brains: int = 1):
              "available": (_chatgpt_live_ok[0] if k == "chatgpt" else keys.get(p["key_field"], False)),
              "hint": (voice_live.CHATGPT_UNAVAILABLE.get(_chatgpt_live_ok[1], "") if k == "chatgpt" else ""),
              "default_model": p["default_model"], "voices": p["voices"],
-             "default_voice": p["default_voice"], "transport": p["transport"]}
+             "default_voice": p["default_voice"], "transport": p["transport"],
+             "voice_info": p.get("voice_info", {})}
             for k, p in voice_live.catalog().items()
         ],
         "chatgpt_voice": v.get("chatgpt_voice") or voice_live.PROVIDERS["chatgpt"]["default_voice"],
@@ -12920,8 +12923,7 @@ async def voice_preview_ws(ws: WebSocket, voice: str = Query("juniper"), provide
     import voice_preview
     prompt = "Bạn là Min Min. Chỉ đọc câu nghe thử được yêu cầu bằng tiếng Việt tự nhiên, không thêm lời và không giao việc."
     cfg = cfgmod.read_settings()
-    pace = {"slow": "Nói chậm rãi, ngắt nghỉ rõ giữa các ý.", "normal": "Nói với tốc độ tự nhiên, vừa phải.",
-            "fast": "Nói nhanh gọn nhưng vẫn rõ từng từ."}.get((cfg.get("voice") or {}).get("live_pace"), "")
+    pace = voice_live.style_line(cfg.get("voice") or {})
     prompt += "\n" + pace
     if provider == "gemini":
         key = str((cfg.get("model") or {}).get("gemini_api_key") or "").strip()

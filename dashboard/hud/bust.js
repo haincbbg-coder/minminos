@@ -19,21 +19,75 @@ export function mat(y) {
   const dy = (y - DAU.y) / DAU.ry;
   if (Math.abs(dy) < 1) {
     const k = Math.sqrt(1 - dy * dy);
-    // cam va quai ham thu lai o nua duoi dau
-    const ham = dy < -0.2 ? 1 - (-0.2 - dy) * 0.28 : 1;
+    // 26.10.79: ham vuong va chac hon (truoc thu rat nhanh nen dau trong "ong"): quai ham rong,
+    // cam hoi vuong, chi thu lai o ria duoi cung.
+    const ham = dy < -0.2 ? 1 - Math.pow((-0.2 - dy) / 0.8, 1.6) * 0.34 : 1;
     rxD = DAU.rx * k * ham; rzD = DAU.rz * k;
   }
-  const rxCo = 0.25, rzCo = 0.26;
-  // vai: loe nhanh ngay duoi co (co thang) roi tron dan thanh bo vai, sau do gan nhu thang dung
-  const t = smooth(0.36, -0.5, y);
-  const e = 1 - Math.pow(1 - t, 2.4);
-  const rxVai = rxCo + (1.5 - rxCo) * e + Math.max(0, -0.5 - y) * 0.04;
-  const rzVai = rzCo + (0.52 - rzCo) * e;
+  // 26.10.79: than luc luong kieu Apex. Co day, co thang xuong cap tren (trapezius) doc ra vai,
+  // vai tron (deltoid), nguc no, roi thon dan xuong eo thanh hinh chu V.
+  const rxCo = 0.31, rzCo = 0.31;
+  let rxT, rzT;
+  if (y > 0.4) { rxT = rxCo; rzT = rzCo; }
+  else if (y > 0.04) {                                  // cap tren: doc loe ra, hoi lom gan co
+    const t = (0.4 - y) / 0.36;
+    rxT = rxCo + (0.98 - rxCo) * (1 - Math.pow(1 - t, 1.85));
+    rzT = rzCo + (0.5 - rzCo) * smooth(0, 1, t);
+  } else if (y > -0.2) {                                // vai tron
+    const t = (0.04 - y) / 0.24;
+    rxT = 0.98 + 0.3 * Math.sin(t * Math.PI / 2);
+    rzT = 0.5 + 0.1 * t;
+  } else if (y > -0.55) {                               // nguc, hoi thu vao
+    const t = (-0.2 - y) / 0.35;
+    rxT = 1.28 - 0.06 * t;
+    rzT = 0.6 + 0.04 * Math.sin(t * Math.PI);
+  } else {                                              // chu V: thon dan xuong eo
+    const t = Math.min(1, (-0.55 - y) / 0.75);
+    rxT = 1.22 - 0.42 * smooth(0, 1, t);
+    rzT = 0.6 - 0.18 * smooth(0, 1, t);
+  }
   let rx, rz;
-  if (y > 0.58) { rx = Math.max(rxD, y < 0.72 ? rxCo : 0); rz = Math.max(rzD, y < 0.72 ? rzCo : 0); }
-  else if (y > 0.36) { rx = rxCo; rz = rzCo; }
-  else { rx = rxVai; rz = rzVai; }
-  return { rx, rz, cz: y < 0.3 ? -0.06 * t : 0 };
+  if (y > 0.62) { rx = Math.max(rxD, y < 0.72 ? rxCo : 0); rz = Math.max(rzD, y < 0.72 ? rzCo : 0); }
+  else { rx = rxT; rz = rzT; }
+  const t0 = smooth(0.36, -0.5, y);
+  return { rx, rz, cz: y < 0.3 ? -0.06 * t0 : 0 };
+}
+
+// Dap noi be mat (26.10.79): khuon mat va co bap, tinh bang toan hoc theo (x, y) cua mat cat.
+// Tra ve do nhô them theo +z (am = lom). Hat nam tren cac vong dong muc nen moi cho nho len/lom
+// xuong bi lech vong va doi huong phap tuyen, shader vien sang tu do ve ra duong nhan co.
+const g2 = (dx, dy, sx, sy) => Math.exp(-((dx / sx) ** 2 + (dy / sy) ** 2));
+export function relief(x, y) {
+  const ax = Math.abs(x);
+  let dz = 0;
+  // --- Mat (dau cao 0.52..1.84) ---
+  if (y > 0.5 && y < 1.9) {
+    dz += 0.055 * g2(ax, y - 1.30, 0.42, 0.05);                       // gờ long may
+    dz -= 0.05 * g2(ax - 0.2, y - 1.2, 0.1, 0.07);                    // hoc mat
+    dz += 0.1 * g2(x, 0, 0.055, 1) * smooth(0.78, 0.98, y) * (1 - smooth(1.2, 1.3, y));   // song mui
+    dz += 0.05 * g2(x, y - 0.8, 0.1, 0.05);                           // dau mui
+    dz += 0.045 * g2(ax - 0.33, y - 0.98, 0.11, 0.11);                // go ma
+    dz -= 0.035 * g2(x, y - 0.68, 0.17, 0.018);                       // duong mieng
+    dz += 0.05 * g2(x, y - 0.56, 0.16, 0.08);                         // cam
+  }
+  // --- Co: gan nhau tu tai xuong xuong don (sternocleidomastoid) ---
+  if (y > 0.05 && y < 0.62) dz += 0.05 * g2(ax - (0.05 + (0.62 - y) * 0.5), 0, 0.05, 1);
+  // --- Nguc, vai, bung ---
+  if (y < 0.2 && y > -1.6) {
+    for (const s of [-1, 1]) dz += 0.13 * g2(x - s * 0.4, y + 0.3, 0.34, 0.22);     // co nguc
+    dz += 0.05 * g2(ax - 0.98, y + 0.1, 0.2, 0.3);                              // vai (deltoid)
+    dz -= 0.05 * g2(ax - 0.76, y + 0.2, 0.05, 0.3);                               // khe vai/nguc
+    dz -= 0.05 * g2(x, 0, 0.045, 1) * smooth(0.0, -0.1, y) * (1 - smooth(-0.8, -0.55, y));   // ranh giua nguc
+    dz += 0.04 * g2(ax, y - (0.1 - 0.13 * Math.min(ax, 1)), 0.75, 0.022);          // xuong don
+    dz -= 0.045 * g2(ax, y + 0.55, 0.5, 0.025);                                   // mep duoi nguc
+    for (let k = 0; k < 3; k++) {                                                 // cơ bụng 6 mui
+      const yk = -0.78 - k * 0.2;
+      dz += 0.05 * g2(ax - 0.2, y - yk, 0.13, 0.085) * smooth(-0.62, -0.7, y);
+      dz -= 0.03 * g2(ax, y - (yk - 0.1), 0.45, 0.014);
+    }
+    dz -= 0.035 * g2(x, 0, 0.03, 1) * smooth(-0.62, -0.7, y);                     // duong giua bung
+  }
+  return dz;
 }
 
 const Y_TOP = DAU.y + DAU.ry - 0.005, Y_BOT = -1.55;
@@ -58,16 +112,24 @@ export function bustPoints(n) {
       y = Y_BOT + Math.random() * (Y_TOP - Y_BOT);
       y = Math.round(y / STEP) * STEP;
       m = mat(y);
-      if (m.rx > 0.02 && Math.random() < (m.rx + m.rz) / 2.1) break;
+      if (m.rx > 0.02 && Math.random() < (m.rx + m.rz) / 1.9) break;
     }
     const a = Math.random() * TAU;
     let x = Math.cos(a) * m.rx, z = Math.sin(a) * m.rz + m.cz;
+    // dap noi: chi mat truoc (sin a > 0), mem dan ve hai ben
+    const truoc = smooth(0.0, 0.55, Math.sin(a));
+    const rl = relief(x, y);
+    z += rl * truoc;
     // phap tuyen: ngang theo elip + thanh phan doc o dau (vom) va vai (doc xuong)
     let ny = 0;
     const dy = (y - DAU.y) / DAU.ry;
     if (y > 0.6) ny = dy * 0.9;
     else if (y < 0.36 && y > -0.7) ny = 1.1 * (1 - smooth(0.3, -0.55, y)) * smooth(0.36, 0.25, y) + 0.6 * smooth(0.3, -0.1, y) * (1 - smooth(-0.2, -0.6, y));
-    const nx = Math.cos(a) / m.rx, nz = Math.sin(a) / m.rz;
+    let nx = Math.cos(a) / m.rx, nz = Math.sin(a) / m.rz;
+    // phap tuyen theo do doc cua dap noi: nho len thi huong ra, doc xuong thi huong xuong
+    const e = 0.012;
+    const gx = (relief(x + e, y) - relief(x - e, y)) / (2 * e), gy = (relief(x, y + e) - relief(x, y - e)) / (2 * e);
+    nx -= gx * 1.6 * truoc; ny -= gy * 1.6 * truoc;
     // mat truoc: vung am, duong gon song nhe
     let zone = 0.04;
     if (y > 0.72 && z > 0) {
@@ -75,7 +137,7 @@ export function bustPoints(n) {
       const am = Math.exp(-(fx * fx * 1.3 + fy * fy * 0.9)) * Math.pow(Math.max(0, z / (m.rz || 1)), 0.6);
       if (am > 0.06) { y += Math.sin(x * 22 + y * 7) * 0.012 * am; zone = 0.15 + am * 1.1; }
     }
-    const fade = y < -0.9 ? Math.max(0, (y - Y_BOT) / (0.65)) : 1;
+    const fade = y < -1.15 ? Math.max(0, (y - Y_BOT) / (0.4)) : 1;
     const head = y > 0.55 ? 1 : y > 0.3 ? (y - 0.3) / 0.25 : 0;
     put(x, y, z, nx, ny, nz, zone, fade, head);
   }

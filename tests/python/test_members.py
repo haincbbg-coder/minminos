@@ -126,6 +126,17 @@ check("mã khôi phục chỉ dùng một lần", r.status_code == 401)
 
 check("phiên thành viên không phải phiên admin", not main.cfgmod.valid_session(m2.cookies.get("javis_session", "")))
 
+# ---- Đồ thị não của brain được cấp (26.10.79) ----
+(A / "sub" / "c.md").write_text("liên kết [[b]] và [[ghi-chu]]", encoding="utf-8")
+r = m2.get("/m/graph", params={"brain": "Cua-hang"})
+gj = r.json() if r.status_code == 200 else {}
+ten = " ".join(str(n.get("path")) for n in gj.get("nodes", []))
+check("đồ thị thành viên trả về note của brain", r.status_code == 200 and "ghi-chu.md" in ten and "sub/b.md" in ten, r.text[:200])
+check("đồ thị không lộ memory/.env/symlink ngoài gốc", "MEMORY" not in ten and "link.md" not in ten and ".env" not in ten, ten)
+check("đồ thị không lộ đường dẫn tuyệt đối", BD not in r.text and "fullpath" not in r.text)
+check("đồ thị brain không được cấp bị chặn", m2.get("/m/graph", params={"brain": "Brain-khac"}).status_code == 403)
+check("khách chưa đăng nhập không xem được đồ thị", TestClient(main.app, base_url="http://localhost").get("/m/graph", params={"brain": "Cua-hang"}).status_code == 401)
+
 adm.post("/members/update", data={"email": "lan@example.com", "disabled": "1"})
 check("khóa thì phiên cũ mất", m2.get("/m/me").status_code == 401)
 r = TestClient(main.app, base_url="http://localhost").post("/auth/login", data={"username": "lan@example.com", "password": "matkhau-lan-1", "code": "1"})
