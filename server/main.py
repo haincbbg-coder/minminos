@@ -12431,6 +12431,12 @@ member_routes.register(app, member_routes.MemberDeps(
     ten_workspace=lambda: os.getenv("APP_NAME", "MinMin OS"),
 ))
 
+# Cổng chuyển học viên có "bản riêng" sang container của họ (HTTP + WebSocket). Thêm SAU CÙNG
+# trong nhóm này để nằm ngoài cùng: thấy request trước mọi middleware khác.
+import member_gateway   # noqa: E402
+
+app.add_middleware(member_gateway.MemberGateway)
+
 
 # ============================================
 # TTS - Edge TTS (giọng Vietnamese chuẩn, miễn phí)

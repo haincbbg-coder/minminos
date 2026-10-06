@@ -3582,5 +3582,19 @@
   "memp.new_file": "New file",
   "memp.new_ask": "New file name (e.g. notes.md):",
   "memp.err": "Could not do that.",
-  "memp.too_big": "This file can't be shown here."
+  "memp.too_big": "This file can't be shown here.",
+  "mem.tenant": "Private instance",
+  "mem.tenant_on": "Private instance: on",
+  "mem.tenant_explain": "A private instance is a fully separate MinMin for this learner: their brain, memory, AI logins and POS or Ads connections never mix with yours. They still sign in on the same domain.",
+  "mem.tenant_create": "Create private instance",
+  "mem.tenant_creating": "Creating, about a minute...",
+  "mem.tenant_ready": "Created and ready.",
+  "mem.tenant_notready": "Created but not ready yet, try again in a few minutes.",
+  "mem.tenant_nodocker": "MinMin has no Docker access, so it can't create this itself. Run the command below on the VPS (replace the internal password and network name), then enter that address and password here:",
+  "mem.tenant_url": "Internal address (http://container-name:7777)",
+  "mem.tenant_pass": "Internal password",
+  "mem.tenant_save": "Save instance",
+  "mem.tenant_remove": "Remove instance",
+  "mem.tenant_remove_ask": "Remove this instance? OK also DELETES their data, Cancel only stops the container and keeps the data.",
+  "mem.tenant_status": "Status"
 }

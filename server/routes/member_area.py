@@ -17,8 +17,11 @@ from typing import Callable
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
 
+import asyncio
+
 import config as cfgmod
 import members
+import tenants
 
 COOKIE = "javis_session"
 DOC_TOI_DA = 2 * 1024 * 1024
@@ -45,6 +48,8 @@ def _loi(msg, code=400):
 
 def _admin(request: Request):
     """None nếu là admin phiên thật; ngược lại trả response lỗi."""
+    if os.getenv("JAVIS_TENANT") == "1":
+        return _loi("Bản riêng của học viên không quản lý thành viên.", 403)
     if not cfgmod.valid_session(request.cookies.get(COOKIE, "")):
         return _loi("Chỉ admin đăng nhập bằng trình duyệt mới quản lý thành viên.", 403)
     return None
@@ -145,7 +150,70 @@ def _make_router():
         e = _admin(request)
         if e:
             return e
+        u = members.lay(email)
+        if u and (u.get("tenant") or {}).get("url") and await asyncio.to_thread(tenants.co_docker):
+            await asyncio.to_thread(tenants.dung, email)      # dừng nhưng GIỮ dữ liệu của học viên
         return {"ok": members.xoa(email)}
+
+
+    # ---------- Bản riêng (container) ----------
+    def _domain(request: Request) -> str:
+        return (request.headers.get("host") or "").split(":")[0]
+
+    @r.get("/members/tenant/info")
+    async def tenant_info(request: Request, email: str):
+        e = _admin(request)
+        if e:
+            return e
+        u = members.lay(email)
+        if not u:
+            return _loi("Không có thành viên này", 404)
+        dk = await asyncio.to_thread(tenants.co_docker)
+        st = (await asyncio.to_thread(tenants.trang_thai, email)) if dk else "unknown"
+        return {"ok": True, "docker": dk, "status": st, "url": (u.get("tenant") or {}).get("url", ""),
+                "command": tenants.lenh_thu_cong(email, _domain(request))}
+
+    @r.post("/members/tenant/create")
+    async def tenant_create(request: Request, email: str = Form(...)):
+        e = _admin(request)
+        if e:
+            return e
+        if not members.lay(email):
+            return _loi("Không có thành viên này", 404)
+        if not await asyncio.to_thread(tenants.co_docker):
+            return _loi("MinMin chưa được gắn socket Docker nên không tự tạo được. Dùng lệnh thủ công.", 409)
+        try:
+            t = await asyncio.to_thread(tenants.tao, email, _domain(request))
+        except RuntimeError as ex:
+            return _loi(str(ex), 500)
+        members.dat_tenant(email, t["url"], t["user"], t["password"])
+        ok = await asyncio.to_thread(tenants.cho_san_sang, t["url"], 90)
+        return {"ok": True, "ready": ok, "url": t["url"]}
+
+    @r.post("/members/tenant/set")
+    async def tenant_set(request: Request, email: str = Form(...), url: str = Form(...),
+                         user: str = Form("tenant"), password: str = Form(...)):
+        e = _admin(request)
+        if e:
+            return e
+        try:
+            members.dat_tenant(email, url, user, password)
+        except KeyError as ex:
+            return _loi(str(ex.args[0]), 404)
+        except ValueError as ex:
+            return _loi(str(ex))
+        return {"ok": True}
+
+    @r.post("/members/tenant/remove")
+    async def tenant_remove(request: Request, email: str = Form(...), delete_data: str = Form("")):
+        e = _admin(request)
+        if e:
+            return e
+        if await asyncio.to_thread(tenants.co_docker):
+            await asyncio.to_thread(tenants.go, email, delete_data.strip().lower() in ("1", "true", "yes"))
+        members.xoa_tenant(email)
+        members.dong_phien(email)
+        return {"ok": True}
 
     # ---------- Thành viên ----------
     @r.get("/m/me")

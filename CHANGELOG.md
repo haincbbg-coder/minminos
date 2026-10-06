@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.78] - 2026-10-06
+### Thêm mới
+- Bản riêng cho học viên: mỗi học viên có một MinMin tách biệt hoàn toàn (brain, bộ nhớ, đăng nhập AI, kết nối POS, Ads, Higgsfield đều riêng) nhưng vào CHUNG tên miền. Đăng nhập bằng email, mật khẩu và 2FA như thành viên; sau đó cổng chuyển thẳng họ sang bản của họ, cả chat trực tiếp.
+- Trong cửa sổ Thành viên có nút Bản riêng: tự tạo container nếu MinMin được gắn quyền Docker, nếu chưa thì hiện lệnh để chạy tay trên VPS rồi nhập địa chỉ vào.
+- Container học viên không mở cổng ra ngoài, không đặc quyền, bỏ hết capability, giới hạn RAM và CPU, volume riêng, không gắn socket Docker hay thư mục máy chủ.
+- Bản riêng sập thì học viên nhận lỗi 502, không bao giờ rơi về bản của chủ. Cookie của bản riêng không rò ra trình duyệt, học viên không đổi được mật khẩu nội bộ.
+
 ## [26.10.77] - 2026-10-06
 ### Thêm mới
 - Mời thành viên vào brain bằng email và mật khẩu riêng (nút người dùng cạnh các nút brain): chủ cấp từng brain ở mức Chỉ xem hoặc Được sửa, khoá, đổi mật khẩu, đặt lại 2FA hoặc xoá thành viên bất cứ lúc nào.
