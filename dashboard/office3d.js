@@ -259,14 +259,14 @@
       NV_CLIPS.forEach(function (n) { ps.push(tai(NV_DIR + "a_" + n + ".glb")); });
       return Promise.all(ps).then(function (r) {
         var clips = {}; NV_CLIPS.forEach(function (n, k) { clips[n] = r[nc + k].animations[0]; });
-        r.slice(0, nc).forEach(function (g) { g.scene.traverse(function (o) { if (o.isMesh && o.material) { var ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(function (m) { ['map', 'normalMap', 'roughnessMap', 'metalnessMap'].forEach(function (k) { if (m[k]) { m[k].anisotropy = 8; m[k].needsUpdate = true; } }); }); } }); });
+        r.slice(0, nc).forEach(function (g) { g.scene.traverse(function (o) { if (o.isMesh && o.material) { var ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(function (m) { ['map', 'normalMap', 'roughnessMap', 'metalnessMap'].forEach(function (k) { if (m[k]) { m[k].anisotropy = 16; m[k].needsUpdate = true; } }); }); } }); });
         NV = { chars: r.slice(0, nc).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils, props: {}, sanGo: null }; return true;
       }).then(function () {
         // đồ dùng tạo bằng Higgsfield (ghế, bàn, cây, đèn, sàn gỗ): thiếu cái nào thì dùng hình dựng bằng code
         return Promise.all(["office_chair", "director_chair", "plant", "lamp", "desk", "bar", "coffee", "tea_tray", "cake", "water", "stand_table", "ac"].map(function (n) {
-          return tai(NV_DIR + "props/" + n + ".glb").then(function (g) { NV.props[n] = g.scene; }, function () {});
+          return tai(NV_DIR + "props/" + n + ".glb").then(function (g) { g.scene.traverse(function (o) { if (o.isMesh && o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) { ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap'].forEach(function (k) { if (m[k]) { m[k].anisotropy = 16; m[k].needsUpdate = true; } }); }); } }); NV.props[n] = g.scene; }, function () {});
         })).then(function () {
-          return new Promise(function (ok) { new T.TextureLoader().load(NV_DIR + "props/floor_wood.jpg?v=" + NV_V, function (tx) { tx.colorSpace = T.SRGBColorSpace; tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.anisotropy = 8; NV.sanGo = tx; ok(); }, null, function () { ok(); }); });
+          return new Promise(function (ok) { new T.TextureLoader().load(NV_DIR + "props/floor_wood.jpg?v=" + NV_V, function (tx) { tx.colorSpace = T.SRGBColorSpace; tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.anisotropy = 16; NV.sanGo = tx; ok(); }, null, function () { ok(); }); });
         });
       }).then(function () { return true; });
     }).catch(function (e) { console.warn("[office] không nạp được người 3D, dùng robot", e); NV = null; return false; });
@@ -1645,7 +1645,7 @@
     xoaCanh();
     cv = document.createElement("canvas"); cv.className = "mm-office-cv"; host.insertBefore(cv, host.firstChild);
     renderer = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3, Math.max(1, Math.sqrt(9e6 / Math.max(1, host.clientWidth * host.clientHeight)))));
     dungCanh(); dungNguoi(list); nhapTay(); lanCuoi = now(); tNow = 0; khung(); napKpi(); pancakeDL = null; pancakeSig = ""; napPancake();
   }
   function mon() {
