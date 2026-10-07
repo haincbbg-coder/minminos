@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.103] - 2026-10-07
+### Thêm mới
+- Chợ chia sẻ: kệ hàng công khai (đang làm).
+
 ## [26.10.102] - 2026-10-07
 ### Thêm mới
 - **Theo dõi bản mới**: thẻ Đã nhận tự hỏi người gửi xem skill, agent bạn đã nhận có bản mới không. Bấm "Xem và cập nhật" là thấy file nào đổi, thêm bớt bao nhiêu dòng, rồi mới cập nhật. Link dùng một lần hay đã hết hạn vẫn nhận được bản mới; người gửi thu hồi link là ngừng.
