@@ -6,7 +6,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.103] - 2026-10-07
 ### Thêm mới
-- Chợ chia sẻ: kệ hàng công khai (đang làm).
+- **Kệ hàng công khai**: trong Chợ chia sẻ > Gửi đi, bạn bày sẵn agent, skill, workflow lên kệ. Ai gõ tên miền MinMin của bạn ở thẻ Nhận về, hoặc mở trang kệ trên điện thoại, là thấy cả kệ và nhận về.
+- Kệ tắt mặc định, chỉ món bạn chọn mới lên kệ; bộ nhớ và khoá API không bao giờ lên. Món trên kệ cũng được ký, soi rủi ro và theo dõi bản mới như link chia sẻ. Gỡ món hay tắt kệ là ngừng ngay.
 
 ## [26.10.102] - 2026-10-07
 ### Thêm mới
