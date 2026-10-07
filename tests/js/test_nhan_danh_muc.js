@@ -64,7 +64,10 @@ global.fetch = (url) => {
   const cat = JSON.parse(fs.readFileSync(path.join(ROOT, "system/mcp-catalog.json"), "utf8"));
   const ds = Array.isArray(cat) ? cat : (cat.connectors || Object.values(cat)[0] || []);
   const ten = new Set(ds.map((c) => c && c.category).filter(Boolean));
-  const conVi = [...ten].filter((x) => I.catLabel(x) === x && /[ăâđêôơư]/i.test(x));
+  // Bắt mọi chữ có dấu tiếng Việt (kể cả chữ dựng sẵn như "ậ", "ể"), không chỉ vài ký tự gốc:
+  // bản cũ chỉ dò [ăâđêôơư] nên "Vận chuyển" lọt qua dù chưa dịch.
+  const coDau = (x) => /[đĐ]/.test(x) || /[\u0300-\u036f]/.test(x.normalize("NFD"));
+  const conVi = [...ten].filter((x) => I.catLabel(x) === x && coDau(x));
   check("mọi danh mục trong mcp-catalog.json đều có bản tiếng Anh", conVi.length === 0, conVi.join(", "));
 
   console.log("");

@@ -6,7 +6,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.116] - 2026-10-07
 ### Thêm mới
-- Đang soạn: đợt 2 kết nối đa tài khoản (Viettel Post, J&T, Instagram, Threads, X, Zalo Ads và các nền tảng bán hàng Việt Nam).
+- Thêm 12 kết nối, mỗi kết nối một tài khoản: **Viettel Post, Ahamove, J&T** (vận chuyển), **Instagram, Threads, X** (đăng bài, đọc bình luận và chỉ số), **Tiki, Haravan, Sapo, KiotViet, Nhanh.vn** (đơn, sản phẩm, tồn kho), **MISA meInvoice** (trạng thái hoá đơn).
+- Zalo Ads chưa kết nối được vì Zalo chưa công khai API báo cáo; tạm xuất file từ Zalo Ads Manager rồi gửi MinMin đọc.
+
+### Bảo mật
+- Đăng bài, tạo và huỷ đơn chỉ chạy khi bạn nâng kết nối lên Toàn quyền. Bán hàng và hoá đơn chỉ đọc. Mọi kết nối mới đều phải qua cổng kiểm định chung.
 
 ## [26.10.115] - 2026-10-07
 ### Thêm mới

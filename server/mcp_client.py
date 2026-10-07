@@ -41,7 +41,12 @@ _INTERNAL = {"botcake": "botcake_mcp", "substack": "substack_mcp",
              "shopee": "shopee_mcp", "tiktokshop": "tiktokshop_mcp", "lazada": "lazada_mcp",
              "ghn": "ghn_mcp", "ghtk": "ghtk_mcp",
              "sepay": "sepay_mcp", "casso": "casso_mcp", "payos": "payos_mcp",
-             "tiktokads": "tiktokads_mcp", "zalo_oa": "zalo_oa_mcp"}   # transport internal → tên module
+             "tiktokads": "tiktokads_mcp", "zalo_oa": "zalo_oa_mcp",
+             # Đợt 2 (26.10.116)
+             "viettelpost": "viettelpost_mcp", "jtexpress": "jtexpress_mcp", "ahamove": "ahamove_mcp",
+             "instagram": "instagram_mcp", "threads": "threads_mcp", "x": "x_mcp",
+             "haravan": "haravan_mcp", "sapo": "sapo_mcp", "kiotviet": "kiotviet_mcp",
+             "nhanhvn": "nhanhvn_mcp", "tiki": "tiki_mcp", "meinvoice": "meinvoice_mcp"}   # transport internal → tên module
 
 _DIAL_SONG_SONG = 8      # số connection dò tool CÙNG LÚC (đừng để npx nổ ra 30 tiến trình)
 _DIAL_TRAN = "20"        # giây - trần dò tool CHO MỖI connection (0 = không giới hạn)

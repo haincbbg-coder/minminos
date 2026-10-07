@@ -1261,6 +1261,675 @@
       },
       "risk": "Mức Chỉ đọc (mặc định) chỉ xem thông tin OA, tin nhắn gần đây, lịch sử trò chuyện và người quan tâm.\n\nMức Toàn quyền cho phép MinMin GỬI TIN NHẮN THẬT từ OA tới khách hàng. Tin đã gửi không rút lại được.\n\nKhóa bí mật và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
       "default_perm": "readonly"
+    },
+    {
+      "id": "viettel-post",
+      "name": "Viettel Post",
+      "icon": "📦",
+      "category": "Vận chuyển",
+      "description": "Tra địa giới, kho hàng, dịch vụ và giá cước, tạo/hủy đơn Viettel Post qua Partner API v2 (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản Viettel Post, thêm nhiều kết nối nếu có nhiều tài khoản.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "viettelpost",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "username",
+            "label": "Tên đăng nhập Viettel Post (thường là số điện thoại)",
+            "placeholder": "Ví dụ: 0987654321"
+          },
+          {
+            "key": "password",
+            "label": "Mật khẩu tài khoản Viettel Post",
+            "placeholder": "Dán mật khẩu..."
+          },
+          {
+            "key": "moi_truong",
+            "label": "Môi trường: live (mặc định) hoặc test, không bắt buộc",
+            "placeholder": "Ví dụ: live",
+            "optional": true
+          }
+        ],
+        "guide": "1. Dùng tài khoản chủ shop đăng nhập được ở viettelpost.vn (nên tạo tài khoản riêng cho tích hợp nếu có thể).\n2. Điền tên đăng nhập (thường là số điện thoại) và mật khẩu vào hai ô bên dưới.\n3. Lưu rồi bấm Test: MinMin đăng nhập, lấy token dài hạn và đọc danh sách kho hàng.\n\nMinMin tự đăng nhập lại khi token hết hạn, token được lưu đã mã hoá trong kết nối.\nĐổi mật khẩu Viettel Post thì sửa lại ô Mật khẩu ở đây.\nĐể thử không tốn tiền, dùng tài khoản trên môi trường thử của Viettel Post và điền test vào ô Môi trường.",
+        "guide_url": "https://partner.viettelpost.vn"
+      },
+      "validate": {
+        "tool": "vtp_kho_hang",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "vtp_tinh_thanh",
+          "vtp_quan_huyen",
+          "vtp_phuong_xa",
+          "vtp_kho_hang",
+          "vtp_dich_vu_va_gia",
+          "vtp_tinh_phi"
+        ],
+        "write": [],
+        "danger": [
+          "vtp_tao_don",
+          "vtp_huy_don"
+        ]
+      },
+      "risk": "Mặc định CHỈ ĐỌC: xem tỉnh/quận/phường, kho hàng, dịch vụ và tính cước. Tính cước không tạo đơn và không tốn tiền.\n\nKhi bật Toàn quyền, MinMin tạo và hủy được đơn giao hàng THẬT trên Viettel Post: đơn tạo ra phát sinh cước, đơn đã hủy không khôi phục được.\n\nKết nối này giữ MẬT KHẨU tài khoản Viettel Post (đã mã hoá) vì API đối tác chỉ cấp token qua đăng nhập.\nMật khẩu và token không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "jt-express",
+      "name": "J&T Express Việt Nam",
+      "icon": "🚛",
+      "category": "Vận chuyển",
+      "description": "Tra hành trình vận đơn và hủy đơn chưa lấy hàng của J&T Express Việt Nam qua API đối tác (MinMin tự dựng cầu nối). Cần thông tin API J&T cấp khi ký hợp đồng. Chưa có tạo đơn và tra giá.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "jtexpress",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "dia_chi_api",
+            "label": "Địa chỉ máy chủ API J&T gửi kèm hợp đồng",
+            "placeholder": "Ví dụ: https://may-chu-jt/yuenan-interface-web"
+          },
+          {
+            "key": "eccompanyid",
+            "label": "Mã nguồn khách (eccompanyid)",
+            "placeholder": "Ví dụ: HALIMI"
+          },
+          {
+            "key": "api_key",
+            "label": "Khoá ký API (key) J&T cấp",
+            "placeholder": "Dán khoá API..."
+          }
+        ],
+        "guide": "1. J&T Express Việt Nam chỉ cấp API cho khách đã ký hợp đồng: liên hệ nhân viên kinh doanh hoặc bưu cục J&T để xin kết nối API.\n2. J&T gửi địa chỉ máy chủ API, mã nguồn khách (eccompanyid) và khoá ký (key): dán ba thứ đó vào ba ô bên dưới.\n3. Lưu rồi hỏi MinMin tra hành trình một mã vận đơn J&T để kiểm tra kết nối.\n\nBản này mới có tra hành trình và hủy đơn chưa được điều bưu tá đi lấy.\nTạo đơn và tra giá chưa có vì tài liệu công khai của J&T chưa đủ để làm an toàn.",
+        "guide_url": "https://api-docs.jtexpress.vn/"
+      },
+      "tool_meta": {
+        "read": [
+          "jt_tra_hanh_trinh"
+        ],
+        "write": [],
+        "danger": [
+          "jt_huy_don"
+        ]
+      },
+      "risk": "Mặc định CHỈ ĐỌC: tra hành trình vận đơn, không tốn tiền.\n\nKhi bật Toàn quyền, MinMin hủy được đơn J&T THẬT khi J&T chưa điều bưu tá đi lấy: đơn đã hủy không khôi phục được.\n\nKhoá ký API được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "ahamove",
+      "name": "Ahamove",
+      "icon": "🛵",
+      "category": "Vận chuyển",
+      "description": "Tra thành phố, dịch vụ, ước tính phí, tra đơn và gọi/hủy đơn giao nhanh Ahamove qua Partner API v3 (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản Ahamove.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "ahamove",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "api_key",
+            "label": "API key Ahamove cấp cho đối tác",
+            "placeholder": "Dán API key..."
+          },
+          {
+            "key": "mobile",
+            "label": "Số điện thoại tài khoản Ahamove (dạng 84...)",
+            "placeholder": "Ví dụ: 84912345678"
+          },
+          {
+            "key": "moi_truong",
+            "label": "Môi trường: live (mặc định) hoặc test, không bắt buộc",
+            "placeholder": "Ví dụ: live",
+            "optional": true
+          }
+        ],
+        "guide": "1. Gửi form đăng ký tích hợp trong tài liệu Ahamove dành cho đối tác: Ahamove gửi API key qua email.\n2. Dán API key vào ô API key, và số điện thoại tài khoản Ahamove (dạng 84...) vào ô Số điện thoại.\n3. Lưu rồi bấm Test: MinMin lấy token và đọc danh sách thành phố.\n\nMinMin tự lấy token mới khi hết hạn, token được lưu đã mã hoá trong kết nối.\nAPI key môi trường thử khác API key thật: dùng key thử thì điền test vào ô Môi trường.",
+        "guide_url": "https://developers.ahamove.com/en/docs/introduction"
+      },
+      "validate": {
+        "tool": "aha_thanh_pho",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "aha_thanh_pho",
+          "aha_dich_vu",
+          "aha_uoc_tinh_phi",
+          "aha_chi_tiet_don",
+          "aha_don_theo_ma_van_don"
+        ],
+        "write": [],
+        "danger": [
+          "aha_tao_don",
+          "aha_huy_don"
+        ]
+      },
+      "risk": "Mặc định CHỈ ĐỌC: xem thành phố, dịch vụ, ước tính phí và tra đơn. Ước tính phí không tạo đơn và không tốn tiền.\n\nKhi bật Toàn quyền, MinMin gọi và hủy được đơn giao THẬT trên Ahamove: tài xế được điều đi ngay, phát sinh phí, đơn đã hủy không khôi phục được.\n\nAPI key và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "instagram",
+      "name": "Instagram (đăng bài)",
+      "icon": "📸",
+      "category": "Mạng xã hội",
+      "description": "Đăng ảnh, carousel, Reel lên tài khoản Instagram chuyên nghiệp và đọc bài, chỉ số, bình luận qua Instagram Graph API chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản, thêm nhiều kết nối để quản lý nhiều tài khoản.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "instagram",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "access_token",
+            "label": "Access token dài hạn (Instagram Login bắt đầu bằng IG, Facebook Login bắt đầu bằng EAA)",
+            "placeholder": "Dán token dài hạn..."
+          },
+          {
+            "key": "ig_user_id",
+            "label": "Instagram User ID (mã tài khoản chuyên nghiệp)",
+            "placeholder": "Ví dụ: 17841400000000000"
+          },
+          {
+            "key": "app_secret",
+            "label": "Khóa bí mật của ứng dụng Meta (để gửi appsecret_proof, không bắt buộc)",
+            "placeholder": "Để trống nếu app không bật Require App Secret",
+            "optional": true
+          }
+        ],
+        "guide": "1. Chuyển tài khoản Instagram sang loại chuyên nghiệp (Business hoặc Creator) trong phần cài đặt của app Instagram.\n2. Vào developers.facebook.com, tạo ứng dụng mới, chọn trường hợp sử dụng Instagram (API với Instagram Login).\n3. Thêm tài khoản Instagram làm người thử nghiệm, cấp quyền instagram_business_basic, instagram_business_content_publish, instagram_business_manage_comments.\n4. Ở mục Tạo access token trong ứng dụng, đăng nhập Instagram và bấm tạo token: đó là token dài hạn (60 ngày). Dán vào ô Access token.\n5. Cùng màn hình đó hiện mã tài khoản (Instagram User ID). Hoặc mở graph.instagram.com/me?fields=user_id,username kèm token, lấy user_id.\n6. Nếu ứng dụng bật Require App Secret, dán thêm Khóa bí mật của ứng dụng. Lưu rồi bấm Kiểm tra.\n\nToken Instagram Login được MinMin tự gia hạn trước khi hết 60 ngày. Token Facebook Login (EAA, tài khoản gắn Trang) thì tự gia hạn ở phía Meta.\nẢnh, video phải nằm ở link https công khai (Meta tự tải về). Ảnh nhận JPEG, video MP4 hoặc MOV.",
+        "guide_url": "https://developers.facebook.com/docs/instagram-platform/content-publishing"
+      },
+      "validate": {
+        "tool": "instagram_tai_khoan",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "instagram_tai_khoan",
+          "instagram_bai_gan_day",
+          "instagram_chi_so_bai",
+          "instagram_binh_luan",
+          "instagram_han_muc_dang",
+          "instagram_trang_thai_container"
+        ],
+        "write": [
+          "instagram_dang_anh",
+          "instagram_dang_carousel",
+          "instagram_dang_reel",
+          "instagram_dang_container",
+          "instagram_tra_loi_binh_luan"
+        ],
+        "danger": [
+          "instagram_dang_anh",
+          "instagram_dang_carousel",
+          "instagram_dang_reel",
+          "instagram_dang_container",
+          "instagram_tra_loi_binh_luan"
+        ]
+      },
+      "risk": "Mức Chỉ đọc (mặc định) chỉ xem thông tin tài khoản, bài gần đây, chỉ số, bình luận và hạn mức đăng.\n\nMức Toàn quyền cho phép MinMin ĐĂNG BÀI CÔNG KHAI THẬT (ảnh, carousel, Reel) và trả lời bình luận. API không xoá được bài.\n\nToken và khóa bí mật được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "threads",
+      "name": "Threads",
+      "icon": "🧵",
+      "category": "Mạng xã hội",
+      "description": "Đăng bài chữ, ảnh, video, carousel lên Threads, trả lời bài, đọc bài, trả lời và chỉ số qua Threads API chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một hồ sơ Threads.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "threads",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "access_token",
+            "label": "Access token dài hạn của Threads",
+            "placeholder": "Dán token dài hạn..."
+          },
+          {
+            "key": "threads_user_id",
+            "label": "Threads User ID (mã hồ sơ)",
+            "placeholder": "Ví dụ: 26000000000000000"
+          },
+          {
+            "key": "app_secret",
+            "label": "Khóa bí mật của ứng dụng Threads (để gửi appsecret_proof, không bắt buộc)",
+            "placeholder": "Để trống nếu không dùng",
+            "optional": true
+          }
+        ],
+        "guide": "1. Vào developers.facebook.com, tạo ứng dụng mới, chọn trường hợp sử dụng Truy cập Threads API.\n2. Bật các quyền threads_basic, threads_content_publish, threads_manage_replies, threads_read_replies, threads_manage_insights.\n3. Thêm hồ sơ Threads làm người thử nghiệm, rồi chấp nhận lời mời trong app Threads (Cài đặt, Tài khoản, Quyền truy cập website).\n4. Mở Graph API Explorer, chọn ứng dụng và host graph.threads.net, tạo token người dùng với các quyền trên.\n5. Đổi sang token dài hạn (60 ngày) qua graph.threads.net/access_token?grant_type=th_exchange_token kèm client_secret.\n6. Gọi graph.threads.net/v1.0/me?fields=id,username bằng token đó để lấy id. Dán token và id vào kết nối, lưu rồi bấm Kiểm tra.\n\nMinMin tự gia hạn token trước khi hết 60 ngày. Ảnh, video phải ở link https công khai. Mỗi bài tối đa 500 ký tự.",
+        "guide_url": "https://developers.facebook.com/docs/threads/get-started"
+      },
+      "validate": {
+        "tool": "threads_ho_so",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "threads_ho_so",
+          "threads_bai_gan_day",
+          "threads_chi_so_bai",
+          "threads_chi_so_tai_khoan",
+          "threads_tra_loi_cua_bai",
+          "threads_han_muc_dang",
+          "threads_trang_thai_container"
+        ],
+        "write": [
+          "threads_dang_bai",
+          "threads_dang_container",
+          "threads_tra_loi"
+        ],
+        "danger": [
+          "threads_dang_bai",
+          "threads_dang_container",
+          "threads_tra_loi"
+        ]
+      },
+      "risk": "Mức Chỉ đọc (mặc định) chỉ xem hồ sơ, bài gần đây, trả lời, chỉ số và hạn mức đăng.\n\nMức Toàn quyền cho phép MinMin ĐĂNG BÀI CÔNG KHAI THẬT và trả lời công khai trên Threads. Không gỡ được qua cầu nối này.\n\nToken và khóa bí mật được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "x-twitter",
+      "name": "X (Twitter)",
+      "icon": "/static/logos/x.png",
+      "category": "Mạng xã hội",
+      "description": "Thông tin tài khoản, bài gần đây, đăng bài và xoá bài trên X (Twitter) qua X API v2 chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản X, thêm nhiều kết nối để quản lý nhiều tài khoản.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "x",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "client_id",
+            "label": "Client ID (OAuth 2.0 của app trên X Developer Console)",
+            "placeholder": "Ví dụ: M1M5R3BMVy13QmpScXkzTUt5OE46MTpjaQ"
+          },
+          {
+            "key": "client_secret",
+            "label": "Client Secret (bỏ trống nếu app là loại Native/công khai)",
+            "placeholder": "Dán Client Secret...",
+            "optional": true
+          },
+          {
+            "key": "redirect_url",
+            "label": "Callback URI đã khai trong app (để tạo link ủy quyền)",
+            "placeholder": "Ví dụ: https://minmin.cua-ban.vn/x/cb"
+          }
+        ],
+        "guide": "1. Vào console.x.com (X Developer Console), đăng nhập tài khoản X, nạp credit X API (tính tiền theo lượt gọi, không còn gói miễn phí).\n2. Tạo app trong Developer Console. Mở User authentication settings, bật OAuth 2.0, chọn quyền Read and write, loại app Web App (client bí mật).\n3. Khai Callback URI cho app (ví dụ https://minmin.cua-ban.vn/x/cb). Chép Client ID, Client Secret và đúng Callback URI đó vào kết nối này rồi lưu.\n4. Hỏi MinMin \"tạo link ủy quyền X\" (tool x_lien_ket_uy_quyen), mở link bằng đúng tài khoản X cần kết nối và bấm đồng ý.\n5. Trang chuyển về Callback URI có dạng ...?state=..&code=XXXX. Chép NGUYÊN địa chỉ đó dán ngay vào chat: code của X chỉ sống 30 giây.\n6. MinMin tự đổi code lấy token và tự làm mới (access token sống 2 giờ, refresh token đổi mới mỗi lần làm mới).\n\nMỗi tài khoản X một kết nối: tài khoản thứ hai thì thêm kết nối mới, dùng lại Client ID và Client Secret.\nCallback URI chỉ cần khớp với app, trang đó không cần chạy được: chỉ để chép địa chỉ có code về.",
+        "guide_url": "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code"
+      },
+      "validate": {
+        "tool": "x_lien_ket_uy_quyen",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "x_lien_ket_uy_quyen",
+          "x_nhap_ma_uy_quyen",
+          "x_thong_tin",
+          "x_bai_gan_day"
+        ],
+        "write": [
+          "x_dang_bai",
+          "x_xoa_bai"
+        ],
+        "danger": [
+          "x_dang_bai",
+          "x_xoa_bai"
+        ]
+      },
+      "risk": "Mức Chỉ đọc (mặc định) chỉ xem thông tin tài khoản và các bài gần đây.\n\nMức Toàn quyền cho phép MinMin ĐĂNG BÀI THẬT công khai, trả lời bài người khác và XOÁ VĨNH VIỄN bài của chính tài khoản. Bài đã đăng có thể bị đọc, chụp lại trước khi xoá.\n\nX API tính tiền theo lượt gọi từ credit nạp trước: đăng một bài khoảng 0,015 USD (bài có link tới 0,2 USD), mỗi bài đọc về khoảng 0,005 USD. Giới hạn 100 bài mỗi 15 phút cho mỗi tài khoản.\n\nClient Secret và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "haravan",
+      "name": "Haravan",
+      "icon": "🛍️",
+      "category": "Bán hàng",
+      "description": "Đơn hàng, sản phẩm, khách hàng, chi nhánh và tồn kho của cửa hàng Haravan qua Haravan Omni API (MinMin tự dựng cầu nối). Mỗi kết nối là một cửa hàng, thêm nhiều kết nối để theo dõi nhiều cửa hàng.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "haravan",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "access_token",
+            "label": "Token của Ứng dụng riêng (Private App)",
+            "placeholder": "Dán token Private App Haravan..."
+          }
+        ],
+        "guide": "1. Đăng nhập trang quản trị Haravan bằng tài khoản chủ cửa hàng.\n2. Vào Ứng dụng, chọn mục Ứng dụng riêng (Private App) rồi bấm Tạo ứng dụng riêng.\n3. Đặt tên (ví dụ MinMin) và chỉ cấp quyền ĐỌC: shop, đơn hàng, sản phẩm, khách hàng, kho.\n4. Lưu lại, chép Token của ứng dụng riêng rồi dán vào ô Token của kết nối này.\n5. Lưu rồi bấm Test: MinMin đọc thông tin cửa hàng để kiểm tra token.\n\nMỗi cửa hàng một kết nối: cửa hàng thứ hai thì thêm kết nối mới với token riêng.",
+        "guide_url": "https://docs.haravan.com/docs/tutorials/authentication/private-app-authentication/"
+      },
+      "validate": {
+        "tool": "haravan_thong_tin_shop",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "haravan_thong_tin_shop",
+          "haravan_don_hang",
+          "haravan_chi_tiet_don",
+          "haravan_san_pham",
+          "haravan_khach_hang",
+          "haravan_chi_nhanh",
+          "haravan_ton_kho",
+          "haravan_goi_api"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem cửa hàng, đơn hàng, sản phẩm, khách hàng và tồn kho. MinMin không sửa giá, không sửa tồn kho, không xử lý đơn.\n\nToken được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "sapo",
+      "name": "Sapo",
+      "icon": "🏬",
+      "category": "Bán hàng",
+      "description": "Đơn hàng, sản phẩm, khách hàng, chi nhánh và tồn kho của cửa hàng Sapo (tên miền mysapo.net) qua Admin API (MinMin tự dựng cầu nối). Mỗi kết nối là một cửa hàng.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "sapo",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "shop_id",
+            "label": "Tên cửa hàng (phần trước .mysapo.net)",
+            "placeholder": "Ví dụ: halimi (cho halimi.mysapo.net)"
+          },
+          {
+            "key": "api_key",
+            "label": "API Key của Ứng dụng riêng",
+            "placeholder": "Dán API Key..."
+          },
+          {
+            "key": "api_secret",
+            "label": "API Secret (Mật khẩu) của Ứng dụng riêng",
+            "placeholder": "Dán API Secret..."
+          },
+          {
+            "key": "access_token",
+            "label": "Access token OAuth, chỉ khi không dùng API Key",
+            "placeholder": "Để trống nếu đã điền API Key...",
+            "optional": true
+          }
+        ],
+        "guide": "1. Đăng nhập trang quản trị Sapo Web (địa chỉ dạng ten-cua-hang.mysapo.net/admin).\n2. Vào Ứng dụng, bấm liên kết Ứng dụng riêng ở cuối trang, rồi bấm Tạo ứng dụng riêng.\n3. Điền tên và email, chỉ cấp quyền Chỉ đọc cho đơn hàng, sản phẩm, khách hàng, kho, rồi Lưu.\n4. Chép API Key và API Secret vào kết nối này.\n5. Ô Tên cửa hàng chỉ điền phần trước .mysapo.net, ví dụ halimi. Lưu rồi bấm Test.\n\nMỗi cửa hàng một kết nối. MinMin chỉ gọi đúng địa chỉ <tên>.mysapo.net, không gửi khoá đi nơi khác.",
+        "guide_url": "https://support.sapo.vn/ung-dung-rieng-private-apps"
+      },
+      "validate": {
+        "tool": "sapo_thong_tin_cua_hang",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "sapo_thong_tin_cua_hang",
+          "sapo_don_hang",
+          "sapo_chi_tiet_don",
+          "sapo_san_pham",
+          "sapo_khach_hang",
+          "sapo_chi_nhanh",
+          "sapo_ton_kho",
+          "sapo_goi_api"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem cửa hàng, đơn hàng, sản phẩm, khách hàng và tồn kho. MinMin không sửa giá, không sửa tồn kho, không xử lý đơn.\n\nAPI Key, API Secret và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "kiotviet",
+      "name": "KiotViet",
+      "icon": "🧾",
+      "category": "Bán hàng",
+      "description": "Chi nhánh, hàng hoá, tồn kho, đặt hàng, hoá đơn bán và khách hàng của gian hàng KiotViet qua Public API (MinMin tự dựng cầu nối). Mỗi kết nối là một gian hàng.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "kiotviet",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "retailer",
+            "label": "Tên gian hàng (Retailer)",
+            "placeholder": "Ví dụ: halimi (phần trước .kiotviet.vn)"
+          },
+          {
+            "key": "client_id",
+            "label": "Client ID",
+            "placeholder": "Dán Client ID..."
+          },
+          {
+            "key": "client_secret",
+            "label": "Mã bảo mật (Client Secret)",
+            "placeholder": "Dán mã bảo mật..."
+          }
+        ],
+        "guide": "1. Đăng nhập KiotViet bằng tài khoản quản trị (admin) của gian hàng.\n2. Vào Thiết lập cửa hàng, chọn Thiết lập kết nối API.\n3. Chép Client ID và Mã bảo mật (client secret) vào kết nối này.\n4. Ô Tên gian hàng điền tên dùng khi đăng nhập, là phần trước .kiotviet.vn, ví dụ halimi.\n5. Lưu rồi bấm Test: MinMin xin token và đọc danh sách chi nhánh.\n\nToken sống 24 giờ, MinMin tự xin lại khi gần hết hạn. Mỗi gian hàng một kết nối.",
+        "guide_url": "https://www.kiotviet.vn/huong-dan-su-dung-public-api-retail/"
+      },
+      "validate": {
+        "tool": "kiotviet_chi_nhanh",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "kiotviet_chi_nhanh",
+          "kiotviet_hang_hoa",
+          "kiotviet_ton_kho",
+          "kiotviet_dat_hang",
+          "kiotviet_hoa_don",
+          "kiotviet_chi_tiet_hoa_don",
+          "kiotviet_khach_hang",
+          "kiotviet_goi_api"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem chi nhánh, hàng hoá, tồn kho, đặt hàng, hoá đơn và khách hàng. MinMin không tạo hoá đơn, không sửa giá hay tồn kho.\n\nClient ID, mã bảo mật và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "nhanh-vn",
+      "name": "Nhanh.vn",
+      "icon": "⚡",
+      "category": "Bán hàng",
+      "description": "Đơn hàng, sản phẩm, tồn kho theo kho, khách hàng và danh sách kho của doanh nghiệp trên Nhanh.vn qua Open API v3 (MinMin tự dựng cầu nối). Mỗi kết nối là một doanh nghiệp.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "nhanhvn",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "app_id",
+            "label": "App ID (app trên open.nhanh.vn)",
+            "placeholder": "Ví dụ: 12345"
+          },
+          {
+            "key": "secret_key",
+            "label": "Secret Key của app (để đổi accessCode)",
+            "placeholder": "Dán Secret Key...",
+            "optional": true
+          },
+          {
+            "key": "redirect_url",
+            "label": "Redirect URL đã khai trong app (để tạo link ủy quyền)",
+            "placeholder": "Ví dụ: https://minmin.cua-ban.vn/cb",
+            "optional": true
+          },
+          {
+            "key": "access_code",
+            "label": "accessCode trên địa chỉ trả về",
+            "placeholder": "Dán accessCode sau khi ủy quyền...",
+            "optional": true
+          },
+          {
+            "key": "access_token",
+            "label": "Access token, nếu đã có sẵn",
+            "placeholder": "Để trống nếu dùng accessCode...",
+            "optional": true
+          },
+          {
+            "key": "business_id",
+            "label": "Mã doanh nghiệp (businessId), tự điền khi đổi accessCode",
+            "placeholder": "Ví dụ: 98765",
+            "optional": true
+          }
+        ],
+        "guide": "1. Vào open.nhanh.vn, đăng nhập và tạo app, khai Redirect URL. Chép App ID và Secret Key vào kết nối, điền Redirect URL rồi lưu.\n2. Hỏi MinMin \"tạo link ủy quyền Nhanh.vn\" (tool nhanhvn_lien_ket_uy_quyen), mở link, đăng nhập và đồng ý cấp quyền.\n3. Trang được chuyển về Redirect URL kèm accessCode=XXXX. Chép phần sau accessCode= vào ô accessCode rồi lưu ngay.\n4. MinMin tự đổi accessCode lấy access token và mã doanh nghiệp. Token sống khoảng 1 năm.\n\nĐã có sẵn access token thì chỉ cần điền App ID, access token và businessId.\naccessCode hết hạn sau 10 phút. Mỗi doanh nghiệp một kết nối.",
+        "guide_url": "https://apidocs.nhanh.vn/v3/readme.md"
+      },
+      "validate": {
+        "tool": "nhanhvn_kho",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "nhanhvn_lien_ket_uy_quyen",
+          "nhanhvn_don_hang",
+          "nhanhvn_chi_tiet_don",
+          "nhanhvn_san_pham",
+          "nhanhvn_chi_tiet_san_pham",
+          "nhanhvn_ton_kho",
+          "nhanhvn_khach_hang",
+          "nhanhvn_kho"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem đơn hàng, sản phẩm, tồn kho, khách hàng và kho. MinMin không tạo hay sửa đơn, không sửa sản phẩm.\n\nSecret Key và access token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "tiki",
+      "name": "Tiki",
+      "icon": "🛍️",
+      "category": "Bán hàng",
+      "description": "Đơn hàng, sản phẩm, kho và tồn kho của nhà bán Tiki qua Tiki Open Platform (MinMin tự dựng cầu nối). Mỗi kết nối là một nhà bán, thêm nhiều kết nối để theo dõi nhiều gian hàng.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "tiki",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "client_id",
+            "label": "Client ID (App ID của app trên Tiki Open Platform)",
+            "placeholder": "Ví dụ: 3750874604017328"
+          },
+          {
+            "key": "client_secret",
+            "label": "Client Secret",
+            "placeholder": "Dán Client Secret của app..."
+          },
+          {
+            "key": "redirect_url",
+            "label": "Redirect URI đã khai trong app (chỉ app công khai cần)",
+            "placeholder": "Ví dụ: https://minmin.cua-ban.vn/cb",
+            "optional": true
+          },
+          {
+            "key": "auth_code",
+            "label": "Mã ủy quyền (code trên địa chỉ trả về, chỉ app công khai cần)",
+            "placeholder": "Dán code sau khi nhà bán ủy quyền...",
+            "optional": true
+          }
+        ],
+        "guide": "1. Đăng nhập Tiki Seller Center bằng tài khoản nhà bán, vào mục kết nối Open API (open.tiki.vn) và tạo app.\n2. App nội bộ (In-house) là cách gọn nhất: chép Client ID và Client Secret vào kết nối này rồi lưu, xong.\n3. App công khai: khai Redirect URI cho app, điền vào ô Redirect URI, rồi hỏi MinMin \"tạo link ủy quyền Tiki\".\n4. Mở link, đồng ý ủy quyền, trang được chuyển về ...?code=XXXX. Chép phần sau code= vào ô Mã ủy quyền rồi lưu.\n5. MinMin tự lấy token và tự làm mới khi gần hết hạn.\n\nMỗi nhà bán một kết nối: gian hàng thứ hai thì thêm kết nối mới.\nCode chỉ dùng được một lần, nên dán ngay sau khi ủy quyền.",
+        "guide_url": "https://open.tiki.vn/docs/docs/current/getting-started/overview/"
+      },
+      "validate": {
+        "tool": "tiki_thong_tin_shop",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "tiki_lien_ket_uy_quyen",
+          "tiki_thong_tin_shop",
+          "tiki_kho_hang",
+          "tiki_don_hang",
+          "tiki_chi_tiet_don",
+          "tiki_san_pham",
+          "tiki_chi_tiet_san_pham",
+          "tiki_ton_kho_kho_tiki"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem đơn hàng, sản phẩm, kho và tồn kho. MinMin không xác nhận đơn, không sửa giá, không sửa tồn kho.\n\nClient Secret và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "misa-meinvoice",
+      "name": "MISA meInvoice",
+      "icon": "🧾",
+      "category": "Hoá đơn & thuế",
+      "description": "Mẫu và ký hiệu hoá đơn, trạng thái hoá đơn đã phát hành (gửi cơ quan thuế, mã CQT, huỷ, người mua đã nhận) và link xem PDF qua API tích hợp MISA meInvoice (MinMin tự dựng cầu nối). Mỗi kết nối là một mã số thuế.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "meinvoice",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "app_id",
+            "label": "AppID tích hợp do MISA cấp",
+            "placeholder": "Dán AppID MISA cấp..."
+          },
+          {
+            "key": "ma_so_thue",
+            "label": "Mã số thuế doanh nghiệp",
+            "placeholder": "Ví dụ: 0101243150"
+          },
+          {
+            "key": "ten_dang_nhap",
+            "label": "Tên đăng nhập meInvoice",
+            "placeholder": "Ví dụ: ketoan@congty.vn"
+          },
+          {
+            "key": "mat_khau",
+            "label": "Mật khẩu meInvoice",
+            "placeholder": "Dán mật khẩu..."
+          },
+          {
+            "key": "moi_truong",
+            "label": "Môi trường: live (mặc định) hoặc test, không bắt buộc",
+            "placeholder": "Ví dụ: live",
+            "optional": true
+          }
+        ],
+        "guide": "1. Liên hệ MISA (tổng đài hoặc nhân viên phụ trách) để đăng ký tích hợp API meInvoice và nhận AppID.\n2. Nên tạo một tài khoản meInvoice riêng cho MinMin, chỉ cấp quyền xem hoá đơn.\n3. Điền AppID, mã số thuế, tên đăng nhập và mật khẩu của tài khoản đó vào kết nối này rồi lưu.\n4. Bấm Test: MinMin đăng nhập và lấy danh sách mẫu hoá đơn để kiểm tra.\n\nMỗi mã số thuế một kết nối: công ty thứ hai thì thêm kết nối mới.\nMuốn thử trước, xin MISA tài khoản môi trường test và điền test vào ô Môi trường.",
+        "guide_url": "https://doc.meinvoice.vn/itg/intro.html"
+      },
+      "validate": {
+        "tool": "meinvoice_mau_hoa_don",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "meinvoice_mau_hoa_don",
+          "meinvoice_trang_thai",
+          "meinvoice_link_xem"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem mẫu hoá đơn, trạng thái hoá đơn và link xem PDF. MinMin không phát hành, không huỷ, không gửi hoá đơn.\n\nMật khẩu và token được lưu đã mã hoá trong kết nối. Nên dùng tài khoản meInvoice riêng chỉ có quyền xem.",
+      "default_perm": "readonly"
     }
   ]
 }
