@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.105] - 2026-10-07
+### Thêm mới
+- **Gói có phí**: trên kệ hàng, bật "Có phí" cho món nào, ghi giá và cách liên hệ mua. Khách thấy giá ngay trên kệ; muốn tải phải có mã mua.
+- Thu tiền xong, bạn cấp mã mua ở Gửi đi > Cấp mã mua, theo vân tay máy MinMin của khách (khách thấy vân tay ngay khi bấm xem món). Mã chỉ chạy trên đúng máy đó, lộ ra người khác cũng không dùng được. Có hạn dùng tuỳ chọn, thu hồi được bất cứ lúc nào; khách đã mua tự nhận bản mới mà không phải nhập lại mã.
+### Sửa lỗi
+- Ô nhập mã PIN trong Chợ chia sẻ trước đây hiện sẵn dù gói không cần PIN.
+
 ## [26.10.104] - 2026-10-07
 ### Mới
 - Văn phòng AI 3D có 36 nhân vật khác nhau (tạo bằng Higgsfield, đủ nam nữ, tuổi, kiểu tóc, trang phục). Mỗi agent và mỗi nhân viên được một nhân vật riêng, không trùng nhau. Chỉ tải số nhân vật cần dùng.

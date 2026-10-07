@@ -56,6 +56,8 @@
 .cs-qr{width:150px;height:150px;border-radius:10px;background:#fff;align-self:center}
 .cs-msg{font-size:12px;min-height:1em;color:var(--mm-muted)}
 .cs-link{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--mm-line)}
+/* thuoc tinh hidden phai thang display:flex cua .cs-row */
+.cs-box [hidden]{display:none!important}
 `;
     document.head.appendChild(s);
   }
@@ -251,11 +253,17 @@
         <button class="cs-btn" id="kChep">${esc(t("cs.copy_link"))}</button></div>
         <img class="cs-qr" alt="QR" src="/bs/ke/qr.svg">` : ""}
       <div class="cs-msg" id="kMsg"></div>
-      <div id="kMon">${j.mon.length ? j.mon.map((m) => `<div class="cs-link"><div class="cs-row">
+      <div id="kMon">${j.mon.length ? j.mon.map((m) => `<div class="cs-link" data-mon="${esc(m.id)}"><div class="cs-row">
           <span class="cs-chip">${esc(kindName(m.type))}</span><b style="flex:1">${esc(m.ten)}</b>
           ${m.con ? "" : `<span class="cs-chip" style="color:var(--mm-warn)">${esc(t("cs.ke_gone"))}</span>`}
-          <button class="cs-btn" data-bo="${esc(m.id)}">${esc(t("cs.ke_remove"))}</button></div></div>`).join("")
-        : `<i class="cs-dim">${esc(t("cs.ke_empty"))}</i>`}</div>`;
+          <label class="cs-row"><input type="checkbox" data-phi ${m.co_phi ? "checked" : ""}> ${esc(t("cs.paid_toggle"))}</label>
+          <button class="cs-btn" data-bo="${esc(m.id)}">${esc(t("cs.ke_remove"))}</button></div>
+          <div class="cs-row" data-phi-box ${m.co_phi ? "" : "hidden"}>
+            <input class="cs-in" data-gia maxlength="60" placeholder="${esc(t("cs.paid_price_ph"))}" value="${esc(m.gia || "")}">
+            <input class="cs-in" data-lh maxlength="120" placeholder="${esc(t("cs.paid_contact_ph"))}" value="${esc(m.lien_he || "")}">
+            <button class="cs-btn" data-luu-phi>${esc(t("cs.save"))}</button></div></div>`).join("")
+        : `<i class="cs-dim">${esc(t("cs.ke_empty"))}</i>`}</div>
+      ${j.mon.some((m) => m.co_phi) ? `<div class="cs-card" id="kMua"></div>` : ""}`;
     const q = (id) => box.querySelector("#" + id);
     q("kTen").value = j.ten_ke || "";
     q("kGt").value = j.gioi_thieu || "";
@@ -285,6 +293,52 @@
       await post("/ke-hang/bo", { id: b.dataset.bo });
       veKe(box, brain, daChon);
     }));
+    box.querySelectorAll("[data-mon]").forEach((row) => {
+      const id = row.dataset.mon, cb = row.querySelector("[data-phi]"), pb = row.querySelector("[data-phi-box]");
+      const luuPhi = async () => {
+        const r = await post("/ke-hang/sua", { id, co_phi: cb.checked ? "1" : "0",
+          gia: row.querySelector("[data-gia]").value, lien_he: row.querySelector("[data-lh]").value });
+        q("kMsg").textContent = r && r.ok ? t("cs.saved") : t("cs.failed");
+      };
+      cb.onchange = async () => { pb.hidden = !cb.checked; await luuPhi(); veKe(box, brain, daChon); };
+      row.querySelector("[data-luu-phi]").onclick = luuPhi;
+    });
+    const kMua = q("kMua");
+    if (kMua) veMaMua(kMua, j.mon.filter((m) => m.co_phi));
+  }
+
+  // Cấp mã mua cho món có phí (26.10.104): gắn với vân tay MÁY người mua, thu hồi được.
+  async function veMaMua(box, monPhi) {
+    const j = await getJson("/ke-hang/ma-mua");
+    box.innerHTML = `<b>${esc(t("cs.code_title"))}</b>
+      <div class="cs-dim">${esc(t("cs.code_hint"))}</div>
+      <div class="cs-row"><select class="cs-in" id="mMon">${monPhi.map((m) => `<option value="${esc(m.id)}">${esc(m.ten)}</option>`).join("")}
+        <option value="*">${esc(t("cs.code_all"))}</option></select>
+        <input class="cs-in" id="mVt" maxlength="19" placeholder="XXXX-XXXX-XXXX-XXXX"></div>
+      <div class="cs-row"><input class="cs-in" id="mKh" maxlength="60" placeholder="${esc(t("cs.code_buyer_ph"))}">
+        <input class="cs-in" id="mHan" type="date" title="${esc(t("cs.code_until"))}"></div>
+      <button class="cs-btn p" id="mCap">${esc(t("cs.code_issue"))}</button>
+      <div class="cs-msg" id="mMsg"></div><div id="mMoi"></div>
+      <div>${((j && j.ma) || []).map((x) => `<div class="cs-link"><div class="cs-row">
+          <b style="flex:1">${esc(x.kh || x.mua)}</b><span class="cs-dim">${esc(x.ten_mon)}</span>
+          ${x.thu_hoi ? `<span class="cs-chip" style="color:var(--mm-bad)">${esc(t("cs.code_revoked"))}</span>`
+            : `<button class="cs-btn" data-chep="${esc(x.ma || "")}">${esc(t("cs.copy_code"))}</button><button class="cs-btn" data-th="${esc(x.so)}">${esc(t("cs.revoke"))}</button>`}</div>
+          <div class="cs-dim">${esc(x.mua)} · ${esc(x.het_han ? t("cs.expires", { d: x.het_han }) : t("cs.code_forever"))}</div></div>`).join("")}</div>`;
+    const q = (id) => box.querySelector("#" + id);
+    q("mCap").onclick = async () => {
+      const r = await post("/ke-hang/ma-mua", { mon: q("mMon").value, mua: q("mVt").value, kh: q("mKh").value, het_han: q("mHan").value });
+      if (!r || !r.ok) { q("mMsg").textContent = (r && r.error) || t("cs.failed"); return; }
+      await veMaMua(box, monPhi);
+      box.querySelector("#mMoi").innerHTML = `<div class="cs-badge ok"><b>${esc(t("cs.code_ready"))}</b>
+        <div class="cs-code" style="font-weight:400;font-size:12px">${esc(r.ma)}</div></div>`;
+      chep(r.ma, box.querySelector("#mMsg"));
+    };
+    box.querySelectorAll("[data-chep]").forEach((b) => (b.onclick = () => chep(b.dataset.chep, q("mMsg"))));
+    box.querySelectorAll("[data-th]").forEach((b) => (b.onclick = async () => {
+      if (!window.confirm(t("cs.code_revoke_ask"))) return;
+      await post("/ke-hang/ma-mua/thu-hoi", { so: b.dataset.th });
+      veMaMua(box, monPhi);
+    }));
   }
 
   // ───────────── Nhận về ─────────────
@@ -298,6 +352,7 @@
         <div class="cs-row"><input class="cs-in" id="csNguon" placeholder="${esc(t("cs.recv_ph"))}">
           <button class="cs-btn p" id="csXem">${esc(t("cs.preview"))}</button></div>
         <div class="cs-row" id="csPinRow" hidden><input class="cs-in" id="csPinNhan" maxlength="12" autocomplete="off" placeholder="${esc(t("cs.pin_enter"))}"></div>
+        <div id="csMuaRow" hidden></div>
         <div class="cs-row"><span class="cs-dim">${esc(t("cs.or_file"))}</span><input type="file" id="csFile" accept=".zip,application/zip"></div>
         <div class="cs-msg" id="csMsg"></div>
       </div>
@@ -311,6 +366,8 @@
       const f = { to_brain: brain };
       if (capNhat) { f.td = capNhat.td; f.host_td = capNhat.host; }
       else if (!file) { f.nguon = $("csNguon").value.trim(); f.pin = $("csPinNhan").value.trim(); }
+      const maNhap = body.querySelector("#csMaMua");
+      if (maNhap && maNhap.value.trim()) f.ma_mua = maNhap.value.trim();
       const r = await post("/brains/import/xem", f, file);
       $("csXem").disabled = false;
       if (r && r.can_pin) {
@@ -318,8 +375,25 @@
         $("csMsg").textContent = r.error || t("cs.pin_need");
         return;
       }
+      if (r && r.can_ma_mua) {
+        const row = $("csMuaRow");
+        row.hidden = false;
+        row.innerHTML = `<div class="cs-badge warn"><b>${esc(r.error || t("cs.buy_need"))}</b>
+          ${r.gia ? `<div>${esc(t("cs.buy_price", { x: r.gia }))}</div>` : ""}
+          ${r.lien_he ? `<div>${esc(t("cs.ke_contact", { x: r.lien_he }))}</div>` : ""}
+          <div style="margin-top:6px">${esc(t("cs.buy_send_fp"))}</div>
+          <div class="cs-row"><span class="cs-code" style="flex:1">${esc(r.van_tay_cua_toi)}</span>
+            <button class="cs-btn" id="csChepVt">${esc(t("cs.copy_code"))}</button></div></div>
+          <div class="cs-row"><input class="cs-in" id="csMaMua" placeholder="${esc(t("cs.buy_code_ph"))}">
+            <button class="cs-btn p" id="csDungMa">${esc(t("cs.buy_use"))}</button></div>`;
+        row.querySelector("#csChepVt").onclick = () => chep(r.van_tay_cua_toi, $("csMsg"));
+        row.querySelector("#csDungMa").onclick = () => xem(file);
+        $("csMsg").textContent = "";
+        return;
+      }
       if (!r || !r.ok) { $("csMsg").textContent = (r && r.error) || t("cs.failed"); return; }
       $("csMsg").textContent = "";
+      $("csMuaRow").hidden = true;
       veXemTruoc(r);
       soiAi(r);
     }
