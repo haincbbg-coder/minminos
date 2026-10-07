@@ -178,15 +178,31 @@ def pancake_office(raw) -> dict:
              "orders": _num(it.get("orders") or it.get("don")), "revenue": _num(it.get("revenue") or it.get("doanh_thu")),
              "target": _num(it.get("target") or it.get("chi_tieu")), "spend": _num(it.get("spend") or it.get("chi_phi")),
              "roas": _num(it.get("roas")), "packed": _num(it.get("packed") or it.get("dong_goi"))}
+        mo = it.get("month_orders", it.get("don_thang"))
+        if mo is not None:
+            r["month_orders"] = _num(mo)      # marketing: đơn tính lương trong tháng của các mã người đó phụ trách
+        y = it.get("yesterday") or it.get("hom_qua")
+        if isinstance(y, dict):
+            r["y"] = {"orders": _num(y.get("orders") or y.get("don")), "revenue": _num(y.get("revenue") or y.get("doanh_thu")),
+                      "spend": _num(y.get("spend") or y.get("chi_phi")), "roas": _num(y.get("roas")), "packed": _num(y.get("packed") or y.get("dong_goi"))}
+            if y.get("month_orders") is not None:
+                r["y"]["month_orders"] = _num(y.get("month_orders"))
         out[r["dept"]].append(r)
     for k, lst in out.items():
-        lst.sort(key=lambda r: (-(r["roas"] if k == "marketing" and not r["revenue"] else r["revenue"]), -r["orders"], r["name"]))
+        if k == "marketing":
+            lst.sort(key=lambda r: (-r.get("month_orders", -1), -(r["roas"] if not r["revenue"] else r["revenue"]), -r["orders"], r["name"]))
+        else:
+            lst.sort(key=lambda r: (-r["revenue"], -r["orders"], r["name"]))
         for i, r in enumerate(lst[:24]):
             r["rank"] = i + 1
         out[k] = lst[:24]
     ads = raw.get("ads") if isinstance(raw, dict) and isinstance(raw.get("ads"), dict) else {}
-    return {"sale": out["sale"], "kho": out["kho"], "marketing": out["marketing"],
-            "ads": {k: _num(v) for k, v in list(ads.items())[:8]}}
+    ay = raw.get("ads_yesterday") if isinstance(raw, dict) and isinstance(raw.get("ads_yesterday"), dict) else None
+    res = {"sale": out["sale"], "kho": out["kho"], "marketing": out["marketing"],
+           "ads": {k: _num(v) for k, v in list(ads.items())[:8]}}
+    if ay is not None:
+        res["ads_yesterday"] = {k: _num(v) for k, v in list(ay.items())[:8]}
+    return res
 
 
 PANCAKE_CFG = "00 - Dashboard/pancake-config.json"
