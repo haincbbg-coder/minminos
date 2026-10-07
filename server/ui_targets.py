@@ -21,6 +21,7 @@ PAGES = (
     "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
     "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai",
+    "biendong",
 )
 
 # Bí danh người dùng hay nói, ánh xạ về id trang. Thường hoá không dấu trước khi tra, nên viết
@@ -83,6 +84,9 @@ ALIASES = {
     "kich hoat": "ketnoingoai", "ma kich hoat": "ketnoingoai", "zalo forwarder": "ketnoingoai",
     "tai hoa don": "ketnoingoai", "dieu khien may": "ketnoingoai", "dieu khien may tinh": "ketnoingoai",
     "xem cam": "matnha", "camera nha": "matnha", "mat nha camera": "matnha", "mat nha (camera)": "matnha", "home eyes": "matnha",
+    # Biến động số dư (26.10.119).
+    "bien dong": "biendong", "bien dong so du": "biendong", "so du": "biendong",
+    "tien vao": "biendong", "casso": "biendong", "chuyen khoan": "biendong", "ngan hang": "biendong",
 }
 
 # Nhóm trên thanh bên = RAIL_GROUPS trong dashboard/console.js (khoá `id`) và GROUPS trong

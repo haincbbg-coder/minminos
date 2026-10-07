@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<title>Biến động số dư - MinMin</title>
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/bien-dong/bien-dong.css?v=1">
+</head>
+<body>
+<header class="top">
+  <a class="back" href="/" aria-label="Về MinMin">&larr;</a>
+  <h1>Biến động số dư</h1>
+  <span class="tt" id="tt">…</span>
+</header>
+
+<main>
+  <section class="tong" aria-label="Hôm nay">
+    <div class="o"><span>Tiền vào hôm nay</span><b id="tongVao">…</b></div>
+    <div class="o"><span>Số khoản vào</span><b id="soVao">…</b></div>
+    <div class="o"><span>Tiền ra hôm nay</span><b id="tongRa">…</b></div>
+  </section>
+
+  <div class="loc">
+    <label class="chk"><input type="checkbox" id="chiVao" checked> Chỉ tiền vào</label>
+    <input id="tim" type="search" placeholder="Tìm nội dung, người chuyển" autocomplete="off">
+  </div>
+  <ul class="ds" id="ds" aria-live="polite"></ul>
+  <p class="trong" id="trong" hidden>Chưa có giao dịch nào. Cài theo các bước bên dưới, rồi bấm "Gọi thử" trong Casso.</p>
+
+  <section class="hop" id="caiDat">
+    <h2>Nối Techcombank qua Casso</h2>
+    <ol>
+      <li>Đăng nhập <a href="https://flow.casso.vn" target="_blank" rel="noopener">Casso Flow</a> và
+        <b>liên kết tài khoản Techcombank</b> (Ngân hàng &rarr; Thêm tài khoản, làm theo hướng dẫn của Casso).</li>
+      <li>Trong Casso: <b>Tích hợp &rarr; Webhook &rarr; Thêm webhook V2</b>. Dán địa chỉ này vào ô URL:
+        <div class="url"><code id="url">…</code><button type="button" class="btn nho" id="chepUrl">Chép</button></div>
+      </li>
+      <li>Casso hiện <b>Key bảo mật</b> (Secure Token / checksum key) của webhook. Chép rồi dán vào đây:
+        <div class="khoa">
+          <input id="khoa" type="password" autocomplete="off" placeholder="Dán Key bảo mật của Casso">
+          <button type="button" class="btn" id="luuKhoa">Lưu</button>
+        </div>
+        <p class="nhac" id="khoaTT">…</p>
+      </li>
+      <li>Lưu webhook trong Casso, rồi bấm <b>Gọi thử</b>. Giao dịch thử (gắn nhãn "thử nghiệm") sẽ hiện ở danh sách trên
+        và báo vào chuông MinMin cùng Telegram của bạn.</li>
+    </ol>
+    <p class="phu rieng"><b>An toàn:</b> địa chỉ có mã bí mật riêng, MinMin chỉ nhận giao dịch có chữ ký đúng
+      bằng Key bảo mật (giữ mã hoá trên máy chủ, không bao giờ hiện lại). Lỡ làm lộ địa chỉ thì bấm "Đổi địa chỉ".</p>
+  </section>
+
+  <section class="hop" id="tuyChon">
+    <h2>Báo tin</h2>
+    <label class="chk"><input type="checkbox" id="optVao"> Chỉ báo tiền vào (bỏ qua tiền ra)</label>
+    <label class="dong">Chỉ báo khoản từ
+      <input id="nguong" type="number" min="0" step="1000" inputmode="numeric"> đ trở lên (0 = báo mọi khoản)</label>
+    <label class="dong cot">Báo thêm cho nhân viên (mỗi dòng một nơi):
+      <textarea id="noiNhan" rows="3" placeholder="-1001234567890&#10;zalo:1234567890"></textarea></label>
+    <p class="nhac">Mặc định MinMin báo vào chuông, thông báo đẩy và Telegram của bạn. Muốn báo thêm nhóm nhân viên:
+      nhóm Telegram thì thêm bot vào nhóm và đưa <b>chat id của nhóm</b> (số âm) vào danh sách cho phép của bot ở
+      <b>Kênh nhắn &rarr; Telegram</b> trước; Zalo thì ghi <code>zalo:&lt;id&gt;</code> của người nhận trên bot Zalo.</p>
+    <div class="nut">
+      <button type="button" class="btn" id="luuTuyChon">Lưu</button>
+      <button type="button" class="btn" id="guiThu">Gửi thử</button>
+      <button type="button" class="btn canh" id="doiToken">Đổi địa chỉ</button>
+    </div>
+    <p class="nhac" id="kq" aria-live="polite"></p>
+  </section>
+</main>
+<script src="/static/bien-dong/bien-dong.js?v=1"></script>
+</body>
+</html>

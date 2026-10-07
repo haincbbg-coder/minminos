@@ -6,7 +6,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.119] - 2026-10-07
 ### Thêm mới
-- Đang soạn: báo biến động số dư (Techcombank và mọi ngân hàng qua Casso).
+- Trang **Biến động số dư** (nhóm Kết nối): nối Techcombank qua Casso, mỗi khoản tiền khách chuyển vào hiện ngay trên chuông MinMin, thông báo đẩy về điện thoại và Telegram, kèm nội dung, người chuyển và số dư.
+- Báo thêm được vào nhóm Telegram hoặc Zalo của nhân viên, chọn chỉ báo tiền vào hoặc từ một mức tiền trở lên. Hỏi MinMin "hôm nay vào bao nhiêu tiền" là có tổng.
+
+### Bảo mật
+- MinMin chỉ nhận giao dịch có chữ ký đúng bằng Key bảo mật của Casso, qua một địa chỉ bí mật đổi được bất cứ lúc nào. Số tài khoản chỉ hiện 4 số cuối.
 
 ## [26.10.118] - 2026-10-07
 ### Sửa lỗi

@@ -5346,5 +5346,75 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 537,
+  "type": "APIRoute",
+  "path": "/bien-dong",
+  "name": "bien_dong_page",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 538,
+  "type": "APIRoute",
+  "path": "/bien-dong/casso/{token}",
+  "name": "bien_dong_casso",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 539,
+  "type": "APIRoute",
+  "path": "/bien-dong/giao-dich",
+  "name": "bien_dong_giao_dich",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 540,
+  "type": "APIRoute",
+  "path": "/bien-dong/cai-dat",
+  "name": "bien_dong_cai_dat",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 541,
+  "type": "APIRoute",
+  "path": "/bien-dong/cai-dat",
+  "name": "bien_dong_luu_cai_dat",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 542,
+  "type": "APIRoute",
+  "path": "/bien-dong/doi-token",
+  "name": "bien_dong_doi_token",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 543,
+  "type": "APIRoute",
+  "path": "/bien-dong/thu",
+  "name": "bien_dong_thu",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
  }
 ]

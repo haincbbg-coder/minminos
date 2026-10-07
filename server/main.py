@@ -232,6 +232,10 @@ _AUTH_PUBLIC_EXACT = ("/", "/favicon.ico", "/auth/status", "/auth/login", "/auth
 _AUTH_LOCAL_EXACT = ("/telegram/send-file", "/reminders", "/reminders/cancel", "/reminders/update")
 # Mắt Nhà: (đường, phương thức) duy nhất được miễn đăng nhập - xem routes/mat_nha.py.
 _MAT_NHA_CONG_KHAI = ("/mat-nha/su-kien", "POST")
+# Biến động số dư (26.10.119): Casso đẩy giao dịch vào POST /bien-dong/casso/<mã>, không có
+# cookie. Miễn ĐÚNG mẫu này (khớp trọn, một đoạn mã) với POST - xem routes/bien_dong.py.
+_BIEN_DONG_CONG_KHAI = (r"/bien-dong/casso/[A-Za-z0-9_-]{20,80}", "POST")
+_BIEN_DONG_CONG_KHAI_RE = re.compile(_BIEN_DONG_CONG_KHAI[0])
 
 
 def duong_dan_router(request) -> str:
@@ -298,7 +302,12 @@ async def _auth_guard(request: Request, call_next):
                   # Mắt Nhà (0.64.91): cầu nối ở nhà đẩy sự kiện camera lên, không có cookie.
                   # Miễn ĐÚNG một cặp (đường, POST); endpoint tự kiểm header x-mat-nha-token.
                   # GET cùng đường (đọc sự kiện) vẫn phải đăng nhập.
-                  or (path, request.method) == _MAT_NHA_CONG_KHAI)
+                  or (path, request.method) == _MAT_NHA_CONG_KHAI
+                  # Biến động số dư: webhook Casso. Endpoint tự kiểm mã trong đường (404 nếu
+                  # sai) và chữ ký HMAC. GET cùng đường, đường có thêm đoạn, dấu "/" cuối
+                  # và mọi đường /bien-dong khác vẫn phải đăng nhập.
+                  or (request.method == _BIEN_DONG_CONG_KHAI[1]
+                      and _BIEN_DONG_CONG_KHAI_RE.fullmatch(path) is not None))
         if not public and not cfgmod.valid_session(request.cookies.get("javis_session", "")):
             # Client ngoài trình duyệt (CLI, script, cron) không có cookie. Nhánh token là
             # đường DUY NHẤT của chúng - xem docs/dev/2026-08-cli-spec.md. Đặt SAU nhánh
@@ -4537,7 +4546,7 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         if "apps" in patch and isinstance(patch.get("apps"), dict):
             # Ứng dụng trong Chợ MinMin (26.10.1): chỉ nhận đúng các id đã biết, giá trị bool.
             apps = dict(cfg["dashboard"].get("apps") or {})
-            for k in ("matnha",):
+            for k in ("matnha", "biendong"):
                 if k in patch["apps"]:
                     apps[k] = bool(patch["apps"][k])
             cfg["dashboard"]["apps"] = apps
@@ -21641,6 +21650,40 @@ async def share_rename(body: dict = Body(...)):
     return {"ok": True, "token": ban["token"], "nhan": ban.get("nhan") or "",
             "ten": await asyncio.to_thread(_share_ten, ban)}
 
+
+
+# Biến động số dư (Casso Webhook V2) - routes/bien_dong.py. Đăng ký SAU route cuối để bảng
+# route (tests/python/route_table.json) chỉ thêm dòng ở đuôi, không đẩy thứ tự route có sẵn.
+import routes.bien_dong as bien_dong_routes   # noqa: E402
+
+
+async def _bien_dong_bao_chu(text: str):
+    """Tiền vào tài khoản: hòm thư (chuông + thông báo đẩy) và Telegram chủ."""
+    await _notify_owner("", text, kind="system", label="Biến động số dư", source="bien-dong")
+
+
+async def _bien_dong_gui_kenh(dich: str, text: str):
+    """Một nơi nhận thêm (nhóm nhân viên): chat id Telegram trong whitelist hoặc "zalo:<id>".
+
+    Kiểm LẠI danh sách cho phép ngay lúc gửi, không chỉ lúc lưu cài đặt: `_gui_qua_kenh` gặp
+    id lạ thì rơi về người khác (Telegram -> chủ, Zalo -> MỌI id trong danh sách), nên một
+    id bị gỡ khỏi whitelist sau khi lưu sẽ đẩy tin tiền về sai người. Không còn hợp lệ thì bỏ."""
+    d = str(dich or "").strip()
+    st = cfgmod.read_settings()
+    if d.startswith(ZALO_CHAT_PREFIX):
+        ds = tg_parse_ids(st.get("zalo_bot", {}).get("chat_id"))
+        if ds and d[len(ZALO_CHAT_PREFIX):] not in ds:
+            return False, "id Zalo không còn trong danh sách cho phép, bỏ qua"
+    elif d not in tg_parse_ids(st.get("telegram", {}).get("chat_id")):
+        return False, "chat id Telegram không còn trong danh sách cho phép, bỏ qua"
+    return await _gui_qua_kenh(d, text)
+
+
+bien_dong_routes.register(app, bien_dong_routes.BienDongDeps(
+    dashboard_dir=Path(DASHBOARD_PATH), bao_chu=_bien_dong_bao_chu, gui_kenh=_bien_dong_gui_kenh,
+    ds_telegram=lambda: tg_parse_ids(cfgmod.read_settings().get("telegram", {}).get("chat_id")),
+    ds_zalo=lambda: tg_parse_ids(cfgmod.read_settings().get("zalo_bot", {}).get("chat_id"))))
+assert bien_dong_routes.LOI_VAO_CONG_KHAI == _BIEN_DONG_CONG_KHAI
 
 if __name__ == "__main__":
     import uvicorn
