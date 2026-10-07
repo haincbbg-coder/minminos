@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.118] - 2026-10-07
+### Sửa lỗi
+- Đăng nhập Facebook: khi khách quên tick hết tài khoản quảng cáo hoặc Trang, màn báo sau đăng nhập nói rõ còn thiếu quyền gì và nhắc bấm đăng nhập lại để tick thêm (trước đây vẫn báo "thành công" làm khách tưởng đã xong).
+
 ## [26.10.117] - 2026-10-07
 ### Sửa lỗi
 - Bảng Sale: đồng bộ Pancake giờ lấy cả số hôm qua nên bảng "Hôm qua" không còn toàn số 0.

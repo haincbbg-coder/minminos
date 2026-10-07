@@ -33,6 +33,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, FileResponse, Response, RedirectResponse
+from html import escape          # escape nội dung chèn vào trang HTML trả về (26.10.115)
 # edge_tts CỐ TÌNH không import ở đây mà nạp lười trong _tts_edge và /tts/voices.
 # Nó chiếm 944ms trong 2.263ms nạp main (41%), và kéo theo cả chuỗi aiohttp 212ms vào
 # đường khởi động, trong khi TTS là tính năng TUỲ CHỌN mà đa số phiên không đụng tới.
@@ -4354,8 +4355,23 @@ async def connect_oauth_callback(state: str = Query(""), code: str = Query(""), 
                     mcp_store.update_connection(cid, {"label": label})
         except Exception as e:
             print(f"[oauth label] {e}")
-        html = ("<html><body style='font-family:sans-serif;background:#111;color:#eee;text-align:center;padding-top:80px'>"
-                "<h2>✓ Đã kết nối thành công</h2><p>Đóng tab này và quay lại Javis, bấm Làm mới ở trang Kết nối.</p></body></html>")
+        # Khách hay QUÊN tick hết tài khoản quảng cáo/Trang trên màn Facebook. Nếu token thiếu
+        # quyền đã xin, nói rõ và chỉ bấm Đăng nhập lại (auth_type=rerequest sẽ hiện lại hộp chọn).
+        thieu = res.get("scopes_missing") or []
+        if thieu:
+            ten = {"ads_read": "đọc quảng cáo", "ads_management": "quản lý quảng cáo",
+                   "pages_show_list": "danh sách Trang", "pages_read_engagement": "đọc bài Trang",
+                   "pages_manage_posts": "đăng bài Trang", "pages_manage_engagement": "trả lời bình luận",
+                   "business_management": "tài sản Business", "read_insights": "số liệu Trang"}
+            ds = ", ".join(ten.get(x, x) for x in thieu)
+            html = ("<html><body style='font-family:sans-serif;background:#111;color:#eee;text-align:center;padding-top:80px'>"
+                    "<h2>✓ Đã kết nối, nhưng còn thiếu quyền</h2>"
+                    f"<p>Chưa cấp: <b>{escape(ds)}</b>.</p>"
+                    "<p>Quay lại Javis, bấm <b>Đăng nhập bằng Facebook</b> lần nữa, và lần này nhớ "
+                    "TICK hết các tài khoản quảng cáo và Trang ở màn Facebook.</p></body></html>")
+        else:
+            html = ("<html><body style='font-family:sans-serif;background:#111;color:#eee;text-align:center;padding-top:80px'>"
+                    "<h2>✓ Đã kết nối thành công</h2><p>Đóng tab này và quay lại Javis, bấm Làm mới ở trang Kết nối.</p></body></html>")
     else:
         html = (f"<html><body style='font-family:sans-serif;background:#111;color:#eee;text-align:center;padding-top:80px'>"
                 f"<h2>⚠ Kết nối thất bại</h2><p>{res.get('error', '')}</p></body></html>")
