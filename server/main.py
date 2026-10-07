@@ -5922,6 +5922,37 @@ _MA_SAI_TOI_DA = 60
 _MA_SAI_CUA_SO = 600
 
 
+@app.get("/bs/td/{td}")
+async def bs_theo_doi(td: str):
+    """Dấu nội dung hiện tại của từng mục trong một link chia sẻ - máy đã nhận hỏi đây để biết có
+    bản mới không mà không phải tải cả gói. Chỉ trả dấu băm + tên, không trả nội dung."""
+    ban = brain_share.doc_theo_doi(td)
+    if not ban:
+        return JSONResponse({"error": localefmt.chu("Kênh theo dõi không còn (link đã bị thu hồi hoặc quá hạn).",
+                                                    "This update channel is gone (link revoked or expired).")}, status_code=404)
+    data, _ = await asyncio.to_thread(_dung_goi_chia_se, ban)
+    return JSONResponse({"items": goi_chia_se.bam_muc(data) if data else {}, "nhan": ban.get("nhan", "")},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.get("/bs/td/{td}/goi.zip")
+async def bs_theo_doi_goi(td: str):
+    """Bản MỚI NHẤT của gói cho máy đã nhận. Không tính vào lượt tải của link (link dùng một lần
+    vẫn cho người đã nhận cập nhật) và không cần PIN: token theo dõi chỉ nằm trong gói đã tải
+    thành công, tức người cầm nó đã qua PIN rồi."""
+    ban = brain_share.doc_theo_doi(td)
+    if not ban:
+        return JSONResponse({"error": "Kênh theo dõi không còn"}, status_code=404)
+    data, fname = await asyncio.to_thread(_dung_goi_chia_se, ban)
+    if not data:
+        return JSONResponse({"error": "Không còn mục nào để chia sẻ"}, status_code=404)
+    data = await asyncio.to_thread(goi_chia_se.gan_theo_doi, data, ban["td"])
+    data = await asyncio.to_thread(goi_chia_se.ky_goi, data)
+    return Response(content=data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"',
+                             "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+
 @app.get("/bs/ma/{ma}")
 async def bs_tim_ma(ma: str, request: Request):
     """Mã ngắn -> token. Công khai, nên đoán mã bị chặn: quá 60 lần sai trong 10 phút từ một IP
@@ -6025,6 +6056,9 @@ async def brain_share_goi(token: str, x_minmin_pin: str = Header("")):
     data, fname = await asyncio.to_thread(_dung_goi_chia_se, ban)
     if not data:
         return JSONResponse({"error": "Không còn mục nào để chia sẻ"}, status_code=404)
+    td = brain_share.dam_bao_td(ban["token"])
+    if td:
+        data = await asyncio.to_thread(goi_chia_se.gan_theo_doi, data, td)   # trước khi ký: chữ ký phủ cả td
     data = await asyncio.to_thread(goi_chia_se.ky_goi, data)
     brain_share.ghi_tai(ban["token"])
     return Response(content=data, media_type="application/zip",
@@ -6157,11 +6191,21 @@ def _cai_goi_an_toan(data: bytes, to_brain: str, overwrite: bool, thong_tin: dic
     root = _brain_root(to_brain)
     nguon = goi_chia_se.nhan_nguon(thong_tin.get("host", ""), thong_tin.get("van_tay", ""), _today())
     safe = goi_chia_se.lam_an_toan(data, nguon=nguon, chon=chon)
-    res = share_bundle.import_bundle(
-        safe, "chia-se.zip", agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain),
-        skills_root=_skills_dir(to_brain), overwrite=overwrite)
+    dirs = dict(agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain), skills_root=_skills_dir(to_brain))
+    res = share_bundle.import_bundle(safe, "chia-se.zip", overwrite=overwrite, **dirs)
     if res.get("imported"):
-        goi_chia_se.ghi_so(root, res["imported"], thong_tin)
+        so_cu = goi_chia_se.doc_so(root)
+        if overwrite:
+            # Cập nhật một skill đã nhập từ CÙNG nguồn: file bản mới không còn thì xoá theo, không
+            # để sót script cũ nằm lại. Skill tự tạo hay của nguồn khác thì không đụng.
+            for k in res["imported"]:
+                v = so_cu.get(k) or {}
+                if str(k).startswith("skill:") and v.get("host") == thong_tin.get("host", ""):
+                    goi_chia_se.don_file_thua(safe, k, skills_root=dirs["skills_root"])
+        tt = dict(thong_tin, td=goi_chia_se.doc_theo_doi(data) or thong_tin.get("td", ""))
+        dau = goi_chia_se.bam_muc(data)
+        hash_cai = {k: goi_chia_se.bam_tren_dia(*str(k).split(":", 1), **dirs) for k in res["imported"]}
+        goi_chia_se.ghi_so(root, res["imported"], tt, phien_ban=dau, hash_cai=hash_cai)
     if any(str(k).startswith("skill:") for k in res.get("imported", [])):
         try:
             system_sync.mirror_skills(root)
@@ -6174,12 +6218,44 @@ def _cai_goi_an_toan(data: bytes, to_brain: str, overwrite: bool, thong_tin: dic
     return res
 
 
+def _thong_tin_cap_nhat(data: bytes, to_brain: str, host: str) -> dict:
+    """Với mục trong gói mà brain này ĐÃ nhập từ cùng máy gửi: bản này có khác bản đang có không,
+    người nhận có tự sửa mục đó không (cập nhật sẽ ghi đè), và khác ở file nào."""
+    so = goi_chia_se.doc_so(_brain_root(to_brain))
+    moi = goi_chia_se.bam_muc(data)
+    ra = {}
+    dirs = dict(agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain), skills_root=_skills_dir(to_brain))
+    for key, dau in moi.items():
+        v = so.get(key)
+        if not isinstance(v, dict) or (host and v.get("host") and v.get("host") != host):
+            continue
+        typ, _, slug = key.partition(":")
+        tren_dia = goi_chia_se.bam_tren_dia(typ, slug, **dirs)
+        ra[key] = {"co_ban_moi": bool(v.get("phien_ban")) and v.get("phien_ban") != dau,
+                   "sua_tai_cho": bool(v.get("hash_cai")) and bool(tren_dia) and tren_dia != v.get("hash_cai"),
+                   "khac": goi_chia_se.khac_biet(data, key, **dirs)}
+    return ra
+
+
 @app.post("/brains/import/xem")
 async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: str = Form("brain"),
-                         goi: UploadFile = File(None)):
-    """Bước 1 của nhập: tải (hoặc nhận file), xác minh, soi. KHÔNG ghi gì vào brain."""
+                         goi: UploadFile = File(None), td: str = Form(""), host_td: str = Form("")):
+    """Bước 1 của nhập: tải (hoặc nhận file), xác minh, soi. KHÔNG ghi gì vào brain.
+    `td` + `host_td`: lấy BẢN MỚI qua kênh theo dõi (nút Cập nhật ở thẻ Đã nhận)."""
     host = ""
-    if goi is not None and getattr(goi, "filename", ""):
+    if td.strip():
+        host = host_td.strip().lower()
+        if not _HOST_RE.match(host) or not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", td.strip()):
+            return JSONResponse({"ok": False, "error": "Kênh theo dõi không hợp lệ"}, status_code=400)
+        loi = await _host_cong_khai(host)
+        if loi:
+            return JSONResponse({"ok": False, "error": loi}, status_code=400)
+        st, data, loi = await _tai_https(f"https://{host}/bs/td/{td.strip()}/goi.zip")
+        if loi or st != 200:
+            return JSONResponse({"ok": False, "error": loi or localefmt.chu(
+                "Người gửi đã thu hồi hoặc kênh theo dõi hết hạn (mã {st}).",
+                "The sender revoked it or the update channel expired ({st}).", st=st)}, status_code=400)
+    elif goi is not None and getattr(goi, "filename", ""):
         data = await goi.read(25 * 1024 * 1024 + 1)
         if len(data) > 25 * 1024 * 1024:
             return JSONResponse({"ok": False, "error": "Gói quá lớn (>25MB)"}, status_code=413)
@@ -6213,7 +6289,8 @@ async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: s
                                          items=[{k: it.get(k) for k in ("type", "slug")} for it in soi["items"]]))
     ket_noi = ket_noi_can.doi_chieu(ket_noi_can.phat_hien(data), await asyncio.to_thread(_ket_noi_hien_co))
     return {"ok": True, "sha256": sha, "xac_minh": xm, "items": soi["items"], "canh_bao": soi["canh_bao"],
-            "nguy_co": nguy_co, "ket_noi": ket_noi, "kich_thuoc": soi["kich_thuoc"]}
+            "nguy_co": nguy_co, "ket_noi": ket_noi, "kich_thuoc": soi["kich_thuoc"],
+            "cap_nhat": await asyncio.to_thread(_thong_tin_cap_nhat, data, to_brain, host)}
 
 
 def _ket_noi_hien_co() -> list:
@@ -6354,6 +6431,51 @@ async def brain_nhap_tu_link(url: str = Form(...), to_brain: str = Form("brain")
         return JSONResponse({"ok": False, "error": xm.get("ly_do") or "Gói cần xác nhận, hãy dùng màn Nhận để xem trước"}, status_code=400)
     res = await asyncio.to_thread(_cai_goi_an_toan, data, to_brain, overwrite in ("1", "true", "True", "on"), xm)
     return {"ok": not res.get("errors"), **res}
+
+
+@app.get("/brains/imported/kiem-tra")
+async def brain_kiem_tra_ban_moi(brain: str = Query("brain")):
+    """Hỏi từng máy gửi (qua kênh theo dõi) xem mục đã nhập có bản mới không. Mỗi kênh hỏi một lần,
+    chạy song song, chặn địa chỉ nội bộ như mọi lần gọi ra ngoài khác."""
+    root = _brain_root(brain)
+    so = goi_chia_se.doc_so(root)
+    kenh: dict = {}
+    for key, v in so.items():
+        if isinstance(v, dict) and v.get("td") and v.get("host") and _HOST_RE.match(str(v["host"])):
+            kenh.setdefault((v["host"], v["td"]), []).append(key)
+
+    async def hoi(host, td):
+        if await _host_cong_khai(host):
+            return host, td, None, "chan"
+        st, body, loi = await _tai_https(f"https://{host}/bs/td/{td}", tran=256 * 1024)
+        if loi:
+            return host, td, None, "loi_mang"
+        if st == 404:
+            return host, td, None, "het"
+        try:
+            return host, td, json.loads(body).get("items") or {}, ""
+        except Exception:
+            return host, td, None, "loi_mang"
+
+    kq = await asyncio.gather(*(hoi(h, t) for (h, t) in list(kenh)[:30]))
+    dirs = dict(agents_dir=_agents_dir(brain), workflows_dir=_workflows_dir(brain), skills_root=_skills_dir(brain))
+    ra = []
+    for host, td, items, loi in kq:
+        for key in kenh[(host, td)]:
+            v = so[key]
+            typ, _, slug = key.partition(":")
+            tren_dia = goi_chia_se.bam_tren_dia(typ, slug, **dirs)
+            if not tren_dia:
+                continue
+            if loi:
+                tt = loi
+            elif key not in items:
+                tt = "bo_khoi_goi"
+            else:
+                tt = "co_ban_moi" if items[key] != v.get("phien_ban") else "moi_nhat"
+            ra.append({"type": typ, "slug": slug, "host": host, "td": td, "trang_thai": tt,
+                       "sua_tai_cho": bool(v.get("hash_cai")) and tren_dia != v.get("hash_cai")})
+    return {"ok": True, "items": ra, "so_kenh": len(kenh)}
 
 
 @app.get("/brains/imported")

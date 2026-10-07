@@ -327,15 +327,24 @@ def _doc_so() -> dict:
     return d if isinstance(d, dict) else {}
 
 
-def ghi_so(brain_root: str, keys, thong_tin: dict) -> None:
-    """Ghi nguồn gốc các mục vừa nhập: {brain_root: {'type:slug': {...}}}."""
+def ghi_so(brain_root: str, keys, thong_tin: dict, phien_ban: dict = None, hash_cai: dict = None) -> None:
+    """Ghi nguồn gốc các mục vừa nhập: {brain_root: {'type:slug': {...}}}.
+
+    Theo dõi bản mới (26.10.102): `td` (kênh theo dõi của người gửi), `phien_ban` (dấu nội dung
+    người gửi lúc cài) và `hash_cai` (dấu file trên đĩa ngay sau khi cài, để biết về sau người
+    nhận có tự sửa mục đó không). Cài lại bản mới thì `tin_tuong` về False: nội dung mới phải được
+    tin lại từ đầu."""
+    phien_ban, hash_cai = phien_ban or {}, hash_cai or {}
     with _LOCK:
         d = _doc_so()
         b = d.setdefault(str(brain_root), {})
         for k in keys:
-            b[str(k)] = {"host": thong_tin.get("host", ""), "van_tay": thong_tin.get("van_tay", ""),
-                         "ten": thong_tin.get("ten", ""), "xac_minh": thong_tin.get("xac_minh", ""),
-                         "luc": int(time.time()), "tin_tuong": False}
+            k = str(k)
+            b[k] = {"host": thong_tin.get("host", ""), "van_tay": thong_tin.get("van_tay", ""),
+                    "ten": thong_tin.get("ten", ""), "xac_minh": thong_tin.get("xac_minh", ""),
+                    "luc": int(time.time()), "tin_tuong": False,
+                    "td": thong_tin.get("td", "") if re.fullmatch(r"[A-Za-z0-9_-]{16,80}", str(thong_tin.get("td") or "")) else "",
+                    "phien_ban": phien_ban.get(k, ""), "hash_cai": hash_cai.get(k, "")}
         p = _so()
         p.parent.mkdir(parents=True, exist_ok=True)
         tmp = p.with_suffix(".json.tmp")
@@ -370,7 +379,179 @@ def mo_khoa_muc(brain_root: str, typ: str, slug: str, *, agents_dir, workflows_d
                     tmp.write_text(f"---\n{fm}\n---\n{body}", encoding="utf-8")
                     os.replace(tmp, p)
         b[key]["tin_tuong"] = True
+        # Gỡ dòng muc_quyen là sửa file, nhưng không phải "người nhận tự sửa nội dung": dời mốc
+        # hash_cai theo để lần kiểm tra bản mới sau không báo nhầm "bạn đã sửa mục này".
+        if typ in ("agent", "workflow") and b[key].get("hash_cai"):
+            b[key]["hash_cai"] = bam_tren_dia(typ, slug, agents_dir=agents_dir, workflows_dir=workflows_dir,
+                                              skills_root=None)
         tmp = _so().with_suffix(".json.tmp")
         tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
         os.replace(tmp, _so())
         return True
+
+
+# ─────────────────────────── THEO DÕI BẢN MỚI (26.10.102) ───────────────────────────
+#
+# Người gửi: lúc tải gói, máy gửi nhét `minmin-theo-doi.json` {td} vào gói TRƯỚC khi ký. `td` là
+# một token bền (365 ngày) gắn với chính link chia sẻ: link hết hạn hay hết lượt thì người ĐÃ
+# nhận vẫn hỏi được bản mới, còn thu hồi link là cắt luôn kênh theo dõi.
+# Người nhận: ghi td + dấu nội dung từng mục vào sổ nguồn gốc; về sau hỏi /bs/td/<td> để so.
+
+FILE_THEO_DOI = "minmin-theo-doi.json"
+
+
+def _key_cua(arc: str):
+    """'skills/bao-gia/x.md' -> 'skill:bao-gia'; 'agents/a.md' -> 'agent:a'; ngoài ba nhóm -> None."""
+    if arc.startswith("skills/"):
+        rel = arc[len("skills/"):]
+        return f"skill:{rel.split('/')[0]}" if "/" in rel else None
+    for top, typ in (("agents/", "agent"), ("workflows/", "workflow")):
+        if arc.startswith(top):
+            rel = arc[len(top):]
+            return f"{typ}:{rel[:-3]}" if rel.endswith(".md") and "/" not in rel else None
+    return None
+
+
+def _dau(ds) -> str:
+    ds = sorted(ds)
+    return hashlib.sha256(json.dumps(ds, separators=(",", ":")).encode("utf-8")).hexdigest()[:32]
+
+
+def bam_muc(data: bytes) -> dict:
+    """{'type:slug': dấu nội dung} cho từng mục trong gói (bỏ file chữ ký, theo dõi, manifest)."""
+    try:
+        z = zipfile.ZipFile(io.BytesIO(data))
+    except Exception:
+        return {}
+    nhom: dict = {}
+    for i in z.infolist():
+        arc = i.filename.replace("\\", "/")
+        if i.is_dir() or ".." in arc.split("/"):
+            continue
+        k = _key_cua(arc)
+        if k:
+            nhom.setdefault(k, []).append([arc, hashlib.sha256(z.read(i)).hexdigest()])
+    return {k: _dau(v) for k, v in nhom.items()}
+
+
+def bam_tren_dia(typ: str, slug: str, *, agents_dir, workflows_dir, skills_root) -> str:
+    """Dấu các file của một mục ĐANG nằm trên đĩa (cùng cách tính với bam_muc). '' nếu không có."""
+    ds = []
+    if typ in ("agent", "workflow"):
+        p = Path(agents_dir if typ == "agent" else workflows_dir) / f"{slug}.md"
+        if p.is_file():
+            ds.append([f"{typ}s/{slug}.md", hashlib.sha256(p.read_bytes()).hexdigest()])
+    elif skills_root is not None:
+        goc = Path(skills_root) / slug
+        if goc.is_dir():
+            for f in sorted(goc.rglob("*")):
+                if f.is_file() and not f.is_symlink():
+                    ds.append([f"skills/{slug}/{f.relative_to(goc).as_posix()}", hashlib.sha256(f.read_bytes()).hexdigest()])
+    return _dau(ds) if ds else ""
+
+
+def gan_theo_doi(data: bytes, td: str) -> bytes:
+    """Gói mới có `minmin-theo-doi.json` (thay bản cũ nếu có). Gọi TRƯỚC ky_goi để chữ ký phủ nó."""
+    src = zipfile.ZipFile(io.BytesIO(data))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        for i in src.infolist():
+            if i.is_dir() or i.filename in (FILE_THEO_DOI, FILE_CHU_KY):
+                continue
+            z.writestr(i.filename, src.read(i))
+        z.writestr(FILE_THEO_DOI, json.dumps({"v": 1, "td": td}))
+    return out.getvalue()
+
+
+def doc_theo_doi(data: bytes) -> str:
+    try:
+        z = zipfile.ZipFile(io.BytesIO(data))
+        td = str(json.loads(z.read(FILE_THEO_DOI)[:4096]).get("td") or "")
+    except Exception:
+        return ""
+    return td if re.fullmatch(r"[A-Za-z0-9_-]{16,80}", td) else ""
+
+
+# Khoá frontmatter do CHÍNH máy nhận ghi khi cài (muc_quyen, nguon, status) bị bỏ qua khi so.
+def _dong_so_sanh(text: str) -> list:
+    """Dòng để so khác biệt. File có frontmatter thì so theo NGHĨA chứ không theo chữ: máy nhận
+    ghi lại frontmatter bằng yaml.safe_dump (đổi `skills: [a]` thành dạng danh sách xuống dòng),
+    nên so chữ là lần cập nhật nào cũng báo "đã sửa" dù người gửi không đụng tới."""
+    meta, body = _parse(text)
+    if text.startswith("---") and meta:
+        meta = {k: v for k, v in meta.items() if k not in ("muc_quyen", "nguon", "status")}
+        dau = json.dumps(meta, ensure_ascii=False, sort_keys=True, indent=0, default=str).splitlines()
+        return dau + body.strip("\n").splitlines()
+    return text.splitlines()
+
+
+def khac_biet(data: bytes, key: str, *, agents_dir, workflows_dir, skills_root) -> list:
+    """[{file, trang_thai: moi|sua|xoa, them, bot}] giữa bản MỚI trong gói và bản trên đĩa của
+    một mục. Chỉ đếm dòng, không gửi nội dung đầy đủ ra giao diện (màn xem trước đã có tóm tắt)."""
+    import difflib
+    typ, _, slug = key.partition(":")
+    try:
+        z = zipfile.ZipFile(io.BytesIO(data))
+    except Exception:
+        return []
+    moi = {}
+    for i in z.infolist():
+        arc = i.filename.replace("\\", "/")
+        if not i.is_dir() and _key_cua(arc) == key and i.file_size <= 2 * 1024 * 1024:
+            moi[arc] = z.read(i)
+    cu = {}
+    if typ in ("agent", "workflow"):
+        p = Path(agents_dir if typ == "agent" else workflows_dir) / f"{slug}.md"
+        if p.is_file():
+            cu[f"{typ}s/{slug}.md"] = p.read_bytes()
+    else:
+        goc = Path(skills_root) / slug
+        if goc.is_dir():
+            for f in goc.rglob("*"):
+                if f.is_file() and not f.is_symlink() and f.stat().st_size <= 2 * 1024 * 1024:
+                    cu[f"skills/{slug}/{f.relative_to(goc).as_posix()}"] = f.read_bytes()
+    ra = []
+    for arc in sorted(set(moi) | set(cu)):
+        a, b = cu.get(arc), moi.get(arc)
+        if a == b:
+            continue
+        la = _dong_so_sanh(a.decode("utf-8", "replace")) if a is not None else []
+        lb = _dong_so_sanh(b.decode("utf-8", "replace")) if b is not None else []
+        if a is not None and b is not None and la == lb:
+            continue   # chỉ khác ở mấy dòng máy nhận tự ghi
+        them = bot = 0
+        for d in difflib.ndiff(la, lb):
+            if d.startswith("+ "):
+                them += 1
+            elif d.startswith("- "):
+                bot += 1
+        ra.append({"file": arc.split("/", 1)[1], "trang_thai": "moi" if a is None else "xoa" if b is None else "sua",
+                   "them": them, "bot": bot})
+    return ra[:80]
+
+
+def don_file_thua(data: bytes, key: str, *, skills_root) -> int:
+    """Cập nhật một SKILL: xoá file trên đĩa mà bản mới không còn (import_bundle chỉ ghi đè, không
+    xoá). Chỉ trong đúng thư mục skill đó, không theo symlink. Trả số file đã xoá."""
+    typ, _, slug = key.partition(":")
+    if typ != "skill" or skills_root is None or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", slug):
+        return 0
+    try:
+        z = zipfile.ZipFile(io.BytesIO(data))
+    except Exception:
+        return 0
+    giu = {i.filename.replace("\\", "/")[len(f"skills/{slug}/"):] for i in z.infolist()
+           if i.filename.replace("\\", "/").startswith(f"skills/{slug}/")}
+    goc = (Path(skills_root) / slug).resolve()
+    n = 0
+    if not goc.is_dir():
+        return 0
+    for f in list(goc.rglob("*")):
+        if f.is_file() and not f.is_symlink() and f.resolve().is_relative_to(goc):
+            if f.relative_to(goc).as_posix() not in giu:
+                try:
+                    f.unlink()
+                    n += 1
+                except OSError:
+                    pass
+    return n

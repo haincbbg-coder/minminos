@@ -99,9 +99,9 @@
       ov.querySelectorAll(".cs-tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
       body.innerHTML = "";
       if (tab === "gui") theGui(body, brain);
-      else if (tab === "nhan") theNhan(body, brain, opts.nguon || "");
-      else theDaNhan(body, brain);
-      opts.nguon = "";
+      else if (tab === "nhan") theNhan(body, brain, opts.nguon || "", opts.capNhat || null);
+      else theDaNhan(body, brain, (x) => { opts.capNhat = x; chon("nhan"); });
+      opts.nguon = ""; opts.capNhat = null;
     };
     ov.querySelectorAll(".cs-tab").forEach((b) => (b.onclick = () => chon(b.dataset.tab)));
     chon(opts.tab || "gui");
@@ -237,7 +237,7 @@
   const NHAN_XM = {
     da_xac_minh: "ok", khoa_doi: "warn", chua_doi_chieu: "warn", chi_chu_ky: "warn", khong_ky: "warn", gia_mao: "bad",
   };
-  function theNhan(body, brain, nguon) {
+  function theNhan(body, brain, nguon, capNhat) {
     body.innerHTML = `
       <div class="cs-card">
         <div class="cs-dim">${esc(t("cs.recv_hint"))}</div>
@@ -254,7 +254,8 @@
       $("csMsg").textContent = t("cs.loading");
       $("csXem").disabled = true;
       const f = { to_brain: brain };
-      if (!file) { f.nguon = $("csNguon").value.trim(); f.pin = $("csPinNhan").value.trim(); }
+      if (capNhat) { f.td = capNhat.td; f.host_td = capNhat.host; }
+      else if (!file) { f.nguon = $("csNguon").value.trim(); f.pin = $("csPinNhan").value.trim(); }
       const r = await post("/brains/import/xem", f, file);
       $("csXem").disabled = false;
       if (r && r.can_pin) {
@@ -309,8 +310,19 @@
         ${(a.dang_ngo || []).length ? `<div style="margin-top:6px"><b>${esc(t("cs.ai_suspicious"))}</b>${a.dang_ngo.map((x) => `<div>• ${esc(x)}</div>`).join("")}</div>` : ""}
         <div class="cs-dim" style="margin-top:6px">${esc(t("cs.ai_note"))}</div>`;
     }
+    function veCapNhat(it, cn) {
+      if (!it.da_co) return "";
+      if (!cn) return ` <span class="cs-dim">(${esc(t("cs.exists"))})</span>`;
+      if (!cn.co_ban_moi) return ` <span class="cs-dim">(${esc(t("cs.upd_same"))})</span>`;
+      const them = (cn.khac || []).reduce((a, k) => a + (k.them || 0), 0);
+      const bot = (cn.khac || []).reduce((a, k) => a + (k.bot || 0), 0);
+      return ` <span class="cs-chip" style="color:var(--mm-ok)">${esc(t("cs.upd_new"))}</span>
+        <small>${esc(t("cs.upd_diff", { f: (cn.khac || []).length, them, bot }))}: ${esc((cn.khac || []).slice(0, 4).map((k) => k.file).join(", "))}</small>
+        ${cn.sua_tai_cho ? `<small style="color:var(--mm-warn)">${esc(t("cs.upd_local"))}</small>` : ""}`;
+    }
     function veXemTruoc(r) {
       const xm = r.xac_minh || {};
+      const coBanMoi = Object.values(r.cap_nhat || {}).some((c) => c.co_ban_moi);
       const coCao = (r.nguy_co || []).some((c) => c.muc === "cao");
       const muc = NHAN_XM[xm.xac_minh] || "warn";
       const ai = xm.ten ? `${xm.ten}${xm.host ? " · " + xm.host : ""}` : (xm.host || t("cs.unknown_sender"));
@@ -324,11 +336,15 @@
         ${veNguyCo(r.nguy_co || [])}
         ${veKetNoi(r.ket_noi || [])}
         <div class="cs-badge" id="csAi" style="box-shadow:var(--mm-in-sm)">${esc(t("cs.ai_reading"))}</div>
-        <div class="cs-list" id="csMuc">${(r.items || []).map((it) => `
-          <label><input type="checkbox" value="${esc(it.type + ":" + it.slug)}" ${it.da_co ? "" : "checked"}>
-            <span><span class="cs-chip">${esc(kindName(it.type))}</span> ${esc(it.name)}${it.da_co ? ` <span class="cs-dim">(${esc(t("cs.exists"))})</span>` : ""}
-            <small>${esc(it.mo_ta || "")}</small></span></label>`).join("")}</div>
-        <label class="cs-row"><input type="checkbox" id="csGhiDe"> ${esc(t("cs.overwrite"))}</label>
+        <div class="cs-list" id="csMuc">${(r.items || []).map((it) => {
+          const cn = (r.cap_nhat || {})[it.type + ":" + it.slug];
+          const chonSan = !it.da_co || (cn && cn.co_ban_moi);
+          return `
+          <label><input type="checkbox" value="${esc(it.type + ":" + it.slug)}" ${chonSan ? "checked" : ""}>
+            <span><span class="cs-chip">${esc(kindName(it.type))}</span> ${esc(it.name)}${veCapNhat(it, cn)}
+            <small>${esc(it.mo_ta || "")}</small></span></label>`;
+        }).join("")}</div>
+        <label class="cs-row"><input type="checkbox" id="csGhiDe" ${coBanMoi ? "checked" : ""}> ${esc(t("cs.overwrite"))}</label>
         ${xm.xac_minh === "khoa_doi" ? `<label class="cs-row"><input type="checkbox" id="csChapNhan"> ${esc(t("cs.accept_key"))}</label>` : ""}
         ${coCao ? `<label class="cs-row"><input type="checkbox" id="csRuiRo"> ${esc(t("cs.accept_risk"))}</label>` : ""}
         <button class="cs-btn p" id="csCai" ${xm.xac_minh === "gia_mao" ? "disabled" : ""}>${esc(t("cs.install"))}</button>
@@ -353,13 +369,27 @@
         try { window.JavisBrains && window.JavisBrains.reload && window.JavisBrains.reload(); } catch (e) {}
       };
     }
-    if (nguon) xem(null);
+    if (capNhat) { $("csNguon").value = capNhat.host; xem(null); }
+    else if (nguon) xem(null);
   }
 
   // ───────────── Đã nhận ─────────────
-  async function theDaNhan(body, brain) {
-    body.innerHTML = `<div class="cs-card"><div class="cs-dim">${esc(t("cs.received_hint"))}</div><div id="csDa">...</div></div>`;
+  async function theDaNhan(body, brain, moCapNhat) {
+    body.innerHTML = `<div class="cs-card"><div class="cs-row"><div class="cs-dim" style="flex:1">${esc(t("cs.received_hint"))}</div>
+      <button class="cs-btn" id="csKiemTra">${esc(t("cs.upd_check"))}</button></div><div class="cs-msg" id="csKtMsg"></div><div id="csDa">...</div></div>`;
     const box = body.querySelector("#csDa");
+    let banMoi = {};
+    async function kiemTra() {
+      const m = body.querySelector("#csKtMsg");
+      m.textContent = t("cs.upd_checking");
+      const j = await getJson("/brains/imported/kiem-tra?brain=" + encodeURIComponent(brain));
+      banMoi = {};
+      ((j && j.items) || []).forEach((x) => { banMoi[x.type + ":" + x.slug] = x; });
+      const n = Object.values(banMoi).filter((x) => x.trang_thai === "co_ban_moi").length;
+      m.textContent = j && j.ok ? (n ? t("cs.upd_found", { n }) : t("cs.upd_none")) : t("cs.failed");
+      nap();
+    }
+    body.querySelector("#csKiemTra").onclick = kiemTra;
     async function nap() {
       const j = await getJson("/brains/imported?brain=" + encodeURIComponent(brain));
       const ds = (j && j.items) || [];
@@ -373,7 +403,11 @@
             <b style="flex:1">${esc(x.slug)}</b>
             ${x.type === "skill" ? "" : `<span class="cs-chip">${esc(an_toan ? t("cs.mode_safe") : t("cs.mode_full"))}</span>`}</div>
           <div class="cs-dim">${esc(t("cs.from", { ai: (x.ten ? x.ten + " · " : "") + (x.host || t("cs.unknown_sender")) }))}${x.van_tay ? " · " + esc(x.van_tay) : ""}</div>
-          ${an_toan ? `<div class="cs-row"><button class="cs-btn" data-a="tin">${esc(t("cs.trust"))}</button></div>` : ""}`;
+          ${veTrangThaiMoi(banMoi[x.type + ":" + x.slug])}
+          <div class="cs-row">${an_toan ? `<button class="cs-btn" data-a="tin">${esc(t("cs.trust"))}</button>` : ""}
+            ${(banMoi[x.type + ":" + x.slug] || {}).trang_thai === "co_ban_moi" ? `<button class="cs-btn p" data-a="moi">${esc(t("cs.upd_open"))}</button>` : ""}</div>`;
+        const bm = el.querySelector('[data-a="moi"]');
+        if (bm) bm.onclick = () => { const k = banMoi[x.type + ":" + x.slug]; moCapNhat({ host: k.host, td: k.td }); };
         const b = el.querySelector('[data-a="tin"]');
         if (b) b.onclick = async () => {
           if (!window.confirm(t("cs.trust_ask", { ten: x.slug }))) return;
@@ -383,7 +417,14 @@
         box.appendChild(el);
       });
     }
-    nap();
+    function veTrangThaiMoi(k) {
+      if (!k) return "";
+      const nhan = { co_ban_moi: t("cs.upd_st_new"), moi_nhat: t("cs.upd_st_latest"), het: t("cs.upd_st_gone"),
+                     bo_khoi_goi: t("cs.upd_st_removed"), loi_mang: t("cs.upd_st_net"), chan: t("cs.upd_st_net") }[k.trang_thai] || "";
+      const mau = k.trang_thai === "co_ban_moi" ? "var(--mm-ok)" : k.trang_thai === "moi_nhat" ? "var(--mm-dim)" : "var(--mm-warn)";
+      return `<div class="cs-dim" style="color:${mau}">${esc(nhan)}${k.sua_tai_cho ? " · " + esc(t("cs.upd_local_short")) : ""}</div>`;
+    }
+    nap().then(kiemTra);
   }
 
   // ───────────── ?nhap=<link> từ trang nhận của người gửi ─────────────

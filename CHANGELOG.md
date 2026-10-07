@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.102] - 2026-10-07
+### Thêm mới
+- **Theo dõi bản mới**: thẻ Đã nhận tự hỏi người gửi xem skill, agent bạn đã nhận có bản mới không. Bấm "Xem và cập nhật" là thấy file nào đổi, thêm bớt bao nhiêu dòng, rồi mới cập nhật. Link dùng một lần hay đã hết hạn vẫn nhận được bản mới; người gửi thu hồi link là ngừng.
+- Bản cập nhật vẫn qua đủ bước xác minh và soi rủi ro, agent cập nhật quay về chế độ an toàn để bạn tin lại. Nếu bạn đã tự sửa mục đó, MinMin báo trước là cập nhật sẽ ghi đè.
+### Sửa lỗi
+- Nhập skill có nhiều file (script, tài liệu kèm) trước đây chỉ giữ được SKILL.md. Nay nhập đủ.
+
 ## [26.10.101] - 2026-10-07
 ### Mới
 - Văn phòng AI 3D thành biệt thự nhiều phòng: giữ văn phòng hiện tại, thêm phòng Sale (bên trái, có cả nhân viên kho) và phòng Marketing (bên phải), sàn gỗ, cây cảnh. Ba nút "Phòng Sale", "Văn phòng", "Phòng Marketing" đưa camera tới từng phòng.

@@ -36,6 +36,9 @@ TRAN = 200
 NGAY_MAC_DINH = 7
 NGAY_TOI_DA = 90
 KINDS = ("agent", "skill", "workflow")
+# Kênh THEO DÕI bản mới (26.10.102): token riêng, sống lâu hơn link (link 7-90 ngày hay dùng một
+# lần là để PHÁT; người đã nhận vẫn cần hỏi được bản mới sau đó). Thu hồi link là chết cả hai.
+TD_NGAY = 365
 BANG_MA = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"   # 31 ký tự, không có 0 O 1 I L
 DO_DAI_MA = 10
 TOI_DA_LUOT = 1000
@@ -109,7 +112,8 @@ def tao(brain: str, items: dict, ngay: int = NGAY_MAC_DINH, nhan: str = "", tat_
         d[tok] = {"brain": str(brain or "brain"), "items": sach, "tat_ca": bool(tat_ca),
                   "nhan": " ".join(str(nhan or "").split())[:120],
                   "tao_luc": now, "het_han": now + ngay * 86400, "tai": 0,
-                  "ma": ma, "toi_da": toi_da}
+                  "ma": ma, "toi_da": toi_da,
+                  "td": secrets.token_urlsafe(24), "td_het_han": now + TD_NGAY * 86400}
         if pin:
             muoi = secrets.token_hex(16)
             d[tok]["pin"] = {"muoi": muoi, "bam": _bam_pin(pin, muoi)}
@@ -170,6 +174,33 @@ def kiem_pin(ban: dict, pin: str) -> str:
     with _LOCK:
         _PIN_SAI.setdefault(tok, []).append(now)
     return "sai"
+
+
+def dam_bao_td(token: str) -> str:
+    """Token theo dõi của một link (link tạo trước 26.10.102 chưa có thì sinh lúc tải lần đầu)."""
+    with _LOCK:
+        d = _doc_tho()
+        v = d.get(token)
+        if not isinstance(v, dict):
+            return ""
+        if not v.get("td"):
+            v["td"] = secrets.token_urlsafe(24)
+            v["td_het_han"] = time.time() + TD_NGAY * 86400
+            _ghi_tho(d)
+        return v["td"]
+
+
+def doc_theo_doi(td: str):
+    """Bản ghi của token theo dõi, chỉ xét hạn của CHÍNH nó (không xét hạn link hay số lượt)."""
+    t = str(td or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", t):
+        return None
+    for tok, v in _doc_tho().items():
+        if isinstance(v, dict) and v.get("td") and hmac.compare_digest(str(v["td"]), t):
+            if float(v.get("td_het_han") or 0) < time.time():
+                return None
+            return dict(v, token=tok)
+    return None
 
 
 def ghi_tai(token: str) -> None:
