@@ -1439,7 +1439,7 @@
   function viTriDi(x, z, c) {                  // chỗ đứng có hợp lệ không (gần điểm đầu/cuối thì được phép)
     if (Math.abs(x) > GX - 0.6 || Math.abs(z) > HZ - 0.6 || trongTuong(x, z)) return false;
     var f0 = c.from0 || c.from;
-    if (Math.hypot(x - c.to.x, z - c.to.z) < 0.5 || Math.hypot(x - f0.x, z - f0.z) < 0.5) return true;
+    if (Math.hypot(x - c.to.x, z - c.to.z) < 0.75 || Math.hypot(x - f0.x, z - f0.z) < 0.6) return true;
     return !blocked[gj(z) * GW + gi(x)];
   }
   function banDo() { return ds.concat(lead ? [lead] : [], nvPhong); }
