@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.108] - 2026-10-07
+### Cải thiện
+- Dải xanh "đang chạy ngầm" trong khung chat thu nhỏ còn một hàng mỏng (chấm, tên việc cắt gọn, nút nhỏ), không còn chiếm chỗ khung chat.
+- Văn phòng 3D: nút ẩn tường (cả 2 mức) vẫn giữ các bảng dashboard để nhìn.
+
 ## [26.10.107] - 2026-10-07
 ### Mới
 - Mỗi phòng ở văn phòng 3D có 2 bảng: HÔM QUA (số đã chốt) và HÔM NAY (số trực tiếp, có chấm xanh).

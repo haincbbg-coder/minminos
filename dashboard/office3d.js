@@ -719,7 +719,7 @@
       canhTuong.push(sau, ngoai, tt);
       [["qua", -4.45], ["nay", 4.45]].forEach(function (kk) {
         var b = new T.Mesh(new T.PlaneGeometry(8.2, 4.1), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangPhong(ph, kk[0])), toneMapped: false })); b.material.map.colorSpace = T.SRGBColorSpace;
-        b.position.set(ph.cx + kk[1], 3.5, -HZ + 0.08); scene.add(b); canhTuong.push(b); bangPhong[ph.id + "_" + kk[0]] = b; khungTV(8.2, 4.1, ph.cx + kk[1], 3.5, -HZ + 0.0, 0);
+        b.position.set(ph.cx + kk[1], 3.5, -HZ + 0.08); scene.add(b); giuBang.push(b); bangPhong[ph.id + "_" + kk[0]] = b; khungTV(8.2, 4.1, ph.cx + kk[1], 3.5, -HZ + 0.0, 0);
       });
       chanTuong(RW + 0.6, light, ph.cx, -HZ + 0.03, 0); chanTuong(HZ * 2, light, xo - dir * 0.15, 0, Math.PI / 2);
       caySan(ph.cx - RW / 2 + 1.2, -HZ + 1.3, 1); caySan(ph.cx + RW / 2 - 1.2, -HZ + 1.3, 1.2); caySan(ph.cx - dir * (RW / 2 - 1.2), HZ - 1.2, 0.9);
@@ -777,7 +777,7 @@
   }
   function khungTV(w, h, x, y, z, ry, man) {
     var f = new T.Mesh(new T.BoxGeometry(w + 0.34, h + 0.34, 0.12), new T.MeshStandardMaterial({ color: 0x0a0c11, roughness: 0.3, metalness: 0.6 }));
-    f.position.set(x, y, z); f.rotation.y = ry; scene.add(f); canhTuong.push(f);
+    f.position.set(x, y, z); f.rotation.y = ry; scene.add(f); giuBang.push(f);
     var c = new T.Mesh(new T.BoxGeometry(w * 0.16, 0.06, 0.05), new T.MeshBasicMaterial({ color: 0x3a4152 })); c.position.set(0, -(h / 2 + 0.1), 0.07); f.add(c);
     var led = new T.Mesh(new T.CircleGeometry(0.035, 10), new T.MeshBasicMaterial({ color: 0x2a6bff })); led.position.set(w * 0.46, -(h / 2 + 0.1), 0.07); f.add(led);
     return f;
@@ -788,7 +788,7 @@
     scene = new T.Scene(); scene.background = new T.Color(nen); scene.fog = new T.Fog(nen, 55, 110);
     scene.add(new T.HemisphereLight(0xffffff, light ? 0xbfcbe0 : 0x24365a, light ? 1.0 : 0.75));
     var dl = new T.DirectionalLight(0xffffff, light ? 1.2 : 0.7); dl.position.set(-8, 18, 10); scene.add(dl);
-    canhTuong = []; canhSan = [];
+    canhTuong = []; canhSan = []; giuBang = [];
     var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san); canhSan.push(san);
     var tgo = sanGoMoi(HX * 2 / 4, HZ * 2 / 4); if (tgo) { san.material.map = tgo; san.material.color.set(light ? 0xe6dcd0 : 0x8a8a8a); san.material.roughness = 0.5; san.material.needsUpdate = true; }
     var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; if (!tgo_()) { scene.add(luoi); canhSan.push(luoi); }
@@ -801,7 +801,7 @@
     khoiTaoLuoi(); taoManHinh();
     // bảng điều hành (số liệu thật) giữa tường sau; khẩu hiệu hai bên và trên tường trái
     bang = new T.Mesh(new T.PlaneGeometry(9, 3.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangDieuHanh()), toneMapped: false })); bang.material.map.colorSpace = T.SRGBColorSpace;
-    bang.position.set(HX - 0.14, 3.95, 0); bang.rotation.y = -Math.PI / 2; scene.add(bang); canhTuong.push(bang); khungTV(9, 3.6, HX - 0.06, 3.95, 0, -Math.PI / 2);   // sau lưng giám đốc
+    bang.position.set(HX - 0.14, 3.95, 0); bang.rotation.y = -Math.PI / 2; scene.add(bang); giuBang.push(bang); khungTV(9, 3.6, HX - 0.06, 3.95, 0, -Math.PI / 2);   // sau lưng giám đốc
     function kh(i, x, y, z, ry, w) { var m = new T.Mesh(new T.PlaneGeometry(w, w * 260 / 900), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veKhauHieu(i)), toneMapped: false })); m.material.map.colorSpace = T.SRGBColorSpace; m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); canhTuong.push(m); }
     kh(0, -8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(1, 8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(6, 0, 3.5, -HZ + 0.02, 0, 5.0);
     kh(2, -HX + 0.02, 3.5, -6.2, Math.PI / 2, 5.0); kh(3, -HX + 0.02, 3.5, 0, Math.PI / 2, 5.0); kh(4, -HX + 0.02, 3.5, 6.2, Math.PI / 2, 5.0);
@@ -1161,7 +1161,7 @@
   }
 
   var camLuu = null;
-  var canhTuong = [], canhSan = [], khongGian = 0; try { khongGian = Math.max(0, Math.min(2, parseInt(localStorage.getItem("mmOfficeKG") || "0", 10) || 0)); } catch (e) {}
+  var canhTuong = [], canhSan = [], giuBang = [], khongGian = 0; try { khongGian = Math.max(0, Math.min(2, parseInt(localStorage.getItem("mmOfficeKG") || "0", 10) || 0)); } catch (e) {}
   function apKhongGian() { canhTuong.forEach(function (o) { o.visible = khongGian === 0; }); canhSan.forEach(function (o) { o.visible = khongGian < 2; }); }
   var anChu = false; try { anChu = localStorage.getItem("mmOfficeAnChu") === "1"; } catch (e) {}
   var lastManHinh = 0;
