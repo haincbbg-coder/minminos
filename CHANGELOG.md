@@ -4,6 +4,16 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.104] - 2026-10-07
+### Mới
+- Văn phòng AI 3D có 36 nhân vật khác nhau (tạo bằng Higgsfield, đủ nam nữ, tuổi, kiểu tóc, trang phục). Mỗi agent và mỗi nhân viên được một nhân vật riêng, không trùng nhau. Chỉ tải số nhân vật cần dùng.
+- Phòng Sale và Marketing luôn có người ngồi: chưa nối Pancake thì hiện nhân viên mẫu, ghi rõ "MẪU".
+- Bảng dashboard như tivi có viền đen, tường quét sơn có chân tường.
+- Pancake POS: điền api_key và shop_id vào 00 - Dashboard/pancake-config.json để tự lấy số đơn, doanh thu (chưa thử với tài khoản thật).
+### Sửa lỗi
+- Ghế quay đúng chiều (trước đây quay ngược).
+- Nhân viên đi tới góc bàn không còn đứng im: tự trượt dọc cạnh bàn và tìm đường lại.
+
 ## [26.10.103] - 2026-10-07
 ### Thêm mới
 - **Kệ hàng công khai**: trong Chợ chia sẻ > Gửi đi, bạn bày sẵn agent, skill, workflow lên kệ. Ai gõ tên miền MinMin của bạn ở thẻ Nhận về, hoặc mở trang kệ trên điện thoại, là thấy cả kệ và nhận về.
