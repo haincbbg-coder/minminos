@@ -108,6 +108,7 @@ import share_trang    # trang nhận công khai /bs/<token> (26.10.92)
 import soi_rui_ro     # soi nội dung gói chia sẻ: luật + AI (26.10.97)
 import ket_noi_can    # kết nối gói chia sẻ cần, so với máy nhận (26.10.100)
 import ke_hang        # kệ hàng công khai /bs/ke (26.10.103)
+import ma_mua         # mã mua cho món có phí trên kệ (26.10.104)
 import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
 import share_render   # dựng trang xem cho link chia sẻ (markdown -> html, khung trang)
@@ -5952,13 +5953,15 @@ async def bs_theo_doi(td: str):
 
 
 @app.get("/bs/td/{td}/goi.zip")
-async def bs_theo_doi_goi(td: str):
+async def bs_theo_doi_goi(td: str, request: Request):
     """Bản MỚI NHẤT của gói cho máy đã nhận. Không tính vào lượt tải của link (link dùng một lần
     vẫn cho người đã nhận cập nhật) và không cần PIN: token theo dõi chỉ nằm trong gói đã tải
     thành công, tức người cầm nó đã qua PIN rồi."""
     ban = _ban_theo_doi(td)
     if not ban:
         return JSONResponse({"error": "Kênh theo dõi không còn"}, status_code=404)
+    if ban.get("mon_ke"):
+        return await _goi_mon_ke(ban["mon_ke"], request)   # món trên kệ: kể cả cập nhật cũng phải qua mã mua
     data, fname = await asyncio.to_thread(_dung_goi_chia_se, ban)
     if not data:
         return JSONResponse({"error": "Không còn mục nào để chia sẻ"}, status_code=404)
@@ -6041,9 +6044,36 @@ async def bs_ke_mon(id_: str, request: Request):
     return JSONResponse(_cong_khai_mon(await asyncio.to_thread(_thong_tin_mon, m)), headers={"Cache-Control": "no-store"})
 
 
+_LY_DO_MUA = {
+    "can_ma": ("Món này có phí. Hãy nhập mã mua người bán cấp.", "This item is paid. Enter the purchase code from the seller."),
+    "ma_sai": ("Mã mua không hợp lệ hoặc không phải của máy bán này.", "Invalid purchase code, or not issued by this seller."),
+    "sai_mon": ("Mã mua này dành cho món khác.", "This purchase code is for another item."),
+    "het_han": ("Mã mua đã hết hạn. Liên hệ người bán để gia hạn.", "The purchase code expired. Contact the seller to renew."),
+    "thu_hoi": ("Mã mua đã bị người bán thu hồi.", "The seller revoked this purchase code."),
+    "sai_may": ("Mã mua này cấp cho một máy MinMin khác.", "This purchase code was issued to another MinMin server."),
+    "sai_gio": ("Đồng hồ máy bạn lệch quá nhiều, hãy chỉnh giờ rồi thử lại.", "Your server clock is too far off; fix it and retry."),
+}
+
+
+def _kiem_mua(m: dict, request: Request):
+    """None khi được tải; JSONResponse 402 khi món có phí mà yêu cầu chưa kèm mã mua hợp lệ."""
+    if not m.get("co_phi"):
+        return None
+    h = request.headers
+    ly_do = ma_mua.kiem_yeu_cau(m["id"], duong_dan_router(request), h.get("x-minmin-ma-mua", ""),
+                                h.get("x-minmin-khoa", ""), h.get("x-minmin-luc", ""), h.get("x-minmin-ky", ""))
+    if not ly_do:
+        return None
+    return JSONResponse({"error": localefmt.chu(*_LY_DO_MUA[ly_do]), "can_ma_mua": True, "ly_do": ly_do,
+                         "gia": m.get("gia", ""), "lien_he": m.get("lien_he", "")}, status_code=402)
+
+
 async def _goi_mon_ke(m: dict, request: Request):
-    """Gói đã ký của một món trên kệ, mang id món làm kênh theo dõi. Tách ra để phần gói có phí
-    chèn bước kiểm mã mua vào đúng một chỗ."""
+    """Gói đã ký của một món trên kệ, mang id món làm kênh theo dõi. Món có phí phải qua _kiem_mua
+    ở ĐÂY - đường duy nhất ra gói của món trên kệ (cả tải lần đầu lẫn cập nhật)."""
+    chan = _kiem_mua(m, request)
+    if chan is not None:
+        return chan
     data, fname = await asyncio.to_thread(_dung_goi_chia_se, _ban_mon_ke(m))
     if not data:
         return JSONResponse({"error": "Món này không còn nội dung để chia sẻ"}, status_code=404)
@@ -6357,10 +6387,31 @@ def _thong_tin_cap_nhat(data: bytes, to_brain: str, host: str) -> dict:
 
 @app.post("/brains/import/xem")
 async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: str = Form("brain"),
-                         goi: UploadFile = File(None), td: str = Form(""), host_td: str = Form("")):
+                         goi: UploadFile = File(None), td: str = Form(""), host_td: str = Form(""),
+                         ma_mua_nhap: str = Form("", alias="ma_mua")):
     """Bước 1 của nhập: tải (hoặc nhận file), xác minh, soi. KHÔNG ghi gì vào brain.
-    `td` + `host_td`: lấy BẢN MỚI qua kênh theo dõi (nút Cập nhật ở thẻ Đã nhận)."""
+    `td` + `host_td`: lấy BẢN MỚI qua kênh theo dõi (nút Cập nhật ở thẻ Đã nhận).
+    `ma_mua`: mã mua món có phí (lần sau tự dùng lại mã đã nhớ)."""
     host = ""
+    mua = None   # (host, id món, mã) khi lượt tải này kèm mã mua - nhớ lại nếu tải thành công
+
+    def _hd_mua(h, mon_id, duong):
+        nonlocal mua
+        ma = ma_mua_nhap.strip() or ma_mua.ma_cua_toi(h, mon_id)
+        if not ma:
+            return {}
+        mua = (h, mon_id, ma)
+        return ma_mua.dau_yeu_cau(duong, ma)
+
+    def _tra_402(body):
+        try:
+            j = json.loads(body or b"{}")
+        except Exception:
+            j = {}
+        k = danh_tinh.cong_khai()
+        return JSONResponse({"ok": False, "can_ma_mua": True, "ly_do": j.get("ly_do", ""), "error": j.get("error", ""),
+                             "gia": str(j.get("gia") or "")[:60], "lien_he": str(j.get("lien_he") or "")[:120],
+                             "van_tay_cua_toi": danh_tinh.van_tay(k)}, status_code=200)
     if td.strip():
         host = host_td.strip().lower()
         if not _HOST_RE.match(host) or not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", td.strip()):
@@ -6368,7 +6419,10 @@ async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: s
         loi = await _host_cong_khai(host)
         if loi:
             return JSONResponse({"ok": False, "error": loi}, status_code=400)
-        st, data, loi = await _tai_https(f"https://{host}/bs/td/{td.strip()}/goi.zip")
+        duong = f"/bs/td/{td.strip()}/goi.zip"
+        st, data, loi = await _tai_https(f"https://{host}{duong}", headers=_hd_mua(host, td.strip(), duong))
+        if st == 402:
+            return _tra_402(data)
         if loi or st != 200:
             return JSONResponse({"ok": False, "error": loi or localefmt.chu(
                 "Người gửi đã thu hồi hoặc kênh theo dõi hết hạn (mã {st}).",
@@ -6382,9 +6436,13 @@ async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: s
         if loi:
             return JSONResponse({"ok": False, "error": loi}, status_code=400)
         hd = {"X-MinMin-Pin": pin.strip()} if pin.strip() else {}
+        if tok.startswith("ke:"):
+            hd.update(_hd_mua(host, tok[3:], f"/bs/ke/{tok[3:]}/goi.zip"))
         st, data, loi = await _tai_https(_duong_goi(host, tok), headers=hd)
         if loi:
             return JSONResponse({"ok": False, "error": loi}, status_code=502)
+        if st == 402:
+            return _tra_402(data)
         if st != 200:
             try:
                 j = json.loads(data or b"{}")
@@ -6396,6 +6454,8 @@ async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: s
             return JSONResponse({"ok": False, "error": j.get("error") or localefmt.chu(
                 "Link không dùng được (mã {st}): hết hạn, hết lượt hoặc bị thu hồi?",
                 "Link not usable ({st}): expired, used up or revoked?", st=st)}, status_code=400)
+    if mua:
+        ma_mua.luu_ma_cua_toi(*mua)   # mã đã mở được gói: nhớ cho các lần cập nhật sau
     xm = await _doi_chieu_chu_ky(data, host)
     soi = goi_chia_se.soi_goi(data, agents_dir=_agents_dir(to_brain), workflows_dir=_workflows_dir(to_brain),
                               skills_root=_skills_dir(to_brain))
@@ -6681,9 +6741,46 @@ async def ke_hang_bo(id_: str = Form(..., alias="id")):
 
 
 @app.post("/ke-hang/sua")
-async def ke_hang_sua(id_: str = Form(..., alias="id"), mo_ta: str = Form("")):
+async def ke_hang_sua(id_: str = Form(..., alias="id"), mo_ta: str = Form(None), co_phi: str = Form(None),
+                      gia: str = Form(None), lien_he: str = Form(None)):
+    """Sửa món trên kệ: mô tả, và bật/tắt CÓ PHÍ kèm giá + cách liên hệ mua (chỉ là chữ hiện ra,
+    MinMin không thu tiền)."""
     _KE_CACHE.pop(id_, None)
-    return {"ok": bool(ke_hang.sua_mon(id_, mo_ta=" ".join(mo_ta.split())[:300]))}
+    sua = {}
+    if mo_ta is not None:
+        sua["mo_ta"] = " ".join(mo_ta.split())[:300]
+    if co_phi is not None:
+        sua["co_phi"] = co_phi in ("1", "true", "on")
+    if gia is not None:
+        sua["gia"] = " ".join(gia.split())[:60]
+    if lien_he is not None:
+        sua["lien_he"] = " ".join(lien_he.split())[:120]
+    return {"ok": bool(ke_hang.sua_mon(id_, **sua))}
+
+
+@app.get("/ke-hang/ma-mua")
+async def ke_hang_ma_mua_ds():
+    ten = {m["id"]: _ten_muc_tren_dia(m["brain"], m["type"], m["slug"]) or m["slug"] for m in ke_hang.doc()["mon"]}
+    return {"ok": True, "ma": [{k: x.get(k) for k in ("so", "mon", "mua", "kh", "het_han", "tao", "thu_hoi", "ma")}
+                               | {"ten_mon": "*" if x.get("mon") == "*" else ten.get(x.get("mon"), "?")}
+                               for x in ma_mua.danh_sach_da_cap()[:300]]}
+
+
+@app.post("/ke-hang/ma-mua")
+async def ke_hang_ma_mua_cap(mon: str = Form(...), mua: str = Form(...), kh: str = Form(""), het_han: str = Form("")):
+    """Cấp mã mua cho MỘT máy người mua (theo vân tay máy đó). Mã chỉ hiện ra đúng lần này."""
+    if mon != "*" and not any(m["id"] == mon for m in ke_hang.doc()["mon"]):
+        return JSONResponse({"ok": False, "error": "Món không có trên kệ"}, status_code=400)
+    try:
+        x = ma_mua.cap_ma(mon, mua, kh, het_han)
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    return {"ok": True, "ma": x["ma"], "so": x["so"], "mua": x["mua"], "het_han": x["het_han"]}
+
+
+@app.post("/ke-hang/ma-mua/thu-hoi")
+async def ke_hang_ma_mua_thu_hoi(so: str = Form(...)):
+    return {"ok": ma_mua.thu_hoi(so)}
 
 
 @app.post("/brains/import/ke")
