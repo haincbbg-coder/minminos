@@ -293,6 +293,11 @@ def import_bundle(data: bytes, filename, *, agents_dir, workflows_dir, skills_ro
 
         if is_javis:
             skip_skill = set()   # slug skill đã có (bỏ qua cả thư mục khi không ghi đè)
+            # Quyết định ghi/bỏ cho MỘT skill phải chốt ở file ĐẦU TIÊN của nó. Trước 26.10.102 phép
+            # "thư mục đã tồn tại?" chạy lại ở từng file, nên file đầu (SKILL.md) vừa tạo thư mục là
+            # mọi file sau của chính skill đó (scripts/, references/) bị coi là "đã có" và bỏ qua:
+            # skill nhiều file nhập về chỉ còn SKILL.md.
+            da_chot_skill = set()
             for i in infos:
                 arc = i.filename.replace("\\", "/")
                 if arc == "javis-bundle.json" or _bad(arc, i):
@@ -304,8 +309,10 @@ def import_bundle(data: bytes, filename, *, agents_dir, workflows_dir, skills_ro
                 if typ == "skill":
                     if slug in skip_skill:
                         skp.add(f"skill:{slug}"); continue
-                    if (Path(skills_root) / slug).exists() and not overwrite:
-                        skip_skill.add(slug); skp.add(f"skill:{slug}"); continue
+                    if slug not in da_chot_skill:
+                        da_chot_skill.add(slug)
+                        if (Path(skills_root) / slug).exists() and not overwrite:
+                            skip_skill.add(slug); skp.add(f"skill:{slug}"); continue
                 write_one(target, z.read(i), typ, slug, arc=arc)
         else:
             # Gói SKILL kiểu CLAUDE (.skill / .zip): SKILL.md ở gốc hoặc trong thư mục con. Một gói
