@@ -258,6 +258,7 @@
   }
   function sanGoMoi(rx, rz) { if (!NV || !NV.sanGo) return null; var t = NV.sanGo.clone(); t.needsUpdate = true; t.repeat.set(rx, rz); return t; }
   // lệch gốc của từng hoạt ảnh (cm, theo hông): clip ngồi giả định ghế nằm sau lưng, kéo về đúng chỗ ghế
+  var GHE_LUI = -0.3;
   var NV_OFF = { sit: [-21.3, 67.4], sitans: [13.1, 35.2] };
   var _qi = null, _p0 = null, _p1 = null, _p2 = null, _q0 = null, _q1 = null, _v0 = null, _v1 = null;
   function dungNguoi3D(ten, role, hueV, laLead) {
@@ -562,7 +563,7 @@
     var ch = new T.Mesh(new T.SphereGeometry(0.07, 10, 8), mat(0x2b3550)); ch.scale.set(0.8, 0.5, 1.2); ch.position.set(0.62, 1.085, NV ? 0.45 : 0.15); g.add(ch);   // chuột
     g.add(chaiNuoc(-1.05, 1.06, 0.12)); g.add(coc(-0.8, 1.06, 0.3, idx % 3)); if (idx % 2) g.add(coc(1.08, 1.06, -0.15, 1));
     scene.add(g);
-    var gk = NV ? 0.25 : 0; ghe(slot.stand.x + Math.sign(slot.desk.x - slot.stand.x) * gk, slot.stand.z + Math.sign(slot.desk.z - slot.stand.z) * gk, slot.rot, false);
+    var gk = NV ? GHE_LUI : 0; ghe(slot.stand.x + Math.sign(slot.desk.x - slot.stand.x) * gk, slot.stand.z + Math.sign(slot.desk.z - slot.stand.z) * gk, slot.rot, false);
     var w = slot.desk.rot;
     chanHinhChuNhat(slot.desk.x, slot.desk.z, w === Math.PI / 2 ? 1.3 : 2.6, w === Math.PI / 2 ? 2.6 : 1.3, 0, 0.45);
     chanTron(slot.stand.x, slot.stand.z, 0.5); chanTron(slot.stand.x + Math.sign(slot.desk.x - slot.stand.x) * gk, slot.stand.z + Math.sign(slot.desk.z - slot.stand.z) * gk, 0.55);

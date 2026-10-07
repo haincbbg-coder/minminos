@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.106] - 2026-10-07
+### Sửa lỗi
+- Văn phòng 3D: ghế nhân viên lùi ra sau để nhìn từ phía sau thấy lưng ghế, người ngồi không còn đè vào ghế.
+
 ## [26.10.105] - 2026-10-07
 ### Thêm mới
 - **Gói có phí**: trên kệ hàng, bật "Có phí" cho món nào, ghi giá và cách liên hệ mua. Khách thấy giá ngay trên kệ; muốn tải phải có mã mua.
