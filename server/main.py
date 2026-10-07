@@ -107,6 +107,7 @@ import goi_chia_se    # ký / soi / làm an toàn gói chia sẻ giữa các Min
 import share_trang    # trang nhận công khai /bs/<token> (26.10.92)
 import soi_rui_ro     # soi nội dung gói chia sẻ: luật + AI (26.10.97)
 import ket_noi_can    # kết nối gói chia sẻ cần, so với máy nhận (26.10.100)
+import ke_hang        # kệ hàng công khai /bs/ke (26.10.103)
 import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
 import share_render   # dựng trang xem cho link chia sẻ (markdown -> html, khung trang)
@@ -5922,11 +5923,26 @@ _MA_SAI_TOI_DA = 60
 _MA_SAI_CUA_SO = 600
 
 
+def _ban_mon_ke(m: dict) -> dict:
+    """Món trên kệ -> bản ghi dạng link chia sẻ để dùng chung _dung_goi_chia_se (kèm phụ thuộc)."""
+    return {"brain": m.get("brain") or "brain", "items": {m["type"]: [m["slug"]]}, "tat_ca": False,
+            "td": m["id"], "nhan": "", "token": "", "mon_ke": m}
+
+
+def _ban_theo_doi(td: str):
+    """Kênh theo dõi là td của một LINK chia sẻ, hoặc id của một MÓN TRÊN KỆ (26.10.103)."""
+    ban = brain_share.doc_theo_doi(td)
+    if ban:
+        return ban
+    m = ke_hang.tim(td)
+    return _ban_mon_ke(m) if m else None
+
+
 @app.get("/bs/td/{td}")
 async def bs_theo_doi(td: str):
     """Dấu nội dung hiện tại của từng mục trong một link chia sẻ - máy đã nhận hỏi đây để biết có
     bản mới không mà không phải tải cả gói. Chỉ trả dấu băm + tên, không trả nội dung."""
-    ban = brain_share.doc_theo_doi(td)
+    ban = _ban_theo_doi(td)
     if not ban:
         return JSONResponse({"error": localefmt.chu("Kênh theo dõi không còn (link đã bị thu hồi hoặc quá hạn).",
                                                     "This update channel is gone (link revoked or expired).")}, status_code=404)
@@ -5940,7 +5956,7 @@ async def bs_theo_doi_goi(td: str):
     """Bản MỚI NHẤT của gói cho máy đã nhận. Không tính vào lượt tải của link (link dùng một lần
     vẫn cho người đã nhận cập nhật) và không cần PIN: token theo dõi chỉ nằm trong gói đã tải
     thành công, tức người cầm nó đã qua PIN rồi."""
-    ban = brain_share.doc_theo_doi(td)
+    ban = _ban_theo_doi(td)
     if not ban:
         return JSONResponse({"error": "Kênh theo dõi không còn"}, status_code=404)
     data, fname = await asyncio.to_thread(_dung_goi_chia_se, ban)
@@ -5951,6 +5967,99 @@ async def bs_theo_doi_goi(td: str):
     return Response(content=data, media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="{fname}"',
                              "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+
+_KE_CACHE: dict = {}     # id -> (mốc, thông tin công khai): trang kệ dựng gói từng món, tránh dựng lại liên tục
+
+
+def _thong_tin_mon(m: dict) -> dict:
+    now = time.time()
+    cu = _KE_CACHE.get(m["id"])
+    if cu and now - cu[0] < 60 and cu[1].get("_ban") == (m.get("mo_ta"), m.get("co_phi"), m.get("gia"), m.get("lien_he")):
+        return cu[1]
+    data, _ = _dung_goi_chia_se(_ban_mon_ke(m))
+    goc = {}
+    kn = []
+    if data:
+        ds = goi_chia_se.soi_goi(data).get("items", [])
+        goc = next((it for it in ds if it["type"] == m["type"] and it["slug"] == m["slug"]), {})
+        kn = [{"ten": k["ten"], "khai_bao": k["khai_bao"]} for k in ket_noi_can.phat_hien(data)]
+    tt = {"id": m["id"], "type": m["type"], "slug": m["slug"], "name": goc.get("name") or m["slug"],
+          "mo_ta": m.get("mo_ta") or goc.get("mo_ta") or "", "ket_noi": kn, "con": bool(data),
+          "co_phi": bool(m.get("co_phi")), "gia": m.get("gia", ""), "lien_he": m.get("lien_he", ""),
+          "_ban": (m.get("mo_ta"), m.get("co_phi"), m.get("gia"), m.get("lien_he"))}
+    _KE_CACHE[m["id"]] = (now, tt)
+    if len(_KE_CACHE) > 1000:
+        _KE_CACHE.clear()
+    return tt
+
+
+def _cong_khai_mon(tt: dict) -> dict:
+    return {k: v for k, v in tt.items() if not k.startswith("_") and k != "con"}
+
+
+@app.get("/bs/ke")
+async def bs_ke(request: Request):
+    """KỆ HÀNG công khai của máy này. Kệ tắt là 404, kể cả khi còn món trong kho."""
+    d = ke_hang.doc()
+    muon_html = "text/html" in (request.headers.get("accept") or "") and request.query_params.get("format") != "json"
+    if not d.get("bat"):
+        return JSONResponse({"error": localefmt.chu("Máy chủ này chưa mở kệ hàng.", "This server has no public shelf.")},
+                            status_code=404)
+    mon = [tt for tt in [await asyncio.to_thread(_thong_tin_mon, m) for m in ke_hang.cong_khai()] if tt["con"]]
+    k = danh_tinh.cong_khai()
+    if not muon_html:
+        return JSONResponse({"ten_ke": d.get("ten_ke", ""), "gioi_thieu": d.get("gioi_thieu", ""), "ten": danh_tinh.ten(),
+                             "khoa": k, "van_tay": danh_tinh.van_tay(k), "mon": [_cong_khai_mon(t) for t in mon]},
+                            headers={"Cache-Control": "no-store"})
+    goc = _goc_cong_khai(request)
+    nonce = share_trang.nonce_moi()
+    trang = share_trang.dung_trang_ke(ten_ke=d.get("ten_ke", ""), gioi_thieu=d.get("gioi_thieu", ""),
+                                     host=goc.split("://", 1)[1], ten=danh_tinh.ten(), van_tay=danh_tinh.van_tay(k),
+                                     mon=mon, goc=goc, qr_svg=_qr_svg_nhung(goc + "/bs/ke"), nonce=nonce)
+    return HTMLResponse(trang, headers={"Content-Security-Policy": share_trang.csp(nonce), "Cache-Control": "no-store",
+                                        "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"})
+
+
+@app.get("/bs/ke/qr.svg")
+async def bs_ke_qr(request: Request):
+    if not ke_hang.doc().get("bat"):
+        return JSONResponse({"error": "Máy chủ này chưa mở kệ hàng"}, status_code=404)
+    svg = _qr_svg_nhung(_goc_cong_khai(request) + "/bs/ke")
+    return Response(content=svg or "", media_type="image/svg+xml",
+                    headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+                             "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
+
+
+@app.get("/bs/ke/{id_}")
+async def bs_ke_mon(id_: str, request: Request):
+    m = ke_hang.tim(id_)
+    if not m:
+        return JSONResponse({"error": "Món không còn trên kệ"}, status_code=404)
+    if "text/html" in (request.headers.get("accept") or ""):
+        return RedirectResponse(url="/bs/ke#" + m["id"], status_code=307)
+    return JSONResponse(_cong_khai_mon(await asyncio.to_thread(_thong_tin_mon, m)), headers={"Cache-Control": "no-store"})
+
+
+async def _goi_mon_ke(m: dict, request: Request):
+    """Gói đã ký của một món trên kệ, mang id món làm kênh theo dõi. Tách ra để phần gói có phí
+    chèn bước kiểm mã mua vào đúng một chỗ."""
+    data, fname = await asyncio.to_thread(_dung_goi_chia_se, _ban_mon_ke(m))
+    if not data:
+        return JSONResponse({"error": "Món này không còn nội dung để chia sẻ"}, status_code=404)
+    data = await asyncio.to_thread(goi_chia_se.gan_theo_doi, data, m["id"])
+    data = await asyncio.to_thread(goi_chia_se.ky_goi, data)
+    return Response(content=data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"',
+                             "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+
+@app.get("/bs/ke/{id_}/goi.zip")
+async def bs_ke_goi(id_: str, request: Request):
+    m = ke_hang.tim(id_)
+    if not m:
+        return JSONResponse({"error": "Món không còn trên kệ"}, status_code=404)
+    return await _goi_mon_ke(m, request)
 
 
 @app.get("/bs/ma/{ma}")
@@ -6069,6 +6178,7 @@ async def brain_share_goi(token: str, x_minmin_pin: str = Header("")):
 # ---------- bên NHẬN ----------
 _LINK_BS_RE = re.compile(r"^/bs/[A-Za-z0-9_-]{16,80}/goi\.zip$")
 _LINK_BS_BAT_KY_RE = re.compile(r"^/bs/([A-Za-z0-9_-]{16,80})(?:/goi\.zip|/qr\.svg)?/?$")
+_LINK_KE_RE = re.compile(r"^/bs/ke/([A-Za-z0-9_-]{16,80})(?:/goi\.zip)?/?$")
 _MA_HOST_RE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9 \-]{8,16})\s*@\s*([A-Za-z0-9.\-]+(?::\d{1,5})?)\s*/?\s*$")
 _HOST_RE = re.compile(r"^[a-z0-9]([a-z0-9\-]{0,62}\.)+[a-z0-9\-]{2,63}(:\d{1,5})?$")
 
@@ -6141,14 +6251,22 @@ async def _phan_tich_nguon(nguon: str):
     except Exception:
         u = None
     mm = _LINK_BS_BAT_KY_RE.match((u.path if u else "") or "")
-    if not u or u.scheme != "https" or not u.hostname or u.username or u.password or not mm:
+    mk = _LINK_KE_RE.match((u.path if u else "") or "")
+    if not u or u.scheme != "https" or not u.hostname or u.username or u.password or not (mm or mk):
         return "", "", localefmt.chu("Cần link https://…/bs/<mã> hoặc mã dạng XXXXX-XXXXX@ten-mien",
                                      "Need an https://…/bs/<token> link or a code like XXXXX-XXXXX@domain")
     host = u.hostname.lower() + (f":{u.port}" if u.port and u.port != 443 else "")
     loi = await _host_cong_khai(host)
     if loi:
         return "", "", loi
-    return host, mm.group(1), ""
+    # Món trên kệ trả "ke:<id>" để nơi gọi dựng đúng đường tải (_duong_goi).
+    return host, (("ke:" + mk.group(1)) if mk else mm.group(1)), ""
+
+
+def _duong_goi(host: str, tok: str) -> str:
+    if tok.startswith("ke:"):
+        return f"https://{host}/bs/ke/{tok[3:]}/goi.zip"
+    return f"https://{host}/bs/{tok}/goi.zip"
 
 
 async def _doi_chieu_chu_ky(data: bytes, host: str) -> dict:
@@ -6264,7 +6382,7 @@ async def brain_nhap_xem(nguon: str = Form(""), pin: str = Form(""), to_brain: s
         if loi:
             return JSONResponse({"ok": False, "error": loi}, status_code=400)
         hd = {"X-MinMin-Pin": pin.strip()} if pin.strip() else {}
-        st, data, loi = await _tai_https(f"https://{host}/bs/{tok}/goi.zip", headers=hd)
+        st, data, loi = await _tai_https(_duong_goi(host, tok), headers=hd)
         if loi:
             return JSONResponse({"ok": False, "error": loi}, status_code=502)
         if st != 200:
@@ -6419,7 +6537,7 @@ async def brain_nhap_tu_link(url: str = Form(...), to_brain: str = Form("brain")
     host, tok, loi = await _phan_tich_nguon(url)
     if loi:
         return JSONResponse({"ok": False, "error": loi}, status_code=400)
-    st, data, loi = await _tai_https(f"https://{host}/bs/{tok}/goi.zip")
+    st, data, loi = await _tai_https(_duong_goi(host, tok))
     if loi:
         return JSONResponse({"ok": False, "error": loi}, status_code=502)
     if st != 200:
@@ -6505,6 +6623,100 @@ async def brain_tin_tuong(brain: str = Form("brain"), type: str = Form(...), slu
     ok = goi_chia_se.mo_khoa_muc(_brain_root(brain), type, slug, agents_dir=_agents_dir(brain),
                                  workflows_dir=_workflows_dir(brain))
     return {"ok": ok}
+
+
+# ---------- quản lý kệ (cần đăng nhập) ----------
+def _ten_muc_tren_dia(brain, typ, slug) -> str:
+    p = (_agents_dir(brain) / f"{slug}.md" if typ == "agent" else _workflows_dir(brain) / f"{slug}.md"
+         if typ == "workflow" else _skills_dir(brain) / slug / "SKILL.md")
+    meta, _ = _read_md(p)
+    return str(meta.get("name") or slug) if p.exists() else ""
+
+
+@app.get("/ke-hang")
+async def ke_hang_xem():
+    d = ke_hang.doc()
+    mon = []
+    for m in d["mon"]:
+        ten = _ten_muc_tren_dia(m["brain"], m["type"], m["slug"])
+        mon.append({k: m.get(k) for k in ("id", "type", "slug", "mo_ta", "co_phi", "gia", "lien_he")}
+                   | {"ten": ten or m["slug"], "con": bool(ten)})
+    return {"ok": True, "bat": d["bat"], "ten_ke": d["ten_ke"], "gioi_thieu": d["gioi_thieu"], "mon": mon,
+            "duong": "/bs/ke"}
+
+
+@app.post("/ke-hang/cai-dat")
+async def ke_hang_cai_dat(bat: str = Form(""), ten_ke: str = Form(None), gioi_thieu: str = Form(None)):
+    d = ke_hang.cai_dat(bat=(bat in ("1", "true", "on")) if bat != "" else None, ten_ke=ten_ke, gioi_thieu=gioi_thieu)
+    return {"ok": True, "bat": d["bat"], "ten_ke": d["ten_ke"], "gioi_thieu": d["gioi_thieu"]}
+
+
+@app.post("/ke-hang/them")
+async def ke_hang_them(brain: str = Form("brain"), items: str = Form("{}")):
+    try:
+        it = json.loads(items or "{}")
+    except Exception:
+        it = {}
+    them, loi = [], []
+    for typ in ke_hang.KINDS:
+        for slug in (it.get(typ) or [])[:200] if isinstance(it, dict) else []:
+            slug = str(slug)
+            if not skill_router.valid_slug(slug) or not _ten_muc_tren_dia(brain, typ, slug):
+                loi.append(f"{typ}:{slug}")
+                continue
+            if typ == "skill" and slug in system_sync.system_skill_slugs():
+                loi.append(f"{typ}:{slug}")   # skill hệ thống ai cũng có, không bày lên kệ
+                continue
+            try:
+                them.append(ke_hang.them_mon(brain, typ, slug)["id"])
+            except ValueError as e:
+                loi.append(f"{typ}:{slug} ({e})")
+    return {"ok": bool(them) or not loi, "them": len(them), "loi": loi[:20]}
+
+
+@app.post("/ke-hang/bo")
+async def ke_hang_bo(id_: str = Form(..., alias="id")):
+    _KE_CACHE.pop(id_, None)
+    return {"ok": ke_hang.bo_mon(id_)}
+
+
+@app.post("/ke-hang/sua")
+async def ke_hang_sua(id_: str = Form(..., alias="id"), mo_ta: str = Form("")):
+    _KE_CACHE.pop(id_, None)
+    return {"ok": bool(ke_hang.sua_mon(id_, mo_ta=" ".join(mo_ta.split())[:300]))}
+
+
+@app.post("/brains/import/ke")
+async def brain_duyet_ke(host: str = Form(...)):
+    """Duyệt kệ hàng của một máy MinMin khác (máy chủ gọi hộ trình duyệt, có rào SSRF)."""
+    h = (host or "").strip().lower()
+    h = re.sub(r"^https?://", "", h).split("/", 1)[0]
+    if not _HOST_RE.match(h):
+        return JSONResponse({"ok": False, "error": localefmt.chu("Tên miền chưa đúng, ví dụ minmin.tenmien.com",
+                                                                 "Not a valid domain, e.g. minmin.example.com")}, status_code=400)
+    loi = await _host_cong_khai(h)
+    if loi:
+        return JSONResponse({"ok": False, "error": loi}, status_code=400)
+    st, body, loi = await _tai_https(f"https://{h}/bs/ke?format=json", tran=2 * 1024 * 1024)
+    if loi or st != 200:
+        return JSONResponse({"ok": False, "error": loi or localefmt.chu("Máy {h} chưa mở kệ hàng (mã {st}).",
+                                                                        "{h} has no public shelf ({st}).", h=h, st=st)}, status_code=400)
+    try:
+        j = json.loads(body)
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Máy đó trả lời không đúng dạng MinMin"}, status_code=400)
+    cl = lambda v, n: " ".join(str(v or "").split())[:n]   # noqa: E731 - dữ liệu người lạ: cắt gọn từng trường
+    mon = []
+    for m in (j.get("mon") or [])[:200]:
+        if not isinstance(m, dict) or not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", str(m.get("id") or "")):
+            continue
+        mon.append({"id": m["id"], "type": m.get("type") if m.get("type") in ke_hang.KINDS else "skill",
+                    "name": cl(m.get("name"), 80), "mo_ta": cl(m.get("mo_ta"), 300),
+                    "ket_noi": [cl(k.get("ten"), 40) for k in (m.get("ket_noi") or [])[:8] if isinstance(k, dict)],
+                    "co_phi": bool(m.get("co_phi")), "gia": cl(m.get("gia"), 60), "lien_he": cl(m.get("lien_he"), 120),
+                    "link": f"https://{h}/bs/ke/{m['id']}"})
+    return {"ok": True, "host": h, "ten_ke": cl(j.get("ten_ke"), 80), "ten": cl(j.get("ten"), 60),
+            "gioi_thieu": cl(j.get("gioi_thieu"), 400), "van_tay": cl(j.get("van_tay"), 19), "mon": mon}
 
 
 @app.get("/danh-tinh")

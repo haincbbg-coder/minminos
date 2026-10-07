@@ -37,6 +37,29 @@ def _ngay(ts) -> str:
         return ""
 
 
+_CSS = """:root{--bg:#efe8de;--card:#f6f0e7;--fg:#2d2438;--mo:#6f6480;--tim:#6b4fa3;--hl:#fff;--sd:#d5cbbd;--ok:#2f7d4f}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1726;--card:#251d31;--fg:#efe7fb;--mo:#a99cbd;--tim:#b99cf2;--hl:#2e2540;--sd:#140f1b;--ok:#6fd39a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:24px 16px}
+.w{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.the{background:var(--card);border-radius:22px;padding:20px;box-shadow:8px 8px 18px var(--sd),-8px -8px 18px var(--hl)}
+.nho{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mo)}
+h1{font-size:22px;margin:4px 0 8px;line-height:1.25}
+.tu{color:var(--mo)}.tu b{color:var(--fg)}
+.vt{display:inline-block;margin-top:8px;font:12px ui-monospace,Menlo,monospace;color:var(--ok);border:1px solid currentColor;border-radius:99px;padding:2px 10px}
+.ds{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ds li{display:flex;gap:10px;align-items:flex-start}.ds small{display:block;color:var(--mo)}
+.chip{flex:none;min-width:74px;text-align:center;font-size:11px;font-weight:600;border-radius:8px;padding:2px 8px;background:var(--bg);color:var(--tim);box-shadow:inset 2px 2px 4px var(--sd),inset -2px -2px 4px var(--hl)}
+.mo{color:var(--mo)}
+.ma{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ma code{flex:1;min-width:0;overflow-wrap:anywhere;font:600 16px ui-monospace,Menlo,monospace;background:var(--bg);padding:10px 12px;border-radius:12px;box-shadow:inset 3px 3px 6px var(--sd),inset -3px -3px 6px var(--hl)}
+.qr{display:flex;justify-content:center;padding:6px}.qr svg{width:180px;height:180px;background:#fff;border-radius:12px;padding:8px}
+input{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:0;border-radius:12px;padding:12px;box-shadow:inset 3px 3px 6px var(--sd),inset -3px -3px 6px var(--hl)}
+button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:11px 16px;cursor:pointer;color:var(--fg);background:var(--card);box-shadow:4px 4px 10px var(--sd),-4px -4px 10px var(--hl)}
+button.chinh{background:var(--tim);color:#fff;box-shadow:none;width:100%;margin-top:10px}
+.loi{color:#c0392b;font-size:13px;min-height:1em;margin-top:6px}
+"""
+
+
 _NHAN_LOAI = {"agent": ("Agent", "Agent"), "skill": ("Skill", "Skill"), "workflow": ("Quy trình", "Workflow")}
 
 
@@ -74,27 +97,7 @@ def dung_trang(*, tieu_de: str, host: str, ten: str, van_tay: str, items: list, 
 <meta name="robots" content="noindex,nofollow">
 <title>{_e(tieu_de)} · MinMin</title>
 <style>
-:root{{--bg:#efe8de;--card:#f6f0e7;--fg:#2d2438;--mo:#6f6480;--tim:#6b4fa3;--hl:#fff;--sd:#d5cbbd;--ok:#2f7d4f}}
-@media (prefers-color-scheme:dark){{:root{{--bg:#1d1726;--card:#251d31;--fg:#efe7fb;--mo:#a99cbd;--tim:#b99cf2;--hl:#2e2540;--sd:#140f1b;--ok:#6fd39a}}}}
-*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:24px 16px}}
-.w{{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}}
-.the{{background:var(--card);border-radius:22px;padding:20px;box-shadow:8px 8px 18px var(--sd),-8px -8px 18px var(--hl)}}
-.nho{{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mo)}}
-h1{{font-size:22px;margin:4px 0 8px;line-height:1.25}}
-.tu{{color:var(--mo)}}.tu b{{color:var(--fg)}}
-.vt{{display:inline-block;margin-top:8px;font:12px ui-monospace,Menlo,monospace;color:var(--ok);border:1px solid currentColor;border-radius:99px;padding:2px 10px}}
-.ds{{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}}
-.ds li{{display:flex;gap:10px;align-items:flex-start}}.ds small{{display:block;color:var(--mo)}}
-.chip{{flex:none;min-width:74px;text-align:center;font-size:11px;font-weight:600;border-radius:8px;padding:2px 8px;background:var(--bg);color:var(--tim);box-shadow:inset 2px 2px 4px var(--sd),inset -2px -2px 4px var(--hl)}}
-.mo{{color:var(--mo)}}
-.ma{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}
-.ma code{{flex:1;min-width:0;overflow-wrap:anywhere;font:600 16px ui-monospace,Menlo,monospace;background:var(--bg);padding:10px 12px;border-radius:12px;box-shadow:inset 3px 3px 6px var(--sd),inset -3px -3px 6px var(--hl)}}
-.qr{{display:flex;justify-content:center;padding:6px}}.qr svg{{width:180px;height:180px;background:#fff;border-radius:12px;padding:8px}}
-input{{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:0;border-radius:12px;padding:12px;box-shadow:inset 3px 3px 6px var(--sd),inset -3px -3px 6px var(--hl)}}
-button{{font:inherit;font-weight:600;border:0;border-radius:12px;padding:11px 16px;cursor:pointer;color:var(--fg);background:var(--card);box-shadow:4px 4px 10px var(--sd),-4px -4px 10px var(--hl)}}
-button.chinh{{background:var(--tim);color:#fff;box-shadow:none;width:100%;margin-top:10px}}
-.loi{{color:#c0392b;font-size:13px;min-height:1em;margin-top:6px}}
-</style></head><body><div class="w">
+{_CSS}</style></head><body><div class="w">
 <div class="the">
  <div class="nho">MinMin · {_e(c("Gói chia sẻ", "Shared package"))}</div>
  <h1>{_e(tieu_de)}</h1>
@@ -135,6 +138,64 @@ button.chinh{{background:var(--tim);color:#fff;box-shadow:none;width:100%;margin
   var b=this;function xong(){{b.textContent="\\u2713";}}
   if(navigator.clipboard)navigator.clipboard.writeText(D.ma).then(xong,function(){{}});
  }};
+}})();
+</script></body></html>"""
+
+
+def dung_trang_ke(*, ten_ke: str, gioi_thieu: str, host: str, ten: str, van_tay: str, mon: list,
+                  goc: str, qr_svg: str, nonce: str) -> str:
+    """Trang KỆ HÀNG công khai `/bs/ke` (26.10.103): mỗi món một thẻ, mỗi thẻ một nút đưa về MinMin
+    của người xem (cùng cơ chế ?nhap= với trang nhận của link)."""
+    c = localefmt.chu
+    tieu_de = ten_ke or c("Kệ năng lực MinMin của {ai}", "MinMin capability shelf of {ai}", ai=ten or host)
+    the = []
+    for m in mon[:200]:
+        can = ", ".join(k.get("ten", "") for k in (m.get("ket_noi") or [])[:6])
+        gia = ""
+        if m.get("co_phi"):
+            gia = (f'<div class="gia">{_e(c("Có phí", "Paid"))}{(": " + _e(m.get("gia", ""))) if m.get("gia") else ""}</div>'
+                   + (f'<small>{_e(c("Liên hệ mua: {x}", "To buy: {x}", x=m.get("lien_he", "")))}</small>' if m.get("lien_he") else ""))
+        the.append(
+            f'<div class="the" id="{_e(m["id"])}"><span class="chip c-{_e(m.get("type", ""))}">{_e(c(*_NHAN_LOAI.get(m.get("type"), ("", ""))))}</span>'
+            f'<h2>{_e(m.get("name") or m.get("slug") or "")}</h2>'
+            + (f'<p class="mo">{_e(m["mo_ta"])}</p>' if m.get("mo_ta") else "")
+            + (f'<small>{_e(c("Cần kết nối: ", "Needs: "))}{_e(can)}</small>' if can else "")
+            + f'{gia}'
+            f'<button class="chinh" data-link="{_e(goc + "/bs/ke/" + m["id"])}">{_e(c("Nhập vào MinMin của tôi", "Import into my MinMin"))}</button></div>')
+    if not the:
+        the.append(f'<div class="the"><p class="mo">{_e(c("Kệ chưa có món nào.", "The shelf is empty."))}</p></div>')
+    js = json.dumps({"loi": c("Gõ địa chỉ MinMin của bạn ở ô trên cùng trước.", "Type your MinMin address in the top box first.")},
+                    ensure_ascii=False).replace("</", "<\\/")
+    return f"""<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{_e(tieu_de)} · MinMin</title>
+<style>{_CSS}
+h2{{font-size:18px;margin:8px 0 4px}}.the small{{display:block;color:var(--mo);margin-top:4px}}
+.gia{{margin-top:8px;font-weight:700;color:var(--tim)}}
+</style></head><body><div class="w">
+<div class="the">
+ <div class="nho">MinMin · {_e(c("Kệ hàng", "Shelf"))}</div>
+ <h1>{_e(tieu_de)}</h1>
+ <div class="tu">{_e(c("Từ", "From"))} <b>{_e(ten or host)}</b>{(" · " + _e(host)) if ten else ""}</div>
+ {f'<span class="vt">&#10003; {_e(van_tay)}</span>' if van_tay else ""}
+ {f'<p class="mo" style="margin:12px 0 0">{_e(gioi_thieu)}</p>' if gioi_thieu else ""}
+ <input id="cuaToi" style="margin-top:14px" placeholder="{_e(c("Địa chỉ MinMin của bạn, ví dụ minmin.tenmien.com", "Your MinMin address, e.g. minmin.example.com"))}" autocomplete="url" inputmode="url">
+ <div class="loi" id="loi"></div>
+ <div class="qr">{qr_svg}</div>
+</div>
+{"".join(the)}
+</div>
+<script nonce="{nonce}">
+(function(){{
+ var D={js};var o=document.getElementById("cuaToi"),loi=document.getElementById("loi");
+ try{{o.value=localStorage.getItem("minmin.cua_toi")||"";}}catch(e){{}}
+ function chuan(v){{v=(v||"").trim().replace(/^https?:\\/\\//i,"").replace(/\\/.*$/,"");return /^[a-z0-9.-]+(:\\d+)?$/i.test(v)?v:"";}}
+ document.querySelectorAll("button[data-link]").forEach(function(b){{b.onclick=function(){{
+  var h=chuan(o.value);if(!h||h===location.host){{loi.textContent=D.loi;o.focus();window.scrollTo(0,0);return;}}
+  try{{localStorage.setItem("minmin.cua_toi",h);}}catch(e){{}}
+  location.href="https://"+h+"/?nhap="+encodeURIComponent(b.getAttribute("data-link"));
+ }};}});
 }})();
 </script></body></html>"""
 

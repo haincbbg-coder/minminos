@@ -130,7 +130,8 @@
       </div>
       <div id="csNew"></div>
       <div class="cs-card"><b>${esc(t("cs.active"))}</b><div id="csLinks"></div>
-        <div class="cs-dim">${esc(t("cs.note"))}</div></div>`;
+        <div class="cs-dim">${esc(t("cs.note"))}</div></div>
+      <div class="cs-card" id="csKe"></div>`;
     const $ = (id) => body.querySelector("#" + id);
     getJson("/danh-tinh").then((j) => {
       if (!j) return;
@@ -231,6 +232,59 @@
       napLinks();
     };
     napLinks();
+    veKe(body.querySelector("#csKe"), brain, daChon);
+  }
+
+  // Kệ hàng công khai (26.10.103): bày sẵn món cho mọi MinMin khác duyệt theo tên miền.
+  async function veKe(box, brain, daChon) {
+    const j = await getJson("/ke-hang");
+    if (!j || !j.ok) { box.innerHTML = `<i class="cs-dim">${esc(t("cs.failed"))}</i>`; return; }
+    const link = location.origin + j.duong;
+    box.innerHTML = `<b>${esc(t("cs.ke_title"))}</b>
+      <div class="cs-dim">${esc(t("cs.ke_hint"))}</div>
+      <label class="cs-row"><input type="checkbox" id="kBat" ${j.bat ? "checked" : ""}> ${esc(t("cs.ke_open"))}</label>
+      <input class="cs-in" id="kTen" maxlength="80" placeholder="${esc(t("cs.ke_name_ph"))}">
+      <textarea class="cs-in" id="kGt" maxlength="400" rows="2" placeholder="${esc(t("cs.ke_intro_ph"))}"></textarea>
+      <div class="cs-row"><button class="cs-btn" id="kLuu">${esc(t("cs.save"))}</button>
+        <button class="cs-btn p" id="kThem">${esc(t("cs.ke_add"))}</button></div>
+      ${j.bat ? `<div class="cs-row"><span class="cs-code" style="flex:1">${esc(link)}</span>
+        <button class="cs-btn" id="kChep">${esc(t("cs.copy_link"))}</button></div>
+        <img class="cs-qr" alt="QR" src="/bs/ke/qr.svg">` : ""}
+      <div class="cs-msg" id="kMsg"></div>
+      <div id="kMon">${j.mon.length ? j.mon.map((m) => `<div class="cs-link"><div class="cs-row">
+          <span class="cs-chip">${esc(kindName(m.type))}</span><b style="flex:1">${esc(m.ten)}</b>
+          ${m.con ? "" : `<span class="cs-chip" style="color:var(--mm-warn)">${esc(t("cs.ke_gone"))}</span>`}
+          <button class="cs-btn" data-bo="${esc(m.id)}">${esc(t("cs.ke_remove"))}</button></div></div>`).join("")
+        : `<i class="cs-dim">${esc(t("cs.ke_empty"))}</i>`}</div>`;
+    const q = (id) => box.querySelector("#" + id);
+    q("kTen").value = j.ten_ke || "";
+    q("kGt").value = j.gioi_thieu || "";
+    const luu = async () => {
+      const r = await post("/ke-hang/cai-dat", { bat: q("kBat").checked ? "1" : "0", ten_ke: q("kTen").value, gioi_thieu: q("kGt").value });
+      if (!r || !r.ok) { q("kMsg").textContent = t("cs.failed"); return false; }
+      return true;
+    };
+    q("kLuu").onclick = async () => { if (await luu()) veKe(box, brain, daChon); };
+    q("kBat").onchange = async () => {
+      if (q("kBat").checked && !window.confirm(t("cs.ke_open_ask"))) { q("kBat").checked = false; return; }
+      if (await luu()) veKe(box, brain, daChon);
+    };
+    const chep = q("kChep");
+    if (chep) chep.onclick = () => chep_(link);
+    function chep_(x) { try { navigator.clipboard.writeText(x); q("kMsg").textContent = t("cs.copied"); } catch (e) { window.prompt("", x); } }
+    q("kThem").onclick = async () => {
+      const items = {}; let n = 0;
+      Object.entries(daChon).forEach(([k, st]) => { if (st.size) { items[k] = [...st]; n += st.size; } });
+      if (!n) { q("kMsg").textContent = t("cs.pick"); return; }
+      const r = await post("/ke-hang/them", { brain, items: JSON.stringify(items) });
+      if (!r || !r.ok) { q("kMsg").textContent = t("cs.failed"); return; }
+      veKe(box, brain, daChon);
+    };
+    box.querySelectorAll("[data-bo]").forEach((b) => (b.onclick = async () => {
+      if (!window.confirm(t("cs.ke_remove_ask"))) return;
+      await post("/ke-hang/bo", { id: b.dataset.bo });
+      veKe(box, brain, daChon);
+    }));
   }
 
   // ───────────── Nhận về ─────────────
@@ -247,6 +301,7 @@
         <div class="cs-row"><span class="cs-dim">${esc(t("cs.or_file"))}</span><input type="file" id="csFile" accept=".zip,application/zip"></div>
         <div class="cs-msg" id="csMsg"></div>
       </div>
+      <div id="csKeKhac"></div>
       <div id="csXemTruoc"></div>`;
     const $ = (id) => body.querySelector("#" + id);
     $("csNguon").value = nguon || "";
@@ -268,7 +323,33 @@
       veXemTruoc(r);
       soiAi(r);
     }
-    $("csXem").onclick = () => { if ($("csNguon").value.trim()) xem(null); };
+    // Gõ đúng một tên miền (không có /bs/...) là duyệt KỆ HÀNG của máy đó.
+    const laTenMien = (v) => /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?\/?$/i.test(v) || /\/bs\/ke\/?$/i.test(v);
+    async function duyetKe(v) {
+      const box = $("csKeKhac");
+      $("csMsg").textContent = t("cs.loading");
+      const j = await post("/brains/import/ke", { host: v.replace(/\/bs\/ke\/?$/i, "") });
+      $("csMsg").textContent = "";
+      if (!j || !j.ok) { box.innerHTML = ""; $("csMsg").textContent = (j && j.error) || t("cs.failed"); return; }
+      box.innerHTML = `<div class="cs-card"><b>${esc(j.ten_ke || t("cs.ke_of", { ai: j.ten || j.host }))}</b>
+        <div class="cs-dim">${esc(j.host)}${j.van_tay ? " · " + esc(j.van_tay) : ""}</div>
+        ${j.gioi_thieu ? `<div class="cs-dim">${esc(j.gioi_thieu)}</div>` : ""}
+        ${(j.mon || []).map((m, i) => `<div class="cs-link"><div class="cs-row"><span class="cs-chip">${esc(kindName(m.type))}</span>
+            <b style="flex:1">${esc(m.name)}</b>${m.co_phi ? `<span class="cs-chip">${esc(t("cs.ke_paid"))}${m.gia ? ": " + esc(m.gia) : ""}</span>` : ""}
+            <button class="cs-btn p" data-i="${i}">${esc(t("cs.preview"))}</button></div>
+          ${m.mo_ta ? `<div class="cs-dim">${esc(m.mo_ta)}</div>` : ""}
+          ${(m.ket_noi || []).length ? `<div class="cs-dim">${esc(t("cs.ke_needs", { ds: m.ket_noi.join(", ") }))}</div>` : ""}
+          ${m.co_phi && m.lien_he ? `<div class="cs-dim">${esc(t("cs.ke_contact", { x: m.lien_he }))}</div>` : ""}</div>`).join("")
+          || `<i class="cs-dim">${esc(t("cs.ke_empty_other"))}</i>`}</div>`;
+      box.querySelectorAll("[data-i]").forEach((b) => (b.onclick = () => {
+        $("csNguon").value = j.mon[Number(b.dataset.i)].link; xem(null);
+      }));
+    }
+    $("csXem").onclick = () => {
+      const v = $("csNguon").value.trim();
+      if (!v) return;
+      if (laTenMien(v)) duyetKe(v); else xem(null);
+    };
     $("csNguon").addEventListener("keydown", (e) => { if (e.key === "Enter") $("csXem").click(); });
     $("csPinNhan").addEventListener("keydown", (e) => { if (e.key === "Enter") $("csXem").click(); });
     $("csFile").onchange = () => { const fl = $("csFile").files[0]; if (fl) xem(fl); };
