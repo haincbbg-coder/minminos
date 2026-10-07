@@ -1006,6 +1006,7 @@
   // Kết nối & khách), "gỡ" = ẩn đi. Trạng thái do console.js giữ (window.JavisApps).
   const UNG_DUNG = [
     { id: "matnha", icon: "eye", ten: "store.app.matnha.name", mo_ta: "store.app.matnha.desc" },
+    { id: "biendong", icon: "wallet", ten: "store.app.biendong.name", mo_ta: "store.app.biendong.desc" },
   ];
   function veUngDung() {
     const A = window.JavisApps;

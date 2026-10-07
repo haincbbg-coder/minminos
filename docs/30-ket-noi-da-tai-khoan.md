@@ -55,6 +55,24 @@ nhà lẫn VPS.
 
 Shop thứ hai: thêm kết nối mới, dùng lại khoá app, chỉ khác code (và Shop ID với Shopee).
 
+## Báo biến động số dư (Techcombank qua Casso)
+
+Khách chuyển khoản vào tài khoản là MinMin báo ngay: chuông, thông báo đẩy của trình duyệt,
+Telegram của bạn, và nhóm nhân viên nếu bạn muốn. Mở trang **Biến động số dư** (nhóm Kết nối
+trên thanh bên) rồi làm theo:
+
+1. Đăng nhập Casso Flow và liên kết tài khoản Techcombank (Ngân hàng, Thêm tài khoản).
+2. Trong Casso: **Tích hợp > Webhook > Thêm webhook V2**, dán địa chỉ MinMin hiện ở bước 2
+   (nút **Chép**). Địa chỉ có mã bí mật riêng; lỡ lộ thì bấm **Đổi địa chỉ**.
+3. Chép **Key bảo mật** Casso đưa ra, dán vào ô ở bước 3 rồi **Lưu**. Thiếu key thì MinMin từ
+   chối mọi giao dịch, vì mỗi giao dịch phải mang chữ ký đúng.
+4. Lưu webhook trong Casso và bấm **Gọi thử**: một giao dịch "thử nghiệm" hiện lên và báo về.
+
+Tuỳ chọn: chỉ báo tiền vào (mặc định), chỉ báo từ một số tiền trở lên, và **báo thêm** cho chat
+id nhóm Telegram (phải có sẵn trong danh sách cho phép của bot) hoặc `zalo:<id>`. Casso gửi lại
+một giao dịch nhiều lần thì MinMin chỉ báo một lần. Hỏi MinMin "hôm nay vào bao nhiêu tiền" là
+nó đọc ngay từ danh sách giao dịch.
+
 ## Kiểm định trước khi đưa vào MinMin
 
 Mỗi nền tảng có bộ test riêng kiểm đúng cách ký và gọi API (`tests/python/test_<ten>_mcp.py`),

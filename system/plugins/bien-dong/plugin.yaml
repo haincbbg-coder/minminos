@@ -1,0 +1,10 @@
+name: Biến động số dư (Casso)
+slug: bien-dong
+version: 1.0.0
+description: Tra cứu giao dịch ngân hàng Casso đẩy về (tiền vào, tiền ra, số dư) - hôm nay vào bao nhiêu tiền, ai chuyển khoản. Chỉ đọc giao dịch đã lưu.
+author: Javis (bundled)
+enabled: true
+min_mode: readonly
+tools:
+  - bien_dong_doc
+hooks: []

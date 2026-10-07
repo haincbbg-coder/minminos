@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.119] - 2026-10-07
+### Thêm mới
+- Trang **Biến động số dư** (nhóm Kết nối): nối Techcombank qua Casso, mỗi khoản tiền khách chuyển vào hiện ngay trên chuông MinMin, thông báo đẩy về điện thoại và Telegram, kèm nội dung, người chuyển và số dư.
+- Báo thêm được vào nhóm Telegram hoặc Zalo của nhân viên, chọn chỉ báo tiền vào hoặc từ một mức tiền trở lên. Hỏi MinMin "hôm nay vào bao nhiêu tiền" là có tổng.
+
+### Bảo mật
+- MinMin chỉ nhận giao dịch có chữ ký đúng bằng Key bảo mật của Casso, qua một địa chỉ bí mật đổi được bất cứ lúc nào. Số tài khoản chỉ hiện 4 số cuối.
+
 ## [26.10.118] - 2026-10-07
 ### Sửa lỗi
 - Đăng nhập Facebook: khi khách quên tick hết tài khoản quảng cáo hoặc Trang, màn báo sau đăng nhập nói rõ còn thiếu quyền gì và nhắc bấm đăng nhập lại để tick thêm (trước đây vẫn báo "thành công" làm khách tưởng đã xong).

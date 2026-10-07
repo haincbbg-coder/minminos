@@ -55,6 +55,24 @@ Nothing to install: MinMin calls each platform's API from Python, on a home PC o
 
 A second shop: add a new connection, reuse the app keys, only the code (and Shop ID on Shopee) differ.
 
+## Balance alerts (Techcombank via Casso)
+
+When a customer transfers money into your account, MinMin tells you at once: the bell, browser
+push, your Telegram, and staff groups if you want. Open the **Balance alerts** page (Connections
+group on the sidebar) and follow it:
+
+1. Sign in to Casso Flow and link your Techcombank account (Banks, Add account).
+2. In Casso: **Integrations > Webhook > Add webhook V2**, paste the MinMin address shown in step 2
+   (the **Copy** button). The address carries its own secret; if it leaks, press **Change address**.
+3. Copy the **security key** Casso gives you, paste it into step 3 and **Save**. Without the key
+   MinMin rejects every transaction, because each one must carry a valid signature.
+4. Save the webhook in Casso and press **Test call**: a "test" transaction appears and is announced.
+
+Options: alert only for money in (the default), only from a minimum amount, and **also notify** a
+Telegram group chat id (it must already be in the bot's allow list) or `zalo:<id>`. When Casso
+resends a transaction, MinMin announces it once. Ask MinMin "how much came in today" and it reads
+the transaction list directly.
+
 ## Certification before shipping
 
 Each platform has its own tests for signing and calling the API (`tests/python/test_<name>_mcp.py`),
