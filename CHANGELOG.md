@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.110] - 2026-10-07
+### Sửa lỗi
+- Văn phòng 3D: khi đi bộ không còn cầm sách giơ ra như xác sống, hai tay đánh tự nhiên. Sổ và iPad để trên mặt bàn, chỉ cầm lên khi đứng phát biểu.
+- Họp: mỗi người một dáng (đứng khoanh tay, chống cằm, tay sau lưng, chống hông, nói chuyện nhẹ; ngồi tựa tay, ghi chép, gập tay), tự đổi dáng theo thời gian. Ghế và người ngồi sát bàn hơn, tay chạm mặt bàn.
+- Giám đốc ngồi gần bàn, laptop trong tầm tay, chân không còn bị lún xuống sàn.
+- Hết đi xuyên tường khi qua cửa (không tìm được đường thì đi vòng qua cửa) và hết đứng lọt vào quầy trà, bàn đứng.
+- Chế độ tối: đèn trần, đèn đứng luôn bật, có vệt sáng vàng chiếu xuống sàn; chế độ sáng vẫn đổi theo giờ thật.
+
 ## [26.10.109] - 2026-10-07
 ### Mới
 - Biệt thự 3D: cửa đôi giữa văn phòng chính và hai phòng Sale, Marketing, tự mở khi có người tới gần. Mỗi phòng có điều hòa và đèn trần (ẩn cùng tường khi bấm Ẩn tường).
