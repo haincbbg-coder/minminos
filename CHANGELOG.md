@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.107] - 2026-10-07
+### Mới
+- Mỗi phòng ở văn phòng 3D có 2 bảng: HÔM QUA (số đã chốt) và HÔM NAY (số trực tiếp, có chấm xanh).
+- Bảng Marketing xếp theo ĐƠN THÁNG: tổng đơn tính lương trong tháng của các mã mỗi người phụ trách (Phúc, Tiến, Khang...), không phải đơn marketing tự chốt. Kèm đơn hôm nay/hôm qua, chi phí và ROAS.
+- File pancake-office.json nhận thêm month_orders, yesterday (orders, revenue, spend, roas, packed, month_orders) cho từng người, và ads_yesterday.
+
 ## [26.10.106] - 2026-10-07
 ### Sửa lỗi
 - Văn phòng 3D: ghế nhân viên lùi ra sau để nhìn từ phía sau thấy lưng ghế, người ngồi không còn đè vào ghế.

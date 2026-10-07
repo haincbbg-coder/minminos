@@ -645,43 +645,64 @@
     }
     scene.add(g); return g;
   }
-  function veBangPhong(ph) {
-    var c = document.createElement("canvas"), W = 1400, H = 560; c.width = W; c.height = H; var g = c.getContext("2d"), light = sang(), F = "system-ui,Segoe UI,Roboto,sans-serif";
+  // mỗi phòng có 2 bảng: HÔM QUA (số đã chốt) và HÔM NAY (số tươi). kieu = "qua" | "nay".
+  // Marketing xếp theo ĐƠN THÁNG: tổng đơn tính lương của các mã người đó phụ trách (không phải đơn marketing tự chốt)
+  function nhin(r, kieu) {
+    if (kieu !== "qua") return r;
+    var y = r.y || {}; return { name: r.name, dept: r.dept, orders: y.orders || 0, revenue: y.revenue || 0, spend: y.spend || 0, roas: y.roas || 0, packed: y.packed || 0, month_orders: y.month_orders != null ? y.month_orders : r.month_orders };
+  }
+  function homQua() { var d = new Date(Date.now() - 864e5); return ("0" + d.getDate()).slice(-2) + "/" + ("0" + (d.getMonth() + 1)).slice(-2); }
+  function veBangPhong(ph, kieu) {
+    var c = document.createElement("canvas"), W = 1120, H = 560; c.width = W; c.height = H; var g = c.getContext("2d"), light = sang(), F = "system-ui,Segoe UI,Roboto,sans-serif", qua = kieu === "qua", mk = ph.id === "marketing";
     var ink = light ? "#12233f" : "#e8f0ff", mute = light ? "#5a6b86" : "#9fb4d8", card = light ? "#ffffff" : "#13264a";
-    g.fillStyle = light ? "#f3f7ff" : "#0c1830"; rr(g, 4, 4, W - 8, H - 8, 28); g.fill(); g.strokeStyle = ph.acc; g.lineWidth = 6; rr(g, 4, 4, W - 8, H - 8, 28); g.stroke();
-    g.textBaseline = "middle"; g.textAlign = "left"; g.fillStyle = ink; g.font = "800 44px " + F; g.fillText(ph.ten.toUpperCase(), 44, 52);
-    g.fillStyle = ph.acc; g.font = "600 22px " + F; g.fillText(ph.id === "marketing" ? "XẾP HẠNG THEO DOANH THU QUẢNG CÁO · POS PANCAKE VÀ FACEBOOK ADS" : "XẾP HẠNG DOANH THU · POS PANCAKE", 44, 92);
-    var d = pancakeDL; g.textAlign = "right"; g.fillStyle = mute; g.font = "500 22px " + F;
-    g.fillText(cat(d ? (d.demo ? "MẪU: chưa nối Pancake" : d.source ? (d.updated ? "Cập nhật: " + d.updated : "Số liệu Pancake") : "") : "Đang tải số liệu…", 46), W - 44, 52); g.textAlign = "left";
-    var ds_ = d ? (ph.id === "sale" ? d.sale : d.marketing) : [], kho = d && ph.id === "sale" ? d.kho : [];
-    if (!d || !d.source || (!ds_.length && !kho.length)) {
-      g.fillStyle = mute; g.font = "600 30px " + F; g.fillText(!d ? "Đang lấy số liệu…" : "Chưa có số liệu Pancake cho phòng này.", 44, 220);
-      g.font = "500 23px " + F; g.fillText("Nối Pancake POS rồi ghi nhân viên và số liệu vào 00 - Dashboard/pancake-office.json.", 44, 270);
+    g.fillStyle = light ? "#f3f7ff" : "#0c1830"; rr(g, 4, 4, W - 8, H - 8, 28); g.fill(); g.strokeStyle = qua ? "#8a97ad" : ph.acc; g.lineWidth = 6; rr(g, 4, 4, W - 8, H - 8, 28); g.stroke();
+    g.textBaseline = "middle"; g.textAlign = "left"; g.fillStyle = ink; g.font = "800 40px " + F; g.fillText(ph.ten.toUpperCase(), 40, 48);
+    g.fillStyle = qua ? "#8a97ad" : "#1fb86a"; g.font = "800 24px " + F;
+    if (!qua) { g.beginPath(); g.arc(48, 92, 8, 0, 6.3); g.fill(); g.fillText("HÔM NAY · TRỰC TIẾP", 66, 92); } else g.fillText("HÔM QUA · " + homQua(), 40, 92);
+    var d = pancakeDL; g.textAlign = "right"; g.fillStyle = mute; g.font = "500 20px " + F;
+    g.fillText(cat(d ? (d.demo ? "MẪU: chưa nối Pancake" : d.source ? (!qua && d.updated ? "Cập nhật " + d.updated : "Pancake POS") : "") : "Đang tải số liệu…", 34), W - 40, 48); g.textAlign = "left";
+    var rows = d ? (mk ? d.marketing : d.sale) : [], kho = d && !mk ? d.kho : [];
+    rows = rows.map(function (r) { return nhin(r, kieu); }); kho = kho.map(function (r) { return nhin(r, kieu); });
+    var key = function (r) { return mk ? (r.month_orders || 0) * 1e9 + (r.spend || 0) : (r.revenue || 0) * 1e3 + (r.orders || 0); };
+    rows.sort(function (a1, b1) { return key(b1) - key(a1); }); kho.sort(function (a1, b1) { return (b1.packed || b1.orders || 0) - (a1.packed || a1.orders || 0); });
+    if (!d || !d.source || (!rows.length && !kho.length)) {
+      g.fillStyle = mute; g.font = "600 28px " + F; g.fillText(!d ? "Đang lấy số liệu…" : "Chưa có số liệu Pancake cho phòng này.", 40, 220);
+      g.font = "500 21px " + F; g.fillText("Ghi nhân viên và số liệu vào 00 - Dashboard/pancake-office.json.", 40, 266);
       return c;
     }
-    var colW = ph.id === "sale" && kho.length ? 800 : W - 88, maxV = 1; ds_.forEach(function (r) { maxV = Math.max(maxV, r.revenue || 0); });
-    var rowH = 52, y0 = 132;
-    g.font = "600 20px " + F; g.fillStyle = mute; g.fillText("HẠNG", 44, y0 - 6); g.fillText("NHÂN VIÊN", 120, y0 - 6); g.textAlign = "right";
-    g.fillText("ĐƠN", 44 + colW - 330, y0 - 6); g.fillText(ph.id === "marketing" ? "CHI PHÍ" : "DOANH THU", 44 + colW - 180, y0 - 6); g.fillText(ph.id === "marketing" ? "ROAS" : "", 44 + colW - 14, y0 - 6); g.textAlign = "left";
-    ds_.slice(0, 7).forEach(function (r, i) {
-      var y = y0 + 12 + i * rowH;
-      g.fillStyle = card; rr(g, 44, y, colW, rowH - 6, 12); g.fill();
-      if (r.revenue) { g.fillStyle = ph.acc; g.globalAlpha = 0.22; rr(g, 44, y, Math.max(24, colW * r.revenue / maxV), rowH - 6, 12); g.fill(); g.globalAlpha = 1; }
-      g.fillStyle = i < 3 ? ph.acc : mute; g.font = "800 26px " + F; g.fillText("#" + r.rank, 58, y + rowH / 2 - 3);
-      g.fillStyle = ink; g.font = "700 26px " + F; g.fillText(cat(r.name, 18), 120, y + rowH / 2 - 3);
-      g.textAlign = "right"; g.font = "600 24px " + F; g.fillStyle = ink; g.fillText(String(r.orders || 0), 44 + colW - 330, y + rowH / 2 - 3);
-      g.fillText(ph.id === "marketing" ? tien(r.spend) : tien(r.revenue), 44 + colW - 180, y + rowH / 2 - 3);
-      if (ph.id === "marketing") { g.fillStyle = r.roas >= 3 ? "#1fb86a" : r.roas > 0 ? "#f5a623" : mute; g.fillText(r.roas ? String(r.roas).replace(".", ",") + "x" : "-", 44 + colW - 14, y + rowH / 2 - 3); }
+    var hasPanel = (!mk && kho.length) || (mk && d.ads && Object.keys(d.ads).length), colW = hasPanel ? 700 : W - 80, maxV = 1;
+    rows.forEach(function (r) { maxV = Math.max(maxV, mk ? (r.month_orders || 0) : (r.revenue || 0)); });
+    var rowH = 52, y0 = 150, xr = 40 + colW;
+    g.font = "600 18px " + F; g.fillStyle = mute; g.fillText("HẠNG", 40, y0 - 8); g.fillText("NHÂN VIÊN", 104, y0 - 8); g.textAlign = "right";
+    if (mk) { g.fillText("ĐƠN THÁNG", xr - 250, y0 - 8); g.fillText(qua ? "ĐƠN QUA" : "ĐƠN NAY", xr - 140, y0 - 8); g.fillText("CHI PHÍ", xr - 60, y0 - 8); g.fillText("ROAS", xr - 8, y0 - 8); }
+    else { g.fillText("ĐƠN", xr - 190, y0 - 8); g.fillText("DOANH THU", xr - 10, y0 - 8); }
+    g.textAlign = "left";
+    rows.slice(0, 7).forEach(function (r, i) {
+      var y = y0 + 8 + i * rowH, v = mk ? (r.month_orders || 0) : (r.revenue || 0);
+      g.fillStyle = card; rr(g, 40, y, colW, rowH - 6, 12); g.fill();
+      if (v) { g.fillStyle = ph.acc; g.globalAlpha = 0.2; rr(g, 40, y, Math.max(24, colW * v / maxV), rowH - 6, 12); g.fill(); g.globalAlpha = 1; }
+      var cy = y + rowH / 2 - 3;
+      g.fillStyle = i < 3 ? ph.acc : mute; g.font = "800 24px " + F; g.fillText("#" + (i + 1), 52, cy);
+      g.fillStyle = ink; g.font = "700 24px " + F; g.fillText(cat(r.name, mk ? 12 : 16), 104, cy);
+      g.textAlign = "right"; g.fillStyle = ink;
+      if (mk) {
+        g.font = "800 26px " + F; g.fillText(r.month_orders != null ? String(r.month_orders) : "-", xr - 250, cy);
+        g.font = "600 22px " + F; g.fillText(String(r.orders || 0), xr - 140, cy); g.fillText(tien(r.spend), xr - 60, cy);
+        g.fillStyle = r.roas >= 3 ? "#1fb86a" : r.roas > 0 ? "#f5a623" : mute; g.fillText(r.roas ? String(r.roas).replace(".", ",") + "x" : "-", xr - 8, cy);
+      } else { g.font = "600 22px " + F; g.fillText(String(r.orders || 0), xr - 190, cy); g.fillText(tien(r.revenue), xr - 10, cy); }
       g.textAlign = "left";
     });
-    if (ph.id === "sale" && kho.length) {
-      var kx = 880, kw = W - 44 - kx; g.fillStyle = card; rr(g, kx, 112, kw, 420, 18); g.fill();
-      g.fillStyle = ph.acc; g.font = "700 24px " + F; g.fillText("KHO · ĐÓNG GÓI", kx + 22, 144);
-      kho.slice(0, 7).forEach(function (r, i) { var y = 186 + i * 48; g.fillStyle = ink; g.font = "600 24px " + F; g.fillText(cat(r.name, 14), kx + 22, y); g.textAlign = "right"; g.fillStyle = mute; g.fillText((r.packed || r.orders || 0) + " đơn", kx + kw - 22, y); g.textAlign = "left"; });
-    } else if (ph.id === "marketing" && d.ads && Object.keys(d.ads).length) {
-      var T2 = { spend: "Chi phí ads", roas: "ROAS", revenue: "Doanh thu", orders: "Đơn", cpa: "CPA", ctr: "CTR" }, kx2 = 880, kw2 = W - 44 - kx2, ky = 112; g.fillStyle = card; rr(g, kx2, ky, kw2, 420, 18); g.fill();
-      g.fillStyle = ph.acc; g.font = "700 24px " + F; g.fillText("TỔNG QUẢNG CÁO", kx2 + 22, ky + 32);
-      Object.keys(d.ads).slice(0, 5).forEach(function (k, i) { var y = ky + 90 + i * 64; g.fillStyle = mute; g.font = "500 22px " + F; g.fillText(T2[k] || k, kx2 + 22, y - 14); g.fillStyle = ink; g.font = "800 34px " + F; g.fillText(k === "roas" ? String(d.ads[k]).replace(".", ",") + "x" : tien(d.ads[k]), kx2 + 22, y + 14); });
+    if (mk) { g.fillStyle = mute; g.font = "500 17px " + F; g.fillText("ĐƠN THÁNG = đơn tính lương của các mã người đó phụ trách trong tháng", 40, H - 22); }
+    var kx = 770, kw = W - 40 - kx;
+    if (!mk && kho.length) {
+      g.fillStyle = card; rr(g, kx, 130, kw, 400, 18); g.fill();
+      g.fillStyle = ph.acc; g.font = "700 22px " + F; g.fillText("KHO · ĐÓNG GÓI", kx + 20, 160);
+      kho.slice(0, 7).forEach(function (r, i) { var y = 204 + i * 46; g.fillStyle = ink; g.font = "600 22px " + F; g.fillText(cat(r.name, 12), kx + 20, y); g.textAlign = "right"; g.fillStyle = mute; g.fillText((r.packed || r.orders || 0) + " đơn", kx + kw - 20, y); g.textAlign = "left"; });
+    } else if (mk && hasPanel) {
+      var A = qua ? (d.ads_yesterday || null) : d.ads, T2 = { spend: "Chi phí ads", roas: "ROAS", revenue: "Doanh thu", orders: "Đơn", cpa: "CPA", ctr: "CTR" }, ky = 130; g.fillStyle = card; rr(g, kx, ky, kw, 400, 18); g.fill();
+      g.fillStyle = ph.acc; g.font = "700 22px " + F; g.fillText("TỔNG QUẢNG CÁO", kx + 20, ky + 30);
+      if (!A) { g.fillStyle = mute; g.font = "500 20px " + F; g.fillText("Chưa có số hôm qua", kx + 20, ky + 90); }
+      else Object.keys(A).slice(0, 5).forEach(function (k, i) { var y = ky + 84 + i * 62; g.fillStyle = mute; g.font = "500 20px " + F; g.fillText(T2[k] || k, kx + 20, y - 14); g.fillStyle = ink; g.font = "800 32px " + F; g.fillText(k === "roas" ? String(A[k]).replace(".", ",") + "x" : tien(A[k]), kx + 20, y + 14); });
     }
     return c;
   }
@@ -696,8 +717,11 @@
       var ngoai = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuongM); ngoai.position.set(xo, 2.9, 0); scene.add(ngoai);
       var tt = new T.Mesh(new T.BoxGeometry(RW + 0.6, 0.05, 0.12), mat(parseInt(ph.acc.slice(1), 16), { emissive: parseInt(ph.acc.slice(1), 16), emissiveIntensity: 0.6 })); tt.position.set(ph.cx, 5.8, -HZ - 0.15); scene.add(tt);
       canhTuong.push(sau, ngoai, tt);
-      var b = new T.Mesh(new T.PlaneGeometry(10.5, 4.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangPhong(ph)), toneMapped: false })); b.material.map.colorSpace = T.SRGBColorSpace;
-      b.position.set(ph.cx, 3.5, -HZ + 0.08); scene.add(b); canhTuong.push(b); bangPhong[ph.id] = b; khungTV(10.5, 4.2, ph.cx, 3.5, -HZ + 0.0, 0); chanTuong(RW + 0.6, light, ph.cx, -HZ + 0.03, 0); chanTuong(HZ * 2, light, xo - dir * 0.15, 0, Math.PI / 2);
+      [["qua", -4.45], ["nay", 4.45]].forEach(function (kk) {
+        var b = new T.Mesh(new T.PlaneGeometry(8.2, 4.1), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangPhong(ph, kk[0])), toneMapped: false })); b.material.map.colorSpace = T.SRGBColorSpace;
+        b.position.set(ph.cx + kk[1], 3.5, -HZ + 0.08); scene.add(b); canhTuong.push(b); bangPhong[ph.id + "_" + kk[0]] = b; khungTV(8.2, 4.1, ph.cx + kk[1], 3.5, -HZ + 0.0, 0);
+      });
+      chanTuong(RW + 0.6, light, ph.cx, -HZ + 0.03, 0); chanTuong(HZ * 2, light, xo - dir * 0.15, 0, Math.PI / 2);
       caySan(ph.cx - RW / 2 + 1.2, -HZ + 1.3, 1); caySan(ph.cx + RW / 2 - 1.2, -HZ + 1.3, 1.2); caySan(ph.cx - dir * (RW / 2 - 1.2), HZ - 1.2, 0.9);
       var nh = spriteTu(veNhan(ph.ten, "Phòng ban", ph.acc, nenNhan()), 3.4); nh.position.set(ph.cx, 6.4, -HZ + 0.4); scene.add(nh); canhTuong.push(nh);
     });
@@ -706,7 +730,7 @@
     if (!scene || !pancakeDL) return;
     var sig = ["sale", "kho", "marketing"].map(function (k) { return (pancakeDL[k] || []).map(function (r) { return r.name; }).join("|"); }).join("#");
     var capNhatChu = function () {
-      nvPhong.forEach(function (a) { var r = a.row; if (!r) return; trangThai(a, (r.dept === "marketing" ? (r.roas ? "ROAS " + String(r.roas).replace(".", ",") + "x · " : "") + tien(r.spend) + " ads" : r.dept === "kho" ? (r.packed || r.orders || 0) + " đơn đóng gói" : (r.orders || 0) + " đơn · " + tien(r.revenue)) + (r.rank ? " · #" + r.rank : "")); });
+      nvPhong.forEach(function (a) { var r = a.row; if (!r) return; trangThai(a, (r.dept === "marketing" ? (r.month_orders != null ? r.month_orders + " đơn tháng" : tien(r.spend) + " ads") + (r.roas ? " · ROAS " + String(r.roas).replace(".", ",") + "x" : "") : r.dept === "kho" ? (r.packed || r.orders || 0) + " đơn đóng gói" : (r.orders || 0) + " đơn · " + tien(r.revenue)) + (r.rank ? " · #" + r.rank : "")); });
     };
     if (sig === pancakeSig) { capNhatChu(); return; }
     pancakeSig = sig;
@@ -737,7 +761,7 @@
           kho: mk("kho", ["Nhân viên Kho 1", "Nhân viên Kho 2"]), marketing: mk("marketing", ["Nhân viên MKT 1", "Nhân viên MKT 2", "Nhân viên MKT 3", "Nhân viên MKT 4"]), ads: {} };
       }
       pancakeDL = d;
-      PHONG.forEach(function (ph) { if (bangPhong[ph.id]) capNhatSprite2(bangPhong[ph.id], veBangPhong(ph)); });
+      PHONG.forEach(function (ph) { ["qua", "nay"].forEach(function (k) { if (bangPhong[ph.id + "_" + k]) capNhatSprite2(bangPhong[ph.id + "_" + k], veBangPhong(ph, k)); }); });
       xepNhanVien();
     }).catch(function () {});
   }
