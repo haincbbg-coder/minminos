@@ -237,10 +237,25 @@
       return Promise.all(ps).then(function (r) {
         var clips = {}; NV_CLIPS.forEach(function (n, k) { clips[n] = r[10 + k].animations[0]; });
         r.slice(0, 10).forEach(function (g) { g.scene.traverse(function (o) { if (o.isMesh && o.material) { var ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(function (m) { ['map', 'normalMap', 'roughnessMap', 'metalnessMap'].forEach(function (k) { if (m[k]) { m[k].anisotropy = 8; m[k].needsUpdate = true; } }); }); } }); });
-        NV = { chars: r.slice(0, 10).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils }; return true;
-      });
+        NV = { chars: r.slice(0, 10).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils, props: {}, sanGo: null }; return true;
+      }).then(function () {
+        // đồ dùng tạo bằng Higgsfield (ghế, bàn, cây, đèn, sàn gỗ): thiếu cái nào thì dùng hình dựng bằng code
+        return Promise.all(["office_chair", "director_chair", "plant", "lamp", "desk"].map(function (n) {
+          return tai(NV_DIR + "props/" + n + ".glb").then(function (g) { NV.props[n] = g.scene; }, function () {});
+        })).then(function () {
+          return new Promise(function (ok) { new T.TextureLoader().load(NV_DIR + "props/floor_wood.jpg?v=" + NV_V, function (tx) { tx.colorSpace = T.SRGBColorSpace; tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.anisotropy = 8; NV.sanGo = tx; ok(); }, null, function () { ok(); }); });
+        });
+      }).then(function () { return true; });
     }).catch(function (e) { console.warn("[office] không nạp được người 3D, dùng robot", e); NV = null; return false; });
   }
+  // đồ Higgsfield đã chuẩn hoá cao 1 (trục Y từ -0.5 đến 0.5): đặt chân chạm sàn, cao `cao`, quay `yaw`
+  var PROP_YAW = { office_chair: 0, director_chair: 0, plant: 0, lamp: 0, desk: Math.PI / 2 };
+  function vatProp(ten, cao, sx) {
+    var src = NV && NV.props && NV.props[ten]; if (!src) return null;
+    var w = new T.Group(), c = NV.SU.clone(src); c.scale.setScalar(cao); c.position.y = 0.5 * cao; c.rotation.y = PROP_YAW[ten] || 0; w.add(c);
+    c.traverse(function (o) { if (o.isMesh) { o.frustumCulled = false; } }); return w;
+  }
+  function sanGoMoi(rx, rz) { if (!NV || !NV.sanGo) return null; var t = NV.sanGo.clone(); t.needsUpdate = true; t.repeat.set(rx, rz); return t; }
   // lệch gốc của từng hoạt ảnh (cm, theo hông): clip ngồi giả định ghế nằm sau lưng, kéo về đúng chỗ ghế
   var NV_OFF = { sit: [-21.3, 67.4], sitans: [13.1, 35.2] };
   var _qi = null, _p0 = null, _p1 = null, _p2 = null, _q0 = null, _q1 = null, _v0 = null, _v1 = null;
@@ -494,8 +509,10 @@
   }
 
   // ---------- đồ vật ----------
-  function ghe(x, z, rot, laStool) {
+  function ghe(x, z, rot, laStool, laGD) {
     var g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = rot;
+    var vc = vatProp(laGD ? "director_chair" : "office_chair", laGD ? 1.45 : 1.12);
+    if (vc) { g.add(vc); scene.add(g); return; }
     var m = mat(sang() ? 0x93a4bd : 0x3a4c6c);
     var seat = laStool ? new T.Mesh(new T.CylinderGeometry(0.42, 0.42, 0.1, 18), m) : new T.Mesh(new T.BoxGeometry(0.95, 0.1, 0.95), m); seat.position.y = 0.4; g.add(seat);
     if (!laStool) { var lung = new T.Mesh(new T.BoxGeometry(0.95, 0.7, 0.1), m); lung.position.set(0, 0.85, -0.5); g.add(lung); }
@@ -530,8 +547,12 @@
   }
   function dungBan(slot, a, idx) {
     var g = new T.Group(); g.position.set(slot.desk.x, NV ? -0.2 : 0, slot.desk.z); g.rotation.y = slot.desk.rot;
-    var mt = new T.Mesh(new T.BoxGeometry(2.6, 0.12, 1.3), mat(sang() ? 0xdfe6f2 : 0x2a3a58)); mt.position.set(0, 1.0, 0); g.add(mt);
-    [[-1.2, -0.55], [1.2, -0.55], [-1.2, 0.55], [1.2, 0.55]].forEach(function (p) { var ch = new T.Mesh(new T.BoxGeometry(0.1, 1.0, 0.1), mat(0x8fa0b8)); ch.position.set(p[0], 0.5, p[1]); g.add(ch); });
+    var bk = vatProp("desk", 1);
+    if (bk) { var cb = bk.children[0]; cb.scale.set(2.6, 1.83, 2.6); cb.position.y = 0.29 * 1.83; g.add(bk); }
+    else {
+      var mt = new T.Mesh(new T.BoxGeometry(2.6, 0.12, 1.3), mat(sang() ? 0xdfe6f2 : 0x2a3a58)); mt.position.set(0, 1.0, 0); g.add(mt);
+      [[-1.2, -0.55], [1.2, -0.55], [-1.2, 0.55], [1.2, 0.55]].forEach(function (p) { var ch = new T.Mesh(new T.BoxGeometry(0.1, 1.0, 0.1), mat(0x8fa0b8)); ch.position.set(p[0], 0.5, p[1]); g.add(ch); });
+    }
     var vien = new T.Mesh(new T.BoxGeometry(1.2, 0.76, 0.06), mat(0x0f1626)); vien.position.set(0, 1.66, -0.38); g.add(vien);
     var man = new T.Mesh(new T.PlaneGeometry(1.1, 0.66), matManOff); man.position.set(0, 1.66, -0.345); g.add(man); a.screen = man; a.screenIdx = idx % 4;
     var de = new T.Mesh(new T.BoxGeometry(0.1, 0.35, 0.1), mat(0x8fa0b8)); de.position.set(0, 1.22, -0.38); g.add(de);
@@ -577,17 +598,142 @@
     var gs = [{ x: TL / 2 + 1.1, z: 0, kind: "seat", rot: -Math.PI / 2 }];
     for (var i = 7; i >= 0; i--) { var x = -4.55 + 1.3 * i; gs.push({ x: x, z: -2.05, kind: "seat", rot: 0 }); gs.push({ x: x, z: 2.05, kind: "seat", rot: Math.PI }); }
     gs.push({ x: -TL / 2 - 1.1, z: 0, kind: "seat", rot: Math.PI / 2 });
-    gs.forEach(function (s) { ghe(s.x, s.z, s.rot, true); chanTron(s.x, s.z, 0.52); s.by = null; });
+    gs.forEach(function (s, gi_) { ghe(s.x, s.z, s.rot, true, gi_ === 0); chanTron(s.x, s.z, 0.52); s.by = null; });
     return { ghe: gs, holo: holo };
   }
   function den(x, z, hex) {
     var g = new T.Group(); g.position.set(x, 0, z);
+    var vl = vatProp("lamp", 2.9);
+    if (vl) g.add(vl); else {
     var tru = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 2.6, 8), mat(0x6f7f98)); tru.position.y = 1.3; g.add(tru);
     var de = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, 0.06, 14), mat(0x6f7f98)); de.position.y = 0.03; g.add(de);
-    var chup = new T.Mesh(new T.CylinderGeometry(0.28, 0.4, 0.5, 14), new T.MeshBasicMaterial({ color: hex })); chup.position.y = 2.7; g.add(chup);
+    var chup = new T.Mesh(new T.CylinderGeometry(0.28, 0.4, 0.5, 14), new T.MeshBasicMaterial({ color: hex })); chup.position.y = 2.7; g.add(chup); }
     var pl = new T.PointLight(hex, 0.9, 20, 1.6); pl.position.y = 2.6; g.add(pl);
     scene.add(g); chanTron(x, z, 0.4);
   }
+  // ---------- biệt thự: phòng Sale (trái) và phòng Marketing (phải), nhân viên theo Pancake POS ----------
+  var RW = 19, PHONG = [
+    { id: "sale", ten: "Phòng Sale", cx: -(14.5 + RW / 2), mau: 0xfff0dc, mauToi: 0x3a2c1c, acc: "#f5a623", vaiTro: "Nhân viên bán hàng" },
+    { id: "marketing", ten: "Phòng Marketing", cx: 14.5 + RW / 2, mau: 0xf0e6ff, mauToi: 0x2c1f46, acc: "#9b6bff", vaiTro: "Nhân viên marketing" }
+  ];
+  var nvPhong = [], vatPhong = [], bangPhong = {}, pancakeDL = null, pancakeSig = "";
+  function tien(v) { v = Number(v) || 0; var a = Math.abs(v); function f(x, n) { return x.toFixed(n).replace(".", ",").replace(/,0+$/, "").replace(/(,\d*?)0+$/, "$1"); } if (a >= 1e9) return f(v / 1e9, 2) + " tỷ"; if (a >= 1e6) return f(v / 1e6, 1) + " tr"; if (a >= 1e3) return f(v / 1e3, 0) + "k"; return String(Math.round(v)); }
+  function veSanGo(light) {
+    var c = document.createElement("canvas"), W = 512; c.width = W; c.height = W; var g = c.getContext("2d");
+    var base = light ? [196, 150, 98] : [92, 66, 44], n = 8, h = W / n;
+    for (var i = 0; i < n; i++) {
+      var k = (Math.sin(i * 12.9898) * 43758.5453) % 1, d = Math.round((k - Math.floor(k) - 0.5) * 36);
+      g.fillStyle = "rgb(" + (base[0] + d) + "," + (base[1] + d) + "," + (base[2] + d) + ")"; g.fillRect(0, i * h, W, h - 2);
+      g.fillStyle = "rgba(0,0,0,0.18)"; g.fillRect(0, i * h + h - 2, W, 2);
+      g.fillStyle = "rgba(0,0,0,0.1)"; g.fillRect(((i * 173) % W), i * h, 2, h - 2);
+      for (var j = 0; j < 14; j++) { var kk = (Math.sin((i * 31 + j) * 78.233) * 12345.6789) % 1; kk = kk - Math.floor(kk); g.fillStyle = "rgba(60,30,10," + (0.05 + kk * 0.07) + ")"; g.fillRect(kk * W, i * h + 6 + (j % 4) * 8, 60 + kk * 90, 1.5); }
+    }
+    var tx = new T.CanvasTexture(c); tx.colorSpace = T.SRGBColorSpace; tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.anisotropy = 4; return tx;
+  }
+  function caySan(x, z, cao) {
+    var g = new T.Group(); g.position.set(x, 0, z);
+    var vp = vatProp("plant", 1.35 + cao * 0.35); if (vp) { vp.rotation.y = x * 1.7; g.add(vp); scene.add(g); return g; }
+    var chau = new T.Mesh(new T.CylinderGeometry(0.34, 0.26, 0.55, 16), mat(0xe9e4da, { roughness: 0.8 })); chau.position.y = 0.275; g.add(chau);
+    var dat = new T.Mesh(new T.CylinderGeometry(0.31, 0.31, 0.04, 16), mat(0x3a2a1c)); dat.position.y = 0.55; g.add(dat);
+    var xanh = [0x2f8f4e, 0x3aa65d, 0x277a43];
+    for (var i = 0; i < 9; i++) {
+      var ang = i * 2.4, rr_ = 0.12 + (i % 3) * 0.08, h = 0.55 + (i % 4) * 0.12 * cao;
+      var la = new T.Mesh(new T.SphereGeometry(0.2 + (i % 3) * 0.05, 10, 8), mat(xanh[i % 3], { roughness: 0.7 }));
+      la.scale.set(1, 1.5, 0.7); la.position.set(Math.cos(ang) * rr_, 0.55 + h, Math.sin(ang) * rr_); la.rotation.y = ang; la.rotation.z = Math.cos(ang) * 0.35; g.add(la);
+    }
+    scene.add(g); return g;
+  }
+  function veBangPhong(ph) {
+    var c = document.createElement("canvas"), W = 1400, H = 560; c.width = W; c.height = H; var g = c.getContext("2d"), light = sang(), F = "system-ui,Segoe UI,Roboto,sans-serif";
+    var ink = light ? "#12233f" : "#e8f0ff", mute = light ? "#5a6b86" : "#9fb4d8", card = light ? "#ffffff" : "#13264a";
+    g.fillStyle = light ? "#f3f7ff" : "#0c1830"; rr(g, 4, 4, W - 8, H - 8, 28); g.fill(); g.strokeStyle = ph.acc; g.lineWidth = 6; rr(g, 4, 4, W - 8, H - 8, 28); g.stroke();
+    g.textBaseline = "middle"; g.textAlign = "left"; g.fillStyle = ink; g.font = "800 44px " + F; g.fillText(ph.ten.toUpperCase(), 44, 52);
+    g.fillStyle = ph.acc; g.font = "600 22px " + F; g.fillText(ph.id === "marketing" ? "XẾP HẠNG THEO DOANH THU QUẢNG CÁO · POS PANCAKE VÀ FACEBOOK ADS" : "XẾP HẠNG DOANH THU · POS PANCAKE", 44, 92);
+    var d = pancakeDL; g.textAlign = "right"; g.fillStyle = mute; g.font = "500 22px " + F;
+    g.fillText(cat(d ? (d.source ? (d.updated ? "Cập nhật: " + d.updated : "Số liệu Pancake") : "") : "Đang tải số liệu…", 46), W - 44, 52); g.textAlign = "left";
+    var ds_ = d ? (ph.id === "sale" ? d.sale : d.marketing) : [], kho = d && ph.id === "sale" ? d.kho : [];
+    if (!d || !d.source || (!ds_.length && !kho.length)) {
+      g.fillStyle = mute; g.font = "600 30px " + F; g.fillText(!d ? "Đang lấy số liệu…" : "Chưa có số liệu Pancake cho phòng này.", 44, 220);
+      g.font = "500 23px " + F; g.fillText("Nối Pancake POS rồi ghi nhân viên và số liệu vào 00 - Dashboard/pancake-office.json.", 44, 270);
+      return c;
+    }
+    var colW = ph.id === "sale" && kho.length ? 800 : W - 88, maxV = 1; ds_.forEach(function (r) { maxV = Math.max(maxV, r.revenue || 0); });
+    var rowH = 52, y0 = 132;
+    g.font = "600 20px " + F; g.fillStyle = mute; g.fillText("HẠNG", 44, y0 - 6); g.fillText("NHÂN VIÊN", 120, y0 - 6); g.textAlign = "right";
+    g.fillText("ĐƠN", 44 + colW - 330, y0 - 6); g.fillText(ph.id === "marketing" ? "CHI PHÍ" : "DOANH THU", 44 + colW - 180, y0 - 6); g.fillText(ph.id === "marketing" ? "ROAS" : "", 44 + colW - 14, y0 - 6); g.textAlign = "left";
+    ds_.slice(0, 7).forEach(function (r, i) {
+      var y = y0 + 12 + i * rowH;
+      g.fillStyle = card; rr(g, 44, y, colW, rowH - 6, 12); g.fill();
+      if (r.revenue) { g.fillStyle = ph.acc; g.globalAlpha = 0.22; rr(g, 44, y, Math.max(24, colW * r.revenue / maxV), rowH - 6, 12); g.fill(); g.globalAlpha = 1; }
+      g.fillStyle = i < 3 ? ph.acc : mute; g.font = "800 26px " + F; g.fillText("#" + r.rank, 58, y + rowH / 2 - 3);
+      g.fillStyle = ink; g.font = "700 26px " + F; g.fillText(cat(r.name, 18), 120, y + rowH / 2 - 3);
+      g.textAlign = "right"; g.font = "600 24px " + F; g.fillStyle = ink; g.fillText(String(r.orders || 0), 44 + colW - 330, y + rowH / 2 - 3);
+      g.fillText(ph.id === "marketing" ? tien(r.spend) : tien(r.revenue), 44 + colW - 180, y + rowH / 2 - 3);
+      if (ph.id === "marketing") { g.fillStyle = r.roas >= 3 ? "#1fb86a" : r.roas > 0 ? "#f5a623" : mute; g.fillText(r.roas ? String(r.roas).replace(".", ",") + "x" : "-", 44 + colW - 14, y + rowH / 2 - 3); }
+      g.textAlign = "left";
+    });
+    if (ph.id === "sale" && kho.length) {
+      var kx = 880, kw = W - 44 - kx; g.fillStyle = card; rr(g, kx, 112, kw, 420, 18); g.fill();
+      g.fillStyle = ph.acc; g.font = "700 24px " + F; g.fillText("KHO · ĐÓNG GÓI", kx + 22, 144);
+      kho.slice(0, 7).forEach(function (r, i) { var y = 186 + i * 48; g.fillStyle = ink; g.font = "600 24px " + F; g.fillText(cat(r.name, 14), kx + 22, y); g.textAlign = "right"; g.fillStyle = mute; g.fillText((r.packed || r.orders || 0) + " đơn", kx + kw - 22, y); g.textAlign = "left"; });
+    } else if (ph.id === "marketing" && d.ads && Object.keys(d.ads).length) {
+      var T2 = { spend: "Chi phí ads", roas: "ROAS", revenue: "Doanh thu", orders: "Đơn", cpa: "CPA", ctr: "CTR" }, kx2 = 880, kw2 = W - 44 - kx2, ky = 112; g.fillStyle = card; rr(g, kx2, ky, kw2, 420, 18); g.fill();
+      g.fillStyle = ph.acc; g.font = "700 24px " + F; g.fillText("TỔNG QUẢNG CÁO", kx2 + 22, ky + 32);
+      Object.keys(d.ads).slice(0, 5).forEach(function (k, i) { var y = ky + 90 + i * 64; g.fillStyle = mute; g.font = "500 22px " + F; g.fillText(T2[k] || k, kx2 + 22, y - 14); g.fillStyle = ink; g.font = "800 34px " + F; g.fillText(k === "roas" ? String(d.ads[k]).replace(".", ",") + "x" : tien(d.ads[k]), kx2 + 22, y + 14); });
+    }
+    return c;
+  }
+  function dungPhongBan() {
+    var light = sang(); nvPhong = []; vatPhong = []; bangPhong = {};
+    var dat = new T.Mesh(new T.PlaneGeometry(240, 140), mat(light ? 0xd6e6d8 : 0x0f1b2c, { roughness: 1 })); dat.rotation.x = -Math.PI / 2; dat.position.y = -0.32; scene.add(dat); canhSan.push(dat);
+    var go = sanGoMoi(RW / 4, HZ * 2 / 4) || veSanGo(light); if (!tgo_()) go.repeat.set(RW / 3, HZ * 2 / 3);
+    PHONG.forEach(function (ph) {
+      var san = new T.Mesh(new T.BoxGeometry(RW, 0.3, HZ * 2), new T.MeshStandardMaterial({ map: go, color: tgo_() ? (light ? 0xe6dcd0 : 0x8a8a8a) : 0xffffff, roughness: 0.55, metalness: 0.02 })); san.position.set(ph.cx, -0.15, 0); scene.add(san); canhSan.push(san);
+      var tuongM = mat(light ? ph.mau : ph.mauToi), dir = ph.cx < 0 ? -1 : 1, xo = ph.cx + dir * (RW / 2 + 0.15);
+      var sau = new T.Mesh(new T.BoxGeometry(RW + 0.6, 5.8, 0.3), tuongM); sau.position.set(ph.cx, 2.9, -HZ - 0.15); scene.add(sau);
+      var ngoai = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuongM); ngoai.position.set(xo, 2.9, 0); scene.add(ngoai);
+      var tt = new T.Mesh(new T.BoxGeometry(RW + 0.6, 0.05, 0.12), mat(parseInt(ph.acc.slice(1), 16), { emissive: parseInt(ph.acc.slice(1), 16), emissiveIntensity: 0.6 })); tt.position.set(ph.cx, 5.8, -HZ - 0.15); scene.add(tt);
+      canhTuong.push(sau, ngoai, tt);
+      var b = new T.Mesh(new T.PlaneGeometry(10.5, 4.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangPhong(ph)), toneMapped: false })); b.material.map.colorSpace = T.SRGBColorSpace;
+      b.position.set(ph.cx, 3.5, -HZ + 0.02); scene.add(b); canhTuong.push(b); bangPhong[ph.id] = b;
+      caySan(ph.cx - RW / 2 + 1.2, -HZ + 1.3, 1); caySan(ph.cx + RW / 2 - 1.2, -HZ + 1.3, 1.2); caySan(ph.cx - dir * (RW / 2 - 1.2), HZ - 1.2, 0.9);
+      var nh = spriteTu(veNhan(ph.ten, "Phòng ban", ph.acc, nenNhan()), 3.4); nh.position.set(ph.cx, 6.4, -HZ + 0.4); scene.add(nh); canhTuong.push(nh);
+    });
+  }
+  function xepNhanVien() {
+    if (!scene || !pancakeDL) return;
+    var sig = ["sale", "kho", "marketing"].map(function (k) { return (pancakeDL[k] || []).map(function (r) { return r.name; }).join("|"); }).join("#");
+    var capNhatChu = function () {
+      nvPhong.forEach(function (a) { var r = a.row; if (!r) return; trangThai(a, (r.dept === "marketing" ? (r.roas ? "ROAS " + String(r.roas).replace(".", ",") + "x · " : "") + tien(r.spend) + " ads" : r.dept === "kho" ? (r.packed || r.orders || 0) + " đơn đóng gói" : (r.orders || 0) + " đơn · " + tien(r.revenue)) + (r.rank ? " · #" + r.rank : "")); });
+    };
+    if (sig === pancakeSig) { capNhatChu(); return; }
+    pancakeSig = sig;
+    vatPhong.forEach(function (o) { scene.remove(o); }); vatPhong = []; nvPhong = [];
+    var truoc = scene.children.length;
+    PHONG.forEach(function (ph) {
+      var dsr = ph.id === "sale" ? (pancakeDL.sale || []).concat(pancakeDL.kho || []) : (pancakeDL.marketing || []);
+      dsr = dsr.slice(0, 20);
+      var cot = 5, sp = 3.4, hang = Math.ceil(dsr.length / cot);
+      dsr.forEach(function (r, i) {
+        var cI = i % cot, hI = Math.floor(i / cot), n = Math.min(cot, dsr.length - hI * cot);
+        var x = ph.cx + (cI - (n - 1) / 2) * sp, zd = -6.4 + hI * 4.7, vt = r.dept === "kho" ? "Nhân viên kho" : ph.vaiTro;
+        var slot = { desk: { x: x, z: zd, rot: 0 }, stand: { x: x + 0, z: zd + 0.95 }, rot: Math.PI };
+        slot.stand = { x: slot.stand.x, z: slot.stand.z + 0.1 };
+        var a = taoAgent(r.name, vt, false, { x: slot.stand.x, z: slot.stand.z, kind: "desk" }, Math.PI);
+        a.row = r; dungBan(slot, a, i + 1); a.group = ph.id; nvPhong.push(a);
+      });
+    });
+    for (var k = truoc; k < scene.children.length; k++) vatPhong.push(scene.children[k]);
+    apKhongGian(); capNhatChu();
+  }
+  function napPancake() {
+    fetch("/office/pancake?brain=" + encodeURIComponent(brain())).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d || !scene) return; pancakeDL = d;
+      PHONG.forEach(function (ph) { if (bangPhong[ph.id]) capNhatSprite2(bangPhong[ph.id], veBangPhong(ph)); });
+      xepNhanVien();
+    }).catch(function () {});
+  }
+  function tgo_() { return !!(NV && NV.sanGo); }
   function dungCanh() {
     var light = sang(), nen = light ? 0xe9f0fa : 0x0d1524;
     scene = new T.Scene(); scene.background = new T.Color(nen); scene.fog = new T.Fog(nen, 55, 110);
@@ -595,7 +741,8 @@
     var dl = new T.DirectionalLight(0xffffff, light ? 1.2 : 0.7); dl.position.set(-8, 18, 10); scene.add(dl);
     canhTuong = []; canhSan = [];
     var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san); canhSan.push(san);
-    var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; scene.add(luoi); canhSan.push(luoi);
+    var tgo = sanGoMoi(HX * 2 / 4, HZ * 2 / 4); if (tgo) { san.material.map = tgo; san.material.color.set(light ? 0xe6dcd0 : 0x8a8a8a); san.material.roughness = 0.5; san.material.needsUpdate = true; }
+    var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; if (!tgo_()) { scene.add(luoi); canhSan.push(luoi); }
     var tuong = mat(light ? 0xdde6f4 : 0x1b2a46);
     var t1 = new T.Mesh(new T.BoxGeometry(HX * 2, 5.8, 0.3), tuong); t1.position.set(0, 2.9, -HZ - 0.15); scene.add(t1);
     var t2 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t2.position.set(-HX - 0.15, 2.9, 0); scene.add(t2);
@@ -610,7 +757,7 @@
     kh(2, -HX + 0.02, 3.5, -6.2, Math.PI / 2, 5.0); kh(3, -HX + 0.02, 3.5, 0, Math.PI / 2, 5.0); kh(4, -HX + 0.02, 3.5, 6.2, Math.PI / 2, 5.0);
         den(-12.9, -9.2, 0xffd9a0); den(12.9, -9.2, 0xffd9a0); den(-12.9, 9.2, 0xffd9a0); den(12.9, 9.2, 0xffd9a0);
     tram = STATION_DEFS.map(dungTram);
-    ban = dungBanHop();
+    ban = dungBanHop(); dungPhongBan();
     apKhongGian();
     camera = new T.PerspectiveCamera(38, 1, 0.1, 250); raycaster = new T.Raycaster();
   }
@@ -624,7 +771,7 @@
   }
   function giuCam() {
     if (cam.dist) cam.dist = Math.max(2, Math.min(75, cam.dist)); cam.pol = Math.max(0.05, Math.min(1.62, cam.pol));
-    cam.tx = Math.max(-HX - 3, Math.min(HX + 3, cam.tx)); cam.tz = Math.max(-HZ - 3, Math.min(HZ + 3, cam.tz)); cam.ty = Math.max(0, Math.min(4, cam.ty));
+    cam.tx = Math.max(-HX - 30, Math.min(HX + 30, cam.tx)); cam.tz = Math.max(-HZ - 3, Math.min(HZ + 3, cam.tz)); cam.ty = Math.max(0, Math.min(4, cam.ty));
   }
   // dịch điểm nhìn trên mặt sàn theo hướng camera (dx sang phải, dz tiến lên)
   function panCam(dx, dz) {
@@ -969,7 +1116,7 @@
       camera.fov = camera.aspect < 0.8 ? 52 : 38; camera.updateProjectionMatrix();
     }
     if (n - lastManHinh > 200) { lastManHinh = n; veManHinh(t); }
-    ds.forEach(function (a) { buoc(a, dt, t); }); if (lead) buoc(lead, dt, t);
+    ds.forEach(function (a) { buoc(a, dt, t); }); if (lead) buoc(lead, dt, t); nvPhong.forEach(function (a) { buoc(a, dt, t); });
     tram.forEach(function (s) { s.den.emissiveIntensity = (s.sang && n < s.sang) ? 1.4 : 0.35; });
     if (ban) ban.holo.material.opacity = n < (ban.sangDen || 0) ? 0.22 + Math.sin(t * 4) * 0.06 : 0;
     datCamera(); renderer.render(scene, camera);
@@ -1041,14 +1188,14 @@
     if (kd) { window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku); kd = ku = null; } phim = {};
     cam.az = -0.62; cam.pol = 0.95; cam.dist = 0; cam.tx = 0.4; cam.ty = 0.6; cam.tz = 1.0;
     if (renderer) { renderer.dispose(); if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
-    renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; phien = {}; bang = null; manHinh = []; nguoiNoi = null;
+    renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; nvPhong = []; vatPhong = []; bangPhong = {}; phien = {}; bang = null; manHinh = []; nguoiNoi = null;
   }
   function dung(list) {
     xoaCanh();
     cv = document.createElement("canvas"); cv.className = "mm-office-cv"; host.insertBefore(cv, host.firstChild);
     renderer = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    dungCanh(); dungNguoi(list); nhapTay(); lanCuoi = now(); tNow = 0; khung(); napKpi();
+    dungCanh(); dungNguoi(list); nhapTay(); lanCuoi = now(); tNow = 0; khung(); napKpi(); pancakeDL = null; pancakeSig = ""; napPancake();
   }
   function mon() {
     var b = brain();
@@ -1065,7 +1212,7 @@
       if (!r[0]) { toast("Máy này không dựng được cảnh 3D"); dong(); return; }
       try { dung(r[1]); } catch (e) { console.warn("[office]", e); toast("Không dựng được văn phòng 3D"); dong(); return; }
       if (camLuu) { cam.az = camLuu.az; cam.pol = camLuu.pol; cam.dist = camLuu.dist; cam.tx = camLuu.tx; cam.ty = camLuu.ty; cam.tz = camLuu.tz; camLuu = null; }
-      seq = 0; hoi(); pollId = setInterval(hoi, 1500); kpiId = setInterval(napKpi, 60000);
+      seq = 0; hoi(); pollId = setInterval(hoi, 1500); kpiId = setInterval(function () { napKpi(); napPancake(); }, 60000);
       if (!r[1].length) toast("Brain này chưa có agent nào. Tạo agent ở trang Cộng sự để họ xuất hiện ở đây.");
     });
   }
@@ -1083,7 +1230,7 @@
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
     host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
-      '<button type="button" id="mmOfficeSim" aria-haspopup="true">Mô phỏng</button><button type="button" id="mmOfficeKG">Ẩn tường</button><button type="button" id="mmOfficeTheme">Chế độ tối</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
+      '<button type="button" id="mmOfficeSim" aria-haspopup="true">Mô phỏng</button><button type="button" id="mmOfficeKG">Ẩn tường</button><button type="button" data-room="-24">Phòng Sale</button><button type="button" data-room="0">Văn phòng</button><button type="button" data-room="24">Phòng Marketing</button><button type="button" id="mmOfficeTheme">Chế độ tối</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
       '<div class="mm-office-simmenu" id="mmOfficeSimMenu" hidden></div><div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
     var nut = document.createElement("button");
@@ -1099,6 +1246,9 @@
       b.addEventListener("click", function () { menuSim.hidden = true; chayMau(k.id); }); menuSim.appendChild(b);
     });
     $("mmOfficeSim").addEventListener("click", function () { menuSim.hidden = !menuSim.hidden; });
+    Array.prototype.forEach.call(host.querySelectorAll("[data-room]"), function (b) {
+      b.addEventListener("click", function () { var x = parseFloat(b.getAttribute("data-room")); cam.tx = x; cam.tz = x ? 1.5 : 1.0; cam.ty = 0.6; cam.az = x ? (x < 0 ? -0.35 : 0.35) : -0.62; cam.pol = 0.95; cam.dist = (x ? 27 : 37) * Math.max(1, 1.6 / (camera ? camera.aspect : 1.6)); giuCam(); });
+    });
     var nutKG = $("mmOfficeKG"), TEN_KG = ["Ẩn tường", "Ẩn cả nhà", "Hiện nhà"];
     function veNutKG() { nutKG.textContent = TEN_KG[khongGian]; nutKG.title = ["Đang hiện đủ nhà. Bấm để ẩn tường và bảng", "Đang ẩn tường. Bấm để ẩn cả sàn, chỉ còn người và đồ", "Đang chỉ hiện người và đồ. Bấm để hiện lại nhà"][khongGian]; }
     veNutKG();

@@ -141,6 +141,52 @@ def targets_of(raw) -> list:
     return out
 
 
+PANCAKE_FILES = ("00 - Dashboard/pancake-office.json", "Dashboard/pancake-office.json")
+_DEPT = (("marketing", ("marketing", "mkt", "ads", "quang cao", "quảng cáo")),
+         ("kho", ("kho", "warehouse", "stock")),
+         ("sale", ("sale", "sales", "ban hang", "bán hàng", "cskh", "chot don", "chốt đơn")))
+
+
+def _dept(v) -> str:
+    t = str(v or "").strip().lower()
+    for key, hints in _DEPT:
+        if any(h in t for h in hints):
+            return key
+    return "sale"
+
+
+def _num(v):
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0
+
+
+def pancake_office(raw) -> dict:
+    """Nhân viên theo phòng ban + xếp hạng, từ file do kết nối Pancake POS (và Facebook Ads) ghi vào brain.
+
+    Mỗi người: {name, dept, orders, revenue, target?, spend?, roas?}. Xếp hạng theo doanh thu (marketing: theo
+    doanh thu quy cho chiến dịch, hoặc ROAS nếu không có). Số liệu để nguyên dạng số; client tự định dạng."""
+    rows = (raw.get("staff") or raw.get("nhan_vien") or []) if isinstance(raw, dict) else []
+    out = {"sale": [], "kho": [], "marketing": []}
+    for it in rows[:80] if isinstance(rows, list) else []:
+        if not isinstance(it, dict):
+            continue
+        name = str(it.get("name") or it.get("ten") or "").strip()[:40]
+        if not name:
+            continue
+        r = {"name": name, "dept": _dept(it.get("dept") or it.get("phong") or it.get("role")), "role": str(it.get("role") or "")[:30],
+             "orders": _num(it.get("orders") or it.get("don")), "revenue": _num(it.get("revenue") or it.get("doanh_thu")),
+             "target": _num(it.get("target") or it.get("chi_tieu")), "spend": _num(it.get("spend") or it.get("chi_phi")),
+             "roas": _num(it.get("roas")), "packed": _num(it.get("packed") or it.get("dong_goi"))}
+        out[r["dept"]].append(r)
+    for k, lst in out.items():
+        lst.sort(key=lambda r: (-(r["roas"] if k == "marketing" and not r["revenue"] else r["revenue"]), -r["orders"], r["name"]))
+        for i, r in enumerate(lst[:24]):
+            r["rank"] = i + 1
+        out[k] = lst[:24]
+    ads = raw.get("ads") if isinstance(raw, dict) and isinstance(raw.get("ads"), dict) else {}
+    return {"sale": out["sale"], "kho": out["kho"], "marketing": out["marketing"],
+            "ads": {k: _num(v) for k, v in list(ads.items())[:8]}}
+
+
 def register(app: FastAPI, deps: HudDeps) -> None:
     index = deps.dashboard_dir / "hud" / "index.html"
 
@@ -148,6 +194,23 @@ def register(app: FastAPI, deps: HudDeps) -> None:
     def hud_page():
         return FileResponse(str(index), media_type="text/html",
                             headers={"Cache-Control": "no-cache"})
+
+    @app.get("/office/pancake")
+    def office_pancake(brain: str = Query("brain")):
+        root = Path(deps.brain_root(brain))
+        for rel in PANCAKE_FILES:
+            f = root / rel
+            if not f.is_file():
+                continue
+            try:
+                raw = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                return JSONResponse({"error": f"File {rel} không đọc được (JSON hỏng).", "source": rel})
+            d = pancake_office(raw)
+            upd = (raw.get("updated_at") or raw.get("updated") or raw.get("cap_nhat")) if isinstance(raw, dict) else None
+            d.update({"source": rel, "updated": upd or time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(f.stat().st_mtime))})
+            return d
+        return {"sale": [], "kho": [], "marketing": [], "ads": {}, "source": None}
 
     @app.get("/hud/kpi")
     def hud_kpi(brain: str = Query("brain")):
