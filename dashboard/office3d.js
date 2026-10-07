@@ -226,18 +226,19 @@
 
   // ---------- người 3D có xương (Higgsfield + Meshy), dựng trong office3d: 10 nhân vật, 6 hoạt ảnh ----------
   var NV = null, NV_CLIPS = ["walk", "idle", "sit", "talk", "listen", "sitans"], nvDem = 0, HS = 1.3;
-  var NV_DIR = "/static/office/", NV_V = "3";
-  function napNguoi() {
+  var NV_DIR = "/static/office/", NV_V = "4", NV_TOTAL = 36;
+  function napNguoi(can) {
+    var nc = Math.max(10, Math.min(NV_TOTAL, can || 10));
     return import(NV_DIR + "gltf-addons.js?v=" + NV_V).then(function (m) {
       var L = new m.GLTFLoader();
       function tai(u) { return new Promise(function (ok, ko) { L.load(u + "?v=" + NV_V, ok, null, ko); }); }
       var ps = [], i;
-      for (i = 0; i < 10; i++) ps.push(tai(NV_DIR + "c" + i + ".glb"));
+      for (i = 0; i < nc; i++) ps.push(tai(NV_DIR + "c" + i + ".glb"));
       NV_CLIPS.forEach(function (n) { ps.push(tai(NV_DIR + "a_" + n + ".glb")); });
       return Promise.all(ps).then(function (r) {
-        var clips = {}; NV_CLIPS.forEach(function (n, k) { clips[n] = r[10 + k].animations[0]; });
-        r.slice(0, 10).forEach(function (g) { g.scene.traverse(function (o) { if (o.isMesh && o.material) { var ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(function (m) { ['map', 'normalMap', 'roughnessMap', 'metalnessMap'].forEach(function (k) { if (m[k]) { m[k].anisotropy = 8; m[k].needsUpdate = true; } }); }); } }); });
-        NV = { chars: r.slice(0, 10).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils, props: {}, sanGo: null }; return true;
+        var clips = {}; NV_CLIPS.forEach(function (n, k) { clips[n] = r[nc + k].animations[0]; });
+        r.slice(0, nc).forEach(function (g) { g.scene.traverse(function (o) { if (o.isMesh && o.material) { var ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(function (m) { ['map', 'normalMap', 'roughnessMap', 'metalnessMap'].forEach(function (k) { if (m[k]) { m[k].anisotropy = 8; m[k].needsUpdate = true; } }); }); } }); });
+        NV = { chars: r.slice(0, nc).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils, props: {}, sanGo: null }; return true;
       }).then(function () {
         // đồ dùng tạo bằng Higgsfield (ghế, bàn, cây, đèn, sàn gỗ): thiếu cái nào thì dùng hình dựng bằng code
         return Promise.all(["office_chair", "director_chair", "plant", "lamp", "desk"].map(function (n) {
@@ -249,7 +250,7 @@
     }).catch(function (e) { console.warn("[office] không nạp được người 3D, dùng robot", e); NV = null; return false; });
   }
   // đồ Higgsfield đã chuẩn hoá cao 1 (trục Y từ -0.5 đến 0.5): đặt chân chạm sàn, cao `cao`, quay `yaw`
-  var PROP_YAW = { office_chair: 0, director_chair: 0, plant: 0, lamp: 0, desk: Math.PI / 2 };
+  var PROP_YAW = { office_chair: Math.PI, director_chair: Math.PI, plant: 0, lamp: 0, desk: Math.PI / 2 };
   function vatProp(ten, cao, sx) {
     var src = NV && NV.props && NV.props[ten]; if (!src) return null;
     var w = new T.Group(), c = NV.SU.clone(src); c.scale.setScalar(cao); c.position.y = 0.5 * cao; c.rotation.y = PROP_YAW[ten] || 0; w.add(c);
@@ -260,7 +261,7 @@
   var NV_OFF = { sit: [-21.3, 67.4], sitans: [13.1, 35.2] };
   var _qi = null, _p0 = null, _p1 = null, _p2 = null, _q0 = null, _q1 = null, _v0 = null, _v1 = null;
   function dungNguoi3D(ten, role, hueV, laLead) {
-    var acc = hsl(hueV, 0.75, 0.52), idx = laLead ? 0 : 1 + (nvDem++ % 9);
+    var acc = hsl(hueV, 0.75, 0.52), idx = laLead ? 0 : 1 + (nvDem++ % (NV.chars.length - 1));
     var g = new T.Group(), pivot = new T.Group(); g.add(pivot);
     var model = NV.SU.clone(NV.chars[idx]); pivot.add(model);
     model.traverse(function (o) { if (o.isSkinnedMesh) o.frustumCulled = false; });
@@ -650,7 +651,7 @@
     g.textBaseline = "middle"; g.textAlign = "left"; g.fillStyle = ink; g.font = "800 44px " + F; g.fillText(ph.ten.toUpperCase(), 44, 52);
     g.fillStyle = ph.acc; g.font = "600 22px " + F; g.fillText(ph.id === "marketing" ? "XẾP HẠNG THEO DOANH THU QUẢNG CÁO · POS PANCAKE VÀ FACEBOOK ADS" : "XẾP HẠNG DOANH THU · POS PANCAKE", 44, 92);
     var d = pancakeDL; g.textAlign = "right"; g.fillStyle = mute; g.font = "500 22px " + F;
-    g.fillText(cat(d ? (d.source ? (d.updated ? "Cập nhật: " + d.updated : "Số liệu Pancake") : "") : "Đang tải số liệu…", 46), W - 44, 52); g.textAlign = "left";
+    g.fillText(cat(d ? (d.demo ? "MẪU: chưa nối Pancake" : d.source ? (d.updated ? "Cập nhật: " + d.updated : "Số liệu Pancake") : "") : "Đang tải số liệu…", 46), W - 44, 52); g.textAlign = "left";
     var ds_ = d ? (ph.id === "sale" ? d.sale : d.marketing) : [], kho = d && ph.id === "sale" ? d.kho : [];
     if (!d || !d.source || (!ds_.length && !kho.length)) {
       g.fillStyle = mute; g.font = "600 30px " + F; g.fillText(!d ? "Đang lấy số liệu…" : "Chưa có số liệu Pancake cho phòng này.", 44, 220);
@@ -695,7 +696,7 @@
       var tt = new T.Mesh(new T.BoxGeometry(RW + 0.6, 0.05, 0.12), mat(parseInt(ph.acc.slice(1), 16), { emissive: parseInt(ph.acc.slice(1), 16), emissiveIntensity: 0.6 })); tt.position.set(ph.cx, 5.8, -HZ - 0.15); scene.add(tt);
       canhTuong.push(sau, ngoai, tt);
       var b = new T.Mesh(new T.PlaneGeometry(10.5, 4.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangPhong(ph)), toneMapped: false })); b.material.map.colorSpace = T.SRGBColorSpace;
-      b.position.set(ph.cx, 3.5, -HZ + 0.02); scene.add(b); canhTuong.push(b); bangPhong[ph.id] = b;
+      b.position.set(ph.cx, 3.5, -HZ + 0.08); scene.add(b); canhTuong.push(b); bangPhong[ph.id] = b; khungTV(10.5, 4.2, ph.cx, 3.5, -HZ + 0.0, 0); chanTuong(RW + 0.6, light, ph.cx, -HZ + 0.03, 0); chanTuong(HZ * 2, light, xo - dir * 0.15, 0, Math.PI / 2);
       caySan(ph.cx - RW / 2 + 1.2, -HZ + 1.3, 1); caySan(ph.cx + RW / 2 - 1.2, -HZ + 1.3, 1.2); caySan(ph.cx - dir * (RW / 2 - 1.2), HZ - 1.2, 0.9);
       var nh = spriteTu(veNhan(ph.ten, "Phòng ban", ph.acc, nenNhan()), 3.4); nh.position.set(ph.cx, 6.4, -HZ + 0.4); scene.add(nh); canhTuong.push(nh);
     });
@@ -728,10 +729,33 @@
   }
   function napPancake() {
     fetch("/office/pancake?brain=" + encodeURIComponent(brain())).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
-      if (!d || !scene) return; pancakeDL = d;
+      if (!d || !scene) return;
+      if (!d.source) {                      // chưa nối Pancake: phòng vẫn có người ngồi để xem, ghi rõ là mẫu
+        var mk = function (ds, ns) { return ns.map(function (n, i) { return { name: n, dept: ds, rank: i + 1, orders: 0, revenue: 0, spend: 0, roas: 0, packed: 0 }; }); };
+        d = { demo: true, source: "mẫu", updated: "", error: d.error || "", sale: mk("sale", ["Nhân viên Sale 1", "Nhân viên Sale 2", "Nhân viên Sale 3", "Nhân viên Sale 4", "Nhân viên Sale 5"]),
+          kho: mk("kho", ["Nhân viên Kho 1", "Nhân viên Kho 2"]), marketing: mk("marketing", ["Nhân viên MKT 1", "Nhân viên MKT 2", "Nhân viên MKT 3", "Nhân viên MKT 4"]), ads: {} };
+      }
+      pancakeDL = d;
       PHONG.forEach(function (ph) { if (bangPhong[ph.id]) capNhatSprite2(bangPhong[ph.id], veBangPhong(ph)); });
       xepNhanVien();
     }).catch(function () {});
+  }
+  // tường sơn: màu ấm có vân sơn mịn; chân tường trắng; khung tivi viền mỏng cho các bảng
+  function veSon(light) {
+    var c = document.createElement("canvas"), W = 256; c.width = W; c.height = W; var g = c.getContext("2d");
+    g.fillStyle = light ? "#f1ece4" : "#1d2b45"; g.fillRect(0, 0, W, W);
+    for (var i = 0; i < 2600; i++) { var k = (Math.sin(i * 12.9898) * 43758.5453) % 1; k = k - Math.floor(k); var k2 = (Math.sin(i * 78.233) * 12345.6789) % 1; k2 = k2 - Math.floor(k2); g.fillStyle = light ? "rgba(120,100,80," + (0.02 + k * 0.035) + ")" : "rgba(255,255,255," + (0.01 + k * 0.02) + ")"; g.fillRect(k * W, k2 * W, 2 + k * 3, 2); }
+    var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(6, 3); t.anisotropy = 4; return t;
+  }
+  function chanTuong(w, light, cx, z, rot, d) {
+    var m = new T.Mesh(new T.BoxGeometry(w, 0.28, 0.06), mat(light ? 0xfdfbf7 : 0x2c3d5e, { roughness: 0.4 })); m.position.set(cx, 0.14, z); m.rotation.y = rot || 0; scene.add(m); canhTuong.push(m);
+  }
+  function khungTV(w, h, x, y, z, ry, man) {
+    var f = new T.Mesh(new T.BoxGeometry(w + 0.34, h + 0.34, 0.12), new T.MeshStandardMaterial({ color: 0x0a0c11, roughness: 0.3, metalness: 0.6 }));
+    f.position.set(x, y, z); f.rotation.y = ry; scene.add(f); canhTuong.push(f);
+    var c = new T.Mesh(new T.BoxGeometry(w * 0.16, 0.06, 0.05), new T.MeshBasicMaterial({ color: 0x3a4152 })); c.position.set(0, -(h / 2 + 0.1), 0.07); f.add(c);
+    var led = new T.Mesh(new T.CircleGeometry(0.035, 10), new T.MeshBasicMaterial({ color: 0x2a6bff })); led.position.set(w * 0.46, -(h / 2 + 0.1), 0.07); f.add(led);
+    return f;
   }
   function tgo_() { return !!(NV && NV.sanGo); }
   function dungCanh() {
@@ -743,15 +767,16 @@
     var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san); canhSan.push(san);
     var tgo = sanGoMoi(HX * 2 / 4, HZ * 2 / 4); if (tgo) { san.material.map = tgo; san.material.color.set(light ? 0xe6dcd0 : 0x8a8a8a); san.material.roughness = 0.5; san.material.needsUpdate = true; }
     var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; if (!tgo_()) { scene.add(luoi); canhSan.push(luoi); }
-    var tuong = mat(light ? 0xdde6f4 : 0x1b2a46);
+    var tuong = mat(light ? 0xffffff : 0xffffff, { map: veSon(light), roughness: 0.95 });
     var t1 = new T.Mesh(new T.BoxGeometry(HX * 2, 5.8, 0.3), tuong); t1.position.set(0, 2.9, -HZ - 0.15); scene.add(t1);
     var t2 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t2.position.set(-HX - 0.15, 2.9, 0); scene.add(t2);
     var t3 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t3.position.set(HX + 0.15, 2.9, 0); scene.add(t3);
     var vien = new T.Mesh(new T.BoxGeometry(HX * 2, 0.05, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 5.8, -HZ - 0.15); scene.add(vien); canhTuong.push(t1, t2, t3, vien);
+    chanTuong(HX * 2, light, 0, -HZ + 0.03, 0); chanTuong(HZ * 2, light, -HX + 0.03, 0, Math.PI / 2); chanTuong(HZ * 2, light, HX - 0.03, 0, Math.PI / 2);
     khoiTaoLuoi(); taoManHinh();
     // bảng điều hành (số liệu thật) giữa tường sau; khẩu hiệu hai bên và trên tường trái
     bang = new T.Mesh(new T.PlaneGeometry(9, 3.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangDieuHanh()), toneMapped: false })); bang.material.map.colorSpace = T.SRGBColorSpace;
-    bang.position.set(HX - 0.02, 3.95, 0); bang.rotation.y = -Math.PI / 2; scene.add(bang); canhTuong.push(bang);   // sau lưng giám đốc
+    bang.position.set(HX - 0.14, 3.95, 0); bang.rotation.y = -Math.PI / 2; scene.add(bang); canhTuong.push(bang); khungTV(9, 3.6, HX - 0.06, 3.95, 0, -Math.PI / 2);   // sau lưng giám đốc
     function kh(i, x, y, z, ry, w) { var m = new T.Mesh(new T.PlaneGeometry(w, w * 260 / 900), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veKhauHieu(i)), toneMapped: false })); m.material.map.colorSpace = T.SRGBColorSpace; m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); canhTuong.push(m); }
     kh(0, -8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(1, 8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(6, 0, 3.5, -HZ + 0.02, 0, 5.0);
     kh(2, -HX + 0.02, 3.5, -6.2, Math.PI / 2, 5.0); kh(3, -HX + 0.02, 3.5, 0, Math.PI / 2, 5.0); kh(4, -HX + 0.02, 3.5, 6.2, Math.PI / 2, 5.0);
@@ -1045,11 +1070,19 @@
           });
           vx += sx * 1.8; vz += sz * 1.8; var vl = Math.hypot(vx, vz) || 1; vx /= vl; vz /= vl;
           var nx = a.x + vx * st, nz = a.z + vz * st;
-          if (!viTriDi(nx, nz, c)) { nx = a.x + dx / d * st; nz = a.z + dz / d * st; if (!viTriDi(nx, nz, c)) { nx = a.x; nz = a.z; } }
+          if (!viTriDi(nx, nz, c)) {
+            nx = a.x + dx / d * st; nz = a.z + dz / d * st;
+            if (!viTriDi(nx, nz, c)) {                  // trượt dọc theo vật cản thay vì đứng im ở góc
+              var ex = a.x + Math.sign(dx) * st, ez = a.z + Math.sign(dz) * st;
+              if (viTriDi(ex, a.z, c)) { nx = ex; nz = a.z; } else if (viTriDi(a.x, ez, c)) { nx = a.x; nz = ez; } else { nx = a.x; nz = a.z; }
+            }
+          }
+          if (Math.hypot(nx - a.x, nz - a.z) < st * 0.2) a.ket = (a.ket || 0) + dt; else a.ket = 0;
+          if (a.ket > 0.6) { a.ket = 0; c.from = { x: a.x, z: a.z }; c.path = timDuong(a.x, a.z, c.to.x, c.to.z, a); c.i = 0; if (c.path.length > 1 && Math.hypot(c.path[0].x - a.x, c.path[0].z - a.z) < 0.05) c.i = 1; }
           a.x = nx; a.z = nz; a.huongDich = Math.atan2(vx, vz);
           if (Math.hypot(p.x - a.x, p.z - a.z) < Math.max(0.18, st)) { a.x = p.x; a.z = p.z; c.i++; if (c.i >= c.path.length) { a.cur = null; a.walking = false; a.kind = c.kind; } }
           if (now() - c.moc > 1600) {              // kẹt: chưa nhúc nhích bao nhiêu thì tìm đường lại
-            if (Math.hypot(a.x - c.mx, a.z - c.mz) < 0.35) { c.path = timDuong(a.x, a.z, c.to.x, c.to.z, a); c.i = 0; }
+            if (Math.hypot(a.x - c.mx, a.z - c.mz) < 0.35) { c.from = { x: a.x, z: a.z }; c.path = timDuong(a.x, a.z, c.to.x, c.to.z, a); c.i = 0; }
             c.moc = now(); c.mx = a.x; c.mz = a.z;
           }
         }
@@ -1207,7 +1240,10 @@
     if (mo) return; mo = true;
     host.hidden = false; document.documentElement.classList.add("mm-office-on");
     var nut = $("officeToggleBtn"); if (nut) nut.setAttribute("aria-pressed", "true");
-    Promise.all([nap().then(function (ok) { return ok ? napNguoi().then(function () { return ok; }) : ok; }), mon()]).then(function (r) {
+    var dem = fetch("/office/pancake?brain=" + encodeURIComponent(brain())).then(function (r) { return r.json(); }).then(function (d) { return (d && d.staff && d.staff.length) || 11; }).catch(function () { return 11; });
+    Promise.all([nap(), mon(), dem]).then(function (r0) {
+      return napNguoi(1 + r0[1].length + r0[2]).then(function () { return [r0[0], r0[1]]; });
+    }).then(function (r) {
       if (!mo) return;
       if (!r[0]) { toast("Máy này không dựng được cảnh 3D"); dong(); return; }
       try { dung(r[1]); } catch (e) { console.warn("[office]", e); toast("Không dựng được văn phòng 3D"); dong(); return; }

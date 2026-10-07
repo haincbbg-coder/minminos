@@ -11,6 +11,8 @@ bảng đi, không báo lỗi.
 """
 import json
 import time
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -187,6 +189,76 @@ def pancake_office(raw) -> dict:
             "ads": {k: _num(v) for k, v in list(ads.items())[:8]}}
 
 
+PANCAKE_CFG = "00 - Dashboard/pancake-config.json"
+PANCAKE_API = "https://pos.pages.fm/api/v1"
+PANCAKE_TTL = 120   # giây: lâu hơn mức này mới gọi Pancake lại
+
+
+def _pc_get(path: str, params: dict):
+    url = PANCAKE_API + path + "?" + urllib.parse.urlencode(params)
+    with urllib.request.urlopen(url, timeout=10) as r:   # noqa: S310 - URL cố định của Pancake
+        return json.loads(r.read().decode("utf-8", "replace"))
+
+
+def _pc_list(raw):
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict):
+        for k in ("data", "users", "orders", "items"):
+            if isinstance(raw.get(k), list):
+                return raw[k]
+    return []
+
+
+def dong_bo_pancake(root: Path) -> str:
+    """Kéo nhân viên và doanh thu hôm nay từ Pancake POS rồi ghi pancake-office.json. Trả lỗi (rỗng nếu ổn).
+
+    Cần file 00 - Dashboard/pancake-config.json: {"api_key": "...", "shop_id": 123,
+    "marketing": ["Tên người"], "kho": ["Tên người"]} (người không nằm trong hai danh sách là Sale).
+    Chưa kiểm chứng với tài khoản thật: parse theo tài liệu Open API v1 của Pancake POS, thiếu trường thì bỏ qua."""
+    cfgf = root / PANCAKE_CFG
+    try:
+        cfg = json.loads(cfgf.read_text(encoding="utf-8"))
+        key, shop = str(cfg["api_key"]), str(cfg["shop_id"])
+    except Exception:
+        return "Thiếu hoặc sai file pancake-config.json (cần api_key và shop_id)."
+    now = time.time()
+    tm = time.localtime(now)
+    day0 = int(time.mktime((tm.tm_year, tm.tm_mon, tm.tm_mday, 0, 0, 0, 0, 0, -1)))
+    try:
+        users = _pc_list(_pc_get(f"/shops/{shop}/users", {"api_key": key}))
+        agg = {}
+        for u in users:
+            if not isinstance(u, dict):
+                continue
+            n = str(u.get("name") or (u.get("user") or {}).get("name") or "").strip()
+            if n:
+                agg[n] = {"orders": 0, "revenue": 0}
+        for page in range(1, 21):
+            batch = _pc_list(_pc_get(f"/shops/{shop}/orders", {"api_key": key, "startDateTime": day0, "endDateTime": int(now),
+                                                              "page_size": 100, "page_number": page}))
+            for o in batch:
+                if not isinstance(o, dict) or o.get("status") in (6, 7):
+                    continue
+                who = o.get("assigning_seller") or o.get("creator") or {}
+                n = str((who.get("name") if isinstance(who, dict) else who) or "").strip()
+                if not n:
+                    continue
+                a = agg.setdefault(n, {"orders": 0, "revenue": 0})
+                a["orders"] += 1
+                a["revenue"] += _num(o.get("total_price") or o.get("cod") or 0)
+            if len(batch) < 100:
+                break
+    except Exception as e:  # mạng, khoá sai, API đổi
+        return f"Pancake: {type(e).__name__}: {str(e)[:120]}"
+    mk, kho = {str(x).strip().lower() for x in cfg.get("marketing") or []}, {str(x).strip().lower() for x in cfg.get("kho") or []}
+    staff = [{"name": n, "dept": "marketing" if n.lower() in mk else "kho" if n.lower() in kho else "sale",
+              "orders": a["orders"], "revenue": a["revenue"], "packed": a["orders"] if n.lower() in kho else 0} for n, a in agg.items()]
+    out = {"updated": time.strftime("%Y-%m-%d %H:%M", tm), "staff": staff}
+    (root / PANCAKE_FILES[0]).write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+    return ""
+
+
 def register(app: FastAPI, deps: HudDeps) -> None:
     index = deps.dashboard_dir / "hud" / "index.html"
 
@@ -198,6 +270,10 @@ def register(app: FastAPI, deps: HudDeps) -> None:
     @app.get("/office/pancake")
     def office_pancake(brain: str = Query("brain")):
         root = Path(deps.brain_root(brain))
+        loi = ""
+        f0 = root / PANCAKE_FILES[0]
+        if (root / PANCAKE_CFG).is_file() and (not f0.is_file() or time.time() - f0.stat().st_mtime > PANCAKE_TTL):
+            loi = dong_bo_pancake(root)
         for rel in PANCAKE_FILES:
             f = root / rel
             if not f.is_file():
@@ -208,9 +284,11 @@ def register(app: FastAPI, deps: HudDeps) -> None:
                 return JSONResponse({"error": f"File {rel} không đọc được (JSON hỏng).", "source": rel})
             d = pancake_office(raw)
             upd = (raw.get("updated_at") or raw.get("updated") or raw.get("cap_nhat")) if isinstance(raw, dict) else None
+            if loi:
+                d["error"] = loi
             d.update({"source": rel, "updated": upd or time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(f.stat().st_mtime))})
             return d
-        return {"sale": [], "kho": [], "marketing": [], "ads": {}, "source": None}
+        return {"sale": [], "kho": [], "marketing": [], "ads": {}, "source": None, "error": loi}
 
     @app.get("/hud/kpi")
     def hud_kpi(brain: str = Query("brain")):
