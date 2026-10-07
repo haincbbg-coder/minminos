@@ -127,6 +127,7 @@ Tương tự với engine ChatGPT (Codex): MCP bạn đã đăng ký thẳng tro
 
 Cả 3 mặc định ở mức **Chỉ đọc** - Javis xem báo cáo, phân tích chi phí/hiệu quả nhưng không đụng được vào chiến dịch.
 
+- **Đăng nhập nhanh qua MinMin** (từ 26.10.114): nếu máy chủ phát hành đã bật trạm đăng nhập, hộp thoại Meta Ads và Facebook Trang có thêm nút **Đăng nhập bằng Facebook**. Bấm là xong, không phải tự tạo app bên dưới. Token đi qua trạm của nhà phát hành lúc đăng nhập (trạm không lưu lại); ai không muốn thì vẫn tự tạo app. Người vận hành trạm xem [Trạm đăng nhập Meta](29-tram-dang-nhap-meta.md).
 - **Meta Ads (Facebook & Instagram)** có HAI kết nối trong kho, chọn 1:
   - **Meta Ads (MCP chính chủ)**: MCP hosted của Meta. Hiện đang beta GIỚI HẠN: Meta chỉ cho vài ứng dụng được cấp phép sẵn (trợ lý ChatGPT/Claude/Perplexity) kết nối và đã tắt tự đăng ký, nên Javis - và cả công cụ khác - CHƯA nối tự phục vụ được. Không phải lỗi máy bạn; chờ Meta mở thêm theo tài khoản. Xem chi tiết bên dưới.
   - **Meta Ads (tự tạo app - Graph API)**: cách CHẠY ĐƯỢC ngay hôm nay (giống Composio/byadsco dùng) - Javis gọi thẳng Marketing API của Meta bằng một Facebook App do BẠN tạo. CHỈ ĐỌC số liệu, không tiêu tiền. Hướng dẫn tạo app ở mục bên dưới.

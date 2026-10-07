@@ -1018,6 +1018,9 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 .conn-guide { font-size: 13px; opacity: .8; background: var(--info-wash);
   border: 1px solid var(--info-line); border-radius: 8px; padding: 9px 12px; line-height: 1.6;
   white-space: pre-line; overflow-wrap: anywhere; }
+.conn-tram { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--info-line);
+  border-radius: 8px; padding: 12px; background: var(--info-wash); }
+.conn-tram .mp-btn { align-self: flex-start; }
 .conn-risk { font-size: 13px; background: var(--warn-wash); border: 1px solid var(--warn-line);
   border-radius: 8px; padding: 10px 12px; line-height: 1.55;
   white-space: pre-line; overflow-wrap: anywhere; }

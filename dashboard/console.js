@@ -5175,6 +5175,33 @@
     return missing;
   }
 
+  // Đăng nhập nhanh qua trạm MinMin (meta_tram.py): chỉ hiện khi trạm báo đang bật. Form tự
+  // tạo app bên dưới giữ nguyên làm đường nâng cao cho ai không muốn token đi qua trạm.
+  async function wireMetaTram(m, con) {
+    let tt = {};
+    try { tt = await (await fetch("/connect/meta-tram")).json(); } catch (e) { return; }
+    if (!tt.bat) return;
+    const form = m.querySelector(".conn-form");
+    if (!form) return;
+    const box = document.createElement("div");
+    box.className = "conn-tram";
+    box.innerHTML = '<b>' + esc(window.t("cs.cn_tram_head")) + '</b>'
+      + '<div class="mp-note">' + esc(window.t("cs.cn_tram_desc")) + '</div>'
+      + '<button class="mp-btn primary" id="oTram">' + esc(window.t("cs.cn_tram_btn")) + '</button>'
+      + '<div class="mp-note" id="oTramErr"></div>'
+      + '<div class="mp-note">' + esc(window.t("cs.cn_tram_or")) + '</div>';
+    form.insertBefore(box, form.firstChild);
+    box.querySelector("#oTram").onclick = async () => {
+      const b = box.querySelector("#oTram"), err = box.querySelector("#oTramErr");
+      b.disabled = true; err.textContent = "";
+      const r = await postJson("/connect/oauth/start", { connector_id: con.id, fields: {}, qua_tram: true });
+      b.disabled = false;
+      if (!r.ok) { err.textContent = r.error || window.t("app.err_cap"); return; }
+      window.open(r.url, "_blank");
+      err.textContent = window.t("cs.cn_oauth_after");
+    };
+  }
+
   function openOauthFlow(el, con, ctx) {
     // Provider không tự đăng ký client (vd Google) khai sẵn fields client_id/secret user tự tạo.
     // Có ô multiline (vd google-ads cho dán sẵn file ADC làm đường lui) nên render y như luồng
@@ -5195,6 +5222,7 @@
       + '<button class="mp-btn primary" id="oGo">' + esc(window.t(fields ? "cs.cn_oauth_save_open" : "cs.cn_oauth_open")) + '</button></div>'
       + '<div class="mp-foot"><span class="mp-note" id="oErr"></span><button class="mp-btn" data-act="close">' + esc(window.t("common.close")) + '</button></div>');
     wireWizCommon(m); wireJsonDrop(m); wireReuse(m);
+    if (con.provider === "meta") wireMetaTram(m, con);
     m.querySelector("#oGo").onclick = async () => {
       const err = m.querySelector("#oErr"), go = m.querySelector("#oGo");
       const fieldsVal = {};

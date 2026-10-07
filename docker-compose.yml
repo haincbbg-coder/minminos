@@ -41,6 +41,14 @@ services:
       # trước sẽ tạo được admin - phải tạo ngay sau khi deploy. Vào được rồi nên bật 2FA.
       JAVIS_ADMIN_USER: ${JAVIS_ADMIN_USER:-}
       JAVIS_ADMIN_PASSWORD: ${JAVIS_ADMIN_PASSWORD:-}
+      # TRẠM ĐĂNG NHẬP META (chỉ máy chủ của nhà phát hành cần): giữ App ID + App Secret của
+      # Facebook App đã được Meta duyệt, để người dùng MinMin khác đăng nhập Facebook mà không
+      # phải tự tạo app. Bỏ trống = máy này không làm trạm. Xem docs/29-tram-dang-nhap-meta.md.
+      JAVIS_META_TRAM_APP_ID: ${JAVIS_META_TRAM_APP_ID:-}
+      JAVIS_META_TRAM_APP_SECRET: ${JAVIS_META_TRAM_APP_SECRET:-}
+      JAVIS_META_TRAM_GOC: ${JAVIS_META_TRAM_GOC:-}
+      JAVIS_META_TRAM_LIEN_HE: ${JAVIS_META_TRAM_LIEN_HE:-}
+      JAVIS_META_TRAM_CONFIG_ID: ${JAVIS_META_TRAM_CONFIG_ID:-}
     ports:
       # Cổng MÁY CHỦ lấy từ biến (trong container vẫn luôn là 7777). Bản thứ hai đặt
       # JAVIS_HOST_PORT=7778 là hết đụng cổng.

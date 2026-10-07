@@ -194,7 +194,7 @@ async def _discover(url):
     return None
 
 
-async def start_auth(conn_id, redirect_uri):
+async def start_auth(conn_id, redirect_uri, qua_tram=False):
     """Bắt đầu OAuth cho 1 connection. Trả {ok, url?} hoặc {ok:False, error}.
 
     2 nhánh:
@@ -208,6 +208,26 @@ async def start_auth(conn_id, redirect_uri):
     store = _load()
     ent = store.get(conn_id) or {}
     explicit = bool(auth.get("authorize_url") and auth.get("token_url"))
+
+    if (not qua_tram and ent.get("qua_tram")
+            and not (mcp_store.connection_secrets(conn_id) or {}).get("client_id")):
+        qua_tram = True      # bấm "Kết nối lại" trên kết nối vốn đi qua trạm thì đi lại đường đó
+    if explicit and qua_tram and (auth.get("provider") or "").strip().lower() == "meta":
+        # Đăng nhập nhanh qua TRẠM của nhà phát hành: không cần tự tạo app (xem meta_tram.py).
+        import meta_tram
+        state = _secrets.token_urlsafe(24)
+        res = await meta_tram.bat_dau(state, redirect_uri, auth.get("scopes") or [])
+        if not res.get("ok"):
+            return {"ok": False, "error": res.get("loi") or "Trạm đăng nhập từ chối."}
+        now = time.time()
+        for k in [k for k, v in _pending.items() if now - v["ts"] > _PENDING_TTL]:
+            _pending.pop(k, None)
+        _pending[state] = {"conn_id": conn_id, "provider": "meta", "tram": True,
+                           "rieng": res["rieng"], "ts": now}
+        ent.update(provider="meta", qua_tram=True, client_id="", token_endpoint="")
+        store[conn_id] = ent
+        _save(store)
+        return {"ok": True, "url": res["url"]}
 
     if explicit:
         creds = mcp_store.connection_secrets(conn_id)
@@ -317,13 +337,20 @@ def _email_from_id_token(idt):
         return ""
 
 
-async def handle_callback(state, code):
+async def handle_callback(state, code, tram=""):
     p = _pending.pop(state or "", None)
     if not p:
         return {"ok": False, "error": "Phiên OAuth không hợp lệ hoặc đã hết hạn - thử lại từ đầu"}
     is_meta = (p.get("provider") == "meta")
     try:
-        if is_meta:
+        if p.get("tram"):
+            # Token về qua trạm: nhận bản mã hoá bằng khoá tạm giữ trong RAM của phiên này.
+            import meta_tram
+            kq = await meta_tram.nhan(tram, p["rieng"])
+            if not kq.get("ok"):
+                return {"ok": False, "error": kq.get("loi")}
+            tk = kq["token"]
+        elif is_meta:
             # Facebook: đổi code→token bằng GET, KHÔNG grant_type/PKCE, client_secret bắt buộc.
             async with httpx.AsyncClient(timeout=20) as client:
                 r = await client.get(p["token_endpoint"], params={
@@ -371,8 +398,12 @@ async def _refresh(conn_id, ent):
     # qua fb_exchange_token. Hết hạn (~60 ngày) hoặc bị thu hồi thì phải đăng nhập lại.
     if ent.get("provider") == "meta":
         cur = secrets_store.decrypt(ent.get("access_token", ""))
-        cs = mcp_store.connection_secrets(conn_id).get("client_secret")
-        ll = await _meta_longlive(ent.get("token_endpoint"), ent.get("client_id"), cs, cur)
+        if ent.get("qua_tram"):      # app của nhà phát hành: gia hạn cần App Secret nên phải qua trạm
+            import meta_tram
+            ll = await meta_tram.gia_han(cur)
+        else:
+            cs = mcp_store.connection_secrets(conn_id).get("client_secret")
+            ll = await _meta_longlive(ent.get("token_endpoint"), ent.get("client_id"), cs, cur)
         if not ll:
             return None
         ent.update(access_token=secrets_store.encrypt(ll["access_token"]),
