@@ -690,6 +690,577 @@
       "purge_warning": "Xoá kết nối này là mất phiên Google đã dán. Muốn dùng lại phải lấy lại cookie từ trình duyệt một lần nữa.",
       "risk": "Kết nối này dùng COOKIE PHIÊN Google, credential tương đương đang đăng nhập tài khoản Google của bạn, không phải OAuth giới hạn phạm vi như Gmail hay Lịch.\n\nMức Chỉ đọc: liệt kê notebook, đọc nguồn, xem trạng thái. Không đụng gì.\n\nMức Ghi nháp: thêm quyền tạo notebook, thêm nguồn, lưu ghi chú, hỏi đáp trong notebook và tạo tóm tắt/audio ở Studio - những thứ này tiêu quota NotebookLM của bạn.\n\nMức Toàn quyền: thêm quyền XOÁ notebook, xoá nguồn, và CHIA SẺ notebook cho người khác. Chia sẻ nhầm thì gỡ lại được nhưng người ta đã đọc rồi, nên nó nằm ở mức cao nhất.\n\nnotebooklm-py là thư viện KHÔNG chính thức, chạy trên giao thức nội bộ của NotebookLM. Google đổi giao thức lúc nào cũng có thể làm kết nối này gãy.",
       "rate_limit": { "calls_per_min": 20 }
+    },
+    {
+      "id": "shopee",
+      "name": "Shopee",
+      "icon": "🧡",
+      "category": "Bán hàng",
+      "description": "Đơn hàng, sản phẩm, tiền thực nhận và thông tin shop Shopee qua Shopee Open Platform (MinMin tự dựng cầu nối). Mỗi kết nối là một shop, thêm nhiều kết nối để theo dõi nhiều shop.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "shopee",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "partner_id",
+            "label": "Partner ID (app trên Shopee Open Platform)",
+            "placeholder": "Ví dụ: 2001234"
+          },
+          {
+            "key": "partner_key",
+            "label": "Partner Key",
+            "placeholder": "Dán Partner Key (Live) của app..."
+          },
+          {
+            "key": "shop_id",
+            "label": "Shop ID (dãy số trên địa chỉ trả về sau khi ủy quyền)",
+            "placeholder": "Ví dụ: 778899"
+          },
+          {
+            "key": "redirect_url",
+            "label": "Redirect URL đã khai trong app (để tạo link ủy quyền)",
+            "placeholder": "Ví dụ: https://minmin.cua-ban.vn/cb",
+            "optional": true
+          },
+          {
+            "key": "auth_code",
+            "label": "Mã ủy quyền (code trên địa chỉ trả về)",
+            "placeholder": "Dán code sau khi shop ủy quyền...",
+            "optional": true
+          },
+          {
+            "key": "moi_truong",
+            "label": "Môi trường (live hoặc test, bỏ trống là live)",
+            "placeholder": "Ví dụ: live",
+            "optional": true
+          }
+        ],
+        "guide": "1. Vào Shopee Open Platform (open.shopee.com), đăng ký tài khoản nhà phát triển và tạo app (loại Seller In House System hoặc ERP).\n2. Khi app được duyệt, chép Partner ID và Partner Key (Live) vào kết nối này, điền Redirect URL đã khai trong app rồi lưu.\n3. Hỏi MinMin \"tạo link ủy quyền Shopee\" (tool shopee_lien_ket_uy_quyen), mở link, đăng nhập tài khoản shop và đồng ý.\n4. Trang được chuyển về Redirect URL có dạng ...?code=XXXX&shop_id=YYYY. Chép code vào ô Mã ủy quyền, shop_id vào ô Shop ID rồi lưu.\n5. MinMin tự đổi code lấy token và tự làm mới token mỗi 4 giờ.\n\nMỗi shop một kết nối: shop thứ hai thì thêm kết nối mới, dùng lại Partner ID và Partner Key, chỉ khác code và Shop ID.\nCode chỉ dùng được một lần và hết hạn sau ít phút, nên dán ngay sau khi ủy quyền.\nỦy quyền có hạn 1 năm, hết hạn thì làm lại bước 3 và 4.",
+        "guide_url": "https://open.shopee.com/developer-guide/4"
+      },
+      "validate": {
+        "tool": "shopee_thong_tin_shop",
+        "args": {},
+        "label_paths": [
+          "shop_name",
+          "response.shop_name"
+        ]
+      },
+      "tool_meta": {
+        "read": [
+          "shopee_lien_ket_uy_quyen",
+          "shopee_thong_tin_shop",
+          "shopee_don_hang",
+          "shopee_chi_tiet_don",
+          "shopee_tai_chinh_don",
+          "shopee_san_pham",
+          "shopee_chi_tiet_san_pham",
+          "shopee_goi_api"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem đơn hàng, sản phẩm, tiền thực nhận và thông tin shop. MinMin không sửa giá, không sửa tồn kho, không xử lý đơn.\n\nPartner Key và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "tiktok-shop",
+      "name": "TikTok Shop",
+      "icon": "🛍️",
+      "category": "Bán hàng",
+      "description": "Đơn hàng, sản phẩm và thông tin shop TikTok Shop qua Partner API (MinMin tự dựng cầu nối). Mỗi kết nối là một shop, thêm nhiều kết nối để theo dõi nhiều shop.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "tiktokshop",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "app_key",
+            "label": "App Key (app đối tác TikTok Shop)",
+            "placeholder": "Ví dụ: 6abc12def3..."
+          },
+          {
+            "key": "app_secret",
+            "label": "App Secret",
+            "placeholder": "Dán App Secret của app..."
+          },
+          {
+            "key": "auth_code",
+            "label": "Mã ủy quyền (code trên địa chỉ trả về)",
+            "placeholder": "Dán code sau khi shop ủy quyền...",
+            "optional": true
+          },
+          {
+            "key": "shop_cipher",
+            "label": "Shop cipher (để trống, MinMin tự tìm)",
+            "placeholder": "Ví dụ: ROW_abc123...",
+            "optional": true
+          }
+        ],
+        "guide": "1. Vào TikTok Shop Partner Center, tạo app (loại Custom app hoặc Public app) và khai Redirect URL.\n2. Bật quyền đọc cho app: Shop Authorized Information, Order Information, Product Basic.\n3. Chép App Key và App Secret của app vào kết nối này.\n4. Mở link ủy quyền của app (mục Authorization trong Partner Center), đăng nhập shop cần kết nối và đồng ý.\n5. Trang được chuyển về Redirect URL có dạng ...?code=XXXX. Chép phần sau code= vào ô Mã ủy quyền rồi lưu.\n6. MinMin tự đổi code lấy token, tự tìm shop cipher và tự làm mới token khi gần hết hạn.\n\nMỗi shop một kết nối: shop thứ hai thì thêm kết nối mới, dùng lại App Key và App Secret, chỉ khác code.\nCode chỉ dùng được một lần và hết hạn nhanh, nên dán ngay sau khi ủy quyền.",
+        "guide_url": "https://partner.tiktokshop.com/docv2/page/authorization-overview-202407"
+      },
+      "validate": {
+        "tool": "tiktokshop_thong_tin_shop",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "tiktokshop_thong_tin_shop",
+          "tiktokshop_don_hang",
+          "tiktokshop_chi_tiet_don",
+          "tiktokshop_san_pham",
+          "tiktokshop_chi_tiet_san_pham",
+          "tiktokshop_goi_api"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem đơn hàng, sản phẩm và thông tin shop. MinMin không sửa giá, không sửa tồn kho, không xác nhận giao hàng.\n\nApp Secret và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "lazada",
+      "name": "Lazada",
+      "icon": "🛒",
+      "category": "Bán hàng",
+      "description": "Đơn hàng, sản phẩm và thông tin shop Lazada Việt Nam qua Lazada Open Platform (MinMin tự dựng cầu nối). Mỗi kết nối là một shop, thêm nhiều kết nối để theo dõi nhiều shop.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "lazada",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "app_key",
+            "label": "App Key (app trên Lazada Open Platform)",
+            "placeholder": "Ví dụ: 123456"
+          },
+          {
+            "key": "app_secret",
+            "label": "App Secret",
+            "placeholder": "Dán App Secret của app..."
+          },
+          {
+            "key": "redirect_url",
+            "label": "Callback URL đã khai trong app (để tạo link ủy quyền)",
+            "placeholder": "Ví dụ: https://minmin.cua-ban.vn/cb",
+            "optional": true
+          },
+          {
+            "key": "auth_code",
+            "label": "Mã ủy quyền (code trên địa chỉ trả về)",
+            "placeholder": "Dán code sau khi shop ủy quyền...",
+            "optional": true
+          }
+        ],
+        "guide": "1. Vào Lazada Open Platform (open.lazada.com), đăng ký tài khoản nhà phát triển và tạo app (ví dụ loại ERP hoặc Seller In-house).\n2. Khai Callback URL cho app, chép App Key và App Secret vào kết nối này, điền Callback URL vào ô tương ứng rồi lưu.\n3. Hỏi MinMin \"tạo link ủy quyền Lazada\" (tool lazada_lien_ket_uy_quyen), mở link, đăng nhập shop Việt Nam và đồng ý.\n4. Trang được chuyển về Callback URL có dạng ...?code=XXXX. Chép phần sau code= vào ô Mã ủy quyền rồi lưu.\n5. MinMin tự đổi code lấy token và tự làm mới token khi gần hết hạn.\n\nMỗi shop một kết nối: shop thứ hai thì thêm kết nối mới, dùng lại App Key và App Secret, chỉ khác code.\nCode chỉ dùng được một lần và hết hạn nhanh, nên dán ngay sau khi ủy quyền.",
+        "guide_url": "https://open.lazada.com/apps/doc/doc?nodeId=10777&docId=108260"
+      },
+      "validate": {
+        "tool": "lazada_thong_tin_shop",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "lazada_lien_ket_uy_quyen",
+          "lazada_thong_tin_shop",
+          "lazada_don_hang",
+          "lazada_chi_tiet_don",
+          "lazada_san_pham_don",
+          "lazada_san_pham",
+          "lazada_goi_api"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem đơn hàng, sản phẩm và thông tin shop. MinMin không sửa giá, không sửa tồn kho, không xử lý đơn.\n\nApp Secret và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "ghn",
+      "name": "Giao Hàng Nhanh (GHN)",
+      "icon": "🚚",
+      "category": "Vận chuyển",
+      "description": "Tra phí, dịch vụ, địa giới, chi tiết đơn và tạo/hủy đơn Giao Hàng Nhanh qua API chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản GHN (một token quản lý được nhiều cửa hàng), thêm nhiều kết nối nếu có nhiều tài khoản.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "ghn",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "token",
+            "label": "Token API của tài khoản GHN",
+            "placeholder": "Dán token GHN..."
+          },
+          {
+            "key": "shop_id",
+            "label": "Mã cửa hàng (ShopId) mặc định, không bắt buộc",
+            "placeholder": "Ví dụ: 885123",
+            "optional": true
+          },
+          {
+            "key": "moi_truong",
+            "label": "Môi trường: live (mặc định) hoặc test, không bắt buộc",
+            "placeholder": "Ví dụ: live",
+            "optional": true
+          }
+        ],
+        "guide": "1. Đăng nhập trang quản lý khách hàng GHN tại khachhang.ghn.vn bằng tài khoản chủ shop.\n2. Vào mục Chủ cửa hàng (hoặc Thông tin tài khoản), bấm Xem để hiện Token API rồi chép token.\n3. Dán token vào ô Token API của kết nối này.\n4. Vào mục Quản lý cửa hàng, chép Mã cửa hàng (ShopId) của cửa hàng hay dùng nhất vào ô Mã cửa hàng mặc định.\n5. Lưu rồi bấm Test: MinMin gọi danh sách cửa hàng để kiểm tra token.\n\nMột token dùng cho mọi cửa hàng của tài khoản đó: khi hỏi MinMin có thể nêu mã cửa hàng khác cho từng lượt.\nTài khoản GHN thứ hai thì thêm một kết nối mới với token riêng.\nĐể thử không tốn tiền, dùng tài khoản trên môi trường test của GHN và điền test vào ô Môi trường.",
+        "guide_url": "https://api.ghn.vn/home/docs/detail"
+      },
+      "validate": {
+        "tool": "ghn_danh_sach_shop",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "ghn_danh_sach_shop",
+          "ghn_tinh_thanh",
+          "ghn_quan_huyen",
+          "ghn_phuong_xa",
+          "ghn_dich_vu",
+          "ghn_tinh_phi",
+          "ghn_chi_tiet_don",
+          "ghn_chi_tiet_don_theo_ma_khach"
+        ],
+        "write": [],
+        "danger": [
+          "ghn_tao_don",
+          "ghn_huy_don"
+        ]
+      },
+      "risk": "Mặc định CHỈ ĐỌC: xem cửa hàng, tỉnh/quận/phường, dịch vụ, tính phí và tra cứu đơn. Tính phí không tạo đơn và không tốn tiền.\n\nKhi bật Toàn quyền, MinMin tạo và hủy được đơn giao hàng THẬT trên GHN: đơn tạo ra phát sinh phí vận chuyển, đơn đã hủy không khôi phục được. Chỉ bật khi bạn muốn MinMin lên đơn thay bạn.\n\nToken được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "ghtk",
+      "name": "Giao Hàng Tiết Kiệm (GHTK)",
+      "icon": "📦",
+      "category": "Vận chuyển",
+      "description": "Tính phí, tra trạng thái đơn, xem địa chỉ lấy hàng và tạo/hủy đơn Giao Hàng Tiết Kiệm qua API chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản GHTK, thêm nhiều kết nối nếu có nhiều tài khoản.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "ghtk",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "token",
+            "label": "API Token của tài khoản GHTK",
+            "placeholder": "Dán API token GHTK..."
+          },
+          {
+            "key": "ma_doi_tac",
+            "label": "Mã đối tác (X-Client-Source), không bắt buộc",
+            "placeholder": "Chỉ điền nếu GHTK đã cấp",
+            "optional": true
+          },
+          {
+            "key": "moi_truong",
+            "label": "Môi trường: live (mặc định) hoặc test, không bắt buộc",
+            "placeholder": "Ví dụ: live",
+            "optional": true
+          }
+        ],
+        "guide": "1. Đăng nhập trang khách hàng GHTK tại khachhang.giaohangtietkiem.vn bằng tài khoản chủ shop.\n2. Vào Thiết lập (Cài đặt) rồi mục Thông tin tài khoản hoặc Kết nối API, bấm hiện API Token và chép lại.\n3. Dán token vào ô API Token của kết nối này.\n4. Nếu GHTK đã cấp mã đối tác (partner code) cho bạn, điền vào ô Mã đối tác; không có thì để trống.\n5. Lưu rồi bấm Test: MinMin đọc danh sách địa chỉ lấy hàng để kiểm tra token.\n\nTài khoản GHTK thứ hai thì thêm một kết nối mới với token riêng.\nĐể thử không tốn tiền, xin GHTK tài khoản môi trường thử nghiệm (staging) và điền test vào ô Môi trường.",
+        "guide_url": "https://docs.giaohangtietkiem.vn/"
+      },
+      "validate": {
+        "tool": "ghtk_dia_chi_lay_hang",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "ghtk_tinh_phi",
+          "ghtk_trang_thai_don",
+          "ghtk_dia_chi_lay_hang"
+        ],
+        "write": [],
+        "danger": [
+          "ghtk_tao_don",
+          "ghtk_huy_don"
+        ]
+      },
+      "risk": "Mặc định CHỈ ĐỌC: tính phí, tra trạng thái đơn và xem địa chỉ lấy hàng. Tính phí không tạo đơn và không tốn tiền.\n\nKhi bật Toàn quyền, MinMin tạo và hủy được đơn giao hàng THẬT trên GHTK: đơn tạo ra phát sinh phí vận chuyển, đơn đã hủy không khôi phục được. Chỉ bật khi bạn muốn MinMin lên đơn thay bạn.\n\nToken được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "sepay",
+      "name": "SePay",
+      "icon": "🏦",
+      "category": "Thanh toán",
+      "description": "Xem biến động số dư các tài khoản ngân hàng đã liên kết với SePay: tiền vào, tiền ra, nội dung chuyển khoản, tổng tiền trong ngày (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản SePay, thêm nhiều kết nối để theo dõi nhiều tài khoản.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "sepay",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "api_token",
+            "label": "API Token của SePay",
+            "placeholder": "Dán API Token..."
+          }
+        ],
+        "guide": "1. Đăng nhập my.sepay.vn bằng tài khoản đã liên kết ngân hàng.\n2. Vào Cấu hình công ty > API Access, bấm Thêm API, đặt tên (ví dụ MinMin) và lưu.\n3. Chép API Token vừa tạo, dán vào ô API Token của kết nối này rồi lưu.\n4. Hỏi MinMin \"hôm nay vào bao nhiêu tiền\" hoặc \"liệt kê giao dịch 7 ngày qua\" để kiểm tra.\n\nMột tài khoản SePay có thể gắn nhiều tài khoản ngân hàng, MinMin xem được tất cả và lọc theo số tài khoản.\nCó tài khoản SePay thứ hai (công ty khác) thì thêm một kết nối mới với API Token của tài khoản đó.",
+        "guide_url": "https://docs.sepay.vn/"
+      },
+      "validate": {
+        "tool": "sepay_tai_khoan_ngan_hang",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "sepay_tai_khoan_ngan_hang",
+          "sepay_giao_dich",
+          "sepay_chi_tiet_giao_dich",
+          "sepay_dem_giao_dich",
+          "sepay_tong_hop"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem tài khoản ngân hàng và lịch sử giao dịch. MinMin không chuyển tiền và không sửa gì trên SePay.\n\nAPI Token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.\nAi có token này đọc được toàn bộ giao dịch, nên chỉ tạo token riêng cho MinMin và xoá nó trên SePay khi không dùng nữa.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "casso",
+      "name": "Casso",
+      "icon": "💳",
+      "category": "Thanh toán",
+      "description": "Xem giao dịch và số dư các tài khoản ngân hàng đã liên kết với Casso: tiền vào, tiền ra, tổng tiền trong ngày (MinMin tự dựng cầu nối). Mỗi kết nối là một doanh nghiệp trên Casso, thêm nhiều kết nối để theo dõi nhiều doanh nghiệp.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "casso",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "api_key",
+            "label": "API Key của Casso",
+            "placeholder": "Dán API Key..."
+          }
+        ],
+        "guide": "1. Đăng nhập casso.vn và chọn đúng doanh nghiệp cần theo dõi.\n2. Vào Tích hợp > API Key, bấm tạo API Key mới, đặt tên (ví dụ MinMin).\n3. Chép API Key, dán vào ô API Key của kết nối này rồi lưu.\n4. Hỏi MinMin \"hôm nay vào bao nhiêu tiền\" để kiểm tra.\n\nCasso giới hạn số lần gọi mỗi phút theo gói (khoảng 2 đến 20 lần), nên hỏi dồn dập có thể bị từ chối tạm thời.\nDoanh nghiệp Casso thứ hai thì thêm một kết nối mới với API Key của doanh nghiệp đó.",
+        "guide_url": "https://developer.casso.vn/"
+      },
+      "validate": {
+        "tool": "casso_thong_tin",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "casso_thong_tin",
+          "casso_giao_dich",
+          "casso_chi_tiet_giao_dich",
+          "casso_tong_hop"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC: xem doanh nghiệp, tài khoản ngân hàng, số dư và lịch sử giao dịch. MinMin không chuyển tiền và không sửa gì trên Casso.\n\nAPI Key được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "payos",
+      "name": "payOS",
+      "icon": "🧾",
+      "category": "Thanh toán",
+      "description": "Tạo link thanh toán kèm mã VietQR để gửi khách chuyển khoản, xem trạng thái đã trả hay chưa và huỷ link qua payOS (MinMin tự dựng cầu nối). Mỗi kết nối là một kênh thanh toán, thêm nhiều kết nối để nhận tiền vào nhiều tài khoản.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "payos",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "client_id",
+            "label": "Client ID của kênh thanh toán",
+            "placeholder": "Dán Client ID..."
+          },
+          {
+            "key": "api_key",
+            "label": "API Key",
+            "placeholder": "Dán API Key..."
+          },
+          {
+            "key": "checksum_key",
+            "label": "Checksum Key (để ký và kiểm tra chữ ký)",
+            "placeholder": "Dán Checksum Key..."
+          },
+          {
+            "key": "return_url",
+            "label": "Trang chuyển về khi khách trả xong (mặc định, không bắt buộc)",
+            "placeholder": "Ví dụ: https://minmin.cua-ban.vn/cb",
+            "optional": true
+          },
+          {
+            "key": "cancel_url",
+            "label": "Trang chuyển về khi khách huỷ (mặc định, không bắt buộc)",
+            "placeholder": "Ví dụ: https://minmin.cua-ban.vn/cb",
+            "optional": true
+          }
+        ],
+        "guide": "1. Đăng nhập my.payos.vn, tạo kênh thanh toán và liên kết tài khoản ngân hàng nhận tiền nếu chưa có.\n2. Mở kênh thanh toán đó, chép Client ID, API Key và Checksum Key vào ba ô tương ứng của kết nối này.\n3. Điền trang chuyển về khi khách trả xong và khi khách huỷ (bắt đầu bằng https://) để khỏi nhập lại mỗi lần, rồi lưu.\n4. Hỏi MinMin \"tạo link thanh toán 250000 cho đơn DH1234\" để thử.\n\nMỗi kênh thanh toán một kết nối: muốn nhận tiền vào tài khoản khác thì tạo kênh mới trên payOS và thêm kết nối mới.\nNội dung chuyển khoản tối đa 25 ký tự; ngân hàng không liên kết qua payOS chỉ nhận 9 ký tự.",
+        "guide_url": "https://payos.vn/docs/"
+      },
+      "tool_meta": {
+        "read": [
+          "payos_xem_link"
+        ],
+        "write": [],
+        "danger": [
+          "payos_tao_link",
+          "payos_huy_link"
+        ]
+      },
+      "risk": "Ở mức Toàn quyền, MinMin tạo link thanh toán THẬT mà khách trả tiền được, và huỷ được link đang chờ khách trả. Ở mức Chỉ đọc, MinMin chỉ xem trạng thái link.\n\nMinMin không rút tiền và không hoàn tiền. Mỗi link tạo ra đều được kiểm tra chữ ký phản hồi của payOS trước khi đưa cho bạn.\nClient ID, API Key và Checksum Key được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "tiktok-ads",
+      "name": "TikTok Ads",
+      "icon": "/static/logos/tiktok-ads.webp",
+      "category": "Quảng cáo",
+      "description": "Chiến dịch, nhóm quảng cáo và báo cáo chi tiêu, chuyển đổi, ROAS của TikTok Ads qua TikTok Business API (MinMin tự dựng cầu nối). Một kết nối quản lý mọi tài khoản quảng cáo trong lần ủy quyền đó; có nhiều Business Center thì thêm nhiều kết nối.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "tiktokads",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "app_id",
+            "label": "App ID (app trên TikTok for Business Developers)",
+            "placeholder": "Ví dụ: 7123456789012345678"
+          },
+          {
+            "key": "secret",
+            "label": "Secret của app",
+            "placeholder": "Dán Secret của app..."
+          },
+          {
+            "key": "auth_code",
+            "label": "Mã ủy quyền auth_code (không bắt buộc nếu đã có Access Token)",
+            "placeholder": "Dán auth_code sau khi ủy quyền...",
+            "optional": true
+          },
+          {
+            "key": "access_token",
+            "label": "Access Token dài hạn (không bắt buộc nếu dán auth_code)",
+            "placeholder": "Dán access token nếu đã có...",
+            "optional": true
+          },
+          {
+            "key": "advertiser_id",
+            "label": "Mã tài khoản quảng cáo mặc định (không bắt buộc)",
+            "placeholder": "Ví dụ: 7012345678901234567",
+            "optional": true
+          }
+        ],
+        "guide": "1. Vào business-api.tiktok.com/portal, đăng nhập bằng tài khoản TikTok for Business và đăng ký làm nhà phát triển.\n2. Mở My Apps, tạo app mới, chọn quyền đọc Ads Management và Reporting (cần bật/tắt chiến dịch thì thêm quyền quản lý chiến dịch).\n3. Khai Advertiser redirect URL cho app. Chờ TikTok duyệt app rồi chép App ID và Secret vào kết nối này.\n4. Trong trang app, mở Advertiser authorization URL, đăng nhập Business Center hoặc tài khoản quảng cáo và đồng ý.\n5. Trang được chuyển về redirect URL có dạng ...?auth_code=XXXX. Chép phần sau auth_code= vào ô Mã ủy quyền rồi lưu.\n6. MinMin tự đổi mã lấy access token dài hạn (không hết hạn) và tự lưu. Đã có access token thì dán thẳng vào ô Access Token.\n\nMột kết nối quản lý MỌI tài khoản quảng cáo trong lần ủy quyền đó. Business Center khác thì thêm kết nối mới, dùng lại App ID và Secret.\nauth_code chỉ dùng được một lần và hết hạn sau khoảng 1 giờ, nên dán ngay sau khi ủy quyền.",
+        "guide_url": "https://business-api.tiktok.com/portal/docs"
+      },
+      "validate": {
+        "tool": "tiktokads_tai_khoan",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "tiktokads_tai_khoan",
+          "tiktokads_chien_dich",
+          "tiktokads_nhom_quang_cao",
+          "tiktokads_bao_cao"
+        ],
+        "write": [
+          "tiktokads_bat_tat_chien_dich",
+          "tiktokads_doi_ngan_sach_chien_dich"
+        ],
+        "danger": [
+          "tiktokads_bat_tat_chien_dich",
+          "tiktokads_doi_ngan_sach_chien_dich"
+        ]
+      },
+      "risk": "Mức Chỉ đọc (mặc định) chỉ xem tài khoản quảng cáo, chiến dịch, nhóm quảng cáo và báo cáo hiệu quả.\n\nMức Toàn quyền cho phép MinMin BẬT hoặc TẮT chiến dịch và ĐỔI NGÂN SÁCH chiến dịch thật, tức là trực tiếp quyết định số tiền quảng cáo bị tiêu. MinMin không xoá được chiến dịch.\n\nSecret và access token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
+      "id": "zalo-oa",
+      "name": "Zalo Official Account",
+      "icon": "/static/logos/zalo.png",
+      "category": "Nhắn tin",
+      "description": "Tin nhắn, người quan tâm và gửi tin tư vấn của Zalo Official Account qua API chính thức của Zalo (MinMin tự dựng cầu nối). Mỗi kết nối là một OA, thêm nhiều kết nối để quản lý nhiều OA.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "zalo_oa",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "app_id",
+            "label": "App ID (app trên Zalo for Developers)",
+            "placeholder": "Ví dụ: 1234567890123456789"
+          },
+          {
+            "key": "app_secret",
+            "label": "Khóa bí mật của ứng dụng (App Secret)",
+            "placeholder": "Dán App Secret..."
+          },
+          {
+            "key": "redirect_url",
+            "label": "Callback URL đã khai trong app (để tạo link ủy quyền, không bắt buộc)",
+            "placeholder": "Ví dụ: https://minmin.cua-ban.vn/cb",
+            "optional": true
+          },
+          {
+            "key": "auth_code",
+            "label": "Mã ủy quyền (code trên địa chỉ trả về, không bắt buộc)",
+            "placeholder": "Dán code sau khi OA ủy quyền...",
+            "optional": true
+          },
+          {
+            "key": "code_verifier",
+            "label": "Code verifier (chỉ khi app bật PKCE, không bắt buộc)",
+            "placeholder": "Để trống nếu không dùng PKCE",
+            "optional": true
+          },
+          {
+            "key": "refresh_token",
+            "label": "Refresh token (không bắt buộc, lấy từ API Explorer)",
+            "placeholder": "Dán refresh token nếu không dùng code...",
+            "optional": true
+          }
+        ],
+        "guide": "1. Vào developers.zalo.me, đăng nhập bằng Zalo của quản trị viên OA và tạo ứng dụng mới.\n2. Trong ứng dụng, mở Official Account, liên kết OA cần quản lý và bật các quyền đọc tin, quản lý người dùng, gửi tin tư vấn.\n3. Khai Callback URL trong phần thiết lập Official Account. Chép App ID và Khóa bí mật vào kết nối này, điền Callback URL rồi lưu.\n4. Hỏi MinMin \"tạo link ủy quyền Zalo OA\" (tool zalo_oa_lien_ket_uy_quyen), mở link, chọn OA và đồng ý.\n5. Trang được chuyển về Callback URL có dạng ...?code=XXXX. Chép phần sau code= vào ô Mã ủy quyền rồi lưu.\nCách khác: mở Zalo API Explorer, chọn ứng dụng và loại OA Access Token, lấy refresh token rồi dán vào ô Refresh token.\n6. MinMin tự đổi code lấy token và tự làm mới token (access token sống khoảng 25 giờ, refresh token 3 tháng).\n\nMỗi OA một kết nối: OA thứ hai thì thêm kết nối mới, dùng lại App ID và Khóa bí mật, chỉ khác code.\nRefresh token chỉ dùng được một lần. Đừng dán cùng một refresh token cho hai kết nối hay cho công cụ khác, kẻo kết nối hỏng phải ủy quyền lại.",
+        "guide_url": "https://developers.zalo.me/docs/official-account/bat-dau/xac-thuc-va-uy-quyen-cho-ung-dung-new"
+      },
+      "validate": {
+        "tool": "zalo_oa_thong_tin",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "zalo_oa_lien_ket_uy_quyen",
+          "zalo_oa_thong_tin",
+          "zalo_oa_hoi_thoai_gan_day",
+          "zalo_oa_hoi_thoai",
+          "zalo_oa_nguoi_quan_tam",
+          "zalo_oa_thong_tin_nguoi_dung"
+        ],
+        "write": [
+          "zalo_oa_gui_tin"
+        ],
+        "danger": [
+          "zalo_oa_gui_tin"
+        ]
+      },
+      "risk": "Mức Chỉ đọc (mặc định) chỉ xem thông tin OA, tin nhắn gần đây, lịch sử trò chuyện và người quan tâm.\n\nMức Toàn quyền cho phép MinMin GỬI TIN NHẮN THẬT từ OA tới khách hàng. Tin đã gửi không rút lại được.\n\nKhóa bí mật và token được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
     }
   ]
 }

@@ -4,6 +4,15 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.115] - 2026-10-07
+### Thêm mới
+- Trang **Kết nối** có thêm 10 nền tảng, mỗi kết nối là một tài khoản nên gắn bao nhiêu shop cũng được: **Shopee, TikTok Shop, Lazada** (đơn hàng, sản phẩm), **GHN, GHTK** (tính phí, tra, tạo, huỷ đơn), **SePay, Casso** (giao dịch ngân hàng), **payOS** (link thanh toán VietQR), **TikTok Ads** (báo cáo, bật tắt chiến dịch), **Zalo OA** (hội thoại, gửi tin).
+- Shop ủy quyền một lần, MinMin tự làm mới token và lưu lại. Hướng dẫn từng bước nằm ngay trong form kết nối.
+
+### Bảo mật
+- Kết nối mới mặc định Chỉ đọc. Tạo đơn, tạo link thanh toán, bật tắt quảng cáo, gửi tin chỉ chạy khi bạn tự nâng lên Toàn quyền. Ba sàn TMĐT ở bản này chỉ đọc.
+- Key và token được mã hoá, bị che khỏi mọi câu trả lời và nhật ký. Mọi cầu nối phải qua cổng kiểm định chung trước khi vào MinMin.
+
 ## [26.10.114] - 2026-10-07
 ### Thêm mới
 - **Đăng nhập Facebook một chạm**: hộp thoại Meta Ads và Facebook Trang có nút **Đăng nhập bằng Facebook**, không phải tự tạo app, dán App ID hay Redirect URI nữa. Nút chỉ hiện khi máy chủ phát hành đã bật trạm đăng nhập.

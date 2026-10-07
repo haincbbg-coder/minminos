@@ -29,6 +29,7 @@ The dashboard's navigation rail groups **19 pages** into **7 groups**: Assistant
 - [25 - Chatbot (a dedicated bot)](25-chatbots.md) - putting an Agent in front of customers through a dedicated Telegram or Zalo bot, with its own brain and a handover to a human.
 - [28 - Customer conversations (Inbox)](28-customer-conversations.md) - every chat customers have with your bots and personal Zalo in one place, with takeover when a human is needed.
 - [29 - Meta login relay](29-meta-login-relay.md) - for operators: run the relay so MinMin users sign in to Facebook in one click, without creating their own app.
+- [30 - Multi-account connectors](30-multi-account-connectors.md) - Shopee, TikTok Shop, Lazada, GHN, GHTK, SePay, Casso, payOS, TikTok Ads, Zalo OA; one connection per account.
 
 ### Background work (the Work and Brain groups)
 - [08 - Recurring jobs and reminders](08-recurring-jobs.md) - several background loops plus reminders on a clock or a cron schedule.
