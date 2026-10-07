@@ -74,7 +74,9 @@ def granted_scopes(conn_id):
     """Scope nhà cung cấp THẬT SỰ cấp, đọc từ token response. [] nghĩa là CHƯA BIẾT
     (token lưu trước bản này, hoặc nhà cung cấp không trả trường scope - vd Meta)."""
     ent = _load().get(conn_id) or {}
-    return [_norm_scope(s) for s in str(ent.get("scopes") or "").split() if s.strip()]
+    # Meta ngăn quyền bằng dấu PHẨY (ads_read,pages_manage_posts), Google/Slack bằng dấu CÁCH.
+    raw = str(ent.get("scopes") or "").replace(",", " ")
+    return [_norm_scope(s) for s in raw.split() if s.strip()]
 
 
 def scope_report(conn_id):
@@ -389,7 +391,10 @@ async def handle_callback(state, code, tram=""):
                expires_at=time.time() + float(tk.get("expires_in") or (5184000 if is_meta else 3600)))
     store[p["conn_id"]] = ent
     _save(store)
+    rep = scope_report(p["conn_id"])
     return {"ok": True, "conn_id": p["conn_id"], "first_auth": first_auth,
+            "provider": p.get("provider", ""), "qua_tram": bool(p.get("tram")),
+            "scopes_missing": short_scopes(rep["missing"]),
             "email": _email_from_id_token(tk.get("id_token", ""))}
 
 
