@@ -6,7 +6,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.114] - 2026-10-07
 ### Thêm mới
-- (đang làm) Đăng nhập Facebook một chạm qua trạm đăng nhập Meta của MinMin.
+- **Đăng nhập Facebook một chạm**: hộp thoại Meta Ads và Facebook Trang có nút **Đăng nhập bằng Facebook**, không phải tự tạo app, dán App ID hay Redirect URI nữa. Nút chỉ hiện khi máy chủ phát hành đã bật trạm đăng nhập.
+- Trước khi sang Facebook có một trang xác nhận ghi rõ máy MinMin nào sẽ nhận quyền, để không ai lừa được người khác cấp quyền cho máy lạ.
+- Token tự gia hạn khoảng 60 ngày một lần. Đường tự tạo app cũ vẫn giữ nguyên cho ai muốn.
+
 ## [26.10.113] - 2026-10-07
 ### Cải thiện
 - Văn phòng 3D sắc nét hơn: màn hình điện thoại độ phân giải cao được vẽ đủ điểm ảnh (trước đây bị giảm còn 2 lần), người và đồ vật nhìn nghiêng không còn nhoè.

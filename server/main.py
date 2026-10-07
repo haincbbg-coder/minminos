@@ -109,6 +109,7 @@ import soi_rui_ro     # soi nội dung gói chia sẻ: luật + AI (26.10.97)
 import ket_noi_can    # kết nối gói chia sẻ cần, so với máy nhận (26.10.100)
 import ke_hang        # kệ hàng công khai /bs/ke (26.10.103)
 import ma_mua         # mã mua cho món có phí trên kệ (26.10.104)
+import meta_tram     # trạm đăng nhập Meta: đăng nhập Facebook không cần tự tạo app (26.10.114)
 import brain_labels   # tên hiển thị của brain (đổi nhãn, không đổi thư mục)
 import share_store    # link CHIA SẺ CÔNG KHAI của một file trong brain (/s/<token>)
 import share_render   # dựng trang xem cho link chia sẻ (markdown -> html, khung trang)
@@ -208,7 +209,10 @@ app.add_middleware(CORSMiddleware,
 # `path.startswith(p)`, nên khai "/s" sẽ mở công khai LUÔN /settings, /skills, /sessions,
 # /stt và mọi đường bắt đầu bằng chữ s. Xem test_share_link.py, phép thử đó tồn tại chỉ để
 # canh đúng một ký tự này.
-_AUTH_PUBLIC_PREFIX = ("/static", "/health", "/s/", "/bs/")
+_AUTH_PUBLIC_PREFIX = ("/static", "/health", "/s/", "/bs/",
+                       # /mt/: trạm đăng nhập Meta (meta_tram.py) - máy MinMin khác và Facebook gọi
+                       # vào, không có cookie đăng nhập. Mọi yêu cầu ghi đều kiểm chữ ký riêng.
+                       "/mt/")
 # /brand-logo: hiện trên màn đăng nhập (trước session). /tls-check: Caddy gọi (không đăng nhập được).
 _AUTH_PUBLIC_EXACT = ("/", "/favicon.ico", "/auth/status", "/auth/login", "/auth/setup",
                       "/brand-logo", "/tls-check",
@@ -4298,7 +4302,7 @@ async def connect_oauth_start(request: Request):
         request.url.scheme, request.url.netloc,
         request.headers.get("x-forwarded-proto", ""),
         request.headers.get("x-forwarded-host", "")) + "/connect/oauth/callback"
-    res = await oauth_mcp.start_auth(conn_id, redirect)
+    res = await oauth_mcp.start_auth(conn_id, redirect, qua_tram=bool(data.get("qua_tram")))
     # start_auth FAIL (vd Meta MCP beta allowlist từ chối DCR) mà connection chưa từng có
     # token → XOÁ ngay, đừng để "xác chưa đăng nhập" nằm lại trên trang Kết nối như tài
     # khoản thật (vụ Meta Ads xoá rồi cứ mọc lại mỗi lần bấm thử nút Kết nối).
@@ -4322,8 +4326,8 @@ async def connect_oauth_start(request: Request):
 
 
 @app.get("/connect/oauth/callback")
-async def connect_oauth_callback(state: str = Query(""), code: str = Query("")):
-    res = await oauth_mcp.handle_callback(state, code)
+async def connect_oauth_callback(state: str = Query(""), code: str = Query(""), tram: str = Query("")):
+    res = await oauth_mcp.handle_callback(state, code, tram)
     mcp_hub.invalidate_cache()
     if res.get("ok"):
         _write_codex_profile()
@@ -5913,6 +5917,111 @@ async def brain_share_thu_hoi(token: str = Form(...)):
 
 # Hai đường cố định dưới đây PHẢI khai TRƯỚC /bs/{token}: FastAPI chọn route theo thứ tự khai,
 # và "danh-tinh" khớp được mẫu {token}.
+# ---- Trạm đăng nhập Meta (26.10.114): xem meta_tram.py ----
+def _ip_goi(request: Request) -> str:
+    ip = request.client.host if request.client else ""
+    if ip in ("127.0.0.1", "::1") or ip.startswith(("10.", "172.", "192.168.")):
+        ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()) or ip
+    return ip
+
+
+def _mt_json(d: dict):
+    ma = int(d.pop("ma", 200) or 200) if not d.get("ok") else 200
+    return JSONResponse(d, status_code=ma)
+
+
+@app.get("/mt/thong-tin")
+async def mt_thong_tin():
+    return meta_tram.thong_tin()
+
+
+@app.post("/mt/bat-dau")
+async def mt_bat_dau(request: Request):
+    if not meta_tram.gioi_han("bd:" + _ip_goi(request)):
+        return JSONResponse({"ok": False, "loi": "Quá nhiều yêu cầu, thử lại sau."}, status_code=429)
+    try:
+        than = await request.json()
+    except Exception:
+        than = None
+    if not isinstance(than, dict):
+        return JSONResponse({"ok": False, "loi": "Thân yêu cầu không hợp lệ."}, status_code=400)
+    goc = web_security.external_base(request.url.scheme, request.url.netloc,
+                                     request.headers.get("x-forwarded-proto", ""),
+                                     request.headers.get("x-forwarded-host", ""))
+    return _mt_json(meta_tram.mo_phien(than, goc))
+
+
+def _mt_html(trang: str, status: int = 200):
+    return HTMLResponse(trang, status_code=status, headers={
+        "Content-Security-Policy": meta_tram.csp(), "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY"})
+
+
+@app.get("/mt/xac-nhan/{pid}")
+async def mt_xac_nhan(pid: str, request: Request):
+    trang, xn = meta_tram.trang_xac_nhan(pid)
+    r = _mt_html(trang, 200 if xn else 404)
+    if xn:
+        https = (request.headers.get("x-forwarded-proto", "") or request.url.scheme).startswith("https")
+        r.set_cookie(meta_tram.COOKIE + "_" + pid[:16], xn, max_age=meta_tram.PHIEN_TTL, path="/mt/",
+                     httponly=True, secure=https, samesite="lax")
+    return r
+
+
+@app.get("/mt/ve")
+async def mt_ve(request: Request, state: str = Query(""), code: str = Query(""), error: str = Query("")):
+    if not meta_tram.gioi_han("ve:" + _ip_goi(request), 60):
+        return _mt_html(meta_tram._trang("Quá nhiều yêu cầu", "<p>Thử lại sau ít phút.</p>"), 429)
+    cookie = request.cookies.get(meta_tram.COOKIE + "_" + (state or "")[:16], "")
+    kieu, gt = await meta_tram.nhan_ve(state, code, error, cookie)
+    if kieu == "redirect":
+        return RedirectResponse(gt, status_code=302, headers={"Referrer-Policy": "no-referrer"})
+    return _mt_html(gt, 400)
+
+
+@app.post("/mt/nhan")
+async def mt_nhan(request: Request):
+    if not meta_tram.gioi_han("nh:" + _ip_goi(request), 120):
+        return JSONResponse({"ok": False, "loi": "Quá nhiều yêu cầu."}, status_code=429)
+    try:
+        than = await request.json()
+    except Exception:
+        than = {}
+    return _mt_json(meta_tram.giao_hop(than if isinstance(than, dict) else {}))
+
+
+@app.post("/mt/gia-han")
+async def mt_gia_han(request: Request):
+    if not meta_tram.gioi_han("gh:" + _ip_goi(request), 60):
+        return JSONResponse({"ok": False, "loi": "Quá nhiều yêu cầu."}, status_code=429)
+    try:
+        than = await request.json()
+    except Exception:
+        than = {}
+    return _mt_json(await meta_tram.gia_han_tram(than if isinstance(than, dict) else {}))
+
+
+@app.get("/mt/chinh-sach")
+async def mt_chinh_sach():
+    return _mt_html(meta_tram.trang_chinh_sach())
+
+
+@app.get("/mt/dieu-khoan")
+async def mt_dieu_khoan():
+    return _mt_html(meta_tram.trang_dieu_khoan())
+
+
+@app.get("/mt/xoa-du-lieu")
+async def mt_xoa_du_lieu():
+    return _mt_html(meta_tram.trang_xoa_du_lieu())
+
+
+@app.get("/connect/meta-tram")
+async def connect_meta_tram():
+    """Dashboard hỏi: trạm có bật không, để hiện nút Đăng nhập nhanh cho connector Meta."""
+    return await meta_tram.trang_thai_tram()
+
+
 @app.get("/bs/danh-tinh")
 async def bs_danh_tinh():
     """Khoá công khai của máy này - bên nhận gói dùng để xác minh gói đúng là của tên miền này."""

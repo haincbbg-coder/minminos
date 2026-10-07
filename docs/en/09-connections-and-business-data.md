@@ -127,6 +127,7 @@ The same holds for the ChatGPT (Codex) engine: MCPs you registered directly in t
 
 All 3 default to **Read only**, so Javis reads reports and analyses cost and performance but cannot touch campaigns.
 
+- **Quick sign-in through MinMin** (from 26.10.114): when the publisher's server runs the login relay, the Meta Ads and Facebook Page dialogs get a **Continue with Facebook** button, with no app to create. The token passes through the publisher's relay during sign-in (the relay keeps nothing); anyone who prefers can still create their own app. Operators: see [Meta login relay](29-meta-login-relay.md).
 - **Meta Ads (Facebook & Instagram)** has TWO connections in the store; pick one:
   - **Meta Ads (first-party MCP)**: Meta's hosted MCP. It is currently in LIMITED beta: Meta only lets a few pre-approved applications (the ChatGPT/Claude/Perplexity assistants) connect and has disabled self-registration, so Javis, like other tools, CANNOT self-serve yet. This is not a fault on your machine; wait for Meta to widen access. Details below.
   - **Meta Ads (your own app, Graph API)**: the route that WORKS today (the same one Composio and byadsco use), where Javis calls Meta's Marketing API directly using a Facebook App YOU create. READ ONLY for data, spending nothing. Instructions for creating the app are below.

@@ -99,9 +99,17 @@ vps_env = set((vps.get("environment") or {}).keys())
 # của Hostinger, không phải mặc định kỹ thuật của image - nên chúng thuộc về đây.
 # GHCR_USER/GHCR_TOKEN (0.64.82): cũng là ĐẦU VÀO của người dùng, dành cho repo/ảnh riêng tư -
 # token read:packages để /version thấy bản mới và Watchtower kéo được ảnh. Bỏ trống = như cũ.
+# JAVIS_META_TRAM_* (26.10.114): cũng là ĐẦU VÀO của người vận hành - App ID/Secret của Facebook
+# App để máy này làm trạm đăng nhập Meta (docs/29-tram-dang-nhap-meta.md). Bỏ trống = không làm trạm.
+meta_tram = {"JAVIS_META_TRAM_APP_ID", "JAVIS_META_TRAM_APP_SECRET", "JAVIS_META_TRAM_GOC",
+             "JAVIS_META_TRAM_LIEN_HE", "JAVIS_META_TRAM_CONFIG_ID"}
 check(
-    "VPS production giữ token Watchtower + hai trường tài khoản quản trị + token GHCR",
-    vps_env == {"WATCHTOWER_TOKEN", "JAVIS_ADMIN_USER", "JAVIS_ADMIN_PASSWORD", "GHCR_TOKEN", "GHCR_USER"},
+    "VPS production giữ token Watchtower + hai trường tài khoản quản trị + token GHCR + trạm Meta",
+    vps_env == {"WATCHTOWER_TOKEN", "JAVIS_ADMIN_USER", "JAVIS_ADMIN_PASSWORD", "GHCR_TOKEN", "GHCR_USER"} | meta_tram,
+)
+check(
+    "biến trạm Meta đọc từ .env, mặc định rỗng (bỏ trống = máy không làm trạm)",
+    all(f"${{{v}:-}}" in (ROOT / "docker-compose.yml").read_text(encoding="utf-8") for v in meta_tram),
 )
 check(
     "token GHCR đọc từ .env, mặc định rỗng",

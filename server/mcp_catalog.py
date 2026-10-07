@@ -149,6 +149,8 @@ def public_catalog():
             "category": c.get("category", "Khác"), "description": c.get("description", ""),
             "status": c.get("status", "ready"), "transport": c.get("transport", "http"),
             "auth_type": auth.get("type", "apikey"),
+            # "meta" → dashboard hiện thêm nút Đăng nhập nhanh qua trạm MinMin (meta_tram.py).
+            "provider": (auth.get("provider") or "").strip().lower(),
             # `default`: giá trị dựng sẵn cho ô KỸ THUẬT mà người thường không tự biết điền
             # (vd URL hồ sơ agent UCP của Shopify). Form điền sẵn để user cứ bấm Kết nối là
             # xong, nhưng vẫn sửa được khi cần trỏ sang hồ sơ riêng.
