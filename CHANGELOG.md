@@ -4,6 +4,18 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.109] - 2026-10-07
+### Mới
+- Biệt thự 3D: cửa đôi giữa văn phòng chính và hai phòng Sale, Marketing, tự mở khi có người tới gần. Mỗi phòng có điều hòa và đèn trần (ẩn cùng tường khi bấm Ẩn tường).
+- Độ sáng theo giờ thật của máy: ban ngày sáng, chiều tối ấm dần, ban đêm tối và đèn trần, đèn đứng tự bật.
+- Văn phòng chính xếp lại: quầy trà (máy cà phê, khay trà, tủ bánh, bình nước) và hai bàn đứng ăn ở góc phải phía trước, lối cửa hai bên.
+- Nhân viên không ngồi lì: ai cũng có lúc đứng dậy đi uống nước, ăn bánh, đi dạo, nói chuyện với đồng nghiệp, hoặc sang phòng khác xem bảng dashboard. Giám đốc thỉnh thoảng dẫn hai người đi xem bảng các phòng, có chỉ tay và đọc số thật.
+- Mô phỏng Họp toàn công ty: cả hai phòng về phòng họp chính, hết ghế thì đứng khoanh tay nghe; giám đốc phát biểu trước, vài người đứng lên báo cáo bằng số thật.
+- Mô phỏng Giờ giải lao (tự chạy lúc 10h và 15h): người ra quầy trà uống nước, uống cà phê, ăn bánh, người đứng nói chuyện.
+- Dáng mới: khoanh tay, chỉ tay, uống nước và ăn bánh (có ly, bánh cầm trên tay).
+### Cải thiện
+- Đường đi tự tìm xuyên qua cửa sang cả hai phòng; bấm vào nhân viên trong phòng cũng hiện thẻ thông tin.
+
 ## [26.10.108] - 2026-10-07
 ### Cải thiện
 - Dải xanh "đang chạy ngầm" trong khung chat thu nhỏ còn một hàng mỏng (chấm, tên việc cắt gọn, nút nhỏ), không còn chiếm chỗ khung chat.

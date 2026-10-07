@@ -44,10 +44,10 @@
   // Bàn làm việc của agent kê sát tường sau, tường trái và hàng trước. Trạm dữ liệu dựa tường phải.
   var HX = 14.2, HZ = 10.4, TL = 11.4, TW = 2.3;
   var STATION_DEFS = [
-    { id: "brain", ten: "Bộ nhớ Brain", z: -6.5, re: /^(read|write|edit|glob|grep|notebook|vault|memory|javis_(use_skill|task)|ask_javis)/i },
-    { id: "mcp", ten: "Dữ liệu ngoài", z: -2.2, re: /^mcp__/i },
-    { id: "web", ten: "Mạng và web", z: 2.2, re: /(websearch|webfetch|browser|chrome|fetch|search)/i },
-    { id: "lenh", ten: "Máy chạy lệnh", z: 6.5, re: /./ }
+    { id: "brain", ten: "Bộ nhớ Brain", z: -8.5, re: /^(read|write|edit|glob|grep|notebook|vault|memory|javis_(use_skill|task)|ask_javis)/i },
+    { id: "mcp", ten: "Dữ liệu ngoài", z: -5.7, re: /^mcp__/i },
+    { id: "web", ten: "Mạng và web", z: -2.9, re: /(websearch|webfetch|browser|chrome|fetch|search)/i },
+    { id: "lenh", ten: "Máy chạy lệnh", z: 2.9, re: /./ }
   ];
   function tramCua(tool) {
     tool = String(tool || "");
@@ -59,10 +59,12 @@
   }
 
   // ---------- tìm đường (A*) quanh vật thể ----------
-  var CELL = 0.4, GW = Math.ceil(HX * 2 / CELL), GH = Math.ceil(HZ * 2 / CELL), blocked = null;
-  function gi(x) { return Math.floor((x + HX) / CELL); }
+  // lưới phủ cả văn phòng chính lẫn hai phòng bên (GX = nửa bề ngang của cả biệt thự); cửa đôi ở giữa tường bên, z từ -DOOR đến DOOR
+  var GX = 33.6, DOOR = 1.4, RW = 19;
+  var CELL = 0.4, GW = Math.ceil(GX * 2 / CELL), GH = Math.ceil(HZ * 2 / CELL), blocked = null;
+  function gi(x) { return Math.floor((x + GX) / CELL); }
   function gj(z) { return Math.floor((z + HZ) / CELL); }
-  function cx(i) { return -HX + (i + 0.5) * CELL; }
+  function cx(i) { return -GX + (i + 0.5) * CELL; }
   function cz(j) { return -HZ + (j + 0.5) * CELL; }
   function chanHinhChuNhat(x, z, w, d, rot, pad) {
     var c = Math.cos(rot), s = Math.sin(rot), hw = w / 2 + pad, hd = d / 2 + pad;
@@ -78,19 +80,26 @@
   }
   function khoiTaoLuoi() {
     blocked = new Uint8Array(GW * GH);
-    for (var i = 0; i < GW; i++) for (var j = 0; j < GH; j++) if (Math.abs(cx(i)) > HX - 0.7 || Math.abs(cz(j)) > HZ - 0.7) blocked[j * GW + i] = 1;
+    for (var i = 0; i < GW; i++) for (var j = 0; j < GH; j++) {
+      var x = cx(i), z = cz(j), ax = Math.abs(x);
+      if (ax > GX - 0.7 || Math.abs(z) > HZ - 0.7) blocked[j * GW + i] = 1;
+      else if (ax > HX - 0.35 && ax < HX + 0.65 && Math.abs(z) > DOOR + 0.1) blocked[j * GW + i] = 1;       // tường giữa văn phòng và phòng bên, chỉ chừa lối cửa
+    }
     chanHinhChuNhat(0, 0, TL, TW, 0, 0.45);                       // bàn họp
+  }
+  // xếp lại nhân viên hai phòng thì xoá các ô bị bàn ghế phòng chiếm (không đụng văn phòng chính)
+  function xoaChanPhong() {
+    for (var i = 0; i < GW; i++) for (var j = 0; j < GH; j++) { var x = cx(i); if (Math.abs(x) > HX + 0.65 && Math.abs(x) <= GX - 0.7 && Math.abs(cz(j)) <= HZ - 0.7) blocked[j * GW + i] = 0; }
   }
   function nhoNhat(a, b) { return a.f < b.f; }
   function timDuong(sx, sz, gx, gz, tru) {
     // ô tắc bởi vật tĩnh, hoặc bởi người đang ĐỨNG/NGỒI yên (trừ chính nó); vùng quanh điểm đầu/cuối được mở
     var occ = [];
-    var danh = ds.concat(lead ? [lead] : []);
-    danh.forEach(function (o) { if (o !== tru && !o.walking) occ.push(o); });
+    banDo().forEach(function (o) { if (o !== tru && !o.walking) occ.push(o); });
     function ok(i, j) {
       if (i < 0 || j < 0 || i >= GW || j >= GH) return false;
       var x = cx(i), z = cz(j);
-      if (Math.hypot(x - sx, z - sz) < 0.62 || Math.hypot(x - gx, z - gz) < 0.62) return Math.abs(x) <= HX - 0.7 && Math.abs(z) <= HZ - 0.7 && !(Math.abs(x) <= TL / 2 + 0.3 && Math.abs(z) <= TW / 2 + 0.3);
+      if (Math.hypot(x - sx, z - sz) < 0.62 || Math.hypot(x - gx, z - gz) < 0.62) return Math.abs(x) <= GX - 0.7 && Math.abs(z) <= HZ - 0.7 && !(Math.abs(x) <= TL / 2 + 0.3 && Math.abs(z) <= TW / 2 + 0.3);
       if (blocked[j * GW + i]) return false;
       for (var k = 0; k < occ.length; k++) if (Math.hypot(x - occ[k].x, z - occ[k].z) < 0.85) return false;
       return true;
@@ -103,7 +112,7 @@
     function down(i) { for (;;) { var l = i * 2 + 1, r = l + 1, m = i; if (l < heap.length && nhoNhat(heap[l], heap[m])) m = l; if (r < heap.length && nhoNhat(heap[r], heap[m])) m = r; if (m === i) break; var t = heap[i]; heap[i] = heap[m]; heap[m] = t; i = m; } }
     var goal = tj * GW + ti, found = false, DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
     var guard = 0;
-    while (heap.length && guard++ < 9000) {
+    while (heap.length && guard++ < 30000) {
       var cur = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; down(0); }
       var n = cur.n; if (done[n]) continue; done[n] = 1; if (n === goal) { found = true; break; }
       var ci = n % GW, cj = (n / GW) | 0;
@@ -241,7 +250,7 @@
         NV = { chars: r.slice(0, nc).map(function (g) { return g.scene; }), clips: clips, SU: m.SkeletonUtils, props: {}, sanGo: null }; return true;
       }).then(function () {
         // đồ dùng tạo bằng Higgsfield (ghế, bàn, cây, đèn, sàn gỗ): thiếu cái nào thì dùng hình dựng bằng code
-        return Promise.all(["office_chair", "director_chair", "plant", "lamp", "desk"].map(function (n) {
+        return Promise.all(["office_chair", "director_chair", "plant", "lamp", "desk", "bar", "coffee", "tea_tray", "cake", "water", "stand_table", "ac"].map(function (n) {
           return tai(NV_DIR + "props/" + n + ".glb").then(function (g) { NV.props[n] = g.scene; }, function () {});
         })).then(function () {
           return new Promise(function (ok) { new T.TextureLoader().load(NV_DIR + "props/floor_wood.jpg?v=" + NV_V, function (tx) { tx.colorSpace = T.SRGBColorSpace; tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.anisotropy = 8; NV.sanGo = tx; ok(); }, null, function () { ok(); }); });
@@ -250,7 +259,7 @@
     }).catch(function (e) { console.warn("[office] không nạp được người 3D, dùng robot", e); NV = null; return false; });
   }
   // đồ Higgsfield đã chuẩn hoá cao 1 (trục Y từ -0.5 đến 0.5): đặt chân chạm sàn, cao `cao`, quay `yaw`
-  var PROP_YAW = { office_chair: Math.PI, director_chair: Math.PI, plant: 0, lamp: 0, desk: Math.PI / 2 };
+  var PROP_YAW = { office_chair: Math.PI, director_chair: Math.PI, plant: 0, lamp: 0, desk: Math.PI / 2, bar: Math.PI / 2, coffee: 0, tea_tray: 0, cake: 0, water: 0, stand_table: 0, ac: 0 };
   function vatProp(ten, cao, sx) {
     var src = NV && NV.props && NV.props[ten]; if (!src) return null;
     var w = new T.Group(), c = NV.SU.clone(src); c.scale.setScalar(cao); c.position.y = 0.5 * cao; c.rotation.y = PROP_YAW[ten] || 0; w.add(c);
@@ -382,6 +391,37 @@
         if (r.ikw > 0.01) { h[3].rotateY(-sd * 1.3 * r.ikw); h[3].updateMatrixWorld(true); }
       });
     }
+    // ---- tư thế đứng: khoanh tay, chỉ tay, đưa tay lên miệng (uống nước, ăn bánh) ----
+    var pzDang = (!a.walking && !ngoi && (dang === "cross" || dang === "drink" || dang === "point")) ? dang : null;
+    if (pzDang) r.pzk = pzDang;
+    r.pzw = (r.pzw || 0) + ((pzDang ? 1 : 0) - (r.pzw || 0)) * Math.min(1, dt * 5);
+    if (r.pzw > 0.02 && r.pzk) {
+      var Bq = r.B, sL = Bq.LeftArm.getWorldPosition(new T.Vector3()), sR = Bq.RightArm.getWorldPosition(new T.Vector3());
+      Bq.LeftForeArm.getWorldPosition(_p1); Bq.LeftHand.getWorldPosition(_p2);
+      var Lr = sL.distanceTo(_p1) + _p1.distanceTo(_p2), WW = r.pzw, UPv = new T.Vector3(0, 1, 0);
+      var fw = new T.Vector3(Math.sin(a.rot), 0, Math.cos(a.rot)), lf = new T.Vector3(Math.cos(a.rot), 0, -Math.sin(a.rot));
+      var cucL = lf.clone().multiplyScalar(0.6).add(new T.Vector3(0, -0.8, 0)), cucR = lf.clone().multiplyScalar(-0.6).add(new T.Vector3(0, -0.8, 0)), tg;
+      if (r.pzk === "cross") {
+        tg = sL.clone().addScaledVector(lf, -0.5 * Lr).addScaledVector(fw, 0.38 * Lr).addScaledVector(UPv, -0.5 * Lr); ikTay(Bq.LeftArm, Bq.LeftForeArm, Bq.LeftHand, tg, cucL, WW);
+        tg = sR.clone().addScaledVector(lf, 0.5 * Lr).addScaledVector(fw, 0.46 * Lr).addScaledVector(UPv, -0.46 * Lr); ikTay(Bq.RightArm, Bq.RightForeArm, Bq.RightHand, tg, cucR, WW);
+      } else if (r.pzk === "drink") {
+        var hp = Bq.Head.getWorldPosition(new T.Vector3()), sip = 0.5 + 0.5 * Math.sin(t * 0.9 + a.seed);
+        tg = hp.clone().addScaledVector(fw, (0.36 - 0.08 * sip) * Lr).addScaledVector(UPv, (-0.16 + 0.12 * sip) * Lr).addScaledVector(lf, 0.02 * Lr); ikTay(Bq.RightArm, Bq.RightForeArm, Bq.RightHand, tg, cucR, WW);
+      } else {
+        var dir = a.diemPt ? a.diemPt.clone().sub(sR).normalize() : fw.clone();
+        tg = sR.clone().addScaledVector(dir, 0.97 * Lr).addScaledVector(UPv, 0.03 * Math.sin(t * 2.2 + a.seed) * Lr); ikTay(Bq.RightArm, Bq.RightForeArm, Bq.RightHand, tg, cucR, WW);
+      }
+      if (a.item) {
+        if (!r.cup) {
+          r.cup = new T.Group(); var cm = new T.Mesh(new T.CylinderGeometry(0.07, 0.055, 0.15, 14), mat(0xffffff, { roughness: 0.4 })); cm.position.y = 0.075; r.cup.add(cm);
+          var ct = new T.Mesh(new T.CylinderGeometry(0.063, 0.063, 0.01, 14), mat(0x3a2412)); ct.position.y = 0.148; r.cup.add(ct);
+          var bn = new T.Mesh(new T.CylinderGeometry(0.075, 0.075, 0.03, 14), mat(0xd9a45c, { roughness: 0.8 })); bn.position.y = 0.05; bn.visible = false; r.cup.add(bn); r.cup.userData = { c: cm, t: ct, b: bn }; r.g.add(r.cup);
+        }
+        var ud = r.cup.userData, ban_ = a.item === "banh"; ud.c.visible = !ban_; ud.t.visible = !ban_; ud.b.visible = ban_;
+        if (!ban_) { ud.c.material.color.setHex(a.item === "cafe" ? 0xf5ecdf : 0xffffff); ud.t.material.color.setHex(a.item === "cafe" ? 0x2a160a : 0x7fc4ff); }
+        var hw = Bq.RightHand.getWorldPosition(new T.Vector3()); r.g.worldToLocal(hw); r.cup.position.copy(hw).add(new T.Vector3(0, -0.03, 0)); r.cup.visible = true;
+      } else if (r.cup) r.cup.visible = false;
+    } else if (r.cup) r.cup.visible = false;
     // cầm sách: tay trái đỡ sách trên lòng bàn tay ngửa, trước ngực (hoặc đặt trên mặt bàn khi ngồi), không để tay xuyên sách
     r.carry += ((r.vat.visible ? 1 : 0) - r.carry) * Math.min(1, dt * 6);
     if (r.carry > 0.01) {
@@ -603,6 +643,7 @@
     gs.forEach(function (s, gi_) { ghe(s.x, s.z, s.rot, true, gi_ === 0); chanTron(s.x, s.z, 0.52); s.by = null; });
     return { ghe: gs, holo: holo };
   }
+  var anh = { lamps: [], tran: [], hemi: null, dl: null };
   function den(x, z, hex) {
     var g = new T.Group(); g.position.set(x, 0, z);
     var vl = vatProp("lamp", 2.9);
@@ -610,11 +651,11 @@
     var tru = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 2.6, 8), mat(0x6f7f98)); tru.position.y = 1.3; g.add(tru);
     var de = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, 0.06, 14), mat(0x6f7f98)); de.position.y = 0.03; g.add(de);
     var chup = new T.Mesh(new T.CylinderGeometry(0.28, 0.4, 0.5, 14), new T.MeshBasicMaterial({ color: hex })); chup.position.y = 2.7; g.add(chup); }
-    var pl = new T.PointLight(hex, 0.9, 20, 1.6); pl.position.y = 2.6; g.add(pl);
+    var pl = new T.PointLight(hex, 0.9, 20, 1.6); pl.position.y = 2.6; g.add(pl); anh.lamps.push({ l: pl, b: 0.9 });
     scene.add(g); chanTron(x, z, 0.4);
   }
   // ---------- biệt thự: phòng Sale (trái) và phòng Marketing (phải), nhân viên theo Pancake POS ----------
-  var RW = 19, PHONG = [
+  var PHONG = [
     { id: "sale", ten: "Phòng Sale", cx: -(14.5 + RW / 2), mau: 0xfff0dc, mauToi: 0x3a2c1c, acc: "#f5a623", vaiTro: "Nhân viên bán hàng" },
     { id: "marketing", ten: "Phòng Marketing", cx: 14.5 + RW / 2, mau: 0xf0e6ff, mauToi: 0x2c1f46, acc: "#9b6bff", vaiTro: "Nhân viên marketing" }
   ];
@@ -724,17 +765,23 @@
       chanTuong(RW + 0.6, light, ph.cx, -HZ + 0.03, 0); chanTuong(HZ * 2, light, xo - dir * 0.15, 0, Math.PI / 2);
       caySan(ph.cx - RW / 2 + 1.2, -HZ + 1.3, 1); caySan(ph.cx + RW / 2 - 1.2, -HZ + 1.3, 1.2); caySan(ph.cx - dir * (RW / 2 - 1.2), HZ - 1.2, 0.9);
       var nh = spriteTu(veNhan(ph.ten, "Phòng ban", ph.acc, nenNhan()), 3.4); nh.position.set(ph.cx, 6.4, -HZ + 0.4); scene.add(nh); canhTuong.push(nh);
+      [[-5.5, -4.05], [5.5, -4.05], [-5.5, 5.35], [5.5, 5.35], [0, 0.65]].forEach(function (p) { dungDenTran(ph.cx + p[0], p[1]); });
+      dungDieuHoa(ph.cx + dir * (RW / 2 - 0.45), 4.65, -3.5, -dir * Math.PI / 2); dungDieuHoa(ph.cx + dir * (RW / 2 - 0.45), 4.65, 5.5, -dir * Math.PI / 2);
+      var pd = new T.PointLight(0xfff0d8, 0.9, 30, 1.4); pd.position.set(ph.cx, 4.8, 0.5); scene.add(pd); anh.lamps.push({ l: pd, b: 0.9 }); canhTuong.push(pd);
     });
+  }
+  function chuHang(r) {
+    return (r.dept === "marketing" ? (r.month_orders != null ? r.month_orders + " đơn tháng" : tien(r.spend) + " ads") + (r.roas ? " · ROAS " + String(r.roas).replace(".", ",") + "x" : "") : r.dept === "kho" ? (r.packed || r.orders || 0) + " đơn đóng gói" : (r.orders || 0) + " đơn · " + tien(r.revenue)) + (r.rank ? " · #" + r.rank : "");
   }
   function xepNhanVien() {
     if (!scene || !pancakeDL) return;
     var sig = ["sale", "kho", "marketing"].map(function (k) { return (pancakeDL[k] || []).map(function (r) { return r.name; }).join("|"); }).join("#");
     var capNhatChu = function () {
-      nvPhong.forEach(function (a) { var r = a.row; if (!r) return; trangThai(a, (r.dept === "marketing" ? (r.month_orders != null ? r.month_orders + " đơn tháng" : tien(r.spend) + " ads") + (r.roas ? " · ROAS " + String(r.roas).replace(".", ",") + "x" : "") : r.dept === "kho" ? (r.packed || r.orders || 0) + " đơn đóng gói" : (r.orders || 0) + " đơn · " + tien(r.revenue)) + (r.rank ? " · #" + r.rank : "")); });
+      nvPhong.forEach(function (a) { var r = a.row; if (!r || a.walking || a.cur || a.q.length) return; trangThai(a, chuHang(r)); });
     };
     if (sig === pancakeSig) { capNhatChu(); return; }
     pancakeSig = sig;
-    vatPhong.forEach(function (o) { scene.remove(o); }); vatPhong = []; nvPhong = [];
+    vatPhong.forEach(function (o) { scene.remove(o); }); vatPhong = []; nvPhong = []; xoaChanPhong();
     var truoc = scene.children.length;
     PHONG.forEach(function (ph) {
       var dsr = ph.id === "sale" ? (pancakeDL.sale || []).concat(pancakeDL.kho || []) : (pancakeDL.marketing || []);
@@ -782,33 +829,124 @@
     var led = new T.Mesh(new T.CircleGeometry(0.035, 10), new T.MeshBasicMaterial({ color: 0x2a6bff })); led.position.set(w * 0.46, -(h / 2 + 0.1), 0.07); f.add(led);
     return f;
   }
+
+  // ---------- cửa đôi giữa văn phòng và hai phòng bên: tự mở khi có người tới gần ----------
+  var cuaDoi = [];
+  function dungCuaPhong(tuong, light) {
+    cuaDoi = [];
+    [-1, 1].forEach(function (s) {
+      var xw = s * (HX + 0.15), hD = 3.1, seg = HZ - DOOR;
+      [-1, 1].forEach(function (u) { var w = new T.Mesh(new T.BoxGeometry(0.3, 5.8, seg), tuong); w.position.set(xw, 2.9, u * (DOOR + seg / 2)); scene.add(w); canhTuong.push(w); });
+      var lt = new T.Mesh(new T.BoxGeometry(0.3, 5.8 - hD, DOOR * 2), tuong); lt.position.set(xw, hD + (5.8 - hD) / 2, 0); scene.add(lt); canhTuong.push(lt);
+      var ng = new T.Mesh(new T.BoxGeometry(0.9, 0.3, DOOR * 2), mat(light ? 0xcfc6b8 : 0x3a4458, { roughness: 0.7 })); ng.position.set(xw, -0.15, 0); scene.add(ng); canhSan.push(ng);
+      var kf = mat(light ? 0x8a6a4a : 0x6b5238, { roughness: 0.6 });
+      [-1, 1].forEach(function (u) { var tr = new T.Mesh(new T.BoxGeometry(0.4, hD, 0.14), kf); tr.position.set(xw, hD / 2, u * DOOR); scene.add(tr); canhTuong.push(tr); });
+      var ln = new T.Mesh(new T.BoxGeometry(0.4, 0.14, DOOR * 2 + 0.14), kf); ln.position.set(xw, hD, 0); scene.add(ln); canhTuong.push(ln);
+      var lm = mat(light ? 0xe0c196 : 0x7a5d40, { roughness: 0.55 }), tm = mat(0xc0c8d4, { metalness: 0.7, roughness: 0.3 }), l = [], cw = DOOR - 0.05;
+      [-1, 1].forEach(function (u) {
+        var piv = new T.Group(); piv.position.set(xw, 0, u * (DOOR - 0.03)); scene.add(piv); canhTuong.push(piv);
+        var lf = new T.Mesh(new T.BoxGeometry(0.1, hD - 0.08, cw), lm); lf.position.set(0, (hD - 0.08) / 2, -u * cw / 2); piv.add(lf);
+        var tay = new T.Mesh(new T.BoxGeometry(0.2, 0.5, 0.06), tm); tay.position.set(0, 1.5, -u * (cw - 0.14)); piv.add(tay);
+        l.push({ p: piv, u: u });
+      });
+      cuaDoi.push({ s: s, l: l, mo: 0 });
+    });
+  }
+  function capNhatCua(dt) {
+    var L = banDo();
+    cuaDoi.forEach(function (c) {
+      var xw = c.s * (HX + 0.15), gan = false;
+      for (var i = 0; i < L.length; i++) if (Math.abs(L[i].x - xw) < 2.7 && Math.abs(L[i].z) < 2.6) { gan = true; break; }
+      c.mo += ((gan ? 1 : 0) - c.mo) * Math.min(1, dt * 3.5);
+      c.l.forEach(function (h) { h.p.rotation.y = -c.s * h.u * (Math.PI / 2) * 0.94 * c.mo; });
+    });
+  }
+  // ---------- đồ Higgsfield đặt vào cảnh (quầy trà, điều hòa...), thiếu file thì dựng hình đơn giản ----------
+  function datProp(ten, x, z, cao, yaw, y0) {
+    var v = vatProp(ten, cao); if (!v) return null;
+    v.position.set(x, y0 || 0, z); v.rotation.y = yaw || 0; scene.add(v); return v;
+  }
+  var QUAY = {
+    tra: [{ x: 11.3, z: 6.9, rot: Math.PI / 2 }, { x: 11.3, z: 7.9, rot: Math.PI / 2 }, { x: 11.3, z: 8.9, rot: Math.PI / 2 }],
+    dung: [{ x: 7.6, z: 6.4, rot: Math.PI / 2 }, { x: 9.6, z: 6.4, rot: -Math.PI / 2 }, { x: 7.6, z: 8.8, rot: Math.PI / 2 }, { x: 9.6, z: 8.8, rot: -Math.PI / 2 }]
+  };
+  var CHAT = [{ x: -7, z: 5.6 }, { x: -3, z: 5.6 }, { x: 1, z: 5.6 }, { x: -7, z: -5.6 }, { x: -3, z: -5.6 }, { x: 3, z: -5.6 }];
+  function dungQuayTra() {
+    var light = sang();
+    // quầy trà dựa tường phải: máy cà phê, khay trà, tủ bánh; bình nước đứng cạnh
+    if (!datProp("bar", 12.75, 7.9, 1.05, PROP_YAW.bar)) {
+      var q = new T.Mesh(new T.BoxGeometry(1.4, 1.05, 3.5), mat(light ? 0xe8dfd2 : 0x3a4458)); q.position.set(12.75, 0.525, 7.9); scene.add(q);
+    }
+    datProp("coffee", 12.75, 6.9, 0.62, PROP_YAW.coffee, 1.05);
+    datProp("tea_tray", 12.75, 7.9, 0.2, PROP_YAW.tea_tray, 1.05);
+    datProp("cake", 12.75, 8.9, 0.42, PROP_YAW.cake, 1.05);
+    datProp("water", 13.0, 5.6, 1.45, PROP_YAW.water);
+    [[8.6, 6.4, "cake", 0.34], [8.6, 8.8, "tea_tray", 0.2]].forEach(function (p) {
+      if (!datProp("stand_table", p[0], p[1], 1.15, 0)) { var tb = new T.Mesh(new T.CylinderGeometry(0.55, 0.55, 0.06, 20), mat(0xe6dcc8)); tb.position.set(p[0], 1.12, p[1]); scene.add(tb); var tr = new T.Mesh(new T.CylinderGeometry(0.06, 0.06, 1.1, 8), mat(0x2a2f3a)); tr.position.set(p[0], 0.55, p[1]); scene.add(tr); }
+      datProp(p[2], p[0], p[1], p[3], 0, 1.15);
+      chanTron(p[0], p[1], 0.62);
+    });
+    chanHinhChuNhat(12.75, 7.9, 1.5, 3.6, 0, 0.2); chanTron(13.0, 5.6, 0.4);
+    var nh = spriteTu(veNhan("Quầy trà", "Giải lao, cà phê, bánh", "#f5a623", nenNhan()), 2.6); nh.position.set(12.4, 3.2, 7.9); scene.add(nh); canhTuong.push(nh);
+  }
+  // đèn trần (ẩn cùng tường) và điều hòa treo tường
+  function dungDenTran(x, z) {
+    var g = new T.Group(); g.position.set(x, 5.45, z);
+    var m = new T.MeshStandardMaterial({ color: 0xfff7e6, emissive: 0xfff0cc, emissiveIntensity: 0.2, roughness: 0.4 });
+    var p = new T.Mesh(new T.BoxGeometry(1.5, 0.07, 0.5), m); g.add(p);
+    var vi = new T.Mesh(new T.BoxGeometry(1.62, 0.04, 0.62), mat(0xdfe5ee)); vi.position.y = 0.05; g.add(vi);
+    scene.add(g); canhTuong.push(g); anh.tran.push(p);
+  }
+  function dungDieuHoa(x, y, z, yaw) {
+    var v = vatProp("ac", 0.72);
+    if (!v) { v = new T.Group(); var b = new T.Mesh(new T.BoxGeometry(2.1, 0.7, 0.6), mat(0xf4f6fa, { roughness: 0.35 })); b.position.y = 0.35; v.add(b); }
+    v.position.set(x, y, z); v.rotation.y = yaw; scene.add(v); canhTuong.push(v);
+  }
+  function dungTranNha() {
+    [[-7, -5.8], [0, -5.8], [7, -5.8], [-7, 5.8], [0, 5.8], [7, 5.8]].forEach(function (p) { dungDenTran(p[0], p[1]); });
+    dungDieuHoa(-HX + 0.45, 4.65, -7, Math.PI / 2); dungDieuHoa(-HX + 0.45, 4.65, 7, Math.PI / 2); dungDieuHoa(HX - 0.45, 4.65, 6.4, -Math.PI / 2);
+  }
+  // ---------- độ sáng theo giờ thật: ban ngày sáng, chiều tối ấm, ban đêm tối và bật đèn ----------
+  function smooth(x) { return x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); }
+  function giuAnh() { var d = new Date(); return window.__mmOfficeHour != null ? +window.__mmOfficeHour : d.getHours() + d.getMinutes() / 60; }
+  function apAnhSang() {
+    if (!scene || !anh.hemi) return;
+    var h = giuAnh(), k = smooth((h - 5.0) / 2.0) * (1 - smooth((h - 17.0) / 2.0)), dem = 1 - k, light = sang();
+    anh.hemi.intensity = (light ? 1.0 : 0.75) * (0.36 + 0.64 * k);
+    anh.dl.intensity = (light ? 1.2 : 0.7) * (0.08 + 0.92 * k);
+    anh.dl.color.setRGB(1, 0.7 + 0.3 * k, 0.45 + 0.55 * k); anh.dl.position.set(-8 + (h - 12) * 2.4, 18, 10);
+    var nen = new T.Color(light ? 0xe9f0fa : 0x0d1524).lerp(new T.Color(0x05080f), dem * 0.9);
+    scene.background.copy(nen); if (scene.fog) scene.fog.color.copy(nen);
+    anh.lamps.forEach(function (o) { o.l.intensity = o.b * (0.35 + 1.5 * dem); });
+    anh.tran.forEach(function (m) { m.material.emissiveIntensity = 0.18 + 1.1 * dem; });
+  }
   function tgo_() { return !!(NV && NV.sanGo); }
   function dungCanh() {
     var light = sang(), nen = light ? 0xe9f0fa : 0x0d1524;
     scene = new T.Scene(); scene.background = new T.Color(nen); scene.fog = new T.Fog(nen, 55, 110);
-    scene.add(new T.HemisphereLight(0xffffff, light ? 0xbfcbe0 : 0x24365a, light ? 1.0 : 0.75));
-    var dl = new T.DirectionalLight(0xffffff, light ? 1.2 : 0.7); dl.position.set(-8, 18, 10); scene.add(dl);
-    canhTuong = []; canhSan = []; giuBang = [];
+    anh = { lamps: [], tran: [], hemi: null, dl: null };
+    anh.hemi = new T.HemisphereLight(0xffffff, light ? 0xbfcbe0 : 0x24365a, light ? 1.0 : 0.75); scene.add(anh.hemi);
+    var dl = new T.DirectionalLight(0xffffff, light ? 1.2 : 0.7); dl.position.set(-8, 18, 10); scene.add(dl); anh.dl = dl;
+    canhTuong = []; canhSan = []; giuBang = []; cuaDoi = [];
     var san = new T.Mesh(new T.BoxGeometry(HX * 2, 0.3, HZ * 2), mat(light ? 0xf7f9fd : 0x16233a, { roughness: 0.9 })); san.position.y = -0.15; scene.add(san); canhSan.push(san);
     var tgo = sanGoMoi(HX * 2 / 4, HZ * 2 / 4); if (tgo) { san.material.map = tgo; san.material.color.set(light ? 0xe6dcd0 : 0x8a8a8a); san.material.roughness = 0.5; san.material.needsUpdate = true; }
     var luoi = new T.GridHelper(HX * 2, Math.round(HX * 2), light ? 0xd5deec : 0x24385a, light ? 0xe4ebf6 : 0x1d2d49); luoi.position.y = 0.01; luoi.scale.z = HZ / HX; if (!tgo_()) { scene.add(luoi); canhSan.push(luoi); }
     var tuong = mat(light ? 0xffffff : 0xffffff, { map: veSon(light), roughness: 0.95 });
     var t1 = new T.Mesh(new T.BoxGeometry(HX * 2, 5.8, 0.3), tuong); t1.position.set(0, 2.9, -HZ - 0.15); scene.add(t1);
-    var t2 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t2.position.set(-HX - 0.15, 2.9, 0); scene.add(t2);
-    var t3 = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuong); t3.position.set(HX + 0.15, 2.9, 0); scene.add(t3);
-    var vien = new T.Mesh(new T.BoxGeometry(HX * 2, 0.05, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 5.8, -HZ - 0.15); scene.add(vien); canhTuong.push(t1, t2, t3, vien);
-    chanTuong(HX * 2, light, 0, -HZ + 0.03, 0); chanTuong(HZ * 2, light, -HX + 0.03, 0, Math.PI / 2); chanTuong(HZ * 2, light, HX - 0.03, 0, Math.PI / 2);
+    var vien = new T.Mesh(new T.BoxGeometry(HX * 2, 0.05, 0.12), mat(0x2a6bff, { emissive: 0x2a6bff, emissiveIntensity: 0.6 })); vien.position.set(0, 5.8, -HZ - 0.15); scene.add(vien); canhTuong.push(t1, vien);
+    dungCuaPhong(tuong, light);
+    chanTuong(HX * 2, light, 0, -HZ + 0.03, 0);
     khoiTaoLuoi(); taoManHinh();
     // bảng điều hành (số liệu thật) giữa tường sau; khẩu hiệu hai bên và trên tường trái
     bang = new T.Mesh(new T.PlaneGeometry(9, 3.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangDieuHanh()), toneMapped: false })); bang.material.map.colorSpace = T.SRGBColorSpace;
-    bang.position.set(HX - 0.14, 3.95, 0); bang.rotation.y = -Math.PI / 2; scene.add(bang); giuBang.push(bang); khungTV(9, 3.6, HX - 0.06, 3.95, 0, -Math.PI / 2);   // sau lưng giám đốc
+    bang.position.set(HX - 0.14, 3.95, -5.7); bang.rotation.y = -Math.PI / 2; scene.add(bang); giuBang.push(bang); khungTV(9, 3.6, HX - 0.06, 3.95, -5.7, -Math.PI / 2);   // sau lưng giám đốc
     function kh(i, x, y, z, ry, w) { var m = new T.Mesh(new T.PlaneGeometry(w, w * 260 / 900), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veKhauHieu(i)), toneMapped: false })); m.material.map.colorSpace = T.SRGBColorSpace; m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); canhTuong.push(m); }
     kh(0, -8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(1, 8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(6, 0, 3.5, -HZ + 0.02, 0, 5.0);
-    kh(2, -HX + 0.02, 3.5, -6.2, Math.PI / 2, 5.0); kh(3, -HX + 0.02, 3.5, 0, Math.PI / 2, 5.0); kh(4, -HX + 0.02, 3.5, 6.2, Math.PI / 2, 5.0);
-        den(-12.9, -9.2, 0xffd9a0); den(12.9, -9.2, 0xffd9a0); den(-12.9, 9.2, 0xffd9a0); den(12.9, 9.2, 0xffd9a0);
+    kh(2, -HX + 0.02, 3.5, -6.2, Math.PI / 2, 5.0); kh(3, -HX + 0.02, 4.6, 0, Math.PI / 2, 5.0); kh(4, -HX + 0.02, 3.5, 6.2, Math.PI / 2, 5.0);
+        den(-12.9, -9.2, 0xffd9a0); den(12.9, -9.2, 0xffd9a0); den(-12.9, 9.2, 0xffd9a0); den(12.9, 4.1, 0xffd9a0);
     tram = STATION_DEFS.map(dungTram);
-    ban = dungBanHop(); dungPhongBan();
-    apKhongGian();
+    ban = dungBanHop(); dungQuayTra(); dungTranNha(); dungPhongBan();
+    apKhongGian(); apAnhSang();
     camera = new T.PerspectiveCamera(38, 1, 0.1, 250); raycaster = new T.Raycaster();
   }
   function datCamera() {
@@ -839,15 +977,17 @@
 
   // ---------- đồng bộ danh sách agent: mỗi người một bàn + một ghế sát tường ----------
   function boTri(n) {
-    var trai = Math.ceil(n * 0.3), con = n - trai, sau = Math.ceil(con / 2), truoc = con - sau, res = [], i;
+    // cột trái chừa lối cửa ở giữa (z quanh 0); hàng trước dừng sớm để nhường góc phải cho quầy trà
+    var trai = Math.min(6, Math.ceil(n * 0.3)), con = n - trai, sau = Math.ceil(con / 2), truoc = con - sau, res = [], i;
     function sp(a, b, k, m) { return m <= 1 ? (a + b) / 2 : a + (b - a) * k / (m - 1); }
     for (i = 0; i < sau; i++) { var x = sp(-10, 8, i, sau); res.push({ desk: { x: x, z: -9.5, rot: 0 }, stand: { x: x, z: -8.55 }, rot: Math.PI }); }
-    for (i = 0; i < truoc; i++) { var x2 = sp(-10, 8, i, truoc); res.push({ desk: { x: x2, z: 9.5, rot: Math.PI }, stand: { x: x2, z: 8.55 }, rot: 0 }); }
-    for (i = 0; i < trai; i++) { var z = sp(-6.4, 6.4, i, trai); res.push({ desk: { x: -13.3, z: z, rot: Math.PI / 2 }, stand: { x: -12.35, z: z }, rot: -Math.PI / 2 }); }
+    for (i = 0; i < truoc; i++) { var x2 = sp(-10, 4.2, i, truoc); res.push({ desk: { x: x2, z: 9.5, rot: Math.PI }, stand: { x: x2, z: 8.55 }, rot: 0 }); }
+    var ZT = [-3.9, 3.9, -6.6, 6.6, -9.0, 8.9];
+    for (i = 0; i < trai; i++) { var z = ZT[i]; res.push({ desk: { x: -13.3, z: z, rot: Math.PI / 2 }, stand: { x: -12.35, z: z }, rot: -Math.PI / 2 }); }
     return res;
   }
   function dungNguoi(list) {
-    list = list.slice(0, 24);
+    list = list.slice(0, 22);
     var bt = boTri(list.length);
     list.forEach(function (ag, i) {
       var p = bt[i];
@@ -991,6 +1131,185 @@
     }
   }
 
+
+  // ---------- ai cũng có đời sống riêng: đi uống nước, ăn bánh, dạo, xem bảng, tán gẫu; giám đốc đi xem bảng các phòng ----------
+  var cheDo = null, cheDoHet = 0, lastTuDong = "", luotTiep = 3, luotGD = 80;
+  function moiNguoi() { return ds.filter(function (x) { return !x.lead; }).concat(nvPhong); }
+  function ranh(a) { return !!a && !a.lead && !a.walking && !a.cur && a.q.length === 0 && a.kind === "desk" && !a.seat && a.holdPose === "type" && !conTrongPhien(a); }
+  function choTrong(sp, tru) {
+    var L = banDo();
+    for (var i = 0; i < L.length; i++) {
+      var o = L[i]; if (o === tru) continue;
+      if (Math.hypot(o.x - sp.x, o.z - sp.z) < 0.9) return false;
+      var qs = (o.cur ? [o.cur] : []).concat(o.q);
+      for (var k = 0; k < qs.length; k++) if (qs[k].t === "walk" && Math.hypot(qs[k].to.x - sp.x, qs[k].to.z - sp.z) < 0.6) return false;
+    }
+    return true;
+  }
+  function chonCho(arr, a) { var x = xaoTron(arr); for (var i = 0; i < x.length; i++) if (choTrong(x[i], a)) return x[i]; return null; }
+  function stay_(a, o) { var c = { t: "stay", ms: 3000, pose: "idle" }; for (var k in o) c[k] = o[k]; a.q.push(c); }
+  function chu_(a) { if (a.row) trangThai(a, chuHang(a.row)); else trangThai(a, "Đang làm việc"); }
+  function veChoLam(a) { di(a, a.home, "Về chỗ làm"); a.q.push({ t: "face", huong: a.huong }); a.q.push({ t: "hold", pose: "type" }); a.q.push({ t: "call", fn: chu_ }); }
+  function ngau(a, b) { return a + Math.random() * (b - a); }
+  var DAO = [{ x: -8, z: 5.6 }, { x: -4, z: 5.2 }, { x: 0, z: 5.6 }, { x: 4, z: 5.2 }, { x: -8, z: -5.6 }, { x: -3, z: -5.6 }, { x: 3, z: -5.6 }, { x: 8, z: -5.2 }, { x: 10, z: 3.8 }];
+  var CAU_CHAT = ["Hôm nay đơn về nhiều nhỉ?", "Cuối tuần có đi đâu không?", "Quán cà phê mới đầu đường ngon lắm.", "Chiều nay họp có gì mới không?", "Mình vừa chốt được mấy đơn lớn.", "Nghe nói tuần sau có chiến dịch mới.", "Trời nóng quá, uống gì đi."];
+  function hdNuoc(a, loai, ms) {
+    var sp = chonCho(QUAY.tra, a); if (!sp) return false;
+    loai = loai || ["cup", "cafe", "cup"][Math.floor(Math.random() * 3)];
+    di(a, { x: sp.x, z: sp.z, kind: "dung" }, loai === "cafe" ? "Đi pha cà phê" : "Đi lấy nước uống");
+    a.q.push({ t: "face", huong: sp.rot });
+    stay_(a, { ms: 1500, pose: "idle", tt: loai === "cafe" ? "Pha cà phê" : "Rót nước" });
+    stay_(a, { ms: ms || ngau(7000, 9500), pose: "drink", item: loai, tt: loai === "cafe" ? "Uống cà phê" : "Uống nước" });
+    return true;
+  }
+  function hdAn(a, ms) {
+    var sp = chonCho(QUAY.dung, a); if (!sp) return false;
+    di(a, { x: sp.x, z: sp.z, kind: "dung" }, "Đi ăn bánh"); a.q.push({ t: "face", huong: sp.rot });
+    stay_(a, { ms: ms || ngau(7500, 10500), pose: "drink", item: "banh", tt: "Ăn bánh" });
+    return true;
+  }
+  function hdDao(a) {
+    var n = 1 + Math.floor(Math.random() * 2), i;
+    for (i = 0; i < n; i++) { var sp = chonCho(DAO, a); if (!sp) break; di(a, { x: sp.x, z: sp.z, kind: "dung" }, "Đi dạo"); stay_(a, { ms: ngau(2200, 4200), pose: "idle", tt: "Đi dạo cho đỡ mỏi" }); }
+    return i > 0;
+  }
+  function diemBang() {
+    var r = [{ x: HX - 3.0, z: -5.7, rot: Math.PI / 2, nhin: { x: HX, z: -5.7 }, ten: "bảng điều hành", diem: new T.Vector3(HX - 0.1, 3.95, -5.7) }];
+    PHONG.forEach(function (ph) {
+      [["qua", -4.45, "hôm qua"], ["nay", 4.45, "hôm nay"]].forEach(function (k) {
+        r.push({ x: ph.cx + k[1], z: -8.4, rot: Math.PI, nhin: { x: ph.cx + k[1], z: -HZ }, ten: "bảng " + ph.ten.toLowerCase() + " " + k[2], diem: new T.Vector3(ph.cx + k[1], 3.5, -HZ + 0.1), ph: ph, kieu: k[0] });
+      });
+    });
+    return r;
+  }
+  function hdXem(a) {
+    var sp = chonCho(diemBang(), a); if (!sp) return false;
+    di(a, { x: sp.x, z: sp.z, kind: "dung" }, "Đi xem " + sp.ten); a.q.push({ t: "face", huong: sp.rot });
+    stay_(a, { ms: ngau(7000, 10000), pose: "idle", nhin: sp.nhin, tt: "Xem " + sp.ten });
+    return true;
+  }
+  function hdChat(a) {
+    var b = xaoTron(moiNguoi().filter(function (o) { return o !== a && ranh(o); }))[0]; if (!b) return false;
+    var sp = chonCho(CHAT, a); if (!sp) return false;
+    var pa = { x: sp.x - 0.6, z: sp.z, kind: "dung" }, pb = { x: sp.x + 0.6, z: sp.z, kind: "dung" }, c1 = CAU_CHAT[Math.floor(Math.random() * CAU_CHAT.length)], c2 = CAU_CHAT[Math.floor(Math.random() * CAU_CHAT.length)];
+    di(a, pa, "Đi nói chuyện với " + cat(b.ten, 12)); stay_(a, { ms: 5200, pose: "talk", nhin: pb, text: c1, tt: "Nói chuyện" }); stay_(a, { ms: 4600, pose: "listen", nhin: pb, tt: "Nói chuyện" }); stay_(a, { ms: 4800, pose: "talk", nhin: pb, text: c2, tt: "Nói chuyện" });
+    di(b, pb, "Đi nói chuyện với " + cat(a.ten, 12)); stay_(b, { ms: 5200, pose: "listen", nhin: pa, tt: "Nói chuyện" }); stay_(b, { ms: 4600, pose: "talk", nhin: pa, text: c2, tt: "Nói chuyện" }); stay_(b, { ms: 4800, pose: "listen", nhin: pa, tt: "Nói chuyện" });
+    veChoLam(a); veChoLam(b); return true;
+  }
+  function quayDoi(dt) {
+    var d = new Date(), h = d.getHours(), key = d.toDateString() + "-" + h;
+    if ((h === 10 || h === 15) && d.getMinutes() < 2 && lastTuDong !== key && !cheDo && ban) { lastTuDong = key; gioGiaiLao(); }
+    if (cheDo) { if (now() > cheDoHet) cheDo = null; return; }
+    var coPhien = Object.keys(phien).length > 0;
+    if (lead && !coPhien) {
+      luotGD -= dt;
+      if (luotGD <= 0) { luotGD = ngau(110, 170); if (!lead.walking && !lead.cur && lead.q.length === 0 && lead.kind === "seat") giamDocDi(); }
+    }
+    luotTiep -= dt; if (luotTiep > 0) return; luotTiep = ngau(1.5, 4);
+    var L = moiNguoi(), dang = L.filter(function (o) { return o.walking || o.q.length || o.kind !== "desk"; }).length;
+    if (dang >= Math.max(2, Math.ceil(L.length * 0.22))) return;
+    var cand = L.filter(ranh); if (!cand.length) return;
+    var a = cand[Math.floor(Math.random() * cand.length)];
+    if (now() - (a.hdCuoi || 0) < 25000) return;
+    a.hdCuoi = now();
+    var r = Math.random(), ok = false;
+    if (r < 0.26) ok = hdNuoc(a); else if (r < 0.4) ok = hdAn(a); else if (r < 0.58) ok = hdDao(a); else if (r < 0.8) ok = hdXem(a); else ok = hdChat(a);
+    if (ok) { if (!a.q.length || a.q[a.q.length - 1].t !== "call") veChoLam(a); }
+  }
+  function tomTatBang(sp) {
+    var dl = pancakeDL; if (!dl || !sp.ph) return "Số liệu đang cập nhật, mọi người cố gắng nhé.";
+    var ls = sp.ph.id === "sale" ? (dl.sale || []).concat(dl.kho || []) : (dl.marketing || []), tong = 0, dt = 0, ch = 0;
+    ls.forEach(function (r) { var v = sp.kieu === "qua" ? nhin(r, "qua") : r; tong += v.orders || 0; dt += v.revenue || 0; ch += v.spend || 0; });
+    var ngay = sp.kieu === "qua" ? "Hôm qua" : "Hôm nay";
+    return sp.ph.id === "sale" ? ngay + " phòng Sale chốt " + tong + " đơn, doanh thu " + tien(dt) + "." : ngay + " phòng Marketing chi " + tien(ch) + " quảng cáo, mang về " + tong + " đơn.";
+  }
+  function giamDocDi() {
+    var bs = diemBang(), ch = [bs[0]], ph = xaoTron(PHONG)[0];
+    bs.forEach(function (b) { if (b.ph === ph) ch.push(b); });
+    hienVat(lead, false);
+    var fol = xaoTron(moiNguoi().filter(ranh)).slice(0, 2);
+    ch.forEach(function (sp, i) {
+      di(lead, { x: sp.x, z: sp.z, kind: "dung" }, "Đi xem " + sp.ten); lead.q.push({ t: "face", huong: sp.rot });
+      stay_(lead, { ms: 8500, pose: "point", diem: sp.diem, nhin: sp.nhin, text: sp.ph ? tomTatBang(sp) : "Mình xem lại bảng điều hành chung của công ty.", tt: "Xem " + sp.ten });
+      fol.forEach(function (f, k) {
+        var sg = k ? 1 : -1, ngang = sp.rot === Math.PI;
+        di(f, { x: ngang ? sp.x + 1.5 * sg : sp.x - 0.2, z: ngang ? sp.z + 0.2 : sp.z + 1.5 * sg, kind: "dung" }, "Đi cùng giám đốc");
+        stay_(f, { ms: 8800, pose: k ? "cross" : "listen", nhin: sp.nhin, tt: "Nghe giám đốc" });
+      });
+    });
+    di(lead, lead.seat || lead.home, "Về chỗ họp"); lead.q.push({ t: "face", huong: (lead.seat || lead.home).rot }); lead.q.push({ t: "hold", pose: "listen", tt: "Điều hành" });
+    fol.forEach(function (f) { veChoLam(f); });
+  }
+  // ---------- họp toàn công ty và giờ giải lao ----------
+  function toanBo() { return moiNguoi(); }
+  function choDungHop() {
+    var r = [], x;
+    for (x = -5.5; x <= 5.6; x += 1.2) { r.push({ x: x, z: -4.3 }); r.push({ x: x, z: 4.3 }); }
+    for (x = -4.8; x <= 4.9; x += 1.2) { r.push({ x: x, z: -5.5 }); r.push({ x: x, z: 5.5 }); }
+    for (var z = -2.4; z <= 2.5; z += 1.2) { r.push({ x: -8.6, z: z }); r.push({ x: 8.6, z: z }); }
+    r.sort(function (p, q) { return Math.hypot(p.x, p.z * 1.4) - Math.hypot(q.x, q.z * 1.4); });
+    var lx = lead ? lead.x : 6.8, lz = lead ? lead.z : 0;
+    r.forEach(function (p) { p.rot = Math.atan2(lx - p.x, lz - p.z); });
+    return r;
+  }
+  function baoCaoHop(a, text) {
+    stay_(a, { ms: 6200, pose: "talk", text: text, tt: "Báo cáo trong họp", stand: true, speak: true });
+    a.q.push({ t: "hold", pose: a.hop === "ngoi" ? "listen" : "cross", tt: "Đang họp" });
+  }
+  function hopToanCty() {
+    var tat = xaoTron(toanBo()); if (tat.length < 2 || !ban || !lead) { toast("Chưa đủ nhân viên để họp toàn công ty."); return; }
+    cheDo = "hop"; cheDoHet = now() + 190000; ban.sangDen = now() + 150000; toast("Họp toàn công ty: tất cả nhân viên về phòng họp chính");
+    noi_(lead, "Triệu tập họp toàn công ty", 4000); trangThai(lead, "Chủ trì họp");
+    var ghe_ = ban.ghe.slice(1).filter(function (g) { return !g.by; }), dungC = choDungHop();
+    tat.forEach(function (a, i) {
+      cham(a); hienVat(a, true);
+      if (i < ghe_.length) { var g = ghe_[i]; g.by = a; a.seat = g; a.hop = "ngoi"; di(a, g, "Đi họp toàn công ty"); a.q.push({ t: "face", huong: g.rot }); a.q.push({ t: "hold", pose: "listen", tt: "Đang họp" }); }
+      else { var sp = dungC[(i - ghe_.length) % dungC.length]; a.hop = "dung"; di(a, { x: sp.x, z: sp.z, kind: "dung" }, "Đi họp toàn công ty"); a.q.push({ t: "face", huong: sp.rot }); a.q.push({ t: "hold", pose: "cross", tt: "Đứng nghe họp" }); }
+    });
+    function sau(ms, f) { setTimeout(function () { if (mo && cheDo === "hop") f(); }, ms); }
+    function doiDu(f) { var t0 = now(); (function lap() { if (!mo || cheDo !== "hop") return; if (tat.every(function (a) { return !a.walking && a.q.length === 0; }) || now() - t0 > 70000) f(); else setTimeout(lap, 700); })(); }
+    doiDu(function () {
+      lead.q.length = 0; phatBieu(lead, "Chào cả công ty. Tôi nói nhanh hướng đi tuần này, rồi nghe từng bộ phận báo cáo.", 7500, "Chủ trì họp"); lead.q.push({ t: "hold", pose: "listen", tt: "Điều hành" });
+      var ng = tat.filter(function (a) { return a.hop === "ngoi" && !a.row; }), du = tat.filter(function (a) { return a.hop === "dung"; }), ph = tat.filter(function (a) { return a.row; });
+      var ds_ = [ng[0], du[0], ph[0], ph.length > 1 ? ph[ph.length - 1] : ng[1], du[1]].filter(function (x, i, arr) { return x && arr.indexOf(x) === i; });
+      ds_.slice(0, 4).forEach(function (a, i) {
+        sau(9500 + i * 7200, function () {
+          var r = a.row, tx = r ? (r.dept === "marketing" ? "Em " + cat(a.ten, 14) + " báo cáo: tháng này em có " + (r.month_orders != null ? r.month_orders : (r.orders || 0)) + " đơn tính lương, chi " + tien(r.spend) + " quảng cáo." : "Em " + cat(a.ten, 14) + " báo cáo: hôm nay em xử lý " + (r.orders || r.packed || 0) + " đơn" + (r.revenue ? ", doanh thu " + tien(r.revenue) : "") + ".") : ["Bên em đang xử lý ổn, không có việc tồn.", "Em đã xong phần việc hôm qua, đang làm tiếp phần mới.", "Em cần thêm một người hỗ trợ cho đợt cao điểm."][i % 3];
+          baoCaoHop(a, tx);
+        });
+      });
+      sau(9500 + 4 * 7200 + 1500, function () { lead.q.length = 0; phatBieu(lead, "Cảm ơn mọi người. Ai về việc nấy, chiều nay báo lại cho tôi.", 5200, "Chốt họp"); lead.q.push({ t: "hold", pose: "listen", tt: "Điều hành" }); });
+      sau(9500 + 4 * 7200 + 8500, function () {
+        ban.sangDen = 0; cheDo = null;
+        tat.forEach(function (a) { if (a.seat) { a.seat.by = null; a.seat = null; } a.hop = null; hienVat(a, false); cham(a); noi_(a, "Xong họp, về làm việc", 2200); di(a, a.home, "Về chỗ làm"); a.q.push({ t: "face", huong: a.huong }); a.q.push({ t: "hold", pose: "type" }); a.q.push({ t: "call", fn: chu_ }); });
+      });
+    });
+  }
+  function gioGiaiLao() {
+    var tat = xaoTron(toanBo().filter(function (a) { return !a.seat && !conTrongPhien(a); }));
+    if (tat.length < 2 || !ban) { toast("Chưa đủ nhân viên để giải lao."); return; }
+    cheDo = "nghi"; cheDoHet = now() + 80000; toast("Giờ giải lao: mọi người ra quầy trà, đứng nói chuyện");
+    var gp = tat.slice(0, Math.max(2, Math.ceil(tat.length * 0.55))), tra = QUAY.tra.slice(), dung = QUAY.dung.slice(), chat = xaoTron(CHAT.slice()), con = [];
+    gp.forEach(function (a) {
+      cham(a); hienVat(a, false);
+      if (tra.length) {
+        var sp = tra.shift(), loai = ["cup", "cafe", "cup"][Math.floor(Math.random() * 3)];
+        di(a, { x: sp.x, z: sp.z, kind: "dung" }, loai === "cafe" ? "Đi pha cà phê" : "Đi lấy nước uống"); a.q.push({ t: "face", huong: sp.rot });
+        stay_(a, { ms: 1500, pose: "idle", tt: "Rót nước" }); stay_(a, { ms: 8000, pose: "drink", item: loai, tt: loai === "cafe" ? "Uống cà phê" : "Uống nước" }); stay_(a, { ms: 3500, pose: "idle", text: CAU_CHAT[Math.floor(Math.random() * CAU_CHAT.length)], tt: "Giải lao" }); stay_(a, { ms: 9000, pose: "drink", item: loai, tt: "Giải lao" }); veChoLam(a);
+      } else if (dung.length) {
+        var s2 = dung.shift(); di(a, { x: s2.x, z: s2.z, kind: "dung" }, "Đi ăn bánh"); a.q.push({ t: "face", huong: s2.rot });
+        stay_(a, { ms: 9000, pose: "drink", item: "banh", tt: "Ăn bánh" }); stay_(a, { ms: 4000, pose: "talk", text: CAU_CHAT[Math.floor(Math.random() * CAU_CHAT.length)], tt: "Giải lao" }); stay_(a, { ms: 9000, pose: "drink", item: "banh", tt: "Giải lao" }); veChoLam(a);
+      } else con.push(a);
+    });
+    for (var i = 0; i + 1 < con.length && chat.length; i += 2) {
+      var sp3 = chat.shift(), a = con[i], b = con[i + 1], pa = { x: sp3.x - 0.6, z: sp3.z, kind: "dung" }, pb = { x: sp3.x + 0.6, z: sp3.z, kind: "dung" };
+      di(a, pa, "Ra nói chuyện giải lao"); di(b, pb, "Ra nói chuyện giải lao");
+      for (var k = 0; k < 4; k++) { stay_(a, { ms: 5200, pose: k % 2 ? "listen" : "talk", nhin: pb, text: k % 2 ? "" : CAU_CHAT[Math.floor(Math.random() * CAU_CHAT.length)], tt: "Giải lao" }); stay_(b, { ms: 5200, pose: k % 2 ? "talk" : "listen", nhin: pa, text: k % 2 ? CAU_CHAT[Math.floor(Math.random() * CAU_CHAT.length)] : "", tt: "Giải lao" }); }
+      veChoLam(a); veChoLam(b);
+    }
+    if (con.length % 2 && con.length) { var z1 = con[con.length - 1]; hdDao(z1); veChoLam(z1); }
+  }
+
   // ---------- mô phỏng ----------
   var moPhong = 0;
   var KICH_BAN = [
@@ -998,7 +1317,8 @@
     { id: "tet", ten: "Bán hàng dịp Tết", mo: "Kiểm kho, tìm nguồn hàng, xây thông điệp chiến dịch" },
     { id: "ads", ten: "Chạy quảng cáo cuối tuần", mo: "Soát ngân sách ads, đổi mẫu quảng cáo, kiểm chứng" },
     { id: "don", ten: "Xử lý đơn giao trễ", mo: "Kho, vận chuyển và chăm sóc khách phối hợp" },
-    { id: "bc", ten: "Báo cáo cuối ngày", mo: "Từng người lấy số liệu rồi báo cáo với giám đốc" }
+    { id: "bc", ten: "Báo cáo cuối ngày", mo: "Từng người lấy số liệu rồi báo cáo với giám đốc" },
+    { id: "nghi", ten: "Giờ giải lao", mo: "Mọi người ra quầy trà uống nước, ăn bánh, đứng nói chuyện" }
   ];
   function xaoTron(arr) { var r = arr.slice(); for (var i = r.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = r[i]; r[i] = r[j]; r[j] = t; } return r; }
   function kichBan(loai, xs, tat) {
@@ -1052,8 +1372,10 @@
   }
   function chayMau(loai) {
     var tat = xaoTron(ds.filter(function (x) { return !x.lead; })), xs = tat.slice(0, 4);
-    if (xs.length < 2) { toast("Brain này chưa có agent nào để mô phỏng. Hãy tạo vài agent ở trang Cộng sự."); return; }
     if (typeof loai !== "string" || loai === "rand") loai = KICH_BAN[Math.floor(Math.random() * KICH_BAN.length)].id;
+    if (loai === "hop") { hopToanCty(); return; }
+    if (loai === "nghi") { gioGiaiLao(); return; }
+    if (xs.length < 2) { toast("Brain này chưa có agent nào để mô phỏng. Hãy tạo vài agent ở trang Cộng sự."); return; }
     var id = "demo" + (++moPhong);
     kichBan(loai, xs, tat).forEach(function (e) { e[1].run = id; setTimeout(function () { if (mo) suKien(e[1]); }, e[0]); });
     var ten = KICH_BAN.filter(function (k) { return k.id === loai; })[0]; if (ten) toast("Đang mô phỏng: " + ten.ten);
@@ -1065,11 +1387,11 @@
 
   // ---------- chạy mỗi khung hình ----------
   function viTriDi(x, z, c) {                  // chỗ đứng có hợp lệ không (gần điểm đầu/cuối thì được phép)
-    if (Math.abs(x) > HX - 0.6 || Math.abs(z) > HZ - 0.6) return false;
+    if (Math.abs(x) > GX - 0.6 || Math.abs(z) > HZ - 0.6) return false;
     if (Math.hypot(x - c.to.x, z - c.to.z) < 0.7 || Math.hypot(x - c.from.x, z - c.from.z) < 0.7) return true;
     return !blocked[gj(z) * GW + gi(x)];
   }
-  function banDo() { return ds.concat(lead ? [lead] : []); }
+  function banDo() { return ds.concat(lead ? [lead] : [], nvPhong); }
   function buoc(a, dt, t) {
     var r = a.r, c = a.cur, speed = r.hum ? 1.9 : 3.3;
     if (!c) {
@@ -1080,9 +1402,11 @@
           c.from = { x: a.x, z: a.z }; c.path = timDuong(a.x, a.z, c.to.x, c.to.z, a); c.i = 0; a.walking = true; c.moc = now(); c.mx = a.x; c.mz = a.z;
           if (c.label) trangThai(a, c.label);
         } else if (c.t === "say") { noi_(a, c.text, c.ms); a.cur = null; return buoc(a, dt, t); }
+        else if (c.t === "call") { a.cur = null; c.fn(a); return buoc(a, dt, t); }
       }
     }
     var dang = a.holdPose, sw = 0, dungDay = 0;
+    a.item = (c && c.t === "stay" && c.item) || null; a.diemPt = (c && c.t === "stay" && c.diem) || null;
     if (c) {
       if (c.t === "walk") {
         var p = c.path[c.i];
@@ -1164,7 +1488,7 @@
   var canhTuong = [], canhSan = [], giuBang = [], khongGian = 0; try { khongGian = Math.max(0, Math.min(2, parseInt(localStorage.getItem("mmOfficeKG") || "0", 10) || 0)); } catch (e) {}
   function apKhongGian() { canhTuong.forEach(function (o) { o.visible = khongGian === 0; }); canhSan.forEach(function (o) { o.visible = khongGian < 2; }); }
   var anChu = false; try { anChu = localStorage.getItem("mmOfficeAnChu") === "1"; } catch (e) {}
-  var lastManHinh = 0;
+  var lastManHinh = 0, lastAnh = 0;
   function khung() {
     rafId = requestAnimationFrame(khung);
     var n = now(), dt = Math.min(0.05, (n - lanCuoi) / 1000) * (window.__mmOfficeSpeed || 1); lanCuoi = n; tNow += dt; var t = tNow; phimCam(dt);
@@ -1175,6 +1499,7 @@
     }
     if (n - lastManHinh > 200) { lastManHinh = n; veManHinh(t); }
     ds.forEach(function (a) { buoc(a, dt, t); }); if (lead) buoc(lead, dt, t); nvPhong.forEach(function (a) { buoc(a, dt, t); });
+    capNhatCua(dt); quayDoi(dt); if (n - lastAnh > 8000) { lastAnh = n; apAnhSang(); }
     tram.forEach(function (s) { s.den.emissiveIntensity = (s.sang && n < s.sang) ? 1.4 : 0.35; });
     if (ban) ban.holo.material.opacity = n < (ban.sangDen || 0) ? 0.22 + Math.sin(t * 4) * 0.06 : 0;
     datCamera(); renderer.render(scene, camera);
@@ -1217,7 +1542,7 @@
   function chamRobot(e) {
     var rc = renderer.domElement.getBoundingClientRect();
     raycaster.setFromCamera({ x: ((e.clientX - rc.left) / rc.width) * 2 - 1, y: -((e.clientY - rc.top) / rc.height) * 2 + 1 }, camera);
-    var meshes = []; ds.concat(lead ? [lead] : []).forEach(function (a) { meshes.push(a.r.than); });
+    var meshes = []; banDo().forEach(function (a) { meshes.push(a.r.than); });
     var hit = raycaster.intersectObjects(meshes, false)[0];
     var el = $("mmOfficeCard"); if (!el) return;
     if (!hit) { el.hidden = true; return; }
@@ -1246,7 +1571,7 @@
     if (kd) { window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku); kd = ku = null; } phim = {};
     cam.az = -0.62; cam.pol = 0.95; cam.dist = 0; cam.tx = 0.4; cam.ty = 0.6; cam.tz = 1.0;
     if (renderer) { renderer.dispose(); if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
-    renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; nvPhong = []; vatPhong = []; bangPhong = {}; phien = {}; bang = null; manHinh = []; nguoiNoi = null;
+    renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; nvPhong = []; vatPhong = []; bangPhong = {}; phien = {}; bang = null; manHinh = []; nguoiNoi = null; cheDo = null; cuaDoi = [];
   }
   function dung(list) {
     xoaCanh();
@@ -1369,7 +1694,7 @@
   function phat(loai, d) { if (kenh && !window.__mmOfficeSolo) { try { kenh.postMessage({ loai: loai, d: d }); } catch (e) {} } }
   if (kenh && window.__mmOfficeSolo) kenh.onmessage = function (ev) { var m = ev.data || {}; var O = window.MinMinOffice; if (!O) return; if (m.loai === "start") O.onChatStart(m.d); else if (m.loai === "tool") O.onChatTool(m.d); else if (m.loai === "end") O.onChatEnd(m.d); };
   window.MinMinOffice = {
-    nv: function () { return NV; }, ag: function () { return agents; },
+    nv: function () { return NV; }, ag: function () { return agents; }, chay: function (id) { chayMau(id); }, cam: cam, dsAll: function () { return banDo(); },
     open: function () { khoiTao(); mo_(); }, close: dong, toggle: function () { mo ? dong() : mo_(); },
     // khung chat (app.js): MinMin nhận câu hỏi -> người liên quan vào họp; gọi công cụ -> cử người đi lấy dữ liệu;
     // trả lời xong -> MinMin đứng dậy trình bày chính câu trả lời thật
