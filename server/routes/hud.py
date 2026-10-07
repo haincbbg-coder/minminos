@@ -206,6 +206,9 @@ def pancake_office(raw) -> dict:
 
 
 PANCAKE_CFG = "00 - Dashboard/pancake-config.json"
+# Bảng Marketing đọc từ file riêng để đơn tính lương (MinMin tính cho từng người) không bị đồng bộ Pancake ghi đè
+MKT_FILES = ("00 - Dashboard/marketing-office.json", "Dashboard/marketing-office.json")
+MKT_MAC_DINH = ("Tiến", "Phúc")
 PANCAKE_API = "https://pos.pages.fm/api/v1"
 PANCAKE_TTL = 120   # giây: lâu hơn mức này mới gọi Pancake lại
 
@@ -241,17 +244,10 @@ def dong_bo_pancake(root: Path) -> str:
     now = time.time()
     tm = time.localtime(now)
     day0 = int(time.mktime((tm.tm_year, tm.tm_mon, tm.tm_mday, 0, 0, 0, 0, 0, -1)))
-    try:
-        users = _pc_list(_pc_get(f"/shops/{shop}/users", {"api_key": key}))
+    def gom(t0, t1):
         agg = {}
-        for u in users:
-            if not isinstance(u, dict):
-                continue
-            n = str(u.get("name") or (u.get("user") or {}).get("name") or "").strip()
-            if n:
-                agg[n] = {"orders": 0, "revenue": 0}
         for page in range(1, 21):
-            batch = _pc_list(_pc_get(f"/shops/{shop}/orders", {"api_key": key, "startDateTime": day0, "endDateTime": int(now),
+            batch = _pc_list(_pc_get(f"/shops/{shop}/orders", {"api_key": key, "startDateTime": t0, "endDateTime": t1,
                                                               "page_size": 100, "page_number": page}))
             for o in batch:
                 if not isinstance(o, dict) or o.get("status") in (6, 7):
@@ -265,14 +261,47 @@ def dong_bo_pancake(root: Path) -> str:
                 a["revenue"] += _num(o.get("total_price") or o.get("cod") or 0)
             if len(batch) < 100:
                 break
+        return agg
+    try:
+        users = _pc_list(_pc_get(f"/shops/{shop}/users", {"api_key": key}))
+        names = set()
+        for u in users:
+            if isinstance(u, dict):
+                n = str(u.get("name") or (u.get("user") or {}).get("name") or "").strip()
+                if n:
+                    names.add(n)
+        hom_nay = gom(day0, int(now))
+        hom_qua = gom(day0 - 86400, day0 - 1)       # hôm qua: số đã chốt, bảng "HÔM QUA" đọc từ đây
+        agg = {n: hom_nay.get(n, {"orders": 0, "revenue": 0}) for n in names | set(hom_nay) | set(hom_qua)}
     except Exception as e:  # mạng, khoá sai, API đổi
         return f"Pancake: {type(e).__name__}: {str(e)[:120]}"
     mk, kho = {str(x).strip().lower() for x in cfg.get("marketing") or []}, {str(x).strip().lower() for x in cfg.get("kho") or []}
     staff = [{"name": n, "dept": "marketing" if n.lower() in mk else "kho" if n.lower() in kho else "sale",
-              "orders": a["orders"], "revenue": a["revenue"], "packed": a["orders"] if n.lower() in kho else 0} for n, a in agg.items()]
+              "orders": a["orders"], "revenue": a["revenue"], "packed": a["orders"] if n.lower() in kho else 0,
+              "yesterday": {"orders": hom_qua.get(n, {}).get("orders", 0), "revenue": hom_qua.get(n, {}).get("revenue", 0),
+                            "packed": hom_qua.get(n, {}).get("orders", 0) if n.lower() in kho else 0}} for n, a in agg.items()]
     out = {"updated": time.strftime("%Y-%m-%d %H:%M", tm), "staff": staff}
     (root / PANCAKE_FILES[0]).write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
     return ""
+
+
+def _marketing_rows(root: Path) -> list:
+    """Hàng bảng Marketing: từ marketing-office.json nếu có; chưa có thì hiện sẵn Tiến và Phúc (chưa có số)."""
+    for rel in MKT_FILES:
+        f = root / rel
+        if f.is_file():
+            try:
+                raw = json.loads(f.read_text(encoding="utf-8"))
+                if isinstance(raw, list):
+                    raw = {"staff": raw}
+                rows = raw.get("staff") or raw.get("nhan_vien") or []
+                for it in rows:
+                    if isinstance(it, dict):
+                        it["dept"] = "marketing"
+                return pancake_office({"staff": rows})["marketing"]
+            except Exception:
+                break
+    return pancake_office({"staff": [{"name": n, "dept": "marketing"} for n in MKT_MAC_DINH]})["marketing"]
 
 
 def register(app: FastAPI, deps: HudDeps) -> None:
@@ -299,12 +328,13 @@ def register(app: FastAPI, deps: HudDeps) -> None:
             except Exception:
                 return JSONResponse({"error": f"File {rel} không đọc được (JSON hỏng).", "source": rel})
             d = pancake_office(raw)
+            d["marketing"] = _marketing_rows(root)
             upd = (raw.get("updated_at") or raw.get("updated") or raw.get("cap_nhat")) if isinstance(raw, dict) else None
             if loi:
                 d["error"] = loi
             d.update({"source": rel, "updated": upd or time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(f.stat().st_mtime))})
             return d
-        return {"sale": [], "kho": [], "marketing": [], "ads": {}, "source": None, "error": loi}
+        return {"sale": [], "kho": [], "marketing": _marketing_rows(root), "ads": {}, "source": None, "error": loi}
 
     @app.get("/hud/kpi")
     def hud_kpi(brain: str = Query("brain")):

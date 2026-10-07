@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.117] - 2026-10-07
+### Sửa lỗi
+- Bảng Sale: đồng bộ Pancake giờ lấy cả số hôm qua nên bảng "Hôm qua" không còn toàn số 0.
+- Bảng Marketing: hiện Tiến và Phúc. Số đơn tính lương của từng người đọc từ file `00 - Dashboard/marketing-office.json`, không bị đồng bộ Pancake ghi đè.
+
+### Cải thiện
+- Thu nhỏ tên và bóng chữ nói trên đầu nhân viên.
+
 ## [26.10.116] - 2026-10-07
 ### Thêm mới
 - Thêm 12 kết nối, mỗi kết nối một tài khoản: **Viettel Post, Ahamove, J&T** (vận chuyển), **Instagram, Threads, X** (đăng bài, đọc bình luận và chỉ số), **Tiki, Haravan, Sapo, KiotViet, Nhanh.vn** (đơn, sản phẩm, tồn kho), **MISA meInvoice** (trạng thái hoá đơn).

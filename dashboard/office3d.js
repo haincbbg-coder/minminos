@@ -239,9 +239,9 @@
     var sach = dungVat(hueV % 2, hsl(hueV, 0.5, 0.35).getHex()); sach.position.set(0, -0.1, 0.1); sach.rotation.x = 0.0; tT.hand.add(sach); sach.visible = false;
     var but = new T.Mesh(new T.CylinderGeometry(0.014, 0.014, 0.2, 6), mat(0x222222)); but.rotation.x = Math.PI / 2; but.position.set(0, -0.1, 0.05); tP.hand.add(but); but.visible = false;
     g.scale.setScalar(s);
-    var nhan = spriteTu(veNhan(ten, role, "#" + acc.getHexString(), nenNhan()), 2.5);
+    var nhan = spriteTu(veNhan(ten, role, "#" + acc.getHexString(), nenNhan()), 1.55);
     nhan.position.set(0, 3.15 * s, 0); g.add(nhan);
-    var noi = spriteTu(veNoi("…", "#" + acc.getHexString()), 3.6); noi.center.set(0.5, 0); noi.position.set(0, 3.55 * s, 0); noi.visible = false; g.add(noi);
+    var noi = spriteTu(veNoi("…", "#" + acc.getHexString()), 2.1); noi.center.set(0.5, 0); noi.position.set(0, 3.55 * s, 0); noi.visible = false; g.add(noi);
     return { mat_mat: mat_mat, g: g, dau: dau_, tT: tT, tP: tP, chanT: chanT, chanP: chanP, than: than, matM: matM, nhan: nhan, noi: noi, acc: acc, s: s, vat: sach, but: but };
   }
 
@@ -308,8 +308,8 @@
     gv.add(sach); gv.visible = false; B.LeftHand.add(gv);
     var datBan = dungVat(hueV % 2, hsl(hueV, 0.5, 0.35).getHex()); datBan.visible = false; g.add(datBan);
     var gb = new T.Group(); gb.scale.setScalar(100); var but = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.18, 6), mat(0x222222)); but.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), new T.Vector3(-Math.SQRT1_2, 0, Math.SQRT1_2)); but.position.set(0.012, 0.045, 0.03); gb.add(but); gb.visible = false; B.RightHand.add(gb);
-    var nhan = spriteTu(veNhan(ten, role, "#" + acc.getHexString(), nenNhan()), 2.5); nhan.position.set(0, caoNguoi + 0.55, 0); g.add(nhan);
-    var noi = spriteTu(veNoi("…", "#" + acc.getHexString()), 3.6); noi.center.set(0.5, 0); noi.position.set(0, caoNguoi + 0.95, 0); noi.visible = false; g.add(noi);
+    var nhan = spriteTu(veNhan(ten, role, "#" + acc.getHexString(), nenNhan()), 1.55); nhan.position.set(0, caoNguoi + 0.42, 0); g.add(nhan);
+    var noi = spriteTu(veNoi("…", "#" + acc.getHexString()), 2.1); noi.center.set(0.5, 0); noi.position.set(0, caoNguoi + 0.72, 0); noi.visible = false; g.add(noi);
     return { hum: true, rest: rest, g: g, pivot: pivot, model: model, B: B, mixer: mixer, act: act, wt: wt, S: S, than: than, nhan: nhan, noi: noi, acc: acc, s: 0, vat: gv, but: gb, dat: datBan, ikw: 0, carry: 0, vatGoc: sach, idx: idx };
   }
   // quay xương `bone` sao cho trục hướng tới `child` chỉ về `huong` (thế giới)
