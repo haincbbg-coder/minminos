@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.116] - 2026-10-07
+### Thêm mới
+- Đang soạn: đợt 2 kết nối đa tài khoản (Viettel Post, J&T, Instagram, Threads, X, Zalo Ads và các nền tảng bán hàng Việt Nam).
+
 ## [26.10.115] - 2026-10-07
 ### Thêm mới
 - Trang **Kết nối** có thêm 10 nền tảng, mỗi kết nối là một tài khoản nên gắn bao nhiêu shop cũng được: **Shopee, TikTok Shop, Lazada** (đơn hàng, sản phẩm), **GHN, GHTK** (tính phí, tra, tạo, huỷ đơn), **SePay, Casso** (giao dịch ngân hàng), **payOS** (link thanh toán VietQR), **TikTok Ads** (báo cáo, bật tắt chiến dịch), **Zalo OA** (hội thoại, gửi tin).
