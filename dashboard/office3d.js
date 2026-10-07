@@ -105,7 +105,7 @@
   function timDuong(sx, sz, gx, gz, tru) {
     // ô tắc bởi vật tĩnh, hoặc bởi người đang ĐỨNG/NGỒI yên (trừ chính nó); vùng quanh điểm đầu/cuối được mở
     var occ = [];
-    if (!tru_khongNguoi) banDo().forEach(function (o) { if (o !== tru && !o.walking) occ.push(o); });
+    if (!tru_khongNguoi) banDo().forEach(function (o) { if (o !== tru && !o.walking && !(Math.abs(Math.abs(o.x) - HX) < 1.7 && Math.abs(o.z) < DOOR + 1.3)) occ.push(o); });
     function ok(i, j) {
       if (i < 0 || j < 0 || i >= GW || j >= GH) return false;
       var x = cx(i), z = cz(j);
@@ -592,13 +592,13 @@
   function ghe(x, z, rot, laStool, laGD) {
     var g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = rot;
     var vc = vatProp(laGD ? "director_chair" : "office_chair", laGD ? 1.3 : 1.12);
-    if (vc) { g.add(vc); scene.add(g); return; }
+    if (vc) { g.add(vc); scene.add(g); return g; }
     var m = mat(sang() ? 0x93a4bd : 0x3a4c6c);
     var seat = laStool ? new T.Mesh(new T.CylinderGeometry(0.42, 0.42, 0.1, 18), m) : new T.Mesh(new T.BoxGeometry(0.95, 0.1, 0.95), m); seat.position.y = 0.4; g.add(seat);
     if (!laStool) { var lung = new T.Mesh(new T.BoxGeometry(0.95, 0.7, 0.1), m); lung.position.set(0, 0.85, -0.5); g.add(lung); }
     var tru = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 0.5, 8), mat(0x6f7f98)); tru.position.y = 0.2; g.add(tru);
     var de = new T.Mesh(new T.CylinderGeometry(0.4, 0.4, 0.05, 14), mat(0x6f7f98)); de.position.y = 0.03; g.add(de);
-    scene.add(g);
+    scene.add(g); return g;
   }
   function taoAgent(ten, role, laLead, home, rot) {
     var r = NV ? dungNguoi3D(ten, cat(role, 24), hue(ten), laLead) : dungRobot(ten, cat(role, 24), hue(ten), laLead);
@@ -678,7 +678,7 @@
     var gs = [{ x: TL / 2 + 0.55, z: 0, kind: "seat", rot: -Math.PI / 2 }];
     for (var i = 7; i >= 0; i--) { var x = -4.55 + 1.3 * i; gs.push({ x: x, z: -1.8, kind: "seat", rot: 0 }); gs.push({ x: x, z: 1.8, kind: "seat", rot: Math.PI }); }
     gs.push({ x: -TL / 2 - 0.85, z: 0, kind: "seat", rot: Math.PI / 2 });
-    gs.forEach(function (s, gi_) { ghe(s.x, s.z, s.rot, true, gi_ === 0); chanTron(s.x, s.z, 0.52); s.by = null; });
+    gs.forEach(function (s, gi_) { s.chair = ghe(s.x, s.z, s.rot, true, gi_ === 0); chanTron(s.x, s.z, 0.52); s.by = null; s.cp = 0; s.ct = 0; s.ox = -Math.sin(s.rot); s.oz = -Math.cos(s.rot); s.sx = s.x + s.ox * 1.15; s.sz = s.z + s.oz * 1.15; });
     return { ghe: gs, holo: holo };
   }
   var anh = { lamps: [], tran: [], pool: [], hemi: null, dl: null };
@@ -890,6 +890,10 @@
       cuaDoi.push({ s: s, l: l, mo: 0 });
     });
   }
+  function capNhatGhe(dt) {
+    if (!ban) return;
+    ban.ghe.forEach(function (s) { if (!s.chair || s.cp === s.ct) return; s.cp += Math.max(-1, Math.min(1, s.ct - s.cp)) * Math.min(1, dt * 3.2); if (Math.abs(s.ct - s.cp) < 0.01) s.cp = s.ct; s.chair.position.set(s.x + s.ox * 0.62 * s.cp, 0, s.z + s.oz * 0.62 * s.cp); });
+  }
   function capNhatCua(dt) {
     var L = banDo();
     cuaDoi.forEach(function (c) {
@@ -1076,7 +1080,7 @@
   function di(a, to, label) { a.q.push({ t: "walk", to: to, label: label, kind: to.kind || "desk" }); }
   function dung_(a, ms, pose, nhin, text, tt) { a.q.push({ t: "stay", ms: ms, pose: pose, nhin: nhin, text: text, tt: tt }); }
   function phatBieu(a, text, ms, tt) { a.q.push({ t: "stay", ms: ms || 6000, pose: "talk", text: text, tt: tt || "Đang trình bày", stand: true, speak: true }); }
-  function cham(a) { a.q.length = 0; a.cur = null; a.walking = false; }
+  function cham(a) { if (a.cur && a.cur.s && (a.cur.t === "ngoi" || a.cur.t === "rave")) a.cur.s.ct = 0; a.q.length = 0; a.cur = null; a.walking = false; }
   function veBan(a, label) {
     cham(a); hienVat(a, false); di(a, a.home, label || "Về chỗ làm"); a.q.push({ t: "face", huong: a.huong }); a.q.push({ t: "hold", pose: "type", tt: "Đang làm việc" });
   }
@@ -1313,7 +1317,7 @@
     var ghe_ = ban.ghe.slice(1).filter(function (g) { return !g.by; }), dungC = choDungHop();
     tat.forEach(function (a, i) {
       cham(a); hienVat(a, true);
-      if (i < ghe_.length) { var g = ghe_[i]; g.by = a; a.seat = g; a.hop = "ngoi"; di(a, g, "Đi họp toàn công ty"); a.q.push({ t: "face", huong: g.rot }); a.q.push({ t: "hold", pose: ngauNhien(DANG_NGOI), doi: DANG_NGOI, tt: "Đang họp" }); }
+      if (i < ghe_.length) { var g = ghe_[i]; g.by = a; a.seat = g; a.hop = "ngoi"; di(a, { x: g.sx, z: g.sz, kind: "dung" }, "Đi họp toàn công ty"); a.q.push({ t: "ngoi", s: g }); a.q.push({ t: "hold", pose: ngauNhien(DANG_NGOI), doi: DANG_NGOI, tt: "Đang họp" }); }
       else { var sp = dungC[(i - ghe_.length) % dungC.length]; a.hop = "dung"; di(a, { x: sp.x, z: sp.z, kind: "dung" }, "Đi họp toàn công ty"); a.q.push({ t: "face", huong: sp.rot }); a.q.push({ t: "hold", pose: ngauNhien(DANG_DUNG), doi: DANG_DUNG, tt: "Đứng nghe họp" }); }
     });
     function sau(ms, f) { setTimeout(function () { if (mo && cheDo === "hop") f(); }, ms); }
@@ -1331,7 +1335,7 @@
       sau(9500 + 4 * 7200 + 1500, function () { lead.q.length = 0; phatBieu(lead, "Cảm ơn mọi người. Ai về việc nấy, chiều nay báo lại cho tôi.", 5200, "Chốt họp"); lead.q.push({ t: "hold", pose: "listen", tt: "Điều hành" }); });
       sau(9500 + 4 * 7200 + 8500, function () {
         ban.sangDen = 0; cheDo = null;
-        tat.forEach(function (a) { if (a.seat) { a.seat.by = null; a.seat = null; } a.hop = null; hienVat(a, false); cham(a); noi_(a, "Xong họp, về làm việc", 2200); di(a, a.home, "Về chỗ làm"); a.q.push({ t: "face", huong: a.huong }); a.q.push({ t: "hold", pose: "type" }); a.q.push({ t: "call", fn: chu_ }); });
+        tat.forEach(function (a) { var sg = a.seat, daNgoi = sg && a.kind === "seat"; if (a.seat) { a.seat.by = null; a.seat = null; } a.hop = null; hienVat(a, false); cham(a); noi_(a, "Xong họp, về làm việc", 2200); if (daNgoi) a.q.push({ t: "rave", s: sg }); di(a, a.home, "Về chỗ làm"); a.q.push({ t: "face", huong: a.huong }); a.q.push({ t: "hold", pose: "type" }); a.q.push({ t: "call", fn: chu_ }); });
       });
     });
   }
@@ -1452,7 +1456,8 @@
         else if (c.t === "walk") {
           c.from = { x: a.x, z: a.z }; c.from0 = c.from; c.path = timDuong(a.x, a.z, c.to.x, c.to.z, a); c.i = 0; a.walking = true; c.moc = now(); c.mx = a.x; c.mz = a.z;
           if (c.label) trangThai(a, c.label);
-        } else if (c.t === "say") { noi_(a, c.text, c.ms); a.cur = null; return buoc(a, dt, t); }
+        } else if (c.t === "ngoi" || c.t === "rave") { c.tm = 0; c.fx = a.x; c.fz = a.z; a.walking = true; c.s.ct = 1; }
+        else if (c.t === "say") { noi_(a, c.text, c.ms); a.cur = null; return buoc(a, dt, t); }
         else if (c.t === "call") { a.cur = null; c.fn(a); return buoc(a, dt, t); }
       }
     }
@@ -1463,8 +1468,8 @@
         var p = c.path[c.i];
         if (!p) { a.cur = null; a.walking = false; a.kind = c.kind; }
         else {
-          var dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz) || 1, st = speed * dt, vx = dx / d, vz = dz / d, sx = 0, sz = 0;
-          banDo().forEach(function (o) {            // tránh nhau: đẩy ra khỏi người đang ở gần
+          var dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz) || 1, st = speed * dt, vx = dx / d, vz = dz / d, sx = 0, sz = 0, tCua = Math.abs(Math.abs(a.x) - HX) < 1.7 && Math.abs(a.z) < DOOR + 1.3;
+          if (!tCua) banDo().forEach(function (o) {            // tránh nhau: đẩy ra khỏi người đang ở gần (qua cửa thì đi thẳng, không đẩy nhau)
             if (o === a) return; var ox = a.x - o.x, oz = a.z - o.z, od = Math.hypot(ox, oz);
             if (od < 1.0 && od > 0.001) { var w = (1.0 - od) / 1.0; sx += ox / od * w; sz += oz / od * w; }
           });
@@ -1477,7 +1482,8 @@
               if (viTriDi(ex, a.z, c)) { nx = ex; nz = a.z; } else if (viTriDi(a.x, ez, c)) { nx = a.x; nz = ez; } else { nx = a.x; nz = a.z; }
             }
           }
-          if (Math.hypot(nx - a.x, nz - a.z) < st * 0.2) a.ket = (a.ket || 0) + dt; else a.ket = 0;
+          if (Math.hypot(nx - a.x, nz - a.z) < st * 0.2) { a.ket = (a.ket || 0) + dt; a.ketLau = (a.ketLau || 0) + dt; } else { a.ket = 0; a.ketLau = Math.max(0, (a.ketLau || 0) - dt); }
+          if (a.ketLau > 2.2) { a.ketLau = 0; nx = p.x; nz = p.z; }                // kẹt quá lâu (nhất là ở cửa): nhảy tới điểm tiếp theo
           if (a.ket > 0.6) { a.ket = 0; c.from = { x: a.x, z: a.z }; c.path = timDuong(a.x, a.z, c.to.x, c.to.z, a); c.i = 0; if (c.path.length > 1 && Math.hypot(c.path[0].x - a.x, c.path[0].z - a.z) < 0.05) c.i = 1; }
           a.x = nx; a.z = nz; a.huongDich = Math.atan2(vx, vz);
           if (Math.hypot(p.x - a.x, p.z - a.z) < Math.max(0.18, st)) { a.x = p.x; a.z = p.z; c.i++; if (c.i >= c.path.length) { a.cur = null; a.walking = false; a.kind = c.kind; } }
@@ -1490,6 +1496,14 @@
       } else if (c.t === "stay") {
         if (c.nhin) a.huongDich = Math.atan2(c.nhin.x - a.x, c.nhin.z - a.z);
         dang = c.pose; if (c.stand) dungDay = 1; if (now() >= c.het) { a.cur = null; if (c.speak && nguoiNoi === a) nguoiNoi = null; }
+      } else if (c.t === "ngoi") {                  // kéo ghế ra, bước vào, kéo ghế vào rồi ngồi
+        var sg1 = c.s; c.tm += dt; a.huongDich = sg1.rot; dang = "idle"; a.walking = true;
+        if (c.tm > 0.7) { var u1 = Math.min(1, (c.tm - 0.7) / 1.1), e1 = u1 * u1 * (3 - 2 * u1); a.x = lerp(c.fx, sg1.x, e1); a.z = lerp(c.fz, sg1.z, e1); dang = "walk"; sw = Math.sin(t * 8); if (u1 > 0.45) sg1.ct = 0; }
+        if (c.tm >= 2.1) { a.x = sg1.x; a.z = sg1.z; sg1.ct = 0; a.walking = false; a.kind = "seat"; a.cur = null; }
+      } else if (c.t === "rave") {                  // đứng dậy, kéo ghế ra, bước ra, đẩy ghế vào
+        var sg2 = c.s; c.tm += dt; dang = "idle"; a.walking = true; a.huongDich = sg2.rot + Math.PI;
+        if (c.tm > 0.5) { var u2 = Math.min(1, (c.tm - 0.5) / 1.0), e2 = u2 * u2 * (3 - 2 * u2); a.x = lerp(sg2.x, sg2.sx, e2); a.z = lerp(sg2.z, sg2.sz, e2); dang = "walk"; sw = Math.sin(t * 8); if (u2 > 0.6) sg2.ct = 0; }
+        if (c.tm >= 1.8) { a.x = sg2.sx; a.z = sg2.sz; sg2.ct = 0; a.walking = false; a.kind = "dung"; a.cur = null; }
       } else if (c.t === "face") { a.huongDich = c.huong; a.cur = null; }
       else if (c.t === "hold") {
         if (c.doi) { c.tdoi = (c.tdoi == null ? ngau(1, 8) : c.tdoi) - dt; if (c.tdoi <= 0) { c.pose = c.doi[Math.floor(Math.random() * c.doi.length)]; c.tdoi = ngau(5, 12); } }
@@ -1553,7 +1567,7 @@
     }
     if (n - lastManHinh > 200) { lastManHinh = n; veManHinh(t); }
     ds.forEach(function (a) { buoc(a, dt, t); }); if (lead) buoc(lead, dt, t); nvPhong.forEach(function (a) { buoc(a, dt, t); });
-    capNhatCua(dt); quayDoi(dt); if (n - lastAnh > 8000) { lastAnh = n; apAnhSang(); }
+    capNhatCua(dt); capNhatGhe(dt); quayDoi(dt); if (n - lastAnh > 8000) { lastAnh = n; apAnhSang(); }
     tram.forEach(function (s) { s.den.emissiveIntensity = (s.sang && n < s.sang) ? 1.4 : 0.35; });
     if (ban) ban.holo.material.opacity = n < (ban.sangDen || 0) ? 0.22 + Math.sin(t * 4) * 0.06 : 0;
     datCamera(); renderer.render(scene, camera);

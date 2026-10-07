@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.112] - 2026-10-07
+### Sửa lỗi
+- Họp toàn công ty: nhân viên đứng sau ghế, kéo ghế ra, bước vào ngồi rồi đẩy ghế sát bàn. Họp xong thì đứng dậy, kéo ghế ra, bước ra và đẩy ghế vào.
+- Đi từ phòng này sang phòng khác không còn bị kẹt ở cửa: qua cửa đi thẳng không đẩy nhau, kẹt quá lâu thì tự bước tiếp.
+
 ## [26.10.111] - 2026-10-07
 ### Sửa lỗi
 - Họp toàn công ty: nhân viên lại ngồi vào được ghế (bản trước kéo ghế sát bàn làm lối vào ghế bị chặn nên người đứng xếp hàng bên cạnh).
