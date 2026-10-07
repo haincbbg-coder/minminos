@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.116] - 2026-10-07
+### Thêm mới
+- Thêm 12 kết nối, mỗi kết nối một tài khoản: **Viettel Post, Ahamove, J&T** (vận chuyển), **Instagram, Threads, X** (đăng bài, đọc bình luận và chỉ số), **Tiki, Haravan, Sapo, KiotViet, Nhanh.vn** (đơn, sản phẩm, tồn kho), **MISA meInvoice** (trạng thái hoá đơn).
+- Zalo Ads chưa kết nối được vì Zalo chưa công khai API báo cáo; tạm xuất file từ Zalo Ads Manager rồi gửi MinMin đọc.
+
+### Bảo mật
+- Đăng bài, tạo và huỷ đơn chỉ chạy khi bạn nâng kết nối lên Toàn quyền. Bán hàng và hoá đơn chỉ đọc. Mọi kết nối mới đều phải qua cổng kiểm định chung.
+
 ## [26.10.115] - 2026-10-07
 ### Thêm mới
 - Trang **Kết nối** có thêm 10 nền tảng, mỗi kết nối là một tài khoản nên gắn bao nhiêu shop cũng được: **Shopee, TikTok Shop, Lazada** (đơn hàng, sản phẩm), **GHN, GHTK** (tính phí, tra, tạo, huỷ đơn), **SePay, Casso** (giao dịch ngân hàng), **payOS** (link thanh toán VietQR), **TikTok Ads** (báo cáo, bật tắt chiến dịch), **Zalo OA** (hội thoại, gửi tin).

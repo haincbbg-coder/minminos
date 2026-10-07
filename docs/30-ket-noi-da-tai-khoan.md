@@ -2,7 +2,7 @@
 
 *Tiếng Việt · [English](en/30-multi-account-connectors.md)*
 
-Từ bản 26.10.115, trang **Kết nối** có thêm 10 nền tảng. Điểm chung: **mỗi kết nối là một tài
+Từ bản 26.10.115, trang **Kết nối** có thêm 10 nền tảng, bản 26.10.116 thêm 12 nền tảng nữa. Điểm chung: **mỗi kết nối là một tài
 khoản**. Có ba shop Shopee thì thêm ba kết nối Shopee, có hai tài khoản GHN thì thêm hai kết nối
 GHN. MinMin tự đặt tên riêng cho từng kết nối nên hỏi "đơn hôm nay của shop MeiMei" là đúng shop.
 
@@ -23,12 +23,22 @@ nhà lẫn VPS.
 | Thanh toán | payOS | 1 kênh thanh toán | Tạo link thanh toán VietQR, xem, huỷ link |
 | Quảng cáo | TikTok Ads | 1 lần ủy quyền (nhiều tài khoản quảng cáo) | Chiến dịch, báo cáo, bật tắt, đổi ngân sách |
 | Nhắn tin | Zalo OA | 1 Official Account | Hội thoại, người quan tâm, gửi tin chăm sóc khách |
+| Bán hàng | Tiki | 1 shop | Đơn hàng, sản phẩm, tồn kho (từ 26.10.116) |
+| Bán hàng | Haravan, Sapo | 1 cửa hàng | Đơn hàng, sản phẩm, khách hàng, tồn kho |
+| Bán hàng | KiotViet, Nhanh.vn | 1 tài khoản | Chi nhánh/kho, sản phẩm, tồn kho, đơn, hoá đơn bán, khách |
+| Vận chuyển | Viettel Post, Ahamove | 1 tài khoản | Tính phí, tra đơn, tạo đơn, huỷ đơn |
+| Vận chuyển | J&T Express | 1 tài khoản đối tác | Tra hành trình, huỷ đơn (J&T chưa công khai API tạo đơn) |
+| Mạng xã hội | Instagram | 1 tài khoản chuyên nghiệp | Đăng ảnh, carousel, Reels; đọc bài, bình luận, chỉ số |
+| Mạng xã hội | Threads | 1 hồ sơ | Đăng chữ, ảnh, video, carousel; trả lời; chỉ số |
+| Mạng xã hội | X (Twitter) | 1 tài khoản | Đăng bài, trả lời, xoá bài; đọc bài gần đây (X tính phí mỗi bài) |
+| Hoá đơn & thuế | MISA meInvoice | 1 mã số thuế | Mẫu hoá đơn, trạng thái hoá đơn, link xem |
 
 ## An toàn
 
 - Mọi kết nối mới mặc định **Chỉ đọc**. Muốn MinMin tạo đơn vận chuyển, tạo link thanh toán, bật
   tắt quảng cáo hay gửi tin Zalo thì phải tự nâng kết nối đó lên **Toàn quyền**.
-- Ba sàn TMĐT ở bản này **chỉ đọc**, kể cả khi nâng quyền: MinMin không sửa giá, sửa tồn hay xử lý đơn.
+- Các sàn TMĐT, phần mềm bán hàng và MISA meInvoice **chỉ đọc**, kể cả khi nâng quyền: MinMin không sửa giá, sửa tồn, xử lý đơn hay phát hành hoá đơn.
+- **Zalo Ads chưa có**: Zalo không công khai API báo cáo quảng cáo. Tạm thời xuất file báo cáo từ Zalo Ads Manager rồi gửi MinMin đọc.
 - Key, mật khẩu ứng dụng và token được **mã hoá** khi lưu, và bị che khỏi mọi câu trả lời, nhật
   ký và tin Telegram, kể cả khi nền tảng trả lỗi có nhắc lại token.
 - Shopee, Lazada, TikTok Shop, Zalo OA dùng token có hạn. MinMin tự làm mới và lưu token mới, mỗi

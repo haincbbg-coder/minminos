@@ -38,10 +38,22 @@ check = KiemTra()
 mcp_store_update_goc = mcp_store.update_connection
 mcp_store.update_connection = lambda cid, patch: True     # phần 1-5 không ghi đĩa
 
-MOI = {"shopee", "tiktok-shop", "lazada", "ghn", "ghtk", "sepay", "casso", "payos", "tiktok-ads", "zalo-oa"}
-cat = mcp_catalog.load()
+# Lứa đầu (26.10.115) phải luôn còn đủ. Từ đó về sau MỌI connector internal đều đi qua cổng
+# nghiêm, trừ hai cái có test riêng từ trước, nên thêm nền tảng mới là tự bị kiểm, không cần
+# nhớ sửa file này.
+LUA_DAU = {"shopee", "tiktok-shop", "lazada", "ghn", "ghtk", "sepay", "casso", "payos", "tiktok-ads", "zalo-oa"}
+MIEN = {"botcake", "substack"}
+cat = dict(mcp_catalog.load())
+_them_module = {}
+# Tự kiểm trước khi vào catalog: KET_NOI_THEM=a.json:b.json nạp khuôn connector từ file rời
+# (không sửa catalog thật), module mặc định là <internal>_mcp.
+for _p in [x for x in os.environ.get("KET_NOI_THEM", "").split(os.pathsep) if x.strip()]:
+    _c = json.loads(open(_p, encoding="utf-8").read())
+    cat[_c["id"]] = _c
+    _them_module[_c.get("internal") or ""] = (_c.get("internal") or "") + "_mcp"
 noi_bo = {cid: c for cid, c in cat.items() if c.get("transport") == "internal"}
-check("đủ 10 connector mới trong catalog", MOI <= set(noi_bo), sorted(MOI - set(noi_bo)))
+MOI = {cid for cid in noi_bo if cid not in MIEN}
+check("lứa đầu 10 connector vẫn đủ trong catalog", LUA_DAU <= set(noi_bo), sorted(LUA_DAU - set(noi_bo)))
 
 
 class _CamMang:
@@ -103,7 +115,7 @@ def _args_mau(tool):
 
 ten_da_thay = {}
 for cid, con in sorted(noi_bo.items()):
-    ten_mod = mcp_client._INTERNAL.get(con.get("internal") or "")
+    ten_mod = mcp_client._INTERNAL.get(con.get("internal") or "") or _them_module.get(con.get("internal") or "")
     check(f"[{cid}] có trong mcp_client._INTERNAL", bool(ten_mod), con.get("internal"))
     if not ten_mod:
         continue
