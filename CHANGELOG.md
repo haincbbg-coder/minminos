@@ -6,7 +6,12 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.115] - 2026-10-07
 ### Thêm mới
-- Đang soạn: kết nối mới gắn được nhiều tài khoản.
+- Trang **Kết nối** có thêm 10 nền tảng, mỗi kết nối là một tài khoản nên gắn bao nhiêu shop cũng được: **Shopee, TikTok Shop, Lazada** (đơn hàng, sản phẩm), **GHN, GHTK** (tính phí, tra, tạo, huỷ đơn), **SePay, Casso** (giao dịch ngân hàng), **payOS** (link thanh toán VietQR), **TikTok Ads** (báo cáo, bật tắt chiến dịch), **Zalo OA** (hội thoại, gửi tin).
+- Shop ủy quyền một lần, MinMin tự làm mới token và lưu lại. Hướng dẫn từng bước nằm ngay trong form kết nối.
+
+### Bảo mật
+- Kết nối mới mặc định Chỉ đọc. Tạo đơn, tạo link thanh toán, bật tắt quảng cáo, gửi tin chỉ chạy khi bạn tự nâng lên Toàn quyền. Ba sàn TMĐT ở bản này chỉ đọc.
+- Key và token được mã hoá, bị che khỏi mọi câu trả lời và nhật ký. Mọi cầu nối phải qua cổng kiểm định chung trước khi vào MinMin.
 
 ## [26.10.114] - 2026-10-07
 ### Thêm mới
