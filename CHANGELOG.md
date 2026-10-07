@@ -4,6 +4,9 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.114] - 2026-10-07
+### Thêm mới
+- (đang làm) Đăng nhập Facebook một chạm qua trạm đăng nhập Meta của MinMin.
 ## [26.10.113] - 2026-10-07
 ### Cải thiện
 - Văn phòng 3D sắc nét hơn: màn hình điện thoại độ phân giải cao được vẽ đủ điểm ảnh (trước đây bị giảm còn 2 lần), người và đồ vật nhìn nghiêng không còn nhoè.
