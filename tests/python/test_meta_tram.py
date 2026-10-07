@@ -158,6 +158,10 @@ async def chay():
     check("token dài hạn đúng", secrets_store.decrypt(ent["access_token"]) == "LL_SHORT_CODE1")
     check("ghi nhớ quyền thật được cấp", ent.get("scopes") == "ads_read", ent.get("scopes"))
     check("đánh dấu kết nối đi qua trạm", ent.get("qua_tram") is True)
+    # khách chỉ cấp ads_read (fake /me/permissions từ chối pages_manage_posts) → callback báo thiếu
+    thieu = set(kq.get("scopes_missing") or [])
+    check("callback báo đúng quyền còn thiếu, không kể quyền đã cấp",
+          "pages_manage_posts" in thieu and "khong_cho_phep" in thieu and "ads_read" not in thieu, thieu)
 
     d = tc.post("/mt/nhan", json=meta_tram.ky_than("/mt/nhan", {"phien": pid}))
     check("nhận lần hai: không còn", d.status_code == 404)
@@ -176,6 +180,11 @@ async def chay():
 
 
 asyncio.run(chay())
+
+# quyền Meta ngăn bằng dấu PHẨY phải tách đúng (trước 26.10.117 tách theo dấu cách nên hỏng)
+st_ = oauth_mcp._load(); st_["cmeta"]["scopes"] = "ads_read,pages_manage_posts,read_insights"; oauth_mcp._save(st_)
+check("tách quyền Meta theo dấu phẩy", set(oauth_mcp.granted_scopes("cmeta")) ==
+      {"ads_read", "pages_manage_posts", "read_insights"}, oauth_mcp.granted_scopes("cmeta"))
 
 # ---------- chữ ký ----------
 than = meta_tram.ky_than("/mt/bat-dau", {"ve": VE, "st": "a" * 24, "kx": kx, "quyen": ["ads_read"]})
