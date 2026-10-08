@@ -580,7 +580,7 @@ def _anthropic_reasoning(model, reasoning):
 def _openai_is_reasoning(model):
     """OpenAI: chỉ model o-series / gpt-5 nhận reasoning_effort (gpt-4o sẽ 400 nếu gửi)."""
     m = (model or "").lower()
-    return m.startswith(("o1", "o3", "o4")) or "gpt-5" in m
+    return m.startswith(("o1", "o3", "o4")) or "gpt-5" in m or "gpt-6" in m
 
 
 def _groq_is_reasoning(model):
