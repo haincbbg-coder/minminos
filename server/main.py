@@ -1657,7 +1657,7 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
      "default_models": ["fable", "opus", "sonnet", "haiku",
                         "claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1",
                         "claude-opus-5", "claude-sonnet-5",
-                        "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"]},
+                        "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-5-5", "claude-haiku-4-5"]},
     {"id": "openai-oauth",  "label": "OpenAI OAuth (ChatGPT)",  "kind": "oauth", "key_field": None,             "catalog_key": "openai-oauth",
      "default_models": []},  # model/list của Codex app-server là nguồn chân lý; không ghim version ở đây
     # Antigravity CLI (binary `agy`) - bản Google chỉ định thay cho Gemini CLI sau khi họ ngắt
@@ -1681,9 +1681,9 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
     {"id": "anthropic-api", "label": "Anthropic (API)",         "kind": "api", "key_field": "anthropic_api_key", "catalog_key": "anthropic-api",
      "default_models": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1",
                         "claude-opus-5", "claude-sonnet-5",
-                        "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"]},
+                        "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-5-5", "claude-haiku-4-5"]},
     {"id": "openai",        "label": "OpenAI (ChatGPT API)",    "kind": "api", "key_field": "openai_api_key",    "catalog_key": "openai",
-     "default_models": ["gpt-4o", "gpt-4o-mini", "o3-mini"]},
+     "default_models": ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-terra", "gpt-4o-mini"]},
     {"id": "gemini",        "label": "Google Gemini (API)",     "kind": "api", "key_field": "gemini_api_key",    "catalog_key": "gemini",
      "default_models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]},
     {"id": "groq",          "label": "Groq (API)",              "kind": "api", "key_field": "groq_api_key",      "catalog_key": "groq",
@@ -17897,9 +17897,9 @@ async def _uoc_tinh_tiet_kiem(brain: str = "brain") -> dict:
 # giữ lại cho các bản 4.1 trở về trước, vẫn đúng giá của chúng.
 _GIA_INPUT_1M = {
     "fable": 10.0, "mythos": 10.0,
-    "opus-5": 5.0, "opus-4-8": 5.0, "opus-4-7": 5.0, "opus-4-6": 5.0, "opus-4-5": 5.0,
-    "opus": 15.0, "sonnet-5": 2.0, "sonnet": 3.0, "haiku": 1.0,
-    "gpt-5-mini": 0.25, "gpt-5": 1.25, "gpt-4o-mini": 0.15, "gpt-4o": 2.5, "o3": 2.0,
+    "opus-5-5": 4.0, "opus-5": 5.0, "opus-4-8": 5.0, "opus-4-7": 5.0, "opus-4-6": 5.0, "opus-4-5": 5.0,
+    "opus": 15.0, "haiku-5": 0.1, "sonnet-5": 2.0, "sonnet": 3.0, "haiku": 1.0,
+    "gpt-6.1-sol": 2.0, "gpt-6-sol": 2.0, "gpt-6-luna": 0.1, "gpt-6-astra": 10.0, "gpt-5.6": 2.0, "gpt-5-mini": 0.25, "gpt-5": 1.25, "gpt-4o-mini": 0.15, "gpt-4o": 2.5, "o3": 2.0,
     "gemini-2.5-pro": 1.25, "gemini-2.5-flash": 0.30, "gemini": 0.30,
     "deepseek": 0.30, "llama": 0.10, "qwen": 0.20, "mistral": 0.20, "grok": 2.0,
 }

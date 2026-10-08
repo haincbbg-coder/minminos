@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.120] - 2026-10-08
+### Thêm mới
+- Model mới trong bộ não: **Claude Haiku 5.5** (`claude-haiku-5-5`, rẻ hơn Haiku 4.5 khoảng 75%) cho cả Claude Code và Anthropic API.
+- Danh sách OpenAI API cập nhật dòng mới: **GPT-6.1 Sol, GPT-6 Sol, GPT-6 Luna, GPT-5.6 Terra**. Bộ não ChatGPT qua Codex vẫn tự lấy danh sách mới nhất từ Codex nên đã có sẵn.
+
+### Cải thiện
+- Bảng giá ước tính trang Mức dùng có thêm Opus 5.5, Sonnet 5.5, Haiku 5.5 và các model GPT-6, nên con số tiền khớp hơn.
+
 ## [26.10.119] - 2026-10-07
 ### Thêm mới
 - Trang **Biến động số dư** (nhóm Kết nối): nối Techcombank qua Casso, mỗi khoản tiền khách chuyển vào hiện ngay trên chuông MinMin, thông báo đẩy về điện thoại và Telegram, kèm nội dung, người chuyển và số dư.
