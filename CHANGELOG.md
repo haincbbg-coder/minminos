@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.132] - 2026-10-10
+### Sửa lỗi
+- Sửa một lỗi kiểm thử của bản 26.10.131 (dòng chẩn đoán tool dò hub với cờ chỉ dành cho khung chat của chủ). Không đổi gì với người dùng.
+
 ## [26.10.131] - 2026-10-10
 ### Sửa lỗi
 - Bộ chấm điểm não **không còn chấm oan "không gọi tool"**. Khi có nhiều tool, MinMin giấu bớt và cho não gọi qua một tool trung gian; não thật ra có gọi đúng tool hoá đơn nhưng bộ chấm chỉ thấy tên trung gian nên cho trượt. Vì thế 50 model OpenRouter lẫn Codex cùng trượt y hệt nhau. Bản nền đã lưu cần chạy lại.
