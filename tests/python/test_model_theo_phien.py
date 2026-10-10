@@ -116,7 +116,9 @@ check("meta trả cờ pin_ok (ghim còn chạy được không)", '"pin_ok"' in
 # đổi mặc định chung KHÔNG BAO GIỜ đổi ngược cuộc đang dở; ghim hỏng được thay bằng
 # model thật; ghim lành là no-op (không ghi DB mỗi lượt).
 check("CANARY: vòng WS đóng dấu model đang chạy cho phiên",
-      "store.set_pinned_model(conv_sid, prov, api_model or \"\")" in src)
+      # 26.10.136: đóng dấu tự động ghi rõ manual=False, để bộ chia theo độ khó phân biệt
+      # được với ghim TAY (manual=True ở /sessions/{id}/model) và chỉ nhường ghim tay.
+      "store.set_pinned_model(conv_sid, prov, api_model or \"\", manual=False)" in src)
 check("đóng dấu chỉ ghi khi LỆCH (ghim lành không bị ghi lại mỗi lượt)",
       '(_prow.get("pinned_provider") or "").strip() != prov' in src)
 

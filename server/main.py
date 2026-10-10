@@ -2015,6 +2015,48 @@ def _chat_provider_for_session(mcfg, row):
     return pprov, kind, key, model
 
 
+_DT_GAN_NHAT: list = []   # 30 quyết định định tuyến gần nhất, cho trang Models xem lại
+
+
+def _dinh_tuyen_luot(mcfg, row, user_message, *, co_dinh_kem=False):
+    """Quyết định model cho MỘT lượt theo độ khó câu hỏi. None = giữ model hiệu lực.
+
+    Điều kiện: model.auto_router.enabled, phiên không ghim TAY (pinned_manual), câu hỏi
+    có chữ, bậc đã được gán model, và nhà đó đang sẵn sàng (có key / là CLI). Mọi lỗi
+    đều nuốt về None: bộ chia là tiện ích, không được quyền làm hỏng lượt chat."""
+    try:
+        cfg = (mcfg or {}).get("auto_router") or {}
+        if not cfg.get("enabled") or int((row or {}).get("pinned_manual") or 0):
+            return None
+        text = str(user_message or "").strip()
+        if not text:
+            return None
+        qd = dinh_tuyen.quyet_dinh(text, cfg, co_dinh_kem=co_dinh_kem,
+                                  co_lich_su=bool((row or {}).get("id")))
+        if not qd.get("ap_dung"):
+            return None
+        m = qd["model"]
+        d = _provider_def(m["provider"])
+        if not d:
+            return None
+        kind = d.get("kind", "cli")
+        key = _provider_key(mcfg, d)
+        if kind == "api" and not key:
+            return None
+        ra = {"prov": m["provider"], "kind": kind, "key": key, "model": m["model"],
+              "bac": qd["bac"], "ly_do": qd.get("ly_do", "")}
+        _DT_GAN_NHAT.append({"luc": localefmt.now().strftime("%H:%M:%S"), "bac": qd["bac"],
+                             "ly_do": qd.get("ly_do", ""), "provider": m["provider"],
+                             "model": m["model"], "cau": text[:80]})
+        del _DT_GAN_NHAT[:-30]
+        print(f"[dinh-tuyen] bậc {qd['bac']} ({qd.get('ly_do')}) -> {m['provider']}/{m['model']}",
+              file=sys.stderr)
+        return ra
+    except Exception as e:
+        print(f"[dinh-tuyen] lỗi, giữ model hiệu lực: {type(e).__name__}: {e}", file=sys.stderr)
+        return None
+
+
 def _tg_ghim(mcfg) -> dict:
     """{'provider','model'} đang GHIM cho kênh Telegram, hoặc {} nếu đang theo model chính."""
     tg = (mcfg or {}).get("telegram") or {}
@@ -13064,6 +13106,15 @@ async def dinh_tuyen_thu(request: Request):
             "bat": bool(router_cfg.get("enabled")), "model": model}
 
 
+@app.get("/dinh-tuyen/gan-nhat")
+async def dinh_tuyen_gan_nhat():
+    """30 quyết định định tuyến gần nhất (bậc, lý do, model) để trang Models kiểm tra bộ chia
+    có chọn đúng ý không. Rỗng = chưa bật hoặc chưa có lượt nào qua bộ chia."""
+    cfg = cfgmod.read_settings().get("model", {}).get("auto_router", {}) or {}
+    return {"ok": True, "bat": bool(cfg.get("enabled")), "bac": cfg.get("bac") or {},
+            "gan_nhat": list(reversed(_DT_GAN_NHAT))}
+
+
 @app.get("/version")
 async def version_info():
     cur = _read_version()
@@ -16810,6 +16861,13 @@ async def websocket_endpoint(ws: WebSocket):
             # dọn nhầm/không dọn mạch native khi đổi engine.
             _prow = store.get_session(payload.get("session_id") or "") or {}
             prov, kind, api_key, api_model = _chat_provider_for_session(mcfg, _prow)
+            # TỰ CHIA MODEL THEO ĐỘ KHÓ (Trụ 2, 26.10.136): chỉ khi bật, và phiên KHÔNG
+            # ghim tay. Chọn sai nhà (hết key) thì giữ nguyên model hiệu lực, không bao
+            # giờ làm lượt chat chết vì bộ chia.
+            _dt = _dinh_tuyen_luot(mcfg, _prow, user_message,
+                                   co_dinh_kem=bool(payload.get("attachments") or payload.get("files")))
+            if _dt:
+                prov, kind, api_key, api_model = _dt["prov"], _dt["kind"], _dt["key"], _dt["model"]
             engine_label = ("codex" if prov == "openai-oauth"
                             else "grok-cli" if prov == "grok-cli"
                             else "antigravity-cli" if prov == "antigravity-cli"
@@ -16838,7 +16896,7 @@ async def websocket_endpoint(ws: WebSocket):
             if ((_prow.get("pinned_provider") or "").strip() != prov
                     or (_prow.get("pinned_model") or "") != (api_model or "")):
                 try:
-                    store.set_pinned_model(conv_sid, prov, api_model or "")
+                    store.set_pinned_model(conv_sid, prov, api_model or "", manual=False)
                 except Exception:
                     pass
             # Đổi bộ não giữa chừng: mạch native của MỌI engine khác engine đang chạy lượt
@@ -17183,7 +17241,7 @@ def sessions_new(brain: str = Form("brain"), channel: str = Form("web")):
         mdl, prov = (meta.get("model") or "").strip(), (meta.get("model_provider") or "").strip()
         if mdl and prov:
             try:
-                store.set_pinned_model(sid, prov, mdl)
+                store.set_pinned_model(sid, prov, mdl, manual=True)
             except Exception:
                 pass
     return {"id": sid, "channel": ch}
@@ -17601,7 +17659,8 @@ async def sessions_set_model(session_id: str, provider: str = Form(""),
     prov = (provider or "").strip()
     if prov and not _provider_def(prov):
         return JSONResponse({"error": f"provider không tồn tại: {prov}"}, status_code=400)
-    ok = get_store().set_pinned_model(session_id, prov, model, brain=(brain or "").strip() or None)
+    ok = get_store().set_pinned_model(session_id, prov, model, brain=(brain or "").strip() or None,
+                                      manual=True)
     if not ok:
         return JSONResponse({"error": "phiên không tồn tại"}, status_code=404)
     return {"ok": True, "pinned_provider": prov or None, "pinned_model": (model or "").strip() or None}
