@@ -4173,6 +4173,14 @@
         if (lb) lb.textContent = mod || prov;
       },
     });
+    // Dòng chẩn đoán đi kèm bảng điểm (26.10.131): tool bắt buộc có được đưa cho não không.
+    // Thiếu thì não nào cũng trượt như nhau và đó là lỗi cấu hình, không phải điểm của não.
+    const veChanDoan = (cd) => {
+      if (!cd) return "";
+      if (cd.thieu && cd.thieu.length)
+        return `<div class="warn" style="margin:4px 0">${WARN_ICON} ${esc(t("models.eval_diag_missing", { ten: cd.thieu.join(", ") }))}</div>`;
+      return `<div style="opacity:.6;font-size:12px;margin:2px 0">${esc(t("models.eval_diag_ok", { so: cd.so || 0 }))}${cd.lazy ? " · " + esc(t("models.eval_diag_lazy")) : ""}</div>`;
+    };
     const evalRun = document.getElementById("evalRun");
     if (evalRun) evalRun.onclick = async () => {
       const out = document.getElementById("evalResult");
@@ -4208,6 +4216,7 @@
         `<li><b>${esc(c.id)}</b> (${esc(c.nhom)}): ${esc(c.ly_do)}</li>`).join("");
       out.innerHTML =
         `<div style="margin-bottom:4px">${esc(t("models.eval_brain"))}: <b>${esc((r.nao || {}).model || (r.nao || {}).provider || "?")}</b></div>` +
+        veChanDoan(r.chan_doan) +
         `<div style="font-size:15px;margin-bottom:4px"><b>${bd.dat}/${bd.tong}</b> ${esc(t("models.eval_pass"))} (${Math.round((bd.ty_le || 0) * 100)}%)</div>` +
         (nhomRows ? `<table class="mini-tbl" style="margin:4px 0"><tbody>${nhomRows}</tbody></table>` : "") +
         hqLine +
@@ -4238,7 +4247,7 @@
         const truot = (bd.cau_truot || []).map(c => c.id).join(", ");
         return `<tr><td>${i + 1}</td><td>${esc(m)}</td><td style="text-align:right"><b>${bd.dat}/${bd.tong}</b></td><td style="opacity:.8">${esc(truot || t("models.eval_all_pass"))}</td></tr>`;
       }).join("");
-      bOut.innerHTML = head + (rows ? `<table class="mini-tbl" style="margin:6px 0"><tbody>${rows}</tbody></table>` : "");
+      bOut.innerHTML = head + veChanDoan(st.chan_doan) + (rows ? `<table class="mini-tbl" style="margin:6px 0"><tbody>${rows}</tbody></table>` : "");
     };
     const pollBatch = async () => {
       try {

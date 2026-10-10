@@ -12687,6 +12687,36 @@ def _dg_ten_tool(n: str) -> str:
     return n.rsplit("__", 1)[-1] if "__" in n else n
 
 
+_DG_LAZY_RUN = "javis_run_tool"
+
+
+def _dg_tool_that(ev: dict) -> str:
+    """Tên tool THẬT từ một sự kiện tool_call, xuyên qua lớp lazy của hub (26.10.131).
+
+    Hub giấu bớt tool khi có quá nhiều (>40) và chỉ đưa não `javis_search_tools` +
+    `javis_run_tool`; não gọi javis_run_tool(name="hoa_don_tong_hop"). Bản 124-130 chỉ đọc
+    `ev["name"]` nên thấy "javis_run_tool" rồi phán "không gọi tool bắt buộc" - 50 model
+    OpenRouter lẫn Codex đều bị oan y hệt nhau (ảnh bố 10/10). Ba khuôn sự kiện:
+      Claude SDK / API: {"name", "input": {...}}   Codex: {"name", "item": {"arguments": ...}}"""
+    ten = _dg_ten_tool(ev.get("name"))
+    if ten != _DG_LAZY_RUN:
+        return ten
+    args = ev.get("input")
+    if not isinstance(args, dict):
+        it = ev.get("item") or {}
+        args = it.get("arguments") if isinstance(it, dict) else None
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except Exception:
+                args = None
+        if not isinstance(args, dict):
+            args = it.get("input") if isinstance(it, dict) else None
+    if isinstance(args, dict) and args.get("name"):
+        return _dg_ten_tool(args["name"])
+    return ten
+
+
 async def _dg_gom(gen):
     """Gom một luồng sự kiện engine (cùng khuôn ở mọi não) thành {tra_loi, tool_da_goi, loi}."""
     final, parts, tools = None, [], []
@@ -12697,13 +12727,34 @@ async def _dg_gom(gen):
         elif t == "text":
             parts.append(ev.get("content", "") or "")
         elif t == "tool_call":
-            n = _dg_ten_tool(ev.get("name"))
+            n = _dg_tool_that(ev)
             if n:
                 tools.append(n)
         elif t == "error":
             return {"tra_loi": "", "tool_da_goi": tools, "loi": ev.get("content", "")}
     return {"tra_loi": final if final is not None else "".join(parts),
             "tool_da_goi": tools, "loi": ""}
+
+
+async def _dg_tool_cung_cap(brain: str, cases: list) -> dict:
+    """TỰ CHẨN ĐOÁN trước khi chấm: não có được đưa các tool mà bộ đề bắt buộc không?
+
+    Trả {"so": số tool hub đưa ra, "lazy": có đi qua lớp giấu không, "thieu": [tool bắt
+    buộc không có mặt cả trực tiếp lẫn qua lazy]}. `thieu` khác rỗng thì mọi não đều trượt
+    câu đó như nhau, và đó là lỗi cấu hình (plugin tắt, hub tắt), không phải điểm của não."""
+    can = sorted({t for c in cases for t in (c.get("phai_dung_tool") or [])})
+    try:
+        tools, route = await mcp_hub.discover_all("suggest", vault_root=_brain_root(brain),
+                                                  staging=True)
+    except Exception as e:
+        return {"so": 0, "lazy": False, "thieu": can, "loi": f"{type(e).__name__}: {e}"}
+    co = {_dg_ten_tool((t.get("function") or {}).get("name") or t.get("name") or "")
+          for t in (tools or [])}
+    lazy = _DG_LAZY_RUN in co
+    # Qua lazy thì tool thật nằm trong kho `route` đầy đủ (hub vẫn chạy được nó qua run_tool)
+    trong_kho = {_dg_ten_tool(k) for k in (route or {}).keys()}
+    thieu = [t for t in can if t not in co and not (lazy and t in trong_kho)]
+    return {"so": len(co), "lazy": lazy, "thieu": thieu}
 
 
 def _dg_invoker(prov, key, model, brain):
@@ -12781,6 +12832,14 @@ async def _dg_cham_mot_nao(prov, key, model, brain, cases):
             "khong_cham_duoc": danh_gia.toan_bo_loi_chay(bang), "_bang": bang}
 
 
+async def _dg_chan_doan(brain: str, cases: list) -> dict:
+    """Chẩn đoán kèm theo mọi bảng điểm, để UI cảnh báo khi lỗi nằm ở cấu hình chứ không ở não."""
+    try:
+        return await _dg_tool_cung_cap(brain, cases)
+    except Exception as e:
+        return {"so": 0, "lazy": False, "thieu": [], "loi": f"{type(e).__name__}: {e}"}
+
+
 @app.post("/danh-gia/chay")
 async def danh_gia_chay(request: Request):
     """Chạy bộ chấm điểm với não đang chọn. Trả bảng điểm + so với bản nền (hồi quy)."""
@@ -12806,6 +12865,7 @@ async def danh_gia_chay(request: Request):
         cases = danh_gia.doc_bo(_DG_BO)
     except Exception as e:
         return {"ok": False, "error": f"Bộ đề hỏng: {e}"}
+    chan_doan = await _dg_chan_doan(brain, cases)
     kq = await _dg_cham_mot_nao(prov, key, model, brain, cases)
     bang = kq.pop("_bang")
     goc = danh_gia.doc_goc(_dg_goc_path())
@@ -12817,7 +12877,8 @@ async def danh_gia_chay(request: Request):
     if data.get("luu_goc") and not kq["khong_cham_duoc"]:
         danh_gia.luu_goc(bang, _dg_goc_path())
         da_luu = True
-    return {"ok": True, **kq, "hoi_quy": hoi_quy, "da_luu_ban_nen": da_luu}
+    return {"ok": True, **kq, "hoi_quy": hoi_quy, "da_luu_ban_nen": da_luu,
+            "chan_doan": chan_doan}
 
 
 # ---- Chấm HÀNG LOẠT: mọi model của một nhà, lần lượt, chạy nền, báo về hòm thư (26.10.129) ----
@@ -12931,7 +12992,9 @@ async def danh_gia_loat(request: Request):
         gioi_han = _DG_LOAT_MAX
     bi_cat = max(0, len(models) - gioi_han)
     models = models[:gioi_han]
+    chan_doan = await _dg_chan_doan(brain, cases)
     _DG_LOAT = {"dang_chay": True, "huy": False, "provider": prov, "models": models,
+                "chan_doan": chan_doan,
                 "bi_cat": bi_cat, "so_cau": len(cases), "xong": [], "hien_tai": "",
                 "bat_dau": localefmt.now().isoformat(timespec="seconds"), "ket_thuc": ""}
     _dg_loat_luu()

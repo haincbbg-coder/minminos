@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.131] - 2026-10-10
+### Sửa lỗi
+- Bộ chấm điểm não **không còn chấm oan "không gọi tool"**. Khi có nhiều tool, MinMin giấu bớt và cho não gọi qua một tool trung gian; não thật ra có gọi đúng tool hoá đơn nhưng bộ chấm chỉ thấy tên trung gian nên cho trượt. Vì thế 50 model OpenRouter lẫn Codex cùng trượt y hệt nhau. Bản nền đã lưu cần chạy lại.
+- Bảng điểm có thêm dòng **tự chẩn đoán**: não được đưa bao nhiêu tool, và nếu tool bắt buộc không được đưa thì nói thẳng đó là lỗi cấu hình, điểm chưa nói gì về não.
+
 ## [26.10.130] - 2026-10-10
 ### Sửa lỗi
 - Bộ chấm điểm não giờ **chấm đúng thứ đang chạy thật**: não nhận cùng bản hướng dẫn của MinMin như trong chat (luôn lấy số thật bằng tool, không bịa). Trước đây chỉ gửi mỗi câu hỏi trần nên não mạnh mấy cũng "không gọi tool", Claude Opus lẫn Claude Fable đều trượt y hệt nhau một cách vô lý. Với Claude Code còn thêm lỗi bị chặn tool MCP. Bản nền đã lưu bằng bản cũ cần chạy lại và lưu đè.
