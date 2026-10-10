@@ -5,6 +5,7 @@ Kiến trúc: Voice (browser) ⇄ FastAPI WebSocket ⇄ Claude Code CLI subproce
 Javis KHÔNG gọi Anthropic API trực tiếp. Mọi reasoning + tool calling đi qua
 `claude` CLI đã cài trên máy → tự kế thừa MCP, skills, auth.
 """
+import text_clean
 import localefmt   # múi giờ theo cấu hình, thay UTC+7 nhúng cứng
 import posixpath
 import os
@@ -19116,6 +19117,7 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
     và `ghi_kho=False` khi người gọi tự lo phần ghi (việc nền ghi bằng `push_to_chat`), nên
     lịch sử chỉ được ĐỌC làm ngữ cảnh chứ không bị chèn thêm tin nào.
     """
+    text = text_clean.strip_hidden(text)   # gỡ ký tự vô hình (lệnh giấu) trước khi tới bộ não và trước khi lưu
     # ĐA PHIÊN: định tuyến theo chat_id → ngữ cảnh của mỗi tài khoản tách biệt.
     chat_id = str((meta or {}).get("chat_id") or "default")
     if bot:

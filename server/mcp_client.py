@@ -598,8 +598,29 @@ class SessionPool:
         finally:
             self._danh_dau_ban(key, -1)
 
+    # Nguồn vừa hỏng (không khởi động được, đứt kết nối): trong HAN_HONG giây tiếp theo báo lỗi
+    # ngay thay vì mỗi lần gọi lại chờ cả phút rồi mới hỏng. Bấm Kiểm tra thành công (list_tools
+    # chạy được) thì xoá dấu hỏng và dùng lại nguồn ngay.
+    HAN_HONG = 60
+
+    def _hong_gan_day(self, spec):
+        key = spec.get("key") or _spec_hash(spec)
+        ent = getattr(self, "_hong", {}).get(key)
+        if ent and time.time() - ent[0] < self.HAN_HONG:
+            return ent[1]
+        return ""
+
+    def _danh_dau_hong(self, spec, lyDo):
+        if not hasattr(self, "_hong"):
+            self._hong = {}
+        self._hong[spec.get("key") or _spec_hash(spec)] = (time.time(), lyDo)
+
+    def _xoa_hong(self, spec):
+        getattr(self, "_hong", {}).pop(spec.get("key") or _spec_hash(spec), None)
+
     async def list_tools(self, spec):
         tools = await self._retry(spec, lambda s: s.list_tools(), idempotent=True)
+        self._xoa_hong(spec)
         # Nhớ lại để vòng dò sau còn thứ mà dùng khi phiên đang bận (xem `tool_da_biet`).
         ent = self._sessions.get(spec.get("key") or _spec_hash(spec))
         if ent is not None and tools:
@@ -620,10 +641,18 @@ class SessionPool:
             except Exception as e:
                 print(f"[mcp] inject_args {spec.get('label')}: {type(e).__name__}: {e}",
                       file=sys.stderr)
+        da_hong = self._hong_gan_day(spec)
+        if da_hong:
+            return (f"ERROR: nguồn '{spec.get('label') or 'MCP'}' vừa hỏng ({da_hong}), "
+                    f"tạm không gọi lại trong {self.HAN_HONG} giây. Bấm Kiểm tra ở trang Kết nối để dùng lại ngay.")
         try:
-            return await self._retry(spec, lambda s: s.call_tool(tool, args), idempotent=False,
-                                     ban=True)
+            kq = await self._retry(spec, lambda s: s.call_tool(tool, args), idempotent=False,
+                                   ban=True)
+            self._xoa_hong(spec)
+            return kq
         except Exception as e:
+            ly_do = f"{type(e).__name__}: {str(e)[:120]}"
+            self._danh_dau_hong(spec, ly_do)
             return f"ERROR: gọi tool lỗi: {type(e).__name__}: {e}"
 
 

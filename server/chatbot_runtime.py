@@ -43,6 +43,7 @@ import chatbot_log
 import chatbot_phan_xu
 import chatbot_store
 import chatbot_thu_vien
+import text_clean
 import conversations
 
 # Kênh -> lớp vận chuyển: tra SỔ ĐĂNG KÝ KÊNH (server/channels). Trước 0.61.0 là một bảng chép
@@ -410,13 +411,15 @@ async def anh_cho_bot(text_engine: str, meta: dict, cfg: dict) -> str:
 # ============================================================
 # Rào
 # ============================================================
-def _qua_han_muc(bot_id: str, chat_id: str, tran: int) -> bool:
+def _qua_han_muc(bot_id: str, chat_id: str, tran: int, user_id: str = "") -> bool:
     """Giới hạn tần suất theo GIỜ trượt, tính riêng từng người trong từng bot.
 
     Vì sao cần: một người rảnh trong nhóm đủ đốt hết quota model của chủ trong một buổi chiều,
     và chủ chỉ biết khi nhìn hoá đơn.
     """
-    key = (bot_id, str(chat_id))
+    # Trong NHÓM, hạn mức tính theo từng người chứ không theo cả nhóm: nhóm đông gọi bot đủ
+    # `tran` lần thì người tag bot sau đó bị từ chối oan. Chat riêng thì chat_id đã là người đó.
+    key = (bot_id, str(chat_id), str(user_id or ""))
     now = time.time()
     dq = _HITS.setdefault(key, deque())
     while dq and now - dq[0] > 3600:
@@ -1013,6 +1016,7 @@ async def thu_bot(bot_id: str, cau_hoi: str, chat_type: str = "private") -> dict
 
 def _make_answer_fn(bot_id: str):
     async def _answer(text, meta=None, progress=None):
+        text = text_clean.strip_hidden(text)      # gỡ ký tự vô hình trước khi lưu và trước khi tới bộ não
         cfg = chatbot_store.get_bot(bot_id)
         if not cfg:
             return {"text": "", "files": [], "im_lang": True}
@@ -1024,7 +1028,7 @@ def _make_answer_fn(bot_id: str):
         chat_id = str((meta or {}).get("chat_id") or "")
         # Áp phạm vi của nhóm khách (Agent riêng, được/cấm nói gì...) cho lượt này.
         cfg = chatbot_store.hieu_luc(cfg, chat_id, str((meta or {}).get("chat_type") or "private"))[0]
-        if _qua_han_muc(bot_id, chat_id, cfg.get("rate_limit")):
+        if _qua_han_muc(bot_id, chat_id, cfg.get("rate_limit"), str((meta or {}).get("user_id") or "")):
             return {"text": "Anh chị nhắn hơi nhanh, em xin phép trả lời lại sau ít phút ạ.",
                     "files": []}
         aid_luot, kenh_luot = _tai_khoan_cua(cfg, meta or {})
