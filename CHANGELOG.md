@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.126] - 2026-10-10
+### Sửa lỗi
+- Hộp chọn model trên điện thoại giờ hiện đủ **tất cả các bộ não**. Trước đây cột nhà cung cấp chỉ cao bằng hai dòng nên trông như chỉ có Claude với ChatGPT, phần còn lại khuất trong vùng cuộn hẹp dễ bị tưởng là hết.
+- Chọn một nhà **chưa có API key** (ví dụ OpenRouter) giờ nói rõ "chưa có key, dán vào thẻ nhà này ở trang Models rồi mở lại", kèm nút quay về, thay vì để nút Chuyển mờ đi mà không rõ vì sao.
+
 ## [26.10.125] - 2026-10-10
 ### Thêm mới
 - Trang Models có nút "Chạy kiểm tra" chất lượng não: bấm một cái là chấm model đang chọn trên bộ câu hỏi có đáp án đúng, hiện số câu đạt theo nhóm và cảnh báo nếu tụt so với bản nền. Tích "Lưu làm bản nền" để lần đổi model sau có mốc so sánh.

@@ -614,6 +614,8 @@
   "models.mp_loading_tag": "đang tải…",
   "models.mp_loading": "Đang tải model…",
   "models.mp_empty": "Provider chưa kết nối hoặc không có model. Kết nối ở Providers (hoặc thêm vào settings.json → model.catalog).",
+  "models.mp_add_key": "Chưa có API key cho {nha}. Dán key vào thẻ nhà này ở trang Models rồi mở lại hộp chọn là có model để chọn.",
+  "models.mp_add_key_btn": "Về trang Models dán key",
   "models.mp_note": "Model load động theo provider · lưu cho phiên mới",
   "models.mp_pick": "Chọn",
   "kanban.route_auto": "AI tự chọn người làm",
