@@ -12737,25 +12737,32 @@ async def _dg_gom(gen):
 
 
 async def _dg_tool_cung_cap(brain: str, cases: list) -> dict:
-    """TỰ CHẨN ĐOÁN trước khi chấm: não có được đưa các tool mà bộ đề bắt buộc không?
+    """TỰ CHẨN ĐOÁN trước khi chấm: não có với tới các tool mà bộ đề bắt buộc không?
 
-    Trả {"so": số tool hub đưa ra, "lazy": có đi qua lớp giấu không, "thieu": [tool bắt
-    buộc không có mặt cả trực tiếp lẫn qua lazy]}. `thieu` khác rỗng thì mọi não đều trượt
-    câu đó như nhau, và đó là lỗi cấu hình (plugin tắt, hub tắt), không phải điểm của não."""
+    Trả {"so": số tool não nhìn thấy trực tiếp, "lazy": có đi qua lớp giấu không, "thieu":
+    [tool bắt buộc không có trong KHO]}. `thieu` khác rỗng thì mọi não đều trượt câu đó như
+    nhau, và đó là lỗi cấu hình (plugin tắt, hub tắt), không phải điểm của não.
+
+    26.10.133: soi KHO ĐẦY ĐỦ (`registry_inventory`, bản trước lazy), không soi danh sách
+    `discover_all` trả về - danh sách đó đã bị giấu bớt khi pool > 40, nên bản 131/132 báo
+    động giả "thiếu hoa_don_tong_hop" trong khi não vẫn gọi được nó qua javis_run_tool."""
     can = sorted({t for c in cases for t in (c.get("phai_dung_tool") or [])})
+    vault_root = _brain_root(brain)
     try:
         # KHÔNG bật staging: cờ đó dành riêng cho đường chat của chủ (test_doc_file_dinh_kem
-        # canh). Chẩn đoán chỉ cần biết tool hub có mặt hay không.
-        tools, route = await mcp_hub.discover_all("suggest", vault_root=_brain_root(brain))
+        # canh). Cùng tham số với registry_inventory bên dưới để trúng cùng một ô cache.
+        tools, _route = await mcp_hub.discover_all("suggest", vault_root=vault_root)
+        kho_tools, _kho_route = mcp_hub.registry_inventory("suggest", vault_root=vault_root)
     except Exception as e:
         return {"so": 0, "lazy": False, "thieu": can, "loi": f"{type(e).__name__}: {e}"}
-    co = {_dg_ten_tool((t.get("function") or {}).get("name") or t.get("name") or "")
-          for t in (tools or [])}
+
+    def _ten(t):
+        return _dg_ten_tool((t.get("function") or {}).get("name") or t.get("name") or "")
+    co = {_ten(t) for t in (tools or [])}
+    trong_kho = {_ten(t) for t in (kho_tools or [])} | co
     lazy = _DG_LAZY_RUN in co
-    # Qua lazy thì tool thật nằm trong kho `route` đầy đủ (hub vẫn chạy được nó qua run_tool)
-    trong_kho = {_dg_ten_tool(k) for k in (route or {}).keys()}
-    thieu = [t for t in can if t not in co and not (lazy and t in trong_kho)]
-    return {"so": len(co), "lazy": lazy, "thieu": thieu}
+    thieu = [t for t in can if t not in trong_kho]
+    return {"so": len(co), "lazy": lazy, "thieu": thieu, "kho": len(trong_kho)}
 
 
 def _dg_invoker(prov, key, model, brain):
