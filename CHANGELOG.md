@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.123] - 2026-10-10
+### Thêm mới
+- MinMin đọc được dữ liệu hoá đơn đã tải từ Tổng cục Thuế. Hỏi "tháng này mua vào bao nhiêu hoá đơn, tổng thuế bao nhiêu" là trả lời được ngay, kể cả liệt kê hoá đơn theo đối tác và theo kỳ. Trước đây dữ liệu nằm ngoài tầm đọc của bộ não.
+
 ## [26.10.122] - 2026-10-10
 ### Sửa lỗi
 - Tải hoá đơn TCT: nhật ký chạy giờ hiện đúng giờ Việt Nam. Trước đây máy chủ in giờ UTC nên lệch 7 tiếng (ví dụ 9h51 sáng lại ghi 2h48).

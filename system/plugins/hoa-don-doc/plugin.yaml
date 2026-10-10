@@ -1,0 +1,11 @@
+name: Đọc hoá đơn TCT
+slug: hoa-don-doc
+version: 1.0.0
+description: Cho bộ não đọc dữ liệu hoá đơn đã tải từ Tổng cục Thuế trong app Tải hoá đơn - tổng hợp số hoá đơn, tiền hàng, thuế, và liệt kê hoá đơn theo kỳ. Chỉ đọc.
+author: Javis (bundled)
+enabled: true
+min_mode: readonly
+tools:
+  - hoa_don_tong_hop
+  - hoa_don_danh_sach
+hooks: []
