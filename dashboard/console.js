@@ -4701,6 +4701,14 @@
     let loadingProv = null;
 
     const modelsFor = (pid) => (liveCache[pid] && liveCache[pid].models) || (providers.find(x => x.id === pid) || {}).models || [];
+    // Nhãn bậc (26.10.135): server xếp cao cấp -> nhanh rẻ và gửi kèm bậc; đây chỉ vẽ nhãn
+    // "hợp việc gì" để người không rành tên model vẫn chọn đúng.
+    const BAC_NHAN = { nang: ["mp-bac-nang", t("models.bac_nang")], vua: ["mp-bac-vua", t("models.bac_vua")], nhe: ["mp-bac-nhe", t("models.bac_nhe")] };
+    const bacTag = (pid, mod) => {
+      const b = liveCache[pid] && liveCache[pid].bac && liveCache[pid].bac[mod];
+      const n = b && BAC_NHAN[b];
+      return n ? ` <span class="mp-bac ${n[0]}">${esc(n[1])}</span>` : "";
+    };
     const tagFor = (pid) => {
       if (loadingProv === pid && !liveCache[pid]) return " · " + t("models.mp_loading_tag");
       if (!liveCache[pid]) return "";
@@ -4717,7 +4725,7 @@
       } catch (e) {}
       const stat = (providers.find(x => x.id === pid) || {}).models || [];
       liveCache[pid] = (res && res.models && res.models.length)
-        ? { models: res.models, live: !!res.live }
+        ? { models: res.models, live: !!res.live, bac: res.bac || {} }
         // Rỗng thì GIỮ LẠI lý do server nói. Trước đây nuốt mất nên hộp chọn chỉ còn một câu
         // chung chung "chưa kết nối hoặc không có model", đọc xong vẫn không biết phải làm gì.
         : { models: stat, live: false, error: (res && res.error) || "" };
@@ -4746,7 +4754,7 @@
                 <div class="mp-prov-c">${esc(p.id)}${p.id === main.provider ? " · " + esc(t("models.mp_using")) : ""}${esc(tagFor(p.id))}${p.configured ? "" : " · " + WARN_ICON + " " + esc(t("models.mp_need_conn"))}</div>
               </button>`).join("")}</div>
             <div class="mp-models">${models.length ? models.map(mod => `
-              <button class="mp-model ${mod === selModel ? "sel" : ""}" data-mod="${esc(mod)}">${esc(mod)}${(selProv === main.provider && mod === main.model) ? ` <span class="mp-cur">${esc(t("models.mp_using"))}</span>` : ""}</button>`).join("")
+              <button class="mp-model ${mod === selModel ? "sel" : ""}" data-mod="${esc(mod)}">${esc(mod)}${bacTag(selProv, mod)}${(selProv === main.provider && mod === main.model) ? ` <span class="mp-cur">${esc(t("models.mp_using"))}</span>` : ""}</button>`).join("")
                 : (loadingProv === selProv ? '<div class="mp-empty">' + esc(t("models.mp_loading")) + '</div>'
                     // Nhà CHƯA cấu hình (vd OpenRouter chưa có key) không có model để chọn, nên
                     // nút Switch cứ mờ mà user không hiểu vì sao. Nói thẳng: phải dán key ở trang

@@ -36,7 +36,7 @@
     const force = pid === "openai-oauth" ? "&refresh=1" : "";
     DANG_TAI[pid] = fetch("/provider/models?provider=" + encodeURIComponent(pid) + force)
       .then((r) => r.json())
-      .then((d) => { CACHE[pid] = { models: d.models || [], ts: Date.now() }; })
+      .then((d) => { CACHE[pid] = { models: d.models || [], bac: d.bac || {}, ts: Date.now() }; })
       .catch(() => { if (!CACHE[pid]) CACHE[pid] = { models: [], ts: Date.now() }; })
       .then(() => { delete DANG_TAI[pid]; return CACHE[pid].models; });
     return DANG_TAI[pid];
@@ -112,9 +112,11 @@
       let h = "";
       for (const id of ids.slice(0, limit)) {
         const cur = p.id === sel.provider && id === sel.model;
+        const b = (CACHE[p.id] && CACHE[p.id].bac || {})[id];
+        const nhan = b ? ` <span class="mb-bac mb-bac-${esc(b)}">${esc(T("mpick.bac_" + b))}</span>` : "";
         h += `<div class="mb-item ${cur ? "cur" : ""}" data-prov="${esc(p.id)}" `
           + `data-model="${esc(id)}"><span class="tick">`
-          + `${cur ? IC("check", { cls: "ic-ok" }) : ""}</span><span>${esc(short(id))}</span></div>`;
+          + `${cur ? IC("check", { cls: "ic-ok" }) : ""}</span><span>${esc(short(id))}${nhan}</span></div>`;
       }
       if (ids.length > limit) {
         h += `<div class="mb-empty">${esc(T("mpick.more").replace("{n}", String(ids.length - limit)))}</div>`;

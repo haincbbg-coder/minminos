@@ -5084,8 +5084,14 @@ async def provider_models_index(provider: str, refresh: bool = False) -> dict:
                                cat.get(d.get("catalog_key", "")) or [])
     now = time.time()
     c = _PROV_MODELS_CACHE.get(provider)
+    def _ra(ids, **them):
+        # 26.10.135: trả danh sách ĐÃ XẾP cao cấp -> nhanh rẻ, kèm bậc từng model để hộp chọn
+        # gắn nhãn "hợp việc gì". Mọi nơi đọc danh sách (dashboard, Telegram) đều được thứ tự này.
+        ids = dinh_tuyen.xep_model(ids)
+        return {"models": ids, "bac": {m: dinh_tuyen.bac_cua_model(m) for m in ids}, **them}
+
     if not refresh and c and (now - c["ts"]) < 600 and c.get("ids"):
-        return {"models": c["ids"], "live": True, "cached": True}
+        return _ra(c["ids"], live=True, cached=True)
     try:
         ids = await _fetch_provider_models(provider, m)
     except Exception as e:
@@ -5096,9 +5102,8 @@ async def provider_models_index(provider: str, refresh: bool = False) -> dict:
     if ids:
         _PROV_MODELS_CACHE[provider] = {"ids": ids, "ts": now}
         _remember_catalog(cfg, d, ids)
-        return {"models": ids, "live": True}
-    return {"models": fallback, "live": False,
-            "error": last_err or _vi_sao_khong_co_model(provider, m)}
+        return _ra(ids, live=True)
+    return _ra(fallback, live=False, error=last_err or _vi_sao_khong_co_model(provider, m))
 
 
 @app.get("/provider/models")

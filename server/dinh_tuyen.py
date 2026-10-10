@@ -202,3 +202,39 @@ def quyet_dinh(text: str, router_cfg: dict, *, co_dinh_kem: bool = False,
         return {"ap_dung": False, "bac": pl["bac"], "model": None, "ly_do": "chua-cau-hinh-bac"}
     return {"ap_dung": True, "bac": pl["bac"], "model": m,
             "ly_do": "+".join(pl["ly_do"]), "diem": pl["diem"]}
+
+
+# ─────────────────────────── xếp bậc MODEL theo tên ───────────────────────────
+# Chủ repo 10/10: trong hộp chọn model, mỗi nhà phải xếp từ CAO CẤP xuống THẤP và nói model
+# nào hợp việc nào. Đoán bậc từ TÊN model (không có bảng giá nào chung cho 10 nhà), đủ đúng
+# cho các dòng phổ biến; model lạ về "vua". Cùng thang nhe/vua/nang với auto-router ở trên.
+
+_DAU_NHE = ("haiku", "nano", "lite", "micro", "tiny", ":free", "-free", "flash-8b",
+            "-1b", "-2b", "-3b", "-4b", "-7b", "-8b", "-9b", "-12b", "-14b")
+_DAU_NANG = ("opus", "ultra", "-pro", "pro-", "large", "-max", "max-", "thinking", "reason",
+             "-405b", "-235b", "-480b", "-671b", "deepseek-r1", "grok-4", "gpt-4.1", "gpt-4.5",
+             "gpt-5", "o1", "o3", "o4", "sol")
+# "gpt-5-mini", "o4-mini", "r1-distill" không phải bậc nặng. Khớp theo RANH GIỚI TỪ: "gemini"
+# cũng chứa "mini" mà gemini-2.5-pro là bậc nặng thật.
+_RE_NANG_TRU = re.compile(r"(^|[-_.:/ ])(mini|nano|distill|lite)([-_.:/ ]|$)")
+
+
+def bac_cua_model(model_id: str) -> str:
+    """nhe | vua | nang theo tên model. Thứ tự xét: nhẹ trước (haiku/nano/lite/:free), rồi
+    nặng (opus/pro/ultra/gpt-5/o3...) trừ khi mang dấu mini/nano/distill, còn lại là vừa."""
+    s = str(model_id or "").lower().strip()
+    ten = s.rsplit("/", 1)[-1]           # "anthropic/claude-opus-4" -> "claude-opus-4"
+    if any(k in ten for k in _DAU_NHE):
+        return "nhe"
+    if any(k in ten for k in _DAU_NANG) and not _RE_NANG_TRU.search(ten):
+        return "nang"
+    return "vua"
+
+
+_THU_TU_BAC = {"nang": 0, "vua": 1, "nhe": 2}
+
+
+def xep_model(ids: list) -> list:
+    """Sắp danh sách model: cao cấp lên đầu, nhanh-rẻ xuống cuối; trong cùng bậc giữ thứ tự
+    gốc (danh sách mặc định của nhà thường đã xếp mới trước)."""
+    return sorted(list(ids or []), key=lambda m: _THU_TU_BAC[bac_cua_model(m)])
