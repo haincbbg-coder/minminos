@@ -277,7 +277,10 @@ body.in-console .hud-actions { display: none; }
 .mp-btn.danger:hover { background: color-mix(in srgb, var(--danger-ink, #b3261e) 12%, transparent); }
 @media (max-width: 860px) {
   .mp-body { grid-template-columns: 1fr; }
-  .mp-provs { border-right: 0; border-bottom: 1px solid var(--glass-brd); max-height: 140px; }
+  /* 140px chỉ hiện nổi ~2 nhà cung cấp, phần còn lại khuất trong vùng cuộn hẹp mà trên điện
+     thoại rất dễ tưởng là HẾT danh sách (chủ repo 10/10: "chỉ đổi được Claude với ChatGPT").
+     Nâng lên gần nửa màn để thấy đủ các bộ não; vẫn chừa chỗ cho cột model phía dưới. */
+  .mp-provs { border-right: 0; border-bottom: 1px solid var(--glass-brd); max-height: 46vh; }
 }
 
 /* Skills chia nhóm (trang Skills) */

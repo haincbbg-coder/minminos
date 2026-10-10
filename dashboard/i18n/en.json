@@ -614,6 +614,8 @@
   "models.mp_loading_tag": "loading…",
   "models.mp_loading": "Loading models…",
   "models.mp_empty": "Provider not connected or has no models. Connect it under Providers (or add to settings.json → model.catalog).",
+  "models.mp_add_key": "No API key for {nha} yet. Paste its key into that provider's card on the Models page, then reopen this picker to get models.",
+  "models.mp_add_key_btn": "Back to Models to add key",
   "models.mp_note": "Models load live per provider · saved for new sessions",
   "models.mp_pick": "Pick",
   "kanban.route_auto": "AI picks the worker",

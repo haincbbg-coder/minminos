@@ -4657,8 +4657,15 @@
             <div class="mp-models">${models.length ? models.map(mod => `
               <button class="mp-model ${mod === selModel ? "sel" : ""}" data-mod="${esc(mod)}">${esc(mod)}${(selProv === main.provider && mod === main.model) ? ` <span class="mp-cur">${esc(t("models.mp_using"))}</span>` : ""}</button>`).join("")
                 : (loadingProv === selProv ? '<div class="mp-empty">' + esc(t("models.mp_loading")) + '</div>'
-                    : '<div class="mp-empty">' + esc((liveCache[selProv] && liveCache[selProv].error)
-                        || t("models.mp_empty")) + '</div>')}</div>
+                    // Nhà CHƯA cấu hình (vd OpenRouter chưa có key) không có model để chọn, nên
+                    // nút Switch cứ mờ mà user không hiểu vì sao. Nói thẳng: phải dán key ở trang
+                    // Models trước. Có nút nhảy về đóng hộp để tìm đúng thẻ nhà đó.
+                    : ((providers.find(x => x.id === selProv) || {}).configured === false
+                        ? '<div class="mp-empty">' + esc(t("models.mp_add_key", { nha: selProv }))
+                            + ' <button class="mp-btn" data-act="goprov" style="margin-top:10px">'
+                            + esc(t("models.mp_add_key_btn")) + '</button></div>'
+                        : '<div class="mp-empty">' + esc((liveCache[selProv] && liveCache[selProv].error)
+                            || t("models.mp_empty")) + '</div>'))}</div>
           </div>
           <div class="mp-foot">
             <span class="mp-note">${esc(opts.note || t("models.mp_note"))}</span>
@@ -4673,6 +4680,9 @@
       });
       modal.querySelectorAll(".mp-model").forEach(b => b.onclick = () => { selModel = b.dataset.mod; draw(); });
       modal.querySelectorAll('[data-act="close"]').forEach(b => b.onclick = () => modal.classList.remove("open"));
+      // Đóng hộp chọn để lộ trang Models bên dưới (thẻ nhà + ô dán key nằm ngay đó).
+      const goProv = modal.querySelector('[data-act="goprov"]');
+      if (goProv) goProv.onclick = () => modal.classList.remove("open");
       const applyFilter = () => {
         const q = filterQ.toLowerCase();
         modal.querySelectorAll(".mp-prov,.mp-model").forEach(x => { x.style.display = (!q || x.textContent.toLowerCase().includes(q)) ? "" : "none"; });
