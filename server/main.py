@@ -12744,8 +12744,9 @@ async def _dg_tool_cung_cap(brain: str, cases: list) -> dict:
     câu đó như nhau, và đó là lỗi cấu hình (plugin tắt, hub tắt), không phải điểm của não."""
     can = sorted({t for c in cases for t in (c.get("phai_dung_tool") or [])})
     try:
-        tools, route = await mcp_hub.discover_all("suggest", vault_root=_brain_root(brain),
-                                                  staging=True)
+        # KHÔNG bật staging: cờ đó dành riêng cho đường chat của chủ (test_doc_file_dinh_kem
+        # canh). Chẩn đoán chỉ cần biết tool hub có mặt hay không.
+        tools, route = await mcp_hub.discover_all("suggest", vault_root=_brain_root(brain))
     except Exception as e:
         return {"so": 0, "lazy": False, "thieu": can, "loi": f"{type(e).__name__}: {e}"}
     co = {_dg_ten_tool((t.get("function") or {}).get("name") or t.get("name") or "")
