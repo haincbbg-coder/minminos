@@ -84,6 +84,7 @@ import core_off       # năng lực MẶC ĐỊNH gỡ được: trạng thái g
 import packs          # GÓI mở rộng: thả thư mục vào STATE_DIR/packs là có thêm connector
 import cred_exchange   # đổi credential hộ user (vd App Password -> Google master token) khi đấu
 import plugins_host   # hệ PLUGIN: thư mục Python thả vào, tự thêm tool/hook cho mọi engine qua hub
+import danh_gia      # bộ chấm điểm "não": đo chất lượng trả lời khi đổi model (26.10.124)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
@@ -12645,6 +12646,94 @@ async def _latest_remote_version(cur: str = ""):
     except Exception:
         pass
     return latest, err
+
+
+# ============================================================
+# Bộ chấm điểm "não" (26.10.124) - xem server/danh_gia.py.
+# CHẠY Ở CHẾ ĐỘ CHỈ-ĐỌC (suggest): dù não cư xử lạ cũng không đụng được gì ngoài đời.
+# ============================================================
+_DG_BO = Path(__file__).resolve().parents[1] / "system" / "danh-gia" / "bo-cham-diem.json"
+
+
+def _dg_goc_path() -> Path:
+    return Path(cfgmod.STATE_DIR) / "danh-gia" / "goc.json"
+
+
+async def _dg_resolver(su_that: dict, brain: str):
+    """'Sự thật' của câu số liệu: gọi THẲNG tool đọc dữ liệu (plugin), rút giá trị theo đường."""
+    import inspect as _inspect
+    _tools, route = plugins_host.plugin_tools("full", _brain_root(brain))
+    ten = su_that.get("tool")
+    ent = route.get(ten)
+    if not ent:
+        raise KeyError(f"không có tool '{ten}' để lấy sự thật")
+    res = ent["call"](su_that.get("args") or {})
+    if _inspect.isawaitable(res):
+        res = await res
+    data = json.loads(res) if isinstance(res, str) else res
+    return danh_gia.lay_theo_duong(data, su_that.get("lay", ""))
+
+
+def _dg_invoker(prov, key, model, brain):
+    """Tạo invoker chạy MỘT câu qua não API đang chọn, Ở MỨC SUGGEST (chỉ đọc)."""
+    async def inv(case):
+        messages = [{"role": "user", "content": case["cau_hoi"]}]
+        gen = await _api_stream_mcp(prov, key, model, messages, brain=brain, mode="suggest")
+        final, parts, tools = None, [], []
+        async for ev in gen:
+            t = ev.get("type")
+            if t == "final":
+                final = ev.get("content", "")
+            elif t == "text":
+                parts.append(ev.get("content", "") or "")
+            elif t == "tool_call":
+                n = ev.get("name") or ""
+                if n:
+                    tools.append(n)
+            elif t == "error":
+                return {"tra_loi": "", "tool_da_goi": tools, "loi": ev.get("content", "")}
+        return {"tra_loi": final if final is not None else "".join(parts),
+                "tool_da_goi": tools, "loi": ""}
+    return inv
+
+
+@app.post("/danh-gia/chay")
+async def danh_gia_chay(request: Request):
+    """Chạy bộ chấm điểm với não đang chọn. Trả bảng điểm + so với bản nền (hồi quy)."""
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    brain = (data.get("brain") or "brain").strip() or "brain"
+    mcfg = cfgmod.read_settings().get("model", {})
+    prov, kind, key, model = _chat_provider(mcfg)
+    # Trước mắt chấm được não dạng API/OpenRouter - đúng nơi bố đổi sang model rẻ. Não CLI
+    # (Claude Code/Codex/Grok/Antigravity) chạy đường khác, chưa chấm ở bản này.
+    if prov not in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "ollama",
+                    "openai-compat", "ollama-local"):
+        return {"ok": False, "error": f"Bộ chấm điểm hiện chạy với não dạng API/OpenRouter "
+                f"(nơi hay đổi sang model rẻ). Não đang chọn là '{prov}' (dạng {kind}). "
+                f"Chọn một não API ở trang Models rồi chạy lại."}
+    if kind == "api" and not key:
+        return {"ok": False, "error": f"Não '{prov}' chưa có API key."}
+    try:
+        cases = danh_gia.doc_bo(_DG_BO)
+    except Exception as e:
+        return {"ok": False, "error": f"Bộ đề hỏng: {e}"}
+    invoker = _dg_invoker(prov, key, model, brain)
+
+    async def resolver(st):
+        return await _dg_resolver(st, brain)
+
+    bang = await danh_gia.chay(cases, invoker, resolver)
+    goc = danh_gia.doc_goc(_dg_goc_path())
+    hoi_quy = danh_gia.so_voi_goc(bang, goc) if goc else {"hoi_quy": [], "tien_bo": [],
+                                                          "cau_moi": [], "co_hoi_quy": False}
+    if data.get("luu_goc"):
+        danh_gia.luu_goc(bang, _dg_goc_path())
+    return {"ok": True, "nao": {"provider": prov, "model": model or ""},
+            "bang_diem": {k: v for k, v in bang.items() if k != "chi_tiet"},
+            "hoi_quy": hoi_quy, "da_luu_ban_nen": bool(data.get("luu_goc"))}
 
 
 @app.get("/version")
