@@ -4095,6 +4095,18 @@
           <div class="seg">${reasonChips}</div>
           <div class="aux-note">${esc(t("models.reason_note"))}</div>
         </div>
+      </div>
+      <div class="cview-section">
+        <h3>◆ ${esc(t("models.h_eval"))} <span style="opacity:.5">${esc(t("models.h_eval_sub"))}</span></h3>
+        <div class="gcard aux-card">
+          <div class="gcard-meta">${esc(t("models.eval_meta"))}</div>
+          <div class="aux-now-act" style="justify-content:flex-start;gap:12px;flex-wrap:wrap">
+            <button class="gcard-btn" id="evalRun">${esc(t("models.eval_run"))}</button>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="evalBaseline"> ${esc(t("models.eval_save_base"))}</label>
+          </div>
+          <div id="evalResult" class="aux-note" style="margin-top:4px"></div>
+        </div>
       </div>`;
 
     const chg = document.getElementById("mdChange");
@@ -4134,6 +4146,39 @@
       await saveSetting("model", { reasoning: b.dataset.reason });
       renderModelsCloudTab(el);
     });
+    const evalRun = document.getElementById("evalRun");
+    if (evalRun) evalRun.onclick = async () => {
+      const out = document.getElementById("evalResult");
+      const luu = !!(document.getElementById("evalBaseline") || {}).checked;
+      evalRun.disabled = true;
+      const nhan0 = evalRun.textContent;
+      evalRun.textContent = t("models.eval_running");
+      if (out) out.innerHTML = esc(t("models.eval_running_note"));
+      let r = null;
+      try {
+        r = await (await fetch("/danh-gia/chay", { method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ luu_goc: luu }) })).json();
+      } catch (e) { r = { ok: false, error: String(e) }; }
+      evalRun.disabled = false; evalRun.textContent = nhan0;
+      if (!out) return;
+      if (!r || !r.ok) { out.innerHTML = `<span class="warn">${WARN_ICON} ${esc((r && r.error) || "?")}</span>`; return; }
+      const bd = r.bang_diem || {}; const hq = r.hoi_quy || {};
+      const nhomRows = Object.entries(bd.theo_nhom || {}).map(([g, v]) =>
+        `<tr><td>${esc(g)}</td><td style="text-align:right">${v.dat}/${v.tong}</td></tr>`).join("");
+      const hqLine = (hq.hoi_quy && hq.hoi_quy.length)
+        ? `<div class="warn" style="margin-top:6px">${WARN_ICON} ${esc(t("models.eval_regress"))}: ${esc(hq.hoi_quy.join(", "))}</div>`
+        : (Object.keys(hq).length ? `<div style="margin-top:6px;color:var(--ok,#3a3)">${esc(t("models.eval_no_regress"))}</div>` : "");
+      const truot = (bd.cau_truot || []).map(c =>
+        `<li><b>${esc(c.id)}</b> (${esc(c.nhom)}): ${esc(c.ly_do)}</li>`).join("");
+      out.innerHTML =
+        `<div style="margin-bottom:4px">${esc(t("models.eval_brain"))}: <b>${esc((r.nao || {}).model || (r.nao || {}).provider || "?")}</b></div>` +
+        `<div style="font-size:15px;margin-bottom:4px"><b>${bd.dat}/${bd.tong}</b> ${esc(t("models.eval_pass"))} (${Math.round((bd.ty_le || 0) * 100)}%)</div>` +
+        (nhomRows ? `<table class="mini-tbl" style="margin:4px 0"><tbody>${nhomRows}</tbody></table>` : "") +
+        hqLine +
+        (truot ? `<div style="margin-top:6px">${esc(t("models.eval_failed"))}:</div><ul style="margin:4px 0 0;padding-left:18px">${truot}</ul>` : "") +
+        (r.da_luu_ban_nen ? `<div style="margin-top:6px;opacity:.7">${esc(t("models.eval_saved_base"))}</div>` : "");
+    };
     el.querySelectorAll(".gcard-btn[data-pk]").forEach(b => {
       b.onclick = async () => {
         const pid = b.dataset.pk;

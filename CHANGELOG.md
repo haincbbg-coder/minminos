@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.125] - 2026-10-10
+### Thêm mới
+- Trang Models có nút "Chạy kiểm tra" chất lượng não: bấm một cái là chấm model đang chọn trên bộ câu hỏi có đáp án đúng, hiện số câu đạt theo nhóm và cảnh báo nếu tụt so với bản nền. Tích "Lưu làm bản nền" để lần đổi model sau có mốc so sánh.
+
 ## [26.10.124] - 2026-10-10
 ### Thêm mới
 - Bộ chấm điểm "não": chạy một bộ câu hỏi có đáp án đúng qua model đang chọn rồi chấm bằng luật, và báo HỒI QUY - câu nào trước trả lời đúng mà sau khi đổi model lại sai. Nhờ đó đổi model không còn là canh bạc. Đáp án câu số liệu lấy thẳng từ dữ liệu thật, nên đo đúng việc não có nói đúng con số hay bịa. Chạy ở chế độ chỉ đọc, không đụng gì ngoài đời.
