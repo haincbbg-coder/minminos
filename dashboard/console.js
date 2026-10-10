@@ -4217,7 +4217,8 @@
       out.innerHTML =
         `<div style="margin-bottom:4px">${esc(t("models.eval_brain"))}: <b>${esc((r.nao || {}).model || (r.nao || {}).provider || "?")}</b></div>` +
         veChanDoan(r.chan_doan) +
-        `<div style="font-size:15px;margin-bottom:4px"><b>${bd.dat}/${bd.tong}</b> ${esc(t("models.eval_pass"))} (${Math.round((bd.ty_le || 0) * 100)}%)</div>` +
+        `<div style="font-size:15px;margin-bottom:4px"><b>${bd.dat}/${bd.tong}</b> ${esc(t("models.eval_pass"))} (${Math.round((bd.ty_le || 0) * 100)}%)` +
+        ` <span style="font-size:13px;opacity:.7">· ${esc(t("models.eval_speed", { s: bd.giay_tb || 0, max: bd.giay_max || 0, tool: bd.tool_tb || 0 }))}</span></div>` +
         (nhomRows ? `<table class="mini-tbl" style="margin:4px 0"><tbody>${nhomRows}</tbody></table>` : "") +
         hqLine +
         (truot ? `<div style="margin-top:6px">${esc(t("models.eval_failed"))}:</div><ul style="margin:4px 0 0;padding-left:18px">${truot}</ul>` : "") +
@@ -4242,10 +4243,10 @@
       const xh = dangChay ? xong : (st.xep_hang || xong);
       const rows = xh.map((r, i) => {
         const m = (r.nao || {}).model || "?";
-        if (r.khong_cham_duoc) return `<tr><td>${i + 1}</td><td>${esc(m)}</td><td colspan="2" class="warn">${esc(t("models.eval_cant_short"))}: ${esc(String(r.khong_cham_duoc).slice(0, 70))}</td></tr>`;
+        if (r.khong_cham_duoc) return `<tr><td>${i + 1}</td><td>${esc(m)}</td><td colspan="3" class="warn">${esc(t("models.eval_cant_short"))}: ${esc(String(r.khong_cham_duoc).slice(0, 70))}</td></tr>`;
         const bd = r.bang_diem || {};
         const truot = (bd.cau_truot || []).map(c => c.id).join(", ");
-        return `<tr><td>${i + 1}</td><td>${esc(m)}</td><td style="text-align:right"><b>${bd.dat}/${bd.tong}</b></td><td style="opacity:.8">${esc(truot || t("models.eval_all_pass"))}</td></tr>`;
+        return `<tr><td>${i + 1}</td><td>${esc(m)}</td><td style="text-align:right"><b>${bd.dat}/${bd.tong}</b></td><td style="text-align:right;white-space:nowrap">${esc(String(bd.giay_tb || 0))}s · ${esc(String(bd.tool_tb || 0))} tool</td><td style="opacity:.8">${esc(truot || t("models.eval_all_pass"))}</td></tr>`;
       }).join("");
       bOut.innerHTML = head + veChanDoan(st.chan_doan) + (rows ? `<table class="mini-tbl" style="margin:6px 0"><tbody>${rows}</tbody></table>` : "");
     };

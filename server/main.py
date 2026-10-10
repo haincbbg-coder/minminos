@@ -12911,7 +12911,9 @@ def _dg_loat_luu():
 def _dg_loat_xep_hang(xong: list) -> list:
     """Bảng xếp hạng: chấm được xếp trước theo tỷ lệ giảm dần; không chấm được dồn cuối."""
     def khoa(r):
-        return (0 if r.get("khong_cham_duoc") else 1, (r.get("bang_diem") or {}).get("ty_le", 0.0))
+        bd = r.get("bang_diem") or {}
+        # Cùng độ đúng thì NHANH hơn xếp trên (26.10.134): giay_tb âm để sort reverse chung một chiều.
+        return (0 if r.get("khong_cham_duoc") else 1, bd.get("ty_le", 0.0), -float(bd.get("giay_tb") or 0.0))
     return sorted(xong, key=khoa, reverse=True)
 
 
@@ -12927,7 +12929,8 @@ def _dg_loat_tom_tat(st: dict) -> str:
         else:
             bd = r.get("bang_diem") or {}
             truot = ", ".join(c["id"] for c in (bd.get("cau_truot") or [])[:4])
-            dong.append(f"{i}. {m}: {bd.get('dat')}/{bd.get('tong')}"
+            dong.append(f"{i}. {m}: {bd.get('dat')}/{bd.get('tong')}, {bd.get('giay_tb', 0)}s/câu, "
+                        f"{bd.get('tool_tb', 0)} tool/câu"
                         + (f" - trượt: {truot}" if truot else " - đạt hết"))
     if st.get("huy"):
         dong.append("(Đã dừng theo yêu cầu, danh sách trên là phần đã chấm.)")
