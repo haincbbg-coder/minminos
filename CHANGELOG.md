@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.127] - 2026-10-10
+### Thêm mới
+- Nền cho **định tuyến model theo độ khó**: câu dễ để model rẻ, câu cần phân tích sâu hoặc đụng con số thì mới gọi model mạnh. Bộ phân loại chạy bằng luật (tất định, không tốn thêm lượt gọi), có sàn an toàn: câu tính toán hay đọc dữ liệu không bao giờ bị dồn xuống model rẻ nhất.
+- Có cách **xem thử** trước khi bật: gửi một câu hỏi là biết nó rơi vào bậc nào (nhẹ/vừa/nặng) và sẽ chạy model nào, nên cân chỉnh được trước khi giao việc thật. Định tuyến mặc định TẮT; bật và gán model cho từng bậc rồi dùng nút kiểm tra chất lượng não (26.10.125) để chắc câu trả lời không tụt.
+
 ## [26.10.126] - 2026-10-10
 ### Sửa lỗi
 - Hộp chọn model trên điện thoại giờ hiện đủ **tất cả các bộ não**. Trước đây cột nhà cung cấp chỉ cao bằng hai dòng nên trông như chỉ có Claude với ChatGPT, phần còn lại khuất trong vùng cuộn hẹp dễ bị tưởng là hết.
