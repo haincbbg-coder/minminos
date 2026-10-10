@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.136] - 2026-10-10
+### Thêm mới
+- **Tự chia model theo độ khó chạy thật** (Trụ 2). Trang Models có mục mới: bật một công tắc, gán model cho ba bậc cao cấp / cân bằng / nhanh rẻ (hoặc bấm "Đề xuất từ bảng chấm hàng loạt" để lấy model đứng đầu mỗi bậc), gõ thử một câu để xem nó rơi vào bậc nào, và xem các lượt gần nhất bộ chia đã quyết định gì.
+- Luật an toàn: phiên bố đã tự tay chọn model thì bộ chia không đụng; bậc chưa gán hoặc nhà hết key thì giữ model hiện tại; câu tính toán hay đọc dữ liệu không bao giờ xuống bậc rẻ nhất. Mặc định TẮT.
+
 ## [26.10.135] - 2026-10-10
 ### Cải thiện
 - Hộp chọn model (cả trang Models lẫn trong khung chat) giờ **xếp mỗi nhà từ cao cấp xuống thấp** và gắn nhãn từng model: "Cao cấp · phân tích sâu", "Cân bằng · việc hằng ngày", "Nhanh, rẻ · câu đơn giản". Người không rành tên model vẫn biết nên chọn cái nào cho việc gì. Áp dụng cho mọi nhà, kể cả vài trăm model của OpenRouter.

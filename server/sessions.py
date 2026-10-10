@@ -446,7 +446,13 @@ class SessionStore:
                               # lượt. NULL/rỗng = phiên chưa có lượt dashboard nào (hoặc phiên
                               # Telegram) → theo mặc định chung ở settings.json.
                               ("pinned_provider", "TEXT"),
-                              ("pinned_model", "TEXT")):
+                              ("pinned_model", "TEXT"),
+                              # 1 = người dùng TỰ TAY chọn model cho phiên (hoặc agent chọn);
+                              # 0 = server đóng dấu tự động. Bộ định tuyến theo độ khó
+                              # (26.10.136) chỉ nhường ghim TAY, còn đóng dấu tự động thì
+                              # nó vẫn chọn lại mỗi lượt - không phân biệt là chia một lần
+                              # rồi dính luôn.
+                              ("pinned_manual", "INTEGER DEFAULT 0")):
                 if name not in cols:
                     self._conn.execute(f"ALTER TABLE sessions ADD COLUMN {name} {ddl}")
             # Index cho cột vừa thêm phải chạy SAU vòng ALTER: DB cũ chưa có cột thì CREATE
@@ -844,7 +850,8 @@ class SessionStore:
         return True
 
     def set_pinned_model(self, session_id: str, provider: Optional[str],
-                         model: Optional[str], *, brain: Optional[str] = None) -> bool:
+                         model: Optional[str], *, brain: Optional[str] = None,
+                         manual: Optional[bool] = None) -> bool:
         """Ghim model riêng cho MỘT phiên (provider rỗng = gỡ ghim, phiên quay về mặc
         định chung). Cùng khuôn set_project: `brain` khác None thì tạo hàng nếu phiên
         chưa kịp tồn tại - dashboard mint id phía client, user có thể đổi model trước
@@ -857,9 +864,17 @@ class SessionStore:
             self.create_session(brain=brain, session_id=session_id)
         if not self.get_session(session_id):
             return False
-        self._write(lambda c: c.execute(
-            "UPDATE sessions SET pinned_provider = ?, pinned_model = ? WHERE id = ?",
-            (prov, mdl, session_id)))
+        # manual=None: giữ nguyên cờ (vd tự chữa model của ghim). Gỡ ghim thì cờ về 0.
+        if prov is None:
+            manual = False
+        if manual is None:
+            self._write(lambda c: c.execute(
+                "UPDATE sessions SET pinned_provider = ?, pinned_model = ? WHERE id = ?",
+                (prov, mdl, session_id)))
+        else:
+            self._write(lambda c: c.execute(
+                "UPDATE sessions SET pinned_provider = ?, pinned_model = ?, pinned_manual = ? "
+                "WHERE id = ?", (prov, mdl, 1 if manual else 0, session_id)))
         return True
 
     # ── projects (nhóm hội thoại) ──
