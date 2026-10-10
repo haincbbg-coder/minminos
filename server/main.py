@@ -12737,6 +12737,33 @@ def _dg_invoker(prov, key, model, brain):
     return inv
 
 
+def _dg_nha_san_sang(mcfg, prov):
+    """(ok, lỗi, key) - nhà `prov` có chấm được không. Dùng chung cho chấm lẻ và chấm hàng loạt."""
+    d = _provider_def(prov)
+    if not d:
+        return False, f"Không có nhà '{prov}'.", ""
+    if prov not in _DG_NAO_API + _DG_NAO_CLI:
+        return False, f"Chưa chấm được nhà '{prov}'.", ""
+    key = _provider_key(mcfg, d)
+    if prov in _DG_NAO_API and prov != "ollama-local" and not (key or "").strip():
+        return False, (f"Não '{prov}' chưa có API key. Dán key vào thẻ nhà này ở trang Models "
+                       f"rồi chạy lại."), ""
+    return True, "", key
+
+
+async def _dg_cham_mot_nao(prov, key, model, brain, cases):
+    """Chấm MỘT não trọn bộ đề -> {nao, bang_diem (không chi_tiet), khong_cham_duoc, _bang}."""
+    invoker = _dg_invoker(prov, key, model, brain)
+
+    async def resolver(st):
+        return await _dg_resolver(st, brain)
+
+    bang = await danh_gia.chay(cases, invoker, resolver)
+    return {"nao": {"provider": prov, "model": model or ""},
+            "bang_diem": {k: v for k, v in bang.items() if k != "chi_tiet"},
+            "khong_cham_duoc": danh_gia.toan_bo_loi_chay(bang), "_bang": bang}
+
+
 @app.post("/danh-gia/chay")
 async def danh_gia_chay(request: Request):
     """Chạy bộ chấm điểm với não đang chọn. Trả bảng điểm + so với bản nền (hồi quy)."""
@@ -12750,44 +12777,176 @@ async def danh_gia_chay(request: Request):
     # 26.10.128: mọi não đều chấm được, kể cả Claude Code / ChatGPT / Grok / Antigravity.
     chon = (data.get("provider") or "").strip()
     if chon:
-        d = _provider_def(chon)
-        if not d:
-            return {"ok": False, "error": f"Không có nhà '{chon}'."}
-        prov, kind = chon, d.get("kind", "cli")
-        key, model = _provider_key(mcfg, d), (data.get("model") or "").strip()
+        prov, model = chon, (data.get("model") or "").strip()
         if prov == "openrouter":
             model = model or mcfg.get("openrouter_model") or ""
     else:
-        prov, kind, key, model = _chat_provider(mcfg)
-    if prov not in _DG_NAO_API + _DG_NAO_CLI:
-        return {"ok": False, "error": f"Chưa chấm được nhà '{prov}'."}
-    if prov in _DG_NAO_API and prov != "ollama-local" and not (key or "").strip():
-        return {"ok": False, "error": f"Não '{prov}' chưa có API key. Dán key vào thẻ nhà này ở "
-                f"trang Models rồi chạy lại."}
+        prov, _kind, _key, model = _chat_provider(mcfg)
+    ok, loi, key = _dg_nha_san_sang(mcfg, prov)
+    if not ok:
+        return {"ok": False, "error": loi}
     try:
         cases = danh_gia.doc_bo(_DG_BO)
     except Exception as e:
         return {"ok": False, "error": f"Bộ đề hỏng: {e}"}
-    invoker = _dg_invoker(prov, key, model, brain)
-
-    async def resolver(st):
-        return await _dg_resolver(st, brain)
-
-    bang = await danh_gia.chay(cases, invoker, resolver)
+    kq = await _dg_cham_mot_nao(prov, key, model, brain, cases)
+    bang = kq.pop("_bang")
     goc = danh_gia.doc_goc(_dg_goc_path())
     hoi_quy = danh_gia.so_voi_goc(bang, goc) if goc else {"hoi_quy": [], "tien_bo": [],
                                                           "cau_moi": [], "co_hoi_quy": False}
     # Cả bộ lỗi khi chạy (401, hết key, không nối được não) thì KHÔNG phải điểm của não:
     # không lưu bản nền (lưu là che hồi quy thật về sau) và nói rõ thay vì "0/7 - không tụt".
-    khong_cham_duoc = danh_gia.toan_bo_loi_chay(bang)
     da_luu = False
-    if data.get("luu_goc") and not khong_cham_duoc:
+    if data.get("luu_goc") and not kq["khong_cham_duoc"]:
         danh_gia.luu_goc(bang, _dg_goc_path())
         da_luu = True
-    return {"ok": True, "nao": {"provider": prov, "model": model or ""},
-            "bang_diem": {k: v for k, v in bang.items() if k != "chi_tiet"},
-            "hoi_quy": hoi_quy, "da_luu_ban_nen": da_luu,
-            "khong_cham_duoc": khong_cham_duoc}
+    return {"ok": True, **kq, "hoi_quy": hoi_quy, "da_luu_ban_nen": da_luu}
+
+
+# ---- Chấm HÀNG LOẠT: mọi model của một nhà, lần lượt, chạy nền, báo về hòm thư (26.10.129) ----
+_DG_LOAT_MAX = 25            # trần số model một lượt: OpenRouter có vài trăm, chấm hết là cả đêm
+_DG_LOAT = {"dang_chay": False}   # trạng thái lượt đang/vừa chạy; bản bền ở _dg_loat_path()
+_DG_LOAT_TASK = None
+
+
+def _dg_loat_path() -> Path:
+    return _dg_goc_path().parent / "loat.json"
+
+
+def _dg_loat_luu():
+    try:
+        p = _dg_loat_path(); p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({k: v for k, v in _DG_LOAT.items() if not k.startswith("_")},
+                                ensure_ascii=False, indent=1), encoding="utf-8")
+    except Exception as e:
+        print(f"[danh-gia loat] không lưu được: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+def _dg_loat_xep_hang(xong: list) -> list:
+    """Bảng xếp hạng: chấm được xếp trước theo tỷ lệ giảm dần; không chấm được dồn cuối."""
+    def khoa(r):
+        return (0 if r.get("khong_cham_duoc") else 1, (r.get("bang_diem") or {}).get("ty_le", 0.0))
+    return sorted(xong, key=khoa, reverse=True)
+
+
+def _dg_loat_tom_tat(st: dict) -> str:
+    """Thư báo kết quả, đọc được trên điện thoại/Telegram: mỗi model một dòng."""
+    xh = _dg_loat_xep_hang(st.get("xong") or [])
+    dong = [f"Chấm hàng loạt xong: nhà {st.get('provider')}, {len(xh)} model, "
+            f"bộ {st.get('so_cau', '?')} câu."]
+    for i, r in enumerate(xh, 1):
+        m = (r.get("nao") or {}).get("model") or "?"
+        if r.get("khong_cham_duoc"):
+            dong.append(f"{i}. {m}: không chấm được ({str(r['khong_cham_duoc'])[:60]})")
+        else:
+            bd = r.get("bang_diem") or {}
+            truot = ", ".join(c["id"] for c in (bd.get("cau_truot") or [])[:4])
+            dong.append(f"{i}. {m}: {bd.get('dat')}/{bd.get('tong')}"
+                        + (f" - trượt: {truot}" if truot else " - đạt hết"))
+    if st.get("huy"):
+        dong.append("(Đã dừng theo yêu cầu, danh sách trên là phần đã chấm.)")
+    return "\n".join(dong)
+
+
+async def _dg_loat_chay(prov, key, models, brain, cases, owner_chat):
+    global _DG_LOAT
+    for m in models:
+        if _DG_LOAT.get("huy"):
+            break
+        _DG_LOAT["hien_tai"] = m; _dg_loat_luu()
+        try:
+            kq = await _dg_cham_mot_nao(prov, key, m, brain, cases)
+            kq.pop("_bang", None)
+        except Exception as e:   # một model nổ không được làm sập cả lượt
+            kq = {"nao": {"provider": prov, "model": m}, "bang_diem": {},
+                  "khong_cham_duoc": f"{type(e).__name__}: {e}"}
+        _DG_LOAT.setdefault("xong", []).append(kq)
+        _dg_loat_luu()
+    _DG_LOAT["dang_chay"] = False; _DG_LOAT["hien_tai"] = ""
+    _DG_LOAT["ket_thuc"] = localefmt.now().isoformat(timespec="seconds")
+    _DG_LOAT["xep_hang"] = _dg_loat_xep_hang(_DG_LOAT.get("xong") or [])
+    _dg_loat_luu()
+    try:
+        await _bo_vao_hom_thu(owner_chat, _dg_loat_tom_tat(_DG_LOAT), kind="answer",
+                              label="Chấm điểm não hàng loạt", source="danh-gia")
+    except Exception as e:
+        print(f"[danh-gia loat] báo hòm thư lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+@app.post("/danh-gia/loat")
+async def danh_gia_loat(request: Request):
+    """Chấm HÀNG LOẠT mọi model của một nhà, lần lượt, chạy nền.
+
+    Body: {provider, models?: [..], gioi_han?: int, brain?, chat_id?}. Không đưa `models`
+    thì lấy danh sách model của nhà (live nếu có), cắt ở `gioi_han` (mặc định _DG_LOAT_MAX).
+    Trả ngay; theo dõi bằng GET /danh-gia/loat; xong thì để thư trong hòm thư (chuông)."""
+    global _DG_LOAT, _DG_LOAT_TASK
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    if _DG_LOAT.get("dang_chay"):
+        return {"ok": False, "error": "Đang có một lượt chấm hàng loạt chạy dở. Chờ xong hoặc bấm Dừng."}
+    prov = (data.get("provider") or "").strip()
+    if not prov:
+        return {"ok": False, "error": "Chọn một nhà cung cấp để chấm hàng loạt."}
+    mcfg = cfgmod.read_settings().get("model", {})
+    ok, loi, key = _dg_nha_san_sang(mcfg, prov)
+    if not ok:
+        return {"ok": False, "error": loi}
+    brain = (data.get("brain") or "brain").strip() or "brain"
+    try:
+        cases = danh_gia.doc_bo(_DG_BO)
+    except Exception as e:
+        return {"ok": False, "error": f"Bộ đề hỏng: {e}"}
+    models = [str(m).strip() for m in (data.get("models") or []) if str(m).strip()]
+    if not models:
+        try:
+            res = await provider_models_index(prov)
+            models = [str(m) for m in (res.get("models") or [])]
+        except Exception as e:
+            return {"ok": False, "error": f"Không lấy được danh sách model của {prov}: {e}"}
+    if not models:
+        return {"ok": False, "error": f"Nhà {prov} chưa có model nào để chấm."}
+    try:
+        gioi_han = max(1, min(int(data.get("gioi_han") or _DG_LOAT_MAX), 100))
+    except (TypeError, ValueError):
+        gioi_han = _DG_LOAT_MAX
+    bi_cat = max(0, len(models) - gioi_han)
+    models = models[:gioi_han]
+    _DG_LOAT = {"dang_chay": True, "huy": False, "provider": prov, "models": models,
+                "bi_cat": bi_cat, "so_cau": len(cases), "xong": [], "hien_tai": "",
+                "bat_dau": localefmt.now().isoformat(timespec="seconds"), "ket_thuc": ""}
+    _dg_loat_luu()
+    _DG_LOAT_TASK = asyncio.create_task(
+        _dg_loat_chay(prov, key, models, brain, cases, (data.get("chat_id") or "").strip()))
+    return {"ok": True, "provider": prov, "so_model": len(models), "bi_cat": bi_cat,
+            "so_cau": len(cases)}
+
+
+@app.get("/danh-gia/loat")
+async def danh_gia_loat_trang_thai():
+    """Trạng thái lượt chấm hàng loạt đang/vừa chạy (dashboard poll). Server vừa khởi động
+    thì đọc bản bền của lượt trước để vẫn xem lại được bảng xếp hạng."""
+    if not _DG_LOAT.get("provider"):
+        try:
+            d = json.loads(_dg_loat_path().read_text(encoding="utf-8"))
+            d["dang_chay"] = False   # tiến trình cũ đã chết cùng server
+            return {"ok": True, **d}
+        except Exception:
+            return {"ok": True, "dang_chay": False, "xong": []}
+    st = {k: v for k, v in _DG_LOAT.items() if not k.startswith("_")}
+    st["xep_hang"] = _dg_loat_xep_hang(st.get("xong") or [])
+    return {"ok": True, **st}
+
+
+@app.post("/danh-gia/loat/huy")
+async def danh_gia_loat_huy():
+    """Dừng sau model đang chấm (không cắt ngang giữa một câu)."""
+    if not _DG_LOAT.get("dang_chay"):
+        return {"ok": False, "error": "Không có lượt nào đang chạy."}
+    _DG_LOAT["huy"] = True; _dg_loat_luu()
+    return {"ok": True}
 
 
 @app.post("/dinh-tuyen/thu")

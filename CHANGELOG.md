@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.129] - 2026-10-10
+### Thêm mới
+- **Chấm điểm não hàng loạt**: chọn một nhà (ví dụ OpenRouter), bấm một cái là MinMin chấm lần lượt mọi model của nhà đó rồi **xếp hạng** từ cao xuống thấp, kèm câu nào trượt. Chạy nền, tải lại trang vẫn thấy tiến độ, có nút Dừng; xong thì để thư ở chuông để bố đọc trên điện thoại.
+- Có giới hạn số model mỗi lượt (mặc định 25, tối đa 100) để OpenRouter vài trăm model không chạy cả đêm.
+
 ## [26.10.128] - 2026-10-10
 ### Sửa lỗi
 - Kiểm tra chất lượng não giờ chấm được **mọi bộ não**, kể cả Claude Code, ChatGPT, Grok Build, Antigravity, không chỉ não dạng API như trước. Có nút "Chọn não để chấm" ngay cạnh, chọn riêng cho lượt chấm mà không đổi model chính.
