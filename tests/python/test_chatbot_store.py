@@ -503,3 +503,15 @@ if _fails:
     print(f"ĐỎ {len(_fails)} mục: " + ", ".join(_fails))
     sys.exit(1)
 print("Tất cả xanh.")
+
+
+# ============================================================
+# 8b. Trong NHÓM, hạn mức tính theo từng người (0.84.6 của Javis gốc)
+# ============================================================
+chatbot_runtime._HITS.clear()
+for _ in range(3):
+    chatbot_runtime._qua_han_muc("b1", "-100nhom", 3, "lan")
+check("trong nhóm: người đã đủ hạn mức thì bị chặn",
+      chatbot_runtime._qua_han_muc("b1", "-100nhom", 3, "lan") is True)
+check("trong nhóm: người khác cùng nhóm KHÔNG bị vạ lây",
+      chatbot_runtime._qua_han_muc("b1", "-100nhom", 3, "minh") is False)

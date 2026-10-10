@@ -4,6 +4,16 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.121] - 2026-10-10
+### Bảo mật
+- Bot không còn đọc được lệnh giấu bằng ký tự vô hình. Tin từ Telegram, Zalo, bot khách và CLI được gỡ sạch ký tự rộng bằng không, ký tự đảo chiều chữ và khối ẩn trước khi tới bộ não và trước khi lưu lại. Emoji ghép và tiếng Việt giữ nguyên.
+
+### Sửa lỗi
+- Bot trong nhóm không còn báo "Anh chị nhắn hơi nhanh" oan: giới hạn số câu trả lời mỗi giờ trước đây tính chung cả nhóm, giờ tính riêng từng người.
+
+### Cải thiện
+- Một nguồn kết nối đang hỏng không còn làm MinMin đứng chờ. Khi một nguồn vừa không khởi động được, các lần gọi trong 1 phút sau được báo lỗi ngay. Bấm Kiểm tra ở trang Kết nối thành công thì dùng lại nguồn đó ngay.
+
 ## [26.10.120] - 2026-10-08
 ### Thêm mới
 - Model mới trong bộ não: **Claude Haiku 5.5** (`claude-haiku-5-5`, rẻ hơn Haiku 4.5 khoảng 75%) cho cả Claude Code và Anthropic API.
