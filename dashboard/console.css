@@ -262,6 +262,12 @@ body.in-console .hud-actions { display: none; }
 .mp-model { display: block; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; color: var(--text); border-radius: 9px; padding: 11px 12px; cursor: pointer; font-family: var(--font); font-size: 15px; }
 .mp-model:hover { background: var(--surface-2); }
 .mp-model.sel { background: var(--accent-wash-2); border-color: var(--accent); }
+/* Nhãn bậc model (26.10.135): cao cấp / cân bằng / nhanh rẻ, để người không rành tên vẫn chọn đúng. */
+.mp-bac, .mb-bac { font-size: 10.5px; letter-spacing: .3px; padding: 1px 7px; border-radius: 999px; margin-left: 6px;
+  border: 1px solid var(--glass-brd); color: var(--text3); white-space: nowrap; vertical-align: middle; }
+.mp-bac-nang, .mb-bac-nang { color: var(--accent2); border-color: var(--accent2-line); background: var(--accent2-wash); }
+.mp-bac-vua, .mb-bac-vua { color: var(--text2); }
+.mp-bac-nhe, .mb-bac-nhe { color: var(--ok, #3a3); }
 .mp-cur { float: right; font-size: 11px; color: var(--accent2); letter-spacing: 1px; }
 .mp-empty { color: var(--text3); font-size: 14px; padding: 16px; }
 .mp-foot { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--glass-brd); }

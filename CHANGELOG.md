@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.135] - 2026-10-10
+### Cải thiện
+- Hộp chọn model (cả trang Models lẫn trong khung chat) giờ **xếp mỗi nhà từ cao cấp xuống thấp** và gắn nhãn từng model: "Cao cấp · phân tích sâu", "Cân bằng · việc hằng ngày", "Nhanh, rẻ · câu đơn giản". Người không rành tên model vẫn biết nên chọn cái nào cho việc gì. Áp dụng cho mọi nhà, kể cả vài trăm model của OpenRouter.
+
 ## [26.10.134] - 2026-10-10
 ### Cải thiện
 - Bảng điểm não có thêm **tốc độ** (giây mỗi câu, câu chậm nhất) và **số lượt gọi tool mỗi câu**. Xếp hạng hàng loạt: cùng độ đúng thì não nhanh hơn xếp trên. Một não đúng nhưng lề mề 3 phút và gọi 9 lượt tool giờ lộ ra ngay, không còn đứng trên Claude chỉ vì hơn một câu.

@@ -77,6 +77,18 @@ check("bật + câu dễ -> model nhẹ", qd2["ap_dung"] and qd2["model"]["provi
 check("bật nhưng chưa cấu hình bậc -> không áp dụng (giữ model chính)",
       dt.quyet_dinh("chào", {"enabled": True, "bac": {}})["ap_dung"] is False)
 
+
+# ---------- 26.10.135: xếp bậc model theo tên ----------
+for m, b in {"anthropic/claude-opus-4.1": "nang", "claude-sonnet-4.5": "vua", "claude-haiku-4": "nhe",
+             "gpt-5": "nang", "gpt-5-mini": "vua", "gpt-5-nano": "nhe", "o4-mini": "vua",
+             "gemini-2.5-pro": "nang", "gemini-2.5-flash": "vua", "gemini-2.5-flash-lite": "nhe",
+             "deepseek-r1-distill-llama-8b": "nhe", "qwen/qwen3-235b-a22b": "nang",
+             "meta-llama/llama-3.1-8b-instruct:free": "nhe", "aion-labs/aion-3.0": "vua"}.items():
+    check(f"bậc {m} = {b}", dt.bac_cua_model(m) == b, dt.bac_cua_model(m))
+check("xếp cao cấp lên đầu, nhanh rẻ xuống cuối",
+      dt.xep_model(["claude-haiku-4", "claude-sonnet-4.5", "claude-opus-4.1"]) == ["claude-opus-4.1", "claude-sonnet-4.5", "claude-haiku-4"])
+check("cùng bậc giữ thứ tự gốc", dt.xep_model(["b-sonnet", "a-sonnet"]) == ["b-sonnet", "a-sonnet"])
+
 check("không dùng gạch dài", "—" not in open(os.path.join(ROOT, "server/dinh_tuyen.py"), encoding="utf-8").read())
 
 if fails:
