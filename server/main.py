@@ -12675,26 +12675,65 @@ async def _dg_resolver(su_that: dict, brain: str):
     return danh_gia.lay_theo_duong(data, su_that.get("lay", ""))
 
 
+_DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "antigravity-cli")
+_DG_NAO_API = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "ollama",
+               "openai-compat", "ollama-local")
+
+
+def _dg_ten_tool(n: str) -> str:
+    """Tên tool về dạng trần để bộ chấm so khớp: não CLI thấy tool hub là
+    `mcp__<server>__hoa_don_tong_hop`, não API thấy `hoa_don_tong_hop`. Bộ đề viết tên trần."""
+    n = str(n or "")
+    return n.rsplit("__", 1)[-1] if "__" in n else n
+
+
+async def _dg_gom(gen):
+    """Gom một luồng sự kiện engine (cùng khuôn ở mọi não) thành {tra_loi, tool_da_goi, loi}."""
+    final, parts, tools = None, [], []
+    async for ev in gen:
+        t = ev.get("type")
+        if t == "final":
+            final = ev.get("content", "")
+        elif t == "text":
+            parts.append(ev.get("content", "") or "")
+        elif t == "tool_call":
+            n = _dg_ten_tool(ev.get("name"))
+            if n:
+                tools.append(n)
+        elif t == "error":
+            return {"tra_loi": "", "tool_da_goi": tools, "loi": ev.get("content", "")}
+    return {"tra_loi": final if final is not None else "".join(parts),
+            "tool_da_goi": tools, "loi": ""}
+
+
 def _dg_invoker(prov, key, model, brain):
-    """Tạo invoker chạy MỘT câu qua não API đang chọn, Ở MỨC SUGGEST (chỉ đọc)."""
+    """Invoker chạy MỘT câu qua não đã chọn, Ở MỨC SUGGEST (chỉ đọc).
+
+    Não API (OpenRouter/OpenAI/Gemini/Groq/...) đi thẳng vòng tool `_api_stream_mcp`.
+    Não CLI (Claude Code, ChatGPT qua Codex, Grok Build, Antigravity) dựng engine y như
+    agent "nhẹ" của workflow: Claude engine + MCP hub chỉ đọc, rồi `aux_engine.swap` đổi sang
+    đúng nhà. Bản 26.10.124 chỉ chấm não API nên bố không chấm được Claude/ChatGPT (hỏi 10/10)."""
     async def inv(case):
-        messages = [{"role": "user", "content": case["cau_hoi"]}]
-        gen = await _api_stream_mcp(prov, key, model, messages, brain=brain, mode="suggest")
-        final, parts, tools = None, [], []
-        async for ev in gen:
-            t = ev.get("type")
-            if t == "final":
-                final = ev.get("content", "")
-            elif t == "text":
-                parts.append(ev.get("content", "") or "")
-            elif t == "tool_call":
-                n = ev.get("name") or ""
-                if n:
-                    tools.append(n)
-            elif t == "error":
-                return {"tra_loi": "", "tool_da_goi": tools, "loi": ev.get("content", "")}
-        return {"tra_loi": final if final is not None else "".join(parts),
-                "tool_da_goi": tools, "loi": ""}
+        if prov in _DG_NAO_API:
+            messages = [{"role": "user", "content": case["cau_hoi"]}]
+            gen = await _api_stream_mcp(prov, key, model, messages, brain=brain, mode="suggest")
+            return await _dg_gom(gen)
+        vault_root = _brain_root(brain)
+        c = claude_engine(system_prompt="Bạn là MinMin. Trả lời ngắn gọn, đúng con số tool trả về.",
+                          cwd=vault_root, tag="danh-gia", allowed_tools=list(READONLY_TOOLS))
+        c.model = (model if prov == "anthropic-cli" else "") or None
+        _apply_mcp(c, mode="suggest", brain=brain)
+        c.disallowed_tools = ["Bash", "WebFetch", "WebSearch", "Task"] + [
+            d for d in (c.disallowed_tools or []) if d not in ("Bash", "WebFetch", "WebSearch", "Task")]
+        c.max_wall_s = aux_engine.bg_max_wall_s()
+        # KHÔNG dùng aux_engine.swap: nó kèm chuỗi dự phòng, não chọn gãy là Claude tiếp quản
+        # và bảng điểm ghi nhầm tên não. Chấm não nào phải chạy đúng não đó.
+        try:
+            c = aux_engine.dung_rieng({"provider": prov, "model": model or ""}, c, "suggest",
+                                      "danh-gia", codex_profile=_write_codex_profile)
+        except ValueError as e:
+            return {"tra_loi": "", "tool_da_goi": [], "loi": str(e)}
+        return await _dg_gom(c.query(case["cau_hoi"]))
     return inv
 
 
@@ -12707,16 +12746,24 @@ async def danh_gia_chay(request: Request):
         data = {}
     brain = (data.get("brain") or "brain").strip() or "brain"
     mcfg = cfgmod.read_settings().get("model", {})
-    prov, kind, key, model = _chat_provider(mcfg)
-    # Trước mắt chấm được não dạng API/OpenRouter - đúng nơi bố đổi sang model rẻ. Não CLI
-    # (Claude Code/Codex/Grok/Antigravity) chạy đường khác, chưa chấm ở bản này.
-    if prov not in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "ollama",
-                    "openai-compat", "ollama-local"):
-        return {"ok": False, "error": f"Bộ chấm điểm hiện chạy với não dạng API/OpenRouter "
-                f"(nơi hay đổi sang model rẻ). Não đang chọn là '{prov}' (dạng {kind}). "
-                f"Chọn một não API ở trang Models rồi chạy lại."}
-    if kind == "api" and not key:
-        return {"ok": False, "error": f"Não '{prov}' chưa có API key."}
+    # Chấm não BỐ CHỌN ở nút (provider/model trong body); không chọn thì chấm model chính.
+    # 26.10.128: mọi não đều chấm được, kể cả Claude Code / ChatGPT / Grok / Antigravity.
+    chon = (data.get("provider") or "").strip()
+    if chon:
+        d = _provider_def(chon)
+        if not d:
+            return {"ok": False, "error": f"Không có nhà '{chon}'."}
+        prov, kind = chon, d.get("kind", "cli")
+        key, model = _provider_key(mcfg, d), (data.get("model") or "").strip()
+        if prov == "openrouter":
+            model = model or mcfg.get("openrouter_model") or ""
+    else:
+        prov, kind, key, model = _chat_provider(mcfg)
+    if prov not in _DG_NAO_API + _DG_NAO_CLI:
+        return {"ok": False, "error": f"Chưa chấm được nhà '{prov}'."}
+    if prov in _DG_NAO_API and prov != "ollama-local" and not (key or "").strip():
+        return {"ok": False, "error": f"Não '{prov}' chưa có API key. Dán key vào thẻ nhà này ở "
+                f"trang Models rồi chạy lại."}
     try:
         cases = danh_gia.doc_bo(_DG_BO)
     except Exception as e:
@@ -12730,11 +12777,17 @@ async def danh_gia_chay(request: Request):
     goc = danh_gia.doc_goc(_dg_goc_path())
     hoi_quy = danh_gia.so_voi_goc(bang, goc) if goc else {"hoi_quy": [], "tien_bo": [],
                                                           "cau_moi": [], "co_hoi_quy": False}
-    if data.get("luu_goc"):
+    # Cả bộ lỗi khi chạy (401, hết key, không nối được não) thì KHÔNG phải điểm của não:
+    # không lưu bản nền (lưu là che hồi quy thật về sau) và nói rõ thay vì "0/7 - không tụt".
+    khong_cham_duoc = danh_gia.toan_bo_loi_chay(bang)
+    da_luu = False
+    if data.get("luu_goc") and not khong_cham_duoc:
         danh_gia.luu_goc(bang, _dg_goc_path())
+        da_luu = True
     return {"ok": True, "nao": {"provider": prov, "model": model or ""},
             "bang_diem": {k: v for k, v in bang.items() if k != "chi_tiet"},
-            "hoi_quy": hoi_quy, "da_luu_ban_nen": bool(data.get("luu_goc"))}
+            "hoi_quy": hoi_quy, "da_luu_ban_nen": da_luu,
+            "khong_cham_duoc": khong_cham_duoc}
 
 
 @app.post("/dinh-tuyen/thu")

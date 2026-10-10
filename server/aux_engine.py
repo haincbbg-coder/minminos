@@ -645,6 +645,32 @@ def _build_antigravity(spec, claude_cli_obj, mode, tag):
     return ac
 
 
+def dung_rieng(spec: dict, cli, mode: str, tag: str, codex_profile=None, settings: dict = None):
+    """Dựng engine cho ĐÚNG MỘT nhà, KHÔNG chuỗi dự phòng (khác `swap`).
+
+    Dành cho bộ chấm điểm não (26.10.128): chấm não nào phải chạy đúng não đó. Đi qua `swap`
+    thì não chọn gãy là Claude lặng lẽ tiếp quản, bảng điểm thành điểm của Claude mà ghi tên
+    não kia. Nhà chưa sẵn sàng thì ném ValueError với lý do đọc được, không rơi về đâu cả.
+    `cli` là engine Claude đã dựng (system prompt, vault, allowed tools) để các nhà khác thừa kế."""
+    sp = dict(spec or {})
+    prov = sp.get("provider", CLAUDE)
+    ok, why = availability(sp, settings)
+    if not ok:
+        raise ValueError(why or f"Não '{prov}' chưa sẵn sàng.")
+    if prov == CLAUDE:
+        cli.model = sp.get("model") or None
+        return cli
+    if prov == CODEX:
+        return _build_codex(sp, cli, mode, tag, codex_profile)
+    if prov == GROK_CLI:
+        return _build_grok(sp, cli, mode, tag)
+    if prov == ANTIGRAVITY:
+        return _build_antigravity(sp, cli, mode, tag)
+    if prov in API_PROVIDERS:
+        return _build_api(sp, cli, mode, tag)
+    raise ValueError(f"Không dựng được engine cho nhà '{prov}'.")
+
+
 def apply(deps, cli, mode: str = None, tag: str = None):
     """Dùng ở các nơi chạy nền sau khi đã dựng xong engine Claude.
 

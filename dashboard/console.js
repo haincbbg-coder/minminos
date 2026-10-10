@@ -4101,6 +4101,10 @@
         <div class="gcard aux-card">
           <div class="gcard-meta">${esc(t("models.eval_meta"))}</div>
           <div class="aux-now-act" style="justify-content:flex-start;gap:12px;flex-wrap:wrap">
+            <span class="gcard-meta">${esc(t("models.eval_brain"))}: <b id="evalNao">${esc(main.model || main.provider || "?")}</b></span>
+            <button class="gcard-btn ghost" id="evalPick">${esc(t("models.eval_pick"))}</button>
+          </div>
+          <div class="aux-now-act" style="justify-content:flex-start;gap:12px;flex-wrap:wrap">
             <button class="gcard-btn" id="evalRun">${esc(t("models.eval_run"))}</button>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
               <input type="checkbox" id="evalBaseline"> ${esc(t("models.eval_save_base"))}</label>
@@ -4146,6 +4150,18 @@
       await saveSetting("model", { reasoning: b.dataset.reason });
       renderModelsCloudTab(el);
     });
+    // Não để chấm: mặc định là model chính; nút "Chọn não" mở đúng hộp chọn model (đủ mọi
+    // nhà, kể cả Claude Code/ChatGPT) nhưng chỉ ghi vào biến này, KHÔNG đổi model chính.
+    let evalNao = { provider: main.provider || "", model: main.model || "" };
+    const evalPick = document.getElementById("evalPick");
+    if (evalPick) evalPick.onclick = () => openModelPicker(provList, evalNao, null, {
+      title: t("models.eval_pick_title"), note: t("models.eval_pick_note"),
+      save: async (prov, mod) => {
+        evalNao = { provider: prov, model: mod || "" };
+        const lb = document.getElementById("evalNao");
+        if (lb) lb.textContent = mod || prov;
+      },
+    });
     const evalRun = document.getElementById("evalRun");
     if (evalRun) evalRun.onclick = async () => {
       const out = document.getElementById("evalResult");
@@ -4158,12 +4174,20 @@
       try {
         r = await (await fetch("/danh-gia/chay", { method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ luu_goc: luu }) })).json();
+          body: JSON.stringify({ luu_goc: luu, provider: evalNao.provider, model: evalNao.model }) })).json();
       } catch (e) { r = { ok: false, error: String(e) }; }
       evalRun.disabled = false; evalRun.textContent = nhan0;
       if (!out) return;
       if (!r || !r.ok) { out.innerHTML = `<span class="warn">${WARN_ICON} ${esc((r && r.error) || "?")}</span>`; return; }
       const bd = r.bang_diem || {}; const hq = r.hoi_quy || {};
+      // Cả bộ lỗi khi chạy (401, hết key, não không nối được): đây KHÔNG phải điểm của não.
+      // Nói đúng chuyện đó, không vẽ "0/7 - không tụt" rồi lưu bản nền rác.
+      if (r.khong_cham_duoc) {
+        out.innerHTML = `<div style="margin-bottom:4px">${esc(t("models.eval_brain"))}: <b>${esc((r.nao || {}).model || (r.nao || {}).provider || "?")}</b></div>` +
+          `<div class="warn">${WARN_ICON} ${esc(t("models.eval_cant"))}</div>` +
+          `<div style="margin-top:4px;opacity:.8">${esc(r.khong_cham_duoc)}</div>`;
+        return;
+      }
       const nhomRows = Object.entries(bd.theo_nhom || {}).map(([g, v]) =>
         `<tr><td>${esc(g)}</td><td style="text-align:right">${v.dat}/${v.tong}</td></tr>`).join("");
       const hqLine = (hq.hoi_quy && hq.hoi_quy.length)
