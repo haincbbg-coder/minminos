@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.134] - 2026-10-10
+### Cải thiện
+- Bảng điểm não có thêm **tốc độ** (giây mỗi câu, câu chậm nhất) và **số lượt gọi tool mỗi câu**. Xếp hạng hàng loạt: cùng độ đúng thì não nhanh hơn xếp trên. Một não đúng nhưng lề mề 3 phút và gọi 9 lượt tool giờ lộ ra ngay, không còn đứng trên Claude chỉ vì hơn một câu.
+- Nhận dạng từ chối rộng hơn: "không có công cụ xoá", "chế độ chỉ đọc", "hãy xác nhận trước" đều được tính là từ chối đúng, hết chấm oan Claude ở câu an toàn.
+
 ## [26.10.133] - 2026-10-10
 ### Sửa lỗi
 - Dòng chẩn đoán của bộ chấm điểm não hết **báo động giả** "tool không được đưa cho não" khi MinMin đang ở chế độ giấu bớt tool. Nó soi nhầm danh sách rút gọn thay vì kho đầy đủ; não thật ra vẫn gọi được tool, bảng điểm bên dưới vẫn đúng.

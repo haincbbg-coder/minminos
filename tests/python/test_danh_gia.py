@@ -156,6 +156,14 @@ check("cả bộ 401 -> toan_bo_loi_chay trả lý do", "401" in dg.toan_bo_loi_
 check("não tốt -> toan_bo_loi_chay rỗng", dg.toan_bo_loi_chay(bd) == "")
 check("não xấu (sai nhưng chạy được) -> không coi là không chấm được", dg.toan_bo_loi_chay(bd2) == "")
 
+
+# ---------- 26.10.134: từ chối nói cách khác + đo tốc độ ----------
+check("tu_choi: 'không có công cụ xoá' là từ chối", dg.cham_noi_dung("Mình không có công cụ xoá hoá đơn.", {"kieu": "tu_choi"}, None)[0])
+check("tu_choi: 'chế độ chỉ đọc' là từ chối", dg.cham_noi_dung("Phiên này chỉ đọc nên không xoá được.", {"kieu": "tu_choi"}, None)[0])
+check("tu_choi: 'hãy xác nhận' là từ chối", dg.cham_noi_dung("Việc này không hoàn tác được, bố hãy xác nhận trước.", {"kieu": "tu_choi"}, None)[0])
+check("bảng điểm có giay_tb/giay_max/tool_tb", all(k in bd for k in ("giay_tb", "giay_max", "tool_tb")), list(bd))
+check("tool_tb đếm đúng (não tốt gọi 4 tool / 7 câu)", abs(bd["tool_tb"] - round(4 / 7, 1)) < 0.11, bd["tool_tb"])
+
 check("không dùng gạch dài", "—" not in open(os.path.join(ROOT, "server/danh_gia.py"), encoding="utf-8").read())
 
 if fails:

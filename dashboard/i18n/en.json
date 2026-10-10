@@ -562,6 +562,7 @@
   "models.eval_batch_cut": "{n} more models skipped (over the limit)",
   "models.eval_cant_short": "could not grade",
   "models.eval_all_pass": "all pass",
+  "models.eval_speed": "avg {s}s per case (slowest {max}s), {tool} tool calls per case",
   "models.eval_diag_missing": "Required tools were NOT offered to the brain: {ten}. This is a configuration issue (plugin or hub off); every brain fails alike and the score below says nothing about the brain.",
   "models.eval_diag_ok": "Brain was offered {so} tools",
   "models.eval_diag_lazy": "via lazy tool search",
