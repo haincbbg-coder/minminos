@@ -35,6 +35,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 
 import giay_phep
+import localefmt      # giờ theo múi giờ cấu hình (VN), tránh in giờ UTC của máy chủ
 import routes.ket_noi_ngoai as knn
 
 GOC = "/apps/tai-hoa-don"
@@ -372,7 +373,7 @@ class Viec:
         self.xong_luc = 0.0
 
     def log(self, s: str) -> None:
-        self.nhat_ky.append(f"[{time.strftime('%H:%M:%S')}] {s}")
+        self.nhat_ky.append(f"[{localefmt.now().strftime('%H:%M:%S')}] {s}")
         if len(self.nhat_ky) > 400:
             del self.nhat_ky[:100]
 
@@ -1466,7 +1467,7 @@ def _tao_zip_chung_tu(mst: str, p_ds: list[dict], s_ds: list[dict], nhom: set[st
         readme = f'''<h1>Bộ chứng từ kế toán tự động</h1><p>Doanh nghiệp: <b>{_html(cty['ten'])}</b> · MST {_html(cty['mst'])}</p><p>Gói gồm {len(p_ds)} hóa đơn mua vào, {len(s_ds)} hóa đơn bán ra. File .doc có thể mở bằng Microsoft Word/LibreOffice để rà soát, ký và in.</p><p>Lưu ý: mẫu là khung chứng từ để kế toán hoàn thiện trước khi ký/nộp; các biểu mẫu BHXH/thuế nên đối chiếu với cổng nộp hồ sơ tại thời điểm sử dụng.</p>'''
         z.writestr("00_README.html", _doc_frame("README bộ chứng từ", readme).encode("utf-8"))
         z.writestr("00_DoiSoat_HoaDon.xlsx", _workbook_bytes(all_rows, cty, nhom, nhan_su))
-        z.writestr("00_manifest.json", json.dumps({"mst": mst, "ten_doanh_nghiep": cty["ten"], "so_hoa_don_mua_vao": len(p_ds), "so_hoa_don_ban_ra": len(s_ds), "nhom_mau": sorted(nhom), "loai_hoat_dong": loai_hoat_dong, "tao_luc": dt.datetime.now().isoformat(timespec="seconds")}, ensure_ascii=False, indent=2))
+        z.writestr("00_manifest.json", json.dumps({"mst": mst, "ten_doanh_nghiep": cty["ten"], "so_hoa_don_mua_vao": len(p_ds), "so_hoa_don_ban_ra": len(s_ds), "nhom_mau": sorted(nhom), "loai_hoat_dong": loai_hoat_dong, "tao_luc": localefmt.now().isoformat(timespec="seconds")}, ensure_ascii=False, indent=2))
         for l, rows, root in (("purchase", p_ds, "01_MuaVao"), ("sold", s_ds, "02_BanRa")):
             for inv in rows:
                 ten = f"{_ngay_vn(ngay_hd(inv)).replace('/', '-')}_{_slug(_hoa_don_id(inv))}_{_slug(_ben(inv)['ten'], 40)}"

@@ -416,3 +416,16 @@ if _fails:
     print(f"FAILED {len(_fails)}: {_fails}")
     sys.exit(1)
 print("ALL OK")
+
+# 26.10.121: nhật ký phải in GIỜ VIỆT NAM, không phải giờ UTC của máy chủ (vụ 9h51 ghi 2h48).
+import localefmt as _lf  # noqa: E402
+import datetime as _dt  # noqa: E402
+_goc_now = _lf.now
+_lf.now = lambda: _dt.datetime(2026, 10, 10, 9, 51, 0, tzinfo=_dt.timezone(_dt.timedelta(hours=7)))
+try:
+    _v = hd.Viec("purchase", "thử giờ")
+    _v.log("mốc")
+    check("nhật ký in giờ VN (localefmt.now), không phải giờ UTC máy chủ",
+          _v.nhat_ky[-1].startswith("[09:51:"), _v.nhat_ky[-1])
+finally:
+    _lf.now = _goc_now
