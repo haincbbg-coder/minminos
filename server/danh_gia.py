@@ -213,6 +213,18 @@ def tong_hop(chi_tiet: list) -> dict:
     }
 
 
+def toan_bo_loi_chay(bang_diem: dict) -> str:
+    """Cả bộ KHÔNG CHẤM ĐƯỢC (mọi câu đều lỗi khi chạy: hết key, 401, không nối được não)?
+
+    Trả về lý do của câu đầu (chuỗi rỗng = có ít nhất một câu chạy tới nơi). Một lượt như
+    thế không nói gì về chất lượng não, nên KHÔNG được lưu làm bản nền: lưu 0/7 toàn lỗi
+    làm bản nền thì lần sau não nào cũng "không tụt", và hồi quy thật bị che mất."""
+    ct = bang_diem.get("chi_tiet") or []
+    if not ct or not all(c.get("loi_chay") for c in ct):
+        return ""
+    return str(ct[0].get("ly_do") or "lỗi khi chạy")
+
+
 # ─────────────────────────── bản nền + hồi quy ───────────────────────────
 
 def luu_goc(bang_diem: dict, path) -> None:

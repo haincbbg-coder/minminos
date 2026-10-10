@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.128] - 2026-10-10
+### Sửa lỗi
+- Kiểm tra chất lượng não giờ chấm được **mọi bộ não**, kể cả Claude Code, ChatGPT, Grok Build, Antigravity, không chỉ não dạng API như trước. Có nút "Chọn não để chấm" ngay cạnh, chọn riêng cho lượt chấm mà không đổi model chính.
+- Khi cả bộ lỗi kết nối (hết key, key bị từ chối 401), bảng điểm nói thẳng "chưa chấm được" và **không lưu bản nền** nữa. Trước đây nó hiện "0/7, không tụt" rồi lưu luôn, làm bản nền thành rác và che mất hồi quy thật về sau.
+
 ## [26.10.127] - 2026-10-10
 ### Thêm mới
 - Nền cho **định tuyến model theo độ khó**: câu dễ để model rẻ, câu cần phân tích sâu hoặc đụng con số thì mới gọi model mạnh. Bộ phân loại chạy bằng luật (tất định, không tốn thêm lượt gọi), có sàn an toàn: câu tính toán hay đọc dữ liệu không bao giờ bị dồn xuống model rẻ nhất.

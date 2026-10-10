@@ -147,6 +147,15 @@ bd3 = asyncio.run(dg.chay([c for c in cases if c.get("su_that")][:1], _invoker(D
 check("resolver hỏng: câu đó trượt, lượt vẫn chạy", bd3["tong"] == 1 and bd3["truot"] == 1
       and bd3["cau_truot"][0]["loi_chay"])
 
+
+# ---------- 26.10.128: cả bộ lỗi khi chạy thì không phải điểm của não ----------
+async def _inv_401(case):
+    return {"tra_loi": "", "tool_da_goi": [], "loi": "OpenRouter 401: Missing Authentication header"}
+bd4 = asyncio.run(dg.chay(cases, _inv_401, resolver_gia))
+check("cả bộ 401 -> toan_bo_loi_chay trả lý do", "401" in dg.toan_bo_loi_chay(bd4), dg.toan_bo_loi_chay(bd4))
+check("não tốt -> toan_bo_loi_chay rỗng", dg.toan_bo_loi_chay(bd) == "")
+check("não xấu (sai nhưng chạy được) -> không coi là không chấm được", dg.toan_bo_loi_chay(bd2) == "")
+
 check("không dùng gạch dài", "—" not in open(os.path.join(ROOT, "server/danh_gia.py"), encoding="utf-8").read())
 
 if fails:
