@@ -4110,6 +4110,17 @@
               <input type="checkbox" id="evalBaseline"> ${esc(t("models.eval_save_base"))}</label>
           </div>
           <div id="evalResult" class="aux-note" style="margin-top:4px"></div>
+          <div class="gcard-meta" style="margin-top:14px">${esc(t("models.eval_batch_meta"))}</div>
+          <div class="aux-now-act" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+            <select id="evalBatchProv" class="mp-filter" style="margin:0;padding:8px 10px;max-width:260px">
+              ${provList.map(p => `<option value="${esc(p.id)}" ${p.configured ? "" : "disabled"}>${esc(p.label)}${p.configured ? "" : " (" + esc(t("models.mp_need_conn")) + ")"}</option>`).join("")}
+            </select>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px">${esc(t("models.eval_batch_max"))}
+              <input type="number" id="evalBatchMax" value="25" min="1" max="100" style="width:64px"></label>
+            <button class="gcard-btn" id="evalBatchRun">${esc(t("models.eval_batch_run"))}</button>
+            <button class="gcard-btn ghost" id="evalBatchStop" style="display:none">${esc(t("models.eval_batch_stop"))}</button>
+          </div>
+          <div id="evalBatchOut" class="aux-note" style="margin-top:4px"></div>
         </div>
       </div>`;
 
@@ -4203,6 +4214,52 @@
         (truot ? `<div style="margin-top:6px">${esc(t("models.eval_failed"))}:</div><ul style="margin:4px 0 0;padding-left:18px">${truot}</ul>` : "") +
         (r.da_luu_ban_nen ? `<div style="margin-top:6px;opacity:.7">${esc(t("models.eval_saved_base"))}</div>` : "");
     };
+    // ---- Chấm hàng loạt: mọi model của một nhà, lần lượt, chạy nền; poll để vẽ bảng ----
+    const bRun = document.getElementById("evalBatchRun");
+    const bStop = document.getElementById("evalBatchStop");
+    const bOut = document.getElementById("evalBatchOut");
+    let bTimer = null;
+    const veBatch = (st) => {
+      if (!bOut || !st) return;
+      const xong = st.xong || [];
+      const tong = (st.models || []).length;
+      const dangChay = !!st.dang_chay;
+      if (bRun) bRun.disabled = dangChay;
+      if (bStop) bStop.style.display = dangChay ? "" : "none";
+      if (!st.provider) { bOut.innerHTML = ""; return; }
+      const head = dangChay
+        ? `<div>${esc(t("models.eval_batch_running", { n: xong.length, tong, model: st.hien_tai || "" }))}</div>`
+        : `<div><b>${esc(t("models.eval_batch_done", { n: xong.length, prov: st.provider }))}</b>${st.huy ? " · " + esc(t("models.eval_batch_stopped")) : ""}${st.bi_cat ? " · " + esc(t("models.eval_batch_cut", { n: st.bi_cat })) : ""}</div>`;
+      const xh = dangChay ? xong : (st.xep_hang || xong);
+      const rows = xh.map((r, i) => {
+        const m = (r.nao || {}).model || "?";
+        if (r.khong_cham_duoc) return `<tr><td>${i + 1}</td><td>${esc(m)}</td><td colspan="2" class="warn">${esc(t("models.eval_cant_short"))}: ${esc(String(r.khong_cham_duoc).slice(0, 70))}</td></tr>`;
+        const bd = r.bang_diem || {};
+        const truot = (bd.cau_truot || []).map(c => c.id).join(", ");
+        return `<tr><td>${i + 1}</td><td>${esc(m)}</td><td style="text-align:right"><b>${bd.dat}/${bd.tong}</b></td><td style="opacity:.8">${esc(truot || t("models.eval_all_pass"))}</td></tr>`;
+      }).join("");
+      bOut.innerHTML = head + (rows ? `<table class="mini-tbl" style="margin:6px 0"><tbody>${rows}</tbody></table>` : "");
+    };
+    const pollBatch = async () => {
+      try {
+        const st = await (await fetch("/danh-gia/loat")).json();
+        veBatch(st);
+        if (st.dang_chay && el.isConnected) bTimer = setTimeout(pollBatch, 4000);
+      } catch (e) {}
+    };
+    if (bRun) bRun.onclick = async () => {
+      const prov = (document.getElementById("evalBatchProv") || {}).value || "";
+      const gh = parseInt((document.getElementById("evalBatchMax") || {}).value || "25", 10) || 25;
+      bRun.disabled = true;
+      if (bOut) bOut.innerHTML = esc(t("models.eval_running_note"));
+      let sid = null;
+      try { sid = (window.JavisSessions && window.JavisSessions.current()) || null; } catch (e) {}
+      const r = await postJson("/danh-gia/loat", { provider: prov, gioi_han: gh, chat_id: sid ? "web:" + sid : "" }, 20000);
+      if (!r || !r.ok) { bRun.disabled = false; if (bOut) bOut.innerHTML = `<span class="warn">${WARN_ICON} ${esc((r && r.error) || "?")}</span>`; return; }
+      pollBatch();
+    };
+    if (bStop) bStop.onclick = async () => { bStop.disabled = true; await postJson("/danh-gia/loat/huy", {}); bStop.disabled = false; };
+    pollBatch();   // vào trang thấy ngay lượt đang/vừa chạy, kể cả sau khi tải lại trang
     el.querySelectorAll(".gcard-btn[data-pk]").forEach(b => {
       b.onclick = async () => {
         const pid = b.dataset.pk;
