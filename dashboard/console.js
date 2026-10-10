@@ -3881,6 +3881,9 @@
     const tgReady = !tgPinned || tgProv === "anthropic-cli" || tgProvDef.configured;
     const reasoning = m.reasoning || "off";
     const arCfg = m.auto_router || {};
+    // Khoá i18n viết TĨNH (test_i18n.mjs quét chuỗi), không ghép "models.bac_" + b.
+    const BAC_T = { nang: t("models.bac_nang"), vua: t("models.bac_vua"), nhe: t("models.bac_nhe") };
+    const bacNhan = (b) => BAC_T[b] || b;
     // Thang này phải KHỚP engine.REASONING_LEVELS bên server và EFFORT trong model-picker.js.
     // Mỗi nấc kèm một dòng RẤT ngắn nói nó đánh đổi gì - đủ để chọn, không phải đọc bài.
     const REASON = [["off", t("models.r_off"), t("models.r_off_d")], ["low", t("models.r_low"), t("models.r_low_d")],
@@ -4136,7 +4139,7 @@
           <div id="rtRows">${["nang", "vua", "nhe"].map(b => {
             const m = (arCfg.bac || {})[b] || {};
             return `<div class="aux-now-act" style="justify-content:flex-start;gap:10px;flex-wrap:wrap;margin-top:6px">
-              <span class="mp-bac mp-bac-${b}" style="margin:0">${esc(t("models.bac_" + b))}</span>
+              <span class="mp-bac mp-bac-${b}" style="margin:0">${esc(bacNhan(b))}</span>
               <b id="rtNao-${b}" style="font-size:14px">${esc(m.model || m.provider || t("models.router_unset"))}</b>
               <button class="gcard-btn ghost" data-rt-pick="${b}">${esc(t("models.router_pick"))}</button>
             </div>`; }).join("")}</div>
@@ -4157,7 +4160,7 @@
       const bac = b.dataset.rtPick;
       const cur = ((arCfg.bac || {})[bac]) || {};
       openModelPicker(provList, { provider: cur.provider || "", model: cur.model || "" }, () => renderModelsCloudTab(el), {
-        title: t("models.router_pick_title", { bac: t("models.bac_" + bac) }), note: t("models.router_pick_note"),
+        title: t("models.router_pick_title", { bac: bacNhan(bac) }), note: t("models.router_pick_note"),
         save: async (prov, mod) => rtSave({ bac: { [bac]: { provider: prov, model: mod || "" } } }),
       });
     });
@@ -4190,7 +4193,7 @@
       const r = await postJson("/dinh-tuyen/thu", { text }, 10000);
       if (!out) return;
       if (!r || !r.ok) { out.innerHTML = `<span class="warn">${esc((r && r.error) || "?")}</span>`; return; }
-      out.innerHTML = `<span class="mp-bac mp-bac-${esc(r.bac)}" style="margin:0">${esc(t("models.bac_" + r.bac))}</span> ` +
+      out.innerHTML = `<span class="mp-bac mp-bac-${esc(r.bac)}" style="margin:0">${esc(bacNhan(r.bac))}</span> ` +
         (r.model ? `→ <b>${esc(r.model.provider)}/${esc(r.model.model)}</b>` : `<span class="warn">${esc(t("models.router_unset"))}</span>`) +
         ` <span style="opacity:.6;font-size:12px">(${esc((r.ly_do || []).join(", "))})</span>`;
     };
@@ -4200,7 +4203,7 @@
       try {
         const d = await (await fetch("/dinh-tuyen/gan-nhat")).json();
         const rows = (d.gan_nhat || []).slice(0, 8).map(x =>
-          `<tr><td style="opacity:.6">${esc(x.luc)}</td><td><span class="mp-bac mp-bac-${esc(x.bac)}" style="margin:0">${esc(t("models.bac_" + x.bac))}</span></td><td>${esc(x.model)}</td><td style="opacity:.7">${esc(x.cau)}</td></tr>`).join("");
+          `<tr><td style="opacity:.6">${esc(x.luc)}</td><td><span class="mp-bac mp-bac-${esc(x.bac)}" style="margin:0">${esc(bacNhan(x.bac))}</span></td><td>${esc(x.model)}</td><td style="opacity:.7">${esc(x.cau)}</td></tr>`).join("");
         box.innerHTML = rows ? `<div style="opacity:.7;margin-bottom:2px">${esc(t("models.router_recent"))}</div><table class="mini-tbl"><tbody>${rows}</tbody></table>` : "";
       } catch (e) {}
     })();
