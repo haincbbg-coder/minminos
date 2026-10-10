@@ -471,17 +471,38 @@ def _ngay(s: str) -> dt.date:
 
 
 def tra_cuu(v: Viec, mst: str, tu: dt.date, den: dt.date, loai_ds, he_ds) -> dict:
+    """Tra cứu và LƯU NGAY sau từng hệ (hoá đơn điện tử / máy tính tiền).
+
+    Bản cũ chỉ ghi kho một lần sau khi xong cả hai hệ: hệ máy tính tiền của cổng thuế treo (curl 28,
+    thử lại 6 lần) là mất sạch cả nghìn hoá đơn hệ điện tử vừa kéo về. Giờ hệ nào xong là ghi kho
+    luôn; một hệ lỗi thì báo rõ trong nhật ký và đi tiếp hệ kia, chỉ báo lỗi cả việc khi KHÔNG
+    hệ nào lấy được gì."""
     c = _can_dang_nhap(mst)
     c.cancel_check = v.huy.is_set
     tong = {}
+    loi_he = []
+    so_he_ok = 0
     v.n = len(loai_ds) * len(he_ds)
     for loai in loai_ds:
         kho = doc_kho(mst, loai)
         moi = 0
+        ten_loai = "mua vào" if loai == "purchase" else "bán ra"
         for he in he_ds:
-            v.log(f"Tra {'mua vào' if loai == 'purchase' else 'bán ra'}"
+            ten_he = "máy tính tiền" if he == "sco-query" else "hoá đơn điện tử"
+            v.log(f"Tra {ten_loai}"
                   f"{' (máy tính tiền)' if he == 'sco-query' else ''} {tu:%d/%m/%Y} - {den:%d/%m/%Y}...")
-            ds = c.query_invoices(tu, den, loai, he, progress=v.log)
+            try:
+                ds = c.query_invoices(tu, den, loai, he, progress=v.log)
+            except Exception as e:
+                if type(e).__name__ in ("Cancelled", "TokenExpired"):
+                    ghi_kho(mst, loai, kho)      # giữ phần đã lấy từ hệ trước
+                    raise
+                loi_he.append(f"{ten_loai} / {ten_he}: {e}")
+                v.log(f"Hệ {ten_he} ({ten_loai}) lỗi, bỏ qua và đi tiếp: {e}")
+                v.i += 1
+                continue
+            so_he_ok += 1
+            moi_he = 0
             for inv in ds:
                 k = khoa_hd(inv)
                 cu = kho.get(k) or {}
@@ -489,14 +510,20 @@ def tra_cuu(v: Viec, mst: str, tu: dt.date, den: dt.date, loai_ds, he_ds) -> dic
                 giu = {x: cu[x] for x in cu if x.startswith("_") and x not in ("_system", "_loai")}
                 if not cu:
                     moi += 1
+                    moi_he += 1
                 kho[k] = {**inv, **giu}
+            ghi_kho(mst, loai, kho)              # lưu ngay, không đợi hệ sau
+            v.log(f"Đã lưu {len(ds)} hoá đơn {ten_loai} ({ten_he}), thêm {moi_he} mới, kho có {len(kho)}.")
             v.i += 1
-        ghi_kho(mst, loai, kho)
         tong[loai] = moi
-        v.log(f"Xong {'mua vào' if loai == 'purchase' else 'bán ra'}: thêm {moi} hoá đơn mới, kho có {len(kho)}.")
+        v.log(f"Xong {ten_loai}: thêm {moi} hoá đơn mới, kho có {len(kho)}.")
     if c.token_dead:
         raise RuntimeError("Phiên cổng thuế hết hạn giữa chừng, đăng nhập lại rồi tra tiếp.")
-    return {"moi": tong}
+    if loi_he and not so_he_ok:
+        raise RuntimeError("Không hệ nào của cổng thuế trả được dữ liệu: " + " | ".join(loi_he))
+    if loi_he:
+        v.log("Lưu ý: có hệ lỗi nên kết quả chưa đủ, bấm Tra cứu lại sau: " + " | ".join(loi_he))
+    return {"moi": tong, "loi_he": loi_he}
 
 
 def link_an_toan(u) -> str:
