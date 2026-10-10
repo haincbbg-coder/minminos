@@ -410,6 +410,43 @@ with TestClient(app) as c:
     check("Excel Gmail", c.post(A + "/gmail/xuat").content[:2] == b"PK")
     check("ZIP Gmail", c.post(A + "/gmail/zip").content[:2] == b"PK")
 
+# 26.10.137: hệ máy tính tiền treo không được làm mất hoá đơn hệ điện tử vừa kéo về (vụ 3.890 hoá đơn
+# bán ra biến mất vì curl 28 ở hệ thứ hai). Mỗi hệ ghi kho ngay; hệ lỗi thì bỏ qua và báo.
+class _KhachGia:
+    token_dead = False
+    cancel_check = None
+
+    def __init__(self, hong):
+        self.hong = hong
+
+    def query_invoices(self, tu, den, loai, he, progress=None):
+        if he in self.hong:
+            raise RuntimeError("Thử lại 6 lần vẫn lỗi: curl: (28) Operation timed out")
+        return [{"nbmst": "0100109106", "khmshdon": 1, "khhdon": "C26T", "shdon": n,
+                 "tdlap": "2026-10-05T10:00:00", "tgtttbso": 1000 * n, "_system": he, "_loai": loai}
+                for n in (101, 102)]
+
+
+_goc_cdn = hd._can_dang_nhap
+try:
+    _MST = "0100109106"
+    hd._can_dang_nhap = lambda m: _KhachGia({"sco-query"})
+    _v = hd.Viec("tra-cuu", "thử")
+    _kq = hd.tra_cuu(_v, _MST, dt.date(2026, 10, 4), dt.date(2026, 10, 10), ["sold"], ["query", "sco-query"])
+    check("hệ máy tính tiền lỗi: hoá đơn hệ điện tử vẫn được LƯU", len(hd.doc_kho(_MST, "sold")) == 2,
+          len(hd.doc_kho(_MST, "sold")))
+    check("hệ lỗi được ghi lại, việc không báo lỗi cả", bool(_kq.get("loi_he")) and _kq["moi"]["sold"] == 2, _kq)
+    check("nhật ký nói rõ hệ nào lỗi", any("máy tính tiền" in x and "lỗi" in x for x in _v.nhat_ky))
+    hd._can_dang_nhap = lambda m: _KhachGia({"query", "sco-query"})
+    try:
+        hd.tra_cuu(hd.Viec("tra-cuu", "thử2"), _MST, dt.date(2026, 10, 4), dt.date(2026, 10, 10), ["purchase"], ["query", "sco-query"])
+        check("mọi hệ lỗi thì báo lỗi cả việc", False)
+    except RuntimeError:
+        check("mọi hệ lỗi thì báo lỗi cả việc", True)
+    check("mọi hệ lỗi không ghi đè kho cũ", len(hd.doc_kho(_MST, "sold")) == 2)
+finally:
+    hd._can_dang_nhap = _goc_cdn
+
 srv.shutdown()
 print()
 if _fails:

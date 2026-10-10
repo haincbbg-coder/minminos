@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.137] - 2026-10-10
+### Sửa lỗi
+- **Tra cứu hoá đơn TCT không còn mất sạch dữ liệu khi một hệ của cổng thuế bị treo.** Trước đây bấm "Tra cứu" ở chế độ Cả hai, hệ hoá đơn điện tử kéo về xong cả nghìn hoá đơn nhưng chỉ ghi vào kho khi hệ máy tính tiền cũng xong. Hệ máy tính tiền của cổng thuế hay treo (báo "curl 28, thử lại 6 lần"), thế là cả việc báo lỗi và toàn bộ hoá đơn vừa kéo bị bỏ, kho vẫn 0.
+- Giờ hệ nào xong là lưu ngay vào kho. Hệ nào lỗi thì nhật ký ghi rõ "hệ máy tính tiền lỗi, bỏ qua và đi tiếp", kết quả hệ kia vẫn giữ. Chỉ khi không hệ nào lấy được gì mới báo lỗi cả việc. Bấm Dừng giữa chừng cũng giữ phần đã lấy.
+
 ## [26.10.136] - 2026-10-10
 ### Thêm mới
 - **Tự chia model theo độ khó chạy thật** (Trụ 2). Trang Models có mục mới: bật một công tắc, gán model cho ba bậc cao cấp / cân bằng / nhanh rẻ (hoặc bấm "Đề xuất từ bảng chấm hàng loạt" để lấy model đứng đầu mỗi bậc), gõ thử một câu để xem nó rơi vào bậc nào, và xem các lượt gần nhất bộ chia đã quyết định gì.
