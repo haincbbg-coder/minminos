@@ -85,6 +85,7 @@ import packs          # GÓI mở rộng: thả thư mục vào STATE_DIR/packs 
 import cred_exchange   # đổi credential hộ user (vd App Password -> Google master token) khi đấu
 import plugins_host   # hệ PLUGIN: thư mục Python thả vào, tự thêm tool/hook cho mọi engine qua hub
 import danh_gia      # bộ chấm điểm "não": đo chất lượng trả lời khi đổi model (26.10.124)
+import dinh_tuyen    # định tuyến model theo độ khó câu hỏi (26.10.127)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
@@ -12734,6 +12735,25 @@ async def danh_gia_chay(request: Request):
     return {"ok": True, "nao": {"provider": prov, "model": model or ""},
             "bang_diem": {k: v for k, v in bang.items() if k != "chi_tiet"},
             "hoi_quy": hoi_quy, "da_luu_ban_nen": bool(data.get("luu_goc"))}
+
+
+@app.post("/dinh-tuyen/thu")
+async def dinh_tuyen_thu(request: Request):
+    """XEM THỬ định tuyến (chỉ đọc, không chạy chat): đưa một câu hỏi, trả về bậc độ khó và
+    model sẽ được chọn theo cấu hình model.auto_router hiện tại. Giúp bố cân chỉnh ngưỡng và
+    gán model cho từng bậc TRƯỚC khi bật định tuyến thật."""
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    text = str(data.get("text") or "").strip()
+    if not text:
+        return {"ok": False, "error": "Nhập một câu hỏi để xem nó rơi vào bậc nào."}
+    router_cfg = cfgmod.read_settings().get("model", {}).get("auto_router", {}) or {}
+    pl = dinh_tuyen.phan_loai_luat(text, co_dinh_kem=bool(data.get("co_dinh_kem")))
+    model = dinh_tuyen.chon_model(router_cfg, pl["bac"])
+    return {"ok": True, "bac": pl["bac"], "diem": pl["diem"], "ly_do": pl["ly_do"],
+            "bat": bool(router_cfg.get("enabled")), "model": model}
 
 
 @app.get("/version")
