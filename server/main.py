@@ -12713,14 +12713,31 @@ def _dg_invoker(prov, key, model, brain):
     Não CLI (Claude Code, ChatGPT qua Codex, Grok Build, Antigravity) dựng engine y như
     agent "nhẹ" của workflow: Claude engine + MCP hub chỉ đọc, rồi `aux_engine.swap` đổi sang
     đúng nhà. Bản 26.10.124 chỉ chấm não API nên bố không chấm được Claude/ChatGPT (hỏi 10/10)."""
+    # CHẤM ĐÚNG THỨ ĐANG CHẠY THẬT (26.10.130): não phải nhận cùng system prompt của MinMin
+    # (CLAUDE.md + memory: "luôn lấy số thật từ MCP, không bịa") như trong chat. Bản 124-129
+    # đưa mỗi câu hỏi trần, nên Opus lẫn Fable đều trả lời theo cảm nhận, không gọi tool, và
+    # bị chấm "không gọi tool bắt buộc" y hệt nhau - đó là lỗi đề, không phải lỗi não.
+    try:
+        sysprompt = build_system_prompt(brain)
+    except Exception as e:
+        print(f"[danh-gia] không dựng được system prompt: {type(e).__name__}: {e}", file=sys.stderr)
+        sysprompt = "Bạn là MinMin. Luôn lấy số liệu thật bằng tool, không đoán, không bịa."
+
     async def inv(case):
         if prov in _DG_NAO_API:
-            messages = [{"role": "user", "content": case["cau_hoi"]}]
+            messages = [{"role": "system", "content": sysprompt},
+                        {"role": "user", "content": case["cau_hoi"]}]
             gen = await _api_stream_mcp(prov, key, model, messages, brain=brain, mode="suggest")
             return await _dg_gom(gen)
         vault_root = _brain_root(brain)
-        c = claude_engine(system_prompt="Bạn là MinMin. Trả lời ngắn gọn, đúng con số tool trả về.",
-                          cwd=vault_root, tag="danh-gia", allowed_tools=list(READONLY_TOOLS))
+        # Phải CHO PHÉP tool MCP (pattern mcp__javis) y như loop/workflow, nếu không Claude Code
+        # chạy không tương tác sẽ bị từ chối mọi tool hub và "không gọi tool" là tất yếu.
+        allow = list(READONLY_TOOLS)
+        try:
+            allow += list(_loop_mcp_allow() or [])
+        except Exception:
+            pass
+        c = claude_engine(system_prompt=sysprompt, cwd=vault_root, tag="danh-gia", allowed_tools=allow)
         c.model = (model if prov == "anthropic-cli" else "") or None
         _apply_mcp(c, mode="suggest", brain=brain)
         c.disallowed_tools = ["Bash", "WebFetch", "WebSearch", "Task"] + [
