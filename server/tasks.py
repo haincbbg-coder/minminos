@@ -31,6 +31,9 @@ from fastapi import APIRouter, Form, Query
 from claude_cli import claude_engine, cancel_all, _empty_mcp_file
 import aux_engine
 import channel_context
+import chung_cu      # dòng chứng cứ cho việc nền (Trụ 5, 26.10.141)
+import hanh_dong     # ai đang làm, cho sổ hành động (Trụ 4)
+import localefmt
 import localefmt          # giờ hiển thị theo múi giờ người dùng, không phải giờ máy chủ
 import limit_learner      # nhận diện "gói thuê bao hết lượt" - CÙNG bộ mẫu với khung chat
 import limit_resume       # mượn hằng trừ hao / trần chờ của khung chat, không đẻ bộ số thứ hai
@@ -566,9 +569,14 @@ class TasksFeature:
         narration: list[str] = []
         error = ""
         tool_calls: list[str] = []
+        # Gom chứng cứ (Trụ 5): tool thật đã gọi + kết quả tool, để dòng "Chứng cứ:" ở báo cáo
+        # nói được đã đọc gì, làm gì, số liệu có nguồn không. `self._gom` do _execute đặt.
+        gom = getattr(self, "_gom", None)
         try:
             async for event in cli.query(prompt):
                 kind = event.get("type")
+                if gom is not None:
+                    gom.nap(event)
                 if kind == "final":
                     final = str(event.get("content") or "") or final
                 elif kind == "text":
@@ -821,7 +829,19 @@ Nếu thiếu một quyết định hoặc dữ liệu mà không thể suy ra a
 bằng [[NEEDS_INPUT]] và nêu đúng một lý do cụ thể. Nếu hoàn thành, báo cáo ngắn: đã làm
 gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng.
 """.strip()
-        result, error, tool_calls = await self._query(cli, prompt)
+        # Ai đang làm (sổ hành động) + bộ gom chứng cứ cho ĐÚNG lần chạy này.
+        ai = f"viec:{str(task.get('id') or '')[:8]}"
+        hanh_dong.dat_nguoi_lam(ai)
+        self._gom = chung_cu.Gom(ai=ai, luc_bat_dau=localefmt.now().isoformat(timespec="seconds"))
+        try:
+            result, error, tool_calls = await self._query(cli, prompt)
+            try:
+                chung = self._gom.dung(result, str(task.get("goal") or task.get("title") or ""))
+            except Exception as _e:   # chứng cứ là phụ, không được làm hỏng việc
+                print(f"[kanban] chứng cứ lỗi: {type(_e).__name__}: {_e}", file=sys.stderr)
+                chung = ""
+        finally:
+            self._gom = None
         return (
             result[:MAX_RESULT_CHARS],
             error,
@@ -832,6 +852,7 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
                 "execution_mode": mode,
                 "tool_calls": tool_calls[-100:],
                 "provider": aux_engine.read_spec().get("provider"),
+                "chung_cu": chung,
             },
         )
 
@@ -1097,6 +1118,11 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
                              str(task.get("result") or "").strip()).strip()
             parts = [dau] + ([ket_qua] if ket_qua else [])
             parts_ngan = [dau] + ([ket_qua[:240].strip()] if ket_qua else [])
+            # Trụ 5: dòng chứng cứ đi cùng kết quả ở MỌI kênh (web, Telegram, hòm thư).
+            chung = str((task.get("metadata") or {}).get("chung_cu") or "").strip()
+            if chung:
+                parts.append(chung)
+                parts_ngan.append(chung[:300])
         # Bản cho KHUNG CHAT web: thẻ việc (dashboard/chat-viec.js) đã có dòng đầu nói trạng thái,
         # tên việc và nút mở trang Việc, nên bỏ câu đầu có emoji và câu "xem ở trang Việc".
         web = "\n\n".join(parts[1:]) or dau

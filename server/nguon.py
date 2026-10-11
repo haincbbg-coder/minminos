@@ -39,8 +39,10 @@ def bo_dau(s: str) -> str:
 
 # ─────────────────────────── rút số ───────────────────────────
 
-_RE_NHOM = re.compile(r"(?<![\d.,])\d{1,3}(?:[.,]\d{3})+(?![\d.,])")   # 1.550.000 / 1,550,000
-_RE_TRAN = re.compile(r"(?<![\d.,])\d+(?![\d.,])")
+# Đuôi: không được nối tiếp bằng chữ số, hoặc dấu+chữ số (số thập phân/nhóm nghìn dở). Dấu
+# phẩy/chấm đứng một mình phía sau (JSON "12500000, " hay cuối câu) thì vẫn là số nguyên.
+_RE_NHOM = re.compile(r"(?<![\d.,])\d{1,3}(?:[.,]\d{3})+(?![.,]?\d)")   # 1.550.000 / 1,550,000
+_RE_TRAN = re.compile(r"(?<![\d.,])\d+(?![.,]?\d)")
 
 
 def cac_so(text: str) -> set:

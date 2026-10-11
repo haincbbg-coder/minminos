@@ -68,6 +68,8 @@ from fastapi import APIRouter, Form, Query
 
 from claude_cli import claude_engine, cancel_all, _empty_mcp_file
 import aux_engine   # engine viec nen theo model phu nguoi dung chon
+import chung_cu     # dòng chứng cứ mỗi vòng loop (Trụ 5, 26.10.141)
+import hanh_dong    # ai đang làm, cho sổ hành động (Trụ 4)
 import channel_context   # bóc khối JAVIS_* trước khi báo Telegram - kênh chữ, không phải web
 
 LEGACY_SLUG = "vong-lap-goc"
@@ -891,6 +893,8 @@ class LoopFeature:
                 parts = [f"{head} Loop '{loop['name']}' vừa chạy ({reason})."]
                 if summary:
                     parts.append(summary[:1500])
+                if chung:
+                    parts.append(chung)
                 if verify_line:
                     parts.append("Kiểm chứng: " + verify_line)
                 if paused_now:
@@ -961,14 +965,23 @@ class LoopFeature:
         # Engine nổ giữa chừng (mất mạng, CLI chết) phải thành một vòng "Lỗi:" có ghi log và
         # tính vào fail_streak. Bản trước để exception thoát ra khỏi run_cycle: state không được
         # cập nhật, `_pick_due` chọn lại đúng loop này ở tick kế tiếp, lặp vô hạn, không báo ai.
+        ai_loop = f"loop:{slug}"
+        hanh_dong.dat_nguoi_lam(ai_loop)
+        gom = chung_cu.Gom(ai=ai_loop, luc_bat_dau=datetime.now().isoformat(timespec="seconds"))
         try:
             async for ev in gcli.query(prompt):
+                gom.nap(ev)
                 if ev["type"] == "final":
                     summary = ev.get("content", "") or summary
                 elif ev["type"] == "error":
                     summary = "Lỗi: " + ev["content"][:200]
         except Exception as _e:
             summary = f"Lỗi: {type(_e).__name__}: {_e}"[:200]
+        try:
+            chung = gom.dung(summary, str(loop.get("name") or "")) if summary and not summary.startswith("Lỗi:") else ""
+        except Exception as _e:
+            print(f"[loop] chứng cứ lỗi: {type(_e).__name__}: {_e}", file=sys.stderr)
+            chung = ""
 
         verify_line, verify_failed = "", False
         if mode in ("auto", "full") and summary and not summary.startswith("Lỗi:") \
