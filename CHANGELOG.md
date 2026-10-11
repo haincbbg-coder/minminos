@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.141] - 2026-10-11
+### Thêm mới
+- **Việc nền có chứng cứ** (Trụ 5). Việc Kanban và mỗi vòng loop chạy xong, tin báo về (khung chat, Telegram, hòm thư) có thêm dòng "Chứng cứ": đã đọc dữ liệu từ tool nào, đã làm gì ra ngoài đời (và việc nào bị chặn), số liệu trong kết quả có nguồn hay chưa rõ. Kết quả có số mà không đọc dữ liệu nào thì ghi thẳng "đừng dùng con số này". Đọc một tin trên điện thoại là biết việc đó đáng tin đến đâu.
+### Sửa lỗi
+- Lớp kiểm số liệu đọc được cả số trong dữ liệu JSON có dấu phẩy theo sau (trước đây "12500000," bị bỏ qua nên báo nhầm "chưa rõ nguồn").
+
 ## [26.10.140] - 2026-10-11
 ### Thêm mới
 - **Sổ hành động ra ngoài đời** (Trụ 4), ở trang Kết nối, tab Đã nối: mỗi lần MinMin gửi tin, tạo đơn, đổi ngân sách ads hay xoá gì đó qua kết nối, một dòng được ghi: ai làm (khung chat nào, não nào, việc nền nào), lúc nào, tool gì, tham số gì (che token/mật khẩu), kết quả, và hoàn tác thế nào. Lọc theo loại việc, xem riêng dòng lỗi/bị chặn.
