@@ -299,7 +299,11 @@ def map_message(msg):
                     c = b.content
                     if isinstance(c, list):
                         c = " ".join(x.get("text", "") for x in c if isinstance(x, dict))
-                    events.append({"type": "tool_result", "content": str(c or "")[:500]})
+                    # 6000 ký tự thay vì 500 (26.10.142): lớp dẫn nguồn (nguon.py) đối chiếu
+                    # số liệu trong câu trả lời với kết quả tool; 500 ký tự thì JSON đơn hàng
+                    # Pancake bị cắt mất phần tổng, số nào cũng thành "chưa rõ nguồn". Dashboard
+                    # vẫn chỉ hiện 200 ký tự đầu (main.py cắt khi gửi).
+                    events.append({"type": "tool_result", "content": str(c or "")[:6000]})
         return events, None
     if isinstance(msg, ResultMessage):
         u = msg.usage or {}

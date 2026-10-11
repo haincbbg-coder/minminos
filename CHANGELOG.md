@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.142] - 2026-10-11
+### Cải thiện
+- **Chân nguồn và tự kiểm số liệu giờ có cả khi chạy bằng Claude Code** (trước chỉ não API). Báo cáo như "Hôm nay HALIMI 150 đơn, 51,7 triệu" chạy bằng Claude Code cũng có dòng "Nguồn: pos_order, meta_ads_get · lúc 13:00" và cảnh báo nếu có số không thấy trong dữ liệu. Tool nội bộ (đọc file brain, tìm tool) không bị kể vào nguồn cho đỡ rối.
+
 ## [26.10.141] - 2026-10-11
 ### Thêm mới
 - **Việc nền có chứng cứ** (Trụ 5). Việc Kanban và mỗi vòng loop chạy xong, tin báo về (khung chat, Telegram, hòm thư) có thêm dòng "Chứng cứ": đã đọc dữ liệu từ tool nào, đã làm gì ra ngoài đời (và việc nào bị chặn), số liệu trong kết quả có nguồn hay chưa rõ. Kết quả có số mà không đọc dữ liệu nào thì ghi thẳng "đừng dùng con số này". Đọc một tin trên điện thoại là biết việc đó đáng tin đến đâu.

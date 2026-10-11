@@ -137,7 +137,11 @@ def chan_nguon(tra_loi: str, cau_hoi: str, tool_calls: list, ket_qua_tool: list,
             args = (tc.get("input") or {}).get("args") or {}
         else:
             args = tc.get("input") or {}
-        if n in ("javis_search_tools", "javis_no_tools", "javis_wait_quota"):
+        # Tool nội bộ của hub (tìm tool, đọc/ghi file brain, skill) không phải NGUỒN dữ liệu
+        # kinh doanh; kể vào chỉ làm chân nguồn dài ra mà không nói thêm gì.
+        if n in ("javis_search_tools", "javis_no_tools", "javis_wait_quota", "javis_read_file",
+                 "javis_list_files", "javis_write_file", "javis_use_skill", "javis_connections",
+                 "javis_now", "javis_date_add"):
             continue
         tt = _tom_tat_args(args)
         ten_nguon.append(f"{n}({tt})" if tt else n)

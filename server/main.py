@@ -16086,6 +16086,8 @@ async def websocket_endpoint(ws: WebSocket):
                 _t0_cli = time.time()
                 _da_ghi: list = []      # đường dẫn moi từ tham số tool trong lượt (Write/Edit/Bash...)
 
+                _ng_calls, _ng_kq = [], []   # dẫn nguồn (Trụ 3, não CLI từ 26.10.142)
+
                 async def _consume_claude(prompt, suppress_resume_error=False):
                     """Một lần gọi `claude`. Trả True nếu mạch cũ không còn (resume trượt)."""
                     nonlocal final_text, _streamed, _cli_sid, _cost, _ctx_in
@@ -16093,6 +16095,7 @@ async def websocket_endpoint(ws: WebSocket):
                     async for event in cli.query(prompt):
                         etype = event["type"]
                         if etype == "tool_call":
+                            _ng_calls.append({"name": event.get("name", ""), "input": event.get("input") or {}})
                             await ws.send_text(json.dumps({"type": "tool_call", "tool": event["name"], "detail": tool_label.chi_tiet(event), "content": f"⚙ Đang gọi: {event['name']}"}))
                             # Nhặt mọi thứ trông giống đường dẫn trong tham số tool (Write/Edit có
                             # file_path, Bash thì lẫn trong lệnh). Lọc "có thật + vừa đổi" ở dưới.
@@ -16101,6 +16104,7 @@ async def websocket_endpoint(ws: WebSocket):
                             except Exception:
                                 pass
                         elif etype == "tool_result":
+                            _ng_kq.append(str(event.get("content") or ""))
                             await ws.send_text(json.dumps({"type": "tool_result", "content": event["content"][:200]}))
                         elif etype == "text":
                             _streamed += event["content"]
@@ -16162,6 +16166,25 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(_limit_frame(final_text, "claude-code",
                                                     cli.model or mcfg.get("claude_model") or ""))
                     final_text = ""      # khối _limit_state bên dưới lưu câu báo + hẹn chạy lại
+                # DẪN NGUỒN + NEO SỐ cho não Claude Code (Trụ 3 mở rộng, 26.10.142): cùng luật
+                # với nhánh API. Tool native của Claude (Read/Bash/Grep...) không phải nguồn dữ
+                # liệu kinh doanh nên lọc bỏ; chỉ kể tool hub (mcp__javis__*) và tool connector.
+                if final_text:
+                    try:
+                        _goi_hub = [c for c in _ng_calls
+                                    if str(c.get("name") or "").startswith("mcp__")
+                                    or str(c.get("name") or "").startswith("javis_")]
+                        _chan = nguon.chan_nguon(
+                            final_text, user_message, _goi_hub, _ng_kq,
+                            luc=localefmt.now().strftime("%H:%M"),
+                            bat=bool(mcfg.get("dan_nguon", True)))
+                    except Exception as _e:
+                        _chan = ""
+                        print(f"[nguon cli] {type(_e).__name__}: {_e}", file=sys.stderr)
+                    if _chan:
+                        _chan = "\n\n" + _chan
+                        final_text += _chan
+                        await ws.send_text(json.dumps({"type": "stream", "content": _chan, "tts": False}))
                 # Link file → dạng khung chat mở được, ưu tiên file vừa ghi trong lượt này.
                 try:
                     final_text = _chuan_hoa_link_file(
