@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.138] - 2026-10-11
+### Thêm mới
+- **Dẫn nguồn dưới mỗi câu trả lời có số liệu** (Trụ 3). Lượt nào MinMin đọc dữ liệu thì cuối câu trả lời có dòng "Nguồn: tool nào, tham số gì, lúc mấy giờ", như một chứng từ.
+- **Tự kiểm số liệu bằng luật**: mọi con số đáng kể trong câu trả lời được đối chiếu với đúng dữ liệu tool trả về. Số nào không thấy trong dữ liệu thì cảnh báo "có thể model tự tính hoặc bịa, kiểm lại trước khi dùng". Hỏi về doanh thu, hoá đơn, ads mà không đọc dữ liệu nào vẫn đưa ra số thì cảnh báo mạnh "đừng dùng con số này". Áp dụng cho các bộ não API (OpenRouter, OpenAI, Gemini, Groq...). Tắt được bằng `model.dan_nguon = false`.
 ## [26.10.137] - 2026-10-10
 ### Sửa lỗi
 - **Tra cứu hoá đơn TCT không còn mất sạch dữ liệu khi một hệ của cổng thuế bị treo.** Trước đây bấm "Tra cứu" ở chế độ Cả hai, hệ hoá đơn điện tử kéo về xong cả nghìn hoá đơn nhưng chỉ ghi vào kho khi hệ máy tính tiền cũng xong. Hệ máy tính tiền của cổng thuế hay treo (báo "curl 28, thử lại 6 lần"), thế là cả việc báo lỗi và toàn bộ hoá đơn vừa kéo bị bỏ, kho vẫn 0.

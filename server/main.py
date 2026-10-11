@@ -86,6 +86,7 @@ import cred_exchange   # đổi credential hộ user (vd App Password -> Google 
 import plugins_host   # hệ PLUGIN: thư mục Python thả vào, tự thêm tool/hook cho mọi engine qua hub
 import danh_gia      # bộ chấm điểm "não": đo chất lượng trả lời khi đổi model (26.10.124)
 import dinh_tuyen    # định tuyến model theo độ khó câu hỏi (26.10.127)
+import nguon         # dẫn nguồn + neo số liệu dưới câu trả lời (Trụ 3, 26.10.137)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
@@ -15877,9 +15878,11 @@ async def websocket_endpoint(ws: WebSocket):
                         # lỗi thô ra cho người dùng. Chỉ thử lại MỘT lần: lần hai mà vẫn
                         # vượt thì vấn đề không nằm ở kích thước ngữ cảnh nữa.
                         _limit_hit = None
+                        _ng_calls, _ng_kq = [], []   # dẫn nguồn (Trụ 3): tool đã gọi + kết quả
                         for _attempt in (1, 2):
                             final_text = ""
                             _limit_hit = None
+                            _ng_calls, _ng_kq = [], []
                             gen = await _api_stream_mcp(
                                 prov, api_key, api_model, or_messages, reasoning, brain=brain,
                                 force_lazy=(_phase8_plan.action == "use" or _attempt > 1),
@@ -15900,11 +15903,14 @@ async def websocket_endpoint(ws: WebSocket):
                                 elif ev["type"] == "limit_exceeded":
                                     _limit_hit = ev
                                 elif ev["type"] == "tool_call":
+                                    _ng_calls.append({"name": ev.get("name", ""), "input": ev.get("input") or {}})
                                     await ws.send_text(json.dumps({
                                         "type": "tool_call", "tool": ev.get("name", ""),
                                         "detail": tool_label.chi_tiet(ev),
                                         "content": f"⚙ MCP: {ev.get('name', '')}",
                                     }))
+                                elif ev["type"] == "tool_result":
+                                    _ng_kq.append(str(ev.get("content") or ""))
                                 elif ev["type"] == "text":
                                     final_text += ev["content"]
                                     await ws.send_text(json.dumps({
@@ -15954,6 +15960,22 @@ async def websocket_endpoint(ws: WebSocket):
                             await ws.send_text(json.dumps({
                                 "type": "error", "content": final_text,
                             }))
+                        # DẪN NGUỒN + NEO SỐ (Trụ 3, 26.10.137): nối chân nguồn dưới câu trả lời,
+                        # chỉ ở lượt có tool hoặc có số liệu. Tắt bằng model.dan_nguon=false.
+                        # Lỗi ở đây không được làm hỏng câu trả lời.
+                        if final_text and not _limit_hit:
+                            try:
+                                _chan = nguon.chan_nguon(
+                                    final_text, user_message, _ng_calls, _ng_kq,
+                                    luc=localefmt.now().strftime("%H:%M"),
+                                    bat=bool(mcfg.get("dan_nguon", True)))
+                            except Exception as _e:
+                                _chan = ""
+                                print(f"[nguon] lỗi dựng chân nguồn: {type(_e).__name__}: {_e}", file=sys.stderr)
+                            if _chan:
+                                _chan = "\n\n" + _chan
+                                final_text += _chan
+                                await ws.send_text(json.dumps({"type": "stream", "content": _chan, "tts": False}))
                         final_text = _chuan_hoa_link_file(_brain_root(brain), final_text)
                         await ws.send_text(json.dumps({
                             "type": "response", "content": final_text, "engine": prov,

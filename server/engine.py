@@ -1695,6 +1695,9 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
                     result = await mcp_client.call_route(mcp_route, fn, args)
                 else:
                     result = _schedule_tool_blocked_result()
+                # 26.10.137: phát kết quả tool cho lớp DẪN NGUỒN đối chiếu số liệu (nguon.py).
+                # Người tiêu thụ cũ bỏ qua type lạ nên vô hại.
+                yield {"type": "tool_result", "name": fn, "content": _clip_tool_result(result)}
                 msgs.append({"role": "tool", "tool_call_id": tc.get("id"), "content": _clip_tool_result(result)})
             guard.ghi([((tc.get("function") or {}).get("name"),
                         (tc.get("function") or {}).get("arguments") or "") for tc in tcs])
@@ -1961,6 +1964,7 @@ async def responses_with_mcp(access_token, account_id, model, messages, reasonin
                         result = await mcp_client.call_route(mcp_route, fc.get("name"), args)
                     else:
                         result = _schedule_tool_blocked_result()
+                    yield {"type": "tool_result", "name": fc.get("name"), "content": _clip_tool_result(result)}
                     items.append({"type": "function_call_output", "call_id": fc.get("call_id"), "output": _clip_tool_result(result)})
                 guard.ghi([(fc.get("name"), fc.get("arguments") or "") for fc in fcalls])
                 nhac = guard.loi_nhac()
@@ -2064,6 +2068,7 @@ async def anthropic_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools
                         res = await mcp_client.call_route(mcp_route, tu.get("name"), args)
                     else:
                         res = _schedule_tool_blocked_result()
+                    yield {"type": "tool_result", "name": tu.get("name"), "content": _clip_tool_result(res)}
                     results.append({"type": "tool_result", "tool_use_id": tu.get("id"),
                                     "content": _clip_tool_result(res)})
                 guard.ghi([(tu.get("name"), json.dumps(tu.get("input") or {}, sort_keys=True,
