@@ -22,17 +22,27 @@ GRAPH_VIDEO = "https://graph-video.facebook.com/v25.0"
 CONNECTOR_ID = "facebook-pages"
 
 
-def _connected_id():
-    """id kết nối facebook-pages ĐÃ đăng nhập (None nếu chưa). Import lười để load không phụ thuộc."""
+def _conns():
+    """MỌI kết nối facebook-pages ĐÃ đăng nhập: [{id, label, is_default}], tài khoản mặc định lên đầu.
+    Import lười để load không phụ thuộc."""
     try:
         import mcp_store
         import oauth_mcp
     except Exception:
-        return None
+        return []
+    out = []
     for c in mcp_store.list_connections():
         if c.get("connector_id") == CONNECTOR_ID and oauth_mcp.status(c["id"]).get("connected"):
-            return c["id"]
-    return None
+            out.append({"id": c["id"], "label": c.get("label") or c.get("name") or c["id"],
+                        "is_default": bool(c.get("is_default"))})
+    out.sort(key=lambda x: not x["is_default"])     # sort ổn định: mặc định trước, còn lại giữ thứ tự thêm
+    return out
+
+
+def _connected_id():
+    """id kết nối facebook-pages ĐÃ đăng nhập (ưu tiên tài khoản mặc định; None nếu chưa)."""
+    cs = _conns()
+    return cs[0]["id"] if cs else None
 
 
 def _check():
@@ -43,13 +53,39 @@ def _check():
     return None
 
 
-async def _token():
+async def _token_of(cid):
     import oauth_mcp
-    cid = _connected_id()
-    if not cid:
-        return None
     hdr = await oauth_mcp.auth_headers(cid)      # tự refresh token ~60 ngày khi sắp hết hạn
     return (hdr.get("Authorization", "") or "").replace("Bearer ", "").strip() or None
+
+
+async def _token():
+    """Token người dùng của tài khoản mặc định (dùng để kiểm 'đã kết nối chưa')."""
+    cid = _connected_id()
+    return await _token_of(cid) if cid else None
+
+
+async def _acct_tokens(tai_khoan=""):
+    """[(nhãn tài khoản, user token)] theo thứ tự ưu tiên (mặc định trước). `tai_khoan` (id hoặc tên)
+    thu hẹp về đúng tài khoản đó. Trả (list, err)."""
+    cs = _conns()
+    if not cs:                                    # chưa có danh sách kết nối: dùng đường 1 token cũ
+        t = await _token()
+        return ([("", t)] if t else []), None
+    ref = str(tai_khoan or "").strip().lower()
+    if ref:
+        sel = [c for c in cs if ref in (c["id"].lower(), c["label"].lower())] or \
+              [c for c in cs if ref in c["label"].lower()]
+        if not sel:
+            return [], ("ERROR: Không có tài khoản Facebook '" + str(tai_khoan) + "'. Đang nối: " +
+                        ", ".join(c["label"] for c in cs))
+        cs = sel
+    out = []
+    for c in cs:
+        t = await _token_of(c["id"])
+        if t:
+            out.append((c["label"], t))
+    return out, None
 
 
 async def _get(path, params, token):
@@ -108,28 +144,86 @@ async def _pages(user_token):
     return (d or {}).get("data") or [], None
 
 
-async def _resolve_page(args, user_token):
-    """Chọn Trang thao tác. Trả (page_id, page_token, page_name, err).
-    - page_id / page (tên) trong args → khớp; nếu bỏ trống mà chỉ có 1 Trang → tự lấy;
-    - nhiều Trang mà không chỉ rõ → lỗi kèm danh sách Trang để user chọn."""
-    pages, err = await _pages(user_token)
+# id Trang -> nhãn tài khoản Facebook đã được dùng cho lần thao tác gần nhất (để báo lại cho người dùng)
+_PAGE_OWNER = {}
+
+
+def _co_quyen_dang(p):
+    t = p.get("tasks")
+    return (not t) or any(x in t for x in ("CREATE_CONTENT", "MANAGE"))
+
+
+async def _all_pages(tai_khoan=""):
+    """Gộp Trang của MỌI tài khoản Facebook đã nối. Một Trang cả hai tài khoản cùng quản lý chỉ hiện
+    một lần, kèm danh sách `owners`; token Trang lấy từ tài khoản có quyền đăng (mặc định trước).
+    Trả (pages, loi_tung_tai_khoan, err)."""
+    accts, err = await _acct_tokens(tai_khoan)
+    if err:
+        return None, [], err
+    if not accts:
+        return None, [], "ERROR: " + (_check() or "chưa kết nối")
+    by_id, order, loi = {}, [], []
+    for label, utok in accts:
+        pages, e = await _pages(utok)
+        if e:
+            loi.append(f"{label or 'tài khoản'}: {e}")
+            continue
+        for p in pages:
+            pid = str(p.get("id"))
+            if pid not in by_id:
+                by_id[pid] = {"id": p.get("id"), "name": p.get("name"), "category": p.get("category"),
+                              "owners": [], "_cands": []}
+                order.append(pid)
+            if label and label not in by_id[pid]["owners"]:
+                by_id[pid]["owners"].append(label)
+            by_id[pid]["_cands"].append((label, p))
+    if not order and loi:
+        return None, loi, loi[0]
+    out = []
+    for pid in order:
+        e = by_id[pid]
+        cands = sorted(e["_cands"], key=lambda lp: not _co_quyen_dang(lp[1]))   # ổn định: mặc định trước
+        label, p = cands[0]
+        e["access_token"], e["tasks"], e["dung_tai_khoan"] = p.get("access_token"), p.get("tasks"), label
+        del e["_cands"]
+        out.append(e)
+    return out, loi, None
+
+
+async def _resolve_page(args, user_token=None):
+    """Chọn Trang thao tác trong TẤT CẢ tài khoản Facebook đã nối. Trả (page_id, page_token, page_name, err).
+    - page_id / page (tên) khớp: id chính xác, rồi tên chính xác, rồi tên chứa chuỗi (chỉ khi duy nhất);
+    - bỏ trống mà chỉ có 1 Trang → tự lấy; nhiều Trang mà không chỉ rõ → lỗi kèm danh sách;
+    - `tai_khoan` (id/tên tài khoản Facebook) thu hẹp phạm vi; không có thì MinMin tự tìm tài khoản
+      đang quản lý Trang đó, nên đăng được từ bất kỳ máy/điện thoại nào."""
+    args = args or {}
+    pages, _loi, err = await _all_pages(args.get("tai_khoan"))
     if err:
         return None, None, None, err
     if not pages:
         return None, None, None, ("ERROR: Không thấy Trang nào bạn quản lý. Kiểm tra: bạn là Admin của Trang, "
                                   "và khi đăng nhập Facebook đã TICK chọn Trang đó cho app.")
-    ref = str((args or {}).get("page_id") or (args or {}).get("page") or "").strip()
+
+    def _chon(p):
+        _PAGE_OWNER[str(p.get("id"))] = p.get("dung_tai_khoan") or ""
+        return p.get("id"), p.get("access_token"), p.get("name"), None
+
+    avail = ", ".join(f"{p.get('name')} ({p.get('id')})" for p in pages)
+    ref = str(args.get("page_id") or args.get("page") or "").strip()
     if ref:
         rl = ref.lower()
-        for p in pages:
-            if str(p.get("id")) == ref or rl in str(p.get("name", "")).lower():
-                return p.get("id"), p.get("access_token"), p.get("name"), None
-        avail = ", ".join(f"{p.get('name')} ({p.get('id')})" for p in pages)
+        hit = [p for p in pages if str(p.get("id")) == ref]
+        hit = hit or [p for p in pages if str(p.get("name", "")).strip().lower() == rl]
+        hit = hit or [p for p in pages if rl in str(p.get("name", "")).lower()]
+        if len(hit) == 1:
+            return _chon(hit[0])
+        if len(hit) > 1:
+            return None, None, None, ("ERROR: '" + ref + "' khớp nhiều Trang: " +
+                                      ", ".join(f"{p.get('name')} ({p.get('id')})" for p in hit) +
+                                      ". Chỉ rõ page_id hoặc tên đầy đủ.")
         return None, None, None, f"ERROR: Không khớp Trang '{ref}'. Trang bạn có: {avail}"
     if len(pages) == 1:
-        p = pages[0]
-        return p.get("id"), p.get("access_token"), p.get("name"), None
-    avail = ", ".join(f"{p.get('name')} ({p.get('id')})" for p in pages)
+        return _chon(pages[0])
     return None, None, None, f"ERROR: Bạn có nhiều Trang, cần chỉ rõ page_id hoặc page (tên). Trang: {avail}"
 
 
@@ -137,12 +231,18 @@ async def _list(args, ctx):
     token = await _token()
     if not token:
         return "ERROR: " + (_check() or "chưa kết nối")
-    pages, err = await _pages(token)
+    pages, loi, err = await _all_pages((args or {}).get("tai_khoan"))
     if err:
         return err
-    # KHÔNG lộ access_token của Trang ra output.
-    safe = [{"id": p.get("id"), "name": p.get("name"), "category": p.get("category"),
-             "tasks": p.get("tasks")} for p in pages]
+    # KHÔNG lộ access_token của Trang. `tai_khoan` = các tài khoản Facebook đang quản lý Trang đó.
+    safe = []
+    for p in pages:
+        row = {"id": p.get("id"), "name": p.get("name"), "category": p.get("category"), "tasks": p.get("tasks")}
+        if p.get("owners"):
+            row["tai_khoan"] = p["owners"]
+        safe.append(row)
+    if loi:
+        return json.dumps({"trang": safe, "loi_tai_khoan": loi}, ensure_ascii=False, default=str)
     return json.dumps(safe, ensure_ascii=False, default=str)
 
 
@@ -208,7 +308,7 @@ async def _publish(args, ctx):
     d = await _post(f"{pid}/feed", data, ptok)
     if isinstance(d, dict) and d.get("error"):
         return _fmt(d)
-    return json.dumps({"ok": True, "page": pname,
+    return json.dumps({"ok": True, "page": pname, "tai_khoan": _PAGE_OWNER.get(str(pid)) or None,
                        "post_id": d.get("id") if isinstance(d, dict) else None},
                       ensure_ascii=False, default=str)
 
@@ -303,7 +403,7 @@ async def _publish_photo(args, cctx):
         d = await _post_file(f"{pid}/photos", path, data, ptok)
     if isinstance(d, dict) and d.get("error"):
         return _fmt(d)
-    return json.dumps({"ok": True, "page": pname,
+    return json.dumps({"ok": True, "page": pname, "tai_khoan": _PAGE_OWNER.get(str(pid)) or None,
                        "photo_id": d.get("id") if isinstance(d, dict) else None,
                        "post_id": d.get("post_id") if isinstance(d, dict) else None},
                       ensure_ascii=False, default=str)
@@ -333,7 +433,7 @@ async def _publish_video(args, cctx):
         d = await _post_file(f"{pid}/videos", path, data, ptok, base=GRAPH_VIDEO)
     if isinstance(d, dict) and d.get("error"):
         return _fmt(d)
-    return json.dumps({"ok": True, "page": pname,
+    return json.dumps({"ok": True, "page": pname, "tai_khoan": _PAGE_OWNER.get(str(pid)) or None,
                        "video_id": d.get("id") if isinstance(d, dict) else None,
                        "note": "Video Facebook xử lý nền vài phút rồi mới hiện trên Trang."},
                       ensure_ascii=False, default=str)
@@ -380,7 +480,7 @@ async def _publish_album(args, cctx):
     d = await _post(f"{pid}/feed", data, ptok)
     if isinstance(d, dict) and d.get("error"):
         return _fmt(d)
-    return json.dumps({"ok": True, "page": pname, "photos": len(media_ids),
+    return json.dumps({"ok": True, "page": pname, "tai_khoan": _PAGE_OWNER.get(str(pid)) or None, "photos": len(media_ids),
                        "post_id": d.get("id") if isinstance(d, dict) else None},
                       ensure_ascii=False, default=str)
 
@@ -408,7 +508,7 @@ async def _edit_post(args, cctx):
     if isinstance(d, dict) and d.get("error"):
         return _fmt(d)
     ok = bool(isinstance(d, dict) and (d.get("success") is True or d.get("id")))
-    return json.dumps({"ok": ok, "page": pname, "post_id": post_id,
+    return json.dumps({"ok": ok, "page": pname, "tai_khoan": _PAGE_OWNER.get(str(pid)) or None, "post_id": post_id,
                        "note": "" if ok else "Facebook trả về khác thường: " + str(d)[:120]},
                       ensure_ascii=False, default=str)
 
@@ -438,7 +538,7 @@ async def _delete_post(args, cctx):
         return _fmt(d)
     ok = bool(isinstance(d, dict) and d.get("success") is True)
     cu = str((snap or {}).get("message") or "")
-    return json.dumps({"ok": ok, "page": pname, "post_id": post_id,
+    return json.dumps({"ok": ok, "page": pname, "tai_khoan": _PAGE_OWNER.get(str(pid)) or None, "post_id": post_id,
                        "noi_dung_da_xoa": (cu[:300] + "…") if len(cu) > 300 else cu,
                        "created_time": (snap or {}).get("created_time"),
                        "note": "Đã xoá hẳn, KHÔNG khôi phục được." if ok
@@ -463,7 +563,7 @@ async def _reply(args, ctx):
     d = await _post(f"{target}/comments", {"message": msg}, ptok)
     if isinstance(d, dict) and d.get("error"):
         return _fmt(d)
-    return json.dumps({"ok": True, "page": pname,
+    return json.dumps({"ok": True, "page": pname, "tai_khoan": _PAGE_OWNER.get(str(pid)) or None,
                        "reply_id": d.get("id") if isinstance(d, dict) else None},
                       ensure_ascii=False, default=str)
 
@@ -471,15 +571,17 @@ async def _reply(args, ctx):
 def register(ctx):
     ctx.register_tool(
         name="fb_pages_list", min_mode="readonly", check_fn=_check, handler=_list,
-        description=("Liệt kê các Trang/Fanpage Facebook bạn quản lý (id, tên, hạng mục, quyền). Gọi đầu "
+        description=("Liệt kê Trang/Fanpage Facebook của MỌI tài khoản Facebook đã nối, kèm tài khoản nào đang quản lý Trang nào (id, tên, hạng mục, quyền). Gọi đầu "
                      "tiên để lấy id/tên Trang cho các tool khác. KHÔNG lộ token của Trang."),
-        schema={"type": "object", "properties": {}},
+        schema={"type": "object", "properties": {
+            "tai_khoan": {"type": "string", "description": "Chỉ liệt kê Trang của tài khoản Facebook này (bỏ trống = tất cả)"}}},
     )
     ctx.register_tool(
         name="fb_page_posts", min_mode="readonly", check_fn=_check, handler=_posts,
         description=("Đọc các bài GẦN ĐÂY trên một Trang của bạn (id bài, nội dung, thời gian, link, số bình "
                      "luận). Bỏ trống page nếu chỉ có 1 Trang; nhiều Trang thì truyền page_id hoặc page (tên)."),
         schema={"type": "object", "properties": {
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (bỏ trống nếu chỉ có 1 Trang)"},
             "page": {"type": "string", "description": "tên Trang (thay cho page_id)"},
             "limit": {"type": "integer", "description": "Số bài tối đa (mặc định 10)"}}},
@@ -490,6 +592,7 @@ def register(ctx):
                      "lấy từ fb_page_posts. Trang tự suy từ post_id; nhiều Trang thì truyền thêm page_id/page nếu cần."),
         schema={"type": "object", "properties": {
             "post_id": {"type": "string", "description": "id bài cần đọc bình luận (từ fb_page_posts)"},
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (thường không cần, suy từ post_id)"},
             "page": {"type": "string", "description": "tên Trang (tuỳ chọn)"},
             "limit": {"type": "integer", "description": "Số bình luận tối đa (mặc định 25)"}},
@@ -502,6 +605,7 @@ def register(ctx):
         schema={"type": "object", "properties": {
             "message": {"type": "string", "description": "Nội dung bài đăng"},
             "link": {"type": "string", "description": "Link đính kèm (tuỳ chọn)"},
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (bỏ trống nếu chỉ có 1 Trang)"},
             "page": {"type": "string", "description": "tên Trang (thay cho page_id)"}}},
     )
@@ -513,6 +617,7 @@ def register(ctx):
         schema={"type": "object", "properties": {
             "photo": {"type": "string", "description": "Đường dẫn ảnh trong vault hoặc URL http(s)"},
             "message": {"type": "string", "description": "Caption cho ảnh (tuỳ chọn)"},
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (bỏ trống nếu chỉ có 1 Trang)"},
             "page": {"type": "string", "description": "tên Trang (thay cho page_id)"}},
             "required": ["photo"]},
@@ -526,6 +631,7 @@ def register(ctx):
             "photos": {"type": "array", "items": {"type": "string"},
                        "description": "2-10 ảnh: đường dẫn trong vault hoặc URL http(s)"},
             "message": {"type": "string", "description": "Caption chung của album (tuỳ chọn)"},
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (bỏ trống nếu chỉ có 1 Trang)"},
             "page": {"type": "string", "description": "tên Trang (thay cho page_id)"}},
             "required": ["photos"]},
@@ -538,6 +644,7 @@ def register(ctx):
         schema={"type": "object", "properties": {
             "post_id": {"type": "string", "description": "id bài cần sửa (từ fb_page_posts)"},
             "message": {"type": "string", "description": "Nội dung MỚI thay cho nội dung cũ"},
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (thường tự suy từ post_id)"},
             "page": {"type": "string", "description": "tên Trang (tuỳ chọn)"}},
             "required": ["post_id", "message"]},
@@ -551,6 +658,7 @@ def register(ctx):
             "video": {"type": "string", "description": "Đường dẫn video trong vault hoặc URL http(s)"},
             "message": {"type": "string", "description": "Mô tả video (tuỳ chọn)"},
             "title": {"type": "string", "description": "Tiêu đề video (tuỳ chọn)"},
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (bỏ trống nếu chỉ có 1 Trang)"},
             "page": {"type": "string", "description": "tên Trang (thay cho page_id)"}},
             "required": ["video"]},
@@ -562,6 +670,7 @@ def register(ctx):
                      "đúng bài đó; đừng tự xoá để 'dọn dẹp'. Xoá xong trả lại đoạn nội dung vừa xoá để đối chiếu."),
         schema={"type": "object", "properties": {
             "post_id": {"type": "string", "description": "id bài cần xoá (từ fb_page_posts)"},
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (thường tự suy từ post_id)"},
             "page": {"type": "string", "description": "tên Trang (tuỳ chọn)"}},
             "required": ["post_id"]},
@@ -575,6 +684,7 @@ def register(ctx):
             "message": {"type": "string", "description": "Nội dung trả lời"},
             "comment_id": {"type": "string", "description": "id bình luận cần trả lời"},
             "post_id": {"type": "string", "description": "id bài (bình luận thẳng vào bài thay vì trả lời 1 comment)"},
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = MinMin tự tìm tài khoản đang quản lý Trang)"},
             "page_id": {"type": "string", "description": "id Trang (khi có nhiều Trang)"},
             "page": {"type": "string", "description": "tên Trang (khi có nhiều Trang)"}},
             "required": ["message"]},

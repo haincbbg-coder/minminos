@@ -15,17 +15,27 @@ _INSIGHT_FIELDS = "spend,impressions,clicks,ctr,cpc,cpm,reach,frequency,actions,
 _CAMPAIGN_FIELDS = "name,status,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time"
 
 
-def _connected_id():
-    """id của kết nối meta-ads-graph ĐÃ đăng nhập (None nếu chưa). Import lười để load không phụ thuộc."""
+def _conns():
+    """MỌI kết nối meta-ads-graph ĐÃ đăng nhập: [{id, label, is_default}], tài khoản mặc định lên đầu.
+    Import lười để load không phụ thuộc."""
     try:
         import mcp_store
         import oauth_mcp
     except Exception:
-        return None
+        return []
+    out = []
     for c in mcp_store.list_connections():
         if c.get("connector_id") == CONNECTOR_ID and oauth_mcp.status(c["id"]).get("connected"):
-            return c["id"]
-    return None
+            out.append({"id": c["id"], "label": c.get("label") or c.get("name") or c["id"],
+                        "is_default": bool(c.get("is_default"))})
+    out.sort(key=lambda x: not x["is_default"])
+    return out
+
+
+def _connected_id():
+    """id kết nối meta-ads-graph ĐÃ đăng nhập (ưu tiên tài khoản mặc định; None nếu chưa)."""
+    cs = _conns()
+    return cs[0]["id"] if cs else None
 
 
 def _check():
@@ -35,13 +45,39 @@ def _check():
     return None
 
 
-async def _token():
+async def _token_of(cid):
     import oauth_mcp
-    cid = _connected_id()
-    if not cid:
-        return None
     hdr = await oauth_mcp.auth_headers(cid)      # tự refresh token ~60 ngày khi sắp hết hạn
     return (hdr.get("Authorization", "") or "").replace("Bearer ", "").strip() or None
+
+
+async def _token():
+    """Token của tài khoản mặc định (dùng để kiểm 'đã kết nối chưa')."""
+    cid = _connected_id()
+    return await _token_of(cid) if cid else None
+
+
+async def _acct_tokens(tai_khoan=""):
+    """[(nhãn tài khoản, token)] theo thứ tự ưu tiên (mặc định trước); `tai_khoan` thu hẹp về một
+    tài khoản. Trả (list, err)."""
+    cs = _conns()
+    if not cs:                                    # chưa có danh sách kết nối: đường 1 token cũ
+        t = await _token()
+        return ([("", t)] if t else []), None
+    ref = str(tai_khoan or "").strip().lower()
+    if ref:
+        sel = [c for c in cs if ref in (c["id"].lower(), c["label"].lower())] or \
+              [c for c in cs if ref in c["label"].lower()]
+        if not sel:
+            return [], ("ERROR: Không có tài khoản Facebook '" + str(tai_khoan) + "'. Đang nối: " +
+                        ", ".join(c["label"] for c in cs))
+        cs = sel
+    out = []
+    for c in cs:
+        t = await _token_of(c["id"])
+        if t:
+            out.append((c["label"], t))
+    return out, None
 
 
 async def _get(path, params, token):
@@ -65,36 +101,90 @@ def _fmt(d):
     return json.dumps(d, ensure_ascii=False, default=str)
 
 
-async def _resolve_act(args, token):
-    """Chuẩn hoá account_id thành 'act_<id>'; bỏ trống → lấy tài khoản quảng cáo đầu tiên."""
-    aid = str((args or {}).get("account_id") or "").strip()
-    if not aid:
-        d = await _get("me/adaccounts", {"fields": "account_id", "limit": 1}, token)
+async def _all_adaccounts(token, fields="account_id,name,currency,account_status,amount_spent,balance"):
+    """Mọi tài khoản quảng cáo một user thấy (theo trang, tối đa ~4000). Trả (list, err)."""
+    rows, after = [], ""
+    for _ in range(20):
+        params = {"fields": fields, "limit": 200}
+        if after:
+            params["after"] = after
+        d = await _get("me/adaccounts", params, token)
         if isinstance(d, dict) and d.get("error"):
             return None, _fmt(d)
-        data = (d or {}).get("data") or []
-        if not data:
-            return None, ("ERROR: Không thấy tài khoản quảng cáo nào. Kiểm tra bạn có quyền ads_read "
-                          "và là admin của ad account.")
-        aid = data[0].get("account_id") or ""
-    return "act_" + aid.replace("act_", ""), None
+        rows += (d or {}).get("data") or []
+        pg = (d or {}).get("paging") or {}
+        after = ((pg.get("cursors") or {}).get("after") or "") if pg.get("next") else ""
+        if not after:
+            break
+    return rows, None
+
+
+async def _resolve_act(args, token):
+    """Chuẩn hoá account_id thành 'act_<id>' và CHỌN ĐÚNG TOKEN. Trả (act, err, token_dùng).
+    - có account_id: tìm trong các tài khoản Facebook đã nối xem ai quản lý nó (mặc định trước), dùng
+      token của người đó; không ai liệt kê được thì dùng token mặc định như trước;
+    - bỏ trống: tài khoản quảng cáo đầu tiên của tài khoản mặc định."""
+    args = args or {}
+    accts, err = await _acct_tokens(args.get("tai_khoan"))
+    if err:
+        return None, err, token
+    aid = str(args.get("account_id") or "").strip()
+    if aid:
+        n = aid.replace("act_", "")
+        for _label, tok in accts:
+            rows, e = await _all_adaccounts(tok, "account_id")
+            if not e and any(str(r.get("account_id")) == n for r in rows or []):
+                return "act_" + n, None, tok
+        return "act_" + n, None, (accts[0][1] if accts else token)
+    tok = accts[0][1] if accts else token
+    d = await _get("me/adaccounts", {"fields": "account_id", "limit": 1}, tok)
+    if isinstance(d, dict) and d.get("error"):
+        return None, _fmt(d), tok
+    data = (d or {}).get("data") or []
+    if not data:
+        return None, ("ERROR: Không thấy tài khoản quảng cáo nào. Kiểm tra bạn có quyền ads_read "
+                      "và là admin của ad account."), tok
+    return "act_" + (data[0].get("account_id") or "").replace("act_", ""), None, tok
 
 
 async def _accounts(args, ctx):
+    """Tài khoản quảng cáo của MỌI tài khoản Facebook đã nối, kèm ai đang quản lý (cùng BM nên một
+    tài khoản quảng cáo có thể hiện ở nhiều người, gộp lại một dòng)."""
     token = await _token()
     if not token:
         return "ERROR: " + (_check() or "chưa kết nối")
-    d = await _get("me/adaccounts",
-                   {"fields": "account_id,name,currency,account_status,amount_spent,balance", "limit": 100},
-                   token)
-    return _fmt(d)
+    accts, err = await _acct_tokens((args or {}).get("tai_khoan"))
+    if err:
+        return err
+    by_id, order, loi = {}, [], []
+    for label, tok in accts:
+        rows, e = await _all_adaccounts(tok)
+        if e:
+            loi.append(f"{label or 'tài khoản'}: {e}")
+            continue
+        for r in rows or []:
+            k = str(r.get("account_id"))
+            if k not in by_id:
+                by_id[k] = dict(r)
+                by_id[k]["tai_khoan"] = []
+                order.append(k)
+            if label and label not in by_id[k]["tai_khoan"]:
+                by_id[k]["tai_khoan"].append(label)
+    if not order and loi:
+        return loi[0]
+    data = [by_id[k] if by_id[k]["tai_khoan"] else {x: y for x, y in by_id[k].items() if x != "tai_khoan"}
+            for k in order]
+    out = {"data": data}
+    if loi:
+        out["loi_tai_khoan"] = loi
+    return _fmt(out)
 
 
 async def _insights(args, ctx):
     token = await _token()
     if not token:
         return "ERROR: " + (_check() or "chưa kết nối")
-    act, err = await _resolve_act(args, token)
+    act, err, token = await _resolve_act(args, token)
     if err:
         return err
     args = args or {}
@@ -112,7 +202,7 @@ async def _campaigns(args, ctx):
     token = await _token()
     if not token:
         return "ERROR: " + (_check() or "chưa kết nối")
-    act, err = await _resolve_act(args, token)
+    act, err, token = await _resolve_act(args, token)
     if err:
         return err
     args = args or {}
@@ -140,16 +230,20 @@ async def _raw_get(args, ctx):
             params = {}
     if not isinstance(params, dict):
         params = {}
-    d = await _get(path, params, token)
+    accts, aerr = await _acct_tokens(args.get("tai_khoan"))
+    if aerr:
+        return aerr
+    d = await _get(path, params, accts[0][1] if accts else token)
     return _fmt(d)
 
 
 def register(ctx):
     ctx.register_tool(
         name="meta_ads_accounts", min_mode="readonly", check_fn=_check, handler=_accounts,
-        description=("Liệt kê các tài khoản quảng cáo Facebook/Instagram của bạn (id, tên, tiền tệ, "
+        description=("Liệt kê tài khoản quảng cáo của MỌI tài khoản Facebook đã nối, kèm tài khoản nào quản lý (id, tên, tiền tệ, "
                      "trạng thái, tổng đã tiêu). Dùng đầu tiên để lấy account_id cho các tool khác."),
-        schema={"type": "object", "properties": {}},
+        schema={"type": "object", "properties": {
+            "tai_khoan": {"type": "string", "description": "Chỉ liệt kê của tài khoản Facebook này (bỏ trống = tất cả)"}}},
     )
     ctx.register_tool(
         name="meta_ads_insights", min_mode="readonly", check_fn=_check, handler=_insights,
@@ -158,6 +252,7 @@ def register(ctx):
                      "7 ngày; đổi bằng date_preset (today/yesterday/last_7d/last_14d/last_30d/this_month/"
                      "last_month...) hoặc since+until (YYYY-MM-DD). level = account|campaign|ad."),
         schema={"type": "object", "properties": {
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = tài khoản mặc định, tự tìm ai quản lý account_id)"},
             "account_id": {"type": "string", "description": "act_<id> hoặc <id> (bỏ trống = tài khoản đầu tiên)"},
             "date_preset": {"type": "string", "description": "vd last_7d, last_30d, this_month"},
             "since": {"type": "string", "description": "Từ ngày YYYY-MM-DD (dùng kèm until)"},
@@ -169,6 +264,7 @@ def register(ctx):
         description=("Liệt kê chiến dịch quảng cáo của một tài khoản (tên, trạng thái, mục tiêu, ngân sách "
                      "ngày/trọn đời, thời gian chạy). Bỏ trống account_id = tài khoản đầu tiên."),
         schema={"type": "object", "properties": {
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = tài khoản mặc định, tự tìm ai quản lý account_id)"},
             "account_id": {"type": "string", "description": "act_<id> hoặc <id> (bỏ trống = tài khoản đầu tiên)"},
             "limit": {"type": "integer", "description": "Số chiến dịch tối đa (mặc định 50)"}}},
     )
@@ -178,6 +274,7 @@ def register(ctx):
                      "3 tool trên chưa đủ. path = đường dẫn Graph (vd 'act_123/adsets', 'me/businesses'); "
                      "params = tham số truy vấn (object)."),
         schema={"type": "object", "properties": {
+            "tai_khoan": {"type": "string", "description": "Tên/id tài khoản Facebook muốn dùng (bỏ trống = mặc định)"},
             "path": {"type": "string", "description": "Đường dẫn Graph API, vd 'act_123/adsets'"},
             "params": {"type": "object", "description": "Tham số query (vd {\"fields\":\"name,status\"})"}},
             "required": ["path"]},

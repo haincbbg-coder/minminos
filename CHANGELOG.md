@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.139] - 2026-10-11
+### Sửa lỗi
+- **Facebook nhiều tài khoản: MinMin giờ biết Trang và tài khoản quảng cáo nào do tài khoản Facebook nào quản lý.** Trước đây hai công cụ Facebook Trang và Meta Ads chỉ dùng kết nối ĐẦU TIÊN, bỏ qua ngôi sao mặc định, nên nối thêm tài khoản thứ hai (vd HB Vũ bên cạnh Tố Khuyên) vẫn chỉ đọc và đăng bằng một tài khoản.
+- `fb_pages_list` và `meta_ads_accounts` gộp dữ liệu của MỌI tài khoản đã nối, mỗi Trang / tài khoản quảng cáo ghi rõ ai quản lý (cùng một BM Halimi nên một mục có thể do cả hai quản lý, chỉ hiện một dòng). Meta Ads lấy đủ cả trăm tài khoản quảng cáo nhờ đọc theo trang.
+- Đăng bài, đăng ảnh / video / album, sửa, xoá, trả lời bình luận, đọc bài và insights đều **tự chọn đúng token**: nói tên Trang (hoặc act_ id) là MinMin tự tìm tài khoản đang quản lý, nên đăng được từ máy nào hay từ điện thoại cũng vậy. Kết quả báo lại đã dùng tài khoản nào.
+- Trang cả hai cùng quản lý thì dùng tài khoản mặc định, hoặc tài khoản có quyền đăng. Tên Trang mơ hồ (vd "Melya" khớp hai Trang) thì báo lỗi chứ không đoán, tránh đăng nhầm. Có thêm tham số `tai_khoan` để chỉ định rõ. Một tài khoản hết token không làm hỏng tài khoản kia.
+
 ## [26.10.138] - 2026-10-11
 ### Thêm mới
 - **Dẫn nguồn dưới mỗi câu trả lời có số liệu** (Trụ 3). Lượt nào MinMin đọc dữ liệu thì cuối câu trả lời có dòng "Nguồn: tool nào, tham số gì, lúc mấy giờ", như một chứng từ.
