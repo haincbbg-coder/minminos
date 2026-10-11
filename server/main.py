@@ -87,6 +87,7 @@ import plugins_host   # hệ PLUGIN: thư mục Python thả vào, tự thêm to
 import danh_gia      # bộ chấm điểm "não": đo chất lượng trả lời khi đổi model (26.10.124)
 import dinh_tuyen    # định tuyến model theo độ khó câu hỏi (26.10.127)
 import nguon         # dẫn nguồn + neo số liệu dưới câu trả lời (Trụ 3, 26.10.137)
+import hanh_dong     # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
@@ -13107,6 +13108,36 @@ async def dinh_tuyen_thu(request: Request):
             "bat": bool(router_cfg.get("enabled")), "model": model}
 
 
+@app.get("/hanh-dong")
+async def hanh_dong_danh_sach(limit: int = Query(100), loai: str = Query(""), chi_loi: int = Query(0)):
+    """Sổ hành động ra ngoài đời (Trụ 4): ai, lúc nào, tool gì, tham số, kết quả, hoàn tác."""
+    return {"ok": True, "dong": hanh_dong.doc(min(int(limit or 100), 500), loai=loai, chi_loi=bool(chi_loi)),
+            "thong_ke": hanh_dong.thong_ke(), "nhan": hanh_dong.NHAN, "loai": list(hanh_dong.LOAI)}
+
+
+@app.get("/hanh-dong/chinh-sach")
+async def hanh_dong_chinh_sach_doc():
+    cs = (cfgmod.read_settings().get("quyen") or {}).get("loai_viec") or {}
+    return {"ok": True, "chinh_sach": hanh_dong.chuan_hoa_chinh_sach(cs), "nhan": hanh_dong.NHAN,
+            "loai": list(hanh_dong.LOAI), "hoan_tac": {l: hanh_dong.hoan_tac(l) for l in hanh_dong.LOAI}}
+
+
+@app.post("/hanh-dong/chinh-sach")
+async def hanh_dong_chinh_sach_luu(request: Request):
+    """Lưu quyền theo loại việc: {loai: cho_phep|chan}. Thiếu loại = cho phép."""
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    cs = hanh_dong.chuan_hoa_chinh_sach(data.get("chinh_sach") or data)
+    cfg = cfgmod.read_settings()
+    q = cfg.setdefault("quyen", {}) if isinstance(cfg.get("quyen"), dict) else {}
+    q["loai_viec"] = cs
+    cfg["quyen"] = q
+    cfgmod.write_settings(cfg)
+    return {"ok": True, "chinh_sach": cs}
+
+
 @app.get("/dinh-tuyen/gan-nhat")
 async def dinh_tuyen_gan_nhat():
     """30 quyết định định tuyến gần nhất (bậc, lý do, model) để trang Models kiểm tra bộ chia
@@ -16898,6 +16929,7 @@ async def websocket_endpoint(ws: WebSocket):
             conv_sid = store.get_or_create(
                 payload.get("session_id"), brain=_brain_key(brain), engine=engine_label,
                 model=(api_model or mcfg.get("claude_model")))
+            hanh_dong.dat_nguoi_lam(f"web:{conv_sid[:8]}")   # sổ hành động (Trụ 4): ai đang làm
             if payload.get("voice") and payload.get("utterance_id") and not _answer_receipt:
                 _old_voice = voice_turn_protocol.lookup(store, conv_sid, str(payload["utterance_id"]))
                 if _old_voice:

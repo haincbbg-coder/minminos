@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.140] - 2026-10-11
+### Thêm mới
+- **Sổ hành động ra ngoài đời** (Trụ 4), ở trang Kết nối, tab Đã nối: mỗi lần MinMin gửi tin, tạo đơn, đổi ngân sách ads hay xoá gì đó qua kết nối, một dòng được ghi: ai làm (khung chat nào, não nào, việc nền nào), lúc nào, tool gì, tham số gì (che token/mật khẩu), kết quả, và hoàn tác thế nào. Lọc theo loại việc, xem riêng dòng lỗi/bị chặn.
+- **Quyền theo loại việc**: sáu loại (xoá/huỷ, tiền & quảng cáo, đơn hàng & kho, nhắn tin & email, đăng bài, ghi khác). Tích "Chặn" loại nào là chặn loại đó ở tầng cứng của hub, cho mọi kết nối, mọi bộ não, mọi việc nền, kể cả mức Toàn quyền. Mặc định không chặn gì, giữ nguyên hành vi cũ.
+
 ## [26.10.139] - 2026-10-11
 ### Sửa lỗi
 - **Facebook nhiều tài khoản: MinMin giờ biết Trang và tài khoản quảng cáo nào do tài khoản Facebook nào quản lý.** Trước đây hai công cụ Facebook Trang và Meta Ads chỉ dùng kết nối ĐẦU TIÊN, bỏ qua ngôi sao mặc định, nên nối thêm tài khoản thứ hai (vd HB Vũ bên cạnh Tố Khuyên) vẫn chỉ đọc và đăng bằng một tài khoản.

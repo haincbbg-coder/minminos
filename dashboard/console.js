@@ -5827,6 +5827,15 @@
       // Cả hai khối đều NẰM TRONG DOM, chỉ ẩn đi - phần dây nối bên dưới tìm theo id và
       // chạy một lần cho cả hai, nên đổi tab không phải vẽ lại hay nối lại gì cả.
       + '<div id="mcpTabDaNoi"' + (_mcpTab === "danoi" ? "" : " hidden") + '>'
+      // Trụ 4 (26.10.139): sổ hành động ra ngoài + quyền theo loại việc. Vẽ khung, dữ liệu nạp sau.
+      + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.hd_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.hd_sub")) + '</span></h3>'
+      + '<div class="gcard aux-card"><div class="gcard-meta">' + esc(window.t("cs.hd_meta")) + '</div>'
+      + '<div id="hdChinhSach" class="aux-now-act" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:6px"></div>'
+      + '<div class="aux-now-act" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      + '<select id="hdLoc" class="mp-filter" style="margin:0;padding:6px 10px"><option value="">' + esc(window.t("cs.hd_all")) + '</option></select>'
+      + '<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" id="hdChiLoi"> ' + esc(window.t("cs.hd_only_err")) + '</label>'
+      + '<button class="gcard-btn ghost" id="hdTai">' + esc(window.t("cs.hd_refresh")) + '</button></div>'
+      + '<div id="hdSo" class="aux-note" style="margin-top:6px"></div></div></div>'
       + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.cn_connected_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.cn_account_n", { so: conns.length })) + '</span></h3>'
       + '<div class="gcard-meta" style="max-width:740px">' + esc(window.t("cs.cn_intro"))
       + '<label style="margin-left:8px;cursor:pointer"><input type="checkbox" id="mcpStrict" ' + (d.strict ? "checked" : "") + '> ' + esc(window.t("cs.cn_strict")) + '</label></div>'
@@ -5885,6 +5894,50 @@
         window.JavisPacks.moKho("connector", "mcp", VIEW_META.mcp ? VIEW_META.mcp.label : window.t("page.mcp.label"));
       }
     };
+    // ---- Trụ 4: sổ hành động + quyền theo loại việc ----
+    (async () => {
+      const csBox = document.getElementById("hdChinhSach");
+      const soBox = document.getElementById("hdSo");
+      const loc = document.getElementById("hdLoc");
+      if (!csBox || !soBox) return;
+      let NHAN = {}, LOAI = [];
+      const veCS = (cs) => {
+        csBox.innerHTML = LOAI.map(l => {
+          const chan = cs[l] === "chan";
+          return `<label class="seg-btn ${chan ? "sel" : ""}" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="${esc(window.t("cs.hd_policy_tip"))}">`
+            + `<input type="checkbox" data-hd-loai="${esc(l)}" ${chan ? "checked" : ""}> ${esc(window.t("cs.hd_block"))} ${esc(NHAN[l] || l)}</label>`;
+        }).join("");
+        csBox.querySelectorAll("[data-hd-loai]").forEach(ch => ch.onchange = async () => {
+          const moi = {};
+          csBox.querySelectorAll("[data-hd-loai]").forEach(x => { if (x.checked) moi[x.dataset.hdLoai] = "chan"; });
+          await postJson("/hanh-dong/chinh-sach", { chinh_sach: moi }, 10000);
+          ch.closest("label").classList.toggle("sel", ch.checked);
+        });
+      };
+      const veSo = async () => {
+        let d = null;
+        try { d = await (await fetch("/hanh-dong?limit=60&loai=" + encodeURIComponent(loc ? loc.value : "") + "&chi_loi=" + ((document.getElementById("hdChiLoi") || {}).checked ? 1 : 0))).json(); } catch (e) {}
+        if (!d || !d.ok) { soBox.innerHTML = ""; return; }
+        const tk = d.thong_ke || {};
+        const dem = Object.entries(tk.theo_loai || {}).filter(([, n]) => n).map(([l, n]) => `${esc(NHAN[l] || l)}: ${n}`).join(" · ");
+        const rows = (d.dong || []).map(r => `<tr><td style="opacity:.6;white-space:nowrap">${esc(String(r.ts || "").slice(5, 16).replace("T", " "))}</td>`
+          + `<td style="white-space:nowrap">${esc(r.ai || "?")}</td><td>${esc(NHAN[r.loai] || r.loai)}</td>`
+          + `<td><b>${esc(r.tool)}</b>${r.label ? ` <span style="opacity:.6">(${esc(r.label)})</span>` : ""}<div style="opacity:.7;font-size:12px">${esc(r.args || "")}</div></td>`
+          + `<td class="${r.ok ? "" : "warn"}">${r.ok ? ic("check", { cls: "ic-ok" }) : WARN_ICON + " " + esc(String(r.err || "").slice(0, 80))}</td></tr>`).join("");
+        soBox.innerHTML = `<div style="opacity:.7;margin-bottom:4px">${esc(window.t("cs.hd_count", { n: tk.tong || 0, chan: tk.bi_chan || 0 }))}${dem ? " · " + dem : ""}</div>`
+          + (rows ? `<table class="mini-tbl"><tbody>${rows}</tbody></table>` : `<div class="mp-empty">${esc(window.t("cs.hd_empty"))}</div>`);
+      };
+      try {
+        const c = await (await fetch("/hanh-dong/chinh-sach")).json();
+        NHAN = c.nhan || {}; LOAI = c.loai || [];
+        if (loc) LOAI.forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = NHAN[l] || l; loc.appendChild(o); });
+        veCS(c.chinh_sach || {});
+      } catch (e) {}
+      await veSo();
+      if (loc) loc.onchange = veSo;
+      const cl = document.getElementById("hdChiLoi"); if (cl) cl.onchange = veSo;
+      const tai = document.getElementById("hdTai"); if (tai) tai.onclick = veSo;
+    })();
     document.getElementById("mcpStrict").onchange = (e) => postJson("/mcp/strict", { strict: e.target.checked });
     // Gỡ một dịch vụ có sẵn. Luồng hỏi lại nằm trong `JavisPacks.goApp` chứ không viết lại ở
     // đây: dấu × trên thẻ và nút Gỡ trong kho là CÙNG một hành động, nên phải hỏi y hệt nhau -

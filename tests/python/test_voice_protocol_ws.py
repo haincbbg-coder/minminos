@@ -40,6 +40,7 @@ class VoiceProtocolWS(unittest.IsolatedAsyncioTestCase):
             namespace=dict(_real_ws=Socket(),json=json,store=store,voice_turn_protocol=vp,
                 _CHAT_RUNTIME=runtime,cfgmod=cfg,_chat_provider_for_session=lambda *a:('test','api','key','test'),
                 _dinh_tuyen_luot=lambda *a,**k:None,   # 26.10.136: bộ chia theo độ khó, test này không bật
+                hanh_dong=types.SimpleNamespace(dat_nguoi_lam=lambda *a,**k:None),   # 26.10.139: sổ hành động
                 _brain_key=lambda x:x,send_raw=send,send_client=send,sys=__import__('sys'),uuid=uuid,
                 limit_resume=types.SimpleNamespace(REGISTRY=reg),
                 _CONTEXT_RUNTIME=types.SimpleNamespace(start_turn=lambda *a:None),

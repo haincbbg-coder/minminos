@@ -33,9 +33,11 @@ import mcp_store
 import skill_router
 import skill_usage
 from config import STATE_DIR
+import hanh_dong   # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
 
 _TOKEN_PATH = STATE_DIR / ".hub_token"
 _AUDIT_PATH = STATE_DIR / "mcp_audit.jsonl"
+hanh_dong.dat_duong(STATE_DIR / "hanh-dong.jsonl")
 _CACHE_TTL = 60
 # Vòng dò có nguồn bị BỎ QUA (quá hạn/lỗi) thì danh sách tool là bản THIẾU. Cache nó đủ 60
 # giây là đóng băng cái thiếu đó: mọi lượt chat mở trong cửa sổ ấy nhận một hộp công cụ vắng
@@ -195,6 +197,15 @@ def _rate_ok(conn_id, connector):
     return True
 
 
+def _chinh_sach_loai_viec() -> dict:
+    """settings.quyen.loai_viec = {xoa|tien|don_hang|nhan_tin|dang_bai|khac: cho_phep|chan}."""
+    try:
+        return hanh_dong.chuan_hoa_chinh_sach(
+            (config.read_settings().get("quyen") or {}).get("loai_viec") or {})
+    except Exception:
+        return {}
+
+
 # ============================================================
 # Guarded call - lớp quyền CỨNG + audit quanh mọi tool call
 # ============================================================
@@ -207,6 +218,11 @@ def _guard(ent, fn, mode):
     async def _call(args):
         cls = mcp_catalog.classify(connector, tool, args)
         ok, why = mcp_catalog.allowed(connector, conn.get("perm"), mode, tool, args)
+        # QUYỀN THEO LOẠI VIỆC (Trụ 4): lớp cứng thứ hai, chỉ xét việc GHI. Chủ chặn "tiền" thì
+        # không prompt nào mở được, kể cả ở mức full.
+        loai = hanh_dong.loai_viec(conn.get("connector_id"), tool, args) if cls != "read" else ""
+        if ok and loai:
+            ok, why = hanh_dong.cho_phep(_chinh_sach_loai_viec(), loai)
         if ok and not _rate_ok(conn["id"], connector):
             ok, why = False, (f"Kết nối '{conn.get('label')}' vượt giới hạn tần suất "
                               f"(chống spam/khoá tài khoản). Chờ 1 phút rồi thử lại.")
@@ -215,9 +231,20 @@ def _guard(ent, fn, mode):
                            "connector": conn.get("connector_id"), "label": conn.get("label"),
                            "tool": tool, "mode": mode, "cls": cls, "ok": False, "ms": 0,
                            "err": why[:200], "args_keys": sorted((args or {}).keys())})
+            if loai:
+                hanh_dong.ghi(hanh_dong.dong_so(
+                    ai=hanh_dong.nguoi_lam(), tool=tool, connector=conn.get("connector_id"),
+                    label=conn.get("label"), loai=loai, cls=cls, mode=mode, ok=False, ms=0,
+                    args=args, err=why))
             return "ERROR: " + why
         t0 = time.time()
         result = await mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, args)
+        if loai:   # việc ghi ra ngoài đời: một dòng trong SỔ HÀNH ĐỘNG, dù thành hay bại
+            hanh_dong.ghi(hanh_dong.dong_so(
+                ai=hanh_dong.nguoi_lam(), tool=tool, connector=conn.get("connector_id"),
+                label=conn.get("label"), loai=loai, cls=cls, mode=mode,
+                ok=not str(result).startswith("ERROR:"), ms=int((time.time() - t0) * 1000),
+                args=args, err=str(result)[:200] if str(result).startswith("ERROR:") else ""))
         _audit_append({"ts": datetime.now().isoformat(timespec="seconds"), "conn_id": conn["id"],
                        "connector": conn.get("connector_id"), "label": conn.get("label"),
                        "tool": tool, "mode": mode, "cls": cls,
@@ -1378,6 +1405,10 @@ async def handle_http(request):
     # Chỉ engine Claude (config claude_config_path gắn X-Javis-Engine=claude) mới có tool native
     # mcp__* của connector tài khoản Claude → chỉ nó cần gợi ý ambient. Codex/engine API không có.
     include_ambient = (request.headers.get("x-javis-engine") or "").strip().lower() == "claude"
+    # Ai đang làm, cho sổ hành động: não CLI gọi hub qua HTTP nên ContextVar của lượt chat không
+    # tới được đây; ghi theo engine + mode là đủ để biết "Claude Code ở mức full làm việc này".
+    if not hanh_dong.nguoi_lam():
+        hanh_dong.dat_nguoi_lam(f"{(request.headers.get('x-javis-engine') or 'cli').strip().lower()}:{mode}")
     # Codex chạy MCP qua HTTP hub (khác Claude SDK đấu plugin in-process), nên nếu không mang
     # brain hiện tại thì plugin javis_schedule có tool nhưng không biết phải đọc kho cron nào.
     # Header chỉ nhận đường dẫn thư mục có thật; thiếu header thì `resolve_vault` suy ra brain
