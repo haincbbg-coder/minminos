@@ -61,10 +61,11 @@ check("map: assistant → text + tool_call, bỏ text rỗng",
 
 evs, _ = map_message(UserMessage(content=[
     ToolResultBlock(tool_use_id="t1", content=[{"type": "text", "text": "nội dung file"}]),
-    ToolResultBlock(tool_use_id="t2", content="chuỗi thẳng " + "x" * 600)]))
-check("map: tool_result list + str, clip 500",
+    ToolResultBlock(tool_use_id="t2", content="chuỗi thẳng " + "x" * 7000)]))
+# 26.10.142: trần 6000 (lớp dẫn nguồn cần đủ JSON để đối chiếu số; dashboard tự cắt 200 khi gửi)
+check("map: tool_result list + str, clip 6000",
       evs[0] == {"type": "tool_result", "content": "nội dung file"}
-      and evs[1]["content"].startswith("chuỗi thẳng") and len(evs[1]["content"]) == 500)
+      and evs[1]["content"].startswith("chuỗi thẳng") and len(evs[1]["content"]) == 6000)
 
 evs, sid = map_message(ResultMessage(
     subtype="success", duration_ms=1234, duration_api_ms=1000, is_error=False, num_turns=2,

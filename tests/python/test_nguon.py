@@ -49,6 +49,18 @@ c6 = ng.chan_nguon("x", "y", [{"name": "mcp__javis__javis_run_tool", "input": {"
                               {"name": "javis_search_tools", "input": {"query": "đơn"}}], ["{}"])
 check("xuyên lazy: tên thật + bỏ tool tìm", "pancake_orders(ngay=10/10)" in c6 and "javis_search_tools" not in c6, c6)
 check("tắt -> rỗng", ng.chan_nguon("1.000.000", "?", tc, kq, bat=False) == "")
+
+# ---------- 26.10.142: não CLI - tool hub tên mcp__javis__*, tool nội bộ bị lọc ----------
+c7 = ng.chan_nguon("Hôm nay 150 đơn, 51.740.000đ.", "báo cáo hôm nay", [
+    {"name": "mcp__javis__javis_search_tools", "input": {"query": "pancake"}},
+    {"name": "mcp__javis__javis_read_file", "input": {"path": "00 - Dashboard/x.json"}},
+    {"name": "mcp__javis__javis_run_tool", "input": {"name": "pancake-pos-halimi__pos_order", "args": {"from": "2026-10-11"}}},
+    {"name": "mcp__javis__meta_ads_get", "input": {"path": "owned_ad_accounts"}}],
+    ['{"orders": 150, "revenue": 51740000}'])
+check("CLI: tool thật + connector hiện, tool nội bộ bị lọc",
+      "pos_order(from=2026-10-11)" in c7 and "meta_ads_get" in c7 and "javis_read_file" not in c7 and "javis_search_tools" not in c7, c7)
+check("CLI: số có nguồn -> không cảnh báo", "⚠" not in c7, c7)
+
 check("không dùng gạch dài", "—" not in open(os.path.join(ROOT, "server/nguon.py"), encoding="utf-8").read())
 
 if fails:
