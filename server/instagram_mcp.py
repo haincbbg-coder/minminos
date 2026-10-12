@@ -40,7 +40,7 @@ from urllib.parse import urlparse
 
 import ket_noi_api as k
 
-PHIEN_BAN = "v25.0"
+PHIEN_BAN = "v26.0"
 HOST_IG = "https://graph.instagram.com"
 HOST_FB = "https://graph.facebook.com"
 TEN = "Instagram"

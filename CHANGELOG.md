@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.148] - 2026-10-13
+### Cải thiện
+- **Nâng kết nối Facebook, quảng cáo và Instagram lên Graph API v26.** Meta đã thông báo từ ngày 27/10/2026 các thay đổi của v26 áp lên mọi phiên bản cũ, nên ở lại v25 không né được. MinMin chỉ đọc quảng cáo, đăng bài và đọc bình luận, không dùng phần đơn hàng hay vị trí quảng cáo mà Meta gỡ, nên không ảnh hưởng chức năng hiện có. Nâng sớm để chạy ổn định trước mốc đó.
+
 ## [26.10.147] - 2026-10-12
 ### Thêm mới
 - **Nhật ký ai vào, ai rời nhóm Zalo.** Nhờ MinMin xem nhóm nào, lần đầu MinMin ghi mốc danh sách thành viên; từ lần sau báo rõ ai mới vào (kèm tên), ai đã rời, và lưu thành nhật ký riêng của nhóm. Muốn theo dõi đều thì hẹn lịch cho MinMin xem nhóm mỗi giờ hoặc mỗi ngày. Kết hợp với công cụ duyệt người xin vào nhóm ở bản trước.
