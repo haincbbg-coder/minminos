@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.150] - 2026-10-13
+### Sửa lỗi
+- Sửa bảng kiểm tra đường dẫn của bản trước (thêm 3 đường dẫn xem/sửa/xoá ký ức mà chưa cập nhật bảng), không ảnh hưởng người dùng.
+
 ## [26.10.149] - 2026-10-13
 ### Thêm mới
 - **Xem, sửa, xoá những điều MinMin đang nhớ ngay trên giao diện.** Trong trang Học có thêm mục "Điều MinMin đang nhớ", liệt kê từng ký ức (loại, ngày, nội dung). Điều nào sai hoặc đã cũ thì bấm Sửa hoặc Xoá, từ lần chat sau MinMin không dùng nữa. Trước đây chỉ xem được bằng cách mở file.
