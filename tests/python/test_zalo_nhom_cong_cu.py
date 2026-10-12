@@ -86,6 +86,28 @@ check("tìm 'lan' ra hai người và báo mơ hồ", len(r["matches"]) == 2 and
 r = json.loads(run(P._find, {"group_id": "7001", "name": "duc"}))
 check("tìm không dấu ra đúng một người", r["matches"] == [{"user_id": "333", "name": "Minh Đức"}], r)
 
+# 26.10.146: liệt kê nhóm, xem và duyệt người xin vào
+gia(MOT)
+TRA["v"] = (0, '[{"id":"9001","name":"Test"}]', "")
+r = run(P._list, {"query": "Test"})
+check("liệt kê nhóm: đúng lệnh có --query", CHAY[-1][1] == ["group", "list", "--query", "Test"] and "9001" in r, CHAY[-1])
+run(P._list, {})
+check("liệt kê nhóm không lọc", CHAY[-1][1] == ["group", "list"])
+TRA["v"] = (0, '[{"userId":"555","name":"Hoa"}]', "")
+r = run(P._pending, {"group_id": "9001"})
+check("xem chờ duyệt: đúng lệnh", CHAY[-1][1] == ["group", "pending", "9001"] and "555" in r, CHAY[-1])
+check("xem chờ duyệt thiếu group_id bị từ chối", run(P._pending, {}).startswith("ERROR"))
+TRA["v"] = (0, "", "")
+check("không ai chờ thì báo rõ", "Không có ai" in run(P._pending, {"group_id": "9001"}))
+r = run(P._decide, {"group_id": "9001", "action": "approve", "user_ids": ["555", "--x666"]})
+check("duyệt: đúng lệnh, id lọc về số", CHAY[-1][1] == ["group", "approve", "9001", "555", "666"], CHAY[-1])
+run(P._decide, {"group_id": "9001", "action": "reject", "user_ids": ["555"]})
+check("từ chối: dùng reject-member", CHAY[-1][1] == ["group", "reject-member", "9001", "555"], CHAY[-1])
+check("action lạ bị từ chối", run(P._decide, {"group_id": "9001", "action": "ban", "user_ids": ["1"]}).startswith("ERROR"))
+check("không có user_ids bị từ chối", run(P._decide, {"group_id": "9001", "action": "approve", "user_ids": []}).startswith("ERROR"))
+TRA["v"] = (1, "", "không phải quản trị viên")
+check("lỗi CLI được báo ra", run(P._pending, {"group_id": "9001"}).startswith("ERROR"))
+
 # nhiều tài khoản thì hỏi lại
 gia(HAI)
 check("nhiều tài khoản Zalo mà không nêu connection_id thì hỏi lại, không đoán",

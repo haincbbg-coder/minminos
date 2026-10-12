@@ -1,7 +1,7 @@
 name: Công cụ nhóm Zalo
 slug: zalo-nhom
 version: 1.0.0
-description: Tạo ghi chú, nhắc việc, bình chọn trong NHÓM Zalo và tìm thành viên theo tên để tag đúng người, bằng tài khoản đã quét QR ở trang Kết nối.
+description: Tạo ghi chú, nhắc việc, bình chọn trong NHÓM Zalo tìm thành viên theo tên để tag đúng người, liệt kê nhóm và duyệt người xin vào nhóm, bằng tài khoản đã quét QR ở trang Kết nối.
 author: MinMin (bundled)
 enabled: true
 min_mode: full
@@ -10,4 +10,7 @@ tools:
   - zalo_group_remind
   - zalo_group_poll
   - zalo_group_find_member
+  - zalo_group_list
+  - zalo_group_pending
+  - zalo_group_decide
 hooks: []

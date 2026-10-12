@@ -5,12 +5,16 @@ MCP 1.6.2 chỉ có đọc tin, tìm cuộc chat và gửi chữ. Nhưng CLI cù
 Plugin này gọi đúng các lệnh đó với HOME trỏ vào phiên Zalo đã đăng nhập (cách đã dùng ở
 plugin `zalo-image`), nên không quét QR lần hai và không viết lại giao thức.
 
-Bốn tool:
+Bảy tool (ba cái cuối thêm ở 26.10.146):
   - `zalo_group_note`   ghi chú của nhóm (có thể ghim)
   - `zalo_group_remind` nhắc việc của nhóm, giờ hiểu theo GIỜ VIỆT NAM (CLI hiểu theo múi giờ
                         máy chủ, nên đổi ở đây, nếu không "9h sáng" thành 16h)
   - `zalo_group_poll`   bình chọn trong nhóm
   - `zalo_group_find_member` tìm thành viên theo tên để lấy ID thật mà tag. Chỉ ĐỌC.
+
+  - `zalo_group_list`    liệt kê nhóm đang tham gia (lọc theo tên). Chỉ ĐỌC.
+  - `zalo_group_pending` xem người đang xin vào nhóm (cần là quản trị viên). Chỉ ĐỌC.
+  - `zalo_group_decide`  DUYỆT hoặc TỪ CHỐI người xin vào nhóm (hành động thật, min_mode full).
 
 Ba tool đầu là hành động thật trước mặt cả nhóm nên `min_mode: full`.
 """
@@ -254,6 +258,64 @@ async def _find(args, ctx):
                       ensure_ascii=False)
 
 
+def _rut(text: str, toi_da: int = 6000) -> str:
+    t = (text or "").strip()
+    return t if len(t) <= toi_da else t[:toi_da] + f"\n(đã cắt, còn {len(t) - toi_da} ký tự)"
+
+
+async def _list(args, ctx):
+    loi = _check()
+    if loi:
+        return "ERROR: " + loi
+    c, why = _chon(args)
+    if why:
+        return "ERROR: " + why
+    lenh = ["group", "list"]
+    q = _van_ban(args.get("query"), 100)
+    if q:
+        lenh += ["--query", q]
+    rc, out, err = await _cli(c["home"], *lenh)
+    return _loi_cli(rc, out, err) or _rut(out)
+
+
+async def _pending(args, ctx):
+    loi = _check()
+    if loi:
+        return "ERROR: " + loi
+    gid = _dung_so(args.get("group_id"))
+    if not gid:
+        return "ERROR: thiếu group_id."
+    c, why = _chon(args)
+    if why:
+        return "ERROR: " + why
+    rc, out, err = await _cli(c["home"], "group", "pending", gid)
+    e = _loi_cli(rc, out, err)
+    if e:
+        return e
+    return _rut(out) or json.dumps({"ok": True, "group_id": gid, "ghi_chu": "Không có ai đang chờ duyệt."},
+                                   ensure_ascii=False)
+
+
+async def _decide(args, ctx):
+    loi = _check()
+    if loi:
+        return "ERROR: " + loi
+    gid = _dung_so(args.get("group_id"))
+    quyet = str(args.get("action") or "").strip().lower()
+    ids = [_dung_so(x) for x in (args.get("user_ids") or []) if _dung_so(x)][:50]
+    if not gid or not ids:
+        return "ERROR: thiếu group_id hoặc user_ids (lấy từ zalo_group_pending)."
+    if quyet not in ("approve", "reject"):
+        return "ERROR: action chỉ nhận approve hoặc reject."
+    c, why = _chon(args)
+    if why:
+        return "ERROR: " + why
+    lenh = ["group", "approve" if quyet == "approve" else "reject-member", gid, *ids]
+    rc, out, err = await _cli(c["home"], *lenh)
+    return _loi_cli(rc, out, err) or json.dumps(
+        {"ok": True, "group_id": gid, "action": quyet, "user_ids": ids}, ensure_ascii=False)
+
+
 def register(ctx):
     chung = {"connection_id": {"type": "string", "description": "id kết nối Zalo, chỉ cần khi có nhiều tài khoản"}}
     ctx.register_tool(
@@ -292,3 +354,23 @@ def register(ctx):
         schema={"type": "object", "properties": {
             "group_id": {"type": "string"}, "name": {"type": "string"}, **chung},
             "required": ["group_id", "name"]})
+    ctx.register_tool(
+        name="zalo_group_list",
+        description="Liệt kê các nhóm Zalo tài khoản đang tham gia (tên, số thành viên, group_id). query lọc theo tên, không cần dấu.",
+        handler=_list, min_mode="readonly", check_fn=_check,
+        schema={"type": "object", "properties": {"query": {"type": "string"}, **chung}})
+    ctx.register_tool(
+        name="zalo_group_pending",
+        description="Xem NGƯỜI ĐANG XIN VÀO nhóm Zalo (chờ duyệt). Chỉ quản trị viên nhóm mới xem được. Cần group_id.",
+        handler=_pending, min_mode="readonly", check_fn=_check,
+        schema={"type": "object", "properties": {"group_id": {"type": "string"}, **chung},
+                "required": ["group_id"]})
+    ctx.register_tool(
+        name="zalo_group_decide",
+        description=("DUYỆT (approve) hoặc TỪ CHỐI (reject) người xin vào nhóm Zalo. user_ids lấy từ "
+                     "zalo_group_pending. Chỉ làm khi người dùng đã nói rõ duyệt ai, từ chối ai."),
+        handler=_decide, min_mode="full", check_fn=_check,
+        schema={"type": "object", "properties": {
+            "group_id": {"type": "string"}, "action": {"type": "string", "enum": ["approve", "reject"]},
+            "user_ids": {"type": "array", "items": {"type": "string"}}, **chung},
+            "required": ["group_id", "action", "user_ids"]})

@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.146] - 2026-10-12
+### Thêm mới
+- **Quản lý người xin vào nhóm Zalo ngay trong chat.** Ba công cụ mới cho bộ não: xem danh sách nhóm đang tham gia (lọc theo tên), xem ai đang xin vào nhóm, và duyệt hoặc từ chối từng người. Cần tài khoản Zalo là quản trị viên của nhóm. Duyệt và từ chối là việc thật nên chỉ chạy khi bố đã nói rõ duyệt ai, từ chối ai.
+
 ## [26.10.145] - 2026-10-12
 ### Sửa lỗi
 - **Tạo agent hoặc workflow tên tiếng Việt có dấu giờ đặt tên file không dấu.** Trước đây "Viết email" thành file `viết-email.md`, dễ lỗi trên một số máy và công cụ. Giờ ra `viet-email.md`. Trùng tên với cái có sẵn thì tự thêm số (`-2`, `-3`) chứ không ghi đè lên cái cũ. Agent và workflow đã có giữ nguyên, sửa vẫn lưu đúng chỗ cũ.
