@@ -1113,7 +1113,7 @@
   "cs.upd_rb_docker": "Cách lùi bản Docker:",
   "cs.upd_pin_a": "Hoặc pin image",
   "cs.upd_pin_b": "rồi Redeploy.",
-  "cs.upd_timeout": "Server chưa lên lại sau khoảng 3 phút - thử tải lại trang.",
+  "cs.upd_timeout": "Server chưa lên lại sau khoảng 10 phút - thử tải lại trang.",
   "cs.dl_read_err": "Không đọc được thư mục: ",
   "cs.dl_empty": "Thư mục \"{ten}\" không có file nào để tải.",
   "cs.dl_confirm": "\"{ten}\" có {so} file, khoảng {mb} MB.\nNén thành .zip và tải về?",

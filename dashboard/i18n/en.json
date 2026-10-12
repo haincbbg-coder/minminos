@@ -1113,7 +1113,7 @@
   "cs.upd_rb_docker": "How to roll back on Docker:",
   "cs.upd_pin_a": "Or pin the image",
   "cs.upd_pin_b": "then Redeploy.",
-  "cs.upd_timeout": "The server has not come back after about 3 minutes - try reloading the page.",
+  "cs.upd_timeout": "The server has not come back after about 10 minutes - try reloading the page.",
   "cs.dl_read_err": "Could not read the folder: ",
   "cs.dl_empty": "Folder \"{ten}\" has no files to download.",
   "cs.dl_confirm": "\"{ten}\" has {so} files, about {mb} MB.\nZip it and download?",

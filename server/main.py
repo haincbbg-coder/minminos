@@ -394,6 +394,19 @@ app.add_middleware(_NenTinh, minimum_size=1024)
 
 
 @app.middleware("http")
+async def _server_timing(request: Request, call_next):
+    """Header Server-Timing: thời gian máy chủ xử lý. Mở F12 > Network > Timing là thấy trang nào
+    chậm do máy chủ hay do mạng, khỏi đoán. Không lộ gì ngoài một con số."""
+    t0 = time.perf_counter()
+    resp = await call_next(request)
+    try:
+        resp.headers["Server-Timing"] = f"app;dur={(time.perf_counter() - t0) * 1000:.1f}"
+    except Exception:
+        pass
+    return resp
+
+
+@app.middleware("http")
 async def _static_cache_headers(request: Request, call_next):
     """Asset tĩnh có ?v= (cache-bust theo VERSION, index.html tự gắn) → cho cache 1 năm immutable.
     Không có ?v= thì giữ nguyên (ETag/Last-Modified của StaticFiles vẫn lo revalidate).
@@ -1399,7 +1412,10 @@ async def auth_login(request: Request, username: str = Form(...), password: str 
     cfg = cfgmod.read_settings()
     if not cfgmod.auth_enabled(cfg):
         return {"ok": True, "note": "auth chưa bật"}
-    if username.strip() != cfg["auth"].get("username") or not cfgmod.verify_password(password, cfg):
+    # Tên đăng nhập: cắt khoảng trắng + KHÔNG phân biệt hoa thường (điện thoại hay tự viết hoa
+    # chữ đầu: "Admin" thay vì "admin" từng bị báo sai). Mật khẩu vẫn khớp từng ký tự.
+    if (username.strip().casefold() != str(cfg["auth"].get("username") or "").strip().casefold()
+            or not cfgmod.verify_password(password, cfg)):
         _login_fail(ip)
         await asyncio.sleep(0.5)   # làm chậm brute-force online
         return JSONResponse({"ok": False, "error": "Sai tài khoản hoặc mật khẩu"}, status_code=401)

@@ -1213,7 +1213,7 @@
           if ((docker || !(state && state.state && state.state.phase)) && v.update_available === false && v.current && v.current !== oldCur) {
             clearInterval(poll); status.innerHTML = OK_ICON + " " + window.t("cs.upd_done_reload"); setTimeout(() => location.reload(), 1500); return;
           }
-          if (docker && tries >= 12 && v.current === oldCur) {
+          if (docker && tries >= 100 && v.current === oldCur) {
             clearInterval(poll); status.innerHTML = WARN_ICON + " " + window.t("cs.upd_slow");
             if (rollback) {
               const prev = root.dataset.previousVersion || v.previous_version || "";
@@ -1223,7 +1223,7 @@
             update.disabled = false; return;
           }
         } catch (e) {}
-        if (tries > 60) { clearInterval(poll); status.textContent = window.t("cs.upd_timeout"); update.disabled = false; }
+        if (tries > 200) { clearInterval(poll); status.textContent = window.t("cs.upd_timeout"); update.disabled = false; }
       }, 3000);
     };
     loadVersion();
@@ -3336,7 +3336,7 @@
             clearInterval(poll); st.innerHTML = OK_ICON + " " + esc(window.t("cs.upd_done_reload")); setTimeout(() => location.reload(), 1500); return;
           }
           // docker bản mới có thể lỗi: server vẫn còn bản cũ sau khá lâu → hiện cách lùi
-          if ((window._ovVerMode === "docker") && tries >= 12 && v && v.current === oldCur) {
+          if ((window._ovVerMode === "docker") && tries >= 100 && v && v.current === oldCur) {
             clearInterval(poll);
             const prev = window._ovVerPrev || (v.previous_version || "");
             st.innerHTML = WARN_ICON + " " + esc(window.t("cs.upd_slow"));
@@ -3349,7 +3349,7 @@
             verUpd.disabled = false; return;
           }
         } catch (e) { /* server đang restart - chờ tiếp */ }
-        if (tries > 60) { clearInterval(poll); st.innerHTML = esc(window.t("cs.upd_timeout")); verUpd.disabled = false; }
+        if (tries > 200) { clearInterval(poll); st.innerHTML = esc(window.t("cs.upd_timeout")); verUpd.disabled = false; }
       }, 3000);
     };
     ovLoadVersion();
