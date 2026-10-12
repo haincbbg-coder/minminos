@@ -7174,6 +7174,16 @@ def _ascii_slug(s: str) -> str:
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
     return _slugify(s)
 
+def _slug_moi(ten: str, thu_muc) -> str:
+    """Slug KHÔNG DẤU cho agent/workflow mới ("Viết email" -> viet-email). Trùng file có sẵn thì
+    thêm -2, -3 để KHÔNG ghi đè lên cái của người khác (bỏ dấu làm "Đặt hàng" và "Dat hang" trùng nhau)."""
+    goc = _ascii_slug(ten)
+    slug, n = goc, 2
+    while (Path(thu_muc) / f"{slug}.md").exists():
+        slug = f"{goc[:56]}-{n}"
+        n += 1
+    return slug
+
 def _read_md(path):
     try:
         text = Path(path).read_text(encoding="utf-8")
@@ -7373,7 +7383,7 @@ async def save_agent(name: str = Form(...), role: str = Form(""), skills: str = 
                      avatar_palette: str = Form(None), avatar_color: str = Form(None),
                      avatar_eye: str = Form(None), avatar_eye_color: str = Form(None),
                      avatar_eye_size: str = Form(None)):
-    slug = slug or _slugify(name)
+    slug = slug or _slug_moi(name, _agents_dir(brain))
     skills_list = [s.strip() for s in re.split(r"[,\n]", skills) if s.strip()]
     # `model_provider` nói RÕ model thuộc nhà nào - cùng một tên model có thể có ở hai nhà
     # (gemini-2.5-pro: Gemini CLI lẫn Gemini API; claude-*: Claude Code lẫn Anthropic API).
@@ -9036,7 +9046,7 @@ async def list_workflows(brain: str = Query("brain")):
 async def save_workflow(name: str = Form(...), description: str = Form(""), steps: str = Form("[]"),
                         status: str = Form("active"), slug: str = Form(""), brain: str = Form("brain"),
                         group: str = Form(NHOM_MAC_DINH)):
-    slug = slug or _slugify(name)
+    slug = slug or _slug_moi(name, _workflows_dir(brain))
     try:
         steps_list = json.loads(steps)
     except Exception:
