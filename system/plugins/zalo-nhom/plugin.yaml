@@ -13,4 +13,5 @@ tools:
   - zalo_group_list
   - zalo_group_pending
   - zalo_group_decide
+  - zalo_group_changes
 hooks: []

@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.147] - 2026-10-12
+### Thêm mới
+- **Nhật ký ai vào, ai rời nhóm Zalo.** Nhờ MinMin xem nhóm nào, lần đầu MinMin ghi mốc danh sách thành viên; từ lần sau báo rõ ai mới vào (kèm tên), ai đã rời, và lưu thành nhật ký riêng của nhóm. Muốn theo dõi đều thì hẹn lịch cho MinMin xem nhóm mỗi giờ hoặc mỗi ngày. Kết hợp với công cụ duyệt người xin vào nhóm ở bản trước.
+
 ## [26.10.146] - 2026-10-12
 ### Thêm mới
 - **Quản lý người xin vào nhóm Zalo ngay trong chat.** Ba công cụ mới cho bộ não: xem danh sách nhóm đang tham gia (lọc theo tên), xem ai đang xin vào nhóm, và duyệt hoặc từ chối từng người. Cần tài khoản Zalo là quản trị viên của nhóm. Duyệt và từ chối là việc thật nên chỉ chạy khi bố đã nói rõ duyệt ai, từ chối ai.

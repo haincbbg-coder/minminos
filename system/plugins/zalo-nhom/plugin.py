@@ -5,7 +5,7 @@ MCP 1.6.2 chỉ có đọc tin, tìm cuộc chat và gửi chữ. Nhưng CLI cù
 Plugin này gọi đúng các lệnh đó với HOME trỏ vào phiên Zalo đã đăng nhập (cách đã dùng ở
 plugin `zalo-image`), nên không quét QR lần hai và không viết lại giao thức.
 
-Bảy tool (ba cái cuối thêm ở 26.10.146):
+Tám tool (bốn cái cuối thêm ở 26.10.146):
   - `zalo_group_note`   ghi chú của nhóm (có thể ghim)
   - `zalo_group_remind` nhắc việc của nhóm, giờ hiểu theo GIỜ VIỆT NAM (CLI hiểu theo múi giờ
                         máy chủ, nên đổi ở đây, nếu không "9h sáng" thành 16h)
@@ -14,6 +14,7 @@ Bảy tool (ba cái cuối thêm ở 26.10.146):
 
   - `zalo_group_list`    liệt kê nhóm đang tham gia (lọc theo tên). Chỉ ĐỌC.
   - `zalo_group_pending` xem người đang xin vào nhóm (cần là quản trị viên). Chỉ ĐỌC.
+  - `zalo_group_changes` AI MỚI VÀO / RỜI nhóm kể từ lần xem trước (nhật ký thành viên). Ghi mốc ở máy.
   - `zalo_group_decide`  DUYỆT hoặc TỪ CHỐI người xin vào nhóm (hành động thật, min_mode full).
 
 Ba tool đầu là hành động thật trước mặt cả nhóm nên `min_mode: full`.
@@ -316,6 +317,71 @@ async def _decide(args, ctx):
         {"ok": True, "group_id": gid, "action": quyet, "user_ids": ids}, ensure_ascii=False)
 
 
+async def _ten_nguoi(home: str, ids: list) -> dict:
+    bang: dict = {}
+    for i in range(0, len(ids), 40):
+        rc, out, err = await _cli(home, "group", "members-info", *ids[i:i + 40])
+        if rc == 0:
+            _gom_nguoi(_json_dau(out), bang)
+    return bang
+
+
+async def _changes(args, ctx):
+    """Nhật ký thành viên: so danh sách thành viên HIỆN TẠI với mốc lần xem trước.
+
+    Zalo không bắn sự kiện "ai vừa vào" ra ngoài cho MinMin, nên cách chắc nhất là so hai bức ảnh.
+    Lần đầu chỉ ghi mốc. Mỗi lần sau trả ai vào, ai rời, và nối vào file nhật ký của nhóm."""
+    loi = _check()
+    if loi:
+        return "ERROR: " + loi
+    gid = _dung_so(args.get("group_id"))
+    if not gid:
+        return "ERROR: thiếu group_id."
+    c, why = _chon(args)
+    if why:
+        return "ERROR: " + why
+    rc, out, err = await _cli(c["home"], "group", "members", gid)
+    e = _loi_cli(rc, out, err)
+    if e:
+        return e
+    d = _json_dau(out)
+    ids = list(d.keys()) if isinstance(d, dict) else [str(x) for x in (d or [])]
+    hien_tai = sorted({_dung_so(x) for x in ids if _dung_so(x)})
+    if not hien_tai:
+        return "ERROR: không đọc được danh sách thành viên (cần là thành viên nhóm)."
+    from pathlib import Path
+    thu_muc = Path(ctx.data_dir) / "nhom"
+    thu_muc.mkdir(parents=True, exist_ok=True)
+    moc_f, nk_f = thu_muc / f"{gid}.json", thu_muc / f"{gid}.log.jsonl"
+    moc = None
+    try:
+        moc = json.loads(moc_f.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    bay_gio = datetime.now().strftime("%Y-%m-%d %H:%M")
+    luu = {"luc": bay_gio, "thanh_vien": hien_tai}
+    if not moc:
+        moc_f.write_text(json.dumps(luu, ensure_ascii=False), encoding="utf-8")
+        return json.dumps({"ok": True, "group_id": gid, "moc_moi": True, "so_thanh_vien": len(hien_tai),
+                           "ghi_chu": "Đã ghi mốc đầu tiên. Lần xem sau MinMin báo ai vào, ai rời."},
+                          ensure_ascii=False)
+    cu = set(moc.get("thanh_vien") or [])
+    moi = set(hien_tai)
+    vao, roi = sorted(moi - cu), sorted(cu - moi)
+    ten = await _ten_nguoi(c["home"], vao) if vao else {}
+    if vao or roi:
+        with nk_f.open("a", encoding="utf-8") as f:
+            for u in vao:
+                f.write(json.dumps({"luc": bay_gio, "su_kien": "vao", "user_id": u, "ten": ten.get(u, "")}, ensure_ascii=False) + "\n")
+            for u in roi:
+                f.write(json.dumps({"luc": bay_gio, "su_kien": "roi", "user_id": u}, ensure_ascii=False) + "\n")
+    moc_f.write_text(json.dumps(luu, ensure_ascii=False), encoding="utf-8")
+    return json.dumps({"ok": True, "group_id": gid, "tu": moc.get("luc"), "den": bay_gio,
+                       "so_thanh_vien": len(hien_tai),
+                       "vao": [{"user_id": u, "ten": ten.get(u, "")} for u in vao],
+                       "roi": [{"user_id": u} for u in roi]}, ensure_ascii=False)
+
+
 def register(ctx):
     chung = {"connection_id": {"type": "string", "description": "id kết nối Zalo, chỉ cần khi có nhiều tài khoản"}}
     ctx.register_tool(
@@ -374,3 +440,10 @@ def register(ctx):
             "group_id": {"type": "string"}, "action": {"type": "string", "enum": ["approve", "reject"]},
             "user_ids": {"type": "array", "items": {"type": "string"}}, **chung},
             "required": ["group_id", "action", "user_ids"]})
+    ctx.register_tool(
+        name="zalo_group_changes",
+        description=("Xem AI MỚI VÀO và AI ĐÃ RỜI nhóm Zalo kể từ lần xem trước (nhật ký thành viên). Lần đầu chỉ "
+                     "ghi mốc. Muốn theo dõi đều thì hẹn lịch gọi tool này định kỳ."),
+        handler=_changes, min_mode="safe", check_fn=_check,
+        schema={"type": "object", "properties": {"group_id": {"type": "string"}, **chung},
+                "required": ["group_id"]})
