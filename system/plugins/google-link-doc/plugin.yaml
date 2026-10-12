@@ -1,0 +1,10 @@
+name: Đọc link Google Docs/Sheets
+slug: google-link-doc
+version: 1.0.0
+description: Cho bộ não và bot đọc nội dung link Google Docs, Google Sheets, Google Slides chia sẻ công khai. Chỉ đọc.
+author: MinMin (bundled)
+enabled: true
+min_mode: readonly
+tools:
+  - google_link_doc
+hooks: []
