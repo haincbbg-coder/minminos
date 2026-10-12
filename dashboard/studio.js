@@ -113,7 +113,8 @@
       if (r && r.error) { alert(t("studio.import_fail") + " " + r.error); return; }
       const show = (a) => (a && a.length) ? a.join(", ") : t("studio.none");
       alert(`${t("studio.import_done")}\n• ${t("studio.imported")} ${show(r.imported)}\n• ${t("studio.skipped")} ${show(r.skipped)}`
-        + ((r.errors && r.errors.length) ? `\n• ${t("studio.errors")} ${r.errors.join("; ")}` : ""));
+        + ((r.errors && r.errors.length) ? `\n• ${t("studio.errors")} ${r.errors.join("; ")}` : "")
+        + ((r.warnings && r.warnings.length) ? `\n• ${t("studio.import_warn")} ${r.warnings.join("; ")}` : ""));
       if (reload) reload();
     };
     inp.click();

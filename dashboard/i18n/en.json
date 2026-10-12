@@ -730,6 +730,7 @@
   "studio.import_done": "Import finished.",
   "studio.imported": "Imported:",
   "studio.skipped": "Skipped (already there):",
+  "studio.import_warn": "Safety warnings (dangerous skills were locked; review them in the disabled list before enabling):",
   "studio.errors": "Errors:",
   "studio.var_input": "the input",
   "studio.var_prev": "the previous step's result",

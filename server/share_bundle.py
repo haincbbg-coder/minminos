@@ -26,12 +26,14 @@ import localefmt   # múi giờ theo cấu hình, thay UTC+7 nhúng cứng
 import io
 import json
 import re
+import shutil
 import unicodedata
 import zipfile
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import fastyaml
+import skill_scan
 
 _MAX_FILES = 300
 _MAX_TOTAL = 20 * 1024 * 1024      # tổng giải nén 20MB
@@ -224,8 +226,9 @@ def _dst_for(arc, agents_dir, workflows_dir, skills_root):
 
 def import_bundle(data: bytes, filename, *, agents_dir, workflows_dir, skills_root, overwrite=False):
     """Nhập 1 gói .zip (hoặc .md lẻ). Trả {imported, skipped, errors} (mỗi cái list 'type:slug')."""
-    res = {"imported": [], "skipped": [], "errors": []}
+    res = {"imported": [], "skipped": [], "errors": [], "warnings": [], "locked": []}
     imp, skp = set(), set()
+    quet = {}   # "typ:slug" -> các phát hiện của skill_scan
     name = (filename or "").lower()
     is_zip = data[:2] == b"PK" or name.endswith(".zip")
 
@@ -239,6 +242,16 @@ def import_bundle(data: bytes, filename, *, agents_dir, workflows_dir, skills_ro
             tmp.write_bytes(blob)
             tmp.replace(target)
             imp.add(key)
+            # Soi NỘI DUNG (rào zip chỉ soi đường dẫn). Không bao giờ làm hỏng lượt nhập.
+            try:
+                ten = str(arc or target.name)
+                ph = skill_scan.quet_ten_file(ten)
+                if target.suffix.lower() in (".md", ".txt", ".py", ".js", ".json", ".yaml", ".yml", ".sh", ""):
+                    ph += skill_scan.quet_van_ban(blob.decode("utf-8", "replace"), ten)
+                if ph:
+                    quet.setdefault(key, []).extend(ph)
+            except Exception:
+                pass
         except Exception as e:
             res["errors"].append(f"{arc or key}: {type(e).__name__}: {e}")
 
@@ -356,6 +369,27 @@ def import_bundle(data: bytes, filename, *, agents_dir, workflows_dir, skills_ro
             for smd_arc in goc_skill:
                 nhap_mot_skill(smd_arc)
 
+    # Skill có dấu hiệu NGUY HIỂM thì KHOÁ (chuyển sang .disabled), chủ đọc rồi tự bật. Skill/agent/
+    # workflow mức vừa vẫn nhập, chỉ cảnh báo. Khoá theo thư mục, không xoá gì của người dùng.
+    for key, ph in sorted(quet.items()):
+        typ, _, slug = key.partition(":")
+        mo_ta = skill_scan.tom_tat(ph)
+        if typ == "skill" and skill_scan.co_muc_cao(ph):
+            try:
+                src = Path(skills_root) / slug
+                dst = Path(skills_root) / ".disabled" / slug
+                if src.is_dir():
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    if dst.exists():
+                        shutil.rmtree(dst)
+                    shutil.move(str(src), str(dst))
+                    res["locked"].append(slug)
+                    res["warnings"].append(f"{key} bị KHOÁ vì nghi nguy hiểm: {mo_ta}")
+                    continue
+            except Exception as e:
+                res["errors"].append(f"{key}: không khoá được ({type(e).__name__}) - hãy kiểm tra tay: {mo_ta}")
+                continue
+        res["warnings"].append(f"{key}: {mo_ta}")
     res["imported"] = sorted(imp)
     res["skipped"] = sorted(skp - imp)
     return res

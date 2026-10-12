@@ -105,6 +105,7 @@ import oauth_mcp
 import system_sync   # tầng năng lực HỆ THỐNG (skill/loop mặc định) - update theo phiên bản app
 import skill_router   # nguồn chân lý khám phá skill (canonical <brain>/skills) dùng chung mọi engine
 import skill_usage     # telemetry: đếm skill nào THẬT SỰ được dùng qua javis_use_skill (tín hiệu DƯƠNG một chiều)
+import tong_hop_tuan
 import share_bundle   # xuất/nhập gói agent/skill/workflow (.zip) để chia sẻ giữa brain/người dùng
 import chat_import    # nhập lịch sử chat từ Claude Code / ChatGPT / claude.ai
 import brain_share    # link chia sẻ gói agent/skill/workflow của một brain (/bs/<token>)
@@ -5196,6 +5197,13 @@ def _fact_path(brain: str, slug: str):
     return _brain_memory_dir(brain) / "facts" / f"{slug}.md", slug
 
 
+@app.get("/digest/tuan")
+async def digest_tuan(brain: str = Query("brain")):
+    """Tổng hợp 7 ngày qua: ký ức mới, wiki, kỹ năng đã dùng, kỹ năng bị khoá. Chỉ đọc đĩa."""
+    text = await asyncio.to_thread(tong_hop_tuan.xay, _brain_root(brain), str(_brain_memory_dir(brain)))
+    return {"ok": True, "text": text}
+
+
 @app.get("/memory/facts")
 async def memory_facts(brain: str = Query("brain")):
     """Danh sách ký ức MinMin đang nhớ (một file = một ký ức), mới sửa nhất lên đầu."""
@@ -9696,7 +9704,13 @@ async def _bao_cao_tuan_neu_toi_gio() -> bool:
         return False
     usage_saving.ghi_moc("ngan_sach", tuan, "", "Đã gửi báo cáo token tuần")
     try:
-        await _notify_owner("" if dich == "auto" else dich, await _bao_cao_token("last_week"))
+        _bc = await _bao_cao_token("last_week")
+        try:   # thêm bản tổng hợp học được trong tuần; hỏng phần này thì vẫn gửi báo cáo token
+            _bc += "\n\n" + await asyncio.to_thread(
+                tong_hop_tuan.xay, _brain_root("brain"), str(_brain_memory_dir("brain")))
+        except Exception as _e:  # noqa: BLE001
+            print(f"[tong hop tuan] {type(_e).__name__}: {_e}", file=sys.stderr)
+        await _notify_owner("" if dich == "auto" else dich, _bc)
     except Exception as e:  # noqa: BLE001 - gửi hỏng thì thôi, đừng giết vòng lặp nền
         print(f"[bao cao tuan] {type(e).__name__}: {e}", file=sys.stderr)
     return True
