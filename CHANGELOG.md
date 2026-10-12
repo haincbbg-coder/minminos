@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.145] - 2026-10-12
+### Sửa lỗi
+- **Tạo agent hoặc workflow tên tiếng Việt có dấu giờ đặt tên file không dấu.** Trước đây "Viết email" thành file `viết-email.md`, dễ lỗi trên một số máy và công cụ. Giờ ra `viet-email.md`. Trùng tên với cái có sẵn thì tự thêm số (`-2`, `-3`) chứ không ghi đè lên cái cũ. Agent và workflow đã có giữ nguyên, sửa vẫn lưu đúng chỗ cũ.
+
 ## [26.10.144] - 2026-10-12
 ### Thêm mới
 - **MinMin đọc được link Google Docs, Google Sheets, Google Slides.** Dán link vào chat rồi nhờ đọc, tóm tắt hay làm theo bảng, bộ não tự mở và lấy nội dung (Sheets ra từng dòng, chọn được tab). Tài liệu cần để chế độ "Bất kỳ ai có đường liên kết đều xem được"; nếu còn riêng tư, MinMin báo rõ cách chia sẻ. Chỉ đọc, chỉ mở link của Google. Đây là nền để làm bảng "gửi link vào Sheet là MinMin tự đăng bài".
