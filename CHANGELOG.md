@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.144] - 2026-10-12
+### Thêm mới
+- **MinMin đọc được link Google Docs, Google Sheets, Google Slides.** Dán link vào chat rồi nhờ đọc, tóm tắt hay làm theo bảng, bộ não tự mở và lấy nội dung (Sheets ra từng dòng, chọn được tab). Tài liệu cần để chế độ "Bất kỳ ai có đường liên kết đều xem được"; nếu còn riêng tư, MinMin báo rõ cách chia sẻ. Chỉ đọc, chỉ mở link của Google. Đây là nền để làm bảng "gửi link vào Sheet là MinMin tự đăng bài".
+
 ## [26.10.143] - 2026-10-12
 ### Sửa lỗi
 - **Đăng nhập không còn khó tính chuyện hoa thường.** Điện thoại hay tự viết hoa chữ đầu ("Admin"), trước đây bị báo sai tài khoản. Giờ tên đăng nhập gõ hoa hay thường đều vào được. Mật khẩu vẫn phải đúng từng ký tự.
