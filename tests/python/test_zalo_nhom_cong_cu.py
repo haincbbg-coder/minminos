@@ -108,6 +108,28 @@ check("không có user_ids bị từ chối", run(P._decide, {"group_id": "9001"
 TRA["v"] = (1, "", "không phải quản trị viên")
 check("lỗi CLI được báo ra", run(P._pending, {"group_id": "9001"}).startswith("ERROR"))
 
+# 26.10.146: nhật ký thành viên (so mốc)
+import tempfile, pathlib
+class _Ctx:
+    data_dir = pathlib.Path(tempfile.mkdtemp(prefix="javis-znhom-"))
+gia(MOT)
+TV = {"v": {"111": 1, "222": 1}}
+def _cli_tv(lenh):
+    if lenh[1] == "members":
+        return 0, json.dumps(TV["v"]), ""
+    return 0, json.dumps([{"userId": "333", "displayName": "Hoa Mới"}]), ""
+TRA["v"] = _cli_tv
+r = json.loads(asyncio.run(P._changes({"group_id": "9001"}, _Ctx)))
+check("lần đầu chỉ ghi mốc", r["moc_moi"] and r["so_thanh_vien"] == 2, r)
+TV["v"] = {"111": 1, "333": 1}
+r = json.loads(asyncio.run(P._changes({"group_id": "9001"}, _Ctx)))
+check("lần sau báo 333 vào, 222 rời, có tên", r["vao"] == [{"user_id": "333", "ten": "Hoa Mới"}] and r["roi"] == [{"user_id": "222"}], r)
+r = json.loads(asyncio.run(P._changes({"group_id": "9001"}, _Ctx)))
+check("không đổi thì rỗng", r["vao"] == [] and r["roi"] == [], r)
+nk = (_Ctx.data_dir / "nhom" / "9001.log.jsonl").read_text(encoding="utf-8").strip().splitlines()
+check("nhật ký file có 2 dòng", len(nk) == 2, nk)
+check("thiếu group_id bị từ chối", asyncio.run(P._changes({}, _Ctx)).startswith("ERROR"))
+
 # nhiều tài khoản thì hỏi lại
 gia(HAI)
 check("nhiều tài khoản Zalo mà không nêu connection_id thì hỏi lại, không đoán",
