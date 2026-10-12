@@ -5183,6 +5183,74 @@ async def memory_stats(brain: str = Query("brain")):
     return {"facts": facts}
 
 
+_FACT_SLUG_RE = re.compile(r"^[\w][\w.\-]{0,120}$", re.UNICODE)
+
+
+def _fact_path(brain: str, slug: str):
+    """Đường dẫn file ký ức, hoặc None nếu tên không hợp lệ (chặn ../, dấu gạch chéo)."""
+    slug = str(slug or "").strip()
+    if slug.endswith(".md"):
+        slug = slug[:-3]
+    if not _FACT_SLUG_RE.match(slug) or ".." in slug:
+        return None, slug
+    return _brain_memory_dir(brain) / "facts" / f"{slug}.md", slug
+
+
+@app.get("/memory/facts")
+async def memory_facts(brain: str = Query("brain")):
+    """Danh sách ký ức MinMin đang nhớ (một file = một ký ức), mới sửa nhất lên đầu."""
+    d = _brain_memory_dir(brain) / "facts"
+    ra = []
+    for f in (d.glob("*.md") if d.is_dir() else []):
+        try:
+            meta, body = _read_md(f)
+            ra.append({"slug": f.stem, "type": str((meta or {}).get("type") or ""),
+                       "updated": str((meta or {}).get("updated") or ""),
+                       "text": (body or "").strip()[:1500], "mtime": f.stat().st_mtime})
+        except Exception:
+            continue
+    ra.sort(key=lambda x: x["mtime"], reverse=True)
+    return {"facts": ra[:500], "total": len(ra)}
+
+
+@app.post("/memory/facts/save")
+async def memory_fact_save(slug: str = Form(...), content: str = Form(...), brain: str = Form("brain")):
+    """Sửa nội dung một ký ức (giữ nguyên khối frontmatter, chỉ đổi phần thân)."""
+    p, slug = _fact_path(brain, slug)
+    if p is None or not p.is_file():
+        return JSONResponse({"ok": False, "error": "Không thấy ký ức này."}, status_code=404)
+    if len(content) > 20000:
+        return JSONResponse({"ok": False, "error": "Nội dung quá dài (tối đa 20.000 ký tự)."}, status_code=400)
+    meta, _ = _read_md(p)
+    meta = dict(meta or {})
+    meta["updated"] = _today()
+    _write_md(p, meta, content.strip() + "\n")
+    return {"ok": True, "slug": slug}
+
+
+@app.post("/memory/facts/delete")
+async def memory_fact_delete(slug: str = Form(...), brain: str = Form("brain")):
+    """Quên một ký ức: xoá file và bỏ dòng trỏ tới nó trong MEMORY.md."""
+    p, slug = _fact_path(brain, slug)
+    if p is None or not p.is_file():
+        return JSONResponse({"ok": False, "error": "Không thấy ký ức này."}, status_code=404)
+    p.unlink()
+    idx = _brain_memory_dir(brain) / "MEMORY.md"
+    bo = 0
+    try:
+        if idx.is_file():
+            giu = []
+            for dong in idx.read_text(encoding="utf-8").splitlines():
+                if f"facts/{slug}.md" in dong or f"[[{slug}]]" in dong:
+                    bo += 1
+                    continue
+                giu.append(dong)
+            idx.write_text("\n".join(giu) + "\n", encoding="utf-8")
+    except Exception:
+        pass
+    return {"ok": True, "slug": slug, "dong_chi_muc_da_bo": bo}
+
+
 @app.post("/reflect")
 async def reflect(brain: str = Form("brain")):
     """Nút 'Học từ hội thoại' (THỦ CÔNG): rút Memory + đúc Wiki từ hội thoại gần đây.

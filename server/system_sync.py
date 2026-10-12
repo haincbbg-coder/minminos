@@ -679,6 +679,8 @@ def ensure_synced(brain_root) -> Optional[dict]:
 LEGACY_HASHES.update({
     "skills/ingest-source": {
         "313675bc61ad2aae69b282e9289a1a126ce89eb7688e1e2bfa3cfa409428878d",
+        # bản 26.10.148 (trước khi thêm kỷ luật độ tin cậy ^[suy ra] / ^[chưa rõ])
+        "a5ff4dfc1ea5b38a01dce1f6d4f914e75791ac19dd8bc4a63128a2fc994eb138",
     },
     "skills/javis-builder": {
         "24081f68ed0152b09fc482dc79680e68e249e8153bc1c442f4a01af15b7f012f",
@@ -691,9 +693,11 @@ LEGACY_HASHES.update({
     # ingest-source bản trước contextual-retrieval (v0.9.33) = 313675bc... đã có ở trên
     "skills/lint-wiki": {
         "d12ab25e78405804c378af7ffb13c136d5fd6639cd5140b17231a533704b8bc8",
+        "68e678ad331e4a93bfa5fb0e8b173ea9fa9be83a0e47315d64c41346b9dd9e60",
     },
     "skills/query-wiki": {
         "de1f90fb9094ea7ab66fef95b62f0c8627058599165bb0ba1ae99e40163eb261",
+        "e02eb3ba911b3bd7f1ef79447e5b37d8f7368f3c4793504af0851272f6325d4d",
     },
 })
 

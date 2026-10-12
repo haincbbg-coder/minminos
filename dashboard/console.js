@@ -2680,6 +2680,7 @@
         </div>
       </div>
 
+      <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.mem_head"))}</h3><p style="color:var(--text3);font-size:13.5px;max-width:680px;margin:2px 0 10px">${esc(window.t("cs.mem_desc"))}</p><div id="lnFacts">${esc(window.t("common.loading"))}</div></div>
       <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.ln_review_head"))}</h3><div id="lnReview">${esc(window.t("common.loading"))}</div></div>
       <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.ln_log_head"))}</h3><div id="lnLog">${esc(window.t("common.loading"))}</div></div>
     </div>`;
@@ -2758,6 +2759,45 @@
     }
     // Hai khung dưới đây trước chỉ hiện 10 dòng nhật ký và 12 commit rồi hết - muốn xem xa hơn
     // là không có đường nào. Nay tải sâu hơn hẳn rồi lật trang tại chỗ bằng pager() dùng chung.
+    // Điều MinMin đang nhớ: xem, sửa, xoá từng ký ức (một file trong memory/facts).
+    async function loadFacts() {
+      const box = el.querySelector("#lnFacts");
+      let d = { facts: [] }; try { d = await (await fetch(`/memory/facts?brain=${encodeURIComponent(fbrain())}`)).json(); } catch (e) { }
+      const fs = d.facts || [];
+      if (!fs.length) { box.innerHTML = `<div class="dim" style="color:var(--text3)">${esc(window.t("cs.mem_empty"))}</div>`; return; }
+      pager(box, fs, 8, (rows) => rows.map(f => `<div class="le" data-slug="${esc(f.slug)}">
+          <b>${esc(f.slug)}</b> <span class="dim" style="color:var(--text3)">${esc(f.type)}${f.updated ? " · " + esc(f.updated) : ""}</span>
+          <div class="memTxt" style="white-space:pre-wrap;margin:4px 0">${esc(f.text.length > 400 ? f.text.slice(0, 400) + "…" : f.text)}</div>
+          <button class="s-btn-ghost memEdit">${esc(window.t("cs.mem_edit"))}</button>
+          <button class="s-btn-ghost memDel" style="color:var(--warn-ink)">${esc(window.t("cs.mem_del"))}</button>
+        </div>`).join(""), "");
+      const byslug = Object.fromEntries(fs.map(f => [f.slug, f]));
+      box.onclick = async (ev) => {
+        const row = ev.target.closest(".le[data-slug]"); if (!row) return;
+        const slug = row.getAttribute("data-slug");
+        if (ev.target.closest(".memDel")) {
+          if (!confirm(window.t("cs.mem_del_confirm", { ten: slug }))) return;
+          const f = new FormData(); f.append("slug", slug); f.append("brain", fbrain());
+          let r = {}; try { r = await (await fetch("/memory/facts/delete", { method: "POST", body: f })).json(); } catch (e) { r = { error: e.message }; }
+          if (!r.ok) alert(r.error || "?");
+          loadFacts(); loadMetrics();
+        } else if (ev.target.closest(".memEdit")) {
+          const txt = row.querySelector(".memTxt");
+          if (row.querySelector("textarea")) return;
+          const ta = document.createElement("textarea");
+          ta.value = (byslug[slug] || {}).text || ""; ta.rows = 6; ta.style.cssText = "width:100%;box-sizing:border-box;margin:4px 0";
+          txt.replaceWith(ta);
+          const ok = document.createElement("button"); ok.className = "s-btn"; ok.textContent = window.t("cs.mem_save");
+          ev.target.closest(".memEdit").replaceWith(ok);
+          ok.onclick = async () => {
+            const f = new FormData(); f.append("slug", slug); f.append("content", ta.value); f.append("brain", fbrain());
+            let r = {}; try { r = await (await fetch("/memory/facts/save", { method: "POST", body: f })).json(); } catch (e) { r = { error: e.message }; }
+            if (!r.ok) { alert(r.error || "?"); return; }
+            loadFacts();
+          };
+        }
+      };
+    }
     async function loadReview() {
       let d = { commits: [] }; try { d = await (await fetch(`/learn/review?brain=${encodeURIComponent(fbrain())}&limit=60`)).json(); } catch (e) { }
       const box = el.querySelector("#lnReview");
@@ -2833,7 +2873,7 @@
       el.querySelector("#bkStatus").innerHTML = `${esc(window.t("cs.bk_last"))} ${esc(when)}${s.last_status ? " · " + esc(s.last_status) : ""}${brainsNote}${gitNote}`;
     }
 
-    function loadAll() { loadMetrics(); loadReview(); loadLog(); loadBackup(); }
+    function loadAll() { loadMetrics(); loadFacts(); loadReview(); loadLog(); loadBackup(); }
     loadAll();
   }
 
