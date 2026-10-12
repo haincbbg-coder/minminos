@@ -41,12 +41,21 @@ def has_git() -> bool:
     return shutil.which("git") is not None
 
 
+def _env_git() -> dict:
+    """Ép git nói tiếng Anh: máy đặt ngôn ngữ Việt/Đức thì thông báo đổi chữ và code đọc sai
+    trạng thái (vd tìm "nothing to commit"). LC_ALL=C là cách chắc nhất."""
+    e = dict(os.environ)
+    e["LC_ALL"] = "C"
+    e["LANG"] = "C"
+    return e
+
+
 def _git(root: str, *args, timeout: int = 30) -> subprocess.CompletedProcess:
     """Chạy git trong <root>. KHÔNG raise; caller đọc returncode/stdout."""
     return subprocess.run(
         ["git", "-C", str(root), *args],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
-        timeout=timeout, creationflags=_no_window(),
+        timeout=timeout, creationflags=_no_window(), env=_env_git(),
     )
 
 
@@ -512,7 +521,7 @@ def remote_reachable(repo_url: str, token: str, timeout: int = 30) -> dict:
     try:
         r = subprocess.run(["git", "ls-remote", _auth_url(repo_url, token), "HEAD"],
                            capture_output=True, text=True, encoding="utf-8", errors="replace",
-                           timeout=timeout, creationflags=_no_window())
+                           timeout=timeout, creationflags=_no_window(), env=_env_git())
         if r.returncode != 0:
             return {"ok": False, "error": _redact((r.stderr or "không kết nối được").strip()[:250], token)}
         return {"ok": True}
@@ -683,7 +692,7 @@ def _git_bytes(root: str, *args, timeout: int = 30) -> subprocess.CompletedProce
     """git trả stdout BYTES (cho `git show` nội dung file - an toàn với file nhị phân/ảnh)."""
     return subprocess.run(
         ["git", "-C", str(root), *args],
-        capture_output=True, timeout=timeout, creationflags=_no_window(),
+        capture_output=True, timeout=timeout, creationflags=_no_window(), env=_env_git(),
     )
 
 

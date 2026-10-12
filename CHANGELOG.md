@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.143] - 2026-10-12
+### Sửa lỗi
+- **Đăng nhập không còn khó tính chuyện hoa thường.** Điện thoại hay tự viết hoa chữ đầu ("Admin"), trước đây bị báo sai tài khoản. Giờ tên đăng nhập gõ hoa hay thường đều vào được. Mật khẩu vẫn phải đúng từng ký tự.
+- **Bộ não đồng bộ qua git không còn đọc sai khi máy đặt ngôn ngữ khác.** Máy tiếng Việt hoặc tiếng Đức làm git đổi chữ thông báo, code đọc nhầm trạng thái. Giờ git luôn chạy ở chế độ tiếng Anh cố định.
+- **Nút Cập nhật chờ lâu hơn.** Trước chỉ chờ khoảng 3 phút rồi báo lỗi, trong khi cập nhật bằng Docker có khi mất vài phút. Giờ chờ tới khoảng 10 phút mới báo.
+### Cải thiện
+- Mọi phản hồi của máy chủ kèm thời gian xử lý (Server-Timing). Mở F12, thẻ Network, thẻ Timing là thấy trang nào chậm do máy chủ.
+
 ## [26.10.142] - 2026-10-11
 ### Cải thiện
 - **Chân nguồn và tự kiểm số liệu giờ có cả khi chạy bằng Claude Code** (trước chỉ não API). Báo cáo như "Hôm nay HALIMI 150 đơn, 51,7 triệu" chạy bằng Claude Code cũng có dòng "Nguồn: pos_order, meta_ads_get · lúc 13:00" và cảnh báo nếu có số không thấy trong dữ liệu. Tool nội bộ (đọc file brain, tìm tool) không bị kể vào nguồn cho đỡ rối.
