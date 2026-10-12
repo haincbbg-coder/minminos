@@ -39,8 +39,8 @@ def check(n, c):
 import oauth_mcp  # noqa: E402
 import secrets_store  # noqa: E402
 
-META_AUTH = {"provider": "meta", "authorize_url": "https://www.facebook.com/v25.0/dialog/oauth",
-             "token_url": "https://graph.facebook.com/v25.0/oauth/access_token",
+META_AUTH = {"provider": "meta", "authorize_url": "https://www.facebook.com/v26.0/dialog/oauth",
+             "token_url": "https://graph.facebook.com/v26.0/oauth/access_token",
              "scopes": ["ads_read", "business_management"]}
 
 

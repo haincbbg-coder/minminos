@@ -27,8 +27,8 @@ LY_DO_CHUA = {
     "threads": "Threads chưa làm ở bản này.",
     "zalo": "Zalo cá nhân không có API đăng bài lên nhật ký. Chưa làm ở bản này.",
 }
-GRAPH = "https://graph.facebook.com/v25.0"
-RUPLOAD = "https://rupload.facebook.com/video-upload/v25.0"
+GRAPH = "https://graph.facebook.com/v26.0"
+RUPLOAD = "https://rupload.facebook.com/video-upload/v26.0"
 TT_API = "https://open.tiktokapis.com/v2"
 TT_AUTH = "https://www.tiktok.com/v2/auth/authorize/"
 TT_CHUNK = 10 * 1024 * 1024          # TikTok: mỗi mảnh 5-64MB, mảnh cuối được dôi tới 128MB

@@ -114,8 +114,8 @@ check("/mt/ công khai, /connect/meta-tram thì không",
       and not any("/connect/meta-tram".startswith(p) for p in main._AUTH_PUBLIC_PREFIX))
 
 # ---------- luồng đăng nhập đầy đủ ----------
-META_AUTH = {"provider": "meta", "authorize_url": "https://www.facebook.com/v25.0/dialog/oauth",
-             "token_url": "https://graph.facebook.com/v25.0/oauth/access_token",
+META_AUTH = {"provider": "meta", "authorize_url": "https://www.facebook.com/v26.0/dialog/oauth",
+             "token_url": "https://graph.facebook.com/v26.0/oauth/access_token",
              "scopes": ["ads_read", "pages_manage_posts", "khong_cho_phep"]}
 oauth_mcp._conn = lambda cid: {"id": cid, "url": "", "connector": {"auth": META_AUTH}}
 oauth_mcp.mcp_store.connection_secrets = lambda cid: {}

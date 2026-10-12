@@ -55,7 +55,7 @@ import httpx
 
 import danh_tinh
 
-GRAPH_VER = "v25.0"
+GRAPH_VER = "v26.0"
 DIALOG = f"https://www.facebook.com/{GRAPH_VER}/dialog/oauth"
 TOKEN_URL = f"https://graph.facebook.com/{GRAPH_VER}/oauth/access_token"
 GRAPH = f"https://graph.facebook.com/{GRAPH_VER}"

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-GRAPH = "https://graph.facebook.com/v25.0"
+GRAPH = "https://graph.facebook.com/v26.0"
 CONNECTOR_ID = "meta-ads-graph"
 _INSIGHT_FIELDS = "spend,impressions,clicks,ctr,cpc,cpm,reach,frequency,actions,action_values"
 _CAMPAIGN_FIELDS = "name,status,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time"

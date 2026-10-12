@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import json
 
-GRAPH = "https://graph.facebook.com/v25.0"
+GRAPH = "https://graph.facebook.com/v26.0"
 # Upload video phải đi host riêng của Meta (graph thường từ chối file video)
-GRAPH_VIDEO = "https://graph-video.facebook.com/v25.0"
+GRAPH_VIDEO = "https://graph-video.facebook.com/v26.0"
 CONNECTOR_ID = "facebook-pages"
 
 
