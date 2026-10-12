@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.149] - 2026-10-13
+### Thêm mới
+- **Xem, sửa, xoá những điều MinMin đang nhớ ngay trên giao diện.** Trong trang Học có thêm mục "Điều MinMin đang nhớ", liệt kê từng ký ức (loại, ngày, nội dung). Điều nào sai hoặc đã cũ thì bấm Sửa hoặc Xoá, từ lần chat sau MinMin không dùng nữa. Trước đây chỉ xem được bằng cách mở file.
+- **Kho tri thức gắn nhãn độ tin cậy cho từng ý.** Khi nạp tài liệu vào wiki, câu lấy thẳng từ nguồn thì có trích dẫn, câu MinMin tự suy ra gắn `^[suy ra]`, câu nguồn mơ hồ gắn `^[chưa rõ]`, và số liệu thì không bao giờ được suy ra. Kiểm tra wiki cảnh báo trang trượt sang suy đoán, và khi trả lời MinMin nói rõ ý nào chỉ là suy ra, không trình bày như sự thật.
+
 ## [26.10.148] - 2026-10-13
 ### Cải thiện
 - **Nâng kết nối Facebook, quảng cáo và Instagram lên Graph API v26.** Meta đã thông báo từ ngày 27/10/2026 các thay đổi của v26 áp lên mọi phiên bản cũ, nên ở lại v25 không né được. MinMin chỉ đọc quảng cáo, đăng bài và đọc bình luận, không dùng phần đơn hàng hay vị trí quảng cáo mà Meta gỡ, nên không ảnh hưởng chức năng hiện có. Nâng sớm để chạy ổn định trước mốc đó.

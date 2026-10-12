@@ -18,7 +18,7 @@ có trích dẫn và lưu lại kết quả giá trị.
 1. Đọc `wiki/index.md` TRƯỚC để biết có trang nào.
 2. Đọc các trang wiki liên quan (theo nhóm/tên); đọc trang được `[[link]]` tới nếu cần đủ context.
 3. Thiếu -> đọc `sources/` tương ứng. Vẫn thiếu -> append 1 dòng vào `wiki/_open-questions.md`.
-4. Trả lời có `[[citation]]` cho mọi khẳng định cụ thể. Nói rõ chỗ nào wiki chưa cover thay vì bịa.
+4. Trả lời có `[[citation]]` cho mọi khẳng định cụ thể. Nói rõ chỗ nào wiki chưa cover thay vì bịa. Phân biệt rõ ý có nguồn thẳng với ý trang wiki đánh dấu `^[suy ra]` hoặc `^[chưa rõ]`: nói thẳng "wiki ghi là suy ra, chưa có nguồn" thay vì trình bày như sự thật; tuyệt đối không dùng ý `^[suy ra]` làm số liệu trong báo cáo.
 5. Nếu câu trả lời có GIÁ TRỊ TÁI DÙNG (so sánh, phân tích, mapping mới) -> đề xuất lưu thành 1 trang wiki mới (compounding: khám phá cũng tích luỹ vào bộ não, không tan vào lịch sử chat).
 
 7 dạng câu hỏi chất lượng cao: Tổng hợp (bảng so sánh) · So sánh 3+ (ma trận) · Giả thuyết (phân tích ảnh hưởng) · Gán nhãn/liệt kê · Trực quan hoá (canvas/sơ đồ) · Dịch/chuyển ngữ · Tự kiểm gap (append open-questions).

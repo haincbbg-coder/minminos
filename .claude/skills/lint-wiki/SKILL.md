@@ -12,7 +12,7 @@ group: AI
 Kích hoạt khi người dùng nói những câu như: "health check wiki", "lint wiki", "wiki có
 lỗi gì không", "rà soát bộ não".
 
-Quét `wiki/` phát hiện 8 loại vấn đề:
+Quét `wiki/` phát hiện 9 loại vấn đề:
 1. Mâu thuẫn giữa các trang (gồm section `## Mâu thuẫn` ghi nhận trước mà chưa giải).
 2. Stale claim (trang cũ chưa cập nhật theo source mới).
 3. Orphan (không có inbound `[[link]]`).
@@ -21,5 +21,6 @@ Quét `wiki/` phát hiện 8 loại vấn đề:
 6. Trùng lặp (2 trang gần giống -> đề xuất merge).
 7. Gap (vùng kiến thức mỏng, cần thêm source / web search).
 8. Open-question tồn lâu trong `wiki/_open-questions.md`.
+9. Trượt sang suy đoán: trang có nhiều câu gắn `^[suy ra]` hoặc `^[chưa rõ]` hơn câu có citation `[[Nguồn]]`; số liệu (tiền, số lượng, ngày) bị gắn `^[suy ra]`; câu cụ thể không có citation lẫn nhãn nào. Liệt kê trang và vài câu mẫu để người dùng bổ sung nguồn hoặc xoá.
 
 NGUYÊN TẮC VÀNG: chỉ TRẢ VỀ DANH SÁCH có đánh số. TUYỆT ĐỐI KHÔNG tự sửa 50 chỗ một lúc. Người dùng ưu tiên rồi ra lệnh sửa từng cái (tránh mất kiểm soát audit).

@@ -12,7 +12,7 @@ group: AI
 Kích hoạt khi người dùng nói những câu như: "tiêu hoá source này", "xử lý bài này vào
 wiki", "đọc file này rồi ghi lại kiến thức", hoặc khi có file mới thả vào `sources/`.
 
-Skill làm theo đúng 3 kỷ luật của vault.
+Skill làm theo đúng 3 kỷ luật của vault, cộng thêm kỷ luật độ tin cậy (nhãn `^[suy ra]`, `^[chưa rõ]`).
 
 Đọc schema vault (`CLAUDE.md`/`AGENTS.md` ở gốc brain) trước; đây là bản thao tác của phép INGEST.
 
@@ -27,11 +27,12 @@ Skill làm theo đúng 3 kỷ luật của vault.
 1. Đọc source (kèm ảnh nếu có).
 2. Tóm tắt 3-5 ý chính; rút insight/framework; liên hệ khái niệm đã có.
 3. Xác định trang wiki: mới cần tạo / cần cập nhật / cần merge (đọc `wiki/index.md` để dedup).
-4. Viết/cập nhật wiki (1 trang = 1 ý, có `[[...]]` ngược lại trang liên quan) - TUÂN THỦ 3 KỶ LUẬT:
+4. Viết/cập nhật wiki (1 trang = 1 ý, có `[[...]]` ngược lại trang liên quan) - TUÂN THỦ 4 KỶ LUẬT:
    - Citation cứng: mỗi câu cụ thể kết bằng `[[Nguồn]]`.
    - Mục tiêu vs thực tế: gắn nhãn "(mục tiêu)" / "(thực tế tính đến ...)" / "(cần xác minh)".
    - Mâu thuẫn với trang cũ: thêm `## Mâu thuẫn` (giữ cả 2 quan điểm + nguồn) + append `wiki/_open-questions.md`, KHÔNG ghi đè.
-   Ngoài 3 kỷ luật, mỗi trang phải TỰ ĐỦ NGỮ CẢNH (contextual retrieval - trang tách khỏi source vẫn hiểu và tìm thấy được):
+   - Độ tin cậy từng ý (kỷ luật thứ 4): câu lấy THẲNG từ source thì để citation `[[Nguồn]]`. Câu là kết luận/ghép ý của BẠN (không nằm nguyên văn trong source) thì kết bằng `^[suy ra]`. Câu mà source mơ hồ, nói không rõ hoặc các source nói khác nhau thì kết bằng `^[chưa rõ]`. Số liệu (tiền, số lượng, ngày) KHÔNG BAO GIỜ được gắn `^[suy ra]`: không có trong source thì không viết.
+   Ngoài 4 kỷ luật, mỗi trang phải TỰ ĐỦ NGỮ CẢNH (contextual retrieval - trang tách khỏi source vẫn hiểu và tìm thấy được):
    - Mở đầu trang bằng 1-2 câu định vị: khái niệm này là gì, thuộc chủ đề/nguồn nào, dùng khi nào. Nhất là khi ingest source dài theo từng đoạn - đoạn giữa sách mà thiếu câu định vị là sau này đọc lẻ không hiểu.
    - Frontmatter thêm `aliases: [tên gọi khác, viết tắt, thuật ngữ tiếng Anh]` - để sau này hỏi bằng từ khác thì grep/search vẫn bắt trúng trang.
 5. Cập nhật `wiki/index.md` (thêm dòng link + mô tả 1 dòng).
