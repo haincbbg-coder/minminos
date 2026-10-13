@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.155] - 2026-10-13
+### Cải thiện
+- **Thấy rõ token đi đâu.** Dòng token dưới mỗi câu trả lời nay ghi thêm bao nhiêu phần trăm được đọc lại từ cache của nhà cung cấp (Anthropic tính 10% giá), nên "311k token" không còn đọc nhầm thành 311k token mới. Đếm được trên Claude Code và mọi bộ não API.
+- **Thẻ "Tiết kiệm token" đo ngữ cảnh cố định** nạp lại ở mọi bước: CLAUDE.md, bộ nhớ, skill, mô tả tool, mỗi khối bao nhiêu token. Đây là phần nặng nhất của một báo cáo nhiều bước, giờ có số để quyết cắt chỗ nào.
+- Tool nóng trùng tên trên hai kết nối (hai shop Pancake) ghi kèm tên kết nối, không còn trông như bị lặp.
+
 ## [26.10.154] - 2026-10-13
 ### Cải thiện
 - **Tiết kiệm token, không mất số** (Lớp 6), chạy ngầm cho mọi bộ não. Kết quả tool chỉ đọc được giữ 3 phút: cùng tool cùng tham số thì không gọi Pancake hay ads lần nữa (vừa ghi gì lên kết nối đó là xoá đệm ngay). Dữ liệu JSON được nén lại bỏ thụt dòng và trường rỗng nhưng giữ nguyên mọi con số và số dòng. Mười hai tool hay gọi nhất luôn hiện thẳng cho não, không phải mò qua lớp tìm tool.

@@ -62,6 +62,21 @@ check("k giới hạn", tk.tool_nong(audit, route, k=1) == ["pancake-pos-halimi_
 check("không nhật ký -> rỗng", tk.tool_nong([], route) == [])
 check("không dùng gạch dài", "—" not in open(os.path.join(ROOT, "server/tiet_kiem.py"), encoding="utf-8").read())
 
+# ---------- 26.10.155: đo ngữ cảnh cố định + cache ----------
+_p = ("# MinMin\nluật " * 50 + "\n\n# === BỘ NHỚ DÀI HẠN (nạp sẵn) ===\n- nhớ 1\n- nhớ 2\n"
+      "\n# === ROUTER SKILL (đa engine) ===\nskill a\n\n# === NGÔN NGỮ ===\nvi\n")
+_kh = tk.chia_khoi(_p, ratio=4)
+check("chia_khoi: đúng tên khối theo thứ tự", [x["ten"] for x in _kh] == ["CLAUDE.md", "bộ nhớ", "skill", "ngôn ngữ"], [x["ten"] for x in _kh])
+check("chia_khoi: khối đầu là phần trước tiêu đề", _kh[0]["ky_tu"] == len("# MinMin\nluật " * 50 + "\n\n"))
+check("chia_khoi: token = ký tự / ratio", _kh[0]["token_uoc"] == round(_kh[0]["ky_tu"] / 4))
+check("chia_khoi: tổng ký tự khớp prompt", sum(x["ky_tu"] for x in _kh) == len(_p))
+check("chia_khoi: không tiêu đề thì một khối", len(tk.chia_khoi("chỉ CLAUDE.md")) == 1 and tk.chia_khoi("") == [])
+check("cache_cua: Anthropic", tk.cache_cua({"input_tokens": 5, "cache_read_input_tokens": 1200}) == 1200)
+check("cache_cua: OpenAI/OpenRouter", tk.cache_cua({"prompt_tokens": 9, "prompt_tokens_details": {"cached_tokens": 800}}) == 800)
+check("cache_cua: Responses API", tk.cache_cua({"input_tokens": 9, "input_tokens_details": {"cached_tokens": 7}}) == 7)
+check("cache_cua: không có / rác → 0", tk.cache_cua({"input_tokens": 9}) == 0 and tk.cache_cua(None) == 0 and tk.cache_cua({"cache_read_input_tokens": "x"}) == 0)
+
+
 if fails:
     print(f"ĐỎ {len(fails)}"); sys.exit(1)
 print("Tất cả xanh.")

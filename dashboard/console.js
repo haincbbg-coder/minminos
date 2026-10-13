@@ -4219,6 +4219,27 @@
           <div id="tkStats" class="aux-note" style="margin-top:6px"></div>
         </div>
       </div>`;
+    // Tool nóng kèm tên kết nối: cùng pos_order trên hai shop thì tên ngắn trùng nhau, nhìn
+    // như bị lặp. Chỉ ghi kết nối khi tên ngắn xuất hiện hơn một lần, cho gọn.
+    const tkNongHtml = (d) => {
+      const ct = d.tool_nong_chi_tiet || [];
+      if (!ct.length) return (d.tool_nong || []).map(x => `<code>${esc(x.split("__").pop())}</code>`).join(" · ");
+      const dem = {};
+      ct.forEach(x => { dem[x.tool] = (dem[x.tool] || 0) + 1; });
+      return ct.map(x => `<code>${esc(x.tool)}</code>` + (dem[x.tool] > 1 && x.ket_noi ? `<span style="opacity:.6"> (${esc(x.ket_noi)})</span>` : "")).join(" · ");
+    };
+    // Ngữ cảnh cố định mỗi bước (26.10.155): phần nạp lại ở MỌI bước, nơi token đi nhiều nhất.
+    const tkNguCanhHtml = (d) => {
+      const kh = d.ngu_canh || [];
+      if (!kh.length) return "";
+      const tong = d.ngu_canh_token || kh.reduce((a, x) => a + (x.token_uoc || 0), 0);
+      const phan = kh.filter(x => (x.token_uoc || 0) >= 50)
+        .sort((a, b) => (b.token_uoc || 0) - (a.token_uoc || 0))
+        .map(x => `${esc(x.ten)} ${esc((x.token_uoc || 0).toLocaleString("vi-VN"))}`).join(" · ");
+      return `<div style="margin-top:6px"><b>${esc(t("models.tk_ngu_canh", { token: tong.toLocaleString("vi-VN") }))}</b></div>`
+        + `<div style="opacity:.8">${phan}</div>`
+        + `<div class="dim" style="font-size:11px">${esc(t("models.tk_ngu_canh_note"))}</div>`;
+    };
     (async () => {
       const box = document.getElementById("tkStats");
       if (!box) return;
@@ -4227,7 +4248,8 @@
         if (!d || !d.ok) return;
         box.innerHTML = `<div><b>${esc(t("models.tk_cache", { hit: d.hit || 0, miss: d.miss || 0, pct: Math.round((d.ty_le_hit || 0) * 100), ttl: d.ttl_giay || 0 }))}</b></div>`
           + `<div>${esc(t("models.tk_nen", { kytu: (d.ky_tu_tiet_kiem || 0).toLocaleString("vi-VN"), token: (d.token_uoc || 0).toLocaleString("vi-VN") }))}</div>`
-          + ((d.tool_nong || []).length ? `<div style="margin-top:4px;opacity:.8">${esc(t("models.tk_nong"))}: ${(d.tool_nong || []).map(x => `<code>${esc(x.split("__").pop())}</code>`).join(" · ")}</div>` : "");
+          + ((d.tool_nong || []).length ? `<div style="margin-top:4px;opacity:.8">${esc(t("models.tk_nong"))}: ${tkNongHtml(d)}</div>` : "")
+          + tkNguCanhHtml(d);
       } catch (e) {}
     })();
 

@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 import httpx
 
 import limit_learner
+import tiet_kiem
 
 # Lone surrogate (U+D800–U+DFFF) sanitizer - port từ hermes-agent/agent/message_sanitization.py.
 # Model open-weight (qwen/deepseek/minimax/glm…) thi thoảng stream ra lone surrogate trong content.
@@ -778,7 +779,7 @@ async def anthropic_stream(api_key, model, messages, reasoning="off"):
                 yield {"type": "meta", "model": model}
                 got = False
                 stop_reason = None
-                usage_in = usage_out = 0
+                usage_in = usage_out = usage_cache = 0
                 async for line in r.aiter_lines():
                     line = (line or "").strip()
                     if not line.startswith("data:"):
@@ -795,6 +796,7 @@ async def anthropic_stream(api_key, model, messages, reasoning="off"):
                         u = (obj.get("message") or {}).get("usage") or {}
                         usage_in = ((u.get("input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
                                     + (u.get("cache_creation_input_tokens") or 0))
+                        usage_cache = tiet_kiem.cache_cua(u)
                     elif t == "content_block_delta":
                         txt = (obj.get("delta") or {}).get("text") or ""
                         if txt:
@@ -810,7 +812,7 @@ async def anthropic_stream(api_key, model, messages, reasoning="off"):
                         yield {"type": "error", "content": f"Anthropic: {(obj.get('error') or {}).get('message', 'lỗi')}"}
                         return
                 if usage_in or usage_out:
-                    yield {"type": "usage", "input": usage_in, "output": usage_out}
+                    yield {"type": "usage", "input": usage_in, "output": usage_out, "cache": usage_cache}
                 if not got:
                     yield {"type": "error", "content": f"Anthropic trả về rỗng (stop_reason={stop_reason}). Thử model khác trong Models."}
                     return
@@ -1545,7 +1547,7 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
     import mcp_client
     tools = _mcp_to_openai_tools(mcp_tools)
     msgs = _or_mark_system(messages) if cache_system else list(messages)
-    usage_in = usage_out = 0
+    usage_in = usage_out = usage_cache = 0
     guard = _LapGuard()   # phanh chống kẹt vòng lặp (xem _LapGuard)
     # Chỉ chờ cửa sổ hạn mức MỘT lần mỗi lượt: chờ hai lần là người dùng ngồi nhìn màn hình
     # đứng im nửa phút mà không hiểu chuyện gì.
@@ -1679,6 +1681,7 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
         u = data.get("usage") or {}   # cộng dồn token mọi vòng (kể cả vòng gọi tool)
         usage_in += u.get("prompt_tokens", 0) or 0
         usage_out += u.get("completion_tokens", 0) or 0
+        usage_cache += tiet_kiem.cache_cua(u)
         msg = ((data.get("choices") or [{}])[0]).get("message") or {}
         tcs = msg.get("tool_calls") or []
         if tcs:
@@ -1706,7 +1709,7 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
                 msgs[-1]["content"] += nhac   # nối vào kết quả tool cuối - chỗ chắc chắn model đọc
             if guard.ket():
                 if usage_in or usage_out:
-                    yield {"type": "usage", "input": usage_in, "output": usage_out}
+                    yield {"type": "usage", "input": usage_in, "output": usage_out, "cache": usage_cache}
                 yield {"type": "text", "content": _loi_ket_vong()}
                 return
             continue
@@ -1731,7 +1734,7 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
             }
             return
         if usage_in or usage_out:
-            yield {"type": "usage", "input": usage_in, "output": usage_out}
+            yield {"type": "usage", "input": usage_in, "output": usage_out, "cache": usage_cache}
         if content:
             yield {"type": "text", "content": content}
         else:
@@ -1893,7 +1896,7 @@ async def responses_with_mcp(access_token, account_id, model, messages, reasonin
     yield {"type": "meta", "model": model}
     timeout = httpx.Timeout(180, connect=15)
     async with httpx.AsyncClient(timeout=timeout) as client:
-        usage_in = usage_out = 0
+        usage_in = usage_out = usage_cache = 0
         guard = _LapGuard()   # phanh chống kẹt vòng lặp (xem _LapGuard)
         for _ in range(_max_tool_rounds()):
             # Backend Codex BẮT BUỘC stream=True → đọc SSE, lấy response.completed.output để chạy vòng tool
@@ -1941,6 +1944,7 @@ async def responses_with_mcp(access_token, account_id, model, messages, reasonin
                             _u = _resp.get("usage") or {}
                             usage_in += _u.get("input_tokens", 0) or 0
                             usage_out += _u.get("output_tokens", 0) or 0
+                            usage_cache += tiet_kiem.cache_cua(_u)
                         elif et in ("response.failed", "error", "response.error"):
                             err = (obj.get("response") or {}).get("error") or obj.get("error") or {}
                             msg = err.get("message") if isinstance(err, dict) else str(err)
@@ -1972,7 +1976,7 @@ async def responses_with_mcp(access_token, account_id, model, messages, reasonin
                     items[-1]["output"] += nhac   # nối vào kết quả tool cuối - chỗ chắc chắn model đọc
                 if guard.ket():
                     if usage_in or usage_out:
-                        yield {"type": "usage", "input": usage_in, "output": usage_out}
+                        yield {"type": "usage", "input": usage_in, "output": usage_out, "cache": usage_cache}
                     yield {"type": "text", "content": _loi_ket_vong()}
                     return
                 continue
@@ -1984,7 +1988,7 @@ async def responses_with_mcp(access_token, account_id, model, messages, reasonin
                             text += c.get("text", "")
             text = text or round_text
             if usage_in or usage_out:
-                yield {"type": "usage", "input": usage_in, "output": usage_out}
+                yield {"type": "usage", "input": usage_in, "output": usage_out, "cache": usage_cache}
             if text:
                 yield {"type": "text", "content": text}
             else:
@@ -2015,7 +2019,7 @@ async def anthropic_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools
     extras = _anthropic_reasoning(model, reasoning)
     timeout = httpx.Timeout(180, connect=15)
     async with httpx.AsyncClient(timeout=timeout) as client:
-        usage_in = usage_out = 0
+        usage_in = usage_out = usage_cache = 0
         guard = _LapGuard()   # phanh chống kẹt vòng lặp (xem _LapGuard)
         for _ in range(_max_tool_rounds()):
             # Cache theo lối không-mutate (system dựng mới mỗi vòng, conv copy-khi-đánh-dấu)
@@ -2054,6 +2058,7 @@ async def anthropic_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools
             _u = data.get("usage") or {}   # cộng dồn token mọi vòng tool
             usage_in += ((_u.get("input_tokens") or 0) + (_u.get("cache_read_input_tokens") or 0)
                          + (_u.get("cache_creation_input_tokens") or 0))
+            usage_cache += tiet_kiem.cache_cua(_u)
             usage_out += _u.get("output_tokens") or 0
             blocks = data.get("content") or []
             tool_uses = [b for b in blocks if b.get("type") == "tool_use"]
@@ -2079,13 +2084,13 @@ async def anthropic_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools
                 conv.append({"role": "user", "content": results})
                 if guard.ket():
                     if usage_in or usage_out:
-                        yield {"type": "usage", "input": usage_in, "output": usage_out}
+                        yield {"type": "usage", "input": usage_in, "output": usage_out, "cache": usage_cache}
                     yield {"type": "text", "content": _loi_ket_vong()}
                     return
                 continue
             text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
             if usage_in or usage_out:
-                yield {"type": "usage", "input": usage_in, "output": usage_out}
+                yield {"type": "usage", "input": usage_in, "output": usage_out, "cache": usage_cache}
             if text:
                 yield {"type": "text", "content": text}
             else:
