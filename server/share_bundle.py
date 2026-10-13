@@ -245,11 +245,11 @@ def import_bundle(data: bytes, filename, *, agents_dir, workflows_dir, skills_ro
             # Soi NỘI DUNG (rào zip chỉ soi đường dẫn). Không bao giờ làm hỏng lượt nhập.
             try:
                 ten = str(arc or target.name)
-                ph = skill_scan.quet_ten_file(ten)
+                pht = skill_scan.quet_ten_file(ten)
                 if target.suffix.lower() in (".md", ".txt", ".py", ".js", ".json", ".yaml", ".yml", ".sh", ""):
-                    ph += skill_scan.quet_van_ban(blob.decode("utf-8", "replace"), ten)
-                if ph:
-                    quet.setdefault(key, []).extend(ph)
+                    pht += skill_scan.quet_van_ban(blob.decode("utf-8", "replace"), ten)
+                if pht:
+                    quet.setdefault(key, []).extend(pht)
             except Exception:
                 pass
         except Exception as e:
