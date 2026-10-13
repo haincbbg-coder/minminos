@@ -63,6 +63,20 @@ check("CLI: số có nguồn -> không cảnh báo", "⚠" not in c7, c7)
 
 check("không dùng gạch dài", "—" not in open(os.path.join(ROOT, "server/nguon.py"), encoding="utf-8").read())
 
+# ---------- 26.10.156: gộp chân nguồn ----------
+_g = ng.gom_nguon([("pos_describe", "tool=pos_order"), ("pos_order", "action=list, shop_id=1"),
+                      ("pos_order", "action=list, shop_id=2"), ("pos_order", "shop_id=1, update_status=3"),
+                      ("meta_ads_get", "path=1470...")])
+check("gom_nguon: gọi nhiều lần thành ×N, một lần giữ tham số",
+      _g == ["pos_describe(tool=pos_order)", "pos_order ×3", "meta_ads_get(path=1470...)"], _g)
+_g2 = ng.gom_nguon([(f"t{i}", "") for i in range(9)], toi_da=6)
+check("gom_nguon: quá 6 tool thì nói còn bao nhiêu", _g2[-1] == "+3 tool khác" and len(_g2) == 7, _g2)
+_cn = ng.chan_nguon("Có 12 đơn.", "hôm nay bao nhiêu đơn",
+                       [{"name": "pos_order", "input": {"shop_id": 1}}, {"name": "pos_order", "input": {"shop_id": 2}}],
+                       ['{"total":5}', '{"total":7}'], luc="09:20")
+check("chan_nguon dùng gom_nguon", _cn.startswith("Nguồn: pos_order ×2 · lúc 09:20"), _cn)
+
+
 if fails:
     print(f"ĐỎ {len(fails)}"); sys.exit(1)
 print("Tất cả xanh.")

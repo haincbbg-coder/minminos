@@ -61,11 +61,14 @@ check("map: assistant → text + tool_call, bỏ text rỗng",
 
 evs, _ = map_message(UserMessage(content=[
     ToolResultBlock(tool_use_id="t1", content=[{"type": "text", "text": "nội dung file"}]),
-    ToolResultBlock(tool_use_id="t2", content="chuỗi thẳng " + "x" * 7000)]))
-# 26.10.142: trần 6000 (lớp dẫn nguồn cần đủ JSON để đối chiếu số; dashboard tự cắt 200 khi gửi)
-check("map: tool_result list + str, clip 6000",
+    ToolResultBlock(tool_use_id="t2", content="chuỗi thẳng " + "x" * 7000),
+    ToolResultBlock(tool_use_id="t3", content="y" * 250_000)]))
+# 26.10.156: gần như nguyên vẹn (trần 200k). Claude Code đưa model TOÀN BỘ kết quả, nên lớp
+# dẫn nguồn phải thấy cùng chừng ấy, không thì báo oan "số chưa thấy" cho số nằm sau đoạn cắt.
+check("map: tool_result list + str, giữ 7000 ký tự nguyên vẹn, trần 200k",
       evs[0] == {"type": "tool_result", "content": "nội dung file"}
-      and evs[1]["content"].startswith("chuỗi thẳng") and len(evs[1]["content"]) == 6000)
+      and evs[1]["content"].startswith("chuỗi thẳng") and len(evs[1]["content"]) == 7012
+      and len(evs[2]["content"]) == 200_000)
 
 evs, sid = map_message(ResultMessage(
     subtype="success", duration_ms=1234, duration_api_ms=1000, is_error=False, num_turns=2,

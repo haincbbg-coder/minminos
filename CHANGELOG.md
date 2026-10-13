@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.156] - 2026-10-13
+### Thêm mới
+- **Skill hệ thống "Báo cáo ngày"** (`bao-cao-ngay`, có trong mọi brain): lấy số POS và ads theo công thức gọi cố định ghi trong bộ nhớ, gọi tất cả trong một lượt song song, không hỏi lại cách dùng tool mỗi sáng. Ít bước hơn là ít token hơn, và số đếm cùng một kiểu mỗi ngày nên so sánh được.
+### Sửa lỗi
+- **Hết báo oan "số chưa thấy trong dữ liệu tool"** trên Claude Code: lớp dẫn nguồn chỉ đọc 6.000 ký tự đầu của mỗi kết quả tool trong khi não đọc trọn, nên chi tiêu Meta nằm sau đoạn cắt bị coi là bịa. Giờ đọc gần như nguyên vẹn.
+### Cải thiện
+- Chân nguồn gọn: gọi cùng tool nhiều lần thì ghi `pos_order ×4` thay vì bốn dòng tham số dài.
+
 ## [26.10.155] - 2026-10-13
 ### Cải thiện
 - **Thấy rõ token đi đâu.** Dòng token dưới mỗi câu trả lời nay ghi thêm bao nhiêu phần trăm được đọc lại từ cache của nhà cung cấp (Anthropic tính 10% giá), nên "311k token" không còn đọc nhầm thành 311k token mới. Đếm được trên Claude Code và mọi bộ não API.

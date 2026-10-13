@@ -123,7 +123,7 @@ def _skill_frontmatter(name: str, desc: str, group: str, today: str) -> str:
 #
 # SKILL có thêm HAI rào nữa, vì hai đường hỏng dưới đây không tồn tại với agent/workflow:
 #   5. Skill HỆ THỐNG (javis-builder, ingest-source, query-wiki, lint-wiki, notes,
-#      html-to-webcake) là CẤM. Chúng do app ship và tự cập nhật theo bản mới; đụng vào một
+#      html-to-webcake, bao-cao-ngay) là CẤM. Chúng do app ship và tự cập nhật theo bản mới; đụng vào một
 #      cái là nó thành bản của người dùng và app ngừng cập nhật đè lên - mất im lặng một
 #      năng lực mặc định. `system_sync.is_system_skill` là nguồn chuẩn duy nhất.
 #   6. Skill user đã TẮT (nằm trong `.disabled/`) cũng cấm - sửa nó là hồi sinh thứ người
@@ -968,7 +968,7 @@ class LearnFeature:
                "  11. KHÔNG update chỉ để chữ đẹp hơn: phải có BẰNG CHỨNG trong batch này "
                "rằng làm theo skill cũ đã ra kết quả sai hoặc thiếu. Không có thì để yên. "
                "Skill hệ thống (javis-builder, ingest-source, query-wiki, lint-wiki, notes, "
-               "html-to-webcake) và skill ghi [chủ đã khoá] thì cấm đụng.\n\n"
+               "html-to-webcake, bao-cao-ngay) và skill ghi [chủ đã khoá] thì cấm đụng.\n\n"
                if caps.get("skill") else "")
             + ("TASK (chống spam backlog): worker nền là HEADLESS - chỉ đọc/ghi file TRONG brain này "
                "và đọc dữ liệu qua MCP. Nó KHÔNG có tay user, KHÔNG có trình duyệt đã đăng nhập, "
