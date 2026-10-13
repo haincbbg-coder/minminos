@@ -92,6 +92,18 @@ _cn = ng.chan_nguon("Đã nhận 4,306 tỷ đồng.", "doanh số", [{"name": "
 check("chan_nguon: không cảnh báo số theo đơn vị", "⚠" not in _cn, _cn)
 
 
+# ---------- 26.10.158: số thập phân lẻ trong API + tổng tự cộng ----------
+_kq2 = ['[{"spend":"553483.1"},{"spend":"2200838.4"},{"spend":"3167760.2"}]', '{"revenue":6350000}']
+_n2 = ng.neo_so("3 marketing tiêu 5.922.081 đ (553.483, 2.200.838, 3.167.760); doanh thu 6.350.000; bịa 1.241.425", "báo cáo", _kq2)
+check("neo_so: spend '553483.1' vẫn là nguồn của 553.483", _n2["co_nguon"] == [553483, 2200838, 3167760, 6350000], _n2)
+check("neo_so: tổng 3 tài khoản là 'tong', không cảnh báo", _n2["tong"] == [5922081], _n2)
+check("neo_so: số không có vẫn bị bắt", _n2["khong_nguon"] == [1241425], _n2)
+check("_la_tong: tổng 2 số", ng._la_tong(3000, [1000, 2000, 5000]) and not ng._la_tong(3000, [1500, 5000]))
+check("_la_tong: không dùng cùng một số hai lần", not ng._la_tong(2000, [1000, 5000]))
+_cn2 = ng.chan_nguon("Tiêu 5.922.081 đ.", "báo cáo", [{"name": "meta_ads_get", "input": {}}], _kq2, luc="11:30")
+check("chan_nguon: dòng 'Tự cộng từ dữ liệu', không có ⚠", "Tự cộng từ dữ liệu: 5.922.081" in _cn2 and "⚠" not in _cn2, _cn2)
+
+
 if fails:
     print(f"ĐỎ {len(fails)}"); sys.exit(1)
 print("Tất cả xanh.")

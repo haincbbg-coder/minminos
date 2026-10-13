@@ -77,7 +77,17 @@ def _chuoi_so_trong(ket_qua: str) -> set:
     "1550000.0" (JSON) bằng cách bỏ phần ".0"."""
     kq = str(ket_qua or "")
     kq = re.sub(r"(\d)\.0+(?!\d)", r"\1", kq)   # 1550000.0 -> 1550000
-    return cac_so(kq)
+    ra = cac_so(kq)
+    # Số thập phân lẻ kiểu API ("spend":"553483.1"): cac_so bỏ qua cả số vì đuôi .1, nên chi
+    # tiêu Meta không bao giờ "có nguồn" (chủ repo 13/10). Lấy phần nguyên và bản làm tròn.
+    for m in re.finditer(r"(?<![\d.,])(\d{4,})\.(\d+)(?![\d.,])", kq):
+        try:
+            nguyen = int(m.group(1))
+            ra.add(nguyen)
+            ra.add(int(round(float(m.group(0)))))
+        except ValueError:
+            pass
+    return ra
 
 
 # Số kèm ĐƠN VỊ trong câu trả lời: "4,306 tỷ", "42,3 triệu", "7.225 tỷ đồng". Dấu phẩy hay chấm
@@ -138,6 +148,24 @@ def _khop_xap_xi(n: int, don_vi: dict, kho: set) -> bool:
     return False
 
 
+def _la_tong(n: int, kho_lon: list) -> bool:
+    """n là tổng của 2 hoặc 3 số đáng kể trong kho? (model tự cộng 3 tài khoản ads: chấp nhận
+    được, không phải bịa). kho_lon: danh sách số >= NGUONG_SO, đã sắp, đã bỏ trùng."""
+    tap = set(kho_lon)
+    for i, a in enumerate(kho_lon):
+        if a >= n:
+            break
+        if (n - a) in tap and (n - a) != a:
+            return True
+        for b in kho_lon[i + 1:]:
+            if a + b >= n:
+                break
+            c = n - a - b
+            if c in tap and c not in (a, b):
+                return True
+    return False
+
+
 def neo_so(tra_loi: str, cau_hoi: str, ket_qua_tool: Iterable[str]) -> dict:
     """Đối chiếu số trong câu trả lời với dữ liệu tool.
 
@@ -151,15 +179,18 @@ def neo_so(tra_loi: str, cau_hoi: str, ket_qua_tool: Iterable[str]) -> dict:
     for kq in ket_qua_tool or ():
         kho |= _chuoi_so_trong(kq)
     don_vi = so_co_don_vi(tra_loi)
-    co, xap_xi, khong = [], [], []
+    kho_lon = sorted(k for k in kho if k >= NGUONG_SO)[:600]   # chặn trên cho vòng tổng O(k²)
+    co, xap_xi, tong, khong = [], [], [], []
     for n in sorted(can):
         if n in kho:
             co.append(n)
         elif _khop_xap_xi(n, don_vi, kho) or _la_ban_lam_tron(n, kho):
             xap_xi.append(n)
+        elif _la_tong(n, kho_lon):
+            tong.append(n)
         else:
             khong.append(n)
-    return {"co_nguon": co, "khong_nguon": khong, "xap_xi": xap_xi}
+    return {"co_nguon": co, "khong_nguon": khong, "xap_xi": xap_xi, "tong": tong}
 
 
 # ─────────────────────────── chân nguồn ───────────────────────────
@@ -241,6 +272,10 @@ def chan_nguon(tra_loi: str, cau_hoi: str, tool_calls: list, ket_qua_tool: list,
     dong = []
     if ten_nguon:
         dong.append("Nguồn: " + " · ".join(gom_nguon(ten_nguon)) + (f" · lúc {luc}" if luc else ""))
+    if neo.get("tong") and ten_nguon:
+        # Tổng model tự cộng từ các số có trong dữ liệu: nói ra để người đọc biết đó là phép
+        # cộng chứ không phải số tool trả, nhưng không phải cảnh báo.
+        dong.append("Tự cộng từ dữ liệu: " + ", ".join(_fmt(n) for n in neo["tong"][:6]))
     if neo["khong_nguon"]:
         ds = ", ".join(_fmt(n) for n in neo["khong_nguon"][:6])
         if ten_nguon:

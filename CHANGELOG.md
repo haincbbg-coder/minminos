@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.158] - 2026-10-13
+### Sửa lỗi
+- **Chi tiêu Meta không còn bị báo "chưa thấy trong dữ liệu".** API trả `"spend":"553483.1"`, lớp kiểm số bỏ qua vì đuôi lẻ; giờ đọc phần nguyên và bản làm tròn.
+### Cải thiện
+- Số model tự cộng từ 2 đến 3 số có trong dữ liệu (tổng 3 tài khoản ads) được ghi riêng "Tự cộng từ dữ liệu: ..." thay vì cảnh báo bịa. Cảnh báo chỉ còn dành cho số thật sự không có nguồn.
+- Skill Báo cáo ngày dặn thêm: không tốn một bước chạy `date` trong shell, và nêu từng số thành phần khi cộng.
+
 ## [26.10.157] - 2026-10-13
 ### Sửa lỗi
 - **Hết báo oan "số chưa thấy" với số viết theo đơn vị.** Câu trả lời ghi "4,306 tỷ đồng" trong khi Pancake trả 4.306.251.000: giờ lớp kiểm số hiểu tỷ/triệu/nghìn và nhận ra số làm tròn (7,225 tỷ của 7.224.638.000), chỉ cảnh báo số thật sự không có trong dữ liệu. Số bịa vẫn bị bắt như cũ.
