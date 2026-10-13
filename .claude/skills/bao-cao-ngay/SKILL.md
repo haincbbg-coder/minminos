@@ -83,6 +83,12 @@ công thức thứ hai.
 
 ## Pitfalls
 
+- Không tốn một bước chỉ để tính mốc thời gian (`date +%s` trong shell). Giờ hiện tại đã có
+  trong khối "BÂY GIỜ" của system prompt; cần epoch hay ngày hôm qua thì tính thẳng từ đó, hoặc
+  ghi vào công thức cách tool nhận mốc (chuỗi ngày hay epoch) để khỏi đổi qua lại mỗi lần.
+- Tổng của nhiều tài khoản/shop là phép cộng được phép, nhưng phải NÊU từng số thành phần trong
+  báo cáo để chân nguồn đối chiếu được (nó nhận ra tổng của 2 đến 3 số có trong dữ liệu).
+
 - Gọi `*_describe` khi công thức đã có là tốn một bước vô ích; chỉ gọi khi tham số thật sự bị
   tool từ chối.
 - `page_size=1` chỉ để lấy tổng (total) khi tool trả total trong phần meta; nếu tool không trả
