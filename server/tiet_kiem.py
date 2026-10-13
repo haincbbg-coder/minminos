@@ -138,6 +138,70 @@ class BoDem:
                 "ky_tu_tiet_kiem": self.ky_tu_tiet_kiem, "ttl_giay": self.ttl}
 
 
+# ─────────────────────────── đo ngữ cảnh cố định (26.10.155) ───────────────────────────
+
+_RE_KHOI = re.compile(r"^# === (.+?) ===.*$", re.MULTILINE)
+
+# Tên ngắn cho thẻ Tiết kiệm. Khối không có trong bảng thì hiện nguyên tiêu đề.
+_TEN_KHOI = {
+    "BỘ NHỚ DÀI HẠN (nạp sẵn)": "bộ nhớ",
+    "LỚP AGENTIC (vault đang làm việc)": "đường dẫn vault",
+    "BÂY GIỜ": "đồng hồ",
+    "NGÔN NGỮ": "ngôn ngữ",
+    "KÊNH HỘI THOẠI HIỆN TẠI": "kênh",
+}
+
+
+def chia_khoi(prompt: str, ratio: float = 3.5) -> list:
+    """Cắt system prompt THẬT thành các khối theo tiêu đề `# === X ===`, đo ký tự và token ước
+    lượng của từng khối. Phần trước tiêu đề đầu tiên là CLAUDE.md.
+
+    Vì sao: thẻ Tiết kiệm chỉ đo phần KẾT QUẢ TOOL (nén + đệm), mà báo cáo 311k token của chủ
+    repo (13/10) chỉ bớt được 488 token ở đó. Phần nặng là ngữ cảnh cố định nạp lại MỖI BƯỚC;
+    không nhìn thấy nó chia ra sao thì không biết cắt chỗ nào đáng."""
+    s = prompt or ""
+    ratio = max(1.0, float(ratio or 3.5))
+    moc = [(m.start(), m.group(1).strip()) for m in _RE_KHOI.finditer(s)]
+    ra = []
+
+    def _them(ten, doan):
+        n = len(doan)
+        if n <= 0:
+            return
+        ra.append({"ten": ten, "ky_tu": n, "token_uoc": int(round(n / ratio))})
+
+    dau = moc[0][0] if moc else len(s)
+    _them("CLAUDE.md", s[:dau])
+    for i, (vi, ten) in enumerate(moc):
+        cuoi = moc[i + 1][0] if i + 1 < len(moc) else len(s)
+        ten_ngan = _TEN_KHOI.get(ten)
+        if ten_ngan is None:
+            t = ten.lower()
+            ten_ngan = ("skill" if "skill" in t else "năng lực" if "năng lực" in t
+                        else "project" if "project" in t else ten)
+        _them(ten_ngan, s[vi:cuoi])
+    return ra
+
+
+def cache_cua(usage: Any) -> int:
+    """Số token ĐỌC LẠI TỪ CACHE trong một bản usage, bất kể nhà cung cấp:
+    Anthropic `cache_read_input_tokens`; OpenAI/OpenRouter `prompt_tokens_details.cached_tokens`;
+    Responses API `input_tokens_details.cached_tokens`. Không có thì 0."""
+    if not isinstance(usage, dict):
+        return 0
+    v = usage.get("cache_read_input_tokens")
+    if v is None:
+        for k in ("prompt_tokens_details", "input_tokens_details"):
+            d = usage.get(k)
+            if isinstance(d, dict) and d.get("cached_tokens") is not None:
+                v = d.get("cached_tokens")
+                break
+    try:
+        return max(0, int(v or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 # ─────────────────────────── tool nóng ───────────────────────────
 
 def tool_nong(audit: Iterable[dict], route: dict, k: int = 12, chi_ok: bool = True) -> list:

@@ -366,6 +366,9 @@ def map_message(msg):
             "tokens_in": ((u.get("input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
                           + (u.get("cache_creation_input_tokens") or 0)),
             "tokens_out": u.get("output_tokens") or 0,
+            # Phần đọc lại từ cache (giá 10%). Tách ra để khung chat nói đúng: 311k token mà
+            # 250k là cache thì tiền thật khác hẳn 311k token mới tinh.
+            "tokens_cache": int(u.get("cache_read_input_tokens") or 0),
         })
         return events, (None if resume_failed else msg.session_id)
     return events, None

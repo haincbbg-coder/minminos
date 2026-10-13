@@ -13251,14 +13251,40 @@ async def hanh_dong_chinh_sach_luu(request: Request):
 async def tiet_kiem_thong_ke():
     """Lớp 6: đệm tool đọc (hit/miss), ký tự tiết kiệm nhờ nén JSON, danh sách tool nóng."""
     tk = mcp_hub.thong_ke_tiet_kiem()
+    nong, nong_ct, cong_cu_ky_tu = [], [], 0
     try:
         _tools, route = await mcp_hub.discover_all("suggest", vault_root=_brain_root("brain"))
         nong = tiet_kiem.tool_nong(mcp_hub.audit_tail(500), route, k=12)
+        # Kèm tên kết nối: cùng tool trên hai shop Pancake thì tên ngắn giống hệt nhau, chủ repo
+        # tưởng danh sách bị lặp (13/10).
+        for fn in nong:
+            c = (route.get(fn) or {}).get("conn") or {}
+            nong_ct.append({"fn": fn, "tool": (route.get(fn) or {}).get("tool") or fn,
+                            "ket_noi": c.get("name") or c.get("namespace") or c.get("id") or ""})
+        cong_cu_ky_tu = len(json.dumps(_tools, ensure_ascii=False))
     except Exception:
-        nong = []
+        pass
     # 1 token ~ 3.5 ký tự với JSON/tiếng Việt: ước lượng thô để người đọc hình dung, không phải số bill.
     tk["token_uoc"] = int(tk.get("ky_tu_tiet_kiem", 0) / 3.5)
-    return {"ok": True, **tk, "tool_nong": nong}
+    # NGỮ CẢNH CỐ ĐỊNH mỗi bước (26.10.155): system prompt thật của brain, cắt theo khối, cộng
+    # mô tả tool. Đây là phần nạp lại ở MỌI bước của một lượt nhiều bước, nên là nơi token đi
+    # nhiều nhất; đo xong mới quyết cắt chỗ nào. Có thể trừ bớt khi đường tiết kiệm (Mức dùng)
+    # đang bật, nên thẻ gọi nó là "tối đa".
+    ngu_canh = []
+    try:
+        def _prompt_that():
+            return build_system_prompt("brain") + channel_context.build_channel_block(
+                "dashboard", {"session_id": "do-ngu-canh"}, telegram_running=bool(_TG_BOT),
+                port=_javis_port(), brain_root=_brain_root("brain"))
+        ngu_canh = tiet_kiem.chia_khoi(await asyncio.to_thread(_prompt_that))
+    except Exception:
+        ngu_canh = []
+    if cong_cu_ky_tu:
+        ngu_canh.append({"ten": "mô tả tool", "ky_tu": cong_cu_ky_tu,
+                         "token_uoc": int(round(cong_cu_ky_tu / 3.5))})
+    tong_nc = sum(int(x.get("token_uoc") or 0) for x in ngu_canh)
+    return {"ok": True, **tk, "tool_nong": nong, "tool_nong_chi_tiet": nong_ct,
+            "ngu_canh": ngu_canh, "ngu_canh_token": tong_nc}
 
 
 @app.get("/dinh-tuyen/gan-nhat")
@@ -15327,6 +15353,7 @@ async def websocket_endpoint(ws: WebSocket):
                     api_model or mcfg.get("claude_model") or "mặc định", kind,
                 )
             _ctx_in = 0        # token VÀO của lượt này, để khung chat nói được nó tốn bao nhiêu
+            _ctx_cache = 0     # trong đó bao nhiêu ĐỌC LẠI TỪ CACHE (giá 10%) - 26.10.155
             # cwd = THƯ MỤC BRAIN, không phải gốc project (0.55.58). Trước đó nhánh này là chỗ
             # DUY NHẤT trong bốn engine chat còn chạy cwd=CLAUDE_CWD (/app trong Docker) - Codex,
             # Antigravity, Grok và mọi workflow/loop/lint đều đã cwd=brain. Hậu quả chủ repo báo
@@ -16048,6 +16075,7 @@ async def websocket_endpoint(ws: WebSocket):
                                     _CONTEXT_RUNTIME.set_route(runtime_trace, prov, actual_model)
                                 elif ev["type"] == "usage":
                                     _ctx_in += int(ev.get("input", 0) or 0)
+                                    _ctx_cache += int(ev.get("cache", 0) or 0)
                                     usage_store.record(
                                         prov, actual_model, ev.get("input", 0), ev.get("output", 0)
                                     )
@@ -16134,7 +16162,7 @@ async def websocket_endpoint(ws: WebSocket):
                         await ws.send_text(json.dumps({
                             "type": "response", "content": final_text, "engine": prov,
                             "model": actual_model, "session_id": conv_sid,
-                            **_ctx_frame(runtime_trace, _ctx_in),
+                            **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                         }))
             else:
                 # ===== PROVIDER anthropic-cli - qua Claude Code, đầy đủ MCP / skill / session =====
@@ -16213,7 +16241,7 @@ async def websocket_endpoint(ws: WebSocket):
 
                 async def _consume_claude(prompt, suppress_resume_error=False):
                     """Một lần gọi `claude`. Trả True nếu mạch cũ không còn (resume trượt)."""
-                    nonlocal final_text, _streamed, _cli_sid, _cost, _ctx_in
+                    nonlocal final_text, _streamed, _cli_sid, _cost, _ctx_in, _ctx_cache
                     resume_failed = False
                     async for event in cli.query(prompt):
                         etype = event["type"]
@@ -16239,6 +16267,7 @@ async def websocket_endpoint(ws: WebSocket):
                             if _cli_sid:
                                 store.set_cli_session_id(conv_sid, _cli_sid)
                             _ctx_in += int(event.get("tokens_in", 0) or 0)
+                            _ctx_cache += int(event.get("tokens_cache", 0) or 0)
                             usage_store.record("cli", cli.model or mcfg.get("claude_model") or "mặc định",
                                                event.get("tokens_in", 0), event.get("tokens_out", 0), event.get("cost_usd") or 0)
                             _CONTEXT_RUNTIME.record_usage(
@@ -16319,7 +16348,7 @@ async def websocket_endpoint(ws: WebSocket):
                     "type": "response", "content": final_text, "session_id": conv_sid,
                     "cli_session_id": _cli_sid, "cost_usd": _cost, "engine": "cli",
                     "model": (cli.model or mcfg.get("claude_model") or "mặc định"),
-                    **_ctx_frame(runtime_trace, _ctx_in)}))
+                    **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache)}))
 
             # Token VÀO của lượt vừa xong. Với engine gói thuê bao đây là DẤU HIỆU DUY NHẤT
             # cho biết mạch hội thoại của chúng đã phình tới đâu: Claude Code và Codex tự quản
@@ -18433,7 +18462,7 @@ async def runtime_diagnostics(hours: float = Query(24.0), limit: int = Query(200
             "vi_sao": _vi_sao_chua_di_tat(snapshot.get("tasks") or [])}
 
 
-def _ctx_frame(trace, tokens_in) -> dict:
+def _ctx_frame(trace, tokens_in, cache_read: int = 0) -> dict:
     """Cho khung chat biết lượt vừa rồi đi đường nào và tốn bao nhiêu token vào.
 
     Vì sao cần: trước đây không có cách nào biết một lượt đã đi đường tiết kiệm hay lặng lẽ
@@ -18446,8 +18475,11 @@ def _ctx_frame(trace, tokens_in) -> dict:
         path = str(getattr(trace, "execution_path", "") or "")
     except Exception:  # noqa: BLE001 - phần hiển thị, không được phá lượt chat
         path = ""
+    # ctx_cache: phần của ctx_in được đọc lại từ cache của nhà cung cấp (Anthropic tính 10%
+    # giá). Chỉ hai nhánh (API và Claude Code) đếm được; nhánh khác để 0 và khung chat im.
     return {"ctx_path": path if path and path != "unassigned" else "legacy",
-            "ctx_in": max(0, int(tokens_in or 0))}
+            "ctx_in": max(0, int(tokens_in or 0)),
+            "ctx_cache": max(0, min(int(cache_read or 0), int(tokens_in or 0)))}
 
 
 async def _uoc_tinh_tiet_kiem(brain: str = "brain") -> dict:
