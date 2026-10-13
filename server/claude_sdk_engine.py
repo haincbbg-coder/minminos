@@ -42,6 +42,9 @@ import hub_trace
 import localefmt
 
 _AUDIT_PATH = STATE_DIR / "logs" / "sdk_tool_audit.jsonl"
+# Trần ký tự của một kết quả tool phát ra cho lớp dẫn nguồn. Đủ cho mọi JSON Pancake/Meta
+# thực tế (vài chục nghìn ký tự); chỉ chặn trường hợp bất thường để không phình RAM.
+TOOL_RESULT_MAX = 200_000
 
 # client đang chạy -> (tag, loop) để cancel_all interrupt theo họ tag như claude_cli
 _ACTIVE = {}
@@ -299,11 +302,13 @@ def map_message(msg):
                     c = b.content
                     if isinstance(c, list):
                         c = " ".join(x.get("text", "") for x in c if isinstance(x, dict))
-                    # 6000 ký tự thay vì 500 (26.10.142): lớp dẫn nguồn (nguon.py) đối chiếu
-                    # số liệu trong câu trả lời với kết quả tool; 500 ký tự thì JSON đơn hàng
-                    # Pancake bị cắt mất phần tổng, số nào cũng thành "chưa rõ nguồn". Dashboard
-                    # vẫn chỉ hiện 200 ký tự đầu (main.py cắt khi gửi).
-                    events.append({"type": "tool_result", "content": str(c or "")[:6000]})
+                    # GẦN NHƯ NGUYÊN VẸN (26.10.156, trước là 6000, trước nữa 500): lớp dẫn
+                    # nguồn (nguon.py) đối chiếu số trong câu trả lời với kết quả tool. Khác
+                    # đường API, ở đây Claude Code đưa cho model TOÀN BỘ kết quả, nên cắt ở 6000
+                    # là model thấy số mà lớp dẫn nguồn không thấy -> báo oan "số chưa thấy
+                    # trong dữ liệu tool" cho chi tiêu Meta nằm sau đoạn cắt (chủ repo 13/10).
+                    # Dashboard vẫn chỉ hiện 200 ký tự đầu (main.py cắt khi gửi).
+                    events.append({"type": "tool_result", "content": str(c or "")[:TOOL_RESULT_MAX]})
         return events, None
     if isinstance(msg, ResultMessage):
         u = msg.usage or {}

@@ -117,6 +117,29 @@ def _tom_tat_args(args) -> str:
     return s if len(s) <= 60 else s[:57] + "..."
 
 
+def gom_nguon(ten_nguon: list, toi_da: int = 6) -> list:
+    """Gộp các lần gọi CÙNG TOOL thành một mục: `pos_order ×4`, giữ thứ tự xuất hiện đầu.
+    Gọi một lần thì kèm tham số rút gọn `pos_order(action=list, shop_id=...)`.
+
+    Vì sao (26.10.156): báo cáo 2 shop gọi pos_order bốn lần, chân nguồn liệt kê đủ bốn dòng
+    tham số dài gần bằng chính câu trả lời, chữ nhiều mà thông tin ít; và chân nguồn quay lại
+    ngữ cảnh ở lượt sau, nên dài là tốn token mỗi lượt về sau."""
+    thu_tu, dem, args_dau = [], {}, {}
+    for n, tt in ten_nguon:
+        if n not in dem:
+            thu_tu.append(n); args_dau[n] = tt
+        dem[n] = dem.get(n, 0) + 1
+    ra = []
+    for n in thu_tu[:toi_da]:
+        if dem[n] > 1:
+            ra.append(f"{n} ×{dem[n]}")
+        else:
+            ra.append(f"{n}({args_dau[n]})" if args_dau[n] else n)
+    if len(thu_tu) > toi_da:
+        ra.append(f"+{len(thu_tu) - toi_da} tool khác")
+    return ra
+
+
 def chan_nguon(tra_loi: str, cau_hoi: str, tool_calls: list, ket_qua_tool: list, *,
                luc: str = "", bat: bool = True) -> str:
     """Dựng chân nguồn (chuỗi, có thể rỗng) để nối dưới câu trả lời.
@@ -143,20 +166,14 @@ def chan_nguon(tra_loi: str, cau_hoi: str, tool_calls: list, ket_qua_tool: list,
                  "javis_list_files", "javis_write_file", "javis_use_skill", "javis_connections",
                  "javis_now", "javis_date_add"):
             continue
-        tt = _tom_tat_args(args)
-        ten_nguon.append(f"{n}({tt})" if tt else n)
+        ten_nguon.append((n, _tom_tat_args(args)))
     neo = neo_so(tra_loi, cau_hoi, ket_qua_tool)
     co_so = bool(neo["co_nguon"] or neo["khong_nguon"])
     if not ten_nguon and not co_so:
         return ""
     dong = []
     if ten_nguon:
-        # gộp trùng, giữ thứ tự
-        seen, uniq = set(), []
-        for t in ten_nguon:
-            if t not in seen:
-                seen.add(t); uniq.append(t)
-        dong.append("Nguồn: " + " · ".join(uniq[:6]) + (f" · lúc {luc}" if luc else ""))
+        dong.append("Nguồn: " + " · ".join(gom_nguon(ten_nguon)) + (f" · lúc {luc}" if luc else ""))
     if neo["khong_nguon"]:
         ds = ", ".join(_fmt(n) for n in neo["khong_nguon"][:6])
         if ten_nguon:
