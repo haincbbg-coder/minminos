@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.154] - 2026-10-13
+### Cải thiện
+- **Tiết kiệm token, không mất số** (Lớp 6), chạy ngầm cho mọi bộ não. Kết quả tool chỉ đọc được giữ 3 phút: cùng tool cùng tham số thì không gọi Pancake hay ads lần nữa (vừa ghi gì lên kết nối đó là xoá đệm ngay). Dữ liệu JSON được nén lại bỏ thụt dòng và trường rỗng nhưng giữ nguyên mọi con số và số dòng. Mười hai tool hay gọi nhất luôn hiện thẳng cho não, không phải mò qua lớp tìm tool.
+- Trang Models có thẻ "Tiết kiệm token" cho thấy đã dùng lại bao nhiêu lần, bớt được bao nhiêu ký tự, tool nào đang hiện thẳng. Chỉnh được bằng `mcp.dem_doc_giay`, `mcp.nen_ket_qua`, `mcp.tool_nong`.
+
 ## [26.10.153] - 2026-10-13
 ### Thêm mới
 - **Dải tổng quan ở đầu trang Việc lặp lại:** bao nhiêu việc hẹn giờ đang chờ, bao nhiêu đã hỏng, việc nào hỏng và lỗi gì, lần chạy kế tiếp.

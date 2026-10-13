@@ -4211,7 +4211,25 @@
           <div id="rtTryOut" class="aux-note" style="margin-top:4px"></div>
           <div id="rtRecent" class="aux-note" style="margin-top:8px"></div>
         </div>
+      </div>
+      <div class="cview-section">
+        <h3>◆ ${esc(t("models.h_tk"))} <span style="opacity:.5">${esc(t("models.h_tk_sub"))}</span></h3>
+        <div class="gcard aux-card">
+          <div class="gcard-meta">${esc(t("models.tk_meta"))}</div>
+          <div id="tkStats" class="aux-note" style="margin-top:6px"></div>
+        </div>
       </div>`;
+    (async () => {
+      const box = document.getElementById("tkStats");
+      if (!box) return;
+      try {
+        const d = await (await fetch("/tiet-kiem")).json();
+        if (!d || !d.ok) return;
+        box.innerHTML = `<div><b>${esc(t("models.tk_cache", { hit: d.hit || 0, miss: d.miss || 0, pct: Math.round((d.ty_le_hit || 0) * 100), ttl: d.ttl_giay || 0 }))}</b></div>`
+          + `<div>${esc(t("models.tk_nen", { kytu: (d.ky_tu_tiet_kiem || 0).toLocaleString("vi-VN"), token: (d.token_uoc || 0).toLocaleString("vi-VN") }))}</div>`
+          + ((d.tool_nong || []).length ? `<div style="margin-top:4px;opacity:.8">${esc(t("models.tk_nong"))}: ${(d.tool_nong || []).map(x => `<code>${esc(x.split("__").pop())}</code>`).join(" · ")}</div>` : "");
+      } catch (e) {}
+    })();
 
     // ---- Tự chia model theo độ khó (Trụ 2, 26.10.136) ----
     const rtSave = async (patch) => saveSetting("model", { auto_router: patch });

@@ -88,6 +88,7 @@ import danh_gia      # bộ chấm điểm "não": đo chất lượng trả l�
 import dinh_tuyen    # định tuyến model theo độ khó câu hỏi (26.10.127)
 import nguon         # dẫn nguồn + neo số liệu dưới câu trả lời (Trụ 3, 26.10.137)
 import hanh_dong     # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
+import tiet_kiem     # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
@@ -13244,6 +13245,20 @@ async def hanh_dong_chinh_sach_luu(request: Request):
     cfg["quyen"] = q
     cfgmod.write_settings(cfg)
     return {"ok": True, "chinh_sach": cs}
+
+
+@app.get("/tiet-kiem")
+async def tiet_kiem_thong_ke():
+    """Lớp 6: đệm tool đọc (hit/miss), ký tự tiết kiệm nhờ nén JSON, danh sách tool nóng."""
+    tk = mcp_hub.thong_ke_tiet_kiem()
+    try:
+        _tools, route = await mcp_hub.discover_all("suggest", vault_root=_brain_root("brain"))
+        nong = tiet_kiem.tool_nong(mcp_hub.audit_tail(500), route, k=12)
+    except Exception:
+        nong = []
+    # 1 token ~ 3.5 ký tự với JSON/tiếng Việt: ước lượng thô để người đọc hình dung, không phải số bill.
+    tk["token_uoc"] = int(tk.get("ky_tu_tiet_kiem", 0) / 3.5)
+    return {"ok": True, **tk, "tool_nong": nong}
 
 
 @app.get("/dinh-tuyen/gan-nhat")
