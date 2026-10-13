@@ -5200,7 +5200,7 @@ def _fact_path(brain: str, slug: str):
 @app.get("/digest/tuan")
 async def digest_tuan(brain: str = Query("brain")):
     """Tổng hợp 7 ngày qua: ký ức mới, wiki, kỹ năng đã dùng, kỹ năng bị khoá. Chỉ đọc đĩa."""
-    text = await asyncio.to_thread(tong_hop_tuan.xay, _brain_root(brain), str(_brain_memory_dir(brain)))
+    text = await asyncio.to_thread(tong_hop_tuan.xay, _brain_root(brain), str(_brain_memory_dir(brain)), None, system_sync.system_skill_slugs())
     return {"ok": True, "text": text}
 
 
@@ -9707,7 +9707,7 @@ async def _bao_cao_tuan_neu_toi_gio() -> bool:
         _bc = await _bao_cao_token("last_week")
         try:   # thêm bản tổng hợp học được trong tuần; hỏng phần này thì vẫn gửi báo cáo token
             _bc += "\n\n" + await asyncio.to_thread(
-                tong_hop_tuan.xay, _brain_root("brain"), str(_brain_memory_dir("brain")))
+                tong_hop_tuan.xay, _brain_root("brain"), str(_brain_memory_dir("brain")), None, system_sync.system_skill_slugs())
         except Exception as _e:  # noqa: BLE001
             print(f"[tong hop tuan] {type(_e).__name__}: {_e}", file=sys.stderr)
         await _notify_owner("" if dich == "auto" else dich, _bc)

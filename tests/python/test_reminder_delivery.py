@@ -78,6 +78,7 @@ async def run():
     feature._run_task = task_error
     await feature._fire(str(brain), {
         "id": "r_test_error",
+        "attempts": 2,   # đã hết lượt thử lại thì mới báo lỗi ra ngoài (xem test_reminder_thu_lai)
         "mode": "task",
         "text": internal,
         "label": "Coach buổi sáng",
