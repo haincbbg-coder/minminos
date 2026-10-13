@@ -58,6 +58,16 @@ check("dòng chỉ mục được bỏ, dòng khác giữ", "gia-si" not in idx 
 r = run(main.memory_fact_delete("../x", B))
 check("xoá tên lạ bị chặn", getattr(r, "status_code", 200) == 404)
 
+# Dải tổng quan + ô tuần qua có mặt trong giao diện, đủ chữ cho cả hai ngôn ngữ (26.10.153)
+import json as _j
+_cs = (ROOT / "dashboard" / "console.js").read_text(encoding="utf-8")
+check("console.js có dải tổng quan và ô tuần qua", "lpOverview" in _cs and "lnDigest" in _cs and "/reminders/tong-quan" in _cs and "/digest/tuan" in _cs)
+for _l in ("vi", "en"):
+    _d = _j.loads((ROOT / "dashboard" / "i18n" / f"{_l}.json").read_text(encoding="utf-8"))
+    check(f"i18n {_l} đủ khoá tổng quan", all(k in _d for k in ("cs.ov_head", "cs.ov_line", "cs.ov_next", "cs.ov_noerr")))
+r = run(main.digest_tuan(B))
+check("digest_tuan trả văn bản", r.get("ok") and "TUẦN QUA" in r["text"], r)
+
 if fails:
     print("\nFAIL:", fails)
     raise SystemExit(1)

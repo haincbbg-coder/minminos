@@ -2034,6 +2034,7 @@
         <button class="s-btn" id="lpNew">+ ${esc(window.t("cs.si_add"))}</button>
         <button class="s-btn-ghost" id="lpStop">■ ${esc(window.t("cs.si_stop"))}</button>
       </div>
+      <div id="lpOverview" style="display:none;margin-bottom:12px;padding:10px 12px;border:1px solid var(--hairline);border-radius:8px;font-size:13px;line-height:1.6"></div>
       <div id="lpNotifyWarn" style="display:none;margin-bottom:12px;padding:10px 12px;border:1px solid rgba(224,102,74,.5);border-radius:8px;background:rgba(224,102,74,.08);font-size:13px;line-height:1.5"></div>
       <div id="lpForm" style="display:none;margin-bottom:14px;padding:14px;border:1px solid var(--hairline);border-radius:10px;background:var(--surface-1)">
         <input type="hidden" id="lpSlug">
@@ -2480,6 +2481,18 @@
 
     // Gộp MỌI brain: /viec/all trả từng brain kèm loop + nhắc hẹn. Nhóm theo brain, brain đang
     // xem ở sidebar lên đầu; brain khác rỗng thì ẩn. Mỗi item mang brain_path riêng.
+    // Dải tổng quan việc hẹn giờ: bao nhiêu đang chờ, bao nhiêu hỏng, việc nào hỏng liên tiếp.
+    async function loadOverview() {
+      const ov = el.querySelector("#lpOverview");
+      if (!ov) return;
+      let q = null; try { q = await (await fetch(`/reminders/tong-quan?brain=${encodeURIComponent(fbrain())}`)).json(); } catch (e) { }
+      if (!q || !q.ok || myGen !== _renderGen) { ov.style.display = "none"; return; }
+      const bad = (q.hong_ds || []).concat((q.hong_lien_tiep || []).filter(x => !(q.hong_ds || []).some(y => y.id === x.id)));
+      let h = `<b>${esc(window.t("cs.ov_head"))}</b> ${esc(window.t("cs.ov_line", { cho: q.cho, hong: q.hong }))}`;
+      if (q.ke_tiep) h += ` ${esc(window.t("cs.ov_next", { ten: q.ke_tiep.ten, luc: q.ke_tiep.luc }))}`;
+      if (bad.length) h += `<ul style="margin:6px 0 0 18px;color:var(--warn-ink)">` + bad.slice(0, 5).map(x => `<li>${esc(x.ten)}: ${esc(x.loi || window.t("cs.ov_noerr"))}</li>`).join("") + `</ul>`;
+      ov.innerHTML = h; ov.style.display = "block";
+    }
     async function loadAll(retried) {
       if (myGen !== _renderGen) return;
       let d = null, loadErr = false;
@@ -2523,6 +2536,7 @@
           if (go) go.onclick = (ev) => { ev.preventDefault(); navigateTo("channels"); };
         }
       }
+      loadOverview();
       allLoops = [];
       const groups = (d.brains || []).slice().sort((a, b) => {
         const ac = isCurrentBrain(a) ? 0 : 1, bc = isCurrentBrain(b) ? 0 : 1;
@@ -2680,7 +2694,7 @@
         </div>
       </div>
 
-      <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.mem_head"))}</h3><p style="color:var(--text3);font-size:13.5px;max-width:680px;margin:2px 0 10px">${esc(window.t("cs.mem_desc"))}</p><div id="lnFacts">${esc(window.t("common.loading"))}</div></div>
+      <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.mem_head"))}</h3><p style="color:var(--text3);font-size:13.5px;max-width:680px;margin:2px 0 10px">${esc(window.t("cs.mem_desc"))}</p><div id="lnDigest" style="white-space:pre-wrap;margin-bottom:14px;padding:10px 12px;border:1px solid var(--hairline);border-radius:8px;font-size:13.5px;line-height:1.6;display:none"></div><div id="lnFacts">${esc(window.t("common.loading"))}</div></div>
       <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.ln_review_head"))}</h3><div id="lnReview">${esc(window.t("common.loading"))}</div></div>
       <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.ln_log_head"))}</h3><div id="lnLog">${esc(window.t("common.loading"))}</div></div>
     </div>`;
@@ -2760,6 +2774,13 @@
     // Hai khung dưới đây trước chỉ hiện 10 dòng nhật ký và 12 commit rồi hết - muốn xem xa hơn
     // là không có đường nào. Nay tải sâu hơn hẳn rồi lật trang tại chỗ bằng pager() dùng chung.
     // Điều MinMin đang nhớ: xem, sửa, xoá từng ký ức (một file trong memory/facts).
+    async function loadDigest() {
+      const box = el.querySelector("#lnDigest");
+      if (!box) return;
+      let d = null; try { d = await (await fetch(`/digest/tuan?brain=${encodeURIComponent(fbrain())}`)).json(); } catch (e) { }
+      if (!d || !d.text) { box.style.display = "none"; return; }
+      box.textContent = d.text; box.style.display = "block";
+    }
     async function loadFacts() {
       const box = el.querySelector("#lnFacts");
       let d = { facts: [] }; try { d = await (await fetch(`/memory/facts?brain=${encodeURIComponent(fbrain())}`)).json(); } catch (e) { }
@@ -2873,7 +2894,7 @@
       el.querySelector("#bkStatus").innerHTML = `${esc(window.t("cs.bk_last"))} ${esc(when)}${s.last_status ? " · " + esc(s.last_status) : ""}${brainsNote}${gitNote}`;
     }
 
-    function loadAll() { loadMetrics(); loadFacts(); loadReview(); loadLog(); loadBackup(); }
+    function loadAll() { loadMetrics(); loadDigest(); loadFacts(); loadReview(); loadLog(); loadBackup(); }
     loadAll();
   }
 

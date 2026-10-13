@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.153] - 2026-10-13
+### Thêm mới
+- **Dải tổng quan ở đầu trang Việc lặp lại:** bao nhiêu việc hẹn giờ đang chờ, bao nhiêu đã hỏng, việc nào hỏng và lỗi gì, lần chạy kế tiếp.
+- **Ô "Tuần qua MinMin đã học gì" ở đầu trang Học:** ký ức mới, kỹ năng đã dùng, việc hẹn giờ hỏng, kỹ năng chưa thấy dùng.
+
 ## [26.10.152] - 2026-10-13
 ### Thêm mới
 - **Việc hẹn giờ một lần gặp lỗi tạm thời thì tự thử lại.** Nhiệm vụ chưa ra được kết quả, script không khởi chạy được, hoặc tin nhắc gửi hỏng sẽ được hẹn lại sau 5 rồi 15 phút, tối đa 2 lần, và im lặng cho tới khi hết lượt mới báo lỗi. Việc lặp theo lịch thì không thử lại vì lần tới tự đến. Script bị dừng vì quá giờ không bao giờ thử lại, vì có thể đã làm dở.
