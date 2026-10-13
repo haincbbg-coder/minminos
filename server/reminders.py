@@ -110,6 +110,8 @@ def muc_quyen_cua(rem: dict) -> str:
     return mq if mq in VALID_MUC_QUYEN else MUC_QUYEN_MAC_DINH
 MIN_LEAD_S = 3                 # tối thiểu 3s trong tương lai (tránh bắn ngay/quá khứ)
 MAX_DELAY_DAYS = 366           # trần: không hẹn quá ~1 năm (chỉ áp cho hẹn 1-lần, không áp cron)
+MAX_THU_LAI = 2                # việc một lần gặp lỗi TẠM THỜI thì tự thử lại tối đa ngần này lần
+THU_LAI_SAU_S = (300, 900)     # chờ 5 phút rồi 15 phút: đủ cho mạng/hạn mức hồi, không dồn dập
 MAX_FIRE_PER_TICK = 6          # trần số nhắc bắn mỗi nhịp (chống dồn spam khi server vừa bật lại)
 MAX_KEEP = 500                 # trần số bản ghi giữ lại mỗi brain
 SCRIPT_TIMEOUT_S = 120         # trần thời gian chạy 1 job script
@@ -385,6 +387,23 @@ class RemindersFeature:
                 "muc_quyen": muc_quyen_cua(r),
                 "result": (r.get("result") or "")[:500], "error": r.get("error", "")}
 
+    def tong_quan(self, brain: str) -> dict:
+        """Một cái nhìn cho việc hẹn giờ: bao nhiêu đang chờ, cái nào hỏng, cái nào hỏng liên tiếp,
+        lần tới là lúc nào. Chỉ đọc file, để người dùng khỏi phải mở từng mục tìm cái hỏng."""
+        rems = self._load(brain).get("reminders", [])
+        cho = [r for r in rems if r.get("status") == "pending"]
+        hong = [r for r in rems if r.get("status") == "failed"]
+        lien_tiep = [r for r in cho if int(r.get("fail_streak") or 0) >= 2]
+        tiep = min(cho, key=lambda r: float(r.get("due_at", 0)), default=None)
+        goi = lambda r: {"id": r.get("id"), "ten": (r.get("label") or r.get("text") or "")[:80],
+                         "loi": (r.get("error") or "")[:200], "lan_hong": int(r.get("fail_streak") or 0),
+                         "mode": r.get("mode")}
+        return {"ok": True, "cho": len(cho), "hong": len(hong),
+                "hong_ds": [goi(r) for r in hong[-10:]],
+                "hong_lien_tiep": [goi(r) for r in lien_tiep],
+                "ke_tiep": ({"ten": (tiep.get("label") or tiep.get("text") or "")[:80],
+                             "luc": _fmt_vn(tiep.get("due_at", 0))} if tiep else None)}
+
     def update(self, brain: str, rid: str, *, text=None, label=None, mode=None, chat_id=None,
                cron=None, at=None, delay_min=None, due_at=None, muc_quyen=None) -> dict:
         """Sửa 1 nhắc/lịch ĐANG CHỜ: nội dung, tên, kiểu, và thời điểm. Trả {"ok", "error",
@@ -554,6 +573,7 @@ class RemindersFeature:
         head = rem.get("label") or text
         body, err = "", ""
         deliver, msg = True, ""
+        code = 0
         if mode == "task":
             async with self.lock:
                 body, err = await self._run_task(brain, text, muc_quyen_cua(rem))
@@ -583,6 +603,21 @@ class RemindersFeature:
         else:   # notify
             msg = "⏰ Nhắc bạn: " + text
 
+        # Lỗi TẠM THỜI của việc MỘT LẦN: hẹn lại, im lặng (không báo lỗi lần này, lần cuối mới báo).
+        # Chỉ thử lại khi việc chắc chắn chưa ra kết quả: task không có nội dung, script không khởi
+        # chạy được (không phải bị kill vì quá giờ, vì lúc đó nó có thể đã làm dở). Việc lặp theo
+        # lịch thì bỏ qua: lần tới đã tự đến.
+        lan = int(rem.get("attempts") or 0)
+        mot_lan = not rem.get("cron") and int(rem.get("repeat_min") or 0) <= 0
+        thu_lai = False
+        if mot_lan and lan < MAX_THU_LAI:
+            if mode == "task" and err and not body:
+                thu_lai = True
+            elif mode == "script" and code == -1 and "quá" not in (err or ""):
+                thu_lai = True
+        if thu_lai:
+            deliver = False
+
         ok, send_err = True, ""
         if deliver:
             # Thẻ nhắc hẹn cho khung chat web (dashboard/chat-viec.js, 0.64.49): khung chat vẽ
@@ -606,6 +641,8 @@ class RemindersFeature:
                     rem.get("chat_id", ""), channel_context.strip_control_blocks(msg), **kw)
             except Exception as e:
                 ok, send_err = False, f"{type(e).__name__}: {e}"
+            if mode == "notify" and not ok and mot_lan and lan < MAX_THU_LAI:
+                thu_lai = True   # nhắc chỉ là một tin nhắn: gửi hỏng thì gửi lại không có hại gì
 
         # Cập nhật trạng thái: cron → lần kế · repeat_min → dời hạn · else done/failed.
         async with self._io:
@@ -622,6 +659,18 @@ class RemindersFeature:
                 cur["fired_at"] = _now()
                 cur["result"] = (body or "")[:2000]
                 cur["error"] = (err or ("" if ok else send_err) or "")[:400]
+                that_bai = bool(err) or not ok
+                # Chuỗi lần hỏng liên tiếp cho trang tổng quan; chạy ổn thì về 0.
+                cur["fail_streak"] = (int(cur.get("fail_streak") or 0) + 1) if that_bai else 0
+                if not that_bai:
+                    cur["last_ok_at"] = _now()
+                if thu_lai:
+                    cur["attempts"] = lan + 1
+                    cur["due_at"] = _now() + THU_LAI_SAU_S[min(lan, len(THU_LAI_SAU_S) - 1)]
+                    cur["status"] = "pending"
+                    cur["error"] = (f"lần {lan + 1} lỗi, sẽ thử lại: " + cur["error"])[:400]
+                    self._save(brain, data)
+                    return
                 cron = cur.get("cron")
                 rep = int(cur.get("repeat_min") or 0)
                 if cron:
@@ -639,7 +688,8 @@ class RemindersFeature:
                     cur["due_at"] = nxt
                     cur["status"] = "pending"
                 else:
-                    cur["status"] = "done" if ok else "failed"
+                    # Việc chạy hỏng (err) mà tin báo lỗi gửi được vẫn phải ghi "failed", không "done".
+                    cur["status"] = "done" if (ok and not err) else "failed"
             self._save(brain, data)
 
     async def _run_script(self, brain: str, script: str):
@@ -782,6 +832,10 @@ class RemindersFeature:
             return {"pending": pending, "history": history,
                     "counts": {"pending": len(pending)},
                     "notify": {"ok": ready, "error": why}}
+
+        @router.get("/reminders/tong-quan")
+        async def reminders_tong_quan(brain: str = Query("brain")):
+            return self.tong_quan(brain)
 
         @router.post("/reminders")
         async def reminders_add(payload: dict = Body(None)):
