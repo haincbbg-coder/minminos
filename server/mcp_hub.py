@@ -34,6 +34,7 @@ import skill_router
 import skill_usage
 from config import STATE_DIR
 import hanh_dong   # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
+import tiet_kiem   # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
 
 _TOKEN_PATH = STATE_DIR / ".hub_token"
 _AUDIT_PATH = STATE_DIR / "mcp_audit.jsonl"
@@ -197,6 +198,30 @@ def _rate_ok(conn_id, connector):
     return True
 
 
+# Bộ đệm tool ĐỌC dùng chung cho mọi engine (in-process lẫn HTTP). TTL đọc từ settings
+# mcp.dem_doc_giay (mặc định 180; 0 = tắt), đổi lúc chạy được.
+_DEM_DOC = tiet_kiem.BoDem(ttl_giay=180)
+
+
+def _dem_doc_ttl() -> int:
+    try:
+        v = (config.read_settings().get("mcp") or {}).get("dem_doc_giay", 180)
+        return max(0, int(v))
+    except Exception:
+        return 180
+
+
+def _nen_bat() -> bool:
+    try:
+        return bool((config.read_settings().get("mcp") or {}).get("nen_ket_qua", True))
+    except Exception:
+        return True
+
+
+def thong_ke_tiet_kiem() -> dict:
+    return _DEM_DOC.thong_ke()
+
+
 def _chinh_sach_loai_viec() -> dict:
     """settings.quyen.loai_viec = {xoa|tien|don_hang|nhan_tin|dang_bai|khac: cho_phep|chan}."""
     try:
@@ -238,7 +263,32 @@ def _guard(ent, fn, mode):
                     args=args, err=why))
             return "ERROR: " + why
         t0 = time.time()
+        # ĐỆM TOOL ĐỌC (Lớp 6): cùng kết nối + tool + tham số trong vài phút -> trả lại ngay,
+        # không gọi POS/ads lần nữa. Một báo cáo gọi pos_order 4 lần cùng tham số là 3 lần thừa.
+        _DEM_DOC.ttl = _dem_doc_ttl()
+        khoa = tiet_kiem.khoa_dem(conn["id"], tool, args) if cls == "read" else ""
+        tu_dem = _DEM_DOC.lay(khoa) if khoa else None
+        if tu_dem is not None:
+            _audit_append({"ts": datetime.now().isoformat(timespec="seconds"), "conn_id": conn["id"],
+                           "connector": conn.get("connector_id"), "label": conn.get("label"),
+                           "tool": tool, "mode": mode, "cls": cls, "ok": True, "ms": 0, "err": "",
+                           "args_keys": sorted((args or {}).keys()), "cache": True})
+            return tu_dem
         result = await mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, args)
+        # NÉN KHÔNG MẤT SỐ: JSON thụt dòng + trường rỗng là token đốt không; dump lại dạng đặc,
+        # mọi giá trị giữ nguyên. Áp ở đây nên mọi não (API lẫn CLI qua HTTP) đều hưởng.
+        if _nen_bat() and isinstance(result, str) and not result.startswith("ERROR:"):
+            try:
+                _gon = tiet_kiem.nen_json(result)
+                if len(_gon) < len(result):
+                    _DEM_DOC.ky_tu_tiet_kiem += len(result) - len(_gon)
+                    result = _gon
+            except Exception:
+                pass
+        if khoa and isinstance(result, str) and not result.startswith("ERROR:") and len(result) <= 300_000:
+            _DEM_DOC.cat(khoa, conn["id"], result)
+        elif cls != "read" and not str(result).startswith("ERROR:"):
+            _DEM_DOC.xoa_ket_noi(conn["id"])   # vừa ghi -> số cũ của kết nối này hết giá trị
         if loai:   # việc ghi ra ngoài đời: một dòng trong SỔ HÀNH ĐỘNG, dù thành hay bại
             hanh_dong.ghi(hanh_dong.dong_so(
                 ai=hanh_dong.nguoi_lam(), tool=tool, connector=conn.get("connector_id"),
@@ -1013,6 +1063,14 @@ def _lazy_tools_and_route(visible_tools, visible_route, pool, full_route, top_k,
     return tools, route
 
 
+def _so_tool_nong() -> int:
+    """settings mcp.tool_nong (mặc định 12, 0 = tắt)."""
+    try:
+        return max(0, int((config.read_settings().get("mcp") or {}).get("tool_nong", 12)))
+    except Exception:
+        return 12
+
+
 def _apply_lazy(tools_spec, route, include_ambient=False, hidden=None, force=False):
     """Nếu bật lazy: giấu tool sau meta-tool search/run; không bật → trả nguyên.
     Pool = MỌI tool trừ nhóm hạt nhân CORE_TOOL_FNS - gồm cả builtin và plugin, không riêng
@@ -1022,6 +1080,14 @@ def _apply_lazy(tools_spec, route, include_ambient=False, hidden=None, force=Fal
     pool = [t for t in tools_spec if t["fn"] not in CORE_TOOL_FNS]
     if not force and not _lazy_on(len(pool), _pool_chars(pool)):
         return tools_spec, route
+    # TOOL NÓNG (Lớp 6): các tool chủ gọi nhiều nhất (nhật ký hub) luôn hiện trực tiếp, không
+    # giấu sau lớp tìm tool. Trước đây mỗi báo cáo tốn 1-2 vòng "javis_search_tools" chỉ để tìm
+    # lại pos_order mà hôm nào cũng gọi.
+    try:
+        nong = set(tiet_kiem.tool_nong(audit_tail(500), route, k=_so_tool_nong()))
+    except Exception:
+        nong = set()
+    pool = [t for t in pool if t["fn"] not in nong]
     pool_fns = {t["fn"] for t in pool}
     visible_tools = [t for t in tools_spec if t["fn"] not in pool_fns]
     visible_route = {fn: ent for fn, ent in route.items() if fn not in pool_fns}
