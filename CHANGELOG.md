@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.151] - 2026-10-13
+### Thêm mới
+- **Soi nội dung kỹ năng nhập từ ngoài.** Khi nhập gói .zip hoặc .skill, MinMin đọc nội dung chứ không chỉ kiểm đường dẫn. Kỹ năng có lệnh tải về rồi chạy thẳng, câu bảo "bỏ qua mọi chỉ dẫn trước đó", lệnh xoá hàng loạt hoặc khoá bí mật nằm sẵn sẽ bị **khoá** (chuyển vào danh sách đã tắt), bố đọc rồi tự bật. Ký tự ẩn, file chạy được đi kèm thì vẫn nhập nhưng có cảnh báo hiện ngay sau khi nhập.
+- **Bản tổng hợp tuần.** Ký ức mới, trang wiki mới, kỹ năng đã dùng và kỹ năng bị khoá trong 7 ngày qua, viết bằng văn nói, không tốn token. Xem ngay tại `/digest/tuan`. Ai đã bật báo cáo token sáng thứ Hai thì nhận kèm bản này, không bật thì không gửi gì thêm.
+
 ## [26.10.150] - 2026-10-13
 ### Sửa lỗi
 - Sửa bảng kiểm tra đường dẫn của bản trước (thêm 3 đường dẫn xem/sửa/xoá ký ức mà chưa cập nhật bảng), không ảnh hưởng người dùng.

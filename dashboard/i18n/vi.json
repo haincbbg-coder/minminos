@@ -730,6 +730,7 @@
   "studio.import_done": "Nhập xong.",
   "studio.imported": "Đã nhập:",
   "studio.skipped": "Bỏ qua (đã có):",
+  "studio.import_warn": "Cảnh báo an toàn (skill nguy hiểm đã bị khoá, vào danh sách skill đã tắt để đọc rồi tự bật):",
   "studio.errors": "Lỗi:",
   "studio.var_input": "đầu vào",
   "studio.var_prev": "kết quả bước trước",
