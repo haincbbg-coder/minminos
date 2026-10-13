@@ -77,6 +77,21 @@ _cn = ng.chan_nguon("Có 12 đơn.", "hôm nay bao nhiêu đơn",
 check("chan_nguon dùng gom_nguon", _cn.startswith("Nguồn: pos_order ×2 · lúc 09:20"), _cn)
 
 
+# ---------- 26.10.157: số theo đơn vị / làm tròn không còn báo oan ----------
+_kq = ['{"revenue":4306251000,"created_revenue":7224638000,"orders":23345,"spend":42312000}']
+_n = ng.neo_so("Tạo đơn 7,225 tỷ đồng, đã nhận 4,306 tỷ (13.999 đơn), ads 42,3 triệu, 23.345 đơn, bịa 5.284.688",
+               "tháng trước", _kq)
+check("neo_so: 4,306 tỷ và 7,225 tỷ là xấp xỉ của số trong kho", _n["xap_xi"] == [4306, 7225], _n)
+check("neo_so: số bịa và số không có trong kho vẫn bị bắt", _n["khong_nguon"] == [13999, 5284688], _n)
+check("neo_so: số khớp đúng vẫn là có nguồn", _n["co_nguon"] == [23345], _n)
+check("so_co_don_vi: đọc đơn vị tỷ/triệu/k", ng.so_co_don_vi("4,306 tỷ, 42,3 triệu, 5k") == {4306: 4.306e9, 423: 4.23e7, 5: 5000.0})
+check("làm tròn: 42.310 là bản làm tròn của 42.312.000 (4 chữ số có nghĩa)", ng._la_ban_lam_tron(42310, {42312000}))
+check("làm tròn: 3 chữ số có nghĩa thì KHÔNG khớp bừa", not ng._la_ban_lam_tron(423000, {42312000}) and not ng._la_ban_lam_tron(4230, {42312000}))
+check("làm tròn: không khớp số nhỏ hơn", not ng._la_ban_lam_tron(7225, {722}))
+_cn = ng.chan_nguon("Đã nhận 4,306 tỷ đồng.", "doanh số", [{"name": "pos_order", "input": {}}], _kq, luc="10:44")
+check("chan_nguon: không cảnh báo số theo đơn vị", "⚠" not in _cn, _cn)
+
+
 if fails:
     print(f"ĐỎ {len(fails)}"); sys.exit(1)
 print("Tất cả xanh.")
