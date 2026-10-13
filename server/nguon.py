@@ -80,19 +80,86 @@ def _chuoi_so_trong(ket_qua: str) -> set:
     return cac_so(kq)
 
 
+# Số kèm ĐƠN VỊ trong câu trả lời: "4,306 tỷ", "42,3 triệu", "7.225 tỷ đồng". Dấu phẩy hay chấm
+# ở đây là dấu THẬP PHÂN (người Việt viết tiền tỷ như vậy), không phải nhóm nghìn.
+_DON_VI = {"ty": 1e9, "tỷ": 1e9, "trieu": 1e6, "triệu": 1e6, "tr": 1e6, "nghin": 1e3,
+           "nghìn": 1e3, "ngan": 1e3, "ngàn": 1e3, "k": 1e3}
+_RE_DON_VI = re.compile(r"(?<![\d.,])(\d{1,3}(?:[.,]\d{1,3})?)\s*(tỷ|ty|triệu|trieu|tr|nghìn|nghin|ngàn|ngan|k)\b",
+                        re.IGNORECASE)
+
+
+def so_co_don_vi(text: str) -> dict:
+    """{số-như-cac_so-đọc: giá trị thật}. "4,306 tỷ" -> {4306: 4.306e9}; "42,3 triệu" -> {423: 4.23e7}.
+
+    Vì sao (26.10.157): model viết "doanh thu 4,306 tỷ đồng", cac_so đọc thành 4306 rồi không
+    thấy 4306 trong JSON Pancake (ở đó là 4306251000) -> báo oan "số chưa thấy". Số đó là số
+    THẬT, chỉ viết theo đơn vị người đọc."""
+    ra = {}
+    for m in _RE_DON_VI.finditer(str(text or "")):
+        chu, dv = m.group(1), m.group(2).lower()
+        he = _DON_VI.get(dv) or _DON_VI.get(bo_dau(dv))
+        if not he:
+            continue
+        try:
+            gia_tri = float(chu.replace(",", ".")) * he
+            khoa = int(re.sub(r"[.,]", "", chu))
+        except ValueError:
+            continue
+        ra[khoa] = gia_tri
+    return ra
+
+
+def _la_ban_lam_tron(n: int, kho: set) -> bool:
+    """n là bản LÀM TRÒN của một số trong kho? 7225 ~ 7224638000 (viết "7,225 tỷ"), 42300 ~ 42312000.
+    Đòi ít nhất 4 chữ số có nghĩa để không khớp bừa với mọi số bắt đầu bằng cùng 3 chữ số."""
+    m = int(str(n).rstrip("0") or "0")
+    if m < 1000:
+        return False
+    for k in kho:
+        if k <= n:
+            continue
+        for p in range(1, 13):
+            q = round(k / 10 ** p)
+            if q == m:
+                return True
+            if q < m:
+                break
+    return False
+
+
+def _khop_xap_xi(n: int, don_vi: dict, kho: set) -> bool:
+    """n viết kèm đơn vị (4,306 tỷ) có khớp số nào trong kho trong sai số nửa chữ số cuối?"""
+    v = don_vi.get(n)
+    if not v:
+        return False
+    for k in kho:
+        if k and abs(k - v) / v <= 5e-4:
+            return True
+    return False
+
+
 def neo_so(tra_loi: str, cau_hoi: str, ket_qua_tool: Iterable[str]) -> dict:
     """Đối chiếu số trong câu trả lời với dữ liệu tool.
 
-    Trả {"co_nguon": [..], "khong_nguon": [..]} (số nguyên, đã sắp). Số có mặt trong BẤT KỲ
-    kết quả tool nào là có nguồn. Số nằm sẵn trong câu hỏi thì không xét."""
+    Trả {"co_nguon": [..], "khong_nguon": [..], "xap_xi": [..]} (số nguyên, đã sắp). Số có
+    mặt trong BẤT KỲ kết quả tool nào là có nguồn. Số viết theo đơn vị (4,306 tỷ) hay làm tròn
+    (7.225 của 7.224.638.000) mà khớp một số trong kho thì là "xấp xỉ": cũng có nguồn, không
+    cảnh báo. Số nằm sẵn trong câu hỏi thì không xét."""
     trong_hoi = cac_so(cau_hoi)
     can = so_dang_ke(tra_loi, tru=trong_hoi)
     kho = set()
     for kq in ket_qua_tool or ():
         kho |= _chuoi_so_trong(kq)
-    co = sorted(n for n in can if n in kho)
-    khong = sorted(n for n in can if n not in kho)
-    return {"co_nguon": co, "khong_nguon": khong}
+    don_vi = so_co_don_vi(tra_loi)
+    co, xap_xi, khong = [], [], []
+    for n in sorted(can):
+        if n in kho:
+            co.append(n)
+        elif _khop_xap_xi(n, don_vi, kho) or _la_ban_lam_tron(n, kho):
+            xap_xi.append(n)
+        else:
+            khong.append(n)
+    return {"co_nguon": co, "khong_nguon": khong, "xap_xi": xap_xi}
 
 
 # ─────────────────────────── chân nguồn ───────────────────────────
