@@ -117,7 +117,8 @@ _src = (ROOT / "server" / "main.py").read_text(encoding="utf-8")
 check("ollama nằm trong danh sách provider được phát tool",
       '"gemini", "groq", "ollama", "openai-compat")' in _src)
 check("có nhánh gọi vòng tool cho ollama",
-      "engine.ollama_chat_with_mcp(key, model, messages, reasoning, tools, route)" in _src)
+      # 26.10.161: khoá đi qua bể khoá (`k` = khoá đang dùng), vẫn là vòng tool của ollama
+      "engine.ollama_chat_with_mcp(k, model, messages, reasoning, tools, route)" in _src)
 check("CANARY: mã đã sạch hàm chọn địa chỉ",
       "_ollama_cfg" not in _src and "_ollama_host" not in _src)
 

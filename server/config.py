@@ -118,6 +118,9 @@ _DEFAULT = {
         # Đổi ở trang Models. Cả hai đều giữ NGUYÊN năng lực: Bash, WebFetch, MCP, nối phiên cũ.
         "claude_auth": "subscription",
         "openrouter_key": "",
+        # Bể khoá xoay vòng (26.10.161): {"openrouter": ["sk-..", ...], ...} - khoá DỰ PHÒNG
+        # chính chủ cho nhà API; khoá chính ở các field *_key vẫn đứng đầu. Vấp 429/401 là đổi.
+        "be_khoa": {},
         "anthropic_api_key": "",               # provider Anthropic API (P2)
         "openai_api_key": "",                  # provider OpenAI (ChatGPT API)
         "gemini_api_key": "",                  # provider Google Gemini (endpoint OpenAI-compat)
