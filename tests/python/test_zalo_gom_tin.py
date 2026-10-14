@@ -1,4 +1,4 @@
-"""Zalo cá nhân: gom tin chat riêng, giữ tin khi chủ đang nhắn tay (26.10.160).
+"""Zalo cá nhân: gom tin chat riêng, giữ tin khi chủ đang nhắn tay (26.10.161).
 
     python tests/run.py zalo_gom_tin
 """

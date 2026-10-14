@@ -1,4 +1,4 @@
-"""Gói học Javis 2: kiểm nguồn gốc WebSocket, cắt dấu cách mật khẩu, giờ trực chatbot (26.10.160).
+"""Gói học Javis 2: kiểm nguồn gốc WebSocket, cắt dấu cách mật khẩu, giờ trực chatbot (26.10.161).
 
     python tests/run.py hoc_javis_goi2
 """
