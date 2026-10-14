@@ -4092,11 +4092,21 @@
           </div>
         </div>`;
       }
+      // Bể khoá xoay vòng (26.10.161): khoá DỰ PHÒNG chính chủ cho nhà API, vấp 429/401 là đổi.
+      // Không có ở thẻ CLI/OAuth: xoay tài khoản thuê bao là vi phạm điều khoản.
+      const beKhoa = (p.needs_key && on && p.kind === "api")
+        ? `<details class="prov-bekhoa" data-bekhoa="${p.id}"><summary class="gcard-meta">${esc(t("models.bk_title"))} <span id="bk-st-${p.id}"></span></summary>
+             <div class="prov-note">${esc(t("models.bk_note"))}</div>
+             <textarea class="js-input" id="bk-${p.id}" rows="3" spellcheck="false" placeholder="${esc(t("models.bk_ph"))}"></textarea>
+             <div class="prov-action"><button class="gcard-btn ghost" data-bk-save="${p.id}">${esc(t("models.bk_save"))}</button><span class="gcard-meta" id="bk-msg-${p.id}"></span></div>
+           </details>`
+        : "";
       return `<div class="prov-card ${p.is_main ? "main" : ""}">
         ${provHead(p, on, p.kind === "cli" ? "MCP/skill" : "MCP MinMin", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model")}
         ${p.needs_key
           ? `<div class="prov-action"><input class="js-input" id="pk-${p.id}" type="password" placeholder="${on ? esc(t("models.key_change_ph", { duoi: masked })) : esc(t("models.key_ph"))}"><button class="gcard-btn" data-pk="${p.id}">${on ? esc(t("models.key_change")) : esc(t("models.connect"))}</button>${on ? `<button class="gcard-btn ghost" data-disc="${p.id}">${esc(t("models.disconnect"))}</button>` : ""}</div>`
           : `<div class="prov-note">${esc(t("models.no_key_note"))}</div>`}
+        ${beKhoa}
       </div>`;
     };
 
@@ -4455,6 +4465,36 @@
     };
     if (bStop) bStop.onclick = async () => { bStop.disabled = true; await postJson("/danh-gia/loat/huy", {}); bStop.disabled = false; };
     pollBatch();   // vào trang thấy ngay lượt đang/vừa chạy, kể cả sau khi tải lại trang
+    // Bể khoá: nạp trạng thái (số khoá, khoá đang nghỉ) và lưu danh sách khoá dự phòng.
+    (async () => {
+      let d; try { d = await (await fetch("/be-khoa")).json(); } catch (e) { return; }
+      if (!d || !d.ok) return;
+      el.querySelectorAll("details[data-bekhoa]").forEach(det => {
+        const pid = det.dataset.bekhoa;
+        const st = document.getElementById("bk-st-" + pid);
+        const nha = (d.nha || {})[pid];
+        const n = (d.da_khai || {})[pid] || 0;
+        if (st) {
+          if (!nha) { st.textContent = n ? "(" + n + ")" : ""; return; }
+          const nghi = (nha.khoa || []).filter(k => k.nghi_con_giay > 0);
+          st.textContent = "(" + t("models.bk_status", { n: nha.so_khoa, nghi: nghi.length })
+            + (nghi.length ? ": " + nghi.map(k => k.nhan + " " + k.nghi_con_giay + "s").join(", ") : "") + ")";
+        }
+      });
+    })();
+    el.querySelectorAll(".gcard-btn[data-bk-save]").forEach(b => {
+      b.onclick = async () => {
+        const pid = b.dataset.bkSave;
+        const ta = document.getElementById("bk-" + pid);
+        const msg = document.getElementById("bk-msg-" + pid);
+        const keys = (ta && ta.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+        b.disabled = true;
+        const r = await postJson("/be-khoa", { prov: pid, keys });
+        b.disabled = false;
+        if (msg) msg.textContent = r && r.ok ? t("models.bk_saved", { n: r.so_khoa_du_phong }) : (r && r.error) || t("common.net_err");
+        if (ta && r && r.ok) ta.value = "";
+      };
+    });
     el.querySelectorAll(".gcard-btn[data-pk]").forEach(b => {
       b.onclick = async () => {
         const pid = b.dataset.pk;

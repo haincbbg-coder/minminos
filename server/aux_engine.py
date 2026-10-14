@@ -393,6 +393,15 @@ class _ApiAuxEngine:
             messages.append({"role": "system", "content": sysprompt})
         messages.append({"role": "user", "content": prompt})
 
+        # Bể khoá (26.10.161): việc nền cũng xoay khoá khi vấp 429/401 nếu chủ khai khoá dự phòng.
+        xoay = None
+        try:
+            import be_khoa
+            if self.provider in be_khoa.API_CO_BE:
+                _keys = be_khoa.danh_sach(self.provider, cfgmod.read_settings().get("model", {}) or {}, key)
+                xoay = be_khoa.Xoay(self.provider, _keys) if len(_keys) > 1 else None
+        except Exception:
+            xoay = None
         if tools:
             fn = {"openrouter": eng.openrouter_chat_with_mcp,
                   "openai": eng.openai_chat_with_mcp,
@@ -401,7 +410,10 @@ class _ApiAuxEngine:
                   "ollama": eng.ollama_chat_with_mcp,
                   "ollama-local": eng.ollama_local_chat_with_mcp,
                   "openai-compat": eng.openai_compat_chat_with_mcp}[self.provider]
-            stream = fn(key, self.model, messages, self.reasoning, tools, route)
+            stream = eng.thu_lai_khi_tam_thoi(
+                lambda: fn(xoay.khoa() if xoay else key, self.model, messages, self.reasoning, tools, route),
+                nhan=f"nền {self.provider}+tool", xoay=xoay) if xoay else \
+                fn(key, self.model, messages, self.reasoning, tools, route)
         else:
             fn = {"openrouter": eng.openrouter_stream, "openai": eng.openai_stream,
                   "gemini": eng.gemini_stream, "groq": eng.groq_stream,
@@ -409,7 +421,10 @@ class _ApiAuxEngine:
                   "ollama": eng.ollama_stream,
                   "ollama-local": eng.ollama_local_stream,
                   "openai-compat": eng.openai_compat_stream}[self.provider]
-            stream = fn(key, self.model, messages, self.reasoning)
+            stream = eng.thu_lai_khi_tam_thoi(
+                lambda: fn(xoay.khoa() if xoay else key, self.model, messages, self.reasoning),
+                nhan=f"nền {self.provider}", xoay=xoay) if xoay else \
+                fn(key, self.model, messages, self.reasoning)
 
         # Đường API sinh "text" theo mảnh; việc nền chỉ đọc "final" nên gom lại rồi phát MỘT lần.
         buf = []

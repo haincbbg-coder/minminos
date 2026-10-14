@@ -217,6 +217,10 @@ def ev_loi_http(nhan, status, body_text, headers=None, fact=None, cat=300):
     đúng lỗi đó. Phải co lại hoặc chờ cửa sổ trượt qua trước.
     """
     ev = {"type": "error", "content": f"{nhan} {status}: {str(body_text or '')[:cat]}"}
+    try:
+        ev["ma"] = int(status)     # bể khoá cần status cả khi lỗi KHÔNG tạm thời (401/402/403)
+    except (TypeError, ValueError):
+        pass
     if fact is None and (status in _RETRY_STATUS or _is_transient_body(str(body_text or ""))):
         ev["tam_thoi"] = True
         # Giữ status thật để tầng thử lại chọn được nhịp chờ đúng loại. 429 là hạn mức, cửa
@@ -241,7 +245,7 @@ def ev_loi_exc(nhan, exc):
     return ev
 
 
-async def thu_lai_khi_tam_thoi(tao_stream, *, so_lan=3, nhan=""):
+async def thu_lai_khi_tam_thoi(tao_stream, *, so_lan=3, nhan="", xoay=None):
     """Chạy lại một lượt gọi model khi nó gãy vì lỗi TẠM THỜI (429, 5xx, mạng chớp tắt).
 
     Vì sao nằm ở TẦNG SỰ KIỆN chứ không nhét vào từng hàm stream: có tám đường gọi model và
@@ -263,9 +267,13 @@ async def thu_lai_khi_tam_thoi(tao_stream, *, so_lan=3, nhan=""):
     và `openrouter_stream` - vốn tự retry bên trong - không bị thử lại thêm một tầng nữa.
     """
     da_meta = False
-    for lan in range(1, max(1, so_lan) + 1):
+    # Bể khoá (26.10.161): có `xoay` thì một cú 429/401/402 trên khoá này là đổi sang khoá khác
+    # và gọi lại NGAY, không chờ cửa sổ hạn mức. Mỗi khoá dự phòng cho thêm một lượt thử.
+    tong_lan = max(1, so_lan) + (max(0, len(xoay.keys) - 1) if xoay is not None else 0)
+    for lan in range(1, tong_lan + 1):
         chan = False        # đã nhả chữ / đã chạy tool → lượt này không chạy lại được nữa
         loi_hoan = None
+        doi_khoa = False
         gen = tao_stream()
         try:
             async for ev in gen:
@@ -276,6 +284,10 @@ async def thu_lai_khi_tam_thoi(tao_stream, *, so_lan=3, nhan=""):
                     da_meta = True
                 elif t == "tool_call" or (t == "text" and ev.get("content")):
                     chan = True
+                elif t == "error" and not chan and xoay is not None and ev.get("ma") and xoay.loi(ev):
+                    loi_hoan = ev
+                    doi_khoa = True
+                    break
                 elif t == "error" and ev.get("tam_thoi") and not chan:
                     loi_hoan = ev
                     break
@@ -285,7 +297,14 @@ async def thu_lai_khi_tam_thoi(tao_stream, *, so_lan=3, nhan=""):
             if aclose is not None:
                 await aclose()
         if loi_hoan is None:
+            if xoay is not None:
+                xoay.ok()
             return
+        if doi_khoa:
+            print(f"[bể khoá {nhan or '?'}] khoá vấp {loi_hoan.get('ma')}, đổi sang khoá khác",
+                  file=sys.stderr)
+            await asyncio.sleep(0.3)
+            continue
         cho = loi_hoan.get("cho")
         if cho is None:
             # Nhà cung cấp không nói phải chờ bao lâu thì tự đoán, nhưng đoán theo LOẠI lỗi.
@@ -296,7 +315,7 @@ async def thu_lai_khi_tam_thoi(tao_stream, *, so_lan=3, nhan=""):
                    if loi_hoan.get("ma") == 429 else _jittered_backoff(lan))
         # Nhà cung cấp bảo chờ lâu hơn ngưỡng người ta chịu ngồi im thì đừng chờ - báo ngay để
         # họ biết mà làm việc khác, thay vì nhìn màn hình đứng yên nửa phút.
-        if lan >= so_lan or cho > _WINDOW_WAIT_MAX:
+        if lan >= tong_lan or cho > _WINDOW_WAIT_MAX:
             cuoi = dict(loi_hoan)
             cuoi.pop("tam_thoi", None)
             cuoi.pop("cho", None)
