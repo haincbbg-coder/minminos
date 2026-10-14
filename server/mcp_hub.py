@@ -35,6 +35,7 @@ import skill_usage
 from config import STATE_DIR
 import hanh_dong   # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
 import tiet_kiem   # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
+import tiem_lenh   # quét tiêm lệnh trong dữ liệu vào (26.10.164)
 
 _TOKEN_PATH = STATE_DIR / ".hub_token"
 _AUDIT_PATH = STATE_DIR / "mcp_audit.jsonl"
@@ -283,6 +284,24 @@ def _guard(ent, fn, mode):
                 if len(_gon) < len(result):
                     _DEM_DOC.ky_tu_tiet_kiem += len(result) - len(_gon)
                     result = _gon
+            except Exception:
+                pass
+        # QUÉT TIÊM LỆNH (26.10.164): dữ liệu từ ngoài (tin Zalo, email, bình luận, web) đi
+        # vào ngữ cảnh cùng chỗ với lời chủ. Bắt được mẫu câu nhắm vào AI thì chèn cảnh báo
+        # TRƯỚC nội dung (không xoá) và ghi sổ hành động. Quét trước khi cất đệm để bản đệm
+        # cũng mang cảnh báo.
+        if isinstance(result, str) and not result.startswith("ERROR:") and tiem_lenh.nen_quet_tool(fn):
+            try:
+                result, _bat = tiem_lenh.quet_va_boc(
+                    result, f"{conn.get('label') or conn.get('connector_id') or 'kết nối'} / {tool}",
+                    ghi_so=lambda bat: hanh_dong.ghi(hanh_dong.dong_so(
+                        ai=hanh_dong.nguoi_lam(), tool=tool, connector=conn.get("connector_id"),
+                        label=conn.get("label"), loai="tiem_lenh", cls=cls, mode=mode, ok=False, ms=0,
+                        args=args, err="CẢNH BÁO tiêm lệnh: " + "; ".join(
+                            f"{b['mau']}: {b['doan']}" for b in bat[:3]))))
+                if _bat:
+                    print(f"[tiêm lệnh] {conn.get('label')}/{tool}: " + ", ".join(b["mau"] for b in _bat),
+                          file=sys.stderr)
             except Exception:
                 pass
         if khoa and isinstance(result, str) and not result.startswith("ERROR:") and len(result) <= 300_000:

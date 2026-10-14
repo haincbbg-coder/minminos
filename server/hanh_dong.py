@@ -28,7 +28,10 @@ from typing import Optional
 
 LOAI = ("xoa", "tien", "don_hang", "nhan_tin", "dang_bai", "khac")
 NHAN = {"xoa": "Xoá / huỷ", "tien": "Tiền & quảng cáo", "don_hang": "Đơn hàng & kho",
-        "nhan_tin": "Nhắn tin & email", "dang_bai": "Đăng bài", "khac": "Ghi khác"}
+        "nhan_tin": "Nhắn tin & email", "dang_bai": "Đăng bài", "khac": "Ghi khác",
+        # Không nằm trong LOAI (không có chính sách chặn): chỉ là dòng CẢNH BÁO dữ liệu vào
+        # chứa câu nhắm vào AI (26.10.164). Nhãn để trang Kết nối hiện tên người đọc được.
+        "tiem_lenh": "Cảnh báo tiêm lệnh"}
 CHINH_SACH_HOP_LE = ("cho_phep", "chan")
 
 # Từ khoá trong TÊN TOOL (chữ thường). Xét theo thứ tự LOAI: xoá trước (nặng nhất).
@@ -198,8 +201,12 @@ def thong_ke(limit: int = 2000) -> dict:
     ds = doc(limit)
     dem = {l: 0 for l in LOAI}
     chan = 0
+    tiem = 0
     for r in ds:
+        if r.get("loai") == "tiem_lenh":
+            tiem += 1
+            continue
         dem[r.get("loai") if r.get("loai") in dem else "khac"] += 1
         if not r.get("ok") and "CHẶN" in str(r.get("err") or ""):
             chan += 1
-    return {"tong": len(ds), "theo_loai": dem, "bi_chan": chan}
+    return {"tong": len(ds), "theo_loai": dem, "bi_chan": chan, "tiem_lenh": tiem}

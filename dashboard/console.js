@@ -6065,7 +6065,8 @@
           + `<td style="white-space:nowrap">${esc(r.ai || "?")}</td><td>${esc(NHAN[r.loai] || r.loai)}</td>`
           + `<td><b>${esc(r.tool)}</b>${r.label ? ` <span style="opacity:.6">(${esc(r.label)})</span>` : ""}<div style="opacity:.7;font-size:12px">${esc(r.args || "")}</div></td>`
           + `<td class="${r.ok ? "" : "warn"}">${r.ok ? ic("check", { cls: "ic-ok" }) : WARN_ICON + " " + esc(String(r.err || "").slice(0, 80))}</td></tr>`).join("");
-        soBox.innerHTML = `<div style="opacity:.7;margin-bottom:4px">${esc(window.t("cs.hd_count", { n: tk.tong || 0, chan: tk.bi_chan || 0 }))}${dem ? " · " + dem : ""}</div>`
+        const tiem = tk.tiem_lenh ? " · " + esc(window.t("cs.hd_tiem_lenh", { n: tk.tiem_lenh })) : "";
+        soBox.innerHTML = `<div style="opacity:.7;margin-bottom:4px">${esc(window.t("cs.hd_count", { n: tk.tong || 0, chan: tk.bi_chan || 0 }))}${dem ? " · " + dem : ""}${tiem}</div>`
           + (rows ? `<table class="mini-tbl"><tbody>${rows}</tbody></table>` : `<div class="mp-empty">${esc(window.t("cs.hd_empty"))}</div>`);
       };
       try {

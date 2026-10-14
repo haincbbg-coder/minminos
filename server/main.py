@@ -90,6 +90,7 @@ import nguon         # dẫn nguồn + neo số liệu dưới câu trả lời 
 import hanh_dong     # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
 import tiet_kiem        # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
 import be_khoa          # bể khoá xoay vòng cho nhà API (26.10.161)
+import tiem_lenh        # quét tiêm lệnh trong dữ liệu vào (26.10.164)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
@@ -20061,6 +20062,19 @@ BOT_KHONG_TOOL = ["__javis_bot_khong_tool__"]
 # ghim đường đo, đọc stream, tính usage, cắt lịch sử) phải giống hệt nhau, nên chúng nằm ở đây
 # chứ không chép hai bản. Chép hai bản là cách chắc chắn để một hôm nào đó `usage_store.record`
 # có ở đường này mà thiếu ở đường kia - hoá đơn thiếu, và không ai nhìn ra được từ bên ngoài.
+def _bot_quet_tiem_lenh(text, chat_id=None):
+    try:
+        boc, bat = tiem_lenh.quet_va_boc(
+            text, f"khách {chat_id or '?'}",
+            ghi_so=lambda bat: hanh_dong.ghi(hanh_dong.dong_so(
+                ai=f"bot:{chat_id or '?'}", tool="tin_khach", connector="", label="bot",
+                loai="tiem_lenh", cls="read", mode="bot", ok=False, ms=0, args={},
+                err="CẢNH BÁO tiêm lệnh: " + "; ".join(f"{b['mau']}: {b['doan']}" for b in bat[:3]))))
+        return boc
+    except Exception:
+        return text
+
+
 def _bot_lich_su(sess):
     if sess.get("bot") is None:
         sess["bot"] = []
@@ -20162,7 +20176,9 @@ async def _bot_tra_loi(text, *, sess, sysprompt, prov, api_key, api_model, reaso
     là không có tool nào, và một test canh đúng thân hàm này (test_chatbot_cach_ly.py mục B2).
     """
     lich_su = _bot_lich_su(sess)
-    lich_su.append({"role": "user", "content": text})
+    # Tin của KHÁCH (người lạ) đi vào ngữ cảnh bot: quét tiêm lệnh, bắt được thì chèn cảnh báo
+    # trước nội dung và ghi sổ (26.10.164). Không xoá chữ nào của khách.
+    lich_su.append({"role": "user", "content": _bot_quet_tiem_lenh(text, chat_id)})
     _bot_cat_lich_su(lich_su)
 
     # System dựng LẠI mỗi lượt: tài liệu tra được đổi theo từng câu hỏi. Giữ system cũ là bot
@@ -20295,7 +20311,9 @@ async def _bot_tra_loi_co_tool(text, *, sess, sysprompt, prov, api_key, api_mode
     đưa file cho khách thì nói đường dẫn trong câu trả lời.
     """
     lich_su = _bot_lich_su(sess)
-    lich_su.append({"role": "user", "content": text})
+    # Tin của KHÁCH (người lạ) đi vào ngữ cảnh bot: quét tiêm lệnh, bắt được thì chèn cảnh báo
+    # trước nội dung và ghi sổ (26.10.164). Không xoá chữ nào của khách.
+    lich_su.append({"role": "user", "content": _bot_quet_tiem_lenh(text, chat_id)})
     _bot_cat_lich_su(lich_su)
     messages = [{"role": "system", "content": sysprompt}] + lich_su
 
