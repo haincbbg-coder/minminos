@@ -642,7 +642,7 @@
   "models.tk_nong": "Tool nóng đang hiện thẳng",
   "models.bk_title": "Bể khoá dự phòng",
   "models.bk_note": "Thêm khoá API chính chủ khác của cùng nhà này, mỗi dòng một khoá. Vấp hạn mức (429) hay khoá hỏng (401) là MinMin đổi sang khoá kế ngay, không chờ. Không áp cho gói thuê bao Claude/ChatGPT/Grok: xoay tài khoản thuê bao là vi phạm điều khoản và dễ bị khoá.",
-  "models.bk_ph": "sk-... (mỗi dòng một khoá; lưu danh sách rỗng để xoá)",
+  "models.bk_ph": "Mỗi dòng một khoá, ví dụ sk-... (lưu danh sách rỗng để xoá)",
   "models.bk_save": "Lưu bể khoá",
   "models.bk_saved": "Đã lưu {n} khoá dự phòng",
   "models.bk_status": "{n} khoá, {nghi} đang nghỉ",

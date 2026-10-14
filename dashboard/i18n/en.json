@@ -642,7 +642,7 @@
   "models.tk_nong": "Hot tools shown directly",
   "models.bk_title": "Backup key pool",
   "models.bk_note": "Add other API keys you own for this same provider, one per line. On a rate limit (429) or a dead key (401) MinMin switches to the next key at once. Not for Claude/ChatGPT/Grok subscriptions: rotating subscription accounts breaks their terms and risks a ban.",
-  "models.bk_ph": "sk-... (one key per line; save an empty list to clear)",
+  "models.bk_ph": "One key per line, e.g. sk-... (save an empty list to clear)",
   "models.bk_save": "Save key pool",
   "models.bk_saved": "Saved {n} backup keys",
   "models.bk_status": "{n} keys, {nghi} resting",
