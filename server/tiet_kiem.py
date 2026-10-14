@@ -202,6 +202,88 @@ def cache_cua(usage: Any) -> int:
         return 0
 
 
+# ─────────────────────────── tràn kết quả tool ra file (26.10.160) ───────────────────────────
+
+import hashlib
+import os
+from pathlib import Path
+
+# Kho file tràn: NGOÀI vault (không lẫn vào Second Brain, không bị git/đồng bộ kéo theo), trong
+# STATE_DIR để mọi brain dùng chung một chỗ dọn. Chỉ javis_read_file của đường chat CHỦ đọc được.
+def _state_dir() -> Path:
+    try:
+        from config import STATE_DIR
+        return Path(STATE_DIR)
+    except Exception:
+        return Path(os.environ.get("JAVIS_STATE_DIR") or Path(__file__).parent)
+
+
+KHO_TRAN = _state_dir() / "tool-cache"
+TRAN_GIU_GIO = 24          # file quá tuổi này bị dọn ở lần ghi kế tiếp
+TRAN_TOI_DA_FILE = 400
+
+
+def _don_kho_tran(now: Optional[float] = None) -> None:
+    now = time.time() if now is None else now
+    try:
+        fs = sorted(KHO_TRAN.glob("*.txt"), key=lambda f: f.stat().st_mtime)
+    except OSError:
+        return
+    for f in fs:
+        try:
+            if now - f.stat().st_mtime > TRAN_GIU_GIO * 3600:
+                f.unlink()
+        except OSError:
+            pass
+    try:
+        fs = sorted(KHO_TRAN.glob("*.txt"), key=lambda f: f.stat().st_mtime)
+        for f in fs[: max(0, len(fs) - TRAN_TOI_DA_FILE)]:
+            f.unlink()
+    except OSError:
+        pass
+
+
+def ghi_tran(text: str, ten_tool: str = "tool") -> Path:
+    """Ghi TOÀN BỘ kết quả tool ra file trong KHO_TRAN. Tên = giờ + tool + băm nội dung, nên
+    cùng kết quả thì cùng file (không nhân đôi khi đệm trả lại)."""
+    KHO_TRAN.mkdir(parents=True, exist_ok=True)
+    _don_kho_tran()
+    ten = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(ten_tool or "tool"))[:40].strip("-") or "tool"
+    bam = hashlib.sha1(text.encode("utf-8", "replace")).hexdigest()[:10]
+    f = KHO_TRAN / f"{time.strftime('%Y%m%d-%H%M%S')}-{ten}-{bam}.txt"
+    if not f.exists():
+        tmp = f.with_suffix(".tmp")
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, f)
+    return f
+
+
+def xem_truoc_tran(text: str, duong_dan, max_chars: int = 8000, head_ratio: float = 0.6) -> str:
+    """Bản xem trước đầu/đuôi kèm chỉ dẫn đọc tiếp. Vì sao: trước đây não API chỉ thấy 8.000
+    ký tự đầu đuôi và PHẦN GIỮA MẤT HẲN (60 trang đơn hàng -> sai số âm thầm). Giờ phần giữa
+    nằm trong file, não đọc tiếp bằng javis_read_file(path, offset, limit) khi cần."""
+    n = len(text)
+    head_n = int(max_chars * head_ratio)
+    tail_n = max_chars - head_n
+    return (text[:head_n]
+            + f"\n\n… [KẾT QUẢ DÀI {n:,} KÝ TỰ, ĐÃ LƯU TRỌN tại {duong_dan}. Ở đây chỉ là "
+            f"{head_n:,} ký tự đầu và {tail_n:,} ký tự cuối. Cần phần giữa thì gọi "
+            f"javis_read_file(path=\"{duong_dan}\", offset=<ký tự bắt đầu>, limit=<số ký tự, tối đa "
+            f"30000>) theo từng đoạn; đếm hay cộng toàn bộ thì đọc đủ các đoạn, đừng đoán từ "
+            f"phần đã thấy.] …\n\n"
+            + text[-tail_n:])
+
+
+def la_file_tran(p) -> bool:
+    """Đường dẫn nằm trong kho file tràn? (để javis_read_file cho phép đọc)."""
+    try:
+        t = Path(p).resolve()
+        k = KHO_TRAN.resolve()
+        return t.is_file() and (k in t.parents)
+    except (OSError, ValueError):
+        return False
+
+
 # ─────────────────────────── tool nóng ───────────────────────────
 
 def tool_nong(audit: Iterable[dict], route: dict, k: int = 12, chi_ok: bool = True) -> list:

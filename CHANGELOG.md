@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.160] - 2026-10-14
+### Cải thiện
+- **Não API không còn mất phần giữa của kết quả tool dài** (Lớp 7a, mượn cách Hermes). Trước đây OpenRouter, OpenAI, Anthropic API, Gemini, Groq, Ollama chỉ thấy 8.000 ký tự đầu đuôi, 60 trang đơn hàng thì phần giữa mất âm thầm. Giờ kết quả được lưu trọn ra kho file ngoài brain, não nhận bản xem trước kèm đường dẫn và đọc tiếp bằng `javis_read_file(path, offset, limit)` theo từng đoạn.
+- Kho file tự dọn sau 24 giờ, tối đa 400 file; chỉ lượt chat của chủ đọc được, bot nói chuyện với khách không với tới.
+
 ## [26.10.159] - 2026-10-14
 ### Sửa lỗi
 - **Không còn hai dòng "Nguồn:" dưới một câu trả lời.** Sau vài lượt, não bắt chước dòng chân nguồn và tự in một bản (giờ khác, số khác). Giờ bản do não viết bị xoá, chỉ còn bản thật do MinMin dựng từ nhật ký tool.

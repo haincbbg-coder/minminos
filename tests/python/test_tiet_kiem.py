@@ -77,6 +77,24 @@ check("cache_cua: Responses API", tk.cache_cua({"input_tokens": 9, "input_tokens
 check("cache_cua: không có / rác → 0", tk.cache_cua({"input_tokens": 9}) == 0 and tk.cache_cua(None) == 0 and tk.cache_cua({"cache_read_input_tokens": "x"}) == 0)
 
 
+# ---------- 26.10.160: tràn kết quả tool ra file ----------
+import tempfile
+from pathlib import Path as _P
+_tmp = _P(tempfile.mkdtemp())
+tk.KHO_TRAN = _tmp / "tool-cache"
+_lon = "{" + ",".join(f'"d{i}":{i * 1000}' for i in range(3000)) + "}"
+_f = tk.ghi_tran(_lon, "mcp__javis__pancake__pos_order")
+check("ghi_tran: ghi trọn file trong kho", _f.is_file() and _f.read_text(encoding="utf-8") == _lon)
+check("ghi_tran: cùng nội dung -> cùng băm trong tên", _f.name.endswith(tk.ghi_tran(_lon, "pos_order").name[-14:]))
+_xt = tk.xem_truoc_tran(_lon, _f, max_chars=2000)
+check("xem_truoc_tran: có đầu, có đuôi, có đường dẫn và chỉ dẫn offset", _xt.startswith(_lon[:1200]) and _xt.endswith(_lon[-800:]) and str(_f) in _xt and "offset" in _xt)
+check("la_file_tran: trong kho thì đúng, ngoài kho thì sai", tk.la_file_tran(_f) and not tk.la_file_tran(__file__))
+import engine as _eng
+_cl = _eng._clip_tool_result(_lon, max_chars=2000, ten_tool="pos_order")
+check("_clip_tool_result: kết quả dài không còn mất phần giữa, trỏ sang file", "ĐÃ LƯU TRỌN" in _cl and "BỊ CẮT" not in _cl)
+check("_clip_tool_result: kết quả ngắn giữ nguyên", _eng._clip_tool_result("ngắn") == "ngắn")
+
+
 if fails:
     print(f"ĐỎ {len(fails)}"); sys.exit(1)
 print("Tất cả xanh.")

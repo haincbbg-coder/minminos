@@ -509,6 +509,14 @@ def _safe_read_path(vault_root, p, cho_phep_staging=False, workspace_root=None):
     except ValueError as e:
         loi = e
     if cho_phep_staging:
+        # Kho file tràn kết quả tool (26.10.160): file do chính lượt chat của CHỦ sinh ra, cùng
+        # mức tin cậy với file đính kèm; bot nói chuyện với người lạ không có cờ này nên không
+        # với tới (trong đó là dữ liệu POS/ads của chủ).
+        try:
+            if tiet_kiem.la_file_tran(str(p or "")):
+                return Path(str(p)).resolve()
+        except Exception:
+            pass
         stage = _vung_nhan_file()
         raw = str(p or "").strip().replace("\\", "/")
         if stage and raw:
@@ -662,6 +670,22 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
                     f"Muốn biết trong ảnh có gì, gọi tool javis_describe_image với images=['{rel}'] (ChatGPT nhìn ảnh thật "
                     f"rồi tả lại). Muốn người dùng xem ảnh thì nhúng ![]({rel}) vào câu trả lời.")
         text = p.read_text(encoding="utf-8", errors="replace")
+        # offset/limit (26.10.160): đọc file dài theo từng đoạn, dành cho kết quả tool tràn ra
+        # file. Không truyền thì như cũ: 100.000 ký tự đầu.
+        try:
+            bat_dau = max(0, int((args or {}).get("offset") or 0))
+        except (TypeError, ValueError):
+            bat_dau = 0
+        try:
+            gioi_han = int((args or {}).get("limit") or 0)
+        except (TypeError, ValueError):
+            gioi_han = 0
+        if bat_dau or gioi_han:
+            gioi_han = min(max(1, gioi_han or 30_000), 30_000)
+            doan = text[bat_dau:bat_dau + gioi_han]
+            con = len(text) - (bat_dau + len(doan))
+            return doan + (f"\n… [còn {con:,} ký tự sau offset {bat_dau + len(doan):,} / tổng {len(text):,}]"
+                           if con > 0 else f"\n[hết file, tổng {len(text):,} ký tự]")
         return text[:100_000] + (f"\n… [cắt, file dài {len(text):,} ký tự]" if len(text) > 100_000 else "")
 
     async def _ls(args):
@@ -724,8 +748,10 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
         return text
 
     add("javis_read_file", "Đọc 1 file trong vault (Second Brain). path tương đối so với gốc vault; "
-        "nhận CẢ đường dẫn tuyệt đối của file người dùng vừa đính kèm/dán vào khung chat.",
-        {"path": {"type": "string"}}, ["path"], _read)
+        "nhận CẢ đường dẫn tuyệt đối của file người dùng vừa đính kèm/dán vào khung chat và file "
+        "kết quả tool đã lưu trọn. offset/limit (ký tự) để đọc file dài theo đoạn.",
+        {"path": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"}},
+        ["path"], _read)
     add("javis_list_dir", "Liệt kê file/thư mục trong vault. path tương đối, bỏ trống = gốc vault.",
         {"path": {"type": "string"}}, [], _ls)
     add("javis_write_file", "Ghi/tạo file trong vault (ghi đè nếu có). Dùng khi cần lưu ghi chú, "

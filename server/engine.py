@@ -1154,7 +1154,7 @@ async def openai_responses_stream(access_token, account_id, model, messages, rea
 # ============================================================
 # MCP đa-model - vòng tool-calling để model API/OAuth dùng MCP của Javis (qua mcp_client)
 # ============================================================
-def _clip_tool_result(result, max_chars: int = 8000, head_ratio: float = 0.6) -> str:
+def _clip_tool_result(result, max_chars: int = 8000, head_ratio: float = 0.6, ten_tool: str = "tool") -> str:
     """Cắt kết quả tool quá dài kiểu head+tail KÈM marker, thay cho hard-cut `[:max]`.
     Tail của kết quả MCP (POS/Ads) hay chứa total/summary/pagination → cắt cụt đầu là
     mất phần đó âm thầm. Giữ đầu + cuối + dòng báo bỏ bao nhiêu → model thấy cả hai mép
@@ -1163,6 +1163,14 @@ def _clip_tool_result(result, max_chars: int = 8000, head_ratio: float = 0.6) ->
     text = str(result)
     if len(text) <= max_chars:
         return text
+    # 26.10.160: phần giữa KHÔNG mất nữa. Ghi trọn ra kho file tràn (ngoài vault) rồi đưa não
+    # bản xem trước kèm đường dẫn; javis_read_file đọc tiếp theo offset/limit. Ghi hỏng thì
+    # rơi về cắt đầu đuôi như cũ.
+    try:
+        f = tiet_kiem.ghi_tran(text, ten_tool)
+        return tiet_kiem.xem_truoc_tran(text, f, max_chars=max_chars, head_ratio=head_ratio)
+    except Exception as e:  # noqa: BLE001 - kho tràn hỏng thì không được chết cả lượt
+        print(f"[tran ket qua] {type(e).__name__}: {e}", file=sys.stderr)
     head_n = int(max_chars * head_ratio)
     tail_n = max_chars - head_n
     omitted = len(text) - head_n - tail_n
@@ -1700,8 +1708,9 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
                     result = _schedule_tool_blocked_result()
                 # 26.10.137: phát kết quả tool cho lớp DẪN NGUỒN đối chiếu số liệu (nguon.py).
                 # Người tiêu thụ cũ bỏ qua type lạ nên vô hại.
-                yield {"type": "tool_result", "name": fn, "content": _clip_tool_result(result)}
-                msgs.append({"role": "tool", "tool_call_id": tc.get("id"), "content": _clip_tool_result(result)})
+                clipped = _clip_tool_result(result, ten_tool=fn)
+                yield {"type": "tool_result", "name": fn, "content": clipped}
+                msgs.append({"role": "tool", "tool_call_id": tc.get("id"), "content": clipped})
             guard.ghi([((tc.get("function") or {}).get("name"),
                         (tc.get("function") or {}).get("arguments") or "") for tc in tcs])
             nhac = guard.loi_nhac()
@@ -1968,8 +1977,9 @@ async def responses_with_mcp(access_token, account_id, model, messages, reasonin
                         result = await mcp_client.call_route(mcp_route, fc.get("name"), args)
                     else:
                         result = _schedule_tool_blocked_result()
-                    yield {"type": "tool_result", "name": fc.get("name"), "content": _clip_tool_result(result)}
-                    items.append({"type": "function_call_output", "call_id": fc.get("call_id"), "output": _clip_tool_result(result)})
+                    clipped = _clip_tool_result(result, ten_tool=fc.get("name"))
+                    yield {"type": "tool_result", "name": fc.get("name"), "content": clipped}
+                    items.append({"type": "function_call_output", "call_id": fc.get("call_id"), "output": clipped})
                 guard.ghi([(fc.get("name"), fc.get("arguments") or "") for fc in fcalls])
                 nhac = guard.loi_nhac()
                 if nhac:
@@ -2073,9 +2083,10 @@ async def anthropic_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools
                         res = await mcp_client.call_route(mcp_route, tu.get("name"), args)
                     else:
                         res = _schedule_tool_blocked_result()
-                    yield {"type": "tool_result", "name": tu.get("name"), "content": _clip_tool_result(res)}
+                    clipped = _clip_tool_result(res, ten_tool=tu.get("name"))
+                    yield {"type": "tool_result", "name": tu.get("name"), "content": clipped}
                     results.append({"type": "tool_result", "tool_use_id": tu.get("id"),
-                                    "content": _clip_tool_result(res)})
+                                    "content": clipped})
                 guard.ghi([(tu.get("name"), json.dumps(tu.get("input") or {}, sort_keys=True,
                                                        ensure_ascii=False)) for tu in tool_uses])
                 nhac = guard.loi_nhac()
