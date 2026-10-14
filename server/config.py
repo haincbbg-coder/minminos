@@ -901,8 +901,13 @@ def verify_password(password, cfg=None):
     a = cfg.get("auth", {})
     if not a.get("password_hash"):
         return False
-    h, _ = hash_password(password, a.get("salt"))
-    return secrets.compare_digest(h, a["password_hash"])
+    # Thử đúng như gõ rồi tới bản đã cắt dấu cách đầu/cuối: bàn phím điện thoại hay chèn dấu cách
+    # thừa, còn mật khẩu cũ lỡ có dấu cách ở rìa thì bản "đúng như gõ" vẫn khớp.
+    for cand in dict.fromkeys([password, (password or "").strip()]):
+        h, _ = hash_password(cand, a.get("salt"))
+        if secrets.compare_digest(h, a["password_hash"]):
+            return True
+    return False
 
 
 # ---- Xác thực 2 lớp (TOTP). Toán nằm ở totp.py, đây chỉ là chỗ CẤT ----
@@ -1262,7 +1267,8 @@ def provision_admin_from_env():
     `auth.env_applied` keeps only a salted hash of the last applied env value, never the value.
     Returns "created", "reset" or "" (nothing done).
     """
-    pw = os.getenv("JAVIS_ADMIN_PASSWORD", "")
+    pw_tho = os.getenv("JAVIS_ADMIN_PASSWORD", "")
+    pw = pw_tho.strip()   # dấu cách thừa khi dán vào Hostinger/Docker không phải một phần mật khẩu
     if not pw:
         return ""
     user = (os.getenv("JAVIS_ADMIN_USER", "admin").strip() or "admin")
@@ -1277,8 +1283,11 @@ def provision_admin_from_env():
         return "created"
     applied = a.get("env_applied") if isinstance(a.get("env_applied"), dict) else {}
     if applied.get("hash"):
-        same = (applied.get("username") == user and secrets.compare_digest(
-            hash_password(pw, str(applied.get("salt") or ""))[0], str(applied["hash"])))
+        # Dấu đã ghi có thể băm từ bản CÓ dấu cách thừa (trước khi có luật cắt): coi là cùng giá trị,
+        # không thì lần khởi động đầu sau cập nhật tưởng mật khẩu đổi và đặt lại tài khoản.
+        same = applied.get("username") == user and any(
+            secrets.compare_digest(hash_password(c, str(applied.get("salt") or ""))[0], str(applied["hash"]))
+            for c in dict.fromkeys([pw, pw_tho]))
         if same:
             return ""
     elif a.get("username") == user and verify_password(pw, cfg):

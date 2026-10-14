@@ -446,6 +446,28 @@ def _clean_ngon_ngu(v: Any) -> str:
     return lang_registry.chuan_hoa(s_) or "auto"
 
 
+_GIO_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
+
+
+def _clean_gio(v: Any) -> str:
+    """"8:00" hoặc "08:00" thành "08:00"; rỗng hoặc sai dạng thành "" (không giới hạn giờ)."""
+    m = _GIO_RE.match(str(v or "").strip())
+    return f"{int(m.group(1)):02d}:{m.group(2)}" if m else ""
+
+
+def trong_gio_truc(bot: dict, now=None) -> bool:
+    """Bot có đang trong giờ trực không. Để trống một trong hai đầu = trực cả ngày.
+    Qua nửa đêm cũng được (22:00 đến 02:00). Giờ tính theo múi giờ trong Cài đặt."""
+    tu, den = _clean_gio((bot or {}).get("gio_truc_tu")), _clean_gio((bot or {}).get("gio_truc_den"))
+    if not tu or not den or tu == den:
+        return True
+    if now is None:
+        import localefmt
+        now = localefmt.now()
+    p = f"{now.hour:02d}:{now.minute:02d}"
+    return (tu <= p < den) if tu < den else (p >= tu or p < den)
+
+
 def _clean_rate(v: Any) -> int:
     try:
         n = int(v)
@@ -718,7 +740,7 @@ def _nhan_brain_cho_tk(bot: dict) -> None:
 _PATCHABLE = ("name", "icon", "groups", "reply_when", "handoff_to", "rate_limit",
               "agent_slug", "agent_brain", "brain", "bot_username", "token", "enabled",
               "nguon_tra_loi", "muc_quyen", "ngon_ngu", "account_ids",
-              "agents_phu", "rieng_pham_vi", "rieng_cho_phep",
+              "agents_phu", "rieng_pham_vi", "rieng_cho_phep", "gio_truc_tu", "gio_truc_den",
               "noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi", "nhom_khach", "nguoi_la")
 # `channel` CỐ Ý đứng ngoài danh sách trắng. Đổi kênh của một bot đã tạo là đổi sang một CON
 # BOT KHÁC: token khác, danh tính khác, khách khác, và cả đống id nhóm đang lưu lập tức vô
@@ -783,6 +805,8 @@ def update_bot(bot_id: str, patch: dict) -> tuple[bool, str]:
                     b["handoff_to"] = str(v or "").strip()
                 elif k == "rate_limit":
                     b["rate_limit"] = _clean_rate(v)
+                elif k in ("gio_truc_tu", "gio_truc_den"):
+                    b[k] = _clean_gio(v)
                 elif k == "agents_phu":
                     b["agents_phu"] = _clean_agents_phu(v, str((b.get("agent") or {}).get("slug") or ""))
                 elif k == "rieng_pham_vi":

@@ -76,7 +76,15 @@ async def answer_fn(text, meta, progress):
 t = zp.Transport("zalo-1", [], answer_fn)
 zc.chu_vua_nhan_tay = lambda conn_id, thread: False
 priv = zc.chuan_hoa_tin(conn, anh | {"threadId": "U9", "threadType": "dm"}, {"U9": {"name": "Quý", "type": "user"}})
-asyncio.run(t.xu_ly(priv))
+zp.GOM_GIAY = 0          # chat riêng gom tin 5 giây ngoài đời thật; test không chờ
+zc._BOTS["zalo-1"] = t   # bot chỉ trả lời khi còn đăng ký với vòng đọc
+
+
+async def _chay_mot():
+    await t.xu_ly(priv)
+    await asyncio.sleep(0.2)
+
+asyncio.run(_chay_mot())
 check("the bot is called with the caption, co_anh and the link", GOT and GOT[0][0] == "@Javis Vũ đây em"
       and GOT[0][1].get("co_anh") is True and GOT[0][1].get("image_url") == URL, GOT)
 

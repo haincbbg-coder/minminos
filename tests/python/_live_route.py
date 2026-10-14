@@ -129,6 +129,7 @@ class LiveRouteMixin:
         names.update(live_overrides)
         namespace = dict(
             asyncio=asyncio, json=json, sys=sys, localefmt=__import__("localefmt"), WebSocket=Socket, Query=lambda x: x,
+            _ws_chan_nguon=lambda ws: False,
             cfgmod=types.SimpleNamespace(gate_active=lambda: False,
                                          read_settings=lambda: {"voice": {"live_provider": "chatgpt"}}),
             voice_live=types.SimpleNamespace(

@@ -338,6 +338,7 @@
           '<span>' + esc(b.nguon_tra_loi === "tai_lieu" ? window.t("cb.nguon_tl_ngan")
                                                         : window.t("cb.nguon_ag_ngan")) + '</span>' +
           '<span>' + esc(window.t("cb.n_luot_tra_loi", { count: st.answered || 0 })) + '</span>' +
+          ((b.gio_truc_tu && b.gio_truc_den) ? '<span>' + esc(window.t("cb.truc_the", { tu: b.gio_truc_tu, den: b.gio_truc_den })) + '</span>' : '') +
           (b.handoff_to ? '<span>' + ic("user") + ' ' + esc(window.t("cb.co_chuyen_nguoi")) + '</span>'
                         : '<span class="cb-warn">' + esc(window.t("cb.chua_nguoi_nhan")) + '</span>') +
         '</div>' +
@@ -870,6 +871,11 @@
             '<select id="cbNgonNgu">' + htmlNgonNgu((b && b.ngon_ngu) || "auto") + '</select>' +
             '<div class="cb-muc-note">' + esc(window.t("cb.hint_ngon_ngu")) + '</div>' +
 
+            (b ? '<label>' + esc(window.t("cb.lb_gio_truc")) + '</label>' +
+              '<div style="display:flex;gap:8px;align-items:center">' +
+              '<input id="cbTrucTu" type="time" value="' + esc(b.gio_truc_tu || "") + '"> ' + esc(window.t("cb.gio_den")) +
+              ' <input id="cbTrucDen" type="time" value="' + esc(b.gio_truc_den || "") + '"></div>' +
+              '<div class="cb-hint">' + esc(window.t("cb.hint_gio_truc")) + '</div>' : '') +
             '<label>' + esc(window.t("cb.lb_handoff")) + '</label>' +
             '<input id="cbHandoff" value="' + esc(b ? (b.handoff_to || "") : "") + '" placeholder="' +
               esc(window.t("cb.ph_handoff")) + '">' +
@@ -1185,6 +1191,8 @@
       var chung = { name: ten, agent_slug: ag, agent_brain: br, brain: br,
                     handoff_to: ho, nguon_tra_loi: ngu, muc_quyen: muc, xac_nhan_rui_ro: "1",
                     ngon_ngu: (document.getElementById("cbNgonNgu") || {}).value || "auto",
+                    gio_truc_tu: (document.getElementById("cbTrucTu") || {}).value || "",
+                    gio_truc_den: (document.getElementById("cbTrucDen") || {}).value || "",
                     groups: gr, reply_when: rw, account_ids: ids.join(","),
                     agents_phu: Array.prototype.map.call(box.querySelectorAll(".cbAgentPhuCk:checked"),
                       function (x) { return x.value; }).filter(function (x) { return x !== ag; }).join(","),

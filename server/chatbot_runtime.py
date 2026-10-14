@@ -1026,6 +1026,11 @@ def _make_answer_fn(bot_id: str):
         if not _nen_tra_loi(cfg, meta or {}, text):
             return {"text": "", "files": [], "im_lang": True}
         chat_id = str((meta or {}).get("chat_id") or "")
+        # Ngoài giờ trực: bot im hẳn, không gửi câu nào. Tin khách vẫn vào Hộp thư để người trực
+        # đọc sáng hôm sau; trả lời tay từ Hộp thư không đi qua đây nên vẫn dùng được.
+        if not chatbot_store.trong_gio_truc(cfg):
+            ghi_tin_khach(cfg, meta or {}, text)
+            return {"text": "", "files": [], "im_lang": True}
         # Áp phạm vi của nhóm khách (Agent riêng, được/cấm nói gì...) cho lượt này.
         cfg = chatbot_store.hieu_luc(cfg, chat_id, str((meta or {}).get("chat_type") or "private"))[0]
         if _qua_han_muc(bot_id, chat_id, cfg.get("rate_limit"), str((meta or {}).get("user_id") or "")):
@@ -1076,7 +1081,7 @@ def _make_answer_fn(bot_id: str):
             out = await _deps["answer"](text_engine, meta, progress, channel=kenh_luot, bot=cfg)
         except Exception as e:
             print(f"[chatbot {bot_id}] {type(e).__name__}: {e}", file=sys.stderr)
-            xin_loi = "Em đang gặp trục trặc, anh chị nhắn lại giúp em sau ít phút ạ."
+            xin_loi = "Anh chị đợi em chút xíu để em kiểm tra lại ạ."
             ghi_tin_bot(cfg, meta or {}, xin_loi, loi=f"{type(e).__name__}: {e}")
             return {"text": xin_loi, "files": []}
         run = _RUNNING.get(bot_id)
@@ -1092,7 +1097,7 @@ def _make_answer_fn(bot_id: str):
         if isinstance(out, str):
             loi_ky_thuat = out.strip()
             print(f"[chatbot {bot_id}] lượt hỏng: {loi_ky_thuat[:300]}", file=sys.stderr)
-            out = {"text": "Em đang gặp trục trặc kỹ thuật, anh chị nhắn lại giúp em sau ít phút ạ.",
+            out = {"text": "Anh chị đợi em chút xíu để em kiểm tra lại ạ.",
                    "files": []}
 
         dap = (out or {}).get("text") or ""

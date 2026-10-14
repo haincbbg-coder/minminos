@@ -4,6 +4,16 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.161] - 2026-10-14
+### Bảo mật
+- **Kết nối trực tiếp (chat, terminal, giọng nói) nay kiểm nguồn gốc.** Trước đây chỉ kiểm đăng nhập, và máy chưa đặt mật khẩu thì một trang web lạ đang mở trong trình duyệt có thể nối vào MinMin, kể cả terminal. Giờ kết nối từ trang khác nguồn gốc bị chặn; dashboard, Telegram và công cụ dòng lệnh không bị ảnh hưởng. Nên cập nhật sớm. (Học từ Javis 0.118.)
+### Sửa lỗi
+- **Mật khẩu có dấu cách thừa không còn làm bố bị khoá ngoài.** Bàn phím điện thoại hay chèn dấu cách ở cuối khi gõ mật khẩu; giờ đăng nhập thử cả bản gõ nguyên và bản đã cắt. Mật khẩu đặt qua biến môi trường (Docker, Hostinger) cũng được cắt, và cập nhật không còn tưởng mật khẩu đổi rồi đặt lại tài khoản. (Học từ Javis 0.92.1 và 0.96.1.)
+- Câu bot nói với khách khi gặp lỗi đổi thành "Anh chị đợi em chút xíu để em kiểm tra lại ạ", không còn bảo khách nhắn lại sau.
+### Thêm mới
+- **Bot Zalo cá nhân chờ khách nhắn xong rồi mới trả lời.** Khách nhắn một ý thành mấy tin liền thì bot đợi khách im 5 giây rồi đáp một lần đủ ý. Gửi ảnh rồi nhắn "xem giúp em" thành một câu hỏi kèm ảnh. Khách gửi file thì bot biết tên file và nói rõ chưa mở được (đọc nội dung file chưa làm).
+- **Chủ vừa tự nhắn thì bot giữ tin khách chứ không bỏ.** Chủ trả lời sau tin khách thì bot im; hết 10 phút chủ vẫn chưa trả lời thì bot đáp một lần cho tất cả. Tắt bot giữa chừng thì không gửi gì. Nhóm giữ nguyên cách cũ.
+- **Giờ trực cho chatbot.** Ở form Sửa bot điền Từ và Đến (vd 08:00 đến 02:00, qua nửa đêm cũng được); ngoài giờ bot im hẳn, tin khách vẫn vào Hộp thư, trả lời tay từ Hộp thư vẫn dùng được. Để trống là trực cả ngày.
 ## [26.10.160] - 2026-10-14
 ### Cải thiện
 - **Não API không còn mất phần giữa của kết quả tool dài** (Lớp 7a, mượn cách Hermes). Trước đây OpenRouter, OpenAI, Anthropic API, Gemini, Groq, Ollama chỉ thấy 8.000 ký tự đầu đuôi, 60 trang đơn hàng thì phần giữa mất âm thầm. Giờ kết quả được lưu trọn ra kho file ngoài brain, não nhận bản xem trước kèm đường dẫn và đọc tiếp bằng `javis_read_file(path, offset, limit)` theo từng đoạn.
