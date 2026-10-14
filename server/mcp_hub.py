@@ -223,6 +223,14 @@ def thong_ke_tiet_kiem() -> dict:
     return _DEM_DOC.thong_ke()
 
 
+def _hoi_truoc_giay() -> float:
+    """settings quyen.hoi_truoc_giay: chờ chủ duyệt bao lâu (mặc định 180s)."""
+    try:
+        return float((config.read_settings().get("quyen") or {}).get("hoi_truoc_giay") or hanh_dong.HOI_TRUOC_GIAY_MAC_DINH)
+    except Exception:
+        return float(hanh_dong.HOI_TRUOC_GIAY_MAC_DINH)
+
+
 def _chinh_sach_loai_viec() -> dict:
     """settings.quyen.loai_viec = {xoa|tien|don_hang|nhan_tin|dang_bai|khac: cho_phep|chan}."""
     try:
@@ -263,6 +271,32 @@ def _guard(ent, fn, mode):
                     label=conn.get("label"), loai=loai, cls=cls, mode=mode, ok=False, ms=0,
                     args=args, err=why))
             return "ERROR: " + why
+        # HỎI TRƯỚC (26.10.165): loại việc chủ đặt "hỏi trước" thì dừng lại, báo chủ, chờ gật.
+        if loai and hanh_dong.can_hoi(_chinh_sach_loai_viec(), loai):
+            yc = hanh_dong.tao_yeu_cau(ai=hanh_dong.nguoi_lam(), tool=tool,
+                                       connector=conn.get("connector_id"), label=conn.get("label"),
+                                       loai=loai, args=args)
+            kq = await hanh_dong.cho_quyet(yc, timeout=_hoi_truoc_giay())
+            if kq != "dong_y":
+                ly_do = ("chủ TỪ CHỐI" if kq == "tu_choi" else
+                         f"hết {int(_hoi_truoc_giay())} giây chờ mà chủ chưa duyệt")
+                why = (f"CHƯA LÀM: việc loại \"{hanh_dong.NHAN.get(loai, loai)}\" ({tool}) đang ở mức "
+                       f"HỎI TRƯỚC và {ly_do}. MinMin không tự làm việc này. Nói lại với chủ "
+                       f"là việc chưa được thực hiện; chủ có thể duyệt ở trang Kết nối (mục Chờ "
+                       f"duyệt) hoặc đổi mức ở Quyền theo loại việc. Không thử lại bằng cách khác.")
+                hanh_dong.ghi(hanh_dong.dong_so(
+                    ai=hanh_dong.nguoi_lam(), tool=tool, connector=conn.get("connector_id"),
+                    label=conn.get("label"), loai=loai, cls=cls, mode=mode, ok=False, ms=0,
+                    args=args, err="CHẶN (hỏi trước): " + ly_do))
+                _audit_append({"ts": datetime.now().isoformat(timespec="seconds"), "conn_id": conn["id"],
+                               "connector": conn.get("connector_id"), "label": conn.get("label"),
+                               "tool": tool, "mode": mode, "cls": cls, "ok": False, "ms": 0,
+                               "err": why[:200], "args_keys": sorted((args or {}).keys())})
+                return "ERROR: " + why
+            hanh_dong.ghi(hanh_dong.dong_so(
+                ai=hanh_dong.nguoi_lam(), tool=tool, connector=conn.get("connector_id"),
+                label=conn.get("label"), loai=loai, cls=cls, mode=mode, ok=True, ms=0,
+                args=args, err=f"ĐÃ DUYỆT bởi {yc.get('nguoi_quyet') or 'chủ'} (#{yc['id']})"))
         t0 = time.time()
         # ĐỆM TOOL ĐỌC (Lớp 6): cùng kết nối + tool + tham số trong vài phút -> trả lại ngay,
         # không gọi POS/ads lần nữa. Một báo cáo gọi pos_order 4 lần cùng tham số là 3 lần thừa.

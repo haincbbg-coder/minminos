@@ -1109,6 +1109,25 @@ function handleMessage(data) {
     try { if (window.JavisBackground) window.JavisBackground.refresh(); } catch (e) {}
     return;
   }
+  if (data.type === "duyet") {
+    // Cổng hỏi trước (26.10.165): MinMin đang dừng chờ chủ gật. Thẻ có hai nút ngay trong khung
+    // chat; trang Kết nối (mục Chờ duyệt) cũng bấm được.
+    try {
+      const y = data.yeu_cau || {};
+      const el = appendJavisMessage("");
+      el.innerHTML = `<div class="duyet-card"><b>${escapeHtml(window.t("app.duyet_head"))}</b> `
+        + `${escapeHtml(y.nhan_loai || y.loai || "")} · <code>${escapeHtml(y.tool || "")}</code>${y.label ? " (" + escapeHtml(y.label) + ")" : ""}`
+        + (y.args ? `<div style="opacity:.75;font-size:12px">${escapeHtml(y.args)}</div>` : "")
+        + `<div style="margin-top:6px;display:flex;gap:8px"><button class="gcard-btn" data-duyet="${escapeHtml(y.id)}" data-gat="1">${escapeHtml(window.t("app.duyet_ok"))}</button>`
+        + `<button class="gcard-btn ghost" data-duyet="${escapeHtml(y.id)}" data-gat="0">${escapeHtml(window.t("app.duyet_no"))}</button></div></div>`;
+      el.querySelectorAll("[data-duyet]").forEach(b => b.onclick = async () => {
+        el.querySelectorAll("[data-duyet]").forEach(x => { x.disabled = true; });
+        try { await fetch("/hanh-dong/duyet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: b.dataset.duyet, dong_y: b.dataset.gat === "1" }) }); } catch (e) {}
+        b.textContent = b.dataset.gat === "1" ? window.t("app.duyet_done_ok") : window.t("app.duyet_done_no");
+      });
+    } catch (e) {}
+    return;
+  }
   if (data.type === "inbox") {
     // Việc nền vừa để lại một mẩu thư → chấm đỏ trên chuông nhảy NGAY, không đợi tải lại
     // trang. Nếu thư thuộc đúng hội thoại đang mở thì coi như đã đọc luôn: người dùng đang

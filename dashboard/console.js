@@ -5972,6 +5972,7 @@
       + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.hd_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.hd_sub")) + '</span></h3>'
       + '<div class="gcard aux-card"><div class="gcard-meta">' + esc(window.t("cs.hd_meta")) + '</div>'
       + '<div id="hdChinhSach" class="aux-now-act" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:6px"></div>'
+      + '<div id="hdChoDuyet" class="aux-note" style="margin-top:8px"></div>'
       + '<div class="aux-now-act" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:10px">'
       + '<select id="hdLoc" class="mp-filter" style="margin:0;padding:6px 10px"><option value="">' + esc(window.t("cs.hd_all")) + '</option></select>'
       + '<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" id="hdChiLoi"> ' + esc(window.t("cs.hd_only_err")) + '</label>'
@@ -6042,19 +6043,43 @@
       const loc = document.getElementById("hdLoc");
       if (!csBox || !soBox) return;
       let NHAN = {}, LOAI = [];
+      // Ba mức mỗi loại việc (26.10.165): Tự làm / Hỏi trước / Chặn. "Hỏi trước" = MinMin dừng
+      // lại, báo chủ (khung chat, chuông, Telegram) và chờ gật trong vài phút rồi mới làm.
+      const MUC = [["cho_phep", window.t("cs.hd_m_auto")], ["hoi_truoc", window.t("cs.hd_m_ask")], ["chan", window.t("cs.hd_block")]];
       const veCS = (cs) => {
         csBox.innerHTML = LOAI.map(l => {
-          const chan = cs[l] === "chan";
-          return `<label class="seg-btn ${chan ? "sel" : ""}" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="${esc(window.t("cs.hd_policy_tip"))}">`
-            + `<input type="checkbox" data-hd-loai="${esc(l)}" ${chan ? "checked" : ""}> ${esc(window.t("cs.hd_block"))} ${esc(NHAN[l] || l)}</label>`;
+          const v = cs[l] || "cho_phep";
+          return `<label class="seg-btn ${v !== "cho_phep" ? "sel" : ""}" style="display:flex;align-items:center;gap:6px" title="${esc(window.t("cs.hd_policy_tip"))}">`
+            + `${esc(NHAN[l] || l)} <select class="mp-filter" style="margin:0;padding:2px 6px" data-hd-loai="${esc(l)}">`
+            + MUC.map(([k, nh]) => `<option value="${k}" ${v === k ? "selected" : ""}>${esc(nh)}</option>`).join("") + `</select></label>`;
         }).join("");
-        csBox.querySelectorAll("[data-hd-loai]").forEach(ch => ch.onchange = async () => {
+        csBox.querySelectorAll("[data-hd-loai]").forEach(sel => sel.onchange = async () => {
           const moi = {};
-          csBox.querySelectorAll("[data-hd-loai]").forEach(x => { if (x.checked) moi[x.dataset.hdLoai] = "chan"; });
+          csBox.querySelectorAll("[data-hd-loai]").forEach(x => { if (x.value !== "cho_phep") moi[x.dataset.hdLoai] = x.value; });
           await postJson("/hanh-dong/chinh-sach", { chinh_sach: moi }, 10000);
-          ch.closest("label").classList.toggle("sel", ch.checked);
+          sel.closest("label").classList.toggle("sel", sel.value !== "cho_phep");
         });
       };
+      const veChoDuyet = async () => {
+        const box = document.getElementById("hdChoDuyet");
+        if (!box) return;
+        let d = null;
+        try { d = await (await fetch("/hanh-dong/cho-duyet")).json(); } catch (e) {}
+        const ds = (d && d.cho) || [];
+        if (!ds.length) { box.innerHTML = ""; return; }
+        box.innerHTML = `<div><b>${esc(window.t("cs.hd_cho_duyet", { n: ds.length }))}</b></div>` + ds.map(y =>
+          `<div class="aux-now-act" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:4px">`
+          + `<span><b>${esc(y.nhan_loai || y.loai)}</b> · ${esc(y.tool)}${y.label ? " (" + esc(y.label) + ")" : ""}<div style="opacity:.7;font-size:12px">${esc(y.args || "")}</div></span>`
+          + `<button class="gcard-btn" data-duyet="${esc(y.id)}" data-gat="1">${esc(window.t("cs.hd_dong_y"))}</button>`
+          + `<button class="gcard-btn ghost" data-duyet="${esc(y.id)}" data-gat="0">${esc(window.t("cs.hd_tu_choi"))}</button></div>`).join("");
+        box.querySelectorAll("[data-duyet]").forEach(b => b.onclick = async () => {
+          b.disabled = true;
+          await postJson("/hanh-dong/duyet", { id: b.dataset.duyet, dong_y: b.dataset.gat === "1" }, 10000);
+          await veChoDuyet();
+        });
+      };
+      window.JavisDuyet = { refresh: veChoDuyet };
+      await veChoDuyet();
       const veSo = async () => {
         let d = null;
         try { d = await (await fetch("/hanh-dong?limit=60&loai=" + encodeURIComponent(loc ? loc.value : "") + "&chi_loi=" + ((document.getElementById("hdChiLoi") || {}).checked ? 1 : 0))).json(); } catch (e) {}

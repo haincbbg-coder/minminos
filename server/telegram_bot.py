@@ -307,7 +307,7 @@ class TelegramBot(HangLuot):
                     print(f"[telegram send] {e}", file=sys.stderr)
                     break   # lỗi mạng: thử lại plain cũng sẽ lỗi
 
-    async def send_text(self, chat, text):
+    async def send_text(self, chat, text, reply_markup=None):
         """Gửi MỘT tin chữ và NÓI KẾT QUẢ. Trả (ok, lỗi).
 
         `_send` ở trên nuốt lỗi (nó phục vụ vòng trả lời, nơi không có ai để báo). Hộp thư
@@ -319,10 +319,14 @@ class TelegramBot(HangLuot):
             return False, "tin rỗng"
         loi = ""
         async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
-            for chunk in [text[i:i + 3500] for i in range(0, len(text), 3500)]:
+            chunks = [text[i:i + 3500] for i in range(0, len(text), 3500)]
+            chunks_cuoi = chunks[-1] if chunks else None
+            for chunk in chunks:
                 da_gui = False
                 for use_md in (True, False):
                     payload = {"chat_id": chat, "text": chunk}
+                    if reply_markup is not None and chunk is chunks_cuoi:
+                        payload["reply_markup"] = reply_markup   # nút chỉ gắn vào tin cuối
                     if use_md:
                         payload["text"] = md_to_mdv2(chunk)
                         payload["parse_mode"] = "MarkdownV2"
