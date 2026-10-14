@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.163] - 2026-10-14
+### Cải thiện
+- **Não API dọn kết quả tool cũ ngay trong lượt** (Lớp 7c, mượn ContextCompressor của Hermes). Mỗi vòng tool gửi lại cả hội thoại, nên trang 1 của 60 trang đơn hàng đi theo tới vòng 60. Giờ khi hội thoại vượt 240.000 ký tự, các kết quả tool cũ nhất (trừ 4 kết quả gần nhất) được thay bằng một dòng đánh dấu dẫn tới file đầy đủ ở kho tràn; lời người dùng và lời model không bị đụng. Chỉnh bằng `mcp.don_ngu_canh_ky_tu` (0 = tắt).
+
 ## [26.10.162] - 2026-10-14
 ### Thêm mới
 - **Bể khoá xoay vòng cho nhà API** (OpenRouter, OpenAI, Anthropic API, Gemini, Groq, Ollama Cloud, endpoint tự khai). Thẻ nhà cung cấp ở trang Models có mục "Bể khoá dự phòng": thêm các khoá chính chủ khác, mỗi dòng một khoá. Vấp hạn mức 429 hay khoá hỏng 401 là MinMin đổi sang khoá kế ngay và gọi lại, không chờ cửa sổ hạn mức; khoá vấp nghỉ 60 giây (lặp lại thì nghỉ dài dần), khoá sai nghỉ 1 giờ. Áp cho chat, bot và việc nền.

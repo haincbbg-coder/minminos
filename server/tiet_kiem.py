@@ -284,6 +284,131 @@ def la_file_tran(p) -> bool:
         return False
 
 
+# ─────────────────────────── dọn kết quả tool cũ trong lượt (26.10.162) ───────────────────────────
+
+DAU_DA_DON = "[Kết quả tool cũ đã dọn"
+_RE_FILE_TRAN = re.compile(r"ĐÃ LƯU TRỌN tại (\S+?\.txt)")
+
+
+def nguong_don_ky_tu(default: int = 240_000) -> int:
+    """settings mcp.don_ngu_canh_ky_tu: tổng ký tự của hội thoại mà vượt qua thì bắt đầu dọn
+    kết quả tool cũ. 0 = tắt. Mặc định 240.000 ký tự (~60-70k token), đủ xa trần 128k-200k
+    của phần đông model để còn chỗ cho câu trả lời."""
+    try:
+        from config import read_settings
+        v = (read_settings().get("mcp") or {}).get("don_ngu_canh_ky_tu")
+        return max(0, int(v)) if v is not None else default
+    except Exception:
+        return default
+
+
+def _dau_don(ten_tool: str, n: int, cu: str) -> str:
+    m = _RE_FILE_TRAN.search(cu or "")
+    duong = f", bản đầy đủ còn ở file {m.group(1)} (đọc bằng javis_read_file)" if m else ", gọi lại tool nếu cần"
+    return f"{DAU_DA_DON}: {ten_tool or 'tool'}, {n:,} ký tự{duong}]"
+
+
+def don_ket_qua_cu(muc: list, lay, dat, ten=None, *, giu_cuoi: int = 4,
+                   nguong: Optional[int] = None, muc_tieu: float = 0.6) -> int:
+    """Dọn kết quả tool CŨ trong một hội thoại đang chạy vòng tool, mượn cách ContextCompressor
+    của Hermes: khi tổng ký tự vượt `nguong`, thay nội dung các kết quả tool cũ nhất (trừ
+    `giu_cuoi` kết quả gần nhất) bằng một dòng đánh dấu, cho tới khi tổng xuống dưới
+    nguong*muc_tieu. KHÔNG đụng lời người dùng và lời model; dữ liệu lớn đã có bản đầy đủ ở kho
+    file tràn nên dòng đánh dấu dẫn thẳng tới đó.
+
+    Vì sao: mỗi vòng tool gửi lại TOÀN BỘ hội thoại. Báo cáo 60 trang đơn hàng thì trang 1 vẫn
+    đi theo tới vòng 60, trong khi model đã dùng xong nó từ vòng 2. Đây là phần nặng nhất của
+    một lượt nhiều bước, nặng hơn cả ngữ cảnh cố định.
+
+    `muc`: danh sách message/item; `lay(x)` -> nội dung kết quả tool (str) hoặc None nếu x không
+    phải kết quả tool; `dat(x, s)` ghi nội dung mới; `ten(x)` -> tên tool (tuỳ chọn).
+    Trả số kết quả đã dọn."""
+    nguong = nguong_don_ky_tu() if nguong is None else int(nguong)
+    if nguong <= 0 or not muc:
+        return 0
+
+    def _tong():
+        t = 0
+        for x in muc:
+            try:
+                t += len(json.dumps(x, ensure_ascii=False, default=str))
+            except (TypeError, ValueError):
+                t += len(str(x))
+        return t
+
+    tong = _tong()
+    if tong <= nguong:
+        return 0
+    vi_tri = [i for i, x in enumerate(muc) if isinstance(lay(x), str)]
+    ung_vien = vi_tri[: max(0, len(vi_tri) - max(0, int(giu_cuoi)))]
+    dich = nguong * max(0.1, min(0.95, float(muc_tieu)))
+    da = 0
+    for i in ung_vien:
+        x = muc[i]
+        cu = lay(x) or ""
+        if cu.startswith(DAU_DA_DON) or len(cu) < 200:
+            continue
+        moi = _dau_don(ten(x) if ten else "", len(cu), cu)
+        dat(x, moi)
+        tong -= (len(cu) - len(moi))
+        da += 1
+        if tong <= dich:
+            break
+    return da
+
+
+# Ba bộ lay/dat cho ba định dạng hội thoại của engine API.
+def don_openai(msgs: list, **kw) -> int:
+    return don_ket_qua_cu(
+        msgs, lambda m: m.get("content") if isinstance(m, dict) and m.get("role") == "tool" else None,
+        lambda m, s: m.__setitem__("content", s),
+        lambda m: str(m.get("name") or m.get("tool_call_id") or ""), **kw)
+
+
+def don_responses(items: list, **kw) -> int:
+    return don_ket_qua_cu(
+        items, lambda m: m.get("output") if isinstance(m, dict) and m.get("type") == "function_call_output" else None,
+        lambda m, s: m.__setitem__("output", s),
+        lambda m: str(m.get("name") or m.get("call_id") or ""), **kw)
+
+
+def don_anthropic(conv: list, **kw) -> int:
+    """Anthropic gói nhiều tool_result trong MỘT message user; dọn từng block."""
+    blocks = []
+    for m in conv:
+        if isinstance(m, dict) and m.get("role") == "user" and isinstance(m.get("content"), list):
+            for b in m["content"]:
+                if isinstance(b, dict) and b.get("type") == "tool_result" and isinstance(b.get("content"), str):
+                    blocks.append(b)
+    if not blocks:
+        return 0
+    # tổng ký tự tính trên CẢ hội thoại, nhưng ứng viên là từng block
+    nguong = kw.pop("nguong", None)
+    nguong = nguong_don_ky_tu() if nguong is None else int(nguong)
+    if nguong <= 0:
+        return 0
+    try:
+        tong = len(json.dumps(conv, ensure_ascii=False, default=str))
+    except (TypeError, ValueError):
+        tong = sum(len(str(m)) for m in conv)
+    if tong <= nguong:
+        return 0
+    giu_cuoi = int(kw.get("giu_cuoi", 4))
+    dich = nguong * float(kw.get("muc_tieu", 0.6))
+    da = 0
+    for b in blocks[: max(0, len(blocks) - giu_cuoi)]:
+        cu = b.get("content") or ""
+        if cu.startswith(DAU_DA_DON) or len(cu) < 200:
+            continue
+        moi = _dau_don(str(b.get("tool_use_id") or ""), len(cu), cu)
+        b["content"] = moi
+        tong -= (len(cu) - len(moi))
+        da += 1
+        if tong <= dich:
+            break
+    return da
+
+
 # ─────────────────────────── tool nóng ───────────────────────────
 
 def tool_nong(audit: Iterable[dict], route: dict, k: int = 12, chi_ok: bool = True) -> list:

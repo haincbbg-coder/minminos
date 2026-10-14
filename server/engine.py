@@ -1639,6 +1639,11 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
         })
         requirement_pending = False
     for _ in range(_max_tool_rounds()):
+        # Dọn kết quả tool cũ khi hội thoại phình (26.10.162): vòng sau không chở lại trang 1
+        # của 60 trang đơn hàng mà model đã dùng xong từ vòng 2.
+        _da_don = tiet_kiem.don_openai(msgs)
+        if _da_don:
+            print(f"[dọn ngữ cảnh {label}] đã dọn {_da_don} kết quả tool cũ", file=sys.stderr)
         payload = {"model": model, "messages": msgs, "stream": False}
         # Bỏ hẳn khoá "tools" khi rỗng: vài endpoint OpenAI-compat từ chối mảng rỗng, và
         # nhánh cứu hộ ở dưới (model vấp cú pháp gọi tool) dựa vào đúng chỗ này.
@@ -1927,6 +1932,7 @@ async def responses_with_mcp(access_token, account_id, model, messages, reasonin
         usage_in = usage_out = usage_cache = 0
         guard = _LapGuard()   # phanh chống kẹt vòng lặp (xem _LapGuard)
         for _ in range(_max_tool_rounds()):
+            tiet_kiem.don_responses(items)     # dọn kết quả tool cũ khi phình (26.10.162)
             # Backend Codex BẮT BUỘC stream=True → đọc SSE, lấy response.completed.output để chạy vòng tool
             payload = {"model": model, "instructions": instructions, "input": items,
                        "tools": tools, "stream": True, "store": False}
@@ -2051,6 +2057,7 @@ async def anthropic_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools
         usage_in = usage_out = usage_cache = 0
         guard = _LapGuard()   # phanh chống kẹt vòng lặp (xem _LapGuard)
         for _ in range(_max_tool_rounds()):
+            tiet_kiem.don_anthropic(conv)      # dọn kết quả tool cũ khi phình (26.10.162)
             # Cache theo lối không-mutate (system dựng mới mỗi vòng, conv copy-khi-đánh-dấu)
             # → marker KHÔNG tích luỹ qua vòng tool, tối đa 3 breakpoint/request (trần API là 4).
             # Vòng tool là nơi cache lãi nhất: mỗi vòng 1 request chở lại nguyên system+tools+conv.

@@ -95,6 +95,36 @@ check("_clip_tool_result: kết quả dài không còn mất phần giữa, tr�
 check("_clip_tool_result: kết quả ngắn giữ nguyên", _eng._clip_tool_result("ngắn") == "ngắn")
 
 
+# ---------- 26.10.162: dọn kết quả tool cũ trong lượt ----------
+_kq = "x" * 5000
+_msgs = [{"role": "system", "content": "luật"}, {"role": "user", "content": "báo cáo"}]
+for i in range(10):
+    _msgs.append({"role": "assistant", "content": None, "tool_calls": [{"id": f"c{i}"}]})
+    _msgs.append({"role": "tool", "tool_call_id": f"c{i}", "content": _kq})
+_n = tk.don_openai(_msgs, nguong=40_000, giu_cuoi=3)
+_tool = [m for m in _msgs if m["role"] == "tool"]
+check("don_openai: dọn từ cũ nhất, giữ 3 kết quả cuối nguyên", _n >= 1 and all(m["content"] == _kq for m in _tool[-3:]) and _tool[0]["content"].startswith(tk.DAU_DA_DON), (_n, _tool[0]["content"][:60]))
+check("don_openai: dọn tới khi xuống dưới 60% ngưỡng rồi dừng, không dọn hết", 0 < _n < 7, _n)
+check("don_openai: lời người dùng và model không bị đụng", _msgs[1]["content"] == "báo cáo" and _msgs[2]["tool_calls"][0]["id"] == "c0")
+check("don_openai: dưới ngưỡng thì không dọn", tk.don_openai([{"role": "tool", "tool_call_id": "a", "content": "ngắn" * 100}], nguong=30_000) == 0)
+check("don_openai: nguong=0 tắt", tk.don_openai(list(_msgs), nguong=0) == 0)
+_n2 = tk.don_openai(_msgs, nguong=40_000, giu_cuoi=3)
+check("don_openai: gọi lại không dọn lại cái đã dọn (idempotent khi đã dưới ngưỡng)", _n2 == 0, _n2)
+# dấu dọn dẫn tới file tràn nếu có
+_m3 = [{"role": "tool", "tool_call_id": "t", "content": "đầu " * 100 + "… [KẾT QUẢ DÀI 99 KÝ TỰ, ĐÃ LƯU TRỌN tại /tmp/kho/20261014-pos_order-abc.txt. …" + "đuôi " * 100}] + [{"role": "tool", "tool_call_id": "u", "content": "y" * 5000}] * 5
+tk.don_openai(_m3, nguong=10_000, giu_cuoi=2)
+check("dấu dọn dẫn tới file tràn", "/tmp/kho/20261014-pos_order-abc.txt" in _m3[0]["content"], _m3[0]["content"])
+# responses + anthropic
+_items = [{"type": "function_call", "call_id": f"c{i}"} if j == 0 else {"type": "function_call_output", "call_id": f"c{i}", "output": _kq} for i in range(8) for j in (0, 1)]
+check("don_responses: dọn được", tk.don_responses(_items, nguong=20_000, giu_cuoi=2) >= 1 and _items[1]["output"].startswith(tk.DAU_DA_DON))
+_conv = [{"role": "user", "content": "hỏi"}]
+for i in range(8):
+    _conv.append({"role": "assistant", "content": [{"type": "tool_use", "id": f"t{i}", "name": "pos_order", "input": {}}]})
+    _conv.append({"role": "user", "content": [{"type": "tool_result", "tool_use_id": f"t{i}", "content": _kq}]})
+check("don_anthropic: dọn block cũ, giữ 4 cuối", tk.don_anthropic(_conv, nguong=20_000) >= 1 and _conv[2]["content"][0]["content"].startswith(tk.DAU_DA_DON) and _conv[-1]["content"][0]["content"] == _kq)
+check("don_anthropic: dưới ngưỡng không dọn", tk.don_anthropic([{"role": "user", "content": [{"type": "tool_result", "tool_use_id": "a", "content": "b" * 300}]}], nguong=5000) == 0)
+
+
 if fails:
     print(f"ĐỎ {len(fails)}"); sys.exit(1)
 print("Tất cả xanh.")

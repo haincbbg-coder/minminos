@@ -636,7 +636,7 @@
   "models.mp_add_key_btn": "Về trang Models dán key",
   "models.h_tk": "TIẾT KIỆM TOKEN",
   "models.h_tk_sub": "đệm tool đọc, nén dữ liệu không mất số, tool nóng",
-  "models.tk_meta": "Ba việc chạy ngầm cho mọi bộ não: kết quả tool chỉ đọc được giữ vài phút (cùng tham số thì không gọi POS/ads lần nữa; vừa ghi gì lên kết nối đó là xoá đệm), dữ liệu JSON được nén lại nhưng giữ nguyên mọi con số, và các tool hay gọi nhất luôn hiện thẳng cho não thay vì phải tìm. Chỉnh trong settings: mcp.dem_doc_giay (mặc định 180, 0 = tắt), mcp.nen_ket_qua, mcp.tool_nong (mặc định 12).",
+  "models.tk_meta": "Ba việc chạy ngầm cho mọi bộ não: kết quả tool chỉ đọc được giữ vài phút (cùng tham số thì không gọi POS/ads lần nữa; vừa ghi gì lên kết nối đó là xoá đệm), dữ liệu JSON được nén lại nhưng giữ nguyên mọi con số, và các tool hay gọi nhất luôn hiện thẳng cho não thay vì phải tìm. Chỉnh trong settings: mcp.dem_doc_giay (mặc định 180, 0 = tắt), mcp.nen_ket_qua, mcp.tool_nong (mặc định 12). Với não API còn hai việc nữa: kết quả tool dài được lưu trọn ra file (não đọc tiếp theo đoạn, không mất phần giữa), và kết quả tool cũ trong cùng lượt được dọn khi hội thoại vượt mcp.don_ngu_canh_ky_tu (mặc định 240.000 ký tự, 0 = tắt), dòng dọn dẫn tới file đầy đủ.",
   "models.tk_cache": "Đệm tool đọc từ lúc khởi động: {hit} lần dùng lại, {miss} lần gọi thật ({pct}% dùng lại), giữ {ttl} giây",
   "models.tk_nen": "Nén dữ liệu đã bớt {kytu} ký tự, ước chừng {token} token không phải trả",
   "models.tk_nong": "Tool nóng đang hiện thẳng",
