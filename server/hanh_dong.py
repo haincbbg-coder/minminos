@@ -32,7 +32,7 @@ NHAN = {"xoa": "Xoá / huỷ", "tien": "Tiền & quảng cáo", "don_hang": "Đ�
         # Không nằm trong LOAI (không có chính sách chặn): chỉ là dòng CẢNH BÁO dữ liệu vào
         # chứa câu nhắm vào AI (26.10.164). Nhãn để trang Kết nối hiện tên người đọc được.
         "tiem_lenh": "Cảnh báo tiêm lệnh"}
-CHINH_SACH_HOP_LE = ("cho_phep", "chan")
+CHINH_SACH_HOP_LE = ("cho_phep", "chan", "hoi_truoc")
 
 # Từ khoá trong TÊN TOOL (chữ thường). Xét theo thứ tự LOAI: xoá trước (nặng nhất).
 _TU = {
@@ -117,6 +117,80 @@ def cho_phep(chinh_sach: dict, loai: str) -> tuple:
                        f"của chủ (trang Kết nối, mục Quyền theo loại việc). MinMin không tự làm "
                        f"việc này; hãy nói lại cho người dùng để họ mở quyền hoặc tự làm tay.")
     return True, ""
+
+
+def can_hoi(chinh_sach: dict, loai: str) -> bool:
+    """Loại việc này đang ở mức HỎI TRƯỚC? (26.10.165: MinMin dừng lại, hỏi chủ, chủ gật thì làm)."""
+    return str((chinh_sach or {}).get(loai) or "").strip().lower() == "hoi_truoc"
+
+
+# ─────────────────────────── cổng hỏi trước (26.10.165) ───────────────────────────
+# Mượn cách approval gate của Hermes: hành động ra ngoài thuộc loại chủ đặt "hỏi trước" thì
+# tool KHÔNG chạy ngay; MinMin tạo một yêu cầu, báo chủ (khung chat, chuông, Telegram), và chờ
+# chủ bấm Đồng ý/Từ chối trong vài phút. Gật thì chạy thật và ghi sổ "đã duyệt bởi ai"; lắc
+# hay hết giờ thì tool trả lỗi nói rõ CHƯA LÀM, để model nói lại với chủ thay vì tự lách.
+
+import asyncio
+import secrets
+
+_CHO: dict = {}          # id -> yêu cầu (có "event": asyncio.Event)
+_THONG_BAO = None        # async fn(yeu_cau) do main đặt: đẩy ra khung chat / Telegram / chuông
+HOI_TRUOC_GIAY_MAC_DINH = 180
+
+
+def dat_thong_bao(fn) -> None:
+    global _THONG_BAO
+    _THONG_BAO = fn
+
+
+def tao_yeu_cau(*, ai: str, tool: str, connector: str, label: str, loai: str, args) -> dict:
+    yc = {"id": secrets.token_hex(4), "ts": datetime.now().isoformat(timespec="seconds"),
+          "ai": ai or "?", "tool": tool, "connector": connector or "", "label": label or "",
+          "loai": loai, "nhan_loai": NHAN.get(loai, loai), "args": tom_tat_args(args),
+          "trang_thai": "cho", "nguoi_quyet": "", "event": asyncio.Event()}
+    _CHO[yc["id"]] = yc
+    # dọn yêu cầu cũ đã quyết quá 1 giờ
+    for k in [k for k, v in _CHO.items() if v["trang_thai"] != "cho"
+              and (datetime.now() - datetime.fromisoformat(v["ts"])).total_seconds() > 3600]:
+        _CHO.pop(k, None)
+    return yc
+
+
+def _gon(yc: dict) -> dict:
+    return {k: v for k, v in yc.items() if k != "event"}
+
+
+def danh_sach_cho(ca_da_quyet: bool = False) -> list:
+    ds = [_gon(v) for v in _CHO.values() if ca_da_quyet or v["trang_thai"] == "cho"]
+    return sorted(ds, key=lambda x: x["ts"], reverse=True)
+
+
+def quyet(ma: str, dong_y: bool, ai: str = "") -> tuple:
+    """Chủ bấm nút. (ok, lý do). Chỉ yêu cầu đang chờ mới quyết được, một lần."""
+    yc = _CHO.get(str(ma or ""))
+    if not yc:
+        return False, "không có yêu cầu này (có thể đã hết giờ chờ)"
+    if yc["trang_thai"] != "cho":
+        return False, f"yêu cầu đã được quyết: {yc['trang_thai']}"
+    yc["trang_thai"] = "dong_y" if dong_y else "tu_choi"
+    yc["nguoi_quyet"] = ai or "chủ"
+    yc["event"].set()
+    return True, ""
+
+
+async def cho_quyet(yc: dict, timeout: float = HOI_TRUOC_GIAY_MAC_DINH) -> str:
+    """Báo chủ rồi chờ. Trả 'dong_y' | 'tu_choi' | 'het_gio'."""
+    if _THONG_BAO is not None:
+        try:
+            await _THONG_BAO(_gon(yc))
+        except Exception:
+            pass
+    try:
+        await asyncio.wait_for(yc["event"].wait(), timeout=max(5.0, float(timeout)))
+    except asyncio.TimeoutError:
+        if yc["trang_thai"] == "cho":
+            yc["trang_thai"] = "het_gio"
+    return yc["trang_thai"]
 
 
 def chuan_hoa_chinh_sach(d) -> dict:

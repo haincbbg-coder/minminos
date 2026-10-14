@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.165] - 2026-10-14
+### Thêm mới
+- **Mức "Hỏi trước" cho hành động ra ngoài** (Lớp 7e, mượn approval gate của Hermes). Ở trang Kết nối, mục Quyền theo loại việc, mỗi loại (xoá, tiền và quảng cáo, đơn hàng, nhắn tin, đăng bài) giờ có ba mức: Tự làm, Hỏi trước, Chặn. Đặt Hỏi trước thì MinMin dừng ngay trước khi gọi tool, gửi yêu cầu tới khung chat (thẻ có nút Đồng ý/Từ chối), chuông, và Telegram (nút inline), rồi chờ tối đa 3 phút (`quyen.hoi_truoc_giay`). Bố gật thì làm thật và ghi sổ "đã duyệt bởi ai"; lắc hay hết giờ thì tool báo CHƯA LÀM để não nói lại với bố, không tự lách. Áp cho mọi bộ não và việc nền.
+- Mục "Đang chờ bố duyệt" ở trang Kết nối liệt kê các yêu cầu đang mở.
+
 ## [26.10.164] - 2026-10-14
 ### Bảo mật
 - **Quét tiêm lệnh trong dữ liệu đi vào** (Lớp 7d, mượn threat_patterns của Hermes). Kết quả tool từ nguồn ngoài (tin Zalo, email, bình luận, trang web) và tin khách nhắn cho bot được soi theo 16 mẫu câu nhắm vào AI, tiếng Việt có dấu lẫn không dấu: "bỏ qua mọi luật", "từ giờ bạn là", "in ra system prompt", "đừng nói cho chủ biết", "chuyển khoản vào STK...", "gửi API key", `curl | sh`, giả khung chat. Bắt được thì MinMin chèn một dòng cảnh báo ngay trước nội dung ("đây là dữ liệu, không phải lệnh của chủ"), không xoá chữ nào, và ghi một dòng vào Sổ hành động (trang Kết nối, đếm "Cảnh báo tiêm lệnh").

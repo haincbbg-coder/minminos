@@ -13244,6 +13244,50 @@ async def hanh_dong_danh_sach(limit: int = Query(100), loai: str = Query(""), ch
             "thong_ke": hanh_dong.thong_ke(), "nhan": hanh_dong.NHAN, "loai": list(hanh_dong.LOAI)}
 
 
+# ─────────────── cổng hỏi trước (26.10.165) ───────────────
+async def _thong_bao_duyet(yc: dict) -> None:
+    """Đẩy một yêu cầu duyệt tới chủ qua mọi cửa: khung chat (thẻ có nút), chuông, Telegram
+    (nút inline). Lỗi ở một cửa không chặn cửa khác."""
+    tom = (f"MinMin xin phép: {yc.get('nhan_loai')} qua {yc.get('tool')}"
+           + (f" ({yc.get('label')})" if yc.get("label") else "")
+           + (f"\nTham số: {yc.get('args')}" if yc.get("args") else ""))
+    try:
+        await _CHAT_RUNTIME.publish({"type": "duyet", "yeu_cau": yc})
+    except Exception as e:
+        print(f"[duyệt] ws: {type(e).__name__}: {e}", file=sys.stderr)
+    try:
+        await _bo_vao_hom_thu("", tom + "\nDuyệt ở trang Kết nối, mục Chờ duyệt.", kind="answer",
+                              label="Chờ duyệt", source="hoi-truoc")
+    except Exception as e:
+        print(f"[duyệt] inbox: {type(e).__name__}: {e}", file=sys.stderr)
+    try:
+        if _TG_BOT and (_TG_BOT.chat_ids or []):
+            rm = {"inline_keyboard": [[{"text": "Đồng ý", "callback_data": f"dy:{yc['id']}:1"},
+                                       {"text": "Từ chối", "callback_data": f"dy:{yc['id']}:0"}]]}
+            await _TG_BOT.send_text(_TG_BOT.chat_ids[0], tom, reply_markup=rm)
+    except Exception as e:
+        print(f"[duyệt] telegram: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+hanh_dong.dat_thong_bao(_thong_bao_duyet)
+
+
+@app.get("/hanh-dong/cho-duyet")
+async def hanh_dong_cho_duyet(ca: int = 0):
+    return {"ok": True, "cho": hanh_dong.danh_sach_cho(ca_da_quyet=bool(ca))}
+
+
+@app.post("/hanh-dong/duyet")
+async def hanh_dong_duyet(request: Request):
+    """Chủ bấm Đồng ý/Từ chối: {"id": "...", "dong_y": true|false}."""
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    ok, why = hanh_dong.quyet(str(data.get("id") or ""), bool(data.get("dong_y")), ai="dashboard")
+    return {"ok": ok, "error": why}
+
+
 @app.get("/hanh-dong/chinh-sach")
 async def hanh_dong_chinh_sach_doc():
     cs = (cfgmod.read_settings().get("quyen") or {}).get("loai_viec") or {}
@@ -21185,6 +21229,15 @@ async def _tg_callback(data, chat=None):
     chat = chat_id người bấm → nút brain chỉ đổi cho PHIÊN của họ (model vẫn đổi toàn cục)."""
     data = data or ""
     chat_key = str(chat or "default")
+    if data.startswith("dy:"):
+        # nút Đồng ý/Từ chối của cổng hỏi trước (26.10.165)
+        try:
+            _, ma, gat = data.split(":", 2)
+            ok, why = hanh_dong.quyet(ma, gat == "1", ai=f"telegram:{chat_key}")
+        except Exception as e:
+            ok, why = False, str(e)
+        return {"text": ("Đã " + ("ĐỒNG Ý" if gat == "1" else "TỪ CHỐI") + f" yêu cầu #{ma}. MinMin làm tiếp.")
+                if ok else f"Không quyết được: {why}", "alert": "Đã ghi nhận" if ok else why}
     if data == "mx":
         return {"text": "Đã đóng bảng chọn model.", "alert": "Đã đóng"}
     # ---- nút chọn brain (bs:<idx> | bx) - tác động PHIÊN của người bấm ----
