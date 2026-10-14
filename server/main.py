@@ -14648,8 +14648,9 @@ async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "
 
 def _ws_chan_nguon(ws) -> bool:
     """True = CHẶN kết nối WebSocket này vì khác nguồn gốc (xem web_security.ws_decision)."""
-    return bool(web_security.ws_decision(ws.headers.get("host", ""), ws.headers.get("origin"),
-                                         cfgmod.gate_active()))
+    # Kết nối thật luôn có headers; getattr chỉ để khung giả trong test không phải dựng thêm thuộc tính.
+    h = getattr(ws, "headers", None) or {}
+    return bool(web_security.ws_decision(h.get("host", ""), h.get("origin"), cfgmod.gate_active()))
 
 
 @app.websocket("/ws/voice-preview")
