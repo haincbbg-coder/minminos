@@ -16146,6 +16146,7 @@ async def websocket_endpoint(ws: WebSocket):
                         # chỉ ở lượt có tool hoặc có số liệu. Tắt bằng model.dan_nguon=false.
                         # Lỗi ở đây không được làm hỏng câu trả lời.
                         if final_text and not _limit_hit:
+                            final_text = nguon.bo_chan_gia(final_text) or final_text
                             try:
                                 _chan = nguon.chan_nguon(
                                     final_text, user_message, _ng_calls, _ng_kq,
@@ -16322,6 +16323,11 @@ async def websocket_endpoint(ws: WebSocket):
                 # với nhánh API. Tool native của Claude (Read/Bash/Grep...) không phải nguồn dữ
                 # liệu kinh doanh nên lọc bỏ; chỉ kể tool hub (mcp__javis__*) và tool connector.
                 if final_text:
+                    # Model hay bắt chước dòng "Nguồn: ... · lúc" đã thấy ở lượt trước; xoá bản
+                    # giả trước khi nối bản thật (26.10.159).
+                    _sach = nguon.bo_chan_gia(final_text)
+                    if _sach and _sach != final_text:
+                        final_text = _sach
                     try:
                         _goi_hub = [c for c in _ng_calls
                                     if str(c.get("name") or "").startswith("mcp__")

@@ -238,6 +238,29 @@ def gom_nguon(ten_nguon: list, toi_da: int = 6) -> list:
     return ra
 
 
+# Dòng chân nguồn GIẢ do model viết: sau vài lượt thấy "Nguồn: pos_order ×4 · lúc 10:44" dưới
+# câu trả lời, model bắt chước và tự in một dòng y hệt (kể cả "⚠ Số chưa thấy..."), có khi
+# hai lần (chủ repo 13/10 13:04: hai dòng Nguồn, hai giờ khác nhau). Chân nguồn là CHỨNG TỪ do
+# code dựng từ nhật ký tool; model in ra thì vừa sai vừa làm người đọc hết tin dòng thật.
+_RE_CHAN_GIA = re.compile(
+    r"^[ \t]*(?:Nguồn:[^\n]*(?:· lúc \d{1,2}:\d{2}|×\d+)[^\n]*"
+    r"|⚠[ \t]*Số chưa thấy trong dữ liệu tool:[^\n]*"
+    r"|⚠[ \t]*Câu trả lời có số liệu[^\n]*"
+    r"|Tự cộng từ dữ liệu:[^\n]*)[ \t]*$",
+    re.MULTILINE)
+
+
+def bo_chan_gia(tra_loi: str) -> str:
+    """Xoá các dòng model tự in giả chân nguồn, để chân nguồn THẬT (dựng từ nhật ký) đứng một
+    mình. Không đụng vào câu chữ khác."""
+    s = str(tra_loi or "")
+    if "Nguồn:" not in s and "⚠" not in s and "Tự cộng" not in s:
+        return s
+    s = _RE_CHAN_GIA.sub("", s)
+    s = re.sub(r"\n{3,}", "\n\n", s)
+    return s.rstrip()
+
+
 def chan_nguon(tra_loi: str, cau_hoi: str, tool_calls: list, ket_qua_tool: list, *,
                luc: str = "", bat: bool = True) -> str:
     """Dựng chân nguồn (chuỗi, có thể rỗng) để nối dưới câu trả lời.
