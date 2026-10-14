@@ -636,7 +636,7 @@
   "models.mp_add_key_btn": "Back to Models to add key",
   "models.h_tk": "TOKEN SAVINGS",
   "models.h_tk_sub": "read cache, lossless data compaction, hot tools",
-  "models.tk_meta": "Three things run quietly for every brain: read-only tool results are kept for a few minutes (same arguments means no second POS/ads call; any write to that connection clears its cache), JSON data is compacted while keeping every number, and the most-used tools are shown directly instead of hidden behind search. Tune in settings: mcp.dem_doc_giay (default 180, 0 = off), mcp.nen_ket_qua, mcp.tool_nong (default 12).",
+  "models.tk_meta": "Three things run quietly for every brain: read-only tool results are kept for a few minutes (same arguments means no second POS/ads call; any write to that connection clears its cache), JSON data is compacted while keeping every number, and the most-used tools are shown directly instead of hidden behind search. Tune in settings: mcp.dem_doc_giay (default 180, 0 = off), mcp.nen_ket_qua, mcp.tool_nong (default 12). For API brains two more: long tool results are stored whole in a file (the brain pages through it, nothing in the middle is lost), and old tool results within a turn are cleared once the conversation exceeds mcp.don_ngu_canh_ky_tu (default 240,000 chars, 0 = off), with the marker pointing to the full file.",
   "models.tk_cache": "Read cache since start: {hit} reused, {miss} real calls ({pct}% reused), kept {ttl}s",
   "models.tk_nen": "Compaction removed {kytu} characters, roughly {token} tokens not paid for",
   "models.tk_nong": "Hot tools shown directly",
