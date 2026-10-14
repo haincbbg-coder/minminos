@@ -88,6 +88,8 @@ chatbot_runtime.wire(answer=_engine, brain_root=lambda b: tempfile.mkdtemp(prefi
 # 1. Zalo cá nhân là một kênh gắn được bot, và hiện ra để CHỌN
 # ============================================================
 zp = channels.spec("zalo_personal")
+import channels.zalo_personal as _zpm  # noqa: E402
+_zpm.GOM_GIAY = 0   # gom tin 5 giây ngoài đời thật; test không chờ
 check("Zalo cá nhân gắn được bot (có Transport) dù là kênh kind=account",
       zp and zp.kind == "account" and zp.nl("bot"))
 check("nhưng KHÔNG dùng được để tạo tài khoản bằng token", "zalo_personal" not in channels.bot_token_ids())
@@ -158,20 +160,18 @@ async def chay():
     check("và không bị tính là chủ tự tay nhắn (không thì bot tự khoá miệng sau câu đầu)",
           not zc.chu_vua_nhan_tay("zalo-1", "u1"))
 
-    # ---- rào: nhóm, ảnh, tin cũ -----------------------------------------------------
+    # ---- rào: nhóm, tin cũ (ảnh trơn ở chat riêng nay được gom và trả lời, xem test_zalo_gom_tin) -----------------------------------------------------
     GUI.clear()
     KHO_TIN.extend([
         {"threadId": "g1", "from": "u9", "senderName": "Ai đó", "type": "text",
          "text": "Cả nhà ơi", "id": "g-1", "ts": _ms(2), "threadType": 1},
-        {"threadId": "u1", "from": "u1", "type": "image", "text": "", "id": "a-1", "ts": _ms(2),
-         "threadType": 0},
         {"threadId": "u1", "from": "u1", "type": "text", "text": "Hỏi từ hôm qua", "id": "cu-1",
          "ts": _ms(zc.TUOI_TOI_DA + 600), "threadType": 0},
     ])
     n0 = len(LUOT_ENGINE)
     await zc.doc_mot_lan(dict(CONN))
     await asyncio.sleep(0.3)
-    check("nhóm, ảnh và tin cũ: bot KHÔNG trả lời và không tốn một lượt model",
+    check("nhóm và tin cũ: bot KHÔNG trả lời và không tốn một lượt model",
           not GUI and len(LUOT_ENGINE) == n0, (GUI, len(LUOT_ENGINE) - n0))
 
     # ---- chủ vừa tự tay nhắn cuộc chat này: bot nhường -------------------------------

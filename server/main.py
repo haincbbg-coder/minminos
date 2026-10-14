@@ -14646,9 +14646,15 @@ async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "
 
 
 
+def _ws_chan_nguon(ws) -> bool:
+    """True = CHẶN kết nối WebSocket này vì khác nguồn gốc (xem web_security.ws_decision)."""
+    return bool(web_security.ws_decision(ws.headers.get("host", ""), ws.headers.get("origin"),
+                                         cfgmod.gate_active()))
+
+
 @app.websocket("/ws/voice-preview")
 async def voice_preview_ws(ws: WebSocket, voice: str = Query("juniper"), provider: str = Query("chatgpt")):
-    if cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", "")):
+    if _ws_chan_nguon(ws) or (cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", ""))):
         await ws.close(code=1008)
         return
     if provider not in ("chatgpt", "gemini") or voice not in voice_live.PROVIDERS[provider]["voices"]:
@@ -14686,7 +14692,7 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
     Khung JSON về trình duyệt: ready | interrupted | transcript | tool | turn_done | error.
     Khung JSON từ trình duyệt: {"type":"text","text":...} | {"type":"stop"}. Byte = audio.
     """
-    if cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", "")):
+    if _ws_chan_nguon(ws) or (cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", ""))):
         await ws.close(code=1008)
         return
     await ws.accept()
@@ -15238,7 +15244,7 @@ def _bao_lan_nhanh_bo_qua(vconf) -> bool:
 # ============================================
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
-    if cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", "")):
+    if _ws_chan_nguon(ws) or (cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", ""))):
         await ws.close(code=1008)
         return
     await ws.accept()
@@ -17331,7 +17337,7 @@ async def terminal_close(session: str = Form(...)):
 @app.websocket("/ws/terminal")
 async def terminal_ws(ws: WebSocket, session: str = Query(""), brain: str = Query("brain"),
                       cols: int = Query(80), rows: int = Query(24)):
-    if cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", "")):
+    if _ws_chan_nguon(ws) or (cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", ""))):
         await ws.close(code=1008)
         return
     await ws.accept()

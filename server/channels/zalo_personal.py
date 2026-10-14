@@ -131,6 +131,9 @@ async def gui_tep(conn_id: str, thread: str, path: str, loai_chat: str = "privat
         return False, f"{type(ex).__name__}: {ex}"[:200]
 
 
+GOM_GIAY = 5   # chat riêng: đợi khách im ngần này giây rồi mới trả lời một lần
+
+
 class Transport:
     """Lớp vận chuyển cho bot trên Zalo cá nhân, đúng khế ước của `chatbot_runtime.start_bot`.
 
@@ -149,6 +152,7 @@ class Transport:
         self.last_error = ""
         self._task = None
         self._khoa = {}         # thread -> Lock: một cuộc chat một lượt, khỏi trả lời chồng nhau
+        self._dem = {}          # thread -> {evs, task}: tin chat riêng đang chờ gom
 
     # ---- vòng đời ------------------------------------------------------------------
     def start(self):
@@ -204,19 +208,30 @@ class Transport:
         loai = str(ev.get("message_type") or "text")
         text = str(ev.get("text") or "").strip()
         thread = str(ev.get("external_chat_id") or "")
-        # Chat riêng: chữ hoặc ảnh có chú thích. Nhóm: tin chữ, và ảnh/file CÓ CAPTION (chữ đi kèm ảnh tính
-        # như một tin: "@Bot giá cái này?" gửi kèm ảnh thì bot phải trả lời).
-        if not nhom and (ev.get("chat_type") != "private" or loai not in ("text", "image")):
+        # Chat riêng: chữ, ảnh (có hay không có chú thích) và file. Nhóm: tin chữ, và ảnh/file CÓ
+        # CAPTION (chữ đi kèm ảnh tính như một tin: "@Bot giá cái này?" gửi kèm ảnh thì bot phải trả lời).
+        if not nhom and (ev.get("chat_type") != "private" or loai not in ("text", "image", "file")):
             return
-        if (nhom or loai == "image") and not zalo_nhom.la_chu_thich(loai, text):
+        if nhom and not zalo_nhom.la_chu_thich(loai, text):
             return
-        if not text or not thread:
+        if not thread or (not text and (nhom or loai == "text")):
             return
         if time.time() - float(ev.get("created_at") or 0) > zc.TUOI_TOI_DA:
             return
-        if zc.chu_vua_nhan_tay(self.conn_id, thread):
+        if nhom:
+            if zc.chu_vua_nhan_tay(self.conn_id, thread):
+                return
+            meta = self._meta(ev, thread, True)
+            md = ev.get("metadata") or {}
+            meta["mentioned"] = zalo_nhom.co_goi_ten(text, md.get("mentions"), self._ten_goi())
+            meta["reply_to_bot"] = zc.la_tra_loi_bot(self.conn_id, thread, md.get("replyTo"))
+            await self._tra_loi(thread, text, meta, True)
             return
-        meta = {
+        # Chat riêng: gom các tin khách nhắn liền nhau rồi trả lời MỘT lần (xem _gom).
+        self._gom(thread, ev)
+
+    def _meta(self, ev: dict, thread: str, nhom: bool) -> dict:
+        return {
             "chat_id": thread, "chat_type": "group" if nhom else "private",
             "chat_title": str(ev.get("chat_title") or "") if nhom else "",
             "user_id": str(ev.get("sender_id") or thread),
@@ -224,14 +239,74 @@ class Transport:
             "message_id": str(ev.get("external_message_id") or ""),
             "account_id": self.conn_id,
         }
-        if loai == "image":
+
+    # ---- gom tin chat riêng ----------------------------------------------------------
+    def _gom(self, thread: str, ev: dict):
+        """Khách nhắn một ý thành mấy tin liền: đợi họ im GOM_GIAY giây rồi đáp một lần đủ ý.
+        Chủ vừa tự nhắn cuộc chat này thì GIỮ tin lại thay vì bỏ: chủ trả lời trong TAY_IM giây
+        thì bỏ phần giữ (khách đã được phục vụ), hết hạn mà chủ chưa trả lời thì bot đáp một lần."""
+        d = self._dem.setdefault(thread, {"evs": [], "task": None})
+        d["evs"].append(ev)
+        if d["task"] and not d["task"].done():
+            d["task"].cancel()
+        d["task"] = asyncio.get_running_loop().create_task(self._doi_roi_tra_loi(thread))
+
+    async def _doi_roi_tra_loi(self, thread: str):
+        import zalo_personal_channel as zc
+        try:
+            await asyncio.sleep(GOM_GIAY)
+            while True:
+                d = self._dem.get(thread) or {}
+                evs = list(d.get("evs") or [])
+                if not evs or zc._BOTS.get(self.conn_id) is not self:
+                    return           # bot đã tắt: không gửi gì
+                cuoi = max(float(e.get("created_at") or 0) for e in evs) or time.time()
+                tay = float(zc._TAY.get((self.conn_id, thread)) or 0)
+                if tay and tay >= cuoi:
+                    d["evs"] = []    # chủ đã tự trả lời sau tin khách: bỏ phần giữ
+                    return
+                if tay and cuoi - tay < zc.TAY_IM:
+                    # Chủ đang nói chuyện ở đây từ trước khi khách nhắn: chờ tới khi đủ TAY_IM
+                    # kể từ tin khách mà chủ vẫn im.
+                    cho = cuoi + zc.TAY_IM - time.time()
+                    if cho > 0:
+                        await asyncio.sleep(min(cho, 60))
+                        continue
+                break
+            d["evs"] = []
+            await self._tra_loi_gom(thread, evs)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            self.last_error = f"{type(e).__name__}: {e}"[:300]
+            print(f"[zalo-personal bot {self.conn_id}] gom tin hỏng: {self.last_error}", file=sys.stderr)
+
+    async def _tra_loi_gom(self, thread: str, evs: list):
+        dong = []
+        anh = ""
+        for e in evs:
+            loai = str(e.get("message_type") or "text")
+            t = str(e.get("text") or "").strip()
+            if loai == "image":
+                anh = str((e.get("metadata") or {}).get("image_url") or anh)
+                dong.append(t or "[Khách gửi một ảnh]")
+            elif loai == "file":
+                ten = str((e.get("metadata") or {}).get("fileName") or "")
+                dong.append((t + " " if t else "") + f"[Khách gửi file{': ' + ten if ten else ''}. Bot chưa mở được file, hãy nói rõ và hỏi khách cần gì]")
+            else:
+                dong.append(t)
+        text = "\n".join(x for x in dong if x).strip()
+        if not text:
+            return
+        meta = self._meta(evs[-1], thread, False)
+        if anh:
             meta["co_anh"] = True
             # 0.74.1: the photo's link, so the bot can actually look at it (see `chatbot_runtime.anh_cho_bot`).
-            meta["image_url"] = str((ev.get("metadata") or {}).get("image_url") or "")
-        if nhom:
-            md = ev.get("metadata") or {}
-            meta["mentioned"] = zalo_nhom.co_goi_ten(text, md.get("mentions"), self._ten_goi())
-            meta["reply_to_bot"] = zc.la_tra_loi_bot(self.conn_id, thread, md.get("replyTo"))
+            meta["image_url"] = anh
+        await self._tra_loi(thread, text, meta, False)
+
+    async def _tra_loi(self, thread: str, text: str, meta: dict, nhom: bool):
+        import zalo_personal_channel as zc
         khoa = self._khoa.setdefault(thread, asyncio.Lock())
         async with khoa:
             try:

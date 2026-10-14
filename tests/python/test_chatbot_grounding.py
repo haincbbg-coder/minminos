@@ -473,7 +473,7 @@ _fn = chatbot_runtime._make_answer_fn(_bid)
 _ra = asyncio.run(_fn("chào Coach", {"chat_id": "77", "chat_type": "private"}))
 
 check("khách chỉ nhận câu xin lỗi chung, không nhận lỗi kỹ thuật",
-      "trục trặc kỹ thuật" in _ra["text"] and "Model" not in _ra["text"])
+      "đợi em chút xíu" in _ra["text"] and "Model" not in _ra["text"])
 # Câu báo lượt GÃY phải khác hẳn câu "chưa có thông tin". Dùng chung một câu thì chủ nhìn màn
 # hình không phân biệt được bot đang hỏng hay đang thiếu tài liệu - đúng ca chủ repo đã dính.
 check("câu báo lượt gãy khác hẳn câu thiếu tài liệu",

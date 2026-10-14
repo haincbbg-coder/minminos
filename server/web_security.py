@@ -191,3 +191,24 @@ def csrf_decision(method: str, host_header: str, origin_header, gate_active: boo
             if host not in allowed:
                 return 403, "host không được phép"
     return None
+
+
+def ws_decision(host_header: str, origin_header, gate_active: bool):
+    """Kết nối WebSocket (chat, terminal, giọng nói) có được nhận không. None = cho qua, hoặc (mã, lý do).
+
+    Vì sao cần riêng: middleware HTTP của Starlette KHÔNG chạy cho WebSocket, nên `csrf_decision`
+    không bao giờ gác chúng. Trình duyệt không áp same-origin cho WebSocket, một trang web lạ
+    mở `ws://localhost:PORT/ws/terminal` được và gửi lệnh như chủ máy, kể cả khi chưa đặt mật
+    khẩu (không có cổng đăng nhập thì không có gì chặn). Quy tắc: có Origin thì phải cùng host
+    hoặc thuộc danh sách host cho phép. Client không phải trình duyệt không gửi Origin nên qua.
+    """
+    if not host_hop_le(host_header):
+        return 400, "host header không hợp lệ"
+    host = host_only(host_header)
+    if origin_header:
+        oh = host_only(origin_header)
+        if oh != host and oh not in allowed_web_hosts():
+            return 403, "websocket khác nguồn gốc bị chặn"
+    if not gate_active and host and not _is_ip(host) and host not in allowed_web_hosts():
+        return 403, "host không được phép"
+    return None
