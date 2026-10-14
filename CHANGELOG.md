@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.161] - 2026-10-14
+### Thêm mới
+- **Bể khoá xoay vòng cho nhà API** (OpenRouter, OpenAI, Anthropic API, Gemini, Groq, Ollama Cloud, endpoint tự khai). Thẻ nhà cung cấp ở trang Models có mục "Bể khoá dự phòng": thêm các khoá chính chủ khác, mỗi dòng một khoá. Vấp hạn mức 429 hay khoá hỏng 401 là MinMin đổi sang khoá kế ngay và gọi lại, không chờ cửa sổ hạn mức; khoá vấp nghỉ 60 giây (lặp lại thì nghỉ dài dần), khoá sai nghỉ 1 giờ. Áp cho chat, bot và việc nền.
+- Không áp cho gói thuê bao Claude Code, ChatGPT, Grok, Antigravity: xoay nhiều tài khoản thuê bao để lách hạn mức là vi phạm điều khoản và dễ bị khoá tài khoản.
+
 ## [26.10.160] - 2026-10-14
 ### Cải thiện
 - **Não API không còn mất phần giữa của kết quả tool dài** (Lớp 7a, mượn cách Hermes). Trước đây OpenRouter, OpenAI, Anthropic API, Gemini, Groq, Ollama chỉ thấy 8.000 ký tự đầu đuôi, 60 trang đơn hàng thì phần giữa mất âm thầm. Giờ kết quả được lưu trọn ra kho file ngoài brain, não nhận bản xem trước kèm đường dẫn và đọc tiếp bằng `javis_read_file(path, offset, limit)` theo từng đoạn.

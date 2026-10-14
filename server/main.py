@@ -88,7 +88,8 @@ import danh_gia      # bộ chấm điểm "não": đo chất lượng trả l�
 import dinh_tuyen    # định tuyến model theo độ khó câu hỏi (26.10.127)
 import nguon         # dẫn nguồn + neo số liệu dưới câu trả lời (Trụ 3, 26.10.137)
 import hanh_dong     # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
-import tiet_kiem     # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
+import tiet_kiem        # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
+import be_khoa          # bể khoá xoay vòng cho nhà API (26.10.161)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
@@ -2181,9 +2182,23 @@ def _api_stream(prov, key, model, messages, reasoning="off"):
     lượt trả lời: người nhắn cho bot nhận câu xin lỗi kỹ thuật, người trực bị gọi dậy, còn
     thứ cần làm chỉ là chờ một giây rồi hỏi lại.
     """
+    xoay = _be_khoa_cua(prov, key)
     return engine.thu_lai_khi_tam_thoi(
-        lambda: _api_stream_goc(prov, key, model, messages, reasoning),
-        nhan=f"{prov}/{model or 'mặc định'}")
+        lambda: _api_stream_goc(prov, xoay.khoa() if xoay else key, model, messages, reasoning),
+        nhan=f"{prov}/{model or 'mặc định'}", xoay=xoay)
+
+
+def _be_khoa_cua(prov, key):
+    """Bộ xoay khoá cho một lượt gọi API, hoặc None khi nhà này chỉ có một khoá (đường cũ y
+    nguyên). Chỉ nhà dùng API key; gói thuê bao không bao giờ vào đây (xem be_khoa.py)."""
+    if prov not in be_khoa.API_CO_BE or not key:
+        return None
+    try:
+        mcfg = cfgmod.read_settings().get("model", {}) or {}
+        keys = be_khoa.danh_sach(prov, mcfg, key)
+    except Exception:
+        return None
+    return be_khoa.Xoay(prov, keys) if len(keys) > 1 else None
 
 
 # Allowlist rỗng-thật cho engine Claude Code: bật cổng `can_use_tool` mà không tool nào khớp,
@@ -2460,25 +2475,29 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
         # Vòng tool cũng được chạy lại khi gãy tạm thời, nhưng chỉ tới khi nó chạy tool ĐẦU
         # TIÊN: từ đó trở đi lượt này đã để lại dấu vết ngoài đời (ghi file, gửi tin, đặt
         # lịch) và chạy lại là làm hai lần. Điều kiện đó do `thu_lai_khi_tam_thoi` giữ.
+        _xoay = _be_khoa_cua(prov, key)
+
         def _vong_tool():
+            k = _xoay.khoa() if _xoay else key
             if prov == "openrouter":
-                return engine.openrouter_chat_with_mcp(key, model, messages, reasoning, tools, route)
+                return engine.openrouter_chat_with_mcp(k, model, messages, reasoning, tools, route)
             if prov == "openai":
-                return engine.openai_chat_with_mcp(key, model, messages, reasoning, tools, route)
+                return engine.openai_chat_with_mcp(k, model, messages, reasoning, tools, route)
             if prov == "anthropic-api":
-                return engine.anthropic_chat_with_mcp(key, model, messages, reasoning, tools, route)
+                return engine.anthropic_chat_with_mcp(k, model, messages, reasoning, tools, route)
             if prov == "gemini":
-                return engine.gemini_chat_with_mcp(key, model, messages, reasoning, tools, route)
+                return engine.gemini_chat_with_mcp(k, model, messages, reasoning, tools, route)
             if prov == "groq":
-                return engine.groq_chat_with_mcp(key, model, messages, reasoning, tools, route)
+                return engine.groq_chat_with_mcp(k, model, messages, reasoning, tools, route)
             if prov == "openai-compat":
-                return engine.openai_compat_chat_with_mcp(key, model, messages, reasoning, tools, route)
-            return engine.ollama_chat_with_mcp(key, model, messages, reasoning, tools, route)
+                return engine.openai_compat_chat_with_mcp(k, model, messages, reasoning, tools, route)
+            return engine.ollama_chat_with_mcp(k, model, messages, reasoning, tools, route)
         if prov == "ollama-local":
             return engine.ollama_local_chat_with_mcp(key, model, messages, reasoning, tools, route)
 
         if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "ollama", "openai-compat"):
-            return engine.thu_lai_khi_tam_thoi(_vong_tool, nhan=f"{prov}/{model or 'mặc định'}+tool")
+            return engine.thu_lai_khi_tam_thoi(_vong_tool, nhan=f"{prov}/{model or 'mặc định'}+tool",
+                                               xoay=_xoay)
     return _api_stream(prov, key, model, messages, reasoning)
 
 
@@ -13247,6 +13266,48 @@ async def hanh_dong_chinh_sach_luu(request: Request):
     return {"ok": True, "chinh_sach": cs}
 
 
+@app.get("/be-khoa")
+async def be_khoa_thong_ke():
+    """Bể khoá xoay vòng: mỗi nhà API có mấy khoá, khoá nào đang nghỉ vì 429/401 (nhãn 4 ký tự
+    cuối, không bao giờ trả khoá đầy đủ)."""
+    mcfg = cfgmod.read_settings().get("model", {}) or {}
+
+    def _chinh(prov):
+        d = _provider_def(prov)
+        return _provider_key(mcfg, d) if d else ""
+
+    return {"ok": True, "nha": be_khoa.thong_ke(mcfg, _chinh),
+            "da_khai": {k: len(v or []) for k, v in (mcfg.get("be_khoa") or {}).items()}}
+
+
+@app.post("/be-khoa")
+async def be_khoa_luu(req: Request):
+    """Lưu danh sách khoá dự phòng của MỘT nhà: {"prov": "openrouter", "keys": ["..", ".."]}.
+    Chỉ nhà dùng API key; gói thuê bao bị từ chối (xoay tài khoản thuê bao là vi phạm điều
+    khoản, xem be_khoa.py)."""
+    body = await req.json()
+    prov = str(body.get("prov") or "").strip()
+    if prov not in be_khoa.API_CO_BE:
+        return {"ok": False, "error": f"'{prov}' không phải nhà dùng API key; bể khoá không áp cho gói thuê bao."}
+    keys = []
+    for k in (body.get("keys") or []):
+        k = str(k or "").strip()
+        if k and k not in keys:
+            keys.append(k)
+    cfg = cfgmod.read_settings()
+    m = cfg.setdefault("model", {})
+    be = m.setdefault("be_khoa", {}) if isinstance(m.get("be_khoa"), dict) or m.get("be_khoa") is None else {}
+    if not isinstance(m.get("be_khoa"), dict):
+        m["be_khoa"] = be
+    if keys:
+        be[prov] = keys
+    else:
+        be.pop(prov, None)
+    cfgmod.write_settings(cfg)
+    be_khoa.xoa_trang_thai()
+    return {"ok": True, "prov": prov, "so_khoa_du_phong": len(keys)}
+
+
 @app.get("/tiet-kiem")
 async def tiet_kiem_thong_ke():
     """Lớp 6: đệm tool đọc (hit/miss), ký tự tiết kiệm nhờ nén JSON, danh sách tool nóng."""
@@ -20160,22 +20221,24 @@ def _bot_stream_co_tool(prov, key, model, messages, reasoning, tools, route,
     """
     if not tools:
         return _api_stream(prov, key, model, messages, reasoning)
+    _xoay = _be_khoa_cua(prov, key)
 
     def _vong():
+        key_ = _xoay.khoa() if _xoay else key
         if prov == "openrouter":
-            return engine.openrouter_chat_with_mcp(key, model, messages, reasoning, tools, route)
+            return engine.openrouter_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "openai":
-            return engine.openai_chat_with_mcp(key, model, messages, reasoning, tools, route)
+            return engine.openai_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "gemini":
-            return engine.gemini_chat_with_mcp(key, model, messages, reasoning, tools, route)
+            return engine.gemini_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "groq":
-            return engine.groq_chat_with_mcp(key, model, messages, reasoning, tools, route)
+            return engine.groq_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "ollama":
-            return engine.ollama_chat_with_mcp(key, model, messages, reasoning, tools, route)
+            return engine.ollama_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "ollama-local":
             return engine.ollama_local_chat_with_mcp(key, model, messages, reasoning, tools, route)
         if prov == "openai-compat":
-            return engine.openai_compat_chat_with_mcp(key, model, messages, reasoning, tools, route)
+            return engine.openai_compat_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "openai-oauth":
             creds = openai_oauth.valid_creds() or {}
             return engine.responses_with_mcp(creds.get("access_token", ""), creds.get("account_id", ""),
@@ -20187,11 +20250,11 @@ def _bot_stream_co_tool(prov, key, model, messages, reasoning, tools, route,
             # Bốn lớp rào giữ đúng hợp đồng cách ly: xem `_claude_sub_stream_tools`.
             return _claude_sub_stream_tools(model, messages, reasoning, brain=brain,
                                             tag=tag_bot, mode=muc_quyen)
-        return engine.anthropic_chat_with_mcp(key, model, messages, reasoning, tools, route)
+        return engine.anthropic_chat_with_mcp(key_, model, messages, reasoning, tools, route)
 
     # Nhà cung cấp gãy tạm thời thì thử lại - nhưng dừng ngay khi tool đầu tiên đã chạy, vì từ
     # đó lượt này đã chạm vào thế giới thật.
-    return engine.thu_lai_khi_tam_thoi(_vong, nhan=f"bot {prov}/{model or 'mặc định'}")
+    return engine.thu_lai_khi_tam_thoi(_vong, nhan=f"bot {prov}/{model or 'mặc định'}", xoay=_xoay)
 
 
 async def _bot_tra_loi_co_tool(text, *, sess, sysprompt, prov, api_key, api_model, reasoning,
