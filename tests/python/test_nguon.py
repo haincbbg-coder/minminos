@@ -104,6 +104,19 @@ _cn2 = ng.chan_nguon("Tiêu 5.922.081 đ.", "báo cáo", [{"name": "meta_ads_get
 check("chan_nguon: dòng 'Tự cộng từ dữ liệu', không có ⚠", "Tự cộng từ dữ liệu: 5.922.081" in _cn2 and "⚠" not in _cn2, _cn2)
 
 
+# ---------- 26.10.159: xoá chân nguồn GIẢ do model bắt chước ----------
+_gia = ("Kết quả 89 mã.\n\nAnh muốn mình làm tiếp việc nào?\n\n"
+        "Nguồn: pos_order ×60 · pos_purchase ×8 · pos_describe ×1 · lúc 13:08\n\n"
+        "⚠ Số chưa thấy trong dữ liệu tool: 1.859. Có thể model tự cộng trừ.\n"
+        "Tự cộng từ dữ liệu: 5.922.081\n"
+        "Nguồn gốc của số liệu là Pancake (câu này giữ).")
+_sach = ng.bo_chan_gia(_gia)
+check("bo_chan_gia: xoá dòng Nguồn giả, ⚠ giả, Tự cộng giả", "Nguồn: pos_order" not in _sach and "⚠" not in _sach and "Tự cộng từ" not in _sach, _sach)
+check("bo_chan_gia: giữ câu chữ khác, kể cả câu có chữ 'Nguồn gốc'", "Anh muốn mình làm tiếp" in _sach and "Nguồn gốc của số liệu" in _sach, _sach)
+check("bo_chan_gia: không có gì giả thì trả nguyên", ng.bo_chan_gia("Doanh thu 5 tỷ.") == "Doanh thu 5 tỷ.")
+check("bo_chan_gia: dòng 'Nguồn:' thường của người viết thì giữ", ng.bo_chan_gia("Nguồn: báo cáo kế toán tháng 9") == "Nguồn: báo cáo kế toán tháng 9")
+
+
 if fails:
     print(f"ĐỎ {len(fails)}"); sys.exit(1)
 print("Tất cả xanh.")

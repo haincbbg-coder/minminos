@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.159] - 2026-10-14
+### Sửa lỗi
+- **Không còn hai dòng "Nguồn:" dưới một câu trả lời.** Sau vài lượt, não bắt chước dòng chân nguồn và tự in một bản (giờ khác, số khác). Giờ bản do não viết bị xoá, chỉ còn bản thật do MinMin dựng từ nhật ký tool.
+
 ## [26.10.158] - 2026-10-13
 ### Sửa lỗi
 - **Chi tiêu Meta không còn bị báo "chưa thấy trong dữ liệu".** API trả `"spend":"553483.1"`, lớp kiểm số bỏ qua vì đuôi lẻ; giờ đọc phần nguyên và bản làm tròn.
