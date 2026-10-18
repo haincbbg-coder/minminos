@@ -125,6 +125,7 @@ _DEFAULT = {
         "openai_api_key": "",                  # provider OpenAI (ChatGPT API)
         "gemini_api_key": "",                  # provider Google Gemini (endpoint OpenAI-compat)
         "groq_api_key": "",                    # provider Groq (endpoint OpenAI-compat, suy luận rất nhanh)
+        "xai_api_key": "",                     # provider xAI Grok API (trả theo lượng, khác gói Grok Build)
         # Provider 'ollama' = Ollama Cloud (ollama.com). Bản chạy trên máy nhà KHÔNG được đấu,
         # cố ý: nó đòi thêm một ô địa chỉ - ca đặc biệt duy nhất của cả lớp nhà cung cấp -
         # trong khi phần đông người dùng Javis chạy nó trên VPS, nơi "localhost" là chính cái
@@ -172,6 +173,7 @@ _DEFAULT = {
             "openai": ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-terra", "gpt-4o-mini"],                        # OpenAI API
             "gemini": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],  # Google Gemini API (picker load động)
             "groq": ["llama-3.3-70b-versatile", "qwen3-32b", "openai/gpt-oss-120b"],  # Groq (picker load động)
+            "xai": ["grok-4", "grok-4-fast", "grok-3-mini"],                           # xAI API (picker load động)
             # Không ghim model Codex: /provider/models lấy catalog LIVE bằng
             # codex app-server model/list và nhớ lại lần thành công gần nhất.
             "openai-oauth": [],
@@ -498,7 +500,7 @@ _SECRET_PATHS = (
     # được. Xem `_secret_keys`.
     "packs.tokens.*",
     "model.openrouter_key", "model.anthropic_api_key", "model.openai_api_key", "model.gemini_api_key",
-    "model.groq_api_key", "model.ollama_key", "model.ollama_local_key", "model.openai_compat_key",
+    "model.groq_api_key", "model.xai_api_key", "model.ollama_key", "model.ollama_local_key", "model.openai_compat_key",
     "model.openai_oauth.access_token", "model.openai_oauth.refresh_token", "model.openai_oauth.id_token",
     # Gemini CLI (đăng nhập Google ngay trên dashboard). Refresh token ở đây mở được cả gói
     # Code Assist của tài khoản Google, nên nó ngang hàng mọi secret khác trong danh sách.

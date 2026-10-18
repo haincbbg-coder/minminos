@@ -100,6 +100,15 @@ tk = bk.thong_ke(mcfg, lambda p: "sk-A" if p == "openrouter" else "")
 check("thong_ke: chỉ nhà có bể, nhãn 4 ký tự", list(tk) == ["openrouter"] and all(len(k["nhan"]) <= 5 for k in tk["openrouter"]["khoa"]), tk)
 check("thong_ke: không chứa khoá đầy đủ", "sk-ABCD" not in str(tk))
 
+# ---------- 26.10.167: xAI Grok API là nhà có bể khoá, khác hẳn Grok Build ----------
+check("xai có bể khoá", "xai" in bk.API_CO_BE and "grok-cli" not in bk.API_CO_BE)
+import aux_engine as _ax
+check("xai là nhà API của việc nền với trường khoá riêng", "xai" in _ax.API_PROVIDERS and _ax._KEY_FIELD.get("xai") == "xai_api_key")
+check("engine có xai_stream và xai_chat_with_mcp", hasattr(engine, "xai_stream") and hasattr(engine, "xai_chat_with_mcp") and engine.XAI_URL.startswith("https://api.x.ai/v1/"))
+check("xai: grok-3-mini và grok-4 nhận reasoning, bản non-reasoning thì không",
+      engine._xai_is_reasoning("grok-3-mini") and engine._xai_is_reasoning("grok-4") and not engine._xai_is_reasoning("grok-4-fast-non-reasoning"))
+
+
 if fails:
     print("ĐỎ", len(fails), fails)
     sys.exit(1)
