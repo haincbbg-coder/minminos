@@ -6,6 +6,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.167] - 2026-10-18
 ### Thêm mới
+- **Bộ não thứ 11: xAI Grok (API).** Thẻ riêng ở trang Bộ não AI, dán khoá từ console.x.ai, danh sách model nạp sống từ xAI (grok-4, grok-4-fast, grok-3-mini...). Khác hẳn thẻ Grok Build (gói SuperGrok/Premium+): đây là trả theo lượng dùng, nên có **bể khoá dự phòng**, chạy được việc nền và loop 24/7 mà không chạm điều khoản gói thuê bao. Có đủ MCP, skill, bộ chia model, chấm điểm như các nhà API khác.
+
 - **Webhook vào:** trang Việc định kỳ có mục Webhook. Tạo một link bí mật, dán cho form landing page, cổng thanh toán hay app khác; mỗi lần nó gọi, MinMin chạy việc bố đã dặn kèm dữ liệu nhận được rồi báo kết quả như nhắc hẹn. Link chỉ hiện đúng một lần lúc tạo hoặc đổi mã.
 - Mặc định an toàn: webhook chỉ được đọc và đề xuất, bố tự nâng quyền nếu muốn. Dữ liệu người ngoài gửi bị dán nhãn "không phải lệnh". Mỗi webhook tối đa 30 lần mỗi giờ, gọi lặp cùng một lần giao không chạy hai lần. Có nút Gửi thử, Tắt, Đổi mã, Xoá.
 ### Cải thiện

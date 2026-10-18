@@ -481,6 +481,11 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 # Groq đổi tên model khá nhanh (model cũ bị deprecate rồi gỡ). Để một chỗ duy nhất, và
 # picker vẫn nạp danh sách LIVE từ /openai/v1/models nên mặc định này chỉ là lưới an toàn.
 GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile"
+# xAI Grok qua API (26.10.167): endpoint OpenAI-compatible, bán theo lượng dùng, KHÁC gói
+# SuperGrok/Premium+ của Grok Build (binary `grok`). Đây là đường để bể khoá và việc nền chạy
+# Grok mà không đụng điều khoản gói thuê bao.
+XAI_URL = "https://api.x.ai/v1/chat/completions"
+XAI_DEFAULT_MODEL = "grok-4"
 
 # Ollama - model chạy NGAY TRÊN MÁY người dùng. Khác mọi provider trên ở hai điểm, và cả hai
 # đều ăn vào cách viết mã chứ không chỉ là cấu hình:
@@ -684,6 +689,19 @@ async def groq_stream(api_key, model, messages, reasoning="off"):
     không có tool nào; đường thường là groq_chat_with_mcp)."""
     async for ev in _openai_compat_stream(GROQ_URL, "Groq", api_key, model or GROQ_DEFAULT_MODEL,
                                           messages, reasoning, _groq_is_reasoning(model)):
+        yield ev
+
+
+def _xai_is_reasoning(model):
+    """xAI: dòng grok-3-mini / grok-4 nhận reasoning_effort (low|high); bản non-reasoning thì không."""
+    m = (model or "").lower()
+    return "mini" in m or ("grok-4" in m and "non-reasoning" not in m)
+
+
+async def xai_stream(api_key, model, messages, reasoning="off"):
+    """xAI Grok API (provider 'xai') - nhánh không tool."""
+    async for ev in _openai_compat_stream(XAI_URL, "xAI", api_key, model or XAI_DEFAULT_MODEL,
+                                          messages, reasoning, _xai_is_reasoning(model)):
         yield ev
 
 
@@ -902,6 +920,7 @@ async def single_tool_plan(provider, api_key, model, messages, reasoning, tool_s
     endpoints = {
         "openai": (OPENAI_URL, model or "gpt-4o-mini"),
         "groq": (GROQ_URL, model or GROQ_DEFAULT_MODEL),
+        "xai": (XAI_URL, model or XAI_DEFAULT_MODEL),
         "gemini": (GEMINI_URL, model or "gemini-2.5-flash"),
         "openrouter": (OPENROUTER_URL, model or "openai/gpt-4o-mini"),
         "ollama": (OLLAMA_URL, model),
@@ -1851,6 +1870,18 @@ async def openai_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools, m
         extra["reasoning_effort"] = api_effort(reasoning)
     yield {"type": "meta", "model": model}
     async for ev in _cc_tool_loop(OPENAI_URL, headers, model or "gpt-4o-mini", messages, mcp_tools, mcp_route, extra, "OpenAI"):
+        yield ev
+
+
+async def xai_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools, mcp_route):
+    """xAI Grok API + vòng tool-calling MCP (endpoint OpenAI-compat, dùng _cc_tool_loop chung)."""
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    extra = {}
+    if reasoning not in (None, "", "off") and _xai_is_reasoning(model):
+        # xAI chỉ nhận low|high
+        extra["reasoning_effort"] = "high" if api_effort(reasoning) in ("high", "xhigh", "ultra") else "low"
+    yield {"type": "meta", "model": model}
+    async for ev in _cc_tool_loop(XAI_URL, headers, model or XAI_DEFAULT_MODEL, messages, mcp_tools, mcp_route, extra, "xAI"):
         yield ev
 
 
