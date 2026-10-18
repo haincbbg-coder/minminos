@@ -4094,17 +4094,22 @@
       }
       // Bể khoá xoay vòng (26.10.161): khoá DỰ PHÒNG chính chủ cho nhà API, vấp 429/401 là đổi.
       // Không có ở thẻ CLI/OAuth: xoay tài khoản thuê bao là vi phạm điều khoản.
+      // 26.10.166: là một NÚT rõ ràng trên hàng nút của thẻ (chủ repo không tìm thấy mục này
+      // 18/10 khi nó là dòng chữ xám gập lại), bấm thì mở khung dưới.
       const beKhoa = (p.needs_key && on && p.kind === "api")
-        ? `<details class="prov-bekhoa" data-bekhoa="${p.id}"><summary class="gcard-meta">${esc(t("models.bk_title"))} <span id="bk-st-${p.id}"></span></summary>
+        ? `<div class="prov-bekhoa" data-bekhoa="${p.id}" hidden>
              <div class="prov-note">${esc(t("models.bk_note"))}</div>
              <textarea class="js-input" id="bk-${p.id}" rows="3" spellcheck="false" placeholder="${esc(t("models.bk_ph"))}"></textarea>
-             <div class="prov-action"><button class="gcard-btn ghost" data-bk-save="${p.id}">${esc(t("models.bk_save"))}</button><span class="gcard-meta" id="bk-msg-${p.id}"></span></div>
-           </details>`
+             <div class="prov-action"><button class="gcard-btn" data-bk-save="${p.id}">${esc(t("models.bk_save"))}</button><span class="gcard-meta" id="bk-msg-${p.id}"></span></div>
+           </div>`
+        : "";
+      const nutBeKhoa = (p.needs_key && on && p.kind === "api")
+        ? `<button class="gcard-btn ghost" data-bk-mo="${p.id}">${esc(t("models.bk_title"))} <span id="bk-st-${p.id}"></span></button>`
         : "";
       return `<div class="prov-card ${p.is_main ? "main" : ""}">
         ${provHead(p, on, p.kind === "cli" ? "MCP/skill" : "MCP MinMin", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model")}
         ${p.needs_key
-          ? `<div class="prov-action"><input class="js-input" id="pk-${p.id}" type="password" placeholder="${on ? esc(t("models.key_change_ph", { duoi: masked })) : esc(t("models.key_ph"))}"><button class="gcard-btn" data-pk="${p.id}">${on ? esc(t("models.key_change")) : esc(t("models.connect"))}</button>${on ? `<button class="gcard-btn ghost" data-disc="${p.id}">${esc(t("models.disconnect"))}</button>` : ""}</div>`
+          ? `<div class="prov-action"><input class="js-input" id="pk-${p.id}" type="password" placeholder="${on ? esc(t("models.key_change_ph", { duoi: masked })) : esc(t("models.key_ph"))}"><button class="gcard-btn" data-pk="${p.id}">${on ? esc(t("models.key_change")) : esc(t("models.connect"))}</button>${on ? `<button class="gcard-btn ghost" data-disc="${p.id}">${esc(t("models.disconnect"))}</button>` : ""}${nutBeKhoa}</div>`
           : `<div class="prov-note">${esc(t("models.no_key_note"))}</div>`}
         ${beKhoa}
       </div>`;
@@ -4469,7 +4474,7 @@
     (async () => {
       let d; try { d = await (await fetch("/be-khoa")).json(); } catch (e) { return; }
       if (!d || !d.ok) return;
-      el.querySelectorAll("details[data-bekhoa]").forEach(det => {
+      el.querySelectorAll("[data-bekhoa]").forEach(det => {
         const pid = det.dataset.bekhoa;
         const st = document.getElementById("bk-st-" + pid);
         const nha = (d.nha || {})[pid];
@@ -4482,6 +4487,14 @@
         }
       });
     })();
+    el.querySelectorAll(".gcard-btn[data-bk-mo]").forEach(b => {
+      b.onclick = () => {
+        const box = el.querySelector(`[data-bekhoa="${b.dataset.bkMo}"]`);
+        if (!box) return;
+        box.hidden = !box.hidden;
+        if (!box.hidden) { const ta = box.querySelector("textarea"); if (ta) ta.focus(); }
+      };
+    });
     el.querySelectorAll(".gcard-btn[data-bk-save]").forEach(b => {
       b.onclick = async () => {
         const pid = b.dataset.bkSave;

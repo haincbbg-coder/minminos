@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.166] - 2026-10-18
+### Sửa lỗi
+- **Bể khoá dự phòng giờ là một nút rõ ràng** trên thẻ nhà cung cấp API ở trang Bộ não AI, cạnh nút Đổi khoá và Ngắt. Trước nó là một dòng chữ xám gập lại dưới ô khoá, nhìn không ra. Bấm nút là mở khung dán khoá; trên nút hiện luôn số khoá và khoá đang nghỉ.
+
 ## [26.10.165] - 2026-10-14
 ### Thêm mới
 - **Mức "Hỏi trước" cho hành động ra ngoài** (Lớp 7e, mượn approval gate của Hermes). Ở trang Kết nối, mục Quyền theo loại việc, mỗi loại (xoá, tiền và quảng cáo, đơn hàng, nhắn tin, đăng bài) giờ có ba mức: Tự làm, Hỏi trước, Chặn. Đặt Hỏi trước thì MinMin dừng ngay trước khi gọi tool, gửi yêu cầu tới khung chat (thẻ có nút Đồng ý/Từ chối), chuông, và Telegram (nút inline), rồi chờ tối đa 3 phút (`quyen.hoi_truoc_giay`). Bố gật thì làm thật và ghi sổ "đã duyệt bởi ai"; lắc hay hết giờ thì tool báo CHƯA LÀM để não nói lại với bố, không tự lách. Áp cho mọi bộ não và việc nền.
