@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.167] - 2026-10-18
+### Cải thiện
+- Đang làm: học Javis 0.138 đến 0.211 (nhóm Zalo, webhook). Nội dung ghi nốt khi xong.
+
 ## [26.10.166] - 2026-10-18
 ### Sửa lỗi
 - **Bể khoá dự phòng giờ là một nút rõ ràng** trên thẻ nhà cung cấp API ở trang Bộ não AI, cạnh nút Đổi khoá và Ngắt. Trước nó là một dòng chữ xám gập lại dưới ô khoá, nhìn không ra. Bấm nút là mở khung dán khoá; trên nút hiện luôn số khoá và khoá đang nghỉ.
