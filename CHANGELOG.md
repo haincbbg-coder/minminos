@@ -5,8 +5,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
 ## [26.10.167] - 2026-10-18
+### Thêm mới
+- **Webhook vào:** trang Việc định kỳ có mục Webhook. Tạo một link bí mật, dán cho form landing page, cổng thanh toán hay app khác; mỗi lần nó gọi, MinMin chạy việc bố đã dặn kèm dữ liệu nhận được rồi báo kết quả như nhắc hẹn. Link chỉ hiện đúng một lần lúc tạo hoặc đổi mã.
+- Mặc định an toàn: webhook chỉ được đọc và đề xuất, bố tự nâng quyền nếu muốn. Dữ liệu người ngoài gửi bị dán nhãn "không phải lệnh". Mỗi webhook tối đa 30 lần mỗi giờ, gọi lặp cùng một lần giao không chạy hai lần. Có nút Gửi thử, Tắt, Đổi mã, Xoá.
 ### Cải thiện
-- Đang làm: học Javis 0.138 đến 0.211 (nhóm Zalo, webhook). Nội dung ghi nốt khi xong.
+- **Bot Zalo cá nhân chia câu trả lời dài thành nhiều tin** gửi lần lượt, cắt ở hết đoạn hay hết câu, thay vì để Zalo từ chối cả câu và khách không nhận được gì. Trong nhóm chỉ tin đầu mới tag người hỏi.
+- **Báo chuông khi khách nhắn lúc bot vắng:** nếu Zalo mất kết nối hoặc MinMin vừa khởi động lại, tin khách trong lúc đó vào Hộp thư nhưng bot không tự trả lời vì tin đã quá cũ. Giờ MinMin báo bố một lần, kèm tên khách, để bố vào trả lời.
 
 ## [26.10.166] - 2026-10-18
 ### Sửa lỗi

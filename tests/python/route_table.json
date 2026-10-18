@@ -5606,5 +5606,75 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 563,
+  "type": "APIRoute",
+  "path": "/hook/{token}",
+  "name": "hook_vao",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 564,
+  "type": "APIRoute",
+  "path": "/webhooks",
+  "name": "wh_ds",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 565,
+  "type": "APIRoute",
+  "path": "/webhooks",
+  "name": "wh_tao",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 566,
+  "type": "APIRoute",
+  "path": "/webhooks/doi-token",
+  "name": "wh_doi",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 567,
+  "type": "APIRoute",
+  "path": "/webhooks/cap-nhat",
+  "name": "wh_capnhat",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 568,
+  "type": "APIRoute",
+  "path": "/webhooks/xoa",
+  "name": "wh_xoa",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 569,
+  "type": "APIRoute",
+  "path": "/webhooks/thu",
+  "name": "wh_thu",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
  }
 ]

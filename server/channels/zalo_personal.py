@@ -131,6 +131,32 @@ async def gui_tep(conn_id: str, thread: str, path: str, loai_chat: str = "privat
         return False, f"{type(ex).__name__}: {ex}"[:200]
 
 
+GIOI_HAN_TIN = 1800   # ký tự mỗi tin: Zalo từ chối tin quá dài, khách chẳng nhận được gì
+
+
+def chia_tin(cau: str, gioi_han: int = GIOI_HAN_TIN) -> list:
+    """Cắt câu dài thành nhiều tin, ưu tiên cắt ở hết đoạn, rồi hết câu, rồi dấu cách. Giữ nguyên
+    thứ tự, không làm rơi chữ nào (trừ khoảng trắng đầu/cuối mỗi mảnh)."""
+    cau = str(cau or "").strip()
+    if len(cau) <= gioi_han:
+        return [cau] if cau else []
+    mang = []
+    while len(cau) > gioi_han:
+        cat = -1
+        for dau in ("\n\n", "\n", ". ", "? ", "! ", " "):
+            i = cau.rfind(dau, 0, gioi_han)
+            if i >= gioi_han // 3:
+                cat = i + (len(dau) if dau.strip() == "" else len(dau) - 1)
+                break
+        if cat <= 0:
+            cat = gioi_han
+        mang.append(cau[:cat].strip())
+        cau = cau[cat:].strip()
+    if cau:
+        mang.append(cau)
+    return [m for m in mang if m]
+
+
 GOM_GIAY = 5   # chat riêng: đợi khách im ngần này giây rồi mới trả lời một lần
 
 
@@ -375,12 +401,18 @@ class Transport:
                 tv = {}
             cau, specs = zalo_nhom.gan_tag(cau, str(meta.get("user_id") or ""),
                                            str(meta.get("user_name") or ""), tv)
-        # Nhớ TRƯỚC khi gửi: tiếng vọng có thể về vòng đọc ngay trong nhịp kế tiếp.
-        zc.ghi_da_gui(self.conn_id, thread, cau)
-        if meta and meta.get("chat_type") == "group":
-            ok, loi = await gui_co_tag(self.conn_id, thread, cau, specs)
-        else:
-            ok, loi = await gui({"id": self.conn_id}, thread, cau, "private")
-        if not ok:
-            self.last_error = f"Gửi Zalo lỗi: {loi}"[:300]
-            print(f"[zalo-personal bot {self.conn_id}] {self.last_error}", file=sys.stderr)
+        # Câu dài thì cắt thành nhiều tin gửi lần lượt; trong nhóm chỉ tin đầu mới kèm tag.
+        manh = chia_tin(cau) or [cau]
+        for i, m in enumerate(manh):
+            # Nhớ TRƯỚC khi gửi: tiếng vọng có thể về vòng đọc ngay trong nhịp kế tiếp.
+            zc.ghi_da_gui(self.conn_id, thread, m)
+            if meta and meta.get("chat_type") == "group":
+                ok, loi = await gui_co_tag(self.conn_id, thread, m, specs if i == 0 else [])
+            else:
+                ok, loi = await gui({"id": self.conn_id}, thread, m, "private")
+            if not ok:
+                self.last_error = f"Gửi Zalo lỗi: {loi}"[:300]
+                print(f"[zalo-personal bot {self.conn_id}] {self.last_error}", file=sys.stderr)
+                return
+            if i + 1 < len(manh):
+                await asyncio.sleep(0.8)

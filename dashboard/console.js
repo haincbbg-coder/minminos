@@ -2035,6 +2035,7 @@
         <button class="s-btn-ghost" id="lpStop">■ ${esc(window.t("cs.si_stop"))}</button>
       </div>
       <div id="lpOverview" style="display:none;margin-bottom:12px;padding:10px 12px;border:1px solid var(--hairline);border-radius:8px;font-size:13px;line-height:1.6"></div>
+      <div id="lpWebhooks" style="margin-bottom:12px;padding:10px 12px;border:1px solid var(--hairline);border-radius:8px;font-size:13px;line-height:1.6"></div>
       <div id="lpNotifyWarn" style="display:none;margin-bottom:12px;padding:10px 12px;border:1px solid rgba(224,102,74,.5);border-radius:8px;background:rgba(224,102,74,.08);font-size:13px;line-height:1.5"></div>
       <div id="lpForm" style="display:none;margin-bottom:14px;padding:14px;border:1px solid var(--hairline);border-radius:10px;background:var(--surface-1)">
         <input type="hidden" id="lpSlug">
@@ -2493,6 +2494,50 @@
       if (bad.length) h += `<ul style="margin:6px 0 0 18px;color:var(--warn-ink)">` + bad.slice(0, 5).map(x => `<li>${esc(x.ten)}: ${esc(x.loi || window.t("cs.ov_noerr"))}</li>`).join("") + `</ul>`;
       ov.innerHTML = h; ov.style.display = "block";
     }
+    // Webhook vào: danh sách, tạo, gọi thử, tắt/bật, đổi mã, xoá. Mã bí mật chỉ hiện đúng một lần.
+    async function loadWebhooks(secret) {
+      const box = el.querySelector("#lpWebhooks");
+      if (!box) return;
+      let d = null; try { d = await (await fetch("/webhooks")).json(); } catch (e) { }
+      if (!d || !d.ok || myGen !== _renderGen) { box.style.display = "none"; return; }
+      const T = (k, p) => esc(window.t(k, p));
+      const post = async (u, b) => (await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })).json();
+      let h = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b>${T("cs.wh_head")}</b><button class="s-btn-ghost" id="whAdd">${T("cs.wh_add")}</button></div>`;
+      if (secret) h += `<div style="margin-top:8px;padding:8px 10px;border:1px solid var(--hairline);border-radius:8px;word-break:break-all"><div>${T("cs.wh_secret")}</div><code style="font-size:13px">${esc(secret)}</code></div>`;
+      h += `<div id="whForm" style="display:none;margin-top:8px"><input id="whName" class="inp" style="width:100%;font-size:16px;margin-bottom:6px" placeholder="${T("cs.wh_name")}">
+        <textarea id="whJob" class="inp" rows="3" style="width:100%;font-size:16px;margin-bottom:6px" placeholder="${T("cs.wh_job")}"></textarea>
+        <select id="whLevel" class="inp" style="width:100%;font-size:16px;margin-bottom:6px"><option value="suggest">${T("cs.wh_l_suggest")}</option><option value="auto">${T("cs.wh_l_auto")}</option><option value="full">${T("cs.wh_l_full")}</option></select>
+        <button class="s-btn" id="whOk">${T("cs.wh_create")}</button> <button class="s-btn-ghost" id="whNo">${T("cs.wh_cancel")}</button></div>`;
+      const ds = d.webhooks || [];
+      h += ds.length ? ds.map(w => `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--hairline)" data-wh="${esc(w.id)}">
+          <b>${esc(w.ten)}</b>${w.bat ? "" : ` <span style="color:var(--warn-ink)">(${T("cs.wh_disabled")})</span>`}
+          <div style="color:var(--text3)">${esc(w.viec)}</div>
+          <div style="color:var(--text3)">${T("cs.wh_runs", { n: w.so_lan, g: w.lan_gio, t: w.tran_gio })}</div>
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
+            <button class="s-btn-ghost" data-act="thu">${T("cs.wh_test")}</button>
+            <button class="s-btn-ghost" data-act="bat">${w.bat ? T("cs.wh_off") : T("cs.wh_on")}</button>
+            <button class="s-btn-ghost" data-act="tok">${T("cs.wh_newtok")}</button>
+            <button class="s-btn-ghost" data-act="xoa">${T("cs.wh_del")}</button></div></div>`).join("")
+        : `<div style="margin-top:6px;color:var(--text3)">${T("cs.wh_none")}</div>`;
+      box.innerHTML = h;
+      const form = box.querySelector("#whForm");
+      box.querySelector("#whAdd").onclick = () => { form.style.display = form.style.display === "none" ? "block" : "none"; };
+      box.querySelector("#whNo").onclick = () => { form.style.display = "none"; };
+      box.querySelector("#whOk").onclick = async () => {
+        const r = await post("/webhooks", { ten: box.querySelector("#whName").value, viec: box.querySelector("#whJob").value, muc_quyen: box.querySelector("#whLevel").value });
+        if (!r.ok) { alert(window.t("cs.wh_err") + ": " + (r.error || "")); return; }
+        loadWebhooks(r.url);
+      };
+      box.querySelectorAll("[data-wh] [data-act]").forEach(b => {
+        b.onclick = async () => {
+          const id = b.closest("[data-wh]").dataset.wh, act = b.dataset.act, w = ds.find(x => x.id === id);
+          if (act === "thu") { const r = await post("/webhooks/thu", { id }); alert(r.ok ? window.t("cs.wh_tested") : (r.error || window.t("cs.wh_err"))); }
+          else if (act === "bat") { await post("/webhooks/cap-nhat", { id, bat: !w.bat }); loadWebhooks(); }
+          else if (act === "tok") { if (!confirm(window.t("cs.wh_tok_ask"))) return; const r = await post("/webhooks/doi-token", { id }); loadWebhooks(r.ok ? r.url : undefined); }
+          else if (act === "xoa") { if (!confirm(window.t("cs.wh_del_ask"))) return; await post("/webhooks/xoa", { id }); loadWebhooks(); }
+        };
+      });
+    }
     async function loadAll(retried) {
       if (myGen !== _renderGen) return;
       let d = null, loadErr = false;
@@ -2537,6 +2582,7 @@
         }
       }
       loadOverview();
+      loadWebhooks();
       allLoops = [];
       const groups = (d.brains || []).slice().sort((a, b) => {
         const ac = isCurrentBrain(a) ? 0 : 1, bc = isCurrentBrain(b) ? 0 : 1;
