@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.169] - 2026-10-18
+### Cải thiện
+- Đang làm: nhặt số điện thoại, số tài khoản từ tin khách và gắn cờ tin gấp ở chat riêng.
+
 ## [26.10.168] - 2026-10-18
 ### Thêm mới
 - **Bộ não thứ 11: xAI Grok (API).** Thẻ riêng ở trang Bộ não AI, dán khoá từ console.x.ai, danh sách model nạp sống từ xAI (grok-4, grok-4-fast, grok-3-mini...). Khác hẳn thẻ Grok Build (gói SuperGrok/Premium+): đây là trả theo lượng dùng, nên có **bể khoá dự phòng**, chạy được việc nền và loop 24/7 mà không chạm điều khoản gói thuê bao. Có đủ MCP, skill, bộ chia model, chấm điểm như các nhà API khác.
