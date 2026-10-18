@@ -384,6 +384,7 @@ async def doc_mot_lan(conn: dict) -> dict:
     tin = d.get("messages") or []
     ten = await _nap_ten(conn, tt) if tin else (tt.get("ten") or {})
     moi = trung = 0
+    bo_lo: Dict[str, str] = {}   # khách chat riêng nhắn lúc bot không kịp trả lời (tin quá cũ)
     for m in tin:
         ev = chuan_hoa_tin(conn, m, ten)
         if not ev:
@@ -403,7 +404,12 @@ async def doc_mot_lan(conn: dict) -> dict:
                 trung += 1
             else:
                 moi += 1
+                if (ev.get("sender_type") == "customer" and ev.get("chat_type") == "private"
+                        and TUOI_TOI_DA < time.time() - float(ev.get("created_at") or 0) < TUOI_BAO_LO):
+                    bo_lo[str(ev.get("external_chat_id") or "")] = str(ev.get("sender_name") or "một khách")
                 _giao_cho_bot(conn, ev)
+    if bo_lo and cursor and conn["id"] in _BOTS:
+        bao_tin_bo_lo(conn, list(bo_lo.values()))
     nc = _lay(d, "nextCursor", "next_cursor", "cursor", mac_dinh="")
     if nc:
         conversations.ghi_trang_thai(khoa_cursor, str(nc))
@@ -411,6 +417,23 @@ async def doc_mot_lan(conn: dict) -> dict:
     tt["loi"] = ""
     tt["so_tin"] = int(tt.get("so_tin") or 0) + moi
     return {"moi": moi, "trung": trung}
+
+
+TUOI_BAO_LO = 6 * 3600   # tin cũ hơn mức này mà tới giờ mới thấy: coi là lịch sử, không báo
+
+
+def bao_tin_bo_lo(conn: dict, ten: list) -> None:
+    """Mất kết nối / MinMin tắt một lúc rồi đọc lại được: tin khách trong khoảng đó vào Hộp thư
+    nhưng bot không trả lời (quá cũ). Báo chủ MỘT lần để tự xem, thay vì để khách chờ trong im lặng."""
+    try:
+        import inbox
+        ds = ", ".join(sorted(set(str(t) for t in ten))[:8])
+        inbox.add(f"Có {len(ten)} tin khách nhắn lúc Zalo \"{conn.get('label') or conn.get('id')}\" "
+                  f"chưa đọc được (mất kết nối hoặc MinMin vừa khởi động lại): {ds}. "
+                  f"Bot không tự trả lời vì tin đã quá cũ. Mở Hộp thư hội thoại để xem và trả lời.",
+                  kind="system", title="Có khách nhắn lúc bot vắng", source="zalo_personal")
+    except Exception as e:
+        print(f"[zalo-personal] báo tin bỏ lỡ lỗi: {e}", file=sys.stderr)
 
 
 async def _vong() -> None:

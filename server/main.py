@@ -245,6 +245,9 @@ _MAT_NHA_CONG_KHAI = ("/mat-nha/su-kien", "POST")
 # cookie. Miễn ĐÚNG mẫu này (khớp trọn, một đoạn mã) với POST - xem routes/bien_dong.py.
 _BIEN_DONG_CONG_KHAI = (r"/bien-dong/casso/[A-Za-z0-9_-]{20,80}", "POST")
 _BIEN_DONG_CONG_KHAI_RE = re.compile(_BIEN_DONG_CONG_KHAI[0])
+# Webhook vào (26.10.167): hệ thống ngoài POST /hook/<mã>. Endpoint tự kiểm mã băm.
+_HOOK_CONG_KHAI = (r"/hook/[A-Za-z0-9_-]{20,80}", "POST")
+_HOOK_CONG_KHAI_RE = re.compile(_HOOK_CONG_KHAI[0])
 
 
 def duong_dan_router(request) -> str:
@@ -316,7 +319,9 @@ async def _auth_guard(request: Request, call_next):
                   # sai) và chữ ký HMAC. GET cùng đường, đường có thêm đoạn, dấu "/" cuối
                   # và mọi đường /bien-dong khác vẫn phải đăng nhập.
                   or (request.method == _BIEN_DONG_CONG_KHAI[1]
-                      and _BIEN_DONG_CONG_KHAI_RE.fullmatch(path) is not None))
+                      and _BIEN_DONG_CONG_KHAI_RE.fullmatch(path) is not None)
+                  or (request.method == _HOOK_CONG_KHAI[1]
+                      and _HOOK_CONG_KHAI_RE.fullmatch(path) is not None))
         if not public and not cfgmod.valid_session(request.cookies.get("javis_session", "")):
             # Client ngoài trình duyệt (CLI, script, cron) không có cookie. Nhánh token là
             # đường DUY NHẤT của chúng - xem docs/dev/2026-08-cli-spec.md. Đặt SAU nhánh
@@ -22541,6 +22546,12 @@ bien_dong_routes.register(app, bien_dong_routes.BienDongDeps(
     ds_telegram=lambda: tg_parse_ids(cfgmod.read_settings().get("telegram", {}).get("chat_id")),
     ds_zalo=lambda: tg_parse_ids(cfgmod.read_settings().get("zalo_bot", {}).get("chat_id"))))
 assert bien_dong_routes.LOI_VAO_CONG_KHAI == _BIEN_DONG_CONG_KHAI
+
+# Webhook vào (26.10.167) - routes/webhooks.py, cũng đăng ký ở đuôi cho bảng route.
+import routes.webhooks as webhooks_routes   # noqa: E402
+webhooks_routes.register(app, webhooks_routes.WebhooksDeps(
+    nhac_hen=lambda: reminders_feature, duong_dan_goc=lambda r: str(r.base_url)))
+assert webhooks_routes.LOI_VAO_CONG_KHAI == _HOOK_CONG_KHAI
 
 if __name__ == "__main__":
     import uvicorn
