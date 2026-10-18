@@ -5,8 +5,9 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
 ## [26.10.169] - 2026-10-18
-### Cải thiện
-- Đang làm: nhặt số điện thoại, số tài khoản từ tin khách và gắn cờ tin gấp ở chat riêng.
+### Thêm mới
+- **MinMin tự nhặt thông tin từ tin khách** (học Zalo.Net): số điện thoại, số tài khoản ngân hàng (kèm tên ngân hàng nếu khách ghi), và link. Đầu mỗi cuộc chat trong Hộp thư có một dải tóm tắt "Khách đã gửi: SĐT, STK, link" để tra nhanh, khỏi cuộn tìm. Mẫu cố ý hẹp, nên con số đơn hàng hay câu "hẹn sáng mai" không bị nhặt nhầm.
+- **Cờ tin gấp ở chat riêng:** khách nhắn "gấp", "khiếu nại", "lừa đảo", "hoàn tiền ngay"... thì chuông kêu một lần kèm trích câu nhắn, và dải đầu cuộc chat đổi sang màu cảnh báo. Mỗi khách báo nhiều nhất một lần mỗi 30 phút để không dội chuông.
 
 ## [26.10.168] - 2026-10-18
 ### Thêm mới

@@ -455,6 +455,26 @@
     return "";
   }
 
+  // Dải tóm tắt thông tin trích từ tin khách (server/trich_tin.py ghi vào metadata.trich).
+  function dongTrich(msgs) {
+    var sdt = [], tk = [], link = [], gap = false;
+    (msgs || []).forEach(function (m) {
+      var t = m && m.metadata && m.metadata.trich;
+      if (!t || m.sender_type !== "customer") return;
+      (t.sdt || []).forEach(function (x) { if (sdt.indexOf(x) < 0) sdt.push(x); });
+      (t.tk || []).forEach(function (x) { var s = x.so + (x.nh ? " (" + x.nh + ")" : ""); if (tk.indexOf(s) < 0) tk.push(s); });
+      (t.link || []).forEach(function (x) { if (link.indexOf(x) < 0) link.push(x); });
+      if (t.gap && t.gap.length) gap = true;
+    });
+    var p = [];
+    if (sdt.length) p.push(esc(window.t("ht.trich_sdt")) + ": " + sdt.slice(-3).map(esc).join(", "));
+    if (tk.length) p.push(esc(window.t("ht.trich_tk")) + ": " + tk.slice(-3).map(esc).join(", "));
+    if (link.length) p.push(esc(window.t("ht.trich_link")) + ": " + link.slice(-2).map(function (u) { return esc(u.slice(0, 60)); }).join(", "));
+    if (!p.length && !gap) return "";
+    return '<div class="ht-note' + (gap ? " warn" : "") + '">' + (gap ? esc(window.t("ht.trich_gap")) + ". " : "") +
+      (p.length ? "<b>" + esc(window.t("ht.trich_dau")) + "</b> " + p.join(" · ") : "") + "</div>";
+  }
+
   function veThread(giu) {
     var box = _host.querySelector(".ht-thread");
     if (!box) return;
@@ -482,6 +502,7 @@
           : "") +
       '</div>' +
       (human ? '<div class="ht-note warn">' + ic("hand") + ' ' + esc(window.t("ht.dang_tiep_quan")) + '</div>' : "") +
+      dongTrich(_msgs) +
       '<div class="ht-msgs">' + dauKhung(c) + _msgs.map(veTin).join("") + '</div>' +
       (laBot ? '<div class="ht-botbar"></div>' : "") +
       (guiDuoc ? veCompose(c, laBot, human) :

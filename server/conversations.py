@@ -374,6 +374,11 @@ def ghi_su_kien(ev: dict) -> dict:
     ts = e["created_at"]
     tk_id = _tai_khoan_id(e["channel"], e["account_id"])
     try:
+        import trich_tin
+        tr = trich_tin.gan_vao_tin(e)       # ghi metadata.trich trước khi lưu tin
+    except Exception:
+        tr = {}
+    try:
         with _lock:
             db = _conn()
             db.execute("BEGIN IMMEDIATE")
@@ -458,6 +463,12 @@ def ghi_su_kien(ev: dict) -> dict:
             except Exception:
                 db.execute("ROLLBACK")
                 raise
+        if tr.get("gap"):
+            try:
+                import trich_tin
+                trich_tin.bao_gap(e, tr, conv_id)
+            except Exception:
+                pass
         return {"ok": True, "trung": False, "conversation_id": conv_id, "message_id": msg_id,
                 "customer_id": customer_id}
     except Exception as ex:
