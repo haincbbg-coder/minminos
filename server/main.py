@@ -1723,6 +1723,10 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
     # gói thuê bao. default_models là lưới cuối; /provider/models nạp bản LIVE từ /v1/models.
     {"id": "xai",           "label": "xAI Grok (API)",          "kind": "api", "key_field": "xai_api_key",       "catalog_key": "xai",
      "default_models": ["grok-4", "grok-4-fast", "grok-3-mini"]},
+    # Meta Muse qua Meta Model API (26.10.169): khoá ở developer.meta.com/ai, trả theo lượng.
+    # default_models là lưới cuối; /provider/models nạp bản LIVE từ api.meta.ai/v1/models.
+    {"id": "meta",          "label": "Meta Muse (API)",         "kind": "api", "key_field": "meta_api_key",      "catalog_key": "meta",
+     "default_models": ["muse-spark-1.3", "muse-spark-1.2", "muse-wonder-1.0"]},
     # Ollama Cloud. CỐ Ý không đấu bản chạy trên máy nhà: bản đó đòi một ô địa chỉ riêng, tức
     # một ca đặc biệt duy nhất xuyên suốt lớp này, trong khi phần đông người dùng Javis chạy
     # nó trên VPS - nơi "localhost" là chính cái container chứ không phải máy họ.
@@ -1904,6 +1908,8 @@ def _set_main_model(cfg, provider, model):
         m["engine"] = "groq"
     elif provider == "xai":
         m["engine"] = "xai"
+    elif provider == "meta":
+        m["engine"] = "meta"
     elif provider == "ollama":
         m["engine"] = "ollama"
     elif provider == "openai-compat":
@@ -2004,7 +2010,7 @@ def _chat_provider(mcfg):
 # chạy bằng Claude mà không ai biết. Trang Studio đọc chính danh sách này để vẽ ô chọn, nên
 # thêm provider mới ở aux_engine thì thêm tên vào đây là giao diện có ngay.
 AGENT_PROVIDERS = ("anthropic-cli", "openai-oauth", "grok-cli", "antigravity-cli",
-                   "openrouter", "anthropic-api", "openai", "gemini", "groq", "xai", "ollama",
+                   "openrouter", "anthropic-api", "openai", "gemini", "groq", "xai", "meta", "ollama",
                    # Model chạy máy nhà cũng giao được việc nền cho agent. Bỏ nó ra khỏi đây
                    # là tính năng nửa vời: cài model về rồi mà chỉ chat tay được, không giao
                    # cho agent hay workflow nào chạy.
@@ -2413,6 +2419,8 @@ def _api_stream_goc(prov, key, model, messages, reasoning="off"):
         return engine.groq_stream(key, model, messages, reasoning)
     if prov == "xai":
         return engine.xai_stream(key, model, messages, reasoning)
+    if prov == "meta":
+        return engine.meta_stream(key, model, messages, reasoning)
     if prov == "ollama":
         return engine.ollama_stream(key, model, messages, reasoning)
     if prov == "ollama-local":
@@ -2453,7 +2461,7 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
     ChatGPT OAuth ở các kênh tương tác đi qua Codex CLI native MCP, không dùng fallback này."""
     tools, route = [], {}
     inventory_tools, inventory_route = [], {}
-    if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "ollama", "openai-compat"):
+    if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat"):
         try:
             if _hub_enabled():
                 vault_root = _brain_root(brain) if brain else None
@@ -2506,13 +2514,15 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
                 return engine.groq_chat_with_mcp(k, model, messages, reasoning, tools, route)
             if prov == "xai":
                 return engine.xai_chat_with_mcp(k, model, messages, reasoning, tools, route)
+            if prov == "meta":
+                return engine.meta_chat_with_mcp(k, model, messages, reasoning, tools, route)
             if prov == "openai-compat":
                 return engine.openai_compat_chat_with_mcp(k, model, messages, reasoning, tools, route)
             return engine.ollama_chat_with_mcp(k, model, messages, reasoning, tools, route)
         if prov == "ollama-local":
             return engine.ollama_local_chat_with_mcp(key, model, messages, reasoning, tools, route)
 
-        if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "ollama", "openai-compat"):
+        if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat"):
             return engine.thu_lai_khi_tam_thoi(_vong_tool, nhan=f"{prov}/{model or 'mặc định'}+tool",
                                                xoay=_xoay)
     return _api_stream(prov, key, model, messages, reasoning)
@@ -3329,7 +3339,7 @@ def _schedule_cancel_reply(action: dict) -> str:
 def _api_label(prov):
     return {"openrouter": "OpenRouter", "openai": "OpenAI", "anthropic-api": "Anthropic API",
             "openai-oauth": "ChatGPT (OAuth)", "gemini": "Google Gemini",
-            "groq": "Groq", "xai": "xAI Grok API", "ollama": "Ollama", "openai-compat": "OpenAI Compatible"}.get(prov, prov)
+            "groq": "Groq", "xai": "xAI Grok API", "meta": "Meta Muse API", "ollama": "Ollama", "openai-compat": "OpenAI Compatible"}.get(prov, prov)
 
 def _reasoning_level(mcfg):
     r = (mcfg or {}).get("reasoning", "off")
@@ -5018,6 +5028,18 @@ async def _fetch_provider_models(provider, m):
         # lọc ra kẻo picker chat hiện model không chat được.
         ids = [x.get("id") for x in data if x.get("id")
                and not any(s in x["id"].lower() for s in ("whisper", "tts", "guard", "embed"))]
+        return sorted(ids) or None
+    if provider == "meta":
+        key = m.get("meta_api_key")
+        if not key:
+            return None
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.get("https://api.meta.ai/v1/models", headers={"Authorization": f"Bearer {key}"})
+            r.raise_for_status()
+            data = r.json().get("data", [])
+        # Meta phục vụ cả model ảnh/giọng/SAM trên cùng endpoint - picker chat chỉ giữ Muse chat.
+        ids = [x.get("id") for x in data if x.get("id")
+               and not any(k in x["id"].lower() for k in ("image", "voice", "transcribe", "sam-", "embed"))]
         return sorted(ids) or None
     if provider == "xai":
         key = m.get("xai_api_key")
@@ -12881,7 +12903,7 @@ async def _dg_resolver(su_that: dict, brain: str):
 
 
 _DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "antigravity-cli")
-_DG_NAO_API = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "ollama",
+_DG_NAO_API = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama",
                "openai-compat", "ollama-local")
 
 
@@ -16585,7 +16607,7 @@ async def websocket_endpoint(ws: WebSocket):
                 # Nén NỀN phần lịch sử cũ sắp rơi khỏi cửa sổ (chỉ engine API - CLI tự quản
                 # context). Lỗi nén không ảnh hưởng lượt chat; lượt sau vẫn còn fallback trim.
                 if (not used_fast_path and kind == "api" and api_key and
-                        prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai")):
+                        prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta")):
                     try:
                         asyncio.create_task(compaction.maybe_compact(
                             store, conv_sid, prov, api_key, api_model, _api_stream))
@@ -20329,6 +20351,8 @@ def _bot_stream_co_tool(prov, key, model, messages, reasoning, tools, route,
             return engine.groq_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "xai":
             return engine.xai_chat_with_mcp(key_, model, messages, reasoning, tools, route)
+        if prov == "meta":
+            return engine.meta_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "ollama":
             return engine.ollama_chat_with_mcp(key_, model, messages, reasoning, tools, route)
         if prov == "ollama-local":
@@ -21071,6 +21095,7 @@ _TG_NHAN_NGAN = {
     "gemini": "Gemini API",
     "groq": "Groq",
     "xai": "xAI API",
+    "meta": "Meta Muse",
     "ollama": "Ollama",
     "openai-compat": "OpenAI Compat",
 }

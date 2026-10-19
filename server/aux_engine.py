@@ -42,7 +42,7 @@ CLAUDE = "anthropic-cli"
 CODEX = "openai-oauth"
 GROK_CLI = "grok-cli"
 ANTIGRAVITY = "antigravity-cli"
-API_PROVIDERS = ("openrouter", "openai", "gemini", "groq", "xai", "anthropic-api", "ollama",
+API_PROVIDERS = ("openrouter", "openai", "gemini", "groq", "xai", "meta", "anthropic-api", "ollama",
                  "ollama-local", "openai-compat")
 
 # provider -> tên trường chứa API key trong settings["model"]
@@ -52,6 +52,7 @@ _KEY_FIELD = {
     "gemini": "gemini_api_key",
     "groq": "groq_api_key",
     "xai": "xai_api_key",
+    "meta": "meta_api_key",
     "anthropic-api": "anthropic_api_key",
     "ollama": "ollama_key",
     # Bản chạy MÁY NHÀ. Trường này thường RỖNG - Ollama trần không có xác thực - và điều đó
@@ -407,7 +408,7 @@ class _ApiAuxEngine:
             fn = {"openrouter": eng.openrouter_chat_with_mcp,
                   "openai": eng.openai_chat_with_mcp,
                   "gemini": eng.gemini_chat_with_mcp, "groq": eng.groq_chat_with_mcp,
-                  "xai": eng.xai_chat_with_mcp,
+                  "xai": eng.xai_chat_with_mcp, "meta": eng.meta_chat_with_mcp,
                   "anthropic-api": eng.anthropic_chat_with_mcp,
                   "ollama": eng.ollama_chat_with_mcp,
                   "ollama-local": eng.ollama_local_chat_with_mcp,
@@ -419,7 +420,7 @@ class _ApiAuxEngine:
         else:
             fn = {"openrouter": eng.openrouter_stream, "openai": eng.openai_stream,
                   "gemini": eng.gemini_stream, "groq": eng.groq_stream,
-                  "xai": eng.xai_stream,
+                  "xai": eng.xai_stream, "meta": eng.meta_stream,
                   "anthropic-api": eng.anthropic_stream,
                   "ollama": eng.ollama_stream,
                   "ollama-local": eng.ollama_local_stream,
