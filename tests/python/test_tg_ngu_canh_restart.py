@@ -217,8 +217,8 @@ class _GiaEngineCoReset(_GiaEngine):
         self.session_id = None
 
 
-check("bảng engine giữ mạch kể đủ bốn cái",
-      {k for _, k in main._TG_ENGINE_MACH} == {"cli", "codex", "grok", "antigravity"},
+check("bảng engine giữ mạch kể đủ năm cái",
+      {k for _, k in main._TG_ENGINE_MACH} == {"cli", "codex", "grok", "muse", "antigravity"},
       main._TG_ENGINE_MACH)
 
 _s = main._tg_session("777")

@@ -28,6 +28,10 @@ PERSIST_ROOT="${JAVIS_HOME_PERSIST:-/data/home}"
 # một bậc: binary `grok` nằm ở ~/.local/bin nên ĐƯỢC giữ, thẻ Models vẫn báo "Đã cài CLI",
 # chỉ mỗi phiên đăng nhập là bay. Người dùng báo 29/08: "mỗi lần nâng cấp bản mới là grok
 # lại bị logout". Thêm một chữ vào danh sách này là xong, không phải sửa docker-compose.
+#
+# Muse Code CLI (`muse`, 26.10.171) KHÔNG cần thêm gì: binary ở ~/.local/bin, đăng nhập và
+# cấu hình MCP ở ~/.config/muse/ (auth.json, settings.json) - cả hai thư mục đã nằm trong
+# danh sách dưới từ trước.
 for d in .local .antigravity .config .gemini .grok; do
     src="$HOME/$d"
     dst="$PERSIST_ROOT/$d"

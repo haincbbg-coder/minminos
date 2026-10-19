@@ -226,6 +226,8 @@ main._gemini_sub_stream = _lam_engine("_gemini_sub_stream")
 main._antigravity_sub_stream = _lam_engine("_antigravity_sub_stream")
 # Grok Build CLI (bộ não thứ 11) cùng cảnh: chạy binary `grok`, không qua engine.*.
 main._grok_sub_stream = _lam_engine("_grok_sub_stream")
+# Meta Muse Code CLI (bộ não thứ 15) cùng cảnh: chạy binary `muse`, không qua engine.*.
+main._muse_sub_stream = _lam_engine("_muse_sub_stream")
 
 _bo_sot = []
 for _p in [d["id"] for d in main.PROVIDER_DEFS]:

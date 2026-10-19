@@ -36,7 +36,7 @@
   function PROVS() {
     return [["", window.t("studio.all")], ["claude", "Claude Code"], ["codex", "ChatGPT"], ["api", "API"]];
   }
-  var PROV_LABEL = { claude: "Claude Code", codex: "ChatGPT/Codex", api: "API (OpenRouter...)", "grok-cli": "Grok Build" };
+  var PROV_LABEL = { claude: "Claude Code", codex: "ChatGPT/Codex", api: "API (OpenRouter...)", "grok-cli": "Grok Build", "muse-cli": "Muse Code" };
   function SRC_LABEL() { return { manual: window.t("usage.nguon.tay"), javis: window.t("usage.nguon.javis") }; }
   function ACT_LABEL() {
     return { chat: "Chat", background: window.t("usage.hd.nen"), subagent: "Subagent", manual: window.t("usage.hd.thu_cong") };

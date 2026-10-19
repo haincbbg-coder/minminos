@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.172] - 2026-10-19
+### Thêm mới
+- **Bộ não thứ 15: Meta Muse Code CLI.** Chạy gói thuê bao Muse Code chính chủ (Everyday / High / Power / Maximum) bằng binary `muse` cài một lần, không cần mua API key. Thẻ riêng ở trang Bộ não AI: bấm Đăng nhập là hiện link và mã để mở trên máy bố, chạy trên VPS cũng được; MinMin không giữ token. Đủ MCP, skill, loop, việc nền, chạy lệnh máy, nối mạch hội thoại.
+- Lưu ý điều khoản như Grok Build: Meta chưa nói rõ về chạy nền 24/7 hay chạy trên VPS bằng gói thuê bao, việc nền nặng thì trỏ sang API key cho chắc. Hai model đuôi "contributor" xếp cuối vì chọn là cho Meta huấn luyện trên dữ liệu gửi lên.
+- Định dạng sự kiện của `muse exec` Meta chưa công bố, nên nút **Kiểm tra lại** trên thẻ hiện cả sự kiện thô: nếu chat ra trống, bố dán đoạn đó cho dev là sửa được.
+
 ## [26.10.171] - 2026-10-19
 ### Sửa lỗi
 - **Lượt học không còn xoá trang wiki vừa viết** (học Javis 0.217.0). Đây là lý do MinMin hay "quên": sau mỗi lượt học, bước dọn dẹp chỉ coi thư mục `Wiki` viết hoa là hợp lệ, còn thư mục `wiki` viết thường (của mọi brain mới) bị coi là "ngoài phạm vi" nên các trang vừa ghi bị dọn mất, kể cả trang chat vừa tạo mà lượt học chỉ thêm một mục. Giờ phạm vi lấy đúng thư mục wiki và memory thật của brain, `wiki`, `Wiki` hay `07 - Wiki` đều được.

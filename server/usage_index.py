@@ -294,6 +294,9 @@ _EVENT_CODEX = {"codex", "openai-oauth", "chatgpt", "oauth"}
 # xAI la duong TRA TIEN theo luot goi, con day la duong THUE BAO - hai thu khac hoan toan ve
 # hoa don du cung ten model.
 _EVENT_GROK_CLI = {"grok-cli", "grok_cli", "grok"}
+# Muse Code CLI (goi thue bao Meta): cung ly do, cot rieng, KHONG gom vao 'api' (thẻ Meta Muse
+# API la duong tra tien theo luot goi).
+_EVENT_MUSE_CLI = {"muse-cli", "muse_cli", "muse"}
 
 
 def _ingest_events(conn) -> int:
@@ -360,6 +363,9 @@ def _ingest_events(conn) -> int:
                            "project": "(events)"})
         elif prov in _EVENT_GROK_CLI:
             events.append({**chung, "provider": "grok-cli", "source": "javis",
+                           "activity": "chat", "project": "(events)"})
+        elif prov in _EVENT_MUSE_CLI:
+            events.append({**chung, "provider": "muse-cli", "source": "javis",
                            "activity": "chat", "project": "(events)"})
     if events:
         _insert_events(conn, path, events)

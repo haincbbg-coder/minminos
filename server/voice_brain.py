@@ -63,6 +63,7 @@ BRAIN_PROVIDERS = {
     "codex": {"label": "ChatGPT (gói ChatGPT, qua Codex)", "key_field": "", "default_model": ""},
     "claude": {"label": "Claude Code (gói Claude)", "key_field": "", "default_model": "haiku"},
     "grok": {"label": "Grok Build (gói SuperGrok / X Premium+)", "key_field": "", "default_model": ""},
+    "muse": {"label": "Muse Code (gói thuê bao Meta)", "key_field": "", "default_model": ""},
     "groq": {"label": "Groq (API)", "key_field": "groq_api_key", "default_model": "llama-3.3-70b-versatile"},
     "gemini": {"label": "Google Gemini (API)", "key_field": "gemini_api_key", "default_model": "gemini-2.5-flash"},
     "openai": {"label": "OpenAI (API)", "key_field": "openai_api_key", "default_model": "gpt-4o-mini"},
@@ -862,6 +863,54 @@ class GrokVoiceBrain(VoiceBrain):
         self.cli = None
 
 
+class MuseVoiceBrain(VoiceBrain):
+    """Muse Code trên gói thuê bao Meta: một lượt `muse exec` headless mỗi câu, giữ cùng một
+    MuseCLI để nối mạch cũ (có ký ức). Cùng khuôn GrokVoiceBrain."""
+    provider = "muse"
+
+    def __init__(self, model: str = "", cli_factory: Optional[Callable] = None):
+        super().__init__()
+        self.model = model
+        self._factory = cli_factory
+        self.cli = None
+
+    def _ensure(self):
+        if self.cli is not None:
+            return
+        if self._factory:
+            self.cli = self._factory()
+        else:
+            import muse_cli
+            if not muse_cli.find_muse_cli():
+                raise RuntimeError("Chưa cài Muse Code CLI (muse). Cài rồi đăng nhập ở trang Models.")
+            import tempfile
+            self.cli = muse_cli.MuseCLI(cwd=tempfile.gettempdir(), tag="voice", model=self.model or None,
+                                        instructions=SYSTEM_PROMPT)
+            self.cli.mode = "suggest"
+            self.cli.max_turns = 1
+            self.cli.timeout = TURN_TIMEOUT_S
+
+    async def stream(self, text: str, history: List[dict]) -> AsyncIterator[str]:
+        self.last_used = time.time()
+        async with self._lock:
+            self._ensure()
+            content = text if getattr(self.cli, "session_id", None) else seed_text(history, text, with_prompt=False)
+            got = False
+            async for ev in self.cli.query(content):
+                t = ev.get("type")
+                if t == "text" and ev.get("content"):
+                    got = True
+                    yield ev["content"]
+                elif t == "final":
+                    if not got and ev.get("content"):
+                        yield str(ev["content"])
+                elif t == "error":
+                    raise RuntimeError(str(ev.get("content") or "Muse Code báo lỗi."))
+
+    async def close(self) -> None:
+        self.cli = None
+
+
 # ============================================================
 # Việc nền đang chạy của mỗi phiên nói (Voice V3, spec mục 14: tách NÓI khỏi LÀM)
 # ============================================================
@@ -1055,7 +1104,7 @@ _REAPER: Optional[asyncio.Task] = None
 # ô "bộ não giọng". Làn nhanh mà khoá brain_provider rỗng thì dùng bộ não đầu tiên đang sẵn trên GÓI
 # người dùng đã có, theo đúng thứ tự này. Không có cái nào thì tin từ mic đi bộ não chính như cũ.
 # Khoá đã lưu (chọn tay từ bản cũ) vẫn thắng: giá trị cũ được đọc và dùng tiếp.
-PLAN_BRAINS = ("antigravity", "codex", "claude", "grok")
+PLAN_BRAINS = ("antigravity", "codex", "claude", "grok", "muse")
 _AUTO_TTL = 60.0
 _AUTO_CACHE: Dict[str, object] = {"at": 0.0, "key": None, "value": ""}
 
@@ -1076,6 +1125,9 @@ def plan_brain_available(pid: str, cfg: dict) -> bool:
         if pid == "grok":
             import grok_cli
             return bool(grok_cli.find_grok_cli())
+        if pid == "muse":
+            import muse_cli
+            return bool(muse_cli.find_muse_cli())
     except Exception:
         return False
     return False
@@ -1153,6 +1205,8 @@ def _make(conf: dict) -> VoiceBrain:
         return ClaudeVoiceBrain(model=conf.get("model") or BRAIN_PROVIDERS["claude"]["default_model"])
     if prov == "grok":
         return GrokVoiceBrain(model=conf.get("model") or "")
+    if prov == "muse":
+        return MuseVoiceBrain(model=conf.get("model") or "")
     if prov in PROVIDERS:
         if not conf.get("api_key"):
             raise RuntimeError(f"Bộ não giọng nói {prov} chưa có API key ở trang Models.")

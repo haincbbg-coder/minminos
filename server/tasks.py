@@ -62,6 +62,7 @@ _TEN_GOI = {
     "claude-code": "Claude (Pro/Max)",
     "codex": "ChatGPT",
     "grok-cli": "SuperGrok / X Premium",
+    "muse-cli": "Meta Muse Code",
     "antigravity-cli": "Google Antigravity",
     "gemini-cli": "Google",
 }

@@ -65,6 +65,7 @@ import terminal        # tab Code: pseudo-terminal thật trong dashboard (pty t
 import coding_store    # trang Coding: phiên gắn repo nào, nhánh nào, worktree nào, mức quyền nào
 import antigravity_cli   # bộ não thứ 10: Antigravity CLI (`agy`) - bản Google chỉ định thay Gemini CLI
 import grok_cli          # bộ não thứ 11: Grok Build CLI (`grok`) - gói SuperGrok / X Premium+
+import muse_cli          # bộ não thứ 15: Meta Muse Code CLI (`muse`) - gói thuê bao Muse Code
 import totp            # xác thực 2 lớp (TOTP) cho cổng đăng nhập - thuần toán, không đụng cấu hình
 # 26.10.80: tính năng thành viên được mời đã gỡ bỏ. Xoá dữ liệu cũ (tài khoản, mã 2FA, phiên) nếu còn.
 for _tenFile in ("users.json", ".member_sessions.json"):
@@ -1704,6 +1705,12 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
     # bảng chép tay thì sai lặng lẽ - /provider/models hỏi CLI rồi nhớ lại.
     {"id": "grok-cli", "label": "xAI Grok Build CLI", "kind": "cli", "key_field": None,
      "catalog_key": "grok-cli", "default_models": []},
+    # Meta Muse Code CLI (binary `muse`, 26.10.172) - đường Meta dùng GÓI THUÊ BAO Muse Code
+    # (Everyday / High / Power / Maximum) sẵn có, KHÁC thẻ "Meta Muse (API)" trả theo lượng ở
+    # dưới. Đăng nhập trình duyệt từ thẻ Models như Grok (CLI in link + mã, chạy được qua SSH).
+    # default_models RỖNG: `muse_cli.list_models` giữ bảng tĩnh vì Meta không có lệnh liệt kê.
+    {"id": "muse-cli", "label": "Meta Muse Code CLI", "kind": "cli", "key_field": None,
+     "catalog_key": "muse-cli", "default_models": []},
     {"id": "antigravity-cli", "label": "Google Antigravity CLI", "kind": "cli", "key_field": None,
      "catalog_key": "antigravity-cli", "default_models": []},
     {"id": "openrouter",    "label": "OpenRouter",              "kind": "api", "key_field": "openrouter_key",    "catalog_key": "openrouter",
@@ -1786,6 +1793,9 @@ def _providers_view(cfg):
             # Đọc `~/.grok/auth.json` - file thật, quyền 0600. Rẻ như nhánh Gemini CLI, và đây
             # chính là chỗ Grok dễ hơn `agy`: có file để soi nên không phải hỏi CLI.
             configured = bool(grok_cli.auth_status().get("connected"))
+        elif p["id"] == "muse-cli":
+            # Đọc `~/.config/muse/auth.json` (hoặc META_API_KEY), rẻ như nhánh Grok.
+            configured = bool(muse_cli.auth_status().get("connected"))
         elif p["id"] == "antigravity-cli":
             # `agy` giữ phiên trong keyring của hệ điều hành nên không có file nào để soi -
             # phải hỏi chính CLI. Nhưng TUYỆT ĐỐI không hỏi trong luồng này: _providers_view
@@ -1836,6 +1846,21 @@ def _providers_view(cfg):
             # Phiên nằm trong `~/.grok/auth.json` do chính CLI giữ, Javis không sở hữu nó -
             # nhưng `grok logout` thì gọi được, nên thẻ CÓ nút Ngắt (khác `agy`).
             item["auth_by_javis"] = False
+        if p["id"] == "muse-cli":
+            _u = muse_cli.auth_status()
+            item["cli_found"] = bool(muse_cli.find_muse_cli())
+            item["auth_method"] = _u.get("method", "")
+            item["account"] = _u.get("account", "")
+            item["plan"] = _u.get("plan", "")
+            item["auth_error"] = _u.get("error", "")
+            item["cai_lenh"] = muse_cli.lenh_cai()
+            item["dang_nhap"] = muse_cli.login_huong_dan()
+            # Phiên nằm trong `~/.config/muse/auth.json` do chính CLI giữ; `muse logout` gọi
+            # được nên thẻ CÓ nút Ngắt.
+            item["auth_by_javis"] = False
+            # Bảng model tĩnh của engine (Meta không có lệnh liệt kê), để thẻ không báo 0 model.
+            if not item["models"]:
+                item["models"] = list(muse_cli.MODELS)
         if p["id"] == "antigravity-cli":
             _a = antigravity_cli.auth_status_nen()   # cùng lý do nhánh `configured` ở trên
             item["cli_found"] = bool(antigravity_cli.find_antigravity_cli())
@@ -1904,6 +1929,8 @@ def _set_main_model(cfg, provider, model):
         m["engine"] = "antigravity-cli"
     elif provider == "grok-cli":
         m["engine"] = "grok-cli"
+    elif provider == "muse-cli":
+        m["engine"] = "muse-cli"
     elif provider == "groq":
         m["engine"] = "groq"
     elif provider == "xai":
@@ -2009,7 +2036,7 @@ def _chat_provider(mcfg):
 # antigravity-cli hay ollama vào ô chọn model của agent chỉ là hứa suông - agent sẽ lặng lẽ
 # chạy bằng Claude mà không ai biết. Trang Studio đọc chính danh sách này để vẽ ô chọn, nên
 # thêm provider mới ở aux_engine thì thêm tên vào đây là giao diện có ngay.
-AGENT_PROVIDERS = ("anthropic-cli", "openai-oauth", "grok-cli", "antigravity-cli",
+AGENT_PROVIDERS = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli",
                    "openrouter", "anthropic-api", "openai", "gemini", "groq", "xai", "meta", "ollama",
                    # Model chạy máy nhà cũng giao được việc nền cho agent. Bỏ nó ra khỏi đây
                    # là tính năng nửa vời: cài model về rồi mà chỉ chat tay được, không giao
@@ -2342,6 +2369,22 @@ def _grok_sub_stream(model, messages, reasoning="off", *, brain=None, tag="chat"
     return _cli_sub_doc(g, _cli_do_sau_khac(g, grok_cli, reasoning, prompt), model)
 
 
+def _muse_sub_stream(model, messages, reasoning="off", *, brain=None, tag="chat",
+                     mode="suggest"):
+    """Gói thuê bao Muse Code (Meta Muse Code CLI) cho đường CHAT-THUẦN của `_api_stream`.
+
+    Cùng lý do tồn tại với `_grok_sub_stream` ngay trên. KHÔNG phải `async def` - xem chú
+    thích dài ở `_antigravity_sub_stream`.
+    """
+    sys_txt, prompt = _claude_sub_tach(messages)
+    g = muse_cli.MuseCLI(cwd=_brain_root(brain) if brain else None, tag=tag,
+                         model=model or None, instructions=sys_txt)
+    g.mode = mode or "suggest"
+    if brain:
+        _apply_muse_hub(g, _brain_root(brain), mode=mode)
+    return _cli_sub_doc(g, _cli_do_sau_khac(g, muse_cli, reasoning, prompt), model)
+
+
 async def _cli_sub_doc(g, prompt, model):
     """Một lượt engine CLI (Antigravity hoặc Grok) -> hợp đồng sự kiện của `_api_stream`.
 
@@ -2435,6 +2478,8 @@ def _api_stream_goc(prov, key, model, messages, reasoning="off"):
         return _antigravity_sub_stream(model, messages, reasoning)
     if prov == "grok-cli":
         return _grok_sub_stream(model, messages, reasoning)
+    if prov == "muse-cli":
+        return _muse_sub_stream(model, messages, reasoning)
     if prov == "anthropic-cli":
         # Gói Claude Code đi qua chính binary `claude`, KHÔNG tự dựng request tới
         # api.anthropic.com bằng token của người dùng nữa (xem claude_auth.py). Vẫn không có
@@ -3548,6 +3593,30 @@ def _apply_grok_hub(cli, vault_root=None, mode="full"):
     return cli
 
 
+def _apply_muse_hub(cli, vault_root=None, mode="full"):
+    """Gắn MCP hub của Javis vào tiến trình `muse`.
+
+    Khác `_apply_grok_hub`: Muse Code đọc MCP từ cấu hình CÁ NHÂN `~/.config/muse/settings.json`
+    chứ không theo thư mục làm việc, nên `muse_cli.ghi_mcp_settings` GỘP entry `javis` vào file
+    đó (giữ server khác của người dùng, có sao lưu). Header y hệt các engine kia (`Bearer
+    hub_token` + X-Javis-Mode + X-Javis-Vault) nên hub áp đúng một bộ luật quyền cho cả sáu.
+    Entry dựng bằng `muse_cli.hub_entry` (khoá `transport: streamable_http` + `url`).
+    """
+    root = vault_root or getattr(cli, "cwd", None)
+    if not root:
+        return cli
+    hub = None
+    if _hub_enabled():
+        headers = {"Authorization": f"Bearer {mcp_hub.hub_token()}", "X-Javis-Mode": mode}
+        try:
+            headers["X-Javis-Vault"] = str(Path(root).expanduser().resolve())
+        except Exception:
+            headers["X-Javis-Vault"] = str(root)
+        hub = muse_cli.hub_entry(mcp_hub.hub_url(), headers)
+    muse_cli.ghi_mcp_settings(root, hub)
+    return cli
+
+
 def _apply_antigravity_hub(cli, vault_root=None, mode="full"):
     """Gắn MCP hub của Javis vào tiến trình `agy`.
 
@@ -3872,6 +3941,62 @@ async def grok_check(brain: str = "brain"):
     # tiết", nên nút đó phải THẬT SỰ có chi tiết, không thì lại là một vòng bấm vô ích nữa.
     try:
         d["chan_doan"] = grok_cli.chan_doan()
+    except Exception as e:
+        d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
+    return d
+
+
+@app.get("/muse/status")
+def muse_status():
+    """Trạng thái bộ não Meta Muse Code CLI cho trang Models, kèm chẩn đoán (TÊN file/khoá,
+    không giá trị) và 30 dòng JSONL thô của lượt gần nhất."""
+    d = muse_cli.auth_status()
+    d["cli_path"] = muse_cli.find_muse_cli() or ""
+    d["cai_lenh"] = muse_cli.lenh_cai()
+    d["huong_dan"] = muse_cli.login_huong_dan()
+    try:
+        d["chan_doan"] = muse_cli.chan_doan()
+    except Exception as e:
+        d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
+    return d
+
+
+@app.post("/muse/login-start")
+async def muse_login_start():
+    """Mở `muse` trong pseudo-terminal, bóc link + mã đăng nhập trình duyệt. Giao diện gọi
+    tiếp `/muse/login-poll`."""
+    return await asyncio.to_thread(muse_cli.login_start)
+
+
+@app.get("/muse/login-poll")
+def muse_login_poll():
+    return muse_cli.login_trang_thai()
+
+
+@app.post("/muse/logout")
+async def muse_logout():
+    """Ngắt tài khoản Meta khỏi máy này (`muse logout`)."""
+    return await asyncio.to_thread(muse_cli.logout)
+
+
+@app.post("/muse/check")
+async def muse_check(brain: str = "brain"):
+    """Chạy thử MỘT lượt `muse exec --json` thật, soát hub MCP đã vào settings.json chưa, và
+    trả `su_kien_tho` (JSONL thô) vì sơ đồ sự kiện của Meta chưa có tài liệu."""
+    root = _brain_root(brain)
+    try:
+        _apply_muse_hub(_types.SimpleNamespace(cwd=root), root)
+    except Exception as e:
+        print(f"[muse check] ghi cấu hình MCP: {e}", file=__import__('sys').stderr)
+    d = await asyncio.to_thread(muse_cli.kiem_tra_nhanh)
+    try:
+        mcp = muse_cli.trang_thai_mcp(root)
+        mcp["hub_bat"] = _hub_enabled()
+        d["mcp"] = mcp
+    except Exception as e:
+        d["mcp"] = {"co_javis": False, "loi": f"{type(e).__name__}: {e}"}
+    try:
+        d["chan_doan"] = muse_cli.chan_doan()
     except Exception as e:
         d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
     return d
@@ -5107,6 +5232,8 @@ async def _fetch_provider_models(provider, m):
         # Chạy ở worker: `list_models` có thể đẻ tiến trình con (`grok --help` để dò cờ, rồi
         # `grok models` nếu bản này có) và mất vài giây.
         return await asyncio.to_thread(grok_cli.list_models)
+    if provider == "muse-cli":
+        return muse_cli.list_models()     # bảng tĩnh, không đẻ tiến trình
     if provider == "antigravity-cli":
         # `agy models` là NGUỒN CHÂN LÝ, không có bảng chép tay nào để rơi về - chạy ở worker
         # vì nó đẻ tiến trình con và có thể mất vài giây.
@@ -12902,7 +13029,7 @@ async def _dg_resolver(su_that: dict, brain: str):
     return danh_gia.lay_theo_duong(data, su_that.get("lay", ""))
 
 
-_DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "antigravity-cli")
+_DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli")
 _DG_NAO_API = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama",
                "openai-compat", "ollama-local")
 
@@ -14599,6 +14726,8 @@ def _voice_brain_models(pid: str, cfg: dict) -> list:
             return _voice_models_items(claude_cli.list_models() or [])
         if pid == "grok":
             return _voice_models_items(grok_cli.list_models() or []) if grok_cli.find_grok_cli() else []
+        if pid == "muse":
+            return _voice_models_items(muse_cli.list_models() or []) if muse_cli.find_muse_cli() else []
     except Exception:
         return []
     return []
@@ -14690,6 +14819,18 @@ async def voice_options(brains: int = 1):
             item["hint"] = ("Mỗi câu một lượt grok headless, nối lại mạch cũ nên có ký ức. Trả lời về "
                             "một cục chứ không stream từng chữ." if item["available"]
                             else "Chưa cài Grok Build (grok). Xem trang Models.")
+        elif pid == "muse":
+            try:
+                item["available"] = bool(muse_cli.find_muse_cli())
+            except Exception:
+                item["available"] = False
+            try:
+                item["models"] = _models_items(muse_cli.list_models() or []) if item["available"] else []
+            except Exception:
+                item["models"] = []
+            item["hint"] = ("Mỗi câu một lượt `muse exec` headless, nối lại mạch cũ nên có ký ức. "
+                            "Trả lời về một cục." if item["available"]
+                            else "Chưa cài Muse Code CLI (muse). Xem trang Models.")
         brain_list.append(item)
     _vb = voice_brain.config_from_settings(cfg).get("provider") or ""
     return {
@@ -15389,7 +15530,7 @@ def _bao_lan_nhanh_bo_qua(vconf) -> bool:
         ly_do = ("không đọc được cài đặt giọng nói" if not vconf
                  else f"chế độ giọng nói = {mode or 'standard'!r}" if mode != "fast"
                  else "chế độ Làn nhanh nhưng chưa chọn bộ não giọng và không có bộ não nào sẵn trên gói "
-                      "(Antigravity, ChatGPT, Claude Code, Grok Build)")
+                      "(Antigravity, ChatGPT, Claude Code, Grok Build, Muse Code)")
         print(f"[voice lane] tin từ mic đi bộ não chính: {ly_do}. "
               f"Đăng nhập một gói ở trang Models để có làn nhanh.", file=sys.stderr)
     return True
@@ -15780,6 +15921,85 @@ async def websocket_endpoint(ws: WebSocket):
                     final_text = _chuan_hoa_link_file(_brain_root(brain), final_text)
                     await ws.send_text(json.dumps({
                         "type": "response", "content": final_text, "engine": "grok-cli",
+                        "model": actual_model or "", "session_id": conv_sid,
+                        **_ctx_frame(runtime_trace, _ctx_in)}))
+            elif prov == "muse-cli":
+                # ===== Gói thuê bao Muse Code qua META MUSE CODE CLI - tool native + MCP hub =====
+                #
+                # Cùng khuôn nhánh Grok ngay trên. Khác một chỗ: `muse exec` không phát id mạch
+                # ở chỗ nào có tài liệu, nên Javis TỰ CẤP uuid4 và truyền `--session-id` từ lượt
+                # đầu (engine tự thử lại không cờ nếu CLI từ chối). Id lưu ở cột riêng
+                # `muse_session_id`.
+                actual_model = api_model or None
+                sysprompt, _sub_plan = await _subscription_system_prompt(
+                    "muse-cli", actual_model or "", kind)
+                ucli = muse_cli.MuseCLI(cwd=_cwd_luot_chat(_row0, brain), model=actual_model,
+                                        tag=turn_tag, instructions=sysprompt)
+                ucli.mode = _muc_quyen_luot_chat(_row0, brain)
+                _apply_muse_hub(ucli, _brain_root(brain), mode=ucli.mode)
+                if not ucli.is_available():
+                    final_text = ("⚠ Chưa cài Muse Code CLI trên máy này. Cài một lần:\n\n"
+                                  f"`{muse_cli.lenh_cai()}`\n\n"
+                                  "Rồi bấm \"Đăng nhập\" ở thẻ Muse Code trên trang Models (chạy "
+                                  "trên VPS cũng được, nó in ra một link và một mã).")
+                    await ws.send_text(json.dumps({
+                        "type": "response", "content": final_text, "engine": "muse-cli",
+                        "model": actual_model or "", "session_id": conv_sid,
+                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                else:
+                    _u_mach = (_row0.get("muse_session_id") or "").strip()
+                    if _u_mach and compaction.nen_mach_thue_bao(
+                            _row0.get("last_input_tokens"), msg_count=_row0.get("msg_count"),
+                            rotated_at=_row0.get("thread_rotated_msg")):
+                        _u_mach = ""
+                        store.clear_muse_session_id(conv_sid)
+                        store.mark_thread_rotated(conv_sid)
+                        _CONTEXT_RUNTIME.record_runtime_event(
+                            runtime_trace, "thread.rotated",
+                            {"engine": "muse-cli",
+                             "last_input_tokens": int(_row0.get("last_input_tokens") or 0),
+                             "threshold": compaction.SUBSCRIPTION_THREAD_MAX_TOKENS})
+                        await ws.send_text(json.dumps({
+                            "type": "tool_call", "tool": "javis_nen_mach",
+                            "content": "⚙ Mạch hội thoại đã dài, Javis mở mạch mới."}))
+                    ucli.session_id = _u_mach or None
+                    _u_cur = _cli_do_sau_khac(ucli, muse_cli, reasoning, user_message)
+                    _u_raw = [{"role": _m["role"], "content": _m["content"]}
+                              for _m in store.get_messages(conv_sid)[:-1]
+                              if _m["role"] in ("user", "assistant") and _m.get("content")]
+                    _u_prompt = (_u_cur if _u_mach else compaction.bootstrap_prompt(
+                        _u_raw, _u_cur, summary=_row0.get("compact_summary") or ""))
+                    _CONTEXT_RUNTIME.observe_payload(
+                        runtime_trace,
+                        [{"role": "system", "content": sysprompt},
+                         {"role": "user", "content": _u_prompt}],
+                        provider="muse-cli", model=actual_model or "")
+                    _u_loi = False
+                    async for ev in ucli.query(_u_prompt):
+                        et = ev.get("type")
+                        if et == "tool_call":
+                            await ws.send_text(json.dumps({
+                                "type": "tool_call", "tool": ev.get("name", ""),
+                                "detail": tool_label.chi_tiet(ev),
+                                "content": f"⚙ Đang gọi: {ev.get('name', '')}"}))
+                        elif et == "final":
+                            final_text = ev.get("content") or ""
+                        elif et == "usage":
+                            store.set_last_input_tokens(
+                                conv_sid, int(ev.get("input_tokens") or 0))
+                        elif et == "error":
+                            _u_loi = True
+                            await ws.send_text(_limit_frame(
+                                ev.get("content") or "", "muse-cli", actual_model or ""))
+                    if _u_mach and _u_loi and not final_text:
+                        # Mạch cũ chết trên máy: xoá id để lượt sau mồi lại từ lịch sử.
+                        store.clear_muse_session_id(conv_sid)
+                        ucli.session_id = None
+                    elif ucli.session_id:
+                        store.set_muse_session_id(conv_sid, ucli.session_id)
+                    final_text = _chuan_hoa_link_file(_brain_root(brain), final_text)
+                    await ws.send_text(json.dumps({
+                        "type": "response", "content": final_text, "engine": "muse-cli",
                         "model": actual_model or "", "session_id": conv_sid,
                         **_ctx_frame(runtime_trace, _ctx_in)}))
             elif prov == "antigravity-cli":
@@ -17266,6 +17486,7 @@ async def websocket_endpoint(ws: WebSocket):
                 prov, kind, api_key, api_model = _dt["prov"], _dt["kind"], _dt["key"], _dt["model"]
             engine_label = ("codex" if prov == "openai-oauth"
                             else "grok-cli" if prov == "grok-cli"
+                            else "muse-cli" if prov == "muse-cli"
                             else "antigravity-cli" if prov == "antigravity-cli"
                             else prov if ((kind == "api" and api_key) or kind == "oauth")
                             else "cli")
@@ -19678,7 +19899,7 @@ def _tg_quen_sid(sess) -> None:
 # chỗ tự liệt kê tay là có ngày sót một cái: nhánh đổi provider đã sót `cli` một thời gian, và
 # `antigravity` thì sót ở cả ba chỗ.
 _TG_ENGINE_MACH = (("cli", "cli"), ("codex", "codex"), ("grok-cli", "grok"),
-                   ("antigravity-cli", "antigravity"))
+                   ("muse-cli", "muse"), ("antigravity-cli", "antigravity"))
 
 
 def _tg_ngat_mach(sess, tru=None):
@@ -20015,6 +20236,7 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
     # có ngày phiên bị dán nhãn 'cli' trong khi lượt thật chạy qua OpenRouter.
     engine_label = ("codex" if prov == "openai-oauth"
                     else "grok-cli" if prov == "grok-cli"
+                    else "muse-cli" if prov == "muse-cli"
                     else "antigravity-cli" if prov == "antigravity-cli"
                     else prov if ((kind == "api" and api_key) or kind == "oauth")
                     else "cli")
@@ -20548,7 +20770,8 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         # "Đọc tài liệu" chạy tool ĐỌC ngay trong tiến trình nên chỉ các engine API (và gói ChatGPT)
         # dùng được. Gói Claude Code, Grok Build, Antigravity chạy qua binary riêng: lượt đó rơi về
         # Chỉ đọc, và nói rõ cho chủ biết ở câu trả lời (`canh_bao`) chứ không im lặng hạ mức.
-        _doc_roi_ve = _muc == "doc" and prov in ("anthropic-cli", "grok-cli", "antigravity-cli")
+        _doc_roi_ve = _muc == "doc" and prov in ("anthropic-cli", "grok-cli", "muse-cli",
+                                                 "antigravity-cli")
         if _muc == "doc" and not _doc_roi_ve:
             return await _bot_tra_loi_co_tool(
                 text, sess=sess, sysprompt=_sys_bot, prov=prov, api_key=api_key,
@@ -20711,6 +20934,42 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         if not out and loi:
             _noi = _subscription_limit_message(loi[0], "grok-cli")
             return _noi or ("⚠ Grok Build CLI lỗi: " + loi[0][:400])
+        return out or "(không có nội dung)"
+
+    if prov == "muse-cli":
+        # Cùng khuôn nhánh Grok Build ngay trên: giữ object engine trong `sess["muse"]`.
+        actual_model = api_model or None
+        ucli = sess.get("muse")
+        if ucli is None:
+            ucli = muse_cli.MuseCLI(cwd=_brain_root(brain), model=actual_model,
+                                    tag=f"telegram:{chat_id}", instructions=sysprompt)
+            sess["muse"] = ucli
+        else:
+            ucli.cwd = _brain_root(brain)
+            ucli.model = actual_model
+            ucli.instructions = sysprompt
+        ucli.mode = "full"
+        _apply_muse_hub(ucli, _brain_root(brain))
+        if not ucli.is_available():
+            return ("⚠ Chưa cài Muse Code CLI trên máy chạy Javis. Cài một lần:\n"
+                    f"`{muse_cli.lenh_cai()}`\n"
+                    "Rồi đăng nhập ở thẻ Muse Code trên trang Models.")
+        _hoi = text
+        if not getattr(ucli, "session_id", None):
+            _raw_cu, _tom_cu = _tg_lich_su_kho(store, conv_sid, text)
+            _hoi = compaction.bootstrap_prompt(_raw_cu, _hoi, summary=_tom_cu)
+        out, loi = "", []
+        async for ev in ucli.query(_hoi):
+            et = ev.get("type")
+            if et == "tool_call":
+                await _p(f"⚙ Đang gọi: {ev.get('name', '')}")
+            elif et == "final":
+                out = ev.get("content") or ""
+            elif et == "error":
+                loi.append(str(ev.get("content") or ""))
+        if not out and loi:
+            _noi = _subscription_limit_message(loi[0], "muse-cli")
+            return _noi or ("⚠ Muse Code CLI lỗi: " + loi[0][:400])
         return out or "(không có nội dung)"
 
     if prov == "antigravity-cli":
@@ -21088,6 +21347,7 @@ _TG_NHAN_NGAN = {
     "anthropic-cli": "Claude Code",
     "openai-oauth": "ChatGPT",
     "grok-cli": "Grok Build",
+    "muse-cli": "Muse Code",
     "antigravity-cli": "Antigravity",
     "openrouter": "OpenRouter",
     "anthropic-api": "Claude API",

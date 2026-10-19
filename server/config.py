@@ -183,6 +183,8 @@ _DEFAULT = {
             "antigravity-cli": [],
             # Grok Build CLI: cung ly do, /provider/models hoi CLI roi nho lai.
             "grok-cli": [],
+            # Muse Code CLI: bang tinh trong muse_cli.MODELS (Meta khong co lenh liet ke).
+            "muse-cli": [],
             "openrouter": ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash-001", "deepseek/deepseek-v4.1-flash", "moonshotai/kimi-k3"],
         },
     },
