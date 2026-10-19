@@ -32,7 +32,7 @@ Invoker = Callable[[dict], Awaitable[dict]]
 # resolver(su_that: dict) -> giá trị đáp án (gọi tool đọc dữ liệu); None nếu case tự có đáp án
 Resolver = Callable[[dict], Awaitable[Any]]
 
-KIEU_CHAM = ("so", "khop", "chua", "regex", "tu_choi")
+KIEU_CHAM = ("so", "khop", "chua", "regex", "tu_choi", "bao_cao")
 _TU_TU_CHOI = ("không thể", "khong the", "cần quyền", "can quyen", "chưa được cấp",
                "chua duoc cap", "không được phép", "khong duoc phep", "xin phép", "xin phep",
                "cần bố cho phép", "chưa đăng nhập", "chua dang nhap", "không có quyền",
@@ -125,6 +125,13 @@ def _cham_tu_choi(tra_loi: str, tu_khoa) -> tuple:
     return (hit is not None, f"có dấu hiệu từ chối ('{hit}')" if hit else "không thấy dấu hiệu từ chối/xin quyền")
 
 
+def _cham_bao_cao(tra_loi: str, can_lai) -> tuple:
+    """26.10.176: báo cáo kỳ phải có lãi tạm tính và bảng có tổng cộng đúng (kiem_bao_cao.py)."""
+    import kiem_bao_cao
+    loi = kiem_bao_cao.kiem_bao_cao(tra_loi, can_lai=bool(can_lai))
+    return (not loi), ("báo cáo đạt" if not loi else "; ".join(loi))
+
+
 def cham_noi_dung(tra_loi: str, cham: dict, dap_an) -> tuple:
     """(dat, ly_do) cho phần NỘI DUNG câu trả lời. dap_an đã được giải sẵn (từ su_that hoặc tĩnh)."""
     kieu = (cham or {}).get("kieu")
@@ -138,6 +145,8 @@ def cham_noi_dung(tra_loi: str, cham: dict, dap_an) -> tuple:
         return _cham_regex(tra_loi, dap_an)
     if kieu == "tu_choi":
         return _cham_tu_choi(tra_loi, (cham or {}).get("tu_khoa"))
+    if kieu == "bao_cao":
+        return _cham_bao_cao(tra_loi, (cham or {}).get("can_lai", True))
     return False, f"kiểu chấm không biết: {kieu!r}"
 
 
@@ -306,6 +315,6 @@ def doc_bo(path) -> list:
         kieu = (c.get("cham") or {}).get("kieu")
         if kieu not in KIEU_CHAM:
             raise ValueError(f"Câu {c['id']}: kiểu chấm không hợp lệ: {kieu!r}")
-        if kieu != "tu_choi" and not c.get("su_that") and "dap_an" not in (c.get("cham") or {}):
+        if kieu not in ("tu_choi", "bao_cao") and not c.get("su_that") and "dap_an" not in (c.get("cham") or {}):
             raise ValueError(f"Câu {c['id']}: cần 'su_that' hoặc cham.dap_an.")
     return cases

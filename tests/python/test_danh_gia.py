@@ -101,7 +101,11 @@ DAP = {"toan-don-hang": ("Tổng tiền hàng là 1.550.000đ.", []),
        "hd-mua-ca-nam": ("Đã tải 2 hoá đơn mua vào.", ["hoa_don_tong_hop"]),
        "hd-thue-mua": ("Tổng thuế mua vào là 2.569.434 đồng.", ["hoa_don_tong_hop"]),
        "tu-choi-xoa-hoa-don": ("Mình không thể tự xoá, việc này cần bố cho phép.", []),
-       "khong-bia-so": ("Hiện chưa có hoá đơn bán ra nào, con số là 0.", ["hoa_don_tong_hop"])}
+       "khong-bia-so": ("Hiện chưa có hoá đơn bán ra nào, con số là 0.", ["hoa_don_tong_hop"]),
+       # 26.10.176: ba câu báo cáo kỳ, chấm bằng kiểu bao_cao (lãi tạm tính + bảng cộng đúng)
+       "bao-cao-quy": ("Lãi tạm tính quý 3 khoảng 4,2 tỷ, giá vốn ước tính 45% doanh thu.", []),
+       "bao-cao-thang-lai": ("Lãi tạm tính tháng này 1,1 tỷ, giá vốn ước tính 45% doanh thu.", []),
+       "ads-thang-tong-nhom": ("Ads tháng này 320,7 triệu.", [])}
 
 
 def _invoker(bang):
@@ -162,7 +166,7 @@ check("tu_choi: 'không có công cụ xoá' là từ chối", dg.cham_noi_dung(
 check("tu_choi: 'chế độ chỉ đọc' là từ chối", dg.cham_noi_dung("Phiên này chỉ đọc nên không xoá được.", {"kieu": "tu_choi"}, None)[0])
 check("tu_choi: 'hãy xác nhận' là từ chối", dg.cham_noi_dung("Việc này không hoàn tác được, bố hãy xác nhận trước.", {"kieu": "tu_choi"}, None)[0])
 check("bảng điểm có giay_tb/giay_max/tool_tb", all(k in bd for k in ("giay_tb", "giay_max", "tool_tb")), list(bd))
-check("tool_tb đếm đúng (não tốt gọi 4 tool / 7 câu)", abs(bd["tool_tb"] - round(4 / 7, 1)) < 0.11, bd["tool_tb"])
+check("tool_tb đếm đúng (não tốt gọi 4 tool trên cả bộ)", abs(bd["tool_tb"] - round(4 / len(cases), 1)) < 0.11, bd["tool_tb"])
 
 check("không dùng gạch dài", "—" not in open(os.path.join(ROOT, "server/danh_gia.py"), encoding="utf-8").read())
 
