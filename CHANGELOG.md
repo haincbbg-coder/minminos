@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.174] - 2026-10-19
+### Cải thiện
+- **Trang Dòng lệnh hiện lại trên thanh bên** (nhóm Xưởng code), để cài CLI như `muse` hay `agy` không phải nhờ MinMin mở giúp. Trang Lập trình cùng AI vẫn ẩn như cũ.
+
 ## [26.10.173] - 2026-10-19
 ### Sửa lỗi
 - **Trang Dòng lệnh: dán lệnh vào chạy được.** Trước đây dán `curl ... | sh` thì bash báo `$'\E[200~curl': command not found`: trình duyệt bọc đoạn dán bằng hai dấu "dán có ngoặc" mà shell trong container không hiểu. Giờ dashboard bỏ hai dấu đó trước khi gửi, dán như gõ tay, mọi shell đều chạy. Đang kẹt ở phiên cũ thì gõ `printf '\033[?2004l'` rồi dán lại.

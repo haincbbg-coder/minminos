@@ -146,7 +146,8 @@
   // được. Muốn hiện lại: đặt localStorage "mm.hien_xuong_code" = "1" rồi tải lại trang.
   let _hienXuongCode = false;
   try { _hienXuongCode = localStorage.getItem("mm.hien_xuong_code") === "1"; } catch (e) {}
-  if (!_hienXuongCode) { RAIL_AN.add("terminal"); RAIL_AN.add("coding"); }
+  // 26.10.174: Dòng lệnh hiện luôn (chủ cần gõ lệnh cài CLI như muse, agy); chỉ Lập trình cùng AI còn ẩn.
+  if (!_hienXuongCode) { RAIL_AN.add("coding"); }
   // 26.10.1: Kho tài liệu ẩn khỏi thanh bên theo ý chủ repo (trang vẫn mở được bằng lệnh nói,
   // bấm link file trong chat vẫn tới đúng chỗ).
   RAIL_AN.add("files");
