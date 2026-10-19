@@ -87,6 +87,42 @@ def register(app, deps: ConversationsDeps):
     global _DEPS
     _DEPS = deps
 
+    @router.post("/conversations/file-shelf/image")
+    async def shelf_image(url: str = Form(...)):
+        """Authenticated download of a Zalo image for the local editing shelf.
+
+        Reuse the CDN allowlist/redirect checks and byte cap. Temporary files are
+        removed before returning; never retain user URLs or fetch arbitrary hosts.
+        """
+        import asyncio
+        import tempfile
+        from pathlib import Path
+        from fastapi.responses import Response
+        import image_vision
+        if not image_vision.url_allowed(url):
+            return JSONResponse({"error": "Chỉ tải ảnh từ máy chủ ảnh Zalo."}, status_code=400)
+        with tempfile.TemporaryDirectory(prefix="minmin-shelf-") as folder:
+            try:
+                path, error = await asyncio.wait_for(
+                    image_vision.fetch_image(url, Path(folder), "image", max_bytes=20 * 1024 * 1024), 65)
+            except asyncio.TimeoutError:
+                return JSONResponse({"error": "Tải ảnh quá lâu. Thử lại sau."}, status_code=504)
+            if not path:
+                return JSONResponse({"error": error}, status_code=422)
+            data = path.read_bytes()
+            # Verify actual image bytes, not the remote content-type or filename.
+            import io
+            from PIL import Image
+            try:
+                with Image.open(io.BytesIO(data)) as im:
+                    mime = Image.MIME.get(im.format, "")
+                    if mime not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+                        raise ValueError("unsupported image")
+                    im.verify()
+            except Exception:
+                return JSONResponse({"error": "File tải về không phải ảnh hợp lệ."}, status_code=422)
+        return Response(data, media_type=mime, headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
     @router.get("/conversations")
     async def conversations_list(channel: str = "", bot_id: str = "", account_id: str = "",
                                  q: str = "", mode: str = "", limit: int = 50, offset: int = 0):

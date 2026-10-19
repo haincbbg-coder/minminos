@@ -633,6 +633,7 @@
         '<img src="' + esc(photo) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="' + esc(window.t("ht.photo")) + '">' +
         '<span class="ht-photo-error">' + esc(window.t("ht.photo_error")) + '</span></a>' +
         '<a class="ht-photo-original" href="' + esc(photo) + '" target="_blank" rel="noopener noreferrer">' + esc(window.t("ht.photo_original")) + '</a>' +
+        '<button type="button" class="s-btn" data-shelf-url="' + esc(photo) + '" data-shelf-source="Hộp thư · ' + esc(ai) + '">Thêm vào khay</button>' +
         (caption ? '<div class="ht-photo-caption">' + esc(caption) + '</div>' : '');
     }
     var loai = t.message_type && t.message_type !== "text"

@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.177] - 2026-10-19
+### Thêm mới
+
+- Khay làm việc giữ bản sao ảnh và tài liệu khi chuyển giữa Hộp thư, Hóa đơn, Bộ chứng từ, hub phụ và các xưởng. Thêm ảnh Zalo, PDF hóa đơn hoặc kéo file từ máy vào khay.
+- Chỉnh ảnh với xem trước: cắt theo tỷ lệ, xoay, đổi kích thước, thêm chú thích; lưu bản sao PNG/JPG/WebP hoặc ghép nhiều ảnh thành một ảnh.
+- Chọn và đổi thứ tự ảnh/PDF để tạo một PDF gộp, xem trước và tải để in. Khay lưu trên trình duyệt đang dùng, không thay đổi file gốc.
+
 ## [26.10.176] - 2026-10-19
 ### Cải thiện
 - **Báo cáo kết quả kinh doanh luôn có lãi tạm tính.** Trước đây báo cáo tháng có lãi còn báo cáo quý thì từ chối vì thiếu giá vốn. Giờ báo cáo tháng, quý, năm đều ghi lãi tạm tính theo tỷ lệ giá vốn ước tính và nói rõ đó là ước tính.
