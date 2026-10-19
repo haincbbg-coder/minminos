@@ -45,6 +45,9 @@ _RE_NHOM = re.compile(r"(?<![\d.,])\d{1,3}(?:[.,]\d{3})+(?![.,]?\d)")   # 1.550.
 _RE_TRAN = re.compile(r"(?<![\d.,])\d+(?![.,]?\d)")
 
 
+_RE_THE = re.compile(r"<!--\s*JAVIS_CARD:[\s\S]*?-->")
+
+
 def cac_so(text: str) -> set:
     """Các số nguyên trong văn bản, hiểu cả kiểu nhóm nghìn VN (1.550.000) và Anh (1,550,000).
     Nhóm nghìn bắt trước rồi xoá khỏi văn bản, để "2.569.434" không bị đọc thành 2 và 569."""
@@ -174,6 +177,7 @@ def neo_so(tra_loi: str, cau_hoi: str, ket_qua_tool: Iterable[str]) -> dict:
     (7.225 của 7.224.638.000) mà khớp một số trong kho thì là "xấp xỉ": cũng có nguồn, không
     cảnh báo. Số nằm sẵn trong câu hỏi thì không xét."""
     trong_hoi = cac_so(cau_hoi)
+    tra_loi = _RE_THE.sub(" ", str(tra_loi or ""))   # JSON của thẻ biểu đồ không phải câu chữ để đối chiếu
     can = so_dang_ke(tra_loi, tru=trong_hoi)
     kho = set()
     for kq in ket_qua_tool or ():

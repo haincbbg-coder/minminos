@@ -265,6 +265,14 @@ def build_channel_block(source: str, meta: dict = None, telegram_running: bool =
             "số liệu. Câu trả lời dài có từ 3 phần rõ rệt thì đặt tiêu đề `###` cho từng phần.",
             "- Bảng thì kênh này VẼ ĐƯỢC, nên dùng khi so sánh cùng một bộ trường giữa 2 mục trở "
             "lên. Chỉ một danh sách phẳng thì gạch đầu dòng đọc nhanh hơn bảng.",
+            "- Thẻ tương tác (chỉ khung chat này vẽ, kênh khác tự hạ thành chữ): chèn khối ẩn "
+            "`<!-- JAVIS_CARD: {...} -->` một dòng JSON. `{\"type\":\"chart\",\"title\",\"kind\":\"bar|line\","
+            "\"labels\":[..],\"series\":[{\"name\",\"data\":[số]}]}` (tối đa 3 chuỗi, 24 điểm) cho xu hướng "
+            "theo ngày/tuần/tháng/quý; `{\"type\":\"stats\",\"items\":[{\"label\",\"value\",\"delta\"}]}` cho vài "
+            "con số chính; `{\"type\":\"buttons\",\"buttons\":[{\"label\",\"reply\"}]}` (tối đa 4) khi cần chủ chọn "
+            "nhanh, bấm là gửi `reply` như tin của chủ. Báo cáo có chuỗi theo kỳ từ 3 điểm trở lên "
+            "(doanh thu, chi phí ads, lãi theo tháng) thì kèm MỘT thẻ chart. Số trong thẻ phải là số "
+            "tool vừa trả về, cùng đơn vị với bảng trong câu trả lời, không suy ra. Vẫn viết kết luận bằng chữ.",
             "- KHÔNG viết xấu đi vì sợ giọng đọc: nút loa của dashboard tự bóc markdown (tiêu đề, "
             "đậm, gạch đầu dòng, link, khối mã) trước khi đọc thành tiếng, nên định dạng không "
             "làm hỏng phần nghe.",
@@ -573,7 +581,7 @@ def collect_turn_files(reply_text: str, written_paths: list, t0: float,
 # Hạ khối điều khiển xuống chữ cho kênh không phải web
 # ============================================================
 # Javis nhúng khối điều khiển dạng HTML comment ở cuối câu trả lời cho dashboard
-# đọc (hiện chỉ còn JAVIS_ASK - vẽ nút lựa chọn). Kênh chữ thuần như Telegram không
+# đọc (JAVIS_ASK vẽ nút lựa chọn, JAVIS_CARD vẽ biểu đồ, ô số, nút). Kênh chữ thuần như Telegram không
 # hiểu mấy khối này, mà md_to_mdv2 chỉ escape chứ không bóc, nên không lọc là người
 # dùng nhìn thấy nguyên cụm "<\!\-\- JAVIS\_ASK: ...".
 # Regex để CHUNG cho mọi JAVIS_*, không liệt kê từng tên: khối lạ (vd JAVIS_METRICS
@@ -615,6 +623,11 @@ def strip_control_blocks(text: str) -> str:
     def _sub(m):
         if m.group(1) == "ASK":
             t = _ask_to_text(m.group(2))
+            return ("\n\n" + t) if t else ""
+        if m.group(1) == "CARD":
+            # 26.10.175: biểu đồ / ô số / nút của dashboard; kênh chữ nhận bản chữ.
+            import chat_cards
+            t = chat_cards.card_to_text(m.group(2))
             return ("\n\n" + t) if t else ""
         return ""
 
