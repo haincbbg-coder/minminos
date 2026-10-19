@@ -486,6 +486,11 @@ GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile"
 # Grok mà không đụng điều khoản gói thuê bao.
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 XAI_DEFAULT_MODEL = "grok-4"
+# Meta Muse qua Meta Model API (26.10.169): OpenAI-compatible, Bearer key, trả theo lượng dùng.
+# KHÁC gói Muse Code (thuê bao, binary `muse`). Tier "contributor" rẻ 10 lần nhưng Meta huấn
+# luyện trên dữ liệu gửi lên: KHÔNG đặt mặc định, chủ tự chọn nếu muốn.
+META_URL = "https://api.meta.ai/v1/chat/completions"
+META_DEFAULT_MODEL = "muse-spark-1.3"
 
 # Ollama - model chạy NGAY TRÊN MÁY người dùng. Khác mọi provider trên ở hai điểm, và cả hai
 # đều ăn vào cách viết mã chứ không chỉ là cấu hình:
@@ -696,6 +701,13 @@ def _xai_is_reasoning(model):
     """xAI: dòng grok-3-mini / grok-4 nhận reasoning_effort (low|high); bản non-reasoning thì không."""
     m = (model or "").lower()
     return "mini" in m or ("grok-4" in m and "non-reasoning" not in m)
+
+
+async def meta_stream(api_key, model, messages, reasoning="off"):
+    """Meta Muse API (provider 'meta') - nhánh không tool. Muse Spark nhận reasoning_effort."""
+    async for ev in _openai_compat_stream(META_URL, "Meta Muse", api_key, model or META_DEFAULT_MODEL,
+                                          messages, reasoning, True):
+        yield ev
 
 
 async def xai_stream(api_key, model, messages, reasoning="off"):
@@ -921,6 +933,7 @@ async def single_tool_plan(provider, api_key, model, messages, reasoning, tool_s
         "openai": (OPENAI_URL, model or "gpt-4o-mini"),
         "groq": (GROQ_URL, model or GROQ_DEFAULT_MODEL),
         "xai": (XAI_URL, model or XAI_DEFAULT_MODEL),
+        "meta": (META_URL, model or META_DEFAULT_MODEL),
         "gemini": (GEMINI_URL, model or "gemini-2.5-flash"),
         "openrouter": (OPENROUTER_URL, model or "openai/gpt-4o-mini"),
         "ollama": (OLLAMA_URL, model),
@@ -1870,6 +1883,17 @@ async def openai_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools, m
         extra["reasoning_effort"] = api_effort(reasoning)
     yield {"type": "meta", "model": model}
     async for ev in _cc_tool_loop(OPENAI_URL, headers, model or "gpt-4o-mini", messages, mcp_tools, mcp_route, extra, "OpenAI"):
+        yield ev
+
+
+async def meta_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools, mcp_route):
+    """Meta Muse API + vòng tool-calling MCP (OpenAI-compat, tool song song, dùng _cc_tool_loop)."""
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    extra = {}
+    if reasoning not in (None, "", "off"):
+        extra["reasoning_effort"] = api_effort(reasoning)
+    yield {"type": "meta", "model": model}
+    async for ev in _cc_tool_loop(META_URL, headers, model or META_DEFAULT_MODEL, messages, mcp_tools, mcp_route, extra, "Meta Muse"):
         yield ev
 
 

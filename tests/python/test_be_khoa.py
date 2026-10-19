@@ -109,6 +109,11 @@ check("xai: grok-3-mini và grok-4 nhận reasoning, bản non-reasoning thì kh
       engine._xai_is_reasoning("grok-3-mini") and engine._xai_is_reasoning("grok-4") and not engine._xai_is_reasoning("grok-4-fast-non-reasoning"))
 
 
+# ---------- 26.10.170: Meta Muse API ----------
+check("meta có bể khoá và là nhà API của việc nền", "meta" in bk.API_CO_BE and "meta" in _ax.API_PROVIDERS and _ax._KEY_FIELD.get("meta") == "meta_api_key")
+check("engine có meta_stream/meta_chat_with_mcp trỏ api.meta.ai", hasattr(engine, "meta_stream") and hasattr(engine, "meta_chat_with_mcp") and engine.META_URL == "https://api.meta.ai/v1/chat/completions")
+
+
 if fails:
     print("ĐỎ", len(fails), fails)
     sys.exit(1)

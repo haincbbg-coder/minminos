@@ -24,7 +24,7 @@ import threading
 import time
 from typing import Iterable, Optional
 
-API_CO_BE = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "ollama", "openai-compat")
+API_CO_BE = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat")
 
 # Nghỉ bao lâu theo loại lỗi (giây). 429: ít nhất một cửa sổ hạn mức ngắn; sai khoá thì nghỉ
 # lâu để không đập mãi vào tường, nhưng không vĩnh viễn (chủ có thể vừa nạp tiền).
