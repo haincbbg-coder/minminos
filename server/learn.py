@@ -1480,9 +1480,9 @@ class LearnFeature:
             # commit không -a → file dirty khác như conversations/loop-log không bị cuốn vào).
             written_paths = sorted(set(written_paths))
             if written_paths:
-                bad = git_brain.paths_within(written_paths, ALLOWED_WRITE_PREFIXES)
+                bad = git_brain.paths_within(written_paths, self._scope_cho_phep(root, mem_dir, self._wiki_dir(brain)))
                 if bad:
-                    git_brain.hard_reset_paths(root, bad)   # an toàn: đây là file DO ENGINE vừa ghi
+                    git_brain.hard_reset_paths(root, bad)   # chỉ khôi phục file đã có trong lịch sử, không xoá file chưa commit
                     rep["blocked"].append(f"bỏ {len(bad)} path ngoài scope: {bad[:3]}")
                 safe = [p for p in written_paths if p not in bad]
                 if safe:
@@ -1500,6 +1500,25 @@ class LearnFeature:
             return rep
         finally:
             lock.release()
+
+    @staticmethod
+    def _scope_cho_phep(root, *dirs) -> List[str]:
+        """Các tiền tố được ghi: danh sách cố định cộng thư mục memory và wiki THẬT của brain này.
+
+        26.10.171 (học Javis 0.217.0; bố thấy MinMin "quên" sau lượt học). Danh sách cố định chỉ có "Wiki" viết hoa,
+        trong khi brain tạo mới dùng `wiki/` thường (và `07 - Wiki/` cũng khớp bộ tìm thư mục). Mọi đường dẫn
+        `wiki/...` bị coi là ngoài phạm vi và bị dọn, kể cả trang chat vừa tạo. Lấy đúng thư mục đã ghi thì không lệch."""
+        out = list(ALLOWED_WRITE_PREFIXES)
+        for d in dirs:
+            if not d:
+                continue
+            try:
+                rel = str(Path(d).resolve().relative_to(Path(root).resolve())).replace("\\", "/")
+            except (ValueError, OSError):
+                continue
+            if rel and rel != "." and rel not in out:
+                out.append(rel)
+        return out
 
     # ── merger cho file append-only (model KHÔNG được ghi trực tiếp) ──
     def _merge_memory_index(self, brain, slug, title, hook, written, root):
