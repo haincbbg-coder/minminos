@@ -4,6 +4,7 @@
   const R = window.MinMinFileRules;
   let db, owner = '', items = [], selected = new Set(), panel, launcher, list, status, busy = false;
   let pdfLoading;
+  let workQueue=Promise.resolve();
   let thumbURLs=[];
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('minmin-file-shelf') : null;
   function el(tag, text, cls) {
@@ -47,12 +48,15 @@
     });
   }
   function report(text) { if(status) status.textContent = text; const note=document.querySelector('.mm-file-dialog[open] .mm-note');if(note)note.textContent=text; }
-  async function task(fn) {
-    if (busy) return;
-    busy = true; report('Đang xử lý…'); render();
-    try { await auth(); await fn(); }
-    catch(e) { report(e.message || 'Không xử lý được file.'); }
-    finally { busy = false; render(); }
+  function task(fn) {
+    // Preserve rapid additions from different inbox messages; never silently drop a click.
+    workQueue=workQueue.then(async()=>{
+      busy = true; report('Đang xử lý…'); render();
+      try { await auth(); await fn(); }
+      catch(e) { report(e.message || 'Không xử lý được file.'); }
+      finally { busy = false; render(); }
+    });
+    return workQueue;
   }
   async function add(blob, name, source) {
     R.validate([],blob);
@@ -206,6 +210,7 @@
     });
     panel.querySelector('.mm-shelf-count').textContent=`Đã chọn ${selected.size}/${items.length} · Gộp theo thứ tự trong khay`;
     panel.querySelectorAll('button').forEach(b=>{b.disabled=busy;});
+    document.querySelectorAll('.mm-file-dialog .mm-primary').forEach(b=>{b.disabled=busy;});
   }
   async function open() { await auth();panel.hidden=false;launcher.setAttribute('aria-expanded','true');await store(); }
   function init() {
