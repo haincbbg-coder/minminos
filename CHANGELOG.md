@@ -1,3 +1,7 @@
+## 26.10.177 — 2026-10-19
+
+- Đang phát triển: khay làm việc cho ảnh và tài liệu.
+
 # Nhật ký cập nhật
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
@@ -1005,3 +1009,4 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Cải thiện
 - **Đánh số phiên bản mới theo lịch**, bắt đầu từ 26.10.1. Nhật ký các bản cũ đã dọn.
 - Thanh bên gọn hơn: ẩn Kho tài liệu và nhóm Xưởng code (các trang vẫn còn, không mất dữ liệu).
+
