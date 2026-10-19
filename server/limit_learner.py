@@ -309,6 +309,11 @@ _SUB_PATTERNS: tuple[tuple[str, str, str, re.Pattern], ...] = (
     ("gemini_daily", "gemini-cli", "ngày",
      re.compile(r"exhausted\s+your\s+daily\s+quota|daily\s+(?:quota|limit)\s+(?:limit\s+)?"
                 r"(?:reached|exceeded)", re.I)),
+    # Muse Code CLI (gói Meta): câu chữ CHƯA đo trên máy thật, mẫu cố ý hẹp quanh "limit cho
+    # gói/thuê bao" để không bắt nhầm 429 của một API key thuần. Engine để rỗng, hint quyết.
+    ("muse_plan", "", "",
+     re.compile(r"(?:plan|subscription)\s+limit\s+(?:reached|exceeded)"
+                r"|quota\s+(?:reached|exceeded)\s+for\s+your\s+(?:plan|subscription)", re.I)),
     ("gemini_quota", "gemini-cli", "",
      re.compile(r"quota\s+exceeded\s+for\s+quota\s+metric|resource[_\s]has[_\s]been[_\s]exhausted"
                 r"|RESOURCE_EXHAUSTED", re.I)),
@@ -366,6 +371,7 @@ ENGINE_HINT_BY_PROVIDER = {
     "anthropic-cli": "claude-code",
     "openai-oauth": "codex",
     "grok-cli": "grok-cli",
+    "muse-cli": "muse-cli",
     "antigravity-cli": "antigravity-cli",
 }
 

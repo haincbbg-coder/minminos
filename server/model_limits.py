@@ -154,6 +154,7 @@ SUBSCRIPTION_LABEL = {
     "codex": "gói ChatGPT (Codex)",
     "antigravity-cli": "gói Google (Antigravity CLI)",
     "grok-cli": "gói xAI (SuperGrok / X Premium+)",
+    "muse-cli": "gói Meta Muse Code",
 }
 
 

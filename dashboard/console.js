@@ -4064,6 +4064,35 @@
           </div>
         </div>`;
       }
+      if (p.id === "muse-cli") {
+        // Bộ não thứ 15: Meta Muse Code CLI (binary `muse`), chạy gói thuê bao Muse Code. Cùng
+        // khuôn thẻ Grok: nút Đăng nhập mở `muse` trong pty trên máy chủ, bóc link + mã đưa lên
+        // đây; MinMin KHÔNG giữ token. JSONL của `muse exec` chưa có tài liệu nên nút Kiểm tra
+        // lại hiện cả sự kiện thô để chủ dán lại khi bảng dịch lệch.
+        const st = on
+          ? t("models.st_logged_in") + (p.account ? " · " + esc(p.account) : "")
+            + (p.plan ? " · " + esc(p.plan) : "") + " · " + p.models.length + " model"
+          : (p.cli_found ? t("models.st_cli_no_login") : t("models.st_no_cli", { ten: "Muse Code CLI" }));
+        return `<div class="prov-card ${p.is_main ? "main" : ""}">
+          ${provHead(p, on, "MCP/skill", st)}
+          <div class="prov-note">${esc(t("models.muse_note"))}</div>
+          <div class="prov-note">${esc(t("models.muse_contributor"))}</div>
+          <div class="prov-note warn">${WARN_ICON} ${esc(t("models.muse_bg_warn"))}</div>
+          ${cliWarn("muse")}
+          ${p.cli_found ? "" : `<div class="prov-steps">
+            <div>${esc(t("models.cli_install"))}<br><code>${esc(p.cai_lenh || "")}</code></div>
+          </div>`}
+          <div id="museBox" class="prov-steps" style="display:none"></div>
+          <div class="prov-action" style="flex-wrap:wrap">
+            ${on
+              ? `<button class="gcard-btn ghost" data-musecheck="1">${esc(t("qs.recheck"))}</button>
+                 <button class="gcard-btn ghost" data-musedisc="1">${esc(t("models.disconnect"))}</button>`
+              : `<button class="gcard-btn" data-muselogin="1">${esc(t("auth.submit"))}</button>
+                 <button class="gcard-btn ghost" data-musecheck="1">${esc(t("qs.recheck"))}</button>`}
+            <span id="museMsg" class="gcard-meta" style="margin-left:10px;flex:1;min-width:200px">${on ? "" : esc(p.auth_error || "")}</span>
+          </div>
+        </div>`;
+      }
       if (p.id === "antigravity-cli") {
         // Bộ não thứ 10. Không có nút "Đăng nhập" ở đây và đó là quyết định có lý do: đăng nhập
         // của `agy` là một giao diện bàn phím trong terminal, token thì nằm trong keyring hệ
@@ -4167,6 +4196,7 @@
         <div class="gcard current" style="max-width:540px">
           <div class="gcard-top"><span class="gcard-name">${esc(main.model || "-")}</span><span class="gcard-tag">${esc(mainP.label || main.provider || "")}</span></div>
           <div class="gcard-meta">${esc(mainP.id === "grok-cli" ? t("models.main_grok")
+            : mainP.id === "muse-cli" ? t("models.main_muse")
             : mainP.id === "antigravity-cli" ? t("models.main_agy")
             : mainP.kind === "cli" ? t("models.main_cli")
             : mainP.kind === "oauth" ? t("models.main_codex")
@@ -4729,6 +4759,123 @@
                ? `<br>${esc(t("models.diag_keys"))} <code>${esc(cd.khoa_cap_cao.slice(0, 20).join(", "))}</code>` : "")
             + (cd.nhat_ky && cd.nhat_ky.length
                ? `<br>${esc(t("models.diag_last"))}<br><code style="white-space:pre-wrap">${esc(cd.nhat_ky.slice(-8).join("\n"))}</code>` : "")
+            + `</div>`;
+        }
+      }
+    };
+    // ---- Muse Code CLI: đăng nhập trình duyệt (link + mã) ngay trên trang, như Grok ----
+    const mul = el.querySelector("[data-muselogin]");
+    if (mul) mul.onclick = async () => {
+      const msg = el.querySelector("#museMsg"), box = el.querySelector("#museBox");
+      mul.disabled = true; const cu = mul.textContent; mul.textContent = t("models.opening");
+      if (msg) msg.textContent = t("models.muse_ask");
+      let r = null;
+      try { r = await (await fetch("/muse/login-start", { method: "POST" })).json(); }
+      catch (e) { r = { ok: false, error: t("common.net_err") }; }
+      mul.disabled = false; mul.textContent = cu;
+      if (!r || !r.ok) {
+        if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.cant_open"));
+        // Bóc hụt thì hiện đuôi output thô + cách tự gõ, không để người dùng đoán.
+        if (box && r && r.nhat_ky && r.nhat_ky.length) {
+          box.style.display = "";
+          box.innerHTML = `<div class="gcard-meta">${esc(t("models.muse_manual"))}<br><code style="white-space:pre-wrap">${esc(r.nhat_ky.slice(-8).join("\n"))}</code></div>`;
+        }
+        return;
+      }
+      if (r.xong) { _daHoiModel.delete("muse-cli"); renderModelsCloudTab(el); return; }
+      if (box) {
+        box.style.display = "";
+        box.innerHTML = `<div>${esc(t("models.grok_open"))}<br><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a></div>`
+          + (r.code ? `<div>${esc(t("models.grok_code"))} <code>${esc(r.code)}</code></div>` : "")
+          + `<div>${esc(t("models.grok_back"))}</div>`;
+      }
+      if (msg) msg.textContent = t("models.wait_browser");
+      const veLogM = (d, xong) => {
+        if (!box || !d || !d.nhat_ky || !d.nhat_ky.length) return;
+        const dong = d.nhat_ky.filter(x => !/^\[/.test(x));
+        const cuoi = dong.length ? dong[dong.length - 1] : "";
+        let h = box.querySelector("#museLog");
+        if (!h) {
+          h = document.createElement("div");
+          h.id = "museLog"; h.className = "gcard-meta"; h.style.marginTop = "6px";
+          box.appendChild(h);
+        }
+        h.innerHTML = xong
+          ? `${esc(t("models.muse_log"))}<br><code style="white-space:pre-wrap">${esc(d.nhat_ky.slice(-8).join("\n"))}</code>`
+          : (cuoi ? `Muse CLI: <code>${esc(cuoi.slice(0, 160))}</code>` : "");
+      };
+      const hanM = Date.now() + 300000;
+      const quayM = async () => {
+        let d = null;
+        try { d = await (await fetch("/muse/login-poll")).json(); } catch (e) {}
+        if (d && d.connected) { _daHoiModel.delete("muse-cli"); renderModelsCloudTab(el); return; }
+        if (Date.now() > hanM) {
+          if (msg) msg.innerHTML = Icons.warn(t("models.timeout_login"));
+          veLogM(d, true);
+          return;
+        }
+        if (d && !d.dang_cho) {
+          if (msg) msg.innerHTML = Icons.warn(d.error || t("models.login_incomplete"));
+          veLogM(d, true);
+          return;
+        }
+        veLogM(d, false);
+        setTimeout(quayM, 2000);
+      };
+      setTimeout(quayM, 2000);
+    };
+    const mud = el.querySelector("[data-musedisc]");
+    if (mud) mud.onclick = async () => {
+      mud.disabled = true; mud.textContent = t("models.disconnecting");
+      try { await fetch("/muse/logout", { method: "POST" }); } catch (e) {}
+      _daHoiModel.delete("muse-cli");
+      renderModelsCloudTab(el);
+    };
+    const muc = el.querySelector("[data-musecheck]");
+    if (muc) muc.onclick = async () => {
+      const msg = el.querySelector("#museMsg");
+      muc.disabled = true; const cu4 = muc.textContent; muc.textContent = t("models.trying");
+      if (msg) msg.textContent = t("models.testing");
+      let r = null;
+      const _br3 = window.currentBrainPath ? currentBrainPath() : "brain";
+      try { r = await (await fetch(`/muse/check?brain=${encodeURIComponent(_br3)}`,
+                                   { method: "POST" })).json(); }
+      catch (e) { r = { ok: false, error: t("common.net_err") }; }
+      muc.disabled = false; muc.textContent = cu4;
+      const mcpTxt3 = (r && r.mcp)
+        ? (r.mcp.co_javis ? " · " + esc(t("models.mcp_ok"))
+           : (r.mcp.hub_bat === false ? " · " + esc(t("models.mcp_off"))
+              : " · <b>" + esc(t("models.mcp_fail")) + "</b>"))
+        : "";
+      const box3 = el.querySelector("#museBox");
+      // Sự kiện thô LUÔN hiện khi có (kể cả lúc ok): sơ đồ JSONL của `muse exec` chưa có tài
+      // liệu, đây là thứ chủ repo cần dán lại để sửa bảng dịch.
+      const veTho = (cd) => {
+        const tho = (r && r.su_kien_tho) || (cd && cd.su_kien_tho) || [];
+        return tho.length
+          ? `<br>${esc(t("models.muse_raw"))}<br><code style="white-space:pre-wrap">${esc(tho.slice(-12).join("\n"))}</code>` : "";
+      };
+      if (r && r.ok) {
+        if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.works")) + mcpTxt3;
+        if (box3 && veTho(r.chan_doan)) { box3.style.display = ""; box3.innerHTML = `<div class="gcard-meta">${veTho(r.chan_doan)}</div>`; }
+        _daHoiModel.delete("muse-cli");
+        setTimeout(() => renderModelsCloudTab(el), 1500);
+      } else if (msg) {
+        msg.innerHTML = Icons.warn((r && r.error) || t("models.not_works")) + mcpTxt3;
+        const cd = r && r.chan_doan;
+        if (cd && box3) {
+          box3.style.display = "";
+          const fs = (cd.files || []).map(x => x.ten).join(", ") || t("models.diag_empty");
+          box3.innerHTML = `<div class="gcard-meta">${esc(t("models.diag_intro"))}<br>`
+            + `binary <code>${esc(cd.cli_path || t("models.diag_missing"))}</code><br>`
+            + `${esc(t("models.diag_dir"))} <code>${esc(cd.home || "")}</code> - ${esc(cd.home_ton_tai ? t("models.diag_yes") : t("models.diag_no_have"))}<br>`
+            + `${esc(t("models.diag_files"))} <code>${esc(fs)}</code><br>`
+            + `${esc(t("models.diag_token"))} <b>${esc(cd.co_token ? t("models.diag_yes") : t("models.diag_no"))}</b>`
+            + (cd.khoa_cap_cao && cd.khoa_cap_cao.length
+               ? `<br>${esc(t("models.diag_keys"))} <code>${esc(cd.khoa_cap_cao.slice(0, 20).join(", "))}</code>` : "")
+            + (cd.nhat_ky && cd.nhat_ky.length
+               ? `<br>${esc(t("models.diag_last"))}<br><code style="white-space:pre-wrap">${esc(cd.nhat_ky.slice(-8).join("\n"))}</code>` : "")
+            + veTho(cd)
             + `</div>`;
         }
       }

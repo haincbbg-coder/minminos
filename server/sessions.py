@@ -341,6 +341,7 @@ _NEN_TANG = (
     (("codex", "openai", "openai-oauth", "chatgpt"), "ChatGPT"),
     (("gemini", "google", "antigravity-cli", "antigravity"), "Gemini"),
     (("grok-cli", "grok", "xai"), "Grok"),
+    (("muse-cli", "muse"), "Meta"),
 )
 
 
@@ -434,6 +435,9 @@ class SessionStore:
                               # chung một cột là lượt sau đưa id của engine này cho engine kia
                               # resume, và nó nối vào một mạch không tồn tại rồi hỏng câm.
                               ("grok_session_id", "TEXT"),
+                              # Mạch native của Meta Muse Code CLI (`muse exec --session-id`).
+                              # Cột RIÊNG, cùng lý do như hai cột trên.
+                              ("muse_session_id", "TEXT"),
                               # Luồng của engine ChatGPT Web, đã gỡ ở 0.64.20. Cột VẪN khai
                               # báo để DB cũ và DB mới cùng một hình dạng; không ai đọc ghi
                               # nó nữa. Xoá cột SQLite là phải dựng lại cả bảng, không đáng.
@@ -1272,6 +1276,26 @@ class SessionStore:
             (session_id,),
         ))
 
+    def set_muse_session_id(self, session_id: str, muse_id: str) -> None:
+        """Gắn mạch native của Muse Code CLI vào hội thoại để lượt sau `--session-id` đúng chỗ."""
+        if not muse_id:
+            return
+        self._write(lambda c: c.execute(
+            "UPDATE sessions SET muse_session_id = ?, updated_at = ? WHERE id = ?",
+            (muse_id, time.time(), session_id),
+        ))
+
+    def get_muse_session_id(self, session_id: str) -> str:
+        row = self.get_session(session_id) or {}
+        return str(row.get("muse_session_id") or "")
+
+    def clear_muse_session_id(self, session_id: str) -> None:
+        self._write(lambda c: c.execute(
+            "UPDATE sessions SET muse_session_id = NULL "
+            "WHERE id = ? AND muse_session_id IS NOT NULL",
+            (session_id,),
+        ))
+
     # ── mạch native của các engine giữ phiên ──
     #
     # Nhãn engine -> cột giữ mạch. Engine KHÔNG có mặt ở bảng này (Antigravity CLI và mọi
@@ -1280,7 +1304,8 @@ class SessionStore:
     # một lệnh clear nữa vào main.py - đó chính là cách bảng này bị bỏ sót hai engine.
     _MACH_NATIVE = {"cli": "cli_session_id",
                     "codex": "codex_thread_id",
-                    "grok-cli": "grok_session_id"}
+                    "grok-cli": "grok_session_id",
+                    "muse-cli": "muse_session_id"}
 
     def clear_native_threads(self, session_id: str, keep: str = "") -> List[str]:
         """Vô hiệu mạch native của MỌI engine, TRỪ engine `keep` đang chạy lượt này.
