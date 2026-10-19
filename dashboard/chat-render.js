@@ -594,10 +594,11 @@
   }
 
   function _mdToHtmlThan(raw) {
-    raw = visibleMarkdown(raw);
-
     var ph = [];
     function put(html) { ph.push(html); return OPEN + (ph.length - 1) + CLOSE; }
+    // 26.10.175: khoi JAVIS_CARD (bieu do, o so, nut) duoc ve tai cho TRUOC khi comment an bi bo (chat-card.js).
+    if (typeof window !== "undefined" && window.JavisCard) raw = window.JavisCard.replaceIn(raw, put);
+    raw = visibleMarkdown(raw);
 
     // 0) frontmatter YAML o DAU file .md -> khoi rieng, KHONG cho sua, giu nguyen van de luu lai
     //    dung tung ky tu. Xem frontmatterHtml ben duoi de biet vi sao day la mot loi mat du lieu.

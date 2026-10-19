@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.175] - 2026-10-19
+### Thêm mới
+- **Biểu đồ, ô số và nút bấm ngay trong khung chat** (cổng từ Javis 0.201.0). Trước đây MinMin không biết mình vẽ được biểu đồ và khung chat cũng không vẽ, nên báo cáo kinh doanh chỉ ra bảng chữ trong khi Javis có biểu đồ T4 đến T9 kèm nút "Tính cả đơn CHI VUI" / "Giữ quy tắc loại CHI VUI". Giờ MinMin được dặn vẽ một biểu đồ khi báo cáo có chuỗi theo kỳ từ 3 điểm trở lên, và khung chat vẽ nó tại chỗ. Telegram và Zalo nhận bản chữ.
+- Số trong thẻ bị bỏ khỏi chân nguồn để khỏi cảnh báo oan (thẻ ghi triệu đồng, bảng ghi tỷ). Số trong câu chữ vẫn được đối chiếu như cũ.
+
 ## [26.10.174] - 2026-10-19
 ### Cải thiện
 - **Trang Dòng lệnh hiện lại trên thanh bên** (nhóm Xưởng code), để cài CLI như `muse` hay `agy` không phải nhờ MinMin mở giúp. Trang Lập trình cùng AI vẫn ẩn như cũ.
