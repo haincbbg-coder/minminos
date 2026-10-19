@@ -162,10 +162,7 @@
     for(const item of chosen) {
       report('Đang ghép: '+item.name);
       if(item.type==='pdf') {
-        let source;
-        try {source=await PDFDocument.load(await item.blob.arrayBuffer());} catch (_) {throw Error('Không đọc được PDF hoặc file có mật khẩu: '+item.name);}
-        count+=source.getPageCount(); if(count>200) throw Error('Mỗi lần gộp tối đa 200 trang.');
-        const pages=await output.copyPages(source,source.getPageIndices());pages.forEach(p=>output.addPage(p));
+        count+=await R.appendPDF(PDFDocument,output,await item.blob.arrayBuffer(),item.name,200-count);
       } else {
         if(++count>200) throw Error('Mỗi lần gộp tối đa 200 trang.');
         const im=await picture(item.blob), c=el('canvas');

@@ -33,7 +33,20 @@
     return {x:(w-cw)/2, y:(h-ch)/2, w:cw, h:ch};
   }
   function nameCopy(name, ext) { return String(name || 'tep').replace(/\.[^.]+$/, '') + '-ban-sao.' + ext; }
-  const api = {MAX_FILE, MAX_TOTAL, MAX_COUNT, kind, safeURL, validate, move, crop, nameCopy};
+  async function appendPDF(PDFDocument, output, bytes, name, remaining) {
+    let source, total, pages;
+    try {
+      source=await PDFDocument.load(bytes);
+      total=source.getPageCount();
+      if(!total) throw Error('empty');
+    } catch (_) { throw Error('Không đọc được PDF hoặc file có mật khẩu: '+name); }
+    if(total>remaining) throw Error('Mỗi lần gộp tối đa 200 trang.');
+    try { pages=await output.copyPages(source,source.getPageIndices()); }
+    catch (_) { throw Error('Không sao chép được trang PDF: '+name); }
+    pages.forEach(p=>output.addPage(p));
+    return total;
+  }
+  const api = {MAX_FILE, MAX_TOTAL, MAX_COUNT, kind, safeURL, validate, move, crop, nameCopy, appendPDF};
   root.MinMinFileRules = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window === 'undefined' ? globalThis : window);
