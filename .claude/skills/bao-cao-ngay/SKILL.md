@@ -1,7 +1,7 @@
 ---
 name: Báo cáo ngày
-description: Báo cáo kinh doanh ngày/tuần từ POS và ads theo công thức gọi cố định, ít bước, số nhất quán giữa các ngày.
-description_en: "Daily/weekly business report from POS and ads with a fixed call recipe: few steps, numbers consistent day to day."
+description: Báo cáo kinh doanh ngày/tuần/tháng/quý từ POS và ads, công thức gọi cố định, số nhất quán, kỳ nào cũng có lãi tạm tính.
+description_en: "Daily to quarterly business report from POS and ads: fixed call recipe, consistent numbers, always an estimated profit."
 group: Operations
 ---
 
@@ -13,6 +13,9 @@ Kích hoạt khi người dùng muốn số liệu kinh doanh của một kỳ n
 "hôm qua bán được bao nhiêu", "tuần này thế nào", "chạy báo cáo", "doanh thu và chi tiêu ads",
 hoặc khi một reminder/loop báo cáo định kỳ chạy. Dùng cho MỌI shop, mọi POS, mọi nền ads đang
 kết nối; không gắn với một cửa hàng cụ thể nào.
+
+"Kết quả kinh doanh tháng/quý", "tháng này lời lãi ra sao" cũng dùng skill này, theo mục
+"Báo cáo tháng, quý, năm" bên dưới.
 
 Không dùng cho câu hỏi phân tích sâu ("vì sao tháng này tụt") - câu đó cần đọc rộng hơn, cứ
 làm như bình thường.
@@ -43,6 +46,25 @@ Kết thúc bằng 1 đến 3 việc cần làm nếu có.
 
 **Bước 3 (chỉ khi cần) - lưu số kỳ đã đóng vào cache.** Kỳ đã đóng (hôm qua, tuần trước) thì
 ghi snapshot vào `05 - Data Cache/` theo quy ước cache; kỳ đang chạy thì không.
+
+## Báo cáo tháng, quý, năm: LUÔN có lãi tạm tính
+
+Báo cáo kỳ dài (tháng, quý, năm, hay "kết quả kinh doanh") không được dừng ở doanh thu và ads.
+Bố cần biết còn lại bao nhiêu, nên báo cáo nào cũng phải có một dòng lãi:
+
+- **Công thức**: lãi tạm tính = doanh thu (ghi rõ lấy doanh thu chốt hay đã nhận) trừ giá vốn
+  ước tính trừ chi phí ads trừ các khoản khác đã có số. Dùng MỘT cách tính cho mọi kỳ để so được.
+- **Giá vốn**: lấy từ bộ nhớ (`memory/facts`: tỷ lệ giá vốn, hoặc giá vốn từng loại hàng). Có
+  thì dùng và ghi nguồn. Chưa có thì KHÔNG được từ chối: tính lãi sau ads (chưa trừ giá vốn)
+  và thêm một dòng nhạy theo 2 đến 3 mức giá vốn, ví dụ 40%, 50%, 60%, ghi rõ đó là giả định.
+- **Luôn nói đó là ước tính**: câu "lãi tạm tính" kèm "giá vốn ước tính X% doanh thu" (hoặc
+  giá vốn từng loại). Đừng ghi một con số lãi trần như thể đã chốt sổ.
+- Hỏi bố đúng một câu ở cuối nếu thiếu tỷ lệ giá vốn ("giá vốn thực tế khoảng bao nhiêu %
+  để lần sau tính đúng?"), rồi lưu vào `memory/facts` khi bố trả lời.
+- **Tổng phải khớp thành phần**: bảng có dòng hoặc cột tổng thì các phần cộng ra đúng tổng.
+  Chênh vì quy tắc loại trừ (đơn CHI VUI, tài khoản ngoài nhóm...) thì ghi một dòng giải thích
+  số chênh, đừng để hai con số gần nhau mà không ai nói vì sao.
+- Từ chối "chưa tính được lãi vì thiếu giá vốn" là lỗi: bộ chấm điểm (`bao_cao`) sẽ trượt câu đó.
 
 ## Lần đầu chưa có công thức
 

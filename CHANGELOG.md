@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.176] - 2026-10-19
+### Cải thiện
+- **Báo cáo kết quả kinh doanh luôn có lãi tạm tính.** Trước đây báo cáo tháng có lãi còn báo cáo quý thì từ chối vì thiếu giá vốn. Giờ báo cáo tháng, quý, năm đều ghi lãi tạm tính theo tỷ lệ giá vốn ước tính và nói rõ đó là ước tính.
+### Thêm mới
+- **Bộ chấm điểm có thêm phép kiểm báo cáo**: bắt báo cáo thiếu lãi, và bảng có dòng hoặc cột tổng không bằng tổng các phần.
+
 ## [26.10.175] - 2026-10-19
 ### Thêm mới
 - **Biểu đồ, ô số và nút bấm ngay trong khung chat** (cổng từ Javis 0.201.0). Trước đây MinMin không biết mình vẽ được biểu đồ và khung chat cũng không vẽ, nên báo cáo kinh doanh chỉ ra bảng chữ trong khi Javis có biểu đồ T4 đến T9 kèm nút "Tính cả đơn CHI VUI" / "Giữ quy tắc loại CHI VUI". Giờ MinMin được dặn vẽ một biểu đồ khi báo cáo có chuỗi theo kỳ từ 3 điểm trở lên, và khung chat vẽ nó tại chỗ. Telegram và Zalo nhận bản chữ.
