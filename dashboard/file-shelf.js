@@ -54,7 +54,7 @@
       busy = true; report('Đang xử lý…'); render();
       try { await auth(); await fn(); }
       catch(e) { report(e.message || 'Không xử lý được file.'); }
-      finally { busy = false; render(); }
+      finally { busy = false; if(status && status.textContent==='Đang xử lý…') report(''); render(); }
     });
     return workQueue;
   }

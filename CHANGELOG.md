@@ -1,14 +1,15 @@
-## 26.10.177 — 2026-10-19
-
-- Khay làm việc giữ bản sao ảnh và tài liệu khi chuyển giữa Hộp thư, Hóa đơn, Bộ chứng từ, hub phụ và các xưởng. Thêm ảnh Zalo, PDF hóa đơn hoặc kéo file từ máy vào khay.
-- Chỉnh ảnh với xem trước: cắt theo tỷ lệ, xoay, đổi kích thước, thêm chú thích; lưu bản sao PNG/JPG/WebP hoặc ghép nhiều ảnh thành một ảnh.
-- Chọn và đổi thứ tự ảnh/PDF để tạo một PDF gộp, xem trước và tải để in. Khay lưu trên trình duyệt đang dùng, không thay đổi file gốc.
-
 # Nhật ký cập nhật
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
+
+## [26.10.177] - 2026-10-19
+### Thêm mới
+
+- Khay làm việc giữ bản sao ảnh và tài liệu khi chuyển giữa Hộp thư, Hóa đơn, Bộ chứng từ, hub phụ và các xưởng. Thêm ảnh Zalo, PDF hóa đơn hoặc kéo file từ máy vào khay.
+- Chỉnh ảnh với xem trước: cắt theo tỷ lệ, xoay, đổi kích thước, thêm chú thích; lưu bản sao PNG/JPG/WebP hoặc ghép nhiều ảnh thành một ảnh.
+- Chọn và đổi thứ tự ảnh/PDF để tạo một PDF gộp, xem trước và tải để in. Khay lưu trên trình duyệt đang dùng, không thay đổi file gốc.
 
 ## [26.10.176] - 2026-10-19
 ### Cải thiện
@@ -1011,4 +1012,3 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Cải thiện
 - **Đánh số phiên bản mới theo lịch**, bắt đầu từ 26.10.1. Nhật ký các bản cũ đã dọn.
 - Thanh bên gọn hơn: ẩn Kho tài liệu và nhóm Xưởng code (các trang vẫn còn, không mất dữ liệu).
-
