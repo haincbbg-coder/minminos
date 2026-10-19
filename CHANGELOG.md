@@ -1,6 +1,8 @@
 ## 26.10.177 — 2026-10-19
 
-- Đang phát triển: khay làm việc cho ảnh và tài liệu.
+- Khay làm việc giữ bản sao ảnh và tài liệu khi chuyển giữa Hộp thư, Hóa đơn, Bộ chứng từ, hub phụ và các xưởng. Thêm ảnh Zalo, PDF hóa đơn hoặc kéo file từ máy vào khay.
+- Chỉnh ảnh với xem trước: cắt theo tỷ lệ, xoay, đổi kích thước, thêm chú thích; lưu bản sao PNG/JPG/WebP hoặc ghép nhiều ảnh thành một ảnh.
+- Chọn và đổi thứ tự ảnh/PDF để tạo một PDF gộp, xem trước và tải để in. Khay lưu trên trình duyệt đang dùng, không thay đổi file gốc.
 
 # Nhật ký cập nhật
 
