@@ -325,7 +325,15 @@
 
       // ---- bàn phím ----
       if (!ong) {
-        tb.term.onData(function (d) { gui(tb, { type: "in", data: d }); });
+        // 26.10.173: bỏ hai dấu "dán có ngoặc" (ESC[200~ ... ESC[201~) trước khi gửi xuống pty.
+        // xterm.js bọc mọi lần dán bằng hai dấu đó khi một chương trình trong shell đã bật chế
+        // độ 2004 mà không tắt lại; bash/readline trong container không giải mã nên lệnh dán
+        // vào thành `$'\E[200~curl': command not found`. Bỏ dấu đi thì dán như gõ tay: mọi
+        // shell đều hiểu, và paste nhiều dòng vẫn chạy từng dòng như trước.
+        tb.term.onData(function (d) {
+          d = String(d).replace(/\x1b\[20[01]~/g, "");
+          if (d) gui(tb, { type: "in", data: d });
+        });
       } else {
         // Chế độ ống KHÔNG có tty driver, nên phần việc của nó (hiện chữ vừa gõ, sửa bằng
         // Backspace, gom một dòng rồi mới gửi) phải làm ở đây.

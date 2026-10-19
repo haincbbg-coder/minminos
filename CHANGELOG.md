@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.173] - 2026-10-19
+### Sửa lỗi
+- **Trang Dòng lệnh: dán lệnh vào chạy được.** Trước đây dán `curl ... | sh` thì bash báo `$'\E[200~curl': command not found`: trình duyệt bọc đoạn dán bằng hai dấu "dán có ngoặc" mà shell trong container không hiểu. Giờ dashboard bỏ hai dấu đó trước khi gửi, dán như gõ tay, mọi shell đều chạy. Đang kẹt ở phiên cũ thì gõ `printf '\033[?2004l'` rồi dán lại.
+
 ## [26.10.172] - 2026-10-19
 ### Thêm mới
 - **Bộ não thứ 15: Meta Muse Code CLI.** Chạy gói thuê bao Muse Code chính chủ (Everyday / High / Power / Maximum) bằng binary `muse` cài một lần, không cần mua API key. Thẻ riêng ở trang Bộ não AI: bấm Đăng nhập là hiện link và mã để mở trên máy bố, chạy trên VPS cũng được; MinMin không giữ token. Đủ MCP, skill, loop, việc nền, chạy lệnh máy, nối mạch hội thoại.
