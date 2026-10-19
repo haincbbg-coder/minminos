@@ -1930,6 +1930,48 @@
       },
       "risk": "Bản này CHỈ ĐỌC: xem mẫu hoá đơn, trạng thái hoá đơn và link xem PDF. MinMin không phát hành, không huỷ, không gửi hoá đơn.\n\nMật khẩu và token được lưu đã mã hoá trong kết nối. Nên dùng tài khoản meInvoice riêng chỉ có quyền xem.",
       "default_perm": "readonly"
+    },
+    {
+      "id": "rea",
+      "name": "REA - Dịch ngược phần mềm",
+      "icon": "cpu",
+      "category": "Lập trình",
+      "description": "Nối agent tới bộ công cụ dịch ngược chạy cục bộ (Reverse Engineer Anything): mổ app JavaScript/Electron, website, .NET, Android APK, và binary gốc (cần Ghidra/Hopper/IDA). Dùng để hiểu một tính năng của app người ta hoạt động thế nào rồi dựng lại cho sản phẩm của mình. Phân tích chạy ngay trên máy, không upload app đi đâu.",
+      "status": "beta",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "rea-agents@latest",
+        "mcp"
+      ],
+      "requires": {
+        "node": ">=22.19"
+      },
+      "isolate_home": true,
+      "auth": {
+        "type": "none",
+        "fields": [
+          {
+            "key": "ghidra_dir",
+            "label": "GHIDRA_INSTALL_DIR (chỉ cần nếu muốn decompile binary gốc .exe/.dll/.so)",
+            "placeholder": "Ví dụ: /opt/ghidra_12.1.4",
+            "env": "GHIDRA_INSTALL_DIR",
+            "optional": true
+          },
+          {
+            "key": "java_home",
+            "label": "JAVA_HOME - JDK 21 64-bit (đi kèm Ghidra)",
+            "placeholder": "Ví dụ: /usr/lib/jvm/java-21",
+            "env": "JAVA_HOME",
+            "optional": true
+          }
+        ],
+        "guide": "HAI CHẾ ĐỘ:\n\n1) Chạy được ngay, không cần cấu hình:\nmổ app JavaScript/Electron, website, .NET (đọc tĩnh) và Android APK (cần JADX trên máy chủ).\nĐây là phần hữu ích nhất để nghiên cứu app Electron/desktop rồi dựng lại tính năng.\n\n2) Decompile binary gốc:\ncài thêm Ghidra 12.1.4 + JDK 21 trên chính máy chủ chạy MinMin, rồi điền 2 ô env ở trên.\n\nNỀN: Node.js 22.19+ có sẵn nơi MinMin spawn npx (image MinMin đã có Node 22).\nLần đầu npx kéo gói nên hơi lâu.\n\nPHÁP LÝ: chỉ dùng cho phần mềm mình sở hữu hoặc được phép, khả năng tương tác, nghiên cứu, giáo dục.\nKhông bẻ khóa, không bypass license, không cheat game.\nHopper/IDA/JEB là công cụ thương mại cần license hợp lệ, REA không cấp license.",
+        "guide_url": "https://github.com/morluto/rea/blob/main/docs/installation.md"
+      },
+      "default_perm": "readonly",
+      "risk": "Connector cho phép agent chạy công cụ phân tích nhị phân cục bộ.\nGiữ ở Chỉ đọc; chỉ bật chạy/ghi mục tiêu khi thực sự cần.\nNên để riêng ở instance của chủ, không đẩy xuống instance học viên trừ khi bán như app cao cấp."
     }
   ]
 }
