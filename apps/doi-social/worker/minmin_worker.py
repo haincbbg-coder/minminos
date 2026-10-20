@@ -578,7 +578,18 @@ def ghep(goc: str, ma: str, ten: str = "") -> int:
 
 
 def _tim_profile(gpm, goi: str):
-    ds = [p for p in gpm.ds_profile() if p["id"] == goi.strip() or p["ten"].strip().lower() == goi.strip().lower()]
+    import unicodedata
+
+    def bo_dau(x: str) -> str:
+        x = unicodedata.normalize("NFD", str(x or "").replace("đ", "d").replace("Đ", "D"))
+        return "".join(c for c in x if unicodedata.category(c) != "Mn").lower().strip()
+    tat_ca = gpm.ds_profile()
+    ds = [p for p in tat_ca if p["id"] == goi.strip() or p["ten"].strip().lower() == goi.strip().lower()]
+    if not ds:   # gõ không dấu / một phần tên, miễn khớp duy nhất
+        ds = [p for p in tat_ca if bo_dau(goi) and bo_dau(goi) in bo_dau(p["ten"])]
+        if len(ds) > 1:
+            log("[thu] Nhiều profile khớp: " + "; ".join(p["ten"] for p in ds[:8]))
+            return None
     return ds[0] if ds else None
 
 
@@ -683,6 +694,12 @@ class MayChuGia:
 
     def ket_qua(self, vid, ok, thong_diep, buoc, anh=b"", dem=None) -> None:
         self.in_ra(f"[MinMin giả] KẾT QUẢ: {'OK' if ok else 'LỖI'} - {thong_diep} - {dem}")
+        if anh:
+            try:
+                (THU_MUC / "thu-mau.png").write_bytes(anh)
+                self.in_ra(f"[MinMin giả] Ảnh màn hình cuối: {THU_MUC / 'thu-mau.png'}")
+            except Exception:
+                pass
 
 
 def thu_mau(mau_id: str, goi: str, ts_json: str = "") -> int:

@@ -482,6 +482,10 @@ i[data-ic] { display: inline-flex; font-style: normal; }
   .toast { max-width: none; }
   .modal-bg { padding: 16px 10px; }
   .modal-b { padding: 16px; }
-  .bub, .cm { max-width: 92%; }
+  .bub, .cm { max-width: 96%; }
+  .an-dt { display: none; }
+  .chat-h .botav, .cm-a > .botav { display: none; }
+  .chat-b { padding: 12px; }
 }
 .tbl .av + div .sub, .tbl .av + div .b { white-space: nowrap; }
+.filters .inp-ic .inp { width: 100%; }
