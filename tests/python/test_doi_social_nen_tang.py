@@ -403,118 +403,127 @@ except Exception as e:
     co_pw = False
     check("có playwright", False, e)
 
+def _mo_trinh(pw):
+    try:
+        return pw.chromium.launch(headless=True)
+    except Exception:
+        # Bản playwright trong .venv có thể mới hơn trình duyệt cài sẵn: dùng thẳng chromium có trong
+        # PLAYWRIGHT_BROWSERS_PATH (KHÔNG chạy `playwright install`). Máy CI không có trình duyệt -> bỏ qua.
+        goc_pw = Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"])
+        exe = sorted(goc_pw.glob("chromium-*/chrome-linux*/chrome")) + \
+            sorted(goc_pw.glob("chromium-*/chrome-win*/chrome.exe"))
+        if not exe:
+            return None
+        return pw.chromium.launch(headless=True, executable_path=str(exe[-1]))
+
+
 if co_pw:
     w.THU_MUC = Path(tempfile.mkdtemp())       # CSV quét không ghi vào thư mục Worker của repo
     with sync_playwright() as pw:
-        try:
-            trinh = pw.chromium.launch(headless=True)
-        except Exception:
-            # Bản playwright trong .venv có thể mới hơn trình duyệt cài sẵn: dùng thẳng chromium có trong
-            # PLAYWRIGHT_BROWSERS_PATH (KHÔNG chạy `playwright install`).
-            goc_pw = Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"])
-            exe = sorted(goc_pw.glob("chromium-*/chrome-linux*/chrome")) + \
-                sorted(goc_pw.glob("chromium-*/chrome-win*/chrome.exe"))
-            trinh = pw.chromium.launch(headless=True, executable_path=str(exe[-1]))
-        ctx = trinh.new_context(viewport={"width": 1280, "height": 900})
-        ctx.route("**/*", _phuc_vu)
+        trinh = _mo_trinh(pw)
+        if trinh is None:
+            print("SKIP các test trình duyệt: không có Chromium trên máy này")
+        if trinh is not None:
+            ctx = trinh.new_context(viewport={"width": 1280, "height": 900})
+            ctx.route("**/*", _phuc_vu)
 
-        def chay(nt, ham, ts, **kw):
-            page = ctx.new_page()
-            nc = NguCanhGia(nt, ts, page=page, **kw)
-            try:
-                kq = ham(nc)
-            except Exception as e:  # noqa: BLE001
-                kq = e
-            ck = page.evaluate("window.__ck || []")
-            page.close()
-            return nc, kq, ck
+            def chay(nt, ham, ts, **kw):
+                page = ctx.new_page()
+                nc = NguCanhGia(nt, ts, page=page, **kw)
+                try:
+                    kq = ham(nc)
+                except Exception as e:  # noqa: BLE001
+                    kq = e
+                ck = page.evaluate("window.__ck || []")
+                page.close()
+                return nc, kq, ck
 
-        def thu(ten, nc, kq, ck, them=lambda nc: True):
-            check(f"{ten} chạy thử: không cú bấm/Enter công khai nào", ck == [], ck)
-            check(f"{ten} chạy thử: không báo thành công giả, có báo 'sẽ ...'",
-                  not any(s["kq"] == "thanh_cong" for s in nc.su) and any(s["kq"] == "thong_tin" for s in nc.su)
-                  and not isinstance(kq, Exception) and them(nc), (kq, nc.su))
+            def thu(ten, nc, kq, ck, them=lambda nc: True):
+                check(f"{ten} chạy thử: không cú bấm/Enter công khai nào", ck == [], ck)
+                check(f"{ten} chạy thử: không báo thành công giả, có báo 'sẽ ...'",
+                      not any(s["kq"] == "thanh_cong" for s in nc.su) and any(s["kq"] == "thong_tin" for s in nc.su)
+                      and not isinstance(kq, Exception) and them(nc), (kq, nc.su))
 
-        # TikTok
-        ts = {"links": ["https://www.tiktok.com/@shop/video/1"], "thich": True, "cau_binh_luan": "Xinh quá\nHay nha",
-              "luu": True}
-        nc, kq, ck = chay("tiktok", ky_nang_tiktok.tt_tuong_tac_video, ts, chay_thu=True)
-        thu("tt_tuong_tac_video", nc, kq, ck, lambda nc: {s["hd"] for s in nc.su} >= {"thich", "binh_luan", "luu"})
-        nc, kq, ck = chay("tiktok", ky_nang_tiktok.tt_tuong_tac_video, ts)
-        ok_hd = {s["hd"] for s in nc.su if s["kq"] == "thanh_cong"}
-        check("tt_tuong_tac_video chạy thật: tim + bình luận + lưu đều đọc lại thấy",
-              ok_hd == {"thich", "binh_luan", "luu"} and "like" in ck and "post" in ck and "save" in ck, (nc.su, ck))
-        check("tt_tuong_tac_video chạy thật: bình luận gửi bằng nút, không Enter", not [c for c in ck if c.startswith("enter")], ck)
-        check("tt_tuong_tac_video: ghi khoá chống lặp có tiền tố tiktok",
-              any(g[1][0].startswith("tiktok:") for g in nc.ten_goi("ghi_da_lam")), nc.ten_goi("ghi_da_lam"))
-        nc, kq, ck = chay("tiktok", ky_nang_tiktok.tt_binh_luan_live,
-                          {"links": ["https://www.tiktok.com/@shop/live"], "cau_binh_luan": "Chào shop\nCho xin giá",
-                           "so_cau": 2, "gian_cach": 10}, chay_thu=True)
-        thu("tt_binh_luan_live", nc, kq, ck)
+            # TikTok
+            ts = {"links": ["https://www.tiktok.com/@shop/video/1"], "thich": True, "cau_binh_luan": "Xinh quá\nHay nha",
+                  "luu": True}
+            nc, kq, ck = chay("tiktok", ky_nang_tiktok.tt_tuong_tac_video, ts, chay_thu=True)
+            thu("tt_tuong_tac_video", nc, kq, ck, lambda nc: {s["hd"] for s in nc.su} >= {"thich", "binh_luan", "luu"})
+            nc, kq, ck = chay("tiktok", ky_nang_tiktok.tt_tuong_tac_video, ts)
+            ok_hd = {s["hd"] for s in nc.su if s["kq"] == "thanh_cong"}
+            check("tt_tuong_tac_video chạy thật: tim + bình luận + lưu đều đọc lại thấy",
+                  ok_hd == {"thich", "binh_luan", "luu"} and "like" in ck and "post" in ck and "save" in ck, (nc.su, ck))
+            check("tt_tuong_tac_video chạy thật: bình luận gửi bằng nút, không Enter", not [c for c in ck if c.startswith("enter")], ck)
+            check("tt_tuong_tac_video: ghi khoá chống lặp có tiền tố tiktok",
+                  any(g[1][0].startswith("tiktok:") for g in nc.ten_goi("ghi_da_lam")), nc.ten_goi("ghi_da_lam"))
+            nc, kq, ck = chay("tiktok", ky_nang_tiktok.tt_binh_luan_live,
+                              {"links": ["https://www.tiktok.com/@shop/live"], "cau_binh_luan": "Chào shop\nCho xin giá",
+                               "so_cau": 2, "gian_cach": 10}, chay_thu=True)
+            thu("tt_binh_luan_live", nc, kq, ck)
 
-        # YouTube (chạy thử: bài kho được trả về, không bấm Xuất bản)
-        nc, kq, ck = chay("youtube", ky_nang_youtube.yt_dang_video_kho, {"kho": "chung", "che_do_hien": "cong_khai"},
-                          chay_thu=True, kho=[{"id": 21, "tieu_de": "Video", "tep_cuc_bo": ["/tmp/a.mp4"]}])
-        thu("yt_dang_video_kho", nc, kq, ck, lambda nc: nc.ten_goi("xong_kho")[0][1][:3] == (21, False, False))
+            # YouTube (chạy thử: bài kho được trả về, không bấm Xuất bản)
+            nc, kq, ck = chay("youtube", ky_nang_youtube.yt_dang_video_kho, {"kho": "chung", "che_do_hien": "cong_khai"},
+                              chay_thu=True, kho=[{"id": 21, "tieu_de": "Video", "tep_cuc_bo": ["/tmp/a.mp4"]}])
+            thu("yt_dang_video_kho", nc, kq, ck, lambda nc: nc.ten_goi("xong_kho")[0][1][:3] == (21, False, False))
 
-        # Threads
-        ts = {"links": ["https://www.threads.com/@ban/post/abc"], "thich": True, "cau_binh_luan": "Hay quá",
-              "dang_lai": True}
-        nc, kq, ck = chay("threads", ky_nang_threads.th_tuong_tac, ts, chay_thu=True)
-        thu("th_tuong_tac", nc, kq, ck, lambda nc: {s["hd"] for s in nc.su} >= {"thich", "binh_luan", "chia_se"})
-        nc, kq, ck = chay("threads", ky_nang_threads.th_tuong_tac,
-                          {"links": ["https://www.threads.com/@ban/post/abc"], "thich": True})
-        check("th_tuong_tac chạy thật: thích xong đọc lại thấy 'Unlike'",
-              ck == ["like"] and [s["kq"] for s in nc.su if s["hd"] == "thich"] == ["thanh_cong"], (nc.su, ck))
-        nc, kq, ck = chay("threads", ky_nang_threads.th_quet_csv,
-                          {"kieu_quet": "tim_kiem", "dau_vao": "kem dưỡng ẩm", "so_dong": 10}, chay_thu=True)
-        csvs = list((w.THU_MUC / "quet").glob("threads_tim_kiem_*.csv"))
-        noi = csvs[0].read_text(encoding="utf-8-sig") if csvs else ""
-        check("th_quet_csv: ghi CSV vào quet/ và báo đường dẫn trong chi_tiet",
-              ck == [] and len(csvs) == 1 and "u1" in noi and "Da mình khô" in noi
-              and any(s["hd"] == "quet" and s["kq"] == "thanh_cong" and str(csvs[0]) in s["ct"] for s in nc.su),
-              (nc.su, noi[:200]))
+            # Threads
+            ts = {"links": ["https://www.threads.com/@ban/post/abc"], "thich": True, "cau_binh_luan": "Hay quá",
+                  "dang_lai": True}
+            nc, kq, ck = chay("threads", ky_nang_threads.th_tuong_tac, ts, chay_thu=True)
+            thu("th_tuong_tac", nc, kq, ck, lambda nc: {s["hd"] for s in nc.su} >= {"thich", "binh_luan", "chia_se"})
+            nc, kq, ck = chay("threads", ky_nang_threads.th_tuong_tac,
+                              {"links": ["https://www.threads.com/@ban/post/abc"], "thich": True})
+            check("th_tuong_tac chạy thật: thích xong đọc lại thấy 'Unlike'",
+                  ck == ["like"] and [s["kq"] for s in nc.su if s["hd"] == "thich"] == ["thanh_cong"], (nc.su, ck))
+            nc, kq, ck = chay("threads", ky_nang_threads.th_quet_csv,
+                              {"kieu_quet": "tim_kiem", "dau_vao": "kem dưỡng ẩm", "so_dong": 10}, chay_thu=True)
+            csvs = list((w.THU_MUC / "quet").glob("threads_tim_kiem_*.csv"))
+            noi = csvs[0].read_text(encoding="utf-8-sig") if csvs else ""
+            check("th_quet_csv: ghi CSV vào quet/ và báo đường dẫn trong chi_tiet",
+                  ck == [] and len(csvs) == 1 and "u1" in noi and "Da mình khô" in noi
+                  and any(s["hd"] == "quet" and s["kq"] == "thanh_cong" and str(csvs[0]) in s["ct"] for s in nc.su),
+                  (nc.su, noi[:200]))
 
-        # Instagram
-        ts = {"links": ["https://www.instagram.com/p/xyz/"], "thich": True, "cau_binh_luan": "Đẹp quá ạ", "luu": True}
-        nc, kq, ck = chay("instagram", ky_nang_instagram.ig_tuong_tac_link, ts, chay_thu=True)
-        thu("ig_tuong_tac_link", nc, kq, ck)
-        nc, kq, ck = chay("instagram", ky_nang_instagram.ig_tuong_tac_link,
-                          {"links": ["https://www.instagram.com/p/xyz/"], "thich": True, "luu": True})
-        check("ig_tuong_tac_link chạy thật: thích đúng nút chính (svg 24), không nhầm nút thích bình luận",
-              "like" in ck and "like_comment" not in ck and
-              {s["hd"] for s in nc.su if s["kq"] == "thanh_cong"} == {"thich", "luu"}, (nc.su, ck))
-        nc, kq, ck = chay("instagram", ky_nang_instagram.ig_dang_nhap_threads, {}, chay_thu=True)
-        check("ig_dang_nhap_threads chạy thử: chỉ kiểm trạng thái, không bấm đăng nhập",
-              ck == [] and "Continue with Instagram" not in str(kq) and "sẽ bấm" in str(kq), (kq, ck))
+            # Instagram
+            ts = {"links": ["https://www.instagram.com/p/xyz/"], "thich": True, "cau_binh_luan": "Đẹp quá ạ", "luu": True}
+            nc, kq, ck = chay("instagram", ky_nang_instagram.ig_tuong_tac_link, ts, chay_thu=True)
+            thu("ig_tuong_tac_link", nc, kq, ck)
+            nc, kq, ck = chay("instagram", ky_nang_instagram.ig_tuong_tac_link,
+                              {"links": ["https://www.instagram.com/p/xyz/"], "thich": True, "luu": True})
+            check("ig_tuong_tac_link chạy thật: thích đúng nút chính (svg 24), không nhầm nút thích bình luận",
+                  "like" in ck and "like_comment" not in ck and
+                  {s["hd"] for s in nc.su if s["kq"] == "thanh_cong"} == {"thich", "luu"}, (nc.su, ck))
+            nc, kq, ck = chay("instagram", ky_nang_instagram.ig_dang_nhap_threads, {}, chay_thu=True)
+            check("ig_dang_nhap_threads chạy thử: chỉ kiểm trạng thái, không bấm đăng nhập",
+                  ck == [] and "Continue with Instagram" not in str(kq) and "sẽ bấm" in str(kq), (kq, ck))
 
-        # X
-        nc, kq, ck = chay("x", ky_nang_x.x_tuong_tac_link, {"links": ["https://x.com/ban/status/1"], "thich": True,
-                                                            "dang_lai": True}, chay_thu=True)
-        thu("x_tuong_tac_link", nc, kq, ck)
-        nc, kq, ck = chay("x", ky_nang_x.x_tuong_tac_link, {"links": ["https://x.com/ban/status/1"], "thich": True})
-        check("x_tuong_tac_link chạy thật: like -> unlike đọc lại thấy",
-              ck == ["like"] and [s["kq"] for s in nc.su] == ["thanh_cong"], (nc.su, ck))
-        nc, kq, ck = chay("x", ky_nang_x.x_tra_loi_tu_khoa, {"tu_khoa": "kem dưỡng ẩm", "san_pham": "sp1",
-                                                             "so_tra_loi": 3, "che_do": "dang_luon"},
-                          chay_thu=True, ai={"noi_dung": "Da khô thì nên chọn kem có ceramide nha."})
-        bn = nc.ten_goi("ban_nhap")
-        check("x_tra_loi_tu_khoa chạy thử: không bấm, chỉ tạo nháp cho bài hợp lệ (bỏ tích xanh + crypto)",
-              ck == [] and len(bn) == 1 and bn[0][2]["noi_dang"] == "x" and bn[0][2]["loai"] == "tra_loi"
-              and bn[0][2]["link_goc"].endswith("/an_nhi/status/111")
-              and any(g[1][0] == "x:tra_loi:111" for g in nc.ten_goi("ghi_da_lam")), (bn, ck, nc.su))
+            # X
+            nc, kq, ck = chay("x", ky_nang_x.x_tuong_tac_link, {"links": ["https://x.com/ban/status/1"], "thich": True,
+                                                                "dang_lai": True}, chay_thu=True)
+            thu("x_tuong_tac_link", nc, kq, ck)
+            nc, kq, ck = chay("x", ky_nang_x.x_tuong_tac_link, {"links": ["https://x.com/ban/status/1"], "thich": True})
+            check("x_tuong_tac_link chạy thật: like -> unlike đọc lại thấy",
+                  ck == ["like"] and [s["kq"] for s in nc.su] == ["thanh_cong"], (nc.su, ck))
+            nc, kq, ck = chay("x", ky_nang_x.x_tra_loi_tu_khoa, {"tu_khoa": "kem dưỡng ẩm", "san_pham": "sp1",
+                                                                 "so_tra_loi": 3, "che_do": "dang_luon"},
+                              chay_thu=True, ai={"noi_dung": "Da khô thì nên chọn kem có ceramide nha."})
+            bn = nc.ten_goi("ban_nhap")
+            check("x_tra_loi_tu_khoa chạy thử: không bấm, chỉ tạo nháp cho bài hợp lệ (bỏ tích xanh + crypto)",
+                  ck == [] and len(bn) == 1 and bn[0][2]["noi_dang"] == "x" and bn[0][2]["loai"] == "tra_loi"
+                  and bn[0][2]["link_goc"].endswith("/an_nhi/status/111")
+                  and any(g[1][0] == "x:tra_loi:111" for g in nc.ten_goi("ghi_da_lam")), (bn, ck, nc.su))
 
-        # Reddit
-        nc, kq, ck = chay("reddit", ky_nang_reddit.rd_tham_gia_sub, {"sub": "r/vietnam, AskVN"}, chay_thu=True)
-        thu("rd_tham_gia_sub", nc, kq, ck,
-            lambda nc: [s["kq"] for s in nc.su] == ["thong_tin", "bo_qua"])
-        nc, kq, ck = chay("reddit", ky_nang_reddit.rd_tham_gia_sub, {"sub": "vietnam, AskVN"})
-        check("rd_tham_gia_sub chạy thật: Join -> subscribed (đọc lại), sub đã vào thì bỏ qua",
-              [s["kq"] for s in nc.su] == ["thanh_cong", "bo_qua"], (nc.su, ck))
-        nc, kq, ck = chay("reddit", ky_nang_reddit.rd_dang_sub, {"sub": "r/vietnam", "tieu_de": "Hỏi về kem dưỡng",
-                                                                 "noi_dung": "Nội dung"}, chay_thu=True)
-        thu("rd_dang_sub", nc, kq, ck)
-        trinh.close()
+            # Reddit
+            nc, kq, ck = chay("reddit", ky_nang_reddit.rd_tham_gia_sub, {"sub": "r/vietnam, AskVN"}, chay_thu=True)
+            thu("rd_tham_gia_sub", nc, kq, ck,
+                lambda nc: [s["kq"] for s in nc.su] == ["thong_tin", "bo_qua"])
+            nc, kq, ck = chay("reddit", ky_nang_reddit.rd_tham_gia_sub, {"sub": "vietnam, AskVN"})
+            check("rd_tham_gia_sub chạy thật: Join -> subscribed (đọc lại), sub đã vào thì bỏ qua",
+                  [s["kq"] for s in nc.su] == ["thanh_cong", "bo_qua"], (nc.su, ck))
+            nc, kq, ck = chay("reddit", ky_nang_reddit.rd_dang_sub, {"sub": "r/vietnam", "tieu_de": "Hỏi về kem dưỡng",
+                                                                     "noi_dung": "Nội dung"}, chay_thu=True)
+            thu("rd_dang_sub", nc, kq, ck)
+            trinh.close()
 
 # ---------------------------------------------------------------- 5. quy ước mã nguồn
 for p in sorted(WORKER.glob("ky_nang_*.py")) + [WORKER / "tien_ich_web.py"]:
