@@ -28,6 +28,8 @@ from ngu_canh import LoiKyNang
 
 THU_MUC = Path(__file__).resolve().parent
 MA_DUNG = ("dang_xuat", "checkpoint", "captcha", "qua_nhanh")
+# Nút gần nhất bao một biểu tượng svg (Threads/Instagram vẽ nút bằng <div role=button><svg aria-label>).
+XP_NUT_CHA = "xpath=ancestor::*[@role='button' or local-name()='button'][1]"
 
 
 # --------------------------------------------------------------------------- tìm phần tử
@@ -67,7 +69,7 @@ def ung_vien(goc, role: str = "button", ten: Iterable[str] = (), nhan: Iterable[
     for x in nhan:
         x = x.replace('"', '\\"')
         out.append(goc.locator(f'[aria-label="{x}"]'))
-        out.append(goc.locator(f'[role="button"]:has(svg[aria-label="{x}"])'))
+        out.append(goc.locator(f'svg[aria-label="{x}"]').locator(XP_NUT_CHA))
     for c in css:
         out.append(goc.locator(c))
     if chu:
@@ -215,13 +217,14 @@ _URL_DANG_XUAT = ("/login", "accounts.google.com", "/i/flow/login", "/accounts/l
 _URL_CHECKPOINT = ("/challenge", "/checkpoint", "/account/access", "/accounts/suspended", "/suspended")
 
 
-def kiem_chan(nc) -> None:
-    """Đọc trang: đăng xuất / checkpoint / captcha / quá nhanh -> raise LoiKyNang(ma=...) ngay."""
+def kiem_chan(nc, cho_phep_trang_dang_nhap: bool = False) -> None:
+    """Đọc trang: đăng xuất / checkpoint / captcha / quá nhanh -> raise LoiKyNang(ma=...) ngay.
+    cho_phep_trang_dang_nhap: kỹ năng cố ý mở trang đăng nhập (ig_dang_nhap_threads)."""
     page = nc.page
     url = (page.url or "").lower()
     if any(x in url for x in _URL_CHECKPOINT):
         raise LoiKyNang(f"{nc.nen_tang}: tài khoản đang bị kiểm tra/khoá ({page.url[:80]})", "checkpoint")
-    if any(x in url for x in _URL_DANG_XUAT):
+    if not cho_phep_trang_dang_nhap and any(x in url for x in _URL_DANG_XUAT):
         raise LoiKyNang(f"{nc.nen_tang}: bị đẩy về trang đăng nhập, nick đã đăng xuất", "dang_xuat")
     try:
         c = page.locator(_CAPTCHA_CSS)
@@ -562,6 +565,7 @@ def noi_dung_ai(nc, dem: Dem, hd: str, *, loai: str, noi_dang: str, link_goc: st
     nc.ghi_da_lam(khoa_lap)
     bao(nc, dem, hd, "thanh_cong", f"{ly_do[:120]} -> \"{noi_dung[:80]}\"", link=link or link_goc,
         san_pham=san_pham_id)
+    nc.nghi_thao_tac()
 
 
 def lay_ai(nc, muc_dich: str, du_lieu: dict, anh: Sequence[bytes] = ()) -> dict:

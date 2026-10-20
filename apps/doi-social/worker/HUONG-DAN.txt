@@ -1,6 +1,6 @@
 MINMIN WORKER - máy ở nhà làm việc cho Đội Social
 
-Cần có: Windows 10/11, GPM Login đang mở, Python 3.11 trở lên.
+Cần có: Windows 10/11, GPM Login đang mở, Python 3.8 trở lên (khuyên 3.11+).
 
 1. GPM Login > Cài đặt > API Gateway: giữ Local API url là http://localhost:9495.
    KHÔNG cần tick "Cho phép remote từ internet" (Worker chạy trên chính máy này).
@@ -11,6 +11,17 @@ Cần có: Windows 10/11, GPM Login đang mở, Python 3.11 trở lên.
    bật lại là làm tiếp.
 
 Kiểm tra nhanh một profile: .venv\Scripts\python minmin_worker.py thu "Tên profile"
+
+Chạy THỬ một mẫu trên profile thật (không cần MinMin, KHÔNG đăng/bấm gì công khai, AI trả câu mẫu):
+  .venv\Scripts\python minmin_worker.py thu-mau fb_nuoi_nick "Tên profile" "{\"phut\": 3}"
+  .venv\Scripts\python minmin_worker.py thu-mau fb_tuong_tac_link "Tên profile" "{\"links\": [\"https://www.facebook.com/...\"], \"binh_luan\": true}"
+  Mọi lời gọi MinMin giả và mọi cú bấm bị chặn được in ra màn hình và worker.log.
+
+Chạy nhiều việc cùng lúc: mở worker.json, thêm dòng "song_song": 2 (tối đa 3), lưu rồi mở lại chay.bat.
+Mỗi việc mở một profile riêng; một nick không bao giờ chạy hai việc một lúc.
+
+Tự cập nhật: khi MinMin có bản Worker mới, Worker làm nốt việc đang chạy, tải bản mới, giữ nguyên
+worker.json và worker.log, rồi tự khởi động lại (chay.bat lo phần này).
 
 Lưu ý:
 - Chỉ điều khiển được profile Chrome (profile Firefox của GPM không có cổng điều khiển).
