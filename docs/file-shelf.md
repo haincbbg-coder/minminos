@@ -50,3 +50,7 @@ mở vòng Cắt tỷ lệ, Xoay, Định dạng, Chiều rộng, Chú thích, L
 nằm cạnh vòng trên máy tính và phía trên trên điện thoại. Không tạo khay hay dialog
 chỉnh ảnh hình chữ nhật. Tải / xem mở vòng tải, xem, sắp thứ tự và bỏ bản sao.
 PDF mở trong trình xem PDF của trình duyệt; hộp chọn file vẫn dùng hộp hệ điều hành.
+
+### Linh thú trong nút công cụ (26.10.181)
+
+Trên dashboard, linh thú đang chạy được đặt trong nút vòng công cụ; giữ nguyên màu, hình dáng và trạng thái. Nhánh Linh thú mở các lối tắt cũ bằng vòng con. Tắt linh thú trả lại biểu tượng công cụ; trang không nạp linh thú vẫn dùng nút công cụ bình thường.
