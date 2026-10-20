@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.185] - 2026-10-20
+
+### Thêm mới
+- **Đội Social** (Kết nối ngoài): nhắn Telegram, MinMin viết bài rồi tự mở profile GPM Login trên máy ở nhà để đăng Facebook như người thật, gõ từng chữ, tải ảnh/video, gửi ảnh chụp kết quả về.
+- Máy ở nhà chạy **MinMin Worker**: ghép với MinMin bằng mã 6 số, tự kết nối ra ngoài nên không phải mở cổng router.
+- Mỗi bài đều hiện bản xem trước trên Telegram với nút **Duyệt / Bỏ**, có giới hạn số bài mỗi ngày và khoảng nghỉ cho từng nick.
+
 ## [26.10.184] - 2026-10-20
 
 ### Thêm mới
