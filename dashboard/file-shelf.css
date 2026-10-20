@@ -68,3 +68,19 @@
 
 .mm-orbit-disc{background:linear-gradient(145deg,#c8c3bd,#e0dcd6)}
 .mm-orbit-sector{background:linear-gradient(140deg,color-mix(in srgb,var(--mm-panel) 78%,white),var(--mm-panel) 65%,color-mix(in srgb,var(--mm-panel) 90%,black))}
+.mm-orbit-sector[aria-pressed=true]{background:var(--mm-primary);color:var(--mm-on-brand)}
+.mm-orbit-label{max-width:27%;white-space:normal;text-align:center;line-height:1.2}
+.mm-orbit-label>span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.mm-orbit-label img{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid currentColor}
+.mm-orbit-head>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%}
+.mm-orbit-footer{display:flex;justify-content:center;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px}
+.mm-orbit-footer button,.mm-orbit-footer input{font:500 12px var(--mm-font);border:1px solid var(--mm-line);border-radius:24px;background:var(--mm-panel);color:var(--mm-text);padding:9px 12px;box-shadow:var(--mm-out-xs)}
+.mm-orbit-footer button{cursor:pointer}.mm-orbit-footer button:disabled{opacity:.4;cursor:default}
+.mm-orbit-footer .mm-primary{background:var(--mm-primary);color:var(--mm-on-brand)}
+.mm-orbit-footer :focus-visible{outline:2px solid var(--mm-link);outline-offset:3px}
+.mm-orbit-preview{position:absolute;right:calc(100% + 24px);bottom:25px;width:min(380px,calc(100vw - 430px));pointer-events:none}
+.mm-orbit-preview[hidden]{display:none}
+.mm-orbit-preview canvas{display:block;max-width:100%;max-height:60vh;width:auto;height:auto;object-fit:contain;margin:auto;filter:drop-shadow(0 8px 16px #0003)}
+.mm-orbit-center strong{letter-spacing:0;font-size:12px}
+@media(max-width:800px){.mm-orbit-preview{right:0;bottom:calc(100% + 12px);width:100%;height:min(24vh,180px)}.mm-orbit-preview canvas{max-height:100%;max-width:100%}.mm-orbit:has(.mm-orbit-preview:not([hidden])){width:min(280px,calc(100vw - 28px));bottom:100px}.mm-orbit:has(.mm-orbit-preview:not([hidden])) .mm-orbit-head{visibility:hidden}}
+@media(max-height:650px){.mm-orbit:has(.mm-orbit-preview:not([hidden])){bottom:50px;width:230px}.mm-orbit-preview{max-height:110px}.mm-orbit-hint{font-size:10px}}
