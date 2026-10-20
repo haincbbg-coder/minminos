@@ -217,5 +217,14 @@ check("đường chuột cong kết thúc đúng đích, không đi thẳng",
       pts[-1] == (400, 300) and len(pts) >= 12
       and max(abs((p[1] - 10) - (p[0] - 10) * 290 / 390) for p in pts) > 3)
 
+# ---- driver GPM: đọc thư mục profile từ dòng lệnh và cổng thật từ DevToolsActivePort
+import may_gpm  # noqa: E402
+check("đọc --user-data-dir có dấu cách trong ngoặc kép",
+      may_gpm.thu_muc_profile('"C:\\GPM\\chrome.exe" --user-data-dir="F:\\1. Data\\abc" --lang=vi') == "F:\\1. Data\\abc"
+      and may_gpm.thu_muc_profile("chrome --user-data-dir=/tmp/p --x") == "/tmp/p")
+tm = Path(tempfile.mkdtemp())
+(tm / "DevToolsActivePort").write_text("51234\n/devtools/browser/abc\n")
+check("đọc cổng thật từ DevToolsActivePort", may_gpm.cong_tu_tep(str(tm)) == 51234 and may_gpm.cong_tu_tep("/khong/co") is None)
+
 print("ALL PASS" if ok else "SOME FAILED")
 sys.exit(0 if ok else 1)

@@ -24,6 +24,8 @@ _MO_O_SOAN = re.compile(r"(Bạn đang nghĩ gì|What's on your mind|Viết gì 
 _ANH_VIDEO = re.compile(r"^(Ảnh/video|Ảnh/Video|Photo/video|Photo/Video)$", re.I)
 _TIEP = re.compile(r"^(Tiếp|Next)$", re.I)
 _DANG = re.compile(r"^(Đăng|Post|Đăng bài)$", re.I)
+_CHUYEN = re.compile(r"^(Chuyển ngay|Chuyển|Switch now|Switch)$", re.I)
+_XAC_NHAN_CHUYEN = re.compile(r"^(Chuyển|Switch|Tiếp tục|Continue)$", re.I)
 
 
 class LoiKyNang(RuntimeError):
@@ -57,6 +59,21 @@ def dang_bai(page, viec: dict, tep_cuc_bo: list, nhat_ky) -> str:
     url = page.url.lower()
     if "/login" in url or "checkpoint" in url or page.locator("input[name='pass']").count():
         raise LoiKyNang("nick chưa đăng nhập Facebook hoặc đang bị checkpoint - mở profile trong GPM kiểm tra tay")
+    if ts.get("noi_dang"):
+        # Trang (kiểu mới) mà nick là quản trị: Facebook mời "Chuyển sang Trang" mới đăng được
+        # với danh nghĩa Trang. Bấm chuyển, đợi tải lại, rồi mở lại đúng nơi đăng.
+        nut = _dau_tien_thay([page.get_by_role("button", name=_CHUYEN)], 4000)
+        if nut:
+            nhat_ky("Chuyển sang danh nghĩa Trang")
+            tay.bam(nut)
+            tay.nghi(1.5, 3.0)
+            xn = _dau_tien_thay([page.get_by_role("dialog").get_by_role("button", name=_XAC_NHAN_CHUYEN)], 4000)
+            if xn:
+                tay.bam(xn)
+            page.wait_for_load_state("domcontentloaded", timeout=60000)
+            tay.nghi(4.0, 7.0)
+            page.goto(noi_dang, wait_until="domcontentloaded", timeout=60000)
+            tay.nghi(2.5, 5.0)
     tay.luot(1)
     page.mouse.wheel(0, -2000)
     tay.nghi(0.8, 1.6)

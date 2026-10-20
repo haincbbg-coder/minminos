@@ -16,9 +16,27 @@
   }
   function gio(t) { return t ? new Date(t * 1000).toLocaleString("vi-VN") : ""; }
 
+  function theUpBai(u) {
+    var c = (u && u.cau_hinh) || {}, lc = (u && u.lan_cuoi) || {};
+    var h = '<div class="card"><div class="dong"><h2>Up bài tự động từ Google Sheet</h2>' +
+      '<button class="btn" id="ub-chay">Chạy ngay</button></div>' +
+      '<p class="nho">Mỗi dòng ở tab HÀNG ĐỢI UP BÀI: Tên Page, Page ID, Link video (TikTok, Facebook, Instagram...), Giá, Mã. ' +
+      'MinMin tự tải video, AI nhận diện đồ và viết content, gửi Telegram để bố duyệt, rồi đăng Reels đúng giờ theo tab CẤU HÌNH PAGE.</p>' +
+      '<label>Link Google Sheet UP BÀI</label><input id="ub-sheet" placeholder="https://docs.google.com/spreadsheets/d/..." value="' +
+      esc(c.sheet_id ? "https://docs.google.com/spreadsheets/d/" + c.sheet_id + "/edit" : "") + '">' +
+      '<div class="chips" style="margin:10px 0"><label><input type="checkbox" id="ub-bat"' + (c.bat ? " checked" : "") +
+      '> Tự chạy 5 phút/lần</label><label><input type="checkbox" id="ub-tu"' + (c.tu_duyet ? " checked" : "") +
+      '> Tự duyệt (đăng không cần bấm Duyệt)</label></div>' +
+      '<p><button class="btn phu" id="ub-luu">Lưu</button></p>';
+    if (lc.luc) h += '<p class="nho">Lượt gần nhất ' + esc(lc.luc) + ': xử lý ' + (lc.xu_ly || 0) + ' dòng, đăng ' + (lc.dang || 0) +
+      ' bài' + ((lc.cho || []).length ? '. Chờ: ' + esc(lc.cho.join("; ")) : "") + (lc.loi ? '. Lỗi: ' + esc(lc.loi) : "") + '</p>';
+    if ((u.nhat_ky || []).length) h += '<details><summary class="nho">Nhật ký</summary><div class="nhat-ky">' + u.nhat_ky.map(esc).join("\n") + '</div></details>';
+    return h + '</div>';
+  }
+
   function render(d) {
     var may = d.may || [], nick = d.nick || [], viec = d.viec || [], gh = d.gioi_han || {};
-    var h = "";
+    var h = theUpBai(d.up_bai || {});
     h += '<div class="card"><div class="dong"><h2>Máy ở nhà</h2><div>' +
          '<button class="btn phu" id="tai">Tải MinMin Worker</button> <button class="btn" id="ma">Tạo mã ghép</button></div></div>';
     h += '<div id="o-ma"></div>';
@@ -74,7 +92,8 @@
     main.innerHTML = h;
   }
 
-  function nap() { return api("/doi-social/trang-thai").then(render).catch(function (e) {
+  function nap() { return Promise.all([api("/doi-social/trang-thai"), api("/up-bai/trang-thai").catch(function () { return {}; })])
+    .then(function (a) { a[0].up_bai = a[1]; render(a[0]); }).catch(function (e) {
     main.innerHTML = '<div class="card">' + esc(e.message) + '</div>'; }); }
 
   main.addEventListener("click", function (e) {
@@ -99,6 +118,19 @@
       api("/doi-social/viec", { method: "POST", body: { nick: document.getElementById("f-nick").value,
         noi_dang: document.getElementById("f-noi").value, noi_dung: document.getElementById("f-nd").value } })
         .then(function (d) { toast("Đã tạo bài #" + d.viec.id + ", chờ duyệt"); nap(); }).catch(function (x) { toast(x.message); });
+      return;
+    }
+    if (b.id === "ub-luu") {
+      api("/up-bai/cau-hinh", { method: "POST", body: { sheet: document.getElementById("ub-sheet").value,
+        bat: document.getElementById("ub-bat").checked, tu_duyet: document.getElementById("ub-tu").checked } })
+        .then(function () { toast("Đã lưu"); nap(); }).catch(function (x) { toast(x.message); });
+      return;
+    }
+    if (b.id === "ub-chay") {
+      b.disabled = true; toast("Đang chạy một lượt Sheet... (tải video và AI viết bài có thể mất vài phút)");
+      api("/up-bai/chay", { method: "POST", body: {} }).then(function (d) { var k = d.ket_qua || {};
+        toast(k.loi ? k.loi : (k.bo_qua || ("Xử lý " + (k.xu_ly || 0) + " dòng, đăng " + (k.dang || 0) + " bài"))); nap(); })
+        .catch(function (x) { toast(x.message); }).finally(function () { b.disabled = false; });
       return;
     }
     if (b.id === "g-luu") {

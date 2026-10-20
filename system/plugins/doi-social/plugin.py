@@ -7,6 +7,8 @@ không cần duyệt), rồi máy nhà mới mở profile GPM và làm.
 """
 from __future__ import annotations
 
+import json
+
 
 def _mods():
     import doi_social
@@ -99,6 +101,37 @@ def _viec(args, ctx):
     return "\n".join(out)
 
 
+async def _up_bai_chay(args, ctx):
+    import routes.up_bai as rub
+    up = rub.may()
+    if not up:
+        return "Up bài từ Google Sheet chưa khởi động trên máy chủ này."
+    cfg = rub.doc_cau_hinh()
+    if not cfg["sheet_id"]:
+        return "Chưa đặt Google Sheet UP BÀI. Vào Kết nối ngoài > Đội Social, dán link Sheet ở thẻ Up bài."
+    dong = int(args.get("dong") or 0) or None
+    kq = await up.chay_mot_vong(chi_dong=dong)
+    if not kq.get("ok"):
+        return f"Không chạy được: {kq.get('loi')}"
+    if kq.get("bo_qua"):
+        return "Vòng trước còn đang chạy, kết quả sẽ tự báo về Telegram."
+    dong_cho = "\n".join(kq.get("cho") or [])
+    return (f"Đã chạy một lượt Sheet UP BÀI: xử lý {kq.get('xu_ly', 0)} dòng mới (AI viết content, gửi Telegram "
+            f"để duyệt), đăng {kq.get('dang', 0)} bài." + (f"\nĐang chờ:\n{dong_cho}" if dong_cho else "")
+            + "\nKết quả từng bài tự gửi về Telegram và ghi ngược vào Sheet.")
+
+
+def _up_bai_trang_thai(args, ctx):
+    import routes.up_bai as rub
+    up = rub.may()
+    cfg = rub.doc_cau_hinh()
+    nk = "\n".join(list(reversed(up.nhat_ky_vong[-15:]))) if up else ""
+    return (f"Sheet: {'đã đặt' if cfg['sheet_id'] else 'CHƯA đặt'} · tự chạy 5 phút/lần: {'BẬT' if cfg['bat'] else 'tắt'}"
+            f" · tự duyệt: {'có' if cfg['tu_duyet'] else 'không, duyệt qua Telegram'}\n"
+            f"Lượt gần nhất: {json.dumps(up.lan_cuoi, ensure_ascii=False) if up and up.lan_cuoi else 'chưa chạy'}"
+            + (f"\nNhật ký:\n{nk}" if nk else ""))
+
+
 def register(ctx):
     ctx.register_tool(
         name="social_nick",
@@ -136,4 +169,18 @@ def register(ctx):
             "trang_thai": {"type": "string", "enum": ["cho_duyet", "cho_chay", "dang_chay", "xong", "loi", "bo"]},
             "limit": {"type": "integer", "description": "Mặc định 10"},
         }},
+    )
+    ctx.register_tool(
+        name="up_bai_chay",
+        description=("Up bài từ Google Sheet UP BÀI ngay: tải video ở các dòng mới, AI nhận diện đồ và viết content "
+                     "theo giá/mã, gửi Telegram để duyệt, đăng Reels các dòng đã duyệt đến giờ. 'dong' = chỉ chạy một dòng "
+                     "(bỏ qua lịch giờ đăng)."),
+        handler=_up_bai_chay, min_mode="full",
+        schema={"type": "object", "properties": {"dong": {"type": "integer", "description": "Số dòng trong Sheet"}}},
+    )
+    ctx.register_tool(
+        name="up_bai_trang_thai",
+        description="Trạng thái Up bài từ Google Sheet: Sheet đã đặt chưa, có tự chạy không, lượt chạy gần nhất và nhật ký.",
+        handler=_up_bai_trang_thai, min_mode="readonly",
+        schema={"type": "object", "properties": {}},
     )

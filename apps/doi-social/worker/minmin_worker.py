@@ -23,7 +23,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PHIEN_BAN = "26.10.185"
+PHIEN_BAN = "26.10.186"
 THU_MUC = Path(__file__).resolve().parent
 CAU_HINH = THU_MUC / "worker.json"
 NHAT_KY = THU_MUC / "worker.log"
@@ -121,12 +121,13 @@ def lam_viec(may_chu: MayChu, gpm, viec: dict) -> None:
             if tep_cuc_bo:
                 nhat_ky(f"Đã tải {len(tep_cuc_bo)} tệp từ MinMin")
             nhat_ky("Mở profile trong GPM Login")
+            gpm.nhat_ky = nhat_ky
             cdp = gpm.mo(viec["nick_id"])
+            nhat_ky(f"Đã kết nối được trình duyệt ({cdp.split('/')[-1] if cdp.startswith('ws') else cdp})")
         except Exception as e:
             may_chu.ket_qua(vid, False, f"không chuẩn bị được: {e}", buoc)
             return
         try:
-            time.sleep(3)
             with sync_playwright() as pw:
                 trinh = pw.chromium.connect_over_cdp(cdp, timeout=60000)
                 ctx = trinh.contexts[0] if trinh.contexts else trinh.new_context()
@@ -161,6 +162,16 @@ def lam_viec(may_chu: MayChu, gpm, viec: dict) -> None:
         log(f"[#{vid}] gửi kết quả lỗi: {e}")
 
 
+def _dau_van_ma() -> tuple:
+    out = []
+    for p in sorted(THU_MUC.glob("*.py")):
+        try:
+            out.append((p.name, p.stat().st_mtime))
+        except OSError:
+            pass
+    return tuple(out)
+
+
 def chay() -> int:
     from may_gpm import GPM, LoiGPM
     ch = doc_cau_hinh()
@@ -172,7 +183,13 @@ def chay() -> int:
     log(f"MinMin Worker {PHIEN_BAN} - máy '{ch.get('ten')}' - MinMin {may_chu.goc}")
     nhip_cuoi = 0.0
     loi_lien = 0
+    ban_dau = _dau_van_ma()
     while True:
+        if _dau_van_ma() != ban_dau:
+            # Có bản Worker mới chép đè (cập nhật từ MinMin hoặc tay): thoát để chay.bat mở lại bằng
+            # code mới. Chỉ kiểm giữa hai việc, không bao giờ cắt ngang một lượt đăng.
+            log("Phát hiện bản Worker mới, khởi động lại...")
+            return 3
         try:
             if time.time() - nhip_cuoi > NHIP_GIAY:
                 try:
@@ -210,27 +227,38 @@ def ghep(goc: str, ma: str, ten: str = "") -> int:
     return 0
 
 
-def thu(ten_profile: str) -> int:
+def thu(goi: str) -> int:
+    """Mở một profile (theo id hoặc tên), vào Facebook, chụp màn hình, đóng. Ghi mọi bước vào worker.log."""
     from may_gpm import GPM
     from playwright.sync_api import sync_playwright
     ch = doc_cau_hinh()
-    gpm = GPM(ch.get("gpm") or "http://127.0.0.1:9495")
-    ds = [p for p in gpm.ds_profile() if p["ten"].strip().lower() == ten_profile.strip().lower()]
+    gpm = GPM(ch.get("gpm") or "http://127.0.0.1:9495", nhat_ky=lambda s: log("[thu] " + s))
+    ds = [p for p in gpm.ds_profile() if p["id"] == goi.strip() or p["ten"].strip().lower() == goi.strip().lower()]
     if not ds:
-        log(f"Không thấy profile '{ten_profile}' trong GPM")
+        log(f"[thu] Không thấy profile '{goi}' trong GPM")
         return 1
-    cdp = gpm.mo(ds[0]["id"])
-    log(f"Đã mở profile, cổng điều khiển {cdp}")
-    time.sleep(3)
-    with sync_playwright() as pw:
-        trinh = pw.chromium.connect_over_cdp(cdp, timeout=60000)
-        page = trinh.contexts[0].new_page()
-        page.goto("https://www.facebook.com/me", wait_until="domcontentloaded", timeout=60000)
-        time.sleep(4)
-        log(f"Trang hiện tại: {page.url}")
-        page.close()
-    gpm.dong(ds[0]["id"])
-    log("Đã đóng profile. Worker điều khiển được GPM trên máy này.")
+    log(f"[thu] Thử profile '{ds[0]['ten']}'")
+    try:
+        cdp = gpm.mo(ds[0]["id"])
+        log(f"[thu] Địa chỉ điều khiển: {cdp}")
+        with sync_playwright() as pw:
+            trinh = pw.chromium.connect_over_cdp(cdp, timeout=60000)
+            ctx = trinh.contexts[0] if trinh.contexts else trinh.new_context()
+            page = ctx.new_page()
+            page.goto("https://www.facebook.com/", wait_until="domcontentloaded", timeout=60000)
+            time.sleep(5)
+            log(f"[thu] Trang hiện tại: {page.url} - tiêu đề: {page.title()}")
+            page.screenshot(path=str(THU_MUC / "thu-ket-noi.png"))
+            log("[thu] Đã chụp thu-ket-noi.png")
+            page.close()
+    except Exception as e:
+        log(f"[thu] LỖI: {type(e).__name__}: {e}")
+        log(traceback.format_exc())
+        return 1
+    finally:
+        time.sleep(2)
+        gpm.dong(ds[0]["id"])
+    log("[thu] XONG: Worker điều khiển được GPM trên máy này.")
     return 0
 
 
