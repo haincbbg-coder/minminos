@@ -227,6 +227,7 @@
     drawCurrent=draw;wheel.hidden=false;launcher.setAttribute('aria-expanded','true');draw();wheelCenter.focus();
   }
   function drawWheel(title,entries,back,centerText='Quay lại') {
+    if(!entries.length)entries=[{label:'Thêm file',icon:'add',hint:'Chọn file từ máy hoặc thả vào vòng',run:()=>fileInput.click()}];
     const focused=disc.contains(document.activeElement)?document.activeElement.getAttribute('aria-label'):null;
     thumbURLs.forEach(url=>URL.revokeObjectURL(url));thumbURLs=[];
     heading.textContent=title;disc.replaceChildren();footer.replaceChildren();
