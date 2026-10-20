@@ -869,7 +869,15 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             return HTMLResponse("<!doctype html><meta charset=utf-8><body style='font-family:system-ui;"
                                 f"max-width:560px;margin:15vh auto;padding:0 20px'><h2>Đội Social</h2>"
                                 f"<p>{html.escape(ly)}</p></body>", status_code=403)
-        return FileResponse(str(WEB_DIR / "index.html"), media_type="text/html",
+        # Gắn số phiên bản MinMin đang chạy vào ?v= của mọi script/css: mỗi bản mới phá cache trình duyệt,
+        # không phụ thuộc người sửa web có nhớ đổi số trong index.html hay không.
+        import re as _re
+        html_goc = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+        try:
+            ver = (APP_DIR.parents[1] / "VERSION").read_text(encoding="utf-8").strip() or "0"
+        except OSError:
+            ver = "0"
+        return HTMLResponse(_re.sub(r"\?v=[0-9A-Za-z._-]+", "?v=" + ver, html_goc),
                             headers={"Cache-Control": "no-cache"})
 
     def _tep_tinh(*phan: str):

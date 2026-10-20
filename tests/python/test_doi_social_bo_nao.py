@@ -121,5 +121,9 @@ rds._DEPS.goi_ai = ai2
 asyncio.run(rds._goi_ai_vai("tra_loi_tin_nhan")("PROMPT-GOC", []))
 check("goi_ai của việc được gắn vai trò ở đầu prompt", nhan2["p"].startswith("VAI TRÒ") and nhan2["p"].endswith("PROMPT-GOC"))
 
+ver = (ROOT / "VERSION").read_text().strip()
+h = cl.get("/apps/doi-social/").text
+check("trang web gắn ?v= theo phiên bản đang chạy (phá cache mỗi bản mới)", f"?v={ver}" in h and h.count("?v=") == h.count(f"?v={ver}"))
+
 print("ALL PASS" if ok else "CÓ LỖI")
 raise SystemExit(0 if ok else 1)
