@@ -310,6 +310,10 @@ def fb_tham_gia_nhom_sp(nc) -> str:
                         ghi_chu="câu hỏi duyệt đòi số điện thoại/email")
         elif kq == "chay_thu" and n.get("_moi"):
             nc.su_kien("vao_nhom", "thong_tin", f"Chạy thử: AI chọn nhóm {ten or link}", nhom=link)
+            try:    # ghi vào Kho group FB ở trạng thái chờ duyệt để chủ xem (không phải thao tác công khai)
+                nc.bao_nhom(link, ten=ten, them_moi=True)
+            except Exception as e:
+                nc.nhat_ky(f"Chưa ghi được nhóm vào kho: {e}")
         nc.nghi_thao_tac()
     if nc.chay_thu:
         return f"Chạy thử: xem {min(len(ung_vien), so * 2)} nhóm, không bấm Tham gia."
