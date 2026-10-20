@@ -122,6 +122,19 @@ def duong_cong(x0: float, y0: float, x1: float, y1: float, rng: random.Random,
     return pts
 
 
+def chon_cau(ds, rng: Optional[random.Random] = None, tranh: Optional[List[str]] = None) -> str:
+    """Chọn ngẫu nhiên một câu (chuỗi nhiều dòng hoặc list), bỏ dòng trống, ưu tiên câu chưa dùng
+    trong `tranh`. Trả "" nếu không có câu nào."""
+    rng = rng or random.Random()
+    if isinstance(ds, str):
+        ds = ds.splitlines()
+    cau = [str(x).strip() for x in (ds or []) if str(x).strip()]
+    if not cau:
+        return ""
+    moi = [c for c in cau if c not in (tranh or [])]
+    return rng.choice(moi or cau)
+
+
 class Nguoi:
     """Bàn tay ảo gắn với một trang Playwright (sync)."""
 
@@ -166,6 +179,49 @@ class Nguoi:
                 kb.insert_text(gt)          # emoji ngoài BMP: một lần chèn, như bộ gõ emoji
             else:
                 kb.type(gt)
+
+    def phim(self, ten: str) -> None:
+        """Nhấn một phím/tổ hợp phím (vd 'Enter', 'Escape', 'Shift+Enter') sau một nhịp ngắn."""
+        time.sleep(self.rng.uniform(0.12, 0.45) / max(0.3, self.toc_do))
+        self.page.keyboard.press(ten)
+
+    def go_binh_luan(self, text: str, ty_le_nham: float = 0.02) -> None:
+        """Như go() nhưng xuống dòng bằng Shift+Enter: trong ô bình luận/tin nhắn, Enter là GỬI."""
+        kb = self.page.keyboard
+        for loai, gt, tre in ke_hoach_go(text, self.rng, ty_le_nham, self.toc_do):
+            time.sleep(tre / 1000.0)
+            if loai == "nghi":
+                continue
+            if loai == "phim":
+                kb.press("Shift+Enter" if gt == "Enter" else gt)
+            elif ord(gt[0]) > 0xFFFF or len(gt) > 1:
+                kb.insert_text(gt)
+            else:
+                kb.type(gt)
+
+    def re_chuot(self, locator, giay: float = 1.5) -> None:
+        """Đưa chuột tới phần tử rồi giữ yên ở đó (để hiện bảng cảm xúc, xem trước video...)."""
+        self.di_toi(locator)
+        time.sleep(max(0.2, giay) * self.rng.uniform(0.85, 1.25) / max(0.3, self.toc_do))
+
+    def luot_doc(self, giay: float) -> None:
+        """Lướt đọc tự nhiên trong khoảng `giay` giây: cuộn từng đoạn dài ngắn khác nhau, dừng đọc,
+        thỉnh thoảng kéo ngược lên xem lại."""
+        han = time.monotonic() + max(0.0, giay) / max(0.3, self.toc_do)
+        while time.monotonic() < han:
+            r = self.rng.random()
+            if r < 0.12:
+                self.page.mouse.wheel(0, -self.rng.uniform(120, 420))
+            elif r < 0.25:
+                for _ in range(self.rng.randint(2, 4)):          # cuộn nhanh vài nấc như lướt qua
+                    self.page.mouse.wheel(0, self.rng.uniform(90, 200))
+                    time.sleep(self.rng.uniform(0.05, 0.15) / max(0.3, self.toc_do))
+            else:
+                self.page.mouse.wheel(0, self.rng.uniform(220, 650))
+            con = han - time.monotonic()
+            if con <= 0:
+                break
+            time.sleep(min(con, self.rng.uniform(1.2, 5.5) / max(0.3, self.toc_do)))
 
     def luot(self, lan: int = 2) -> None:
         """Cuộn xem trang một chút như người đang đọc."""

@@ -36,6 +36,19 @@ KY_NANG = {
     # id kỹ năng -> nhãn người đọc. Worker cũng giữ bảng tương ứng; kỹ năng lạ bị từ chối.
     "fb_dang_bai": "Đăng bài Facebook",
 }
+# 26.10.187: mọi id mẫu trong danh mục cũng là kỹ năng (việc của đợt chạy), cộng hai kỹ năng nội
+# bộ máy chủ tự tạo: đăng một nháp đã duyệt, và gửi một tin Messenger chủ tự gõ.
+KY_NANG_NOI_BO = {"dang_ban_nhap": "Đăng nháp đã duyệt", "fb_gui_tin": "Gửi tin nhắn chủ gõ"}
+
+
+def _nap_ky_nang() -> None:
+    import doi_social_kich_ban as kb
+    for m in kb.MAU:
+        KY_NANG.setdefault(m["id"], m["ten"])
+    KY_NANG.update(KY_NANG_NOI_BO)
+
+
+_nap_ky_nang()
 TRANG_THAI = ("cho_duyet", "cho_chay", "dang_chay", "xong", "loi", "bo")
 DUOI_TEP = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".mov", ".m4v", ".webm"}
 TEP_TOI_DA = 200 * 1024 * 1024          # 200MB mỗi tệp
@@ -45,6 +58,7 @@ MA_SONG = 15 * 60
 HET_GIO_CHAY = 20 * 60                   # một lượt đăng bài thật hiếm khi quá 20 phút
 MAY_ONLINE = 90                          # worker nhịp mỗi ~30s; 90s không thấy = ngoại tuyến
 GIOI_HAN_MAC_DINH = {"bai_moi_ngay": 5, "nghi_phut": 20}
+SONG_SONG_TRAN = 3                       # máy nhà là PC thường: tối đa 3 trình duyệt cùng lúc
 
 _khoa = threading.RLock()
 _goc: Optional[Path] = None
@@ -79,6 +93,19 @@ def mo(thu_muc) -> None:
             CREATE INDEX IF NOT EXISTS viec_tt ON viec(trang_thai, may_id);
             CREATE TABLE IF NOT EXISTS cai_dat(k TEXT PRIMARY KEY, v TEXT);
             """)
+            # 26.10.187: cột mới cho bản đầy đủ. ALTER lặp lại trên kho đã có cột thì báo
+            # "duplicate column" - bỏ qua, nên mo() gọi bao nhiêu lần cũng được.
+            for bang, cot in (("may", "kich_ban TEXT DEFAULT '[]'"), ("may", "song_song INTEGER DEFAULT 1"),
+                              ("viec", "dot_id INTEGER"), ("viec", "chay_thu INTEGER DEFAULT 0"),
+                              ("viec", "ket_qua TEXT DEFAULT '{}'")):
+                try:
+                    c.execute(f"ALTER TABLE {bang} ADD COLUMN {cot}")
+                except sqlite3.OperationalError:
+                    pass
+            c.execute("CREATE INDEX IF NOT EXISTS viec_dot ON viec(dot_id)")
+            c.execute("CREATE INDEX IF NOT EXISTS viec_nick ON viec(nick_id, trang_thai)")
+            import doi_social_v2
+            doi_social_v2.tao_bang(c)
 
 
 def dat_goc_tep(ds: Iterable) -> None:
@@ -177,20 +204,38 @@ def go_may(may_id: str) -> bool:
     with _khoa, _db() as c:
         n = c.execute("DELETE FROM may WHERE id=?", (may_id,)).rowcount
         c.execute("DELETE FROM nick WHERE may_id=?", (may_id,))
+        ids = [r[0] for r in c.execute("SELECT id FROM viec WHERE may_id=? AND trang_thai IN "
+                                       "('cho_duyet','cho_chay','dang_chay')", (may_id,))]
         c.execute("UPDATE viec SET trang_thai='loi', thong_diep='máy đã bị gỡ', xong_luc=? "
                   "WHERE may_id=? AND trang_thai IN ('cho_duyet','cho_chay','dang_chay')",
                   (_bay_gio(), may_id))
+        if ids:
+            import doi_social_v2
+            for vid in ids:
+                doi_social_v2.sau_viec(c, vid)
     return n > 0
 
 
-def nhip(may_id: str, nick_ds=None, driver_ok=None, loi_driver: str = "", phien_ban: str = "") -> None:
-    """Worker báo còn sống, kèm danh sách profile đọc từ GPM (nếu có)."""
+def nhip(may_id: str, nick_ds=None, driver_ok=None, loi_driver: str = "", phien_ban: str = "",
+         kich_ban=None, song_song=None) -> None:
+    """Worker báo còn sống, kèm danh sách profile đọc từ GPM (nếu có). Từ 26.10.187 Worker báo
+    thêm danh sách mẫu nó làm được (`kich_ban`) và số việc chạy song song tối đa."""
     now = _bay_gio()
+    kb_json = None
+    if isinstance(kich_ban, list):
+        kb_json = json.dumps(sorted({str(x)[:60] for x in kich_ban if str(x).strip()})[:300])
+    ss = None
+    if song_song is not None:
+        try:
+            ss = max(1, min(SONG_SONG_TRAN, int(song_song)))
+        except (TypeError, ValueError):
+            ss = None
     with _khoa, _db() as c:
         c.execute("UPDATE may SET nhip_luc=?, driver_ok=COALESCE(?, driver_ok), loi_driver=?, "
-                  "phien_ban=COALESCE(NULLIF(?, ''), phien_ban) WHERE id=?",
+                  "phien_ban=COALESCE(NULLIF(?, ''), phien_ban), kich_ban=COALESCE(?, kich_ban), "
+                  "song_song=COALESCE(?, song_song) WHERE id=?",
                   (now, None if driver_ok is None else int(bool(driver_ok)), str(loi_driver or "")[:300],
-                   str(phien_ban or "")[:20], may_id))
+                   str(phien_ban or "")[:20], kb_json, ss, may_id))
         if nick_ds is not None:
             c.execute("DELETE FROM nick WHERE may_id=?", (may_id,))
             for n in list(nick_ds)[:2000]:
@@ -211,6 +256,10 @@ def ds_may() -> list:
             r.pop("token_bam", None)
             r["online"] = (now - (r.get("nhip_luc") or 0)) < MAY_ONLINE
             r["so_nick"] = c.execute("SELECT COUNT(*) FROM nick WHERE may_id=?", (r["id"],)).fetchone()[0]
+            try:
+                r["kich_ban"] = json.loads(r.get("kich_ban") or "[]")
+            except Exception:
+                r["kich_ban"] = []
     return rows
 
 
@@ -281,6 +330,8 @@ def tao_viec(*, ky_nang: str, nick: str, noi_dung: str = "", tep=None, noi_dang:
     Việt người đọc được nếu thiếu/sai/vượt giới hạn."""
     if ky_nang not in KY_NANG:
         raise ValueError(f"kỹ năng chưa có: {ky_nang}")
+    if ky_nang != "fb_dang_bai":
+        raise ValueError(f"kỹ năng '{ky_nang}' chạy qua Đợt chạy (trang Automation), không tạo việc lẻ ở đây")
     noi_dung = str(noi_dung or "").strip()
     if len(noi_dung) > CHU_TOI_DA:
         raise ValueError(f"nội dung quá dài (tối đa {CHU_TOI_DA} ký tự)")
@@ -328,7 +379,7 @@ def tao_viec(*, ky_nang: str, nick: str, noi_dung: str = "", tep=None, noi_dang:
 
 def _dong(r) -> dict:
     d = dict(r)
-    for k, mac in (("tham_so", {}), ("buoc", [])):
+    for k, mac in (("tham_so", {}), ("buoc", []), ("ket_qua", {})):
         try:
             d[k] = json.loads(d.get(k) or "")
         except Exception:
@@ -368,27 +419,89 @@ def duyet(vid, dong_y: bool) -> dict:
     return lay_viec(vid)
 
 
+def _het_gio(r) -> float:
+    """Bao lâu không báo kết quả thì coi việc là treo. Việc đăng bài cũ: 20 phút. Việc của đợt
+    chạy có thể dài (nuôi nick 60 phút, quét 50 bài kèm AI) nên rộng hơn: 90 phút + số phút lướt."""
+    if r["ky_nang"] == "fb_dang_bai":
+        return HET_GIO_CHAY
+    try:
+        phut = int(((json.loads(r["tham_so"] or "{}").get("tham_so") or {}).get("phut")) or 0)
+    except Exception:
+        phut = 0
+    return 90 * 60 + max(0, phut) * 60
+
+
 def _don_viec_treo(c) -> None:
-    c.execute("UPDATE viec SET trang_thai='loi', thong_diep='máy ở nhà không báo kết quả (quá giờ)', "
-              "xong_luc=? WHERE trang_thai='dang_chay' AND bat_dau < ?",
-              (_bay_gio(), _bay_gio() - HET_GIO_CHAY))
+    now = _bay_gio()
+    treo = []
+    for r in c.execute("SELECT id, ky_nang, tham_so, bat_dau FROM viec WHERE trang_thai='dang_chay'").fetchall():
+        if (r["bat_dau"] or 0) < now - _het_gio(r):
+            treo.append(r["id"])
+    for vid in treo:
+        c.execute("UPDATE viec SET trang_thai='loi', thong_diep='máy ở nhà không báo kết quả (quá giờ)', "
+                  "xong_luc=? WHERE id=? AND trang_thai='dang_chay'", (now, vid))
+    if treo:
+        import doi_social_v2
+        for vid in treo:
+            doi_social_v2.sau_viec(c, vid)
 
 
 def nhan_viec(may_id: str) -> Optional[dict]:
-    """Việc kế tiếp cho máy này, tôn trọng khoảng nghỉ giữa hai lượt của cùng một nick.
-    Mỗi máy chạy MỘT việc một lúc (máy nhà không phải trại máy chủ)."""
+    """Việc kế tiếp cho máy này.
+
+    - Việc đăng bài cũ (`fb_dang_bai`): khoảng nghỉ cố định theo gioi_han() cũ.
+    - Việc của đợt chạy: nghỉ ngẫu nhiên trong `chung.nghi_phut` của giới hạn v2, tính hạn mức
+      ngày của nick; hết sạch hạn mức thì kết thúc 'bỏ qua' ngay tại đây, không giao xuống máy.
+    - Mỗi máy chạy tối đa `may.song_song` việc (đợt có thể ghi đè, trần 3); một nick một việc.
+    - Không giao mẫu mà máy chưa báo làm được."""
+    import doi_social_v2 as v2
     gh = gioi_han()
     with _khoa, _db() as c:
         _don_viec_treo(c)
-        if c.execute("SELECT 1 FROM viec WHERE may_id=? AND trang_thai='dang_chay'", (may_id,)).fetchone():
+        m = c.execute("SELECT kich_ban, song_song FROM may WHERE id=?", (may_id,)).fetchone()
+        if not m:
             return None
+        try:
+            ho_tro = set(json.loads(m["kich_ban"] or "[]"))
+        except Exception:
+            ho_tro = set()
+        may_ss = max(1, min(SONG_SONG_TRAN, int(m["song_song"] or 1)))
+        dang = c.execute("SELECT COUNT(*) FROM viec WHERE may_id=? AND trang_thai='dang_chay'",
+                         (may_id,)).fetchone()[0]
+        if dang >= SONG_SONG_TRAN:
+            return None
+        nick_ban = {r[0] for r in c.execute("SELECT DISTINCT nick_id FROM viec WHERE trang_thai='dang_chay'")}
+        gv2 = None
         for r in c.execute("SELECT * FROM viec WHERE may_id=? AND trang_thai='cho_chay' ORDER BY id",
                            (may_id,)).fetchall():
-            cuoi = c.execute("SELECT MAX(xong_luc) FROM viec WHERE nick_id=? AND trang_thai='xong'",
-                             (r["nick_id"],)).fetchone()[0]
-            if cuoi and _bay_gio() - cuoi < gh["nghi_phut"] * 60:
+            if r["nick_id"] in nick_ban:
                 continue
-            c.execute("UPDATE viec SET trang_thai='dang_chay', bat_dau=? WHERE id=?", (_bay_gio(), r["id"]))
+            ky = r["ky_nang"]
+            if ky == "fb_dang_bai":
+                if dang >= may_ss:
+                    continue
+                cuoi = c.execute("SELECT MAX(xong_luc) FROM viec WHERE nick_id=? AND trang_thai='xong'",
+                                 (r["nick_id"],)).fetchone()[0]
+                if cuoi and _bay_gio() - cuoi < gh["nghi_phut"] * 60:
+                    continue
+                c.execute("UPDATE viec SET trang_thai='dang_chay', bat_dau=? WHERE id=?", (_bay_gio(), r["id"]))
+                return lay_viec(r["id"])
+            if not v2.may_lam_duoc(ky, ho_tro, r):
+                continue
+            gioi = may_ss
+            if r["dot_id"]:
+                d = c.execute("SELECT song_song FROM dot_chay WHERE id=?", (r["dot_id"],)).fetchone()
+                if d and d["song_song"]:
+                    gioi = max(1, min(SONG_SONG_TRAN, int(d["song_song"])))
+            if dang >= gioi:
+                continue
+            if gv2 is None:
+                gv2 = v2.gioi_han_v2()
+            kq = v2.chuan_bi_giao(c, r, gv2)
+            if kq == "cho":
+                continue
+            if kq == "bo_qua":
+                continue
             return lay_viec(r["id"])
     return None
 
@@ -401,7 +514,8 @@ def duong_tep(vid, luu: str) -> Optional[Path]:
     return p if p.is_file() else None
 
 
-def ghi_ket_qua(vid, may_id: str, ok: bool, thong_diep: str = "", buoc=None, anh: bytes = b"") -> dict:
+def ghi_ket_qua(vid, may_id: str, ok: bool, thong_diep: str = "", buoc=None, anh: bytes = b"",
+                dem: Optional[dict] = None) -> dict:
     with _khoa, _db() as c:
         r = c.execute("SELECT may_id, trang_thai FROM viec WHERE id=?", (int(vid),)).fetchone()
         if not r or r["may_id"] != may_id:
@@ -412,9 +526,19 @@ def ghi_ket_qua(vid, may_id: str, ok: bool, thong_diep: str = "", buoc=None, anh
         if anh:
             (_goc / "anh" / f"{int(vid)}.png").write_bytes(anh[:8 * 1024 * 1024])
             co_anh = 1
-        c.execute("UPDATE viec SET trang_thai=?, xong_luc=?, thong_diep=?, buoc=?, co_anh=? WHERE id=?",
+        kq = {}
+        if isinstance(dem, dict):
+            for k in ("thanh_cong", "bo_qua", "loi"):
+                try:
+                    kq[k] = max(0, int(dem.get(k) or 0))
+                except (TypeError, ValueError):
+                    kq[k] = 0
+        c.execute("UPDATE viec SET trang_thai=?, xong_luc=?, thong_diep=?, buoc=?, co_anh=?, ket_qua=? WHERE id=?",
                   ("xong" if ok else "loi", _bay_gio(), str(thong_diep or "")[:1000],
-                   json.dumps(list(buoc or [])[:50], ensure_ascii=False), co_anh, int(vid)))
+                   json.dumps(list(buoc or [])[:50], ensure_ascii=False), co_anh,
+                   json.dumps(kq), int(vid)))
+        import doi_social_v2
+        doi_social_v2.sau_viec(c, int(vid))
     shutil.rmtree(str(_goc / "tep" / str(int(vid))), ignore_errors=True)
     return lay_viec(vid)
 
