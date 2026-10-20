@@ -34,7 +34,7 @@ ENV PYTHONUNBUFFERED=1 \
 # Claude's Grep), ffmpeg (edge-tts mp3), curl, tini (PID-1 reaper for the node
 # subprocesses Claude spawns).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl git ripgrep ffmpeg tini \
+        ca-certificates curl git ripgrep ffmpeg fonts-dejavu-core tini \
     && rm -rf /var/lib/apt/lists/*
 
 # Node 22 LTS from stage 1 (npm/npx are symlinks → recreate on PATH).

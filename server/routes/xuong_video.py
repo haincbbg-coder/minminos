@@ -318,7 +318,7 @@ def register(app: FastAPI, ask: Callable[[str, str, List[str]], Awaitable[str]],
         if chay.dang_chay(pid):
             return _loi("Dự án đang dựng, chờ xong rồi sửa.", 409)
         try:
-                b = tu_lieu.chuan_hoa(p, await request.json(), nhap=True)
+            b = tu_lieu.chuan_hoa(p, await request.json(), nhap=True)
         except (ValueError, TypeError) as e:
             return _loi(str(e))
         kho.cap_nhat(pid, ban_dung=b, ket_qua={}, dang={}, che_do_dang="duyet", trang_thai="nhap", loi="")
