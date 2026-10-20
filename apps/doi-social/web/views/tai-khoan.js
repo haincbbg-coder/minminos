@@ -54,7 +54,7 @@
             var cb = n.canh_bao || {}, cbk = Object.keys(cb);
             return '<tr><td><input type="checkbox" class="cb" data-chon="' + esc(n.id) + '"' + (chon[n.id] ? " checked" : "") + '></td><td><div class="row" style="flex-wrap:nowrap">' + DS.av(n.ten) +
               '<div style="min-width:0"><div class="b clip" style="max-width:220px">' + esc(n.ten) + '</div><div class="sub">' + esc(n.may_ten || "") + (n.trinh_duyet ? " · " + esc(n.trinh_duyet) : "") + "</div></div></div></td>" +
-              '<td class="small">' + (n.nhom ? '<span class="row" style="flex-wrap:nowrap;gap:4px">' + ic("folder") + esc(n.nhom) + "</span>" : '<span class="muted">Không thư mục</span>') + "</td>" +
+              '<td class="small nw">' + (n.nhom ? '<span class="row" style="flex-wrap:nowrap;gap:4px">' + ic("folder") + esc(n.nhom) + "</span>" : '<span class="muted">Không thư mục</span>') + "</td>" +
               '<td class="nw"><span class="row" style="flex-wrap:nowrap;gap:6px"><span class="dotx' + (n.online ? " on" : "") + '"></span>' + (n.online ? "Online" : '<span class="muted">Ngoại tuyến</span>') + "</span></td>" +
               '<td><div class="row" style="gap:4px">' + ((n.nhan || []).length ? n.nhan.map(function (t) { return '<span class="bd bd-out" style="padding-left:3px">' + DS.icNT(t, 16) + esc(DS.tenNT(t)) + "</span>"; }).join("") :
                 '<span class="small muted">Chưa gắn</span>') + "</div></td>" +
