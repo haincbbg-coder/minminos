@@ -21567,6 +21567,22 @@ async def _tg_callback(data, chat=None):
         except Exception as e:
             return {"alert": f"Không duyệt được: {e}"[:190]}
         return {"text": f"Dòng {dong}: {msg}", "alert": msg[:190]}
+    if data.startswith("dsk:"):
+        # Đội Social (26.10.187): Duyệt chạy / Từ chối một kế hoạch của Trợ lý AI
+        try:
+            _, kid, gat = data.split(":", 2)
+            kh = doi_social_routes.duyet_ke_hoach_va_chay(int(kid), gat == "1")
+            if asyncio.iscoroutine(kh):
+                kh = await kh
+        except Exception as e:
+            return {"alert": f"Không duyệt được: {e}"[:190]}
+        kh = kh if isinstance(kh, dict) else {}
+        dau = f"🧭 Kế hoạch #{kid}: {str(kh.get('mo_ta') or '').strip()}".rstrip(": ")
+        if gat == "1":
+            so = len(kh.get("dot_ids") or [])
+            return {"text": dau + f"\n\n✅ Đã duyệt. Đã tạo {so} đợt chạy, máy ở nhà sẽ bắt đầu ở lượt tới. "
+                                  "Kết quả xem ở Đội Social > Nhật ký hoạt động.", "alert": "Đã duyệt"}
+        return {"text": dau + "\n\n✕ Đã từ chối, không chạy gì.", "alert": "Đã từ chối"}
     if data.startswith("ds:"):
         # Đội Social (26.10.185): Duyệt / Bỏ một bài chờ đăng
         try:
@@ -22817,7 +22833,129 @@ async def _ds_bao(viec: dict, su_kien: str):
         await _TG_BOT.send_text(dich, than)
 
 
-_DS_DEPS = doi_social_routes.DoiSocialDeps(bao=_ds_bao)
+async def _ds_goi_ai(prompt: str, anh: list) -> str:
+    """Bộ não của Đội Social (26.10.187): có ảnh và ChatGPT (OAuth) đã nối thì cho ChatGPT NHÌN ảnh;
+    không thì chạy engine chính như một lượt CLI (Claude Code/Codex mở được file ảnh theo đường dẫn).
+
+    Mỗi lời gọi một khoá mạch engine dùng một lần rồi gỡ: Worker gọi AI dồn dập và song song, dùng
+    chung một khoá là các lời chấm bài xếp hàng sau nhau và lượt sau mang theo ngữ cảnh lượt trước."""
+    import image_vision
+    goc = Path(_default_brain_dir())
+    anh = [str(a) for a in (anh or []) if str(a or "").strip()][:4]
+    if anh and image_vision.connected():
+        # image_vision chỉ đọc ảnh NẰM TRONG brain (chốt an toàn của nó). Ảnh Worker gửi lên nằm
+        # ngoài brain thì chép tạm vào brain, xem xong xoá.
+        tam_dir = goc / "attachments" / "doi-social" / f"ai-{uuid.uuid4().hex[:10]}"
+        ds, tam = [], []
+        try:
+            for a in anh:
+                p = Path(a)
+                try:
+                    p.resolve().relative_to(goc.resolve())
+                    ds.append(str(p))
+                except ValueError:
+                    tam_dir.mkdir(parents=True, exist_ok=True)
+                    q = tam_dir / (f"{len(tam)}{p.suffix.lower() or '.jpg'}")
+                    shutil.copyfile(p, q)
+                    tam.append(q)
+                    ds.append(str(q))
+            r = await image_vision.describe_images(ds, question=prompt, vault_root=str(goc), timeout_s=240)
+            if r.get("ok"):
+                return str(r.get("text") or "")
+        except Exception as e:
+            print(f"[doi-social] nhìn ảnh: {type(e).__name__}: {e}", file=sys.stderr)
+        finally:
+            if tam:
+                shutil.rmtree(tam_dir, ignore_errors=True)
+    noi = prompt
+    if anh:
+        noi += "\n\nẢnh của bài nằm ở (hãy mở xem từng ảnh trước khi trả lời):\n" + "\n".join(f"- {p}" for p in anh)
+    khoa = f"doi-social:{uuid.uuid4().hex[:10]}"
+    try:
+        out = await _tg_answer(noi, {"chat_id": khoa}, None, channel="cli", phien_kho="", ghi_kho=False)
+    finally:
+        _TG_SESS.pop(khoa, None)
+    if isinstance(out, dict):
+        return str(out.get("text") or "")
+    # Vỏ trả CHUỖI nghĩa là lượt hỏng (hết hạn mức, engine lỗi): báo lỗi, không coi câu lỗi là lời AI.
+    raise RuntimeError(str(out or "AI không trả lời")[:300])
+
+
+_DS_ENGINE_NHIN_ANH = ("anthropic-cli", "openai-oauth")
+
+
+def _ds_thong_tin_ai() -> dict:
+    """Bộ não MinMin đang dùng cho Đội Social: {engine, mo_hinh, nhin_anh, san_sang}."""
+    try:
+        import image_vision
+        mcfg = cfgmod.read_settings().get("model", {})
+        prov, _kind, _key, model = _chat_provider(mcfg)
+        _p, cur = _model_current()
+        return {"engine": _tg_prov_label(prov), "mo_hinh": str(model or cur or "mặc định"),
+                "nhin_anh": bool(image_vision.connected() or prov in _DS_ENGINE_NHIN_ANH),
+                "san_sang": bool(_tg_prov_ready(prov, mcfg))}
+    except Exception as e:
+        print(f"[doi-social] thông tin AI: {type(e).__name__}: {e}", file=sys.stderr)
+        return {"engine": "MinMin", "mo_hinh": "mặc định", "nhin_anh": False, "san_sang": True}
+
+
+def _ds_chat_dich(chat_id="") -> str:
+    """Chat Telegram nhận: chat đã giao nếu thuộc whitelist, không thì chat đầu tiên. '' khi chưa có bot."""
+    if not (_TG_BOT and (_TG_BOT.chat_ids or [])):
+        return ""
+    ds = [str(x) for x in _TG_BOT.chat_ids]
+    return str(chat_id) if str(chat_id or "") in ds else ds[0]
+
+
+def _ds_mo_ta_ke_hoach(kh: dict) -> str:
+    import doi_social_kich_ban as dskb
+    dong = [f"🧭 Kế hoạch #{kh.get('id')} chờ bạn duyệt", str(kh.get("mo_ta") or "").strip()]
+    for i, b in enumerate(kh.get("buoc") or [], 1):
+        m = dskb.THEO_ID.get(str(b.get("kich_ban") or "")) or {}
+        nhan = {f["key"]: f["nhan"] for f in (m.get("tham_so") or [])}
+        ts = []
+        for k, v in list((b.get("tham_so") or {}).items())[:4]:
+            if isinstance(v, list):
+                v = ", ".join(map(str, v[:3])) + (f" (+{len(v) - 3})" if len(v) > 3 else "")
+            v = str(v).replace("\n", " ")
+            ts.append(f"{nhan.get(k, k)}: {v[:80] + '...' if len(v) > 80 else v}")
+        dong.append(f"\nBước {i}: {m.get('ten') or b.get('kich_ban')} · {len(b.get('nick') or [])} nick"
+                    + (f"\n  {'; '.join(ts)}" if ts else "")
+                    + (f"\n  Ghi chú: {b['ghi_chu']}" if b.get("ghi_chu") else ""))
+    dong.append("\nKế hoạch CHƯA chạy. Bấm Duyệt chạy để máy ở nhà bắt đầu.")
+    return "\n".join(x for x in dong if x is not None)
+
+
+async def _ds_bao_ke_hoach(kh: dict):
+    """Kế hoạch của Trợ lý AI: hòm thư + Telegram kèm nút Duyệt chạy / Từ chối (dsk:<id>:1|0)."""
+    than = _ds_mo_ta_ke_hoach(kh or {})
+    try:
+        await _bo_vao_hom_thu("", than, kind="system", label="Đội Social", source="doi-social")
+    except Exception as e:
+        print(f"[doi-social] inbox: {type(e).__name__}: {e}", file=sys.stderr)
+    dich = _ds_chat_dich((kh or {}).get("chat_id") or "")
+    if not dich:
+        return
+    kid = (kh or {}).get("id")
+    await _TG_BOT.send_text(dich, than[:3900], reply_markup={"inline_keyboard": [[
+        {"text": "✅ Duyệt chạy", "callback_data": f"dsk:{kid}:1"},
+        {"text": "✕ Từ chối", "callback_data": f"dsk:{kid}:0"}]]})
+
+
+async def _ds_bao_su_kien(tieu_de: str, noi_dung: str):
+    """Sự kiện của Đội Social (đợt chạy xong, nick bị đăng xuất, nháp chờ duyệt): hòm thư + Telegram chủ."""
+    than = f"{tieu_de}\n{noi_dung}".strip()
+    try:
+        await _bo_vao_hom_thu("", than, kind="system", label="Đội Social", source="doi-social")
+    except Exception as e:
+        print(f"[doi-social] inbox: {type(e).__name__}: {e}", file=sys.stderr)
+    dich = _ds_chat_dich("")
+    if dich:
+        await _TG_BOT.send_text(dich, than[:3900])
+
+
+_DS_DEPS = doi_social_routes.DoiSocialDeps(bao=_ds_bao, goi_ai=_ds_goi_ai, thong_tin_ai=_ds_thong_tin_ai,
+                                           bao_ke_hoach=_ds_bao_ke_hoach, bao_su_kien=_ds_bao_su_kien)
 doi_social_routes.register(app, _DS_DEPS)
 
 # Up bài tự động từ Google Sheet (26.10.186): đọc Sheet UP BÀI, tải video, AI viết content, đăng Reels.

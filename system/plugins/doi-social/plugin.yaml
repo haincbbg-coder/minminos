@@ -1,7 +1,7 @@
 name: Đội Social (máy nhà + GPM Login)
 slug: doi-social
-version: 1.1.0
-description: Giao việc cho máy ở nhà - xem nick (profile GPM Login) đang có, tạo bài đăng Facebook như người thật (gõ từng chữ, tải ảnh/video) chờ chủ duyệt trên Telegram, và xem kết quả các lượt đăng.
+version: 1.2.0
+description: Giao việc cho máy ở nhà - xem nick (profile GPM Login), số liệu tổng quan, giao việc bằng lời thành kế hoạch chờ duyệt trên Telegram, chạy một mẫu tự động cho nhiều nick, tạo bài đăng Facebook như người thật chờ chủ duyệt, và xem kết quả các lượt đăng.
 author: Javis (bundled)
 enabled: true
 min_mode: readonly
@@ -9,6 +9,9 @@ tools:
   - social_nick
   - social_tao_bai_fb
   - social_viec
+  - social_tong_quan
+  - social_ke_hoach
+  - social_chay_mau
   - up_bai_chay
   - up_bai_trang_thai
 hooks: []
