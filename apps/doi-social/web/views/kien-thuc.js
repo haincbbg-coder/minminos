@@ -70,7 +70,30 @@
     el.innerHTML = DS.ph("Kiến thức cho Agent", "Hồ sơ sản phẩm và chủ đề AI dựa vào để viết bài, bình luận, trả lời khách.",
       '<button class="btn" data-act="nhap-bo-nao">' + ic("spark") + 'Nhập từ bộ não MinMin</button><button class="btn" data-act="them" data-loai="chu_de">' + ic("plus") + 'Thêm chủ đề</button><button class="btn btn-pri" data-act="them" data-loai="san_pham">' + ic("plus") + "Thêm sản phẩm</button>") +
       '<div class="note mb">' + ic("info") + '<span>Agent tự đọc thêm <b>wiki, ghi chú và trí nhớ</b> trong bộ não MinMin khớp với từng sản phẩm và từng bài viết, nên bạn không phải nhập lại thứ đã có trong bộ não.</span></div>' +
+      '<div class="card mb" id="kt-vai"><div class="card-h"><h3>' + ic("robot") + ' Agent MinMin làm việc cho Đội Social</h3></div><div class="small muted">Đang tải...</div></div>' +
       '<div id="kt-ds"><div class="kt-grid">' + '<div class="sk sk-card"></div>'.repeat(4) + "</div></div>";
+    napVai();
+    function napVai() {
+      DS.api("GET", "/doi-social/agent-vai").then(function (d) {
+        var box = el.querySelector("#kt-vai"); if (!box || !ctx.alive) return;
+        if (d.ok === false) { box.innerHTML = DS.loiThe(d.error); return; }
+        var ag = d.agent || [], gt = d.gia_tri || {}, viec = d.viec || {};
+        box.innerHTML = '<div class="card-h"><h3>' + ic("robot") + ' Agent MinMin làm việc cho Đội Social</h3></div>' +
+          '<div class="small muted mb">Mỗi loại việc AI mượn vai trò (giọng văn, cách xưng hô, cách chăm khách) của một agent sẵn có trong bộ não MinMin.' +
+          (ag.length ? "" : " Bộ não chưa có agent nào trong thư mục agents/.") + "</div>" +
+          '<div class="fgrid">' + Object.keys(viec).map(function (k) {
+            return '<div class="fld"><label>' + esc(viec[k]) + '</label><select class="inp" data-vai="' + esc(k) + '"><option value="">(không dùng agent)</option>' +
+              ag.map(function (a) { return '<option value="' + esc(a.slug) + '"' + (gt[k] === a.slug ? " selected" : "") + ">" + esc(a.ten || a.slug) + "</option>"; }).join("") +
+              (gt[k] && !ag.some(function (a) { return a.slug === gt[k]; }) ? '<option value="' + esc(gt[k]) + '" selected>' + esc(gt[k]) + " (chưa có trong bộ não)</option>" : "") +
+              "</select></div>";
+          }).join("") + "</div>";
+        box.onchange = function (e) {
+          var sel = e.target.closest("select[data-vai]"); if (!sel) return;
+          var b = {}; b[sel.getAttribute("data-vai")] = sel.value;
+          DS.api("POST", "/doi-social/agent-vai", b).then(function (r) { if (r.ok !== false) DS.toast("Đã lưu vai trò agent", "ok"); });
+        };
+      });
+    }
     DS.bind(el, { "them": function (t) { taoMoi(t.getAttribute("data-loai")); }, "tai-lai": nap, "nhap-bo-nao": nhapBoNao });
     function the(k) {
       var tt = TT[k.trang_thai] || TT.dang_dung;

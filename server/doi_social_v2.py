@@ -218,6 +218,31 @@ def gioi_han_v2() -> dict:
     return _ghep_sau(kb.GIOI_HAN_MAC_DINH, _j(r["v"], {}) if r else {})
 
 
+def vai_agent() -> dict:
+    """Loại việc AI -> slug agent MinMin làm vai trò (ghép với mặc định trong doi_social_bo_nao)."""
+    import doi_social_bo_nao as bn
+    with ds._db() as c:
+        r = c.execute("SELECT v FROM cai_dat WHERE k='agent_vai'").fetchone()
+    luu = _j(r["v"], {}) if r else {}
+    return {k: str(luu.get(k, bn.VAI_MAC_DINH.get(k, "")) or "") for k in bn.VIEC_AI}
+
+
+def dat_vai_agent(moi: dict) -> dict:
+    import re
+    import doi_social_bo_nao as bn
+    cu = vai_agent()
+    for k, v in (moi or {}).items():
+        if k not in bn.VIEC_AI:
+            raise ValueError(f"loại việc lạ: {k}")
+        v = str(v or "").strip()
+        if v and not re.fullmatch(r"[A-Za-z0-9._-]{1,120}", v):
+            raise ValueError("tên agent không hợp lệ")
+        cu[k] = v
+    with ds._khoa, ds._db() as c:
+        c.execute("INSERT OR REPLACE INTO cai_dat(k, v) VALUES('agent_vai', ?)", (_dj(cu),))
+    return cu
+
+
 def _so_nguyen(v, ten: str, lo: int = 0, hi: int = 100000) -> int:
     try:
         n = int(v)

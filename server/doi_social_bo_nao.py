@@ -152,3 +152,75 @@ def boi_canh_tro_ly(tin: str) -> dict:
     """Tri thức bộ não cho Trợ lý AI: trí nhớ doanh nghiệp + mảnh khớp câu hỏi."""
     tt = thu_thap(tin, 4)
     return {"ky_uc": ky_uc(), "tai_lieu": tt.get("khoi", "") if tt.get("co") else "", "nguon": tt.get("nguon", [])}
+
+
+# ------------------------------------------------------------------ agent MinMin làm vai trò cho Đội Social
+# Việc AI của Đội Social mượn "vai" của agent sẵn có trong bộ não (agents/<slug>.md): chăm sóc khách
+# trả lời tin nhắn/bình luận, content creator viết bài/bình luận. Chủ đổi được trong trang Kiến thức.
+VIEC_AI = {
+    "tra_loi_tin_nhan": "Trả lời tin nhắn khách",
+    "tra_loi_binh_luan": "Trả lời bình luận",
+    "viet_binh_luan": "Viết bình luận nhóm / seeding",
+    "viet_bai": "Viết bài đăng",
+    "tro_ly": "Trợ lý AI lập kế hoạch",
+}
+VAI_MAC_DINH = {"tra_loi_tin_nhan": "cham-soc-khach-hang", "tra_loi_binh_luan": "cham-soc-khach-hang",
+                "viet_binh_luan": "content-creator", "viet_bai": "content-creator", "tro_ly": ""}
+VAI_TOI_DA = 3000
+
+
+def ds_agent() -> list:
+    """Agent có trong bộ não: [{slug, ten, mo_ta}] (đọc frontmatter name/description nếu có)."""
+    r = goc()
+    if not r:
+        return []
+    ra = []
+    for thu_muc in ("agents", "Javis/agents"):
+        d = r / thu_muc
+        if not d.is_dir():
+            continue
+        for p in sorted(d.glob("*.md"))[:200]:
+            ten, mo_ta = p.stem, ""
+            try:
+                dau = p.read_text(encoding="utf-8", errors="replace")[:3000]
+            except Exception:
+                continue
+            if dau.startswith("---"):
+                for dong in dau.split("\n---", 1)[0].splitlines():
+                    if dong.startswith("name:"):
+                        ten = dong[5:].strip().strip('"\'') or ten
+                    elif dong.startswith("description:"):
+                        mo_ta = dong[12:].strip().strip('"\'')[:200]
+            if not any(a["slug"] == p.stem for a in ra):
+                ra.append({"slug": p.stem, "ten": ten, "mo_ta": mo_ta})
+        if ra:
+            break
+    return ra
+
+
+def doc_agent(slug: str) -> str:
+    """Thân agent (bỏ frontmatter), cắt ngắn. Rỗng nếu không có."""
+    import re as _re
+    if not slug or not _re.fullmatch(r"[A-Za-z0-9._-]{1,120}", slug):
+        return ""
+    for thu_muc in ("agents", "Javis/agents"):
+        t = doc_tep(f"{thu_muc}/{slug}.md", 20000)
+        if t:
+            than = t["noi_dung"]
+            if than.startswith("---"):
+                ket = than.find("\n---", 3)
+                if ket > 0:
+                    than = than[ket + 4:]
+            return than.strip()[:VAI_TOI_DA]
+    return ""
+
+
+def phu_luc_vai(viec: str, cau_hinh: dict) -> str:
+    """Đoạn mở đầu prompt: vai trò lấy từ agent MinMin được gán cho loại việc này."""
+    slug = (cau_hinh or {}).get(viec, VAI_MAC_DINH.get(viec, ""))
+    than = doc_agent(slug)
+    if not than:
+        return ""
+    return (f"VAI TRÒ CỦA BẠN (lấy từ agent MinMin '{slug}' trong bộ não của chủ; theo đúng giọng văn, cách xưng hô, "
+            "cách chăm sóc khách ở đây, nhưng LUẬT và định dạng trả lời phía dưới luôn được ưu tiên):\n"
+            + than + "\n\n=====\n\n")

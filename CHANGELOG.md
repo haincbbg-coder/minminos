@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.189] - 2026-10-21
+
+### Thêm mới
+- **Agent MinMin làm việc cho Đội Social**: trả lời tin nhắn, bình luận mượn vai của agent Chăm sóc khách hàng, viết bài và bình luận nhóm mượn vai Content creator trong bộ não. Đổi agent cho từng loại việc ngay ở trang Kiến thức cho Agent.
+- **Trả lời tin nhắn fanpage**: nick đang ở danh nghĩa Trang thì Worker vào Hộp thư Meta Business Suite, đọc khách đang chờ và để AI trả lời (chạy thử chỉ ghi câu sẽ trả lời).
+
 ## [26.10.188] - 2026-10-21
 
 ### Thêm mới

@@ -95,5 +95,31 @@ check("tạo kiến thức từ ghi chú wiki", r["ok"] and r["kien_thuc"]["ten"
       and r["kien_thuc"]["nguon_bo_nao"] == ["wiki/vay-lua-halimi.md"] and "890.000" in r["kien_thuc"]["mo_ta"]
       and "type: wiki" not in r["kien_thuc"]["mo_ta"], r)
 
+# ---- agent MinMin làm vai trò
+(brain / "agents").mkdir()
+(brain / "agents" / "cham-soc-khach-hang.md").write_text(
+    "---\nname: Chăm sóc khách hàng\ndescription: Trả lời khách HALIMI\n---\nXưng em, gọi khách là chị. Luôn hỏi size.\n",
+    encoding="utf-8")
+check("liệt kê agent trong bộ não", any(a["slug"] == "cham-soc-khach-hang" and a["ten"] == "Chăm sóc khách hàng"
+                                         for a in bn.ds_agent()))
+pl = bn.phu_luc_vai("tra_loi_tin_nhan", v2.vai_agent())
+check("vai mặc định của trả lời tin nhắn là agent chăm sóc khách", "Xưng em, gọi khách là chị" in pl and "name:" not in pl)
+check("agent không có thì không thêm gì", bn.phu_luc_vai("viet_bai", v2.vai_agent()) == "")
+check("tên agent bẩn bị chặn", bn.doc_agent("../ngoai") == "")
+r = cl.post("/doi-social/agent-vai", json={"viet_bai": "cham-soc-khach-hang", "tro_ly": ""}).json()
+check("đổi vai qua API", r["ok"] and r["gia_tri"]["viet_bai"] == "cham-soc-khach-hang")
+check("loại việc lạ bị từ chối", cl.post("/doi-social/agent-vai", json={"xx": "a"}).json()["ok"] is False)
+g = cl.get("/doi-social/agent-vai").json()
+check("GET agent-vai trả danh sách agent + việc", g["ok"] and g["agent"] and "tra_loi_tin_nhan" in g["viec"])
+nhan2 = {}
+
+
+async def ai2(prompt, anh):
+    nhan2["p"] = prompt
+    return "ok"
+rds._DEPS.goi_ai = ai2
+asyncio.run(rds._goi_ai_vai("tra_loi_tin_nhan")("PROMPT-GOC", []))
+check("goi_ai của việc được gắn vai trò ở đầu prompt", nhan2["p"].startswith("VAI TRÒ") and nhan2["p"].endswith("PROMPT-GOC"))
+
 print("ALL PASS" if ok else "CÓ LỖI")
 raise SystemExit(0 if ok else 1)
