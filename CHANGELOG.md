@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.179] - 2026-10-20
+### Thêm mới
+- Vòng công cụ nổi: bấm nút tròn để mở các mô-đun quanh tâm, chọn ảnh/PDF rồi xử lý ngay. Giữ khay file cũ và các bản sao.
+- Nút có hiệu ứng nổi/lún, tiếng tách khi chọn và công tắc âm thanh; hỗ trợ bàn phím, điện thoại và giảm chuyển động.
+
 ## [26.10.178] - 2026-10-19
 ### Thêm mới
 - **Kết nối REA - dịch ngược phần mềm.** Thêm vào kho Kết nối một connector mới cho REA (Reverse Engineer Anything): nối MinMin tới bộ công cụ mổ app JavaScript/Electron, website, .NET và Android APK ngay trên máy, để hiểu một tính năng của app người ta chạy thế nào rồi dựng lại cho sản phẩm của mình. Bấm Kết nối là chạy, không cần cấu hình; muốn mổ cả file chương trình gốc thì cài thêm Ghidra. Để ở chế độ Chỉ đọc cho an toàn.

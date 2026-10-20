@@ -31,3 +31,11 @@ phụ thuộc CDN lúc sử dụng. Giấy phép nằm cạnh file. Các phép c
 Thay đổi không ghi đè file gốc hoặc thay đổi schema máy chủ. Có thể revert commit phát hành
 bằng một PR và phát hành phiên bản kế tiếp. Dữ liệu khay cũ vẫn ở trình duyệt; khi bật lại
 tính năng có thể đọc lại. Không xóa IndexedDB khi rollback.
+
+## Vòng công cụ (26.10.179)
+
+Nút tròn ở góc dưới mở sáu múi: Thêm file, Khay file, Sửa ảnh, Ghép ảnh, Gộp PDF,
+Tải file. Chọn file trong khay rồi mở vòng để xử lý. Thả file vào vòng cũng thêm được.
+Mỗi múi có phản hồi màu/nổi/lún. Tiếng tách được tạo cục bộ, chỉ khi bấm; công tắc âm
+thanh ghi nhớ trên trình duyệt. Không tải âm thanh bên ngoài. Mũi tên chuyển múi,
+Enter/Space kích hoạt, Escape hoặc nút giữa thu lại. Tôn trọng giảm chuyển động.
