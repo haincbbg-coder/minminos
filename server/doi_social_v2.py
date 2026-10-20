@@ -121,7 +121,9 @@ def tao_bang(c) -> None:
     CREATE INDEX IF NOT EXISTS da_lam_khoa ON da_lam(khoa);
     """)
     import sqlite3
-    for bang, cot in (("ban_nhap", "muc_tieu TEXT DEFAULT '{}'"),):
+    for bang, cot in (("ban_nhap", "muc_tieu TEXT DEFAULT '{}'"),
+                      ("kien_thuc", "nguon_bo_nao TEXT DEFAULT '[]'"),
+                      ("kien_thuc", "tu_tra_bo_nao INTEGER DEFAULT 1")):
         try:
             c.execute(f"ALTER TABLE {bang} ADD COLUMN {cot}")
         except sqlite3.OperationalError:
@@ -1547,7 +1549,24 @@ def _kiem_kt(d: dict, cu: Optional[dict] = None) -> dict:
         raise ValueError("trạng thái phải là dang_dung hoặc cho_duyet")
     if not ra.get("ten"):
         raise ValueError("thiếu tên sản phẩm/chủ đề")
+    # Nối với bộ não MinMin (26.10.187): tệp wiki/ghi chú gắn tay + cờ tự tra bộ não theo ngữ cảnh.
+    if d.get("nguon_bo_nao") is not None:
+        ds_tep = d["nguon_bo_nao"]
+        if isinstance(ds_tep, str):
+            ds_tep = [x.strip() for x in ds_tep.splitlines() if x.strip()]
+        ra["nguon_bo_nao"] = [str(x)[:500] for x in (ds_tep or []) if str(x).strip()][:20]
+    if d.get("tu_tra_bo_nao") is not None:
+        ra["tu_tra_bo_nao"] = 1 if (d["tu_tra_bo_nao"] and str(d["tu_tra_bo_nao"]).lower() not in ("0", "false")) else 0
     return ra
+
+
+def _ghi_bo_nao(c, kid, k: dict) -> None:
+    if "nguon_bo_nao" in k:
+        nb = k["nguon_bo_nao"]
+        c.execute("UPDATE kien_thuc SET nguon_bo_nao=? WHERE id=?",
+                  (_dj(nb if isinstance(nb, list) else []), _int(kid)))
+    if "tu_tra_bo_nao" in k:
+        c.execute("UPDATE kien_thuc SET tu_tra_bo_nao=? WHERE id=?", (int(bool(k["tu_tra_bo_nao"])), _int(kid)))
 
 
 def tao_kien_thuc(d: dict) -> dict:
@@ -1555,6 +1574,7 @@ def tao_kien_thuc(d: dict) -> dict:
     with ds._khoa, ds._db() as c:
         kid = c.execute("INSERT INTO kien_thuc(" + ",".join(_KT_COT) + ", tao_luc) VALUES(" + ",".join("?" * len(_KT_COT))
                         + ",?)", [k.get(x, "") for x in _KT_COT] + [_now()]).lastrowid
+        _ghi_bo_nao(c, kid, k)
     return lay_kien_thuc(kid)
 
 
@@ -1566,6 +1586,7 @@ def sua_kien_thuc(kid, d: dict) -> dict:
     with ds._khoa, ds._db() as c:
         c.execute("UPDATE kien_thuc SET " + ",".join(f"{x}=?" for x in _KT_COT) + " WHERE id=?",
                   [k.get(x, "") for x in _KT_COT] + [_int(kid)])
+        _ghi_bo_nao(c, kid, k)
     return lay_kien_thuc(kid)
 
 
@@ -1582,6 +1603,11 @@ def ds_kien_thuc() -> list:
         ra = []
         for r in c.execute("SELECT * FROM kien_thuc ORDER BY loai, ten").fetchall():
             d = dict(r)
+            try:
+                d["nguon_bo_nao"] = json.loads(d.get("nguon_bo_nao") or "[]")
+            except Exception:
+                d["nguon_bo_nao"] = []
+            d["tu_tra_bo_nao"] = bool(d.get("tu_tra_bo_nao", 1))
             d["so_tai_lieu"] = c.execute("SELECT COUNT(*) FROM tai_lieu WHERE kt_id=?", (d["id"],)).fetchone()[0]
             d["so_hoi_dap"] = c.execute("SELECT COUNT(*) FROM hoi_dap WHERE kt_id=?", (d["id"],)).fetchone()[0]
             d["cho_ban"] = c.execute("SELECT COUNT(*) FROM hoi_dap WHERE kt_id=? AND trang_thai='cho_ban'",
@@ -1600,6 +1626,11 @@ def lay_kien_thuc(kid, day_du: bool = True) -> Optional[dict]:
         if not r:
             return None
         d = dict(r)
+        try:
+            d["nguon_bo_nao"] = json.loads(d.get("nguon_bo_nao") or "[]")
+        except Exception:
+            d["nguon_bo_nao"] = []
+        d["tu_tra_bo_nao"] = bool(d.get("tu_tra_bo_nao", 1))
         if day_du:
             d["tai_lieu"] = [dict(x) for x in c.execute("SELECT id, ten, noi_dung FROM tai_lieu WHERE kt_id=? ORDER BY id",
                                                         (d["id"],))]

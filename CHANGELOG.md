@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.188] - 2026-10-21
+
+### Thêm mới
+- **Đội Social đọc thẳng bộ não MinMin**: Agent tự tra wiki, ghi chú và trí nhớ khớp với từng sản phẩm, từng bài viết, bình luận và tin nhắn khách, nên không phải nhập lại kiến thức đã có.
+- Kiến thức cho Agent có tab **Bộ não MinMin** (gắn cố định ghi chú như bảng giá, chính sách; bật/tắt tự tra) và nút **Nhập từ bộ não** tạo hồ sơ sản phẩm từ một ghi chú wiki.
+- Trợ lý AI của Đội Social đọc trí nhớ doanh nghiệp và tài liệu khớp câu hỏi trước khi trả lời hay lên kế hoạch.
+
 ## [26.10.187] - 2026-10-20
 
 ### Thêm mới
