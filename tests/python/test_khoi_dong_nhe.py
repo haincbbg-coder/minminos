@@ -142,7 +142,12 @@ for lop, ten in _BA_HAM:
 #
 # Vẫn giữ phép đo này dù nó thô: nó là thứ duy nhất bắt được "main phình lên" khi thư viện
 # nặng mới CHƯA kịp có tên trong NANG_PHAI_LUOI. Hàng rào chính xác là danh sách đó.
-TRAN_TI_LE = 4.0
+# NÂNG LÊN 4,6 ngày 21/10/2026 (26.10.187): Đội Social bản đầy đủ khai thêm 98 endpoint (~65ms
+# trên máy dev, các module của nó tự nạp chỉ ~10ms, không thư viện nặng nào), cộng Up bài 26.10.186.
+# Đo trên bản 26.10.186 chưa đổi gì đã 4,19-4,35 ở máy dev và CI đỏ chập chờn, tức trần cũ hết biên
+# đúng như dự báo ở trên. Ca phải bắt vẫn tách sạch: edge_tts + aiohttp ở mức module cộng ~1.150ms,
+# tức thêm khoảng +3,5 vào tỉ lệ, vượt xa 4,6.
+TRAN_TI_LE = 4.6
 
 
 def do_nap_xen_ke(codes, n=5):
