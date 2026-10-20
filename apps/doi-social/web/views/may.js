@@ -78,7 +78,7 @@
         if (!viec.length) h += DS.rong("Chưa có việc nào", "", "list");
         else h += '<div class="tw"><table class="tbl tbl-in"><thead><tr><th>#</th><th>Việc</th><th>Nick</th><th>Trạng thái</th><th>Tạo lúc</th><th></th></tr></thead><tbody>' + viec.slice(0, 15).map(function (v) {
           var ts = v.tham_so || {}, m = mau[v.ky_nang] || {};
-          return '<tr><td class="small muted">#' + v.id + '</td><td style="max-width:320px"><div class="b" style="font-weight:500">' + esc(v.nhan_ky_nang || m.ten || v.ky_nang) + "</div>" +
+          return '<tr><td class="small muted">#' + v.id + '</td><td style="max-width:320px"><div class="b" style="font-weight:500">' + esc(m.ten || v.ten_mau || v.nhan_ky_nang || v.ky_nang) + "</div>" +
             (ts.noi_dung ? '<div class="sub clamp1">' + esc(ts.noi_dung) + "</div>" : "") + (v.thong_diep ? '<div class="sub clamp1">Máy báo: ' + esc(v.thong_diep) + "</div>" : "") + "</td><td>" + esc(v.nick_ten || "") + "</td><td>" +
             DS.ttViec(v) + '</td><td class="small nw">' + DS.gio(v.tao_luc) + '</td><td class="nw">' +
             (v.trang_thai === "cho_duyet" ? '<button class="btn btn-xs btn-ok" data-act="duyet-viec" data-id="' + v.id + '">Duyệt đăng</button> <button class="btn btn-xs" data-act="bo-viec" data-id="' + v.id + '">Bỏ</button>' :

@@ -12,8 +12,8 @@
       el.innerHTML = DS.ph("Trợ lý AI", "Nói việc bằng lời, trợ lý lên kế hoạch thành các đợt chạy. Kế hoạch chỉ chạy khi bạn bấm Duyệt.") +
         '<div class="card mb" id="ty-tt"><div class="sk sk-line" style="width:40%"></div></div>' +
         '<div class="grid g-21"><div class="card chat"><div class="chat-h"><div class="row"><span class="botav">' + ic("spark") + '</span><div><b>Trợ lý Đội Social</b><div class="tiny muted" id="ty-phien">Hội thoại mới</div></div></div>' +
-        '<div class="row"><button class="btn btn-sm btn-ghost" data-act="lich-su">' + ic("clock") + 'Lịch sử</button><button class="btn btn-sm" data-act="moi">' + ic("plus") + "Hội thoại mới</button></div></div>" +
-        '<div class="chat-b" id="ty-msgs"></div><div class="chat-f"><textarea class="ta" id="ty-in" rows="1" placeholder="Nhắn cho trợ lý, ví dụ: đăng một bài thu hút lên Trang..."></textarea>' +
+        '<div class="row"><button class="btn btn-sm btn-ghost" data-act="lich-su">' + ic("clock") + '<span class="an-dt">Lịch sử</span></button><button class="btn btn-sm" data-act="moi">' + ic("plus") + '<span class="an-dt">Hội thoại mới</span></button></div></div>' +
+        '<div class="chat-b" id="ty-msgs"></div><div class="chat-f"><textarea class="ta" id="ty-in" rows="1" placeholder="Nhắn cho trợ lý..."></textarea>' +
         '<button class="btn btn-pri" style="height:40px" data-act="gui" aria-label="Gửi">' + ic("send") + "</button></div></div>" +
         '<div class="card" id="ty-kh-card"><div class="card-h"><h3>' + ic("list") + 'Kế hoạch AI</h3><button class="btn btn-xs btn-ghost" data-act="nap-kh">' + ic("refresh") + '</button></div><div id="ty-kh">' +
         '<div class="sk sk-card"></div></div></div></div>';
