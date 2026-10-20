@@ -859,6 +859,20 @@ def loc_ke_hoach(kh, boi_canh: dict, tin: str = "") -> tuple:
     return {"mo_ta": _cat(bo_gach_dai(_chu(kh.get("mo_ta"))), 300) or "Kế hoạch Đội Social", "buoc": buoc_ra}, bo
 
 
+def _khoi_bo_nao(bn) -> str:
+    """Tri thức từ bộ não MinMin (trí nhớ doanh nghiệp + wiki khớp câu hỏi) cho Trợ lý."""
+    if not isinstance(bn, dict):
+        return ""
+    phan = []
+    if str(bn.get("ky_uc") or "").strip():
+        phan.append("TRÍ NHỚ VỀ CHỦ VÀ DOANH NGHIỆP (từ bộ não MinMin, dùng làm bối cảnh):\n"
+                    + _khoi_du_lieu(_chu(bn.get("ky_uc")), 2500))
+    if str(bn.get("tai_lieu") or "").strip():
+        phan.append("TÀI LIỆU TRONG BỘ NÃO KHỚP CÂU HỎI (wiki/ghi chú của chủ, dùng để viết đúng sự thật, "
+                    "trích nguồn khi trả lời):\n" + _khoi_du_lieu(_chu(bn.get("tai_lieu")), 5000))
+    return ("\n\n" + "\n\n".join(phan)) if phan else ""
+
+
 async def tro_ly(tin: str, lich_su: list, boi_canh: dict, *, goi_ai: GoiAI) -> dict:
     """Trả lời chủ trong Trợ lý AI. -> {tra_loi, ke_hoach: {mo_ta, buoc:[...]} | None}.
     Kế hoạch KHÔNG tự chạy: máy chủ lưu ở trạng thái chờ duyệt."""
@@ -902,6 +916,7 @@ async def tro_ly(tin: str, lich_su: list, boi_canh: dict, *, goi_ai: GoiAI) -> d
         "\n\nNICK:\n" + ("\n".join(dong_nick) or "(chưa có nick nào)") +
         "\n\nKIẾN THỨC (sản phẩm/chủ đề, dùng id cho tham số san_pham):\n" + ("\n".join(dong_kt) or "(chưa có)") +
         "\n\nTỔNG QUAN (số liệu thật):\n" + tq +
+        _khoi_bo_nao(bc.get("bo_nao")) +
         ("\n\nLỊCH SỬ GẦN ĐÂY:\n" + "\n".join(ls) if ls else "") +
         "\n\nCHỦ VỪA NÓI:\n" + _khoi_du_lieu(tin, 3000) + "\n\n" + LUAT_JSON +
         'Mẫu: {"tra_loi": "", "ke_hoach": null} hoặc {"tra_loi": "", "ke_hoach": {"mo_ta": "", "buoc": '

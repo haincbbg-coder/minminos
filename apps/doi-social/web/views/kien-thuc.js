@@ -24,11 +24,54 @@
     };
   }
 
+  function ketQuaBoNao(muc, nut) {
+    if (!muc.length) return DS.rong("Không thấy ghi chú nào khớp", "Thử từ khoá khác, ví dụ tên sản phẩm hoặc thương hiệu.", "search");
+    return '<div class="stack">' + muc.map(function (x) {
+      return '<div class="qa" data-path="' + esc(x.path) + '"><div class="row-sb" style="flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0"><b class="clip">' + esc(x.ten || x.path) +
+        '</b><div class="tiny muted clip">' + esc(x.path) + "</div></div>" + nut + '</div><div class="small muted clamp2" style="margin-top:4px">' + esc(x.trich || "") + "</div></div>";
+    }).join("") + "</div>";
+  }
+
+  function nhapBoNao() {
+    var m = DS.modal({
+      title: "Nhập từ bộ não MinMin",
+      body: '<div class="small muted mb">Tìm một ghi chú trong wiki/bộ não (mô tả sản phẩm, bảng giá, chính sách) để tạo hồ sơ. Ghi chú được gắn luôn vào hồ sơ nên lần sau bạn sửa wiki thì Agent đọc bản mới.</div>' +
+        '<div class="row" style="flex-wrap:nowrap"><input class="inp" id="bn-q" placeholder="Ví dụ: váy lụa, bảng giá, chính sách đổi trả"><button class="btn btn-pri" id="bn-tim">' + ic("search") + "Tìm</button></div>" +
+        '<div id="bn-kq" class="mt"></div>',
+      foot: '<button class="btn" data-x>Đóng</button>'
+    });
+    var q = m.body.querySelector("#bn-q"), kq = m.body.querySelector("#bn-kq");
+    function tim() {
+      var t = q.value.trim(); if (!t) return;
+      kq.innerHTML = DS.skel(3);
+      DS.api("GET", "/doi-social/bo-nao/tim?q=" + encodeURIComponent(t)).then(function (d) {
+        if (d.ok === false) { kq.innerHTML = DS.loiThe(d.error); return; }
+        if (d.co_bo_nao === false) { kq.innerHTML = DS.rong("Chưa nối được bộ não", "MinMin chưa có brain mặc định trên máy chủ này.", "book"); return; }
+        kq.innerHTML = ketQuaBoNao(d.muc || [], '<div class="row" style="flex-wrap:nowrap"><button class="btn btn-xs" data-loai="chu_de">Tạo chủ đề</button><button class="btn btn-xs btn-pri" data-loai="san_pham">Tạo sản phẩm</button></div>');
+      });
+    }
+    m.body.querySelector("#bn-tim").onclick = tim;
+    q.addEventListener("keydown", function (e) { if (e.key === "Enter") tim(); });
+    kq.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-loai]"); if (!b) return;
+      var path = b.closest("[data-path]").getAttribute("data-path");
+      b.disabled = true;
+      DS.api("POST", "/doi-social/kien-thuc/tu-bo-nao", { path: path, loai: b.getAttribute("data-loai") }).then(function (d) {
+        b.disabled = false;
+        if (d.ok === false) return;
+        DS.boNho("kt"); m.close(); DS.toast("Đã tạo hồ sơ từ ghi chú, kiểm lại giá và từ khoá nhé", "ok");
+        DS.go("kien-thuc/" + d.kien_thuc.id);
+      });
+    });
+    setTimeout(function () { q.focus(); }, 50);
+  }
+
   function danhSach(el, ctx) {
     el.innerHTML = DS.ph("Kiến thức cho Agent", "Hồ sơ sản phẩm và chủ đề AI dựa vào để viết bài, bình luận, trả lời khách.",
-      '<button class="btn" data-act="them" data-loai="chu_de">' + ic("plus") + 'Thêm chủ đề</button><button class="btn btn-pri" data-act="them" data-loai="san_pham">' + ic("plus") + "Thêm sản phẩm</button>") +
+      '<button class="btn" data-act="nhap-bo-nao">' + ic("spark") + 'Nhập từ bộ não MinMin</button><button class="btn" data-act="them" data-loai="chu_de">' + ic("plus") + 'Thêm chủ đề</button><button class="btn btn-pri" data-act="them" data-loai="san_pham">' + ic("plus") + "Thêm sản phẩm</button>") +
+      '<div class="note mb">' + ic("info") + '<span>Agent tự đọc thêm <b>wiki, ghi chú và trí nhớ</b> trong bộ não MinMin khớp với từng sản phẩm và từng bài viết, nên bạn không phải nhập lại thứ đã có trong bộ não.</span></div>' +
       '<div id="kt-ds"><div class="kt-grid">' + '<div class="sk sk-card"></div>'.repeat(4) + "</div></div>";
-    DS.bind(el, { "them": function (t) { taoMoi(t.getAttribute("data-loai")); }, "tai-lai": nap });
+    DS.bind(el, { "them": function (t) { taoMoi(t.getAttribute("data-loai")); }, "tai-lai": nap, "nhap-bo-nao": nhapBoNao });
     function the(k) {
       var tt = TT[k.trang_thai] || TT.dang_dung;
       return '<a class="kt" href="#/kien-thuc/' + encodeURIComponent(k.id) + '"><div class="row-sb" style="flex-wrap:nowrap;align-items:flex-start"><b style="font-size:14px">' + esc(k.ten) + "</b>" + DS.bd(tt[0], tt[1], true) + "</div>" +
@@ -55,7 +98,7 @@
   }
 
   function chiTiet(el, ctx, id) {
-    var tab = ["tai-lieu", "hoi-dap", "nhom"].indexOf(ctx.q.tab) >= 0 ? ctx.q.tab : "tai-lieu", K = null, suaQA = {};
+    var tab = ["tai-lieu", "hoi-dap", "nhom", "bo-nao"].indexOf(ctx.q.tab) >= 0 ? ctx.q.tab : "tai-lieu", K = null, suaQA = {}, kqBN = null;
     el.innerHTML = '<a class="back" href="#/kien-thuc">' + ic("back") + "Kiến thức cho Agent</a>" + DS.skel(8);
     function nap() {
       return DS.api("GET", "/doi-social/kien-thuc/" + encodeURIComponent(id)).then(function (d) {
@@ -86,8 +129,20 @@
       h += '<div class="card"><div class="tabs" style="margin-top:-6px">' +
         '<a class="tab' + (tab === "tai-lieu" ? " on" : "") + '" href="#/kien-thuc/' + encodeURIComponent(id) + '?tab=tai-lieu">Tài liệu <span class="cnt">' + tl.length + "</span></a>" +
         '<a class="tab' + (tab === "hoi-dap" ? " on" : "") + '" href="#/kien-thuc/' + encodeURIComponent(id) + '?tab=hoi-dap">Hỏi đáp <span class="cnt"' + (cho.length ? ' style="background:var(--warn-soft);color:var(--warn)"' : "") + ">" + qa.length + "</span></a>" +
+        '<a class="tab' + (tab === "bo-nao" ? " on" : "") + '" href="#/kien-thuc/' + encodeURIComponent(id) + '?tab=bo-nao">Bộ não MinMin <span class="cnt">' + (K.nguon_bo_nao || []).length + "</span></a>" +
         (laSP ? '<a class="tab' + (tab === "nhom" ? " on" : "") + '" href="#/kien-thuc/' + encodeURIComponent(id) + '?tab=nhom">Nhóm <span class="cnt">' + nh.length + "</span></a>" : "") + "</div>";
-      if (tab === "hoi-dap") {
+      if (tab === "bo-nao") {
+        var gan = K.nguon_bo_nao || [];
+        h += '<label class="row-sb" style="flex-wrap:nowrap;gap:12px;padding:4px 0 12px;cursor:pointer"><span><b>Tự tra bộ não theo ngữ cảnh</b><div class="tiny muted">Mỗi lần viết bài, bình luận hay trả lời khách, Agent tìm thêm ghi chú khớp trong wiki và bộ não MinMin.</div></span>' +
+          '<span class="sw"><input type="checkbox" id="bn-tu" ' + (K.tu_tra_bo_nao !== false ? "checked" : "") + "><span></span></span></label>" +
+          '<div class="sec-t">Ghi chú gắn cố định (' + gan.length + ")</div>" +
+          (gan.length ? '<div class="stack">' + gan.map(function (p) {
+            return '<div class="row-sb" data-path="' + esc(p) + '" style="flex-wrap:nowrap;padding:8px 0;border-bottom:1px solid var(--line2)"><div class="row" style="flex-wrap:nowrap;min-width:0">' + ic("file") + '<span class="clip">' + esc(p) + "</span></div>" +
+              '<div class="row" style="flex-wrap:nowrap"><button class="btn btn-xs btn-ghost" data-act="xem-bn">' + ic("eye") + 'Xem</button><button class="btn btn-xs btn-ghost btn-dan" data-act="bo-bn" aria-label="Bỏ gắn">' + ic("x") + "</button></div></div>";
+          }).join("") + "</div>" : '<div class="small muted">Chưa gắn ghi chú nào. Agent luôn đọc trọn ghi chú gắn cố định, hợp với bảng giá, chính sách.</div>') +
+          '<div class="sep"></div><div class="sec-t">Tìm trong bộ não</div><div class="row" style="flex-wrap:nowrap"><input class="inp" id="bn-q2" value="' + esc(K.ten || "") + '"><button class="btn btn-soft" data-act="tim-bn">' + ic("search") + "Tìm</button></div>" +
+          '<div id="bn-kq2" class="mt">' + (kqBN ? ketQuaBoNao(kqBN, '<div class="row" style="flex-wrap:nowrap"><button class="btn btn-xs btn-ghost" data-act="xem-bn">Xem</button><button class="btn btn-xs btn-pri" data-act="gan-bn">Gắn</button></div>') : "") + "</div>";
+      } else if (tab === "hoi-dap") {
         var sx = cho.concat(qa.filter(function (q) { return q.trang_thai !== "cho_ban"; }));
         h += (cho.length ? '<div class="note note-warn mb">' + ic("alert") + "<span><b>" + cho.length + " câu khách hỏi</b> mà AI chưa có thông tin. Trả lời một lần, lần sau AI tự trả lời được.</span></div>" : "") +
           (sx.length ? sx.map(function (q) {
@@ -142,7 +197,46 @@
       var fd = new FormData(); fd.append("tep", f, f.name); fd.append("ten", f.name);
       DS.api("POST", "/doi-social/kien-thuc/" + encodeURIComponent(id) + "/tai-lieu", fd).then(function (d) { if (d.ok !== false) { DS.toast("Đã thêm " + f.name, "ok"); DS.boNho("kt"); nap(); } });
     });
+    function luuBoNao(b, loi) {
+      return DS.api("PUT", "/doi-social/kien-thuc/" + encodeURIComponent(id), b).then(function (d) {
+        if (d.ok === false) return;
+        K = Object.assign(K, (d.kien_thuc || {})); if (b.nguon_bo_nao) K.nguon_bo_nao = b.nguon_bo_nao;
+        DS.boNho("kt"); DS.toast(loi, "ok"); ve();
+      });
+    }
+    function timBN() {
+      var q = (el.querySelector("#bn-q2") || {}).value || K.ten || "";
+      var box = el.querySelector("#bn-kq2"); if (box) box.innerHTML = DS.skel(3);
+      DS.api("GET", "/doi-social/bo-nao/tim?q=" + encodeURIComponent(q.trim())).then(function (d) {
+        if (d.ok === false) return;
+        kqBN = (d.muc || []).filter(function (x) { return (K.nguon_bo_nao || []).indexOf(x.path) < 0; });
+        ve();
+      });
+    }
+    el.addEventListener("change", function (e) {
+      if (e.target.id !== "bn-tu") return;
+      luuBoNao({ tu_tra_bo_nao: e.target.checked }, e.target.checked ? "Agent sẽ tự tra bộ não" : "Đã tắt tự tra bộ não");
+    });
+    el.addEventListener("keydown", function (e) { if (e.target.id === "bn-q2" && e.key === "Enter") timBN(); });
     DS.bind(el, {
+      "tim-bn": timBN,
+      "gan-bn": function (t) {
+        var p = t.closest("[data-path]").getAttribute("data-path");
+        kqBN = (kqBN || []).filter(function (x) { return x.path !== p; });
+        luuBoNao({ nguon_bo_nao: (K.nguon_bo_nao || []).concat([p]) }, "Đã gắn ghi chú vào hồ sơ");
+      },
+      "bo-bn": function (t) {
+        var p = t.closest("[data-path]").getAttribute("data-path");
+        luuBoNao({ nguon_bo_nao: (K.nguon_bo_nao || []).filter(function (x) { return x !== p; }) }, "Đã bỏ gắn");
+      },
+      "xem-bn": function (t) {
+        var p = t.closest("[data-path]").getAttribute("data-path");
+        DS.api("GET", "/doi-social/bo-nao/tep?path=" + encodeURIComponent(p)).then(function (d) {
+          if (d.ok === false) return;
+          DS.modal({ title: d.tep.ten, body: '<div class="tiny muted mb">' + esc(d.tep.path) + '</div><pre style="white-space:pre-wrap;max-height:60vh;overflow:auto;font:inherit;font-size:13px">' + esc(d.tep.noi_dung) + "</pre>",
+            foot: '<button class="btn" data-x>Đóng</button>' });
+        });
+      },
       "tai-lai": nap,
       "luu": luuHoSo,
       "xoa": function () {

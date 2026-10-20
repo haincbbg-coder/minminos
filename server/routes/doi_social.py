@@ -39,6 +39,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from starlette.datastructures import UploadFile
 
 import doi_social
+import doi_social_bo_nao
 import doi_social_v2 as v2
 import giay_phep
 import routes.ket_noi_ngoai as knn
@@ -84,6 +85,7 @@ class DoiSocialDeps:
     bao_ke_hoach: Optional[Callable[[dict], Awaitable]] = None           # gửi kế hoạch + nút dsk:<id>:1|0
     bao_su_kien: Optional[Callable[[str, str], Awaitable]] = None        # (tiêu đề, nội dung) -> hòm thư + Telegram
     co_telegram: Optional[Callable[[], bool]] = None                     # Telegram đã nối chưa (huy hiệu Tổng quan)
+    goc_brain: Optional[Callable[[], str]] = None                        # thư mục bộ não MinMin (wiki, memory)
 
 
 def ly_do_chan() -> Optional[str]:
@@ -227,6 +229,40 @@ def _loi_ai() -> str:
             "cập nhật MinMin lên bản mới nhất.")
 
 
+def _kt_ai(sp, cau_hoi: str = ""):
+    """Kiến thức sản phẩm cho AI, đã nối thêm tri thức từ bộ não MinMin (wiki, ghi chú gắn tay)."""
+    kt = v2.kien_thuc_cho_ai(sp)
+    try:
+        return doi_social_bo_nao.bo_sung(kt, cau_hoi)
+    except Exception as ex:
+        print(f"[doi-social] bộ não lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)
+        return kt
+
+
+def _ngu_canh_ai(du_lieu: dict) -> str:
+    """Chữ ngữ cảnh để tự tra bộ não: nội dung bài, bình luận, tin nhắn cuối của khách, câu hỏi nhóm."""
+    if not isinstance(du_lieu, dict):
+        return ""
+    phan = []
+    bai = du_lieu.get("bai")
+    if isinstance(bai, dict):
+        phan.append(str(bai.get("chu") or "")[:300])
+    bl = du_lieu.get("binh_luan")
+    if isinstance(bl, dict):
+        phan.append(str(bl.get("chu") or "")[:300])
+    ht = du_lieu.get("hoi_thoai")
+    if isinstance(ht, dict):
+        tin = [t for t in (ht.get("tin") or []) if isinstance(t, dict) and t.get("tu") == "khach"]
+        if tin:
+            phan.append(str(tin[-1].get("noi_dung") or "")[:300])
+    ch = du_lieu.get("cau_hoi")
+    if isinstance(ch, list):
+        phan.append(" ".join(str(x) for x in ch)[:300])
+    if du_lieu.get("yeu_cau"):
+        phan.append(str(du_lieu["yeu_cau"])[:300])
+    return " ".join(p for p in phan if p)
+
+
 async def tro_ly_tra_loi(tin: str, phien: str = "", nguon: str = "web", chat_id: str = "") -> dict:
     """Một lượt Trợ lý AI: gọi AI với bối cảnh đội, lưu lịch sử, lưu kế hoạch (CHỜ DUYỆT, không
     tự chạy), báo Telegram kèm nút Duyệt nếu yêu cầu đến từ Telegram. Raise ValueError."""
@@ -240,6 +276,10 @@ async def tro_ly_tra_loi(tin: str, phien: str = "", nguon: str = "web", chat_id:
     phien = re.sub(r"[^A-Za-z0-9_-]", "", str(phien or ""))[:40] or ("p" + secrets.token_hex(6))
     lich = [{"vai": x["vai"], "noi_dung": x["noi_dung"]} for x in v2.lich_su_tro_ly(phien, 20)]
     boi = v2.boi_canh_tro_ly()
+    try:
+        boi["bo_nao"] = doi_social_bo_nao.boi_canh_tro_ly(tin)
+    except Exception as ex:
+        print(f"[doi-social] bộ não cho trợ lý lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)
     import doi_social_ai
     kq = await doi_social_ai.tro_ly(tin, lich, boi, goi_ai=_DEPS.goi_ai) or {}
     tra_loi = str(kq.get("tra_loi") or "").strip()
@@ -351,6 +391,7 @@ async def _vong_nen() -> None:
 def register(app: FastAPI, deps: DoiSocialDeps) -> None:
     global _DEPS
     _DEPS = deps
+    doi_social_bo_nao.dat_goc(deps.goc_brain)
 
     @app.on_event("startup")
     async def _nho_vong():
@@ -556,7 +597,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
                 duong.append(str(p))
             ts = v.get("tham_so") or {}
             sp = du_lieu.get("san_pham_id") or (ts.get("tham_so") or {}).get("san_pham") or ""
-            kt = v2.kien_thuc_cho_ai(sp)
+            kt = _kt_ai(sp, _ngu_canh_ai(du_lieu))
             import doi_social_ai
             try:
                 kq = await doi_social_ai.xu_ly_may(muc, du_lieu, duong, goi_ai=deps.goi_ai, kien_thuc=kt)
@@ -1181,7 +1222,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             noi_dang = str(d.get("noi_dang") or "")
             if noi_dang not in v2.NOI_DANG:
                 raise ValueError("chọn nơi đăng hợp lệ")
-            kt = v2.kien_thuc_cho_ai(d.get("san_pham_id"))
+            kt = _kt_ai(d.get("san_pham_id"), str(d.get("yeu_cau") or ""))
             if not kt:
                 raise ValueError("chọn sản phẩm/chủ đề trong Kiến thức cho Agent")
             nick_id, nick_ten = str(d.get("nick_id") or ""), ""
@@ -1287,7 +1328,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             return _loi(e)
         import doi_social_ai
         try:
-            moi = await doi_social_ai.viet_lai(n, v2.kien_thuc_cho_ai(n.get("san_pham_id")),
+            moi = await doi_social_ai.viet_lai(n, _kt_ai(n.get("san_pham_id"), n.get("bai_goc") or ""),
                                                str(d.get("yeu_cau") or "")[:2000], goi_ai=deps.goi_ai)
             n = v2.sua_ban_nhap(nid, moi)
         except ValueError as e:
@@ -1344,6 +1385,44 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         except ValueError as e:
             return _loi(e)
         return {"ok": True, "ban_nhap": n}
+
+    # ---------------------------------------------------------------- bộ não MinMin (wiki, ghi chú, trí nhớ)
+    @app.get("/doi-social/bo-nao/tim")
+    def ds_bo_nao_tim(q: str = Query("")):
+        c = _chan()
+        if c:
+            return c
+        return {"ok": True, "co_bo_nao": doi_social_bo_nao.goc() is not None, "muc": doi_social_bo_nao.tim(q, 8)}
+
+    @app.get("/doi-social/bo-nao/tep")
+    def ds_bo_nao_tep(path: str = Query("")):
+        c = _chan()
+        if c:
+            return c
+        t = doi_social_bo_nao.doc_tep(path, 20000)
+        return {"ok": True, "tep": t} if t else _loi("không đọc được tệp này trong bộ não", 404)
+
+    @app.post("/doi-social/kien-thuc/tu-bo-nao")
+    async def ds_kt_tu_bo_nao(request: Request):
+        c = _chan()
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            t = doi_social_bo_nao.doc_tep(str(d.get("path") or ""), 20000)
+            if not t:
+                raise ValueError("không đọc được tệp này trong bộ não")
+            than = t["noi_dung"]
+            if than.startswith("---"):
+                ket = than.find("\n---", 3)
+                if ket > 0:
+                    than = than[ket + 4:]
+            than = "\n".join(x for x in than.splitlines() if not x.startswith("# ")).strip()
+            k = v2.tao_kien_thuc({"loai": d.get("loai") or "san_pham", "ten": d.get("ten") or t["ten"],
+                                  "mo_ta": than[:3000], "nguon_bo_nao": [t["path"]], "tu_tra_bo_nao": True})
+        except ValueError as e:
+            return _loi(e)
+        return {"ok": True, "kien_thuc": k}
 
     @app.get("/doi-social/kien-thuc")
     def ds_ds_kt():

@@ -22956,7 +22956,8 @@ async def _ds_bao_su_kien(tieu_de: str, noi_dung: str):
 
 _DS_DEPS = doi_social_routes.DoiSocialDeps(bao=_ds_bao, goi_ai=_ds_goi_ai, thong_tin_ai=_ds_thong_tin_ai,
                                            bao_ke_hoach=_ds_bao_ke_hoach, bao_su_kien=_ds_bao_su_kien,
-                                           co_telegram=lambda: bool(_TG_BOT and (_TG_BOT.chat_ids or [])))
+                                           co_telegram=lambda: bool(_TG_BOT and (_TG_BOT.chat_ids or [])),
+                                           goc_brain=lambda: str(_default_brain_dir()))
 doi_social_routes.register(app, _DS_DEPS)
 
 # Up bài tự động từ Google Sheet (26.10.186): đọc Sheet UP BÀI, tải video, AI viết content, đăng Reels.
