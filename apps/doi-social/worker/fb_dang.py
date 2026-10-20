@@ -298,7 +298,8 @@ def fb_dang_nhom_ai(nc) -> str:
             nc.su_kien("dang_nhom", "bo_qua", f"Mọi nhóm đã đủ {moi_nhom} bài trong tuần")
             break
         try:
-            kq = dang_noi_dung(nc, chuan_link(dich["link"]), str(bn.get("noi_dung") or ""), [], "dang_nhom")
+            kq = dang_noi_dung(nc, chuan_link(dich["link"]), str(bn.get("noi_dung") or ""), bn.get("tep_cuc_bo") or [],
+                               "dang_nhom")
         except LoiKyNang as e:
             if e.ma and e.ma != "chua_vao_nhom":
                 nc.xong_ban_nhap(bn["id"], False, loi=str(e))
@@ -328,7 +329,7 @@ def fb_dang_tuong_ai(nc) -> str:
             nc.su_kien("dang_tuong", "bo_qua", "Không còn bài AI đã duyệt cho tường", ma="het_bai")
             break
         try:
-            kq = dang_noi_dung(nc, "", str(bn.get("noi_dung") or ""), [], "dang_tuong")
+            kq = dang_noi_dung(nc, "", str(bn.get("noi_dung") or ""), bn.get("tep_cuc_bo") or [], "dang_tuong")
         except LoiKyNang as e:
             nc.xong_ban_nhap(bn["id"], False, loi=str(e))
             raise
@@ -354,6 +355,13 @@ def dang_ban_nhap_fb(nc) -> str:
     link_goc = str(ts.get("link_goc") or "")
     if not noi_dung.strip():
         raise LoiKyNang("nháp không có nội dung")
+    da_bao = []
+
+    def bao_nhap(ok_: bool, link: str = "", loi: str = "") -> None:
+        if bid and not da_bao:          # lõi không gọi lại; ở đây cũng chỉ gọi đúng một lần
+            da_bao.append(1)
+            nc.xong_ban_nhap(bid, ok_, link=link, loi=loi)
+
     try:
         if loai in ("binh_luan", "tra_loi"):
             if not link_goc:
@@ -373,12 +381,10 @@ def dang_ban_nhap_fb(nc) -> str:
             if kq != "thanh_cong":
                 nc.su_kien(hd, "loi", "Đã gửi nhưng chưa thấy bình luận hiện" if kq == "khong_hien"
                            else "Không thấy ô bình luận dưới bài", link=link_goc, nhom=nhom)
-                if bid:
-                    nc.xong_ban_nhap(bid, False, loi="không thấy bình luận sau khi gửi")
+                bao_nhap(False, loi="không thấy bình luận sau khi gửi")
                 return "Không đăng được bình luận của nháp."
             nc.su_kien(hd, "thanh_cong", f"Đăng nháp #{bid}: {noi_dung[:80]}", link=link_goc, nhom=nhom)
-            if bid:
-                nc.xong_ban_nhap(bid, True, link=link_goc)
+            bao_nhap(True, link=link_goc)
             return "Đã đăng bình luận của nháp."
         hd = {"fb_nhom": "dang_nhom", "fb_trang": "dang_trang"}.get(noi_dang, "dang_tuong")
         dich = nhom if noi_dang in ("fb_nhom", "fb_trang") else ""
@@ -386,19 +392,18 @@ def dang_ban_nhap_fb(nc) -> str:
             dich = link_goc if link_goc.startswith("http") else ""
             if not dich:
                 raise LoiKyNang("nháp bài nhóm/Trang thiếu link nơi đăng")
-        kq = dang_noi_dung(nc, chuan_link(dich) if dich else "", noi_dung, list(nc.tep_cuc_bo), hd)
+        kq = dang_noi_dung(nc, chuan_link(dich) if dich else "", noi_dung,
+                           list(ts.get("tep_cuc_bo") or nc.tep_cuc_bo), hd)
         if kq["trang_thai"] == "chay_thu":
             return "Chạy thử: đã soạn bài của nháp, không bấm Đăng."
         _bao_ket_qua(nc, kq, hd, nhom=nhom, link_noi=dich)
-        if bid:
-            nc.xong_ban_nhap(bid, True, link=kq.get("link") or "")
+        bao_nhap(True, link=kq.get("link") or "")
         return "Đã đăng bài của nháp" + (" (chờ quản trị viên duyệt)." if kq["trang_thai"] == "cho_duyet" else ".")
     except LoiKyNang as e:
-        if bid:
-            try:
-                nc.xong_ban_nhap(bid, False, loi=str(e))
-            except Exception:
-                pass
+        try:
+            bao_nhap(False, loi=str(e))
+        except Exception:
+            pass
         raise
 
 

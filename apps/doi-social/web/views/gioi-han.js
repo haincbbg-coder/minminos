@@ -57,7 +57,7 @@
             return '<a class="pill' + (id === nt ? " on" : "") + '" href="#/gioi-han?tab=nen-tang&nt=' + id + '">' + DS.icNT(id, 20) + esc(DS.tenNT(id)) + "</a>";
           }).join("") + "</div>" +
             '<div class="card card-x"><div class="card-h"><h3>' + DS.icNT(nt, 22) + "Việc mỗi ngày · " + esc(DS.tenNT(nt)) + '</h3><button class="btn btn-sm" data-act="mac-dinh">' + ic("refresh") + "Mặc định cho " + esc(DS.tenNT(nt)) +
-            '</button></div><div style="height:12px"></div>' +
+            '</button></div>' +
             (mang.length ? '<div class="tw"><table class="tbl"><thead><tr><th>Việc</th><th>Nick mới</th><th>Nick lâu năm</th><th class="small">Mặc định</th></tr></thead><tbody>' + mang.map(function (k) {
               var x = v[k] || md[k] || [0, 0], m = md[k] || [];
               return "<tr><td><b style=\"font-weight:500\">" + esc(HD[k] || k) + "</b></td><td>" + so("nt." + k + ".0", x[0], 0, 10000, 96) + "</td><td>" + so("nt." + k + ".1", x[1], 0, 10000, 96) +

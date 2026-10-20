@@ -251,6 +251,53 @@ check("lay_kho tải tệp về thư mục tạm của việc, bỏ tên tệp t
       and tai == ["/doi-social/may/kho/tep/9/a.jpg", "/doi-social/may/kho/tep/9/b.mp4"], (bai, tai))
 nc4.don_dep()
 
+# Bổ sung của người điều phối: tệp nháp, hong, tệp kết quả, muc_tieu, hành động ngoài danh mục.
+mc8 = MinMinGia()
+_goc8 = mc8.goi
+
+
+def _goi8(method, duong, body=None, timeout=60):
+    if duong.startswith("/doi-social/may/ban-nhap/lay"):
+        mc8.goi_ds.append((method, duong, body))
+        return {"ban_nhap": {"id": 21, "noi_dung": "x", "muc_tieu": {"a": 1},
+                             "tep": [{"ten": "Ảnh 1.jpg", "luu": "a1.jpg"}, {"ten": "x", "luu": "../x"}]}}
+    return _goc8(method, duong, body, timeout)
+
+
+mc8.goi = _goi8
+tai8 = []
+mc8.tai_ve = lambda duong, dich: (tai8.append(duong), Path(dich).write_bytes(b"1"))
+nc8 = NguCanh(mc8, viec_mau("fb_dang_tuong_ai"))
+bn8 = nc8.lay_ban_nhap("fb_tuong")
+check("lay_ban_nhap tải tệp nháp qua /may/ban-nhap/tep/{id}/{luu} vào tep_cuc_bo",
+      tai8 == ["/doi-social/may/ban-nhap/tep/21/a1.jpg"] and len(bn8["tep_cuc_bo"]) == 1
+      and Path(bn8["tep_cuc_bo"][0]).is_file() and bn8["muc_tieu"] == {"a": 1}, (tai8, bn8))
+nc8.ban_nhap(loai="bai_dang", noi_dang="threads", noi_dung="y", muc_tieu={"k": "v"}, tep=[{"ten": "a.png", "b64": "AA=="}])
+b8 = [b for m, d, b in mc8.goi_ds if d == "/doi-social/may/ban-nhap"][-1]
+check("ban_nhap chuyển nguyên kw (muc_tieu, tep b64)", b8["muc_tieu"] == {"k": "v"} and b8["tep"][0]["b64"] == "AA=="
+      and b8["viec_id"] == 7, b8)
+nc8.xong_kho(4, False, False, loi="sai định dạng", hong=True)
+nc8.xong_kho(5, True, True, link="L")
+kk = [b for m, d, b in mc8.goi_ds if "/doi-social/may/kho/" in d and d.endswith("/ket-qua")]
+check("xong_kho gửi hong (tuỳ chọn, mặc định False)", kk[0]["hong"] is True and kk[1]["hong"] is False
+      and kk[1]["link"] == "L", kk)
+csv = nc8.thu_muc_tam / "ket-qua.csv"
+csv.write_text("a,b\n1,2\n", encoding="utf-8")
+nc8.gui_tep_ket_qua(csv)
+tk = [(d, b) for m, d, b in mc8.goi_ds if "/tep-ket-qua/" in d][-1]
+check("gui_tep_ket_qua POST {ten, b64}", tk[0] == "/doi-social/may/tep-ket-qua/7" and tk[1]["ten"] == "ket-qua.csv"
+      and tk[1]["b64"] == "YSxiCjEsMgo=", tk)
+csv.write_bytes(b"x" * (10 * 1024 * 1024 + 1))
+try:
+    nc8.gui_tep_ket_qua(csv)
+    qua_lon = False
+except LoiKyNang:
+    qua_lon = True
+check("tệp kết quả quá 10MB bị từ chối", qua_lon)
+check("hành động ngoài danh mục (dang_nhap) không bị chặn", NguCanh(MinMinGia(), viec_mau(han_muc={"thich": 0}))
+      .con_lai("dang_nhap") >= 10 ** 6)
+nc8.don_dep()
+
 nc5 = NguCanh(MinMinGia(), viec_mau("fb_binh_luan_nhom_sp", {"che_do": "dang_luon"}, chay_thu=True))
 check("cờ chay_thu của việc thắng che_do của tham số", nc5.chay_thu and nc5.che_do == "chay_thu")
 nc6 = NguCanh(MinMinGia(), viec_mau("fb_binh_luan_nhom_sp", {"che_do": "duyet_truoc"}))
@@ -420,6 +467,23 @@ else:
           not kq["ok"] and sk[-1]["ket_qua"] == "loi" and sk[-1]["ma"] == "checkpoint"
           and sk[-1]["hanh_dong"] == "binh_luan" and "checkpoint" in kq["thong_diep"]
           and "đã làm được 1" in kq["thong_diep"], (kq, sk))
+    def ham_nhap(nc):
+        nc.xong_ban_nhap(nc.ts["ban_nhap_id"], True, link="L")
+        nc.su_kien("dang_tuong", "thanh_cong", f"{len(nc.ts.get('tep_cuc_bo') or [])} tệp")
+        return "ok"
+
+    m9 = MinMinGia()
+    m9.tai_ve = lambda duong, dich: (m9.goi_ds.append(("TAI", duong, None)), Path(dich).write_bytes(b"1"))
+    m9.tai_tep = lambda vid, luu, dich: (m9.goi_ds.append(("TAI_VIEC", luu, None)), Path(dich).write_bytes(b"1"))
+    v9 = {"id": 31, "ky_nang": "dang_ban_nhap", "nick_id": "n1",
+          "tham_so": {"tham_so": {"ban_nhap_id": 8, "loai": "bai_dang", "noi_dang": "threads", "noi_dung": "z",
+                                  "tep": [{"ten": "a.jpg", "luu": "a.jpg"}]}}}
+    mw.lam_viec(m9, GPMGia, v9, {"dang_ban_nhap:threads": ham_nhap}, connect=connect)
+    tai9 = [(m_, d) for m_, d, _ in m9.goi_ds if m_ in ("TAI", "TAI_VIEC")]
+    xong9 = [d for m_, d, _ in m9.goi_ds if "/ban-nhap/8/ket-qua" in d]
+    check("dang_ban_nhap: lõi tải ts.tep qua đường nháp vào nc.ts['tep_cuc_bo'], không gọi xong_ban_nhap thêm",
+          tai9 == [("TAI", "/doi-social/may/ban-nhap/tep/8/a.jpg")] and len(xong9) == 1
+          and m9.ket_qua_ds[-1]["ok"] and "1 tệp" in m9.su_kien_ds()[-1]["chi_tiet"], (tai9, xong9))
     so_mo = len(GPMGia.mo_ds)
     mw.lam_viec(m, GPMGia, viec_mau("zz_khong_biet"), kb_t, connect=connect)
     check("kỹ năng lạ -> báo lỗi ngay, không mở profile", not m.ket_qua_ds[-1]["ok"] and len(GPMGia.mo_ds) == so_mo)

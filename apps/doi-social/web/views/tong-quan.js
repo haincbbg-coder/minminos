@@ -12,7 +12,7 @@
   }
 
   function robot() {
-    return '<svg class="robot" width="150" height="150" viewBox="0 0 150 150" aria-hidden="true"><defs>' +
+    return '<svg class="robot" width="124" height="124" viewBox="0 0 150 150" aria-hidden="true"><defs>' +
       '<linearGradient id="rb-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#6366f1"/></linearGradient>' +
       '<linearGradient id="rb-f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e1b4b"/><stop offset="1" stop-color="#312e81"/></linearGradient></defs>' +
       '<circle cx="75" cy="78" r="64" fill="#7c3aed" opacity=".08"/><circle cx="75" cy="78" r="48" fill="#7c3aed" opacity=".08"/>' +
@@ -28,11 +28,11 @@
 
   function minhHoa(nen) {
     var ds = ["telegram", "youtube", "reddit", "facebook", "instagram", "tiktok", "x", "threads"];
-    var h = '<div class="orbit"><div class="ring" style="width:250px;height:250px"></div><div class="ring" style="width:170px;height:170px;border-style:solid;opacity:.6"></div>';
+    var h = '<div class="orbit"><div class="ring" style="width:276px;height:193px"></div><div class="ring" style="width:170px;height:150px;border-style:solid;opacity:.6"></div>';
     ds.forEach(function (id, i) {
-      var g = (i / ds.length) * Math.PI * 2 - Math.PI / 2, r = 125;
+      var g = (i / ds.length) * Math.PI * 2 - Math.PI / 2, r = Math.max(110, Math.min(138, (window.innerWidth - 90) / 2));
       var mo = nen.length && id !== "telegram" && nen.indexOf(id) < 0;
-      h += '<div class="pf" style="left:calc(50% + ' + Math.round(Math.cos(g) * r) + "px);top:calc(47% + " + Math.round(Math.sin(g) * r * .58) +
+      h += '<div class="pf" style="left:calc(50% + ' + Math.round(Math.cos(g) * r) + "px);top:calc(47% + " + Math.round(Math.sin(g) * r * .7) +
         "px);animation-delay:" + (i * .35).toFixed(2) + "s" + (mo ? ";opacity:.45" : "") + '">' + DS.icNT(id, 34) + "</div>";
     });
     return h + "</div>" + robot() + '<div class="robot-cap"><span class="dotx on pulse"></span>MinMin Agent · Sẵn sàng</div>';

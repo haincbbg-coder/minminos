@@ -24,9 +24,9 @@
     var F = { tg: "hom_nay", nick: "", tinh_nang: "", ket_qua: ctx.q.kq || "", tu: "", den: "", trang: 1 };
     var body = el.querySelector("#nk-body");
     body.innerHTML = '<div class="card"><div class="card-h"><h3><span class="dotx on pulse"></span>Đang chạy</h3><span class="tiny muted">Tự làm mới mỗi 5 giây</span></div><div id="nk-dang"><div class="sk sk-line"></div></div></div>' +
-      '<div class="card card-x"><div class="card-h"><h3>Hôm nay theo nick</h3></div><div style="height:12px"></div><div class="tw" id="nk-nick"><table class="tbl"><tbody>' + DS.skelDong(3, 5) + "</tbody></table></div></div>" +
+      '<div class="card card-x"><div class="card-h"><h3>Hôm nay theo nick</h3></div><div class="tw" id="nk-nick"><table class="tbl"><tbody>' + DS.skelDong(3, 5) + "</tbody></table></div></div>" +
       '<div class="card card-x"><div class="card-h"><h3>Dòng thời gian <span class="sub" id="nk-tong"></span></h3><div class="row"><button class="btn btn-sm" data-act="lam-moi">' + ic("refresh") +
-      'Làm mới</button><a class="btn btn-sm" id="nk-csv" href="#">' + ic("download") + 'Xuất CSV</a></div></div><div style="height:12px"></div><div class="filters">' +
+      'Làm mới</button><a class="btn btn-sm" id="nk-csv" href="#">' + ic("download") + 'Xuất CSV</a></div></div><div class="filters">' +
       '<select class="sel" id="f-tg"><option value="hom_nay">Hôm nay</option><option value="24h">24 giờ qua</option><option value="7d">7 ngày</option><option value="30d">30 ngày</option><option value="tuy">Tuỳ chọn</option></select>' +
       '<span id="f-tuy" hidden class="row"><input class="inp" type="datetime-local" id="f-tu"><span class="muted">đến</span><input class="inp" type="datetime-local" id="f-den"></span>' +
       '<select class="sel" id="f-nick"><option value="">Mọi nick</option></select>' +
@@ -132,7 +132,7 @@
     var mauId = DS.mauTheoId(KB), loc = "";
     var body = el.querySelector("#nk-body");
     body.innerHTML = '<div class="card card-x"><div class="card-h"><h3>Đợt chạy hàng loạt <span class="sub" id="dt-tong"></span></h3><a class="btn btn-sm btn-soft" href="#/chay-hang-loat">' +
-      ic("plus") + 'Chạy hàng loạt</a></div><div style="height:12px"></div><div class="filters"><div class="chips" id="dt-loc">' +
+      ic("plus") + 'Chạy hàng loạt</a></div><div class="filters"><div class="chips" id="dt-loc">' +
       [["", "Tất cả"], ["dang_chay", "Đang chạy"], ["cho", "Đang chờ"], ["hoan_tat", "Hoàn tất"], ["huy", "Đã huỷ"]].map(function (x) {
         return '<button class="chip' + (x[0] === loc ? " on" : "") + '" data-act="loc" data-v="' + x[0] + '">' + x[1] + "</button>";
       }).join("") + '</div></div><div id="dt-ds"></div></div>';
@@ -149,7 +149,7 @@
             var m = mauId[x.kich_ban] || {};
             return '<tr class="click" data-act="mo-dot" data-id="' + x.id + '"><td><b>' + esc(x.ten || "Đợt #" + x.id) + '</b><div class="sub">' + (x.nick || []).length + ' nick</div></td><td><div class="row" style="flex-wrap:nowrap">' +
               DS.icNT(m.nen_tang, 18) + '<span class="clip" style="max-width:200px">' + esc(x.ten_mau || m.ten || x.kich_ban) + "</span></div>" + (x.chay_thu ? DS.bd("Chạy thử", "brand") : "") + "</td><td>" +
-              DS.bdMap(DS.TT_DOT, x.trang_thai) + "</td><td>" + tienTrinh(x.tien_trinh) + '</td><td class="num">' + (x.song_song || 1) + '</td><td class="small muted">' +
+              DS.bdMap(DS.TT_DOT, x.trang_thai) + "</td><td>" + tienTrinh(x.tien_trinh) + '</td><td class="num">' + (x.song_song || 1) + '</td><td class="small muted nw">' +
               esc({ web: "Trang web", lich: "Lịch hẹn", tro_ly: "Trợ lý AI", telegram: "Telegram" }[x.nguon] || x.nguon || "") + '</td><td class="nw small">' + DS.gio(x.tao_luc) + "</td></tr>";
           }).join("") + "</tbody></table></div>";
       });
@@ -205,7 +205,7 @@
   function tabLichSu(el, ctx, KB) {
     var mauId = DS.mauTheoId(KB), F = { trang_thai: ctx.q.tt || "", kich_ban: "", trang: 1 }, cache = {};
     var body = el.querySelector("#nk-body");
-    body.innerHTML = '<div class="card card-x"><div class="card-h"><h3>Lịch sử chạy <span class="sub" id="ls-tong"></span></h3></div><div style="height:12px"></div><div class="filters">' +
+    body.innerHTML = '<div class="card card-x"><div class="card-h"><h3>Lịch sử chạy <span class="sub" id="ls-tong"></span></h3></div><div class="filters">' +
       '<select class="sel" id="ls-tt"><option value="">Mọi trạng thái</option><option value="cho_chay">Chờ máy nhận</option><option value="dang_chay">Đang chạy</option><option value="xong">Thành công</option><option value="loi">Thất bại</option><option value="bo">Đã huỷ</option></select>' +
       '<select class="sel" id="ls-mau"><option value="">Mọi mẫu</option>' + DS.dsMau(KB).map(function (m) { return '<option value="' + esc(m.id) + '">' + esc(DS.tenNT(m.nen_tang) + " · " + m.ten) + "</option>"; }).join("") +
       '</select></div><div id="ls-ds"></div></div>';
