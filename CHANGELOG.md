@@ -4,6 +4,15 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.186] - 2026-10-20
+
+### Thêm mới
+- **Up bài tự động từ Google Sheet**: MinMin đọc Sheet UP BÀI, tự tải video từ link TikTok/Facebook/Instagram, AI xem video nhận diện đồ và viết content theo giá, gửi bản xem trước lên Telegram, bấm Duyệt là tự đăng Reels lên đúng Trang theo lịch, rồi ghi link bài và nhật ký ngược vào Sheet.
+
+### Sửa lỗi
+- Máy ở nhà điều khiển được profile GPM Login thật: GPM báo cổng điều khiển nhưng không mở, nay Worker tự mở lại trình duyệt đúng cấu hình GPM kèm cổng.
+- Profile đang mở sẵn thì Worker tự đóng rồi mở lại, không còn báo lỗi ProfileInUse.
+
 ## [26.10.185] - 2026-10-20
 
 ### Thêm mới
