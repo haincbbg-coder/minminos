@@ -145,12 +145,8 @@ def _dj(v) -> str:
 
 
 def _tz():
-    try:
-        import localefmt
-        return localefmt.tz()
-    except Exception:
-        from datetime import timedelta, timezone
-        return timezone(timedelta(hours=7))
+    import localefmt
+    return localefmt.tz()
 
 
 def _dau_ngay(luc: Optional[float] = None) -> float:
