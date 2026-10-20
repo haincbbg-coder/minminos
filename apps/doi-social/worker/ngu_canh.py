@@ -348,10 +348,32 @@ class NguCanh:
         return int(d.get("id") or 0)
 
     def lay_ban_nhap(self, noi_dang: str) -> Optional[dict]:
+        """Nháp đã duyệt; tệp đính kèm (nếu có) tải sẵn vào bn["tep_cuc_bo"]."""
         q = self._q(viec_id=self.vid, noi_dang=noi_dang, san_pham=self.ts.get("san_pham"))
         d = self._goi("GET", f"/doi-social/may/ban-nhap/lay?{q}") or {}
         bn = d.get("ban_nhap")
-        return bn if isinstance(bn, dict) else None
+        if not isinstance(bn, dict):
+            return None
+        bn["tep_cuc_bo"] = self.tai_tep_ban_nhap(bn.get("id"), bn.get("tep"))
+        return bn
+
+    def tai_tep_ban_nhap(self, bid, tep) -> List[str]:
+        """Tải tệp của nháp qua /may/ban-nhap/tep/{id}/{luu} vào thư mục tạm của việc."""
+        out: List[str] = []
+        if not bid or not isinstance(tep, list):
+            return out
+        thu_muc = self.thu_muc_tam / f"nhap-{bid}"
+        for t in tep:
+            luu = str((t or {}).get("luu") or "") if isinstance(t, dict) else ""
+            if not luu or "/" in luu or "\\" in luu or luu.startswith("."):
+                continue
+            thu_muc.mkdir(parents=True, exist_ok=True)
+            dich = thu_muc / luu
+            self._tai(f"/doi-social/may/ban-nhap/tep/{bid}/{urllib.parse.quote(luu)}", dich)
+            out.append(str(dich))
+        if out:
+            self.nhat_ky(f"Đã tải {len(out)} tệp của nháp #{bid}")
+        return out
 
     def xong_ban_nhap(self, id: int, ok: bool, link: str = "", loi: str = "") -> None:
         self._goi("POST", f"/doi-social/may/ban-nhap/{int(id)}/ket-qua", {"ok": bool(ok), "link": link, "loi": loi})
@@ -375,9 +397,22 @@ class NguCanh:
             self.nhat_ky(f"Đã tải {len(bai['tep_cuc_bo'])} tệp của bài kho #{bai.get('id')}")
         return bai
 
-    def xong_kho(self, id: int, ok: bool, da_bam_dang: bool, link: str = "", loi: str = "") -> None:
+    def xong_kho(self, id: int, ok: bool, da_bam_dang: bool, link: str = "", loi: str = "",
+                 hong: bool = False) -> None:
+        """hong=True: bài hỏng (tệp sai định dạng...), không quay lại hàng chờ."""
         self._goi("POST", f"/doi-social/may/kho/{int(id)}/ket-qua",
-                  {"ok": bool(ok), "da_bam_dang": bool(da_bam_dang), "link": link, "loi": loi})
+                  {"ok": bool(ok), "da_bam_dang": bool(da_bam_dang), "link": link, "loi": loi, "hong": bool(hong)})
+
+    TEP_KET_QUA_TOI_DA = 10 * 1024 * 1024
+
+    def gui_tep_ket_qua(self, duong_dan) -> dict:
+        """Gửi một tệp kết quả (vd CSV quét dữ liệu, tối đa 10MB) về MinMin cho việc này."""
+        p = Path(duong_dan)
+        du_lieu = p.read_bytes()
+        if len(du_lieu) > self.TEP_KET_QUA_TOI_DA:
+            raise LoiKyNang(f"tệp kết quả quá lớn ({len(du_lieu) // 1024 // 1024}MB > 10MB)")
+        return self._goi("POST", f"/doi-social/may/tep-ket-qua/{self.vid}",
+                         {"ten": p.name, "b64": base64.b64encode(du_lieu).decode("ascii")}) or {}
 
     # ------------------------------------------------------------------ nhóm, trí nhớ, hội thoại
     def nhom_fb(self) -> list:
@@ -449,6 +484,12 @@ class NguCanh:
             raise LoiKyNang(THONG_DIEP_MA[ma].format(nt=ten), ma=ma)
 
     # ------------------------------------------------------------------ tiện ích không thuộc hợp đồng
+    def chuan_bi_ban_nhap(self) -> None:
+        """Việc dang_ban_nhap: tải sẵn ts.tep vào ts["tep_cuc_bo"] (lõi gọi trước khi chạy kỹ năng)."""
+        if "tep_cuc_bo" in self.ts:
+            return
+        self.ts["tep_cuc_bo"] = self.tai_tep_ban_nhap(self.ts.get("ban_nhap_id"), self.ts.get("tep"))
+
     def don_dep(self) -> None:
         if self._tu_tao_tam:
             import shutil

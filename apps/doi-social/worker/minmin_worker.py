@@ -265,7 +265,8 @@ class DieuPhoi:
 def _tai_tep_viec(may_chu, viec: dict, td: Path) -> list:
     tsv = viec.get("tham_so") or {}
     ds = list(tsv.get("tep") or [])
-    if isinstance(tsv.get("tham_so"), dict):
+    # Tệp của việc dang_ban_nhap thuộc về nháp: NguCanh.chuan_bi_ban_nhap() tải qua /may/ban-nhap/tep/.
+    if isinstance(tsv.get("tham_so"), dict) and viec.get("ky_nang") != "dang_ban_nhap":
         ds += list(tsv["tham_so"].get("tep") or [])
     out, thay = [], set()
     for t in ds:
@@ -350,6 +351,8 @@ def lam_viec(may_chu, tao_gpm, viec: dict, kb: dict = None, day_buoc=None, toc_d
                         msg = ky_nang_fb.dang_bai(page, viec, tep_cuc_bo, nhat_ky)
                         ok = True
                     else:
+                        if viec.get("ky_nang") == "dang_ban_nhap":
+                            nc.chuan_bi_ban_nhap()
                         msg = str(ham(nc) or "").strip()
                         ok = not (nc.dem["thanh_cong"] == 0 and nc.dem["loi"] > 0)
                         if not msg:

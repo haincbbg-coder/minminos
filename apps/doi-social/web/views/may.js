@@ -74,7 +74,7 @@
           '<div class="fld"><label for="g-nghi">Nghỉ giữa hai lượt (phút)</label><input class="inp" id="g-nghi" type="number" min="0" value="' + (gh.nghi_phut != null ? gh.nghi_phut : 20) + '"></div></div>' +
           '<div class="hint mt-s">Chỉ áp cho việc Đăng thử kiểu cũ. Các mẫu Automation dùng Giới hạn nick.</div><div class="row mt-s" style="justify-content:flex-end"><button class="btn btn-sm" data-act="g-luu">Lưu</button></div></div></div></div>';
 
-        h += '<div class="card card-x mt"><div class="card-h"><h3>Việc gần đây</h3><a class="small" href="#/nhat-ky?tab=lich-su">Lịch sử đầy đủ</a></div><div style="height:12px"></div>';
+        h += '<div class="card card-x mt"><div class="card-h"><h3>Việc gần đây</h3><a class="small" href="#/nhat-ky?tab=lich-su">Lịch sử đầy đủ</a></div>';
         if (!viec.length) h += DS.rong("Chưa có việc nào", "", "list");
         else h += '<div class="tw"><table class="tbl tbl-in"><thead><tr><th>#</th><th>Việc</th><th>Nick</th><th>Trạng thái</th><th>Tạo lúc</th><th></th></tr></thead><tbody>' + viec.slice(0, 15).map(function (v) {
           var ts = v.tham_so || {}, m = mau[v.ky_nang] || {};

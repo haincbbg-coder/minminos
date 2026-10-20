@@ -116,7 +116,7 @@
           '<div class="mini mt"><div><b>' + DS.so(c.con || 0) + '</b><span>Còn chờ đăng</span></div><div><b style="color:var(--ok)">' + DS.so(c.da_dang || 0) + '</b><span>Đã đăng</span></div><div><b style="color:' +
           (c.loi ? "var(--err)" : "inherit") + '">' + DS.so(c.loi || 0) + "</b><span>Lỗi</span></div></div>" +
           (!c.con ? '<div class="note note-warn mt">' + ic("alert") + "<span>Kho dùng chung đang hết bài. Mẫu đăng từ kho sẽ báo <b>Hết bài</b> (vàng) cho tới khi bạn thêm bài.</span></div>" : "") + "</div>";
-        h += '<div class="card card-x"><div class="card-h"><h3>Kho riêng theo nick</h3><span class="small muted">Dùng khi mẫu chọn "Kho riêng của từng nick"</span></div><div style="height:12px"></div>';
+        h += '<div class="card card-x"><div class="card-h"><h3>Kho riêng theo nick</h3><span class="small muted">Dùng khi mẫu chọn "Kho riêng của từng nick"</span></div>';
         if (!ds.length) h += DS.rong("Chưa có kho riêng", "Thêm bài cho một nick cụ thể bằng nút bên dưới.", "box", '<button class="btn btn-sm" data-act="chon-nick">' + ic("plus") + "Thêm bài cho một nick</button>");
         else h += '<div class="tw"><table class="tbl"><thead><tr><th>Nick</th><th class="num">Còn</th><th class="num">Đã đăng</th><th class="num">Lỗi</th><th></th></tr></thead><tbody>' + ds.map(function (r) {
           return '<tr><td><div class="row" style="flex-wrap:nowrap">' + DS.av(r.nick_ten) + "<b>" + esc(r.nick_ten) + '</b></div></td><td class="num">' + (r.con ? DS.so(r.con) : '<span class="bd bd-warn">Hết bài</span>') +
