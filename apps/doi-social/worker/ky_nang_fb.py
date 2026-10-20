@@ -1,4 +1,8 @@
-"""Kỹ năng: đăng một bài Facebook (tường cá nhân, Trang hoặc nhóm) như người thật.
+"""Kỹ năng Facebook. `dang_bai` (việc cũ `fb_dang_bai`) giữ NGUYÊN hành vi đã chạy thật; 13 mẫu fb_*
+cùng việc nội bộ `dang_ban_nhap:facebook` và `fb_gui_tin` khai trong `KICH_BAN` ở cuối tệp (mã nằm ở
+fb_dang.py, fb_tuong_tac.py, fb_nhom.py, fb_tin.py, tiện ích chung ở fb_chung.py).
+
+Đăng một bài Facebook (tường cá nhân, Trang hoặc nhóm) như người thật:
 
 Các bước, mỗi bước ghi vào nhật ký để gửi về MinMin:
   1. Mở nơi đăng (link Trang/nhóm, hoặc tường của nick), đọc lướt một chút.
@@ -17,6 +21,7 @@ from __future__ import annotations
 import re
 import time
 
+from ngu_canh import LoiKyNang  # noqa: F401  - ky_nang_fb.LoiKyNang LÀ ngu_canh.LoiKyNang
 from nguoi import Nguoi
 
 _MO_O_SOAN = re.compile(r"(Bạn đang nghĩ gì|What's on your mind|Viết gì đó|Write something|"
@@ -26,10 +31,6 @@ _TIEP = re.compile(r"^(Tiếp|Next)$", re.I)
 _DANG = re.compile(r"^(Đăng|Post|Đăng bài)$", re.I)
 _CHUYEN = re.compile(r"^(Chuyển ngay|Chuyển|Switch now|Switch)$", re.I)
 _XAC_NHAN_CHUYEN = re.compile(r"^(Chuyển|Switch|Tiếp tục|Continue)$", re.I)
-
-
-class LoiKyNang(RuntimeError):
-    pass
 
 
 def _dau_tien_thay(cands, timeout_ms: int = 15000):
@@ -167,3 +168,30 @@ def dang_bai(page, viec: dict, tep_cuc_bo: list, nhat_ky) -> str:
             nhat_ky("Đăng xong nhưng chưa thấy bài ngay (có thể chờ duyệt nhóm hoặc video đang xử lý)")
             return "Đã bấm Đăng, hộp soạn bài đã đóng; chưa thấy bài ngay trên trang (nhóm chờ duyệt hoặc video đang xử lý)."
     return "Đã bấm Đăng, hộp soạn bài đã đóng."
+
+
+# ---------------------------------------------------------------------------- đăng ký mẫu
+# Nạp ở cuối tệp: các tệp fb_*.py dùng ngu_canh/nguoi, không vòng ngược về đây lúc import.
+import fb_dang  # noqa: E402
+import fb_nhom  # noqa: E402
+import fb_tin  # noqa: E402
+import fb_tuong_tac  # noqa: E402
+
+KICH_BAN = {
+    "fb_dang_nhom_ai": fb_dang.fb_dang_nhom_ai,
+    "fb_dang_tuong_kho": fb_dang.fb_dang_tuong_kho,
+    "fb_dang_nhom_link": fb_dang.fb_dang_nhom_link,
+    "fb_dang_tuong_ai": fb_dang.fb_dang_tuong_ai,
+    "fb_tuong_tac_link": fb_tuong_tac.fb_tuong_tac_link,
+    "fb_nuoi_nick": fb_tuong_tac.fb_nuoi_nick,
+    "fb_binh_luan_nhom_sp": fb_nhom.fb_binh_luan_nhom_sp,
+    "fb_binh_luan_nhom_link": fb_nhom.fb_binh_luan_nhom_link,
+    "fb_tra_loi_binh_luan": fb_tin.fb_tra_loi_binh_luan,
+    "fb_tra_loi_tin_nhan": fb_tin.fb_tra_loi_tin_nhan,
+    "fb_tuong_tac_bai_app": fb_tuong_tac.fb_tuong_tac_bai_app,
+    "fb_nhan_tin_ds": fb_tin.fb_nhan_tin_ds,
+    "fb_tham_gia_nhom_sp": fb_nhom.fb_tham_gia_nhom_sp,
+    # nội bộ (máy chủ tạo, không có trong danh mục)
+    "dang_ban_nhap:facebook": fb_dang.dang_ban_nhap_fb,
+    "fb_gui_tin": fb_tin.fb_gui_tin,
+}

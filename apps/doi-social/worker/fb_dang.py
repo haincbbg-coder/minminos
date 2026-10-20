@@ -264,7 +264,9 @@ def _da_vao(nhom: dict, nick_id: str) -> bool:
 
 
 def _so_tuan() -> str:
-    return time.strftime("%G-W%V")
+    import datetime
+    nam, tuan, _ = datetime.date.today().isocalendar()
+    return f"{nam}-W{tuan:02d}"
 
 
 def fb_dang_nhom_ai(nc) -> str:

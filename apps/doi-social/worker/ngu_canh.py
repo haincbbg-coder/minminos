@@ -427,7 +427,6 @@ class NguCanh:
             return b""
 
     def mo(self, url: str) -> None:
-        from ky_nang_fb import mo_trang      # nạp lúc cần: tránh vòng import ky_nang_fb -> ngu_canh
         mo_trang(self.page, url)
 
     def kiem_dang_nhap(self) -> None:
@@ -456,7 +455,18 @@ class NguCanh:
             shutil.rmtree(str(self.thu_muc_tam), ignore_errors=True)
 
 
-_TIEN_TO = {"fb_": "facebook", "tt_": "tiktok", "yt_": "youtube", "th_": "threads", "ig_": "instagram",
+def mo_trang(page, url: str) -> None:
+    """Cùng cách với ky_nang_fb.mo_trang (chép lại ở đây để kỹ năng nền tảng khác không phụ thuộc
+    tệp Facebook): goto chịu được trang tự chuyển hướng ('interrupted by another navigation')."""
+    try:
+        page.goto(url, wait_until="domcontentloaded", timeout=60000)
+    except Exception as e:
+        if "interrupted by another navigation" not in str(e):
+            raise
+        page.wait_for_load_state("domcontentloaded", timeout=60000)
+
+
+_TIEN_TO = {"fb_":"facebook", "tt_": "tiktok", "yt_": "youtube", "th_": "threads", "ig_": "instagram",
             "x_": "x", "rd_": "reddit"}
 NOI_DANG_NEN_TANG = {"fb_nhom": "facebook", "fb_tuong": "facebook", "fb_trang": "facebook", "threads": "threads",
                      "instagram": "instagram", "reddit": "reddit", "x": "x", "tiktok": "tiktok", "youtube": "youtube"}
