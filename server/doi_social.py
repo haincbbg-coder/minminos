@@ -385,6 +385,13 @@ def _dong(r) -> dict:
         except Exception:
             d[k] = mac
     d["nhan_ky_nang"] = KY_NANG.get(d.get("ky_nang"), d.get("ky_nang"))
+    try:
+        import doi_social_kich_ban as _kb
+        m = _kb.THEO_ID.get(d.get("ky_nang"))
+        if m:
+            d["nhan_ky_nang"] = d["ten_mau"] = m["ten"]
+    except Exception:
+        pass
     return d
 
 

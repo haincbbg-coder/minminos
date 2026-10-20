@@ -744,7 +744,7 @@ def ds_lich() -> list:
         return [_dong_lich(r) for r in c.execute("SELECT * FROM lich_hen ORDER BY id DESC").fetchall()]
 
 
-def sua_lich(lid, *, bat=None, ten=None, cron=None, nick=None, tham_so=None) -> dict:
+def sua_lich(lid, *, bat=None, ten=None, cron=None, nick=None, tham_so=None, song_song=None, chay_an=None) -> dict:
     with ds._khoa, ds._db() as c:
         r = c.execute("SELECT * FROM lich_hen WHERE id=?", (_int(lid),)).fetchone()
         if not r:
@@ -762,6 +762,11 @@ def sua_lich(lid, *, bat=None, ten=None, cron=None, nick=None, tham_so=None) -> 
         if tham_so is not None:
             _, ts = _kiem_mau(c, r["kich_ban"], tham_so)
             c.execute("UPDATE lich_hen SET tham_so=? WHERE id=?", (_dj(ts), r["id"]))
+        if song_song is not None:
+            c.execute("UPDATE lich_hen SET song_song=? WHERE id=?",
+                      (max(1, min(ds.SONG_SONG_TRAN, _int(song_song, 1))), r["id"]))
+        if chay_an is not None:
+            c.execute("UPDATE lich_hen SET chay_an=? WHERE id=?", (int(bool(chay_an)), r["id"]))
         if bat is not None:
             c.execute("UPDATE lich_hen SET bat=? WHERE id=?", (int(bool(bat)), r["id"]))
             if bat and not r["bat"]:     # bật lại: tính lần kế từ bây giờ, không chạy bù
