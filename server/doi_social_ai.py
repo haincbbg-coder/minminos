@@ -449,7 +449,7 @@ async def _viet_binh_luan(du_lieu, anh, goi_ai, kt):
     live = _la_live(du_lieu)
     tran = GIOI_HAN["live"] if live else GIOI_HAN["binh_luan"]
     kieu = str(du_lieu.get("kieu") or "tu_nhien")
-    ngon_ngu = str(du_lieu.get("ngon_ngu") or "vi")
+    ngon_ngu = str(du_lieu.get("ngon_ngu") or "").strip()
     co_link = bool(link_hop_le(kt))
     kieu_viet = ("tư vấn: góp ý thật lòng cho đúng vấn đề người đăng hỏi, có thể nhắc sản phẩm như trải nghiệm "
                  "bản thân" if kieu == "tu_van" else
@@ -464,7 +464,7 @@ async def _viet_binh_luan(du_lieu, anh, goi_ai, kt):
         + ("- Nếu thật sự cần dẫn link thì để link ở tra_loi_con (trả lời con ngay dưới bình luận của mình), "
            "chỉ dùng đúng link trong KIẾN THỨC, kèm nửa câu dẫn. Không cần thì để tra_loi_con là chuỗi rỗng.\n"
            if co_link and not live else "- tra_loi_con để chuỗi rỗng.\n")
-        + ("" if ngon_ngu == "vi" else f"- Viết bằng ngôn ngữ: {ngon_ngu}.\n")
+        + (f"- Viết bằng ngôn ngữ: {ngon_ngu}.\n" if ngon_ngu else "")
         + LUAT_DU_LIEU + _ghi_anh(anh) +
         "\nBÀI:\n" + _khoi_bai(du_lieu.get("bai") or {}) + "\n\n" + LUAT_JSON +
         'Mẫu: {"noi_dung": "", "tra_loi_con": ""}'
