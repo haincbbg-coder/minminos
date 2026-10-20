@@ -65,3 +65,13 @@ Bấm lại một file để bỏ chọn, hoặc Bỏ chọn tất cả để xo
 Đóng vòng bằng ×, Escape, nút giữa hoặc Đóng cũng xoá lựa chọn và bản xem trước.
 Các file vẫn ở khay để dùng lại; muốn bỏ bản sao lưu trong khay, mở Tải / xem,
 chọn file rồi Bỏ khỏi khay. File gốc trên máy không thay đổi.
+
+### Chuyển mục đích (26.10.183)
+
+Đổi công cụ rồi chọn công cụ mới luôn xoá lựa chọn cũ. Gộp PDF mặc định chỉ liệt kê
+PDF; muốn chèn ảnh vào PDF thì bật Hiện thêm ảnh để đưa vào PDF. Mỗi công cụ có nút
+Thêm PDF/Thêm ảnh/Thêm file ngay trong màn chọn. Thêm từ máy hoặc kéo thả giữ nguyên
+công cụ, chọn các file vừa thêm và mở trang chứa file mới.
+
+Nút Bỏ file đã chọn khỏi khay yêu cầu xác nhận số bản sao trước khi bỏ; file gốc
+trên máy không bị xoá. Bỏ chọn tất cả chỉ bỏ dấu chọn, còn Đổi công cụ không xoá dữ liệu.

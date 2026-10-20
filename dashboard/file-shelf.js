@@ -6,6 +6,7 @@
   let pdfLoading;
   let wheel, wheelCenter, wheelHint, fileInput, audioContext, soundButton;
   let drawCurrent, disc, footer, heading, previewBox, editorCleanup;
+  let activePurpose = '', pickerPurpose = '', pdfImages = false;
   let soundOn = true;
   try { soundOn = localStorage.getItem('minmin-file-sound') !== 'off'; } catch (_) {}
   let workQueue=Promise.resolve();
@@ -73,14 +74,31 @@
     await store(rows => { R.validate(rows,blob); return rows.concat(item); });
     return item;
   }
-  async function addFiles(files) {
-    await open();
+  function matchesPurpose(item,purpose) {
+    if(['edit','collage'].includes(purpose))return item.type==='image';
+    if(purpose==='pdf')return item.type==='pdf'||(pdfImages&&item.type==='image');
+    return true;
+  }
+  function pickFiles(purpose='') {
+    pickerPurpose=purpose;
+    fileInput.accept=purpose==='pdf'?'.pdf,application/pdf':['edit','collage'].includes(purpose)?'image/png,image/jpeg,image/webp':'';
+    fileInput.click();
+  }
+  async function addFiles(files,purpose=activePurpose) {
+    if(!files.length)return;
     await task(async () => {
+      await store();clearPreview();showFiles(purpose);
       let count = 0;
       for (const f of files) {
-        try { await add(f,f.name,'Máy này'); count++; }
+        try {
+          if(!matchesPurpose({type:R.kind(f.name,f.type)},purpose))throw Error(purpose==='pdf'?'Chỉ thêm PDF ở bước này.':'Chọn file ảnh PNG, JPG hoặc WebP.');
+          const item=await add(f,f.name,'Máy này');count++;
+          if(purpose){if(['edit','download'].includes(purpose))selected.clear();selected.add(item.id);}
+        }
         catch(e) { throw Error(`Đã thêm ${count}/${files.length} file. ${e.message}`); }
       }
+      const lastPage=Math.max(0,Math.ceil(items.filter(x=>matchesPurpose(x,purpose)).length/6)-1);
+      showFiles(purpose,lastPage);
       report(`Đã thêm ${count} file vào khay.`);
     });
   }
@@ -210,7 +228,7 @@
   }
   function closeWheel(focus=true) {
     if(wheel)wheel.hidden=true;
-    clearPreview();selected.clear();drawCurrent=null;
+    clearPreview();selected.clear();drawCurrent=null;activePurpose='';pickerPurpose='';pdfImages=false;
     thumbURLs.forEach(url=>URL.revokeObjectURL(url));thumbURLs=[];
     launcher.setAttribute('aria-expanded','false');
     if(focus)launcher.focus();
@@ -249,7 +267,7 @@
   }
   function showTools(){
     clearPreview();setView(()=>{drawWheel('CÔNG CỤ CỦA BẠN',[
-      {label:'Thêm file',icon:'add',run:()=>fileInput.click()},
+      {label:'Thêm file',icon:'add',run:()=>pickFiles()},
       {label:'Chọn file',icon:'files',run:()=>showFiles()},
       {label:'Sửa ảnh',icon:'edit',run:()=>moduleAction('edit')},
       {label:'Ghép ảnh',icon:'collage',run:()=>moduleAction('collage')},
@@ -260,29 +278,41 @@
     report('Chọn công cụ · thả file vào vòng');
   }
   function showFiles(pending='',page=0){
-    clearPreview();
+    clearPreview();activePurpose=pending;
     setView(()=>{
-      const rows=items.filter(x=>!['edit','collage'].includes(pending)||x.type==='image');
+      const rows=items.filter(x=>matchesPurpose(x,pending));
       const pages=Math.max(1,Math.ceil(rows.length/6));page=Math.max(0,Math.min(page,pages-1));
-      drawWheel('CHỌN FILE · '+(page+1)+' / '+pages,rows.slice(page*6,page*6+6).map(item=>({
+      const title={edit:'SỬA ẢNH',collage:'GHÉP ẢNH',pdf:'GỘP PDF',download:'TẢI / XEM'}[pending]||'CHỌN FILE';
+      const entries=rows.slice(page*6,page*6+6).map(item=>({
         label:item.name,name:'Chọn '+item.name,item,checked:selected.has(item.id),hint:item.name+' · '+item.source,
         run:()=>{if(selected.has(item.id))selected.delete(item.id);else{if(['edit','download'].includes(pending))selected.clear();selected.add(item.id);}drawCurrent();}
-      })),showTools,'Công cụ');
+      }));
+      const addLabel=pending==='pdf'?'Thêm PDF':['edit','collage'].includes(pending)?'Thêm ảnh':'Thêm file';
+      if(!entries.length)entries.push({label:addLabel,icon:'add',run:()=>pickFiles(pending)});
+      drawWheel(title+' · '+(page+1)+' / '+pages,entries,showTools,'Đổi công cụ');
       const action={edit:'Sửa ảnh đã chọn',collage:'Ghép ảnh đã chọn',pdf:'Gộp PDF đã chọn',download:'Xem / tải file đã chọn'}[pending]||'Chọn thao tác';
       footer.append(button('‹',()=>showFiles(pending,page-1)),button(action,()=>{tick();if(pending)moduleAction(pending,true);else showTools();},'mm-primary'),button('›',()=>showFiles(pending,page+1)));
       footer.append(button('Bỏ chọn tất cả',()=>{selected.clear();drawCurrent();report('Đã bỏ chọn tất cả; file vẫn ở trong khay.');}));
       footer.children[3].disabled=busy||!selected.size;
       footer.children[0].disabled=page===0||busy;footer.children[2].disabled=page===pages-1||busy;footer.children[1].disabled=busy||!selected.size;
       footer.children[0].setAttribute('aria-label','Trang file trước');footer.children[2].setAttribute('aria-label','Trang file sau');
-      if(!rows.length){footer.append(button('Thêm file',()=>fileInput.click()));report('Chưa có file phù hợp. Thả file vào vòng hoặc bấm Thêm file.');}
+      const addButton=button(addLabel,()=>pickFiles(pending));addButton.disabled=busy;footer.append(addButton);
+      const remove=button('Bỏ file đã chọn khỏi khay',()=>{
+        if(busy||!selected.size)return;
+        const ids=new Set(selected);
+        if(!window.confirm(`Bỏ ${ids.size} bản sao đã chọn khỏi khay? File gốc trên máy vẫn giữ nguyên.`))return;
+        task(async()=>{await store(rows=>rows.filter(x=>!ids.has(x.id)));selected.clear();showFiles(pending,page);report('Đã bỏ bản sao khỏi khay; file gốc giữ nguyên.');});
+      });remove.disabled=busy||!selected.size;footer.append(remove);
+      if(pending==='pdf'){const filterButton=button(pdfImages?'Chỉ hiện PDF':'Hiện thêm ảnh để đưa vào PDF',()=>{
+        pdfImages=!pdfImages;selected=new Set(items.filter(x=>selected.has(x.id)&&matchesPurpose(x,pending)).map(x=>x.id));showFiles(pending);
+      });filterButton.disabled=busy;footer.append(filterButton);}
+      if(!rows.length)report(pending==='pdf'?'Chưa có PDF. Bấm Thêm PDF để chọn tài liệu từ máy.':'Chưa có file phù hợp. Bấm Thêm file hoặc Thêm ảnh.');
     });
-    if(items.length)report(pending?'Chọn file rồi bấm nút thực hiện bên dưới.':'Bấm từng múi để chọn hoặc bỏ chọn file.');
+    if(items.some(x=>matchesPurpose(x,pending)))report(pending?'Chọn file rồi bấm nút thực hiện bên dưới.':'Bấm từng múi để chọn hoặc bỏ chọn file.');
   }
   async function moduleAction(kind,confirmed=false){
     if(!confirmed){
-      const candidates=items.filter(x=>selected.has(x.id));
-      if(['edit','collage'].includes(kind))selected=new Set(candidates.filter(x=>x.type==='image').map(x=>x.id));
-      if(['edit','download'].includes(kind)&&selected.size>1)selected.clear();
+      selected.clear();pdfImages=false;
       showFiles(kind);return;
     }
     const chosen=items.filter(x=>selected.has(x.id));
@@ -328,7 +358,7 @@
     updateSound();const close=button('×',()=>{if(!busy)closeWheel();},'mm-orbit-sound');close.setAttribute('aria-label','Đóng vòng công cụ');head.append(heading,soundButton,close);disc=el('div',null,'mm-orbit-disc');footer=el('div',null,'mm-orbit-footer');
     previewBox=el('div',null,'mm-orbit-preview');previewBox.hidden=true;previewBox.setAttribute('aria-label','Ảnh đang sửa');
     wheelHint=el('p','Chọn công cụ','mm-orbit-hint');wheelHint.setAttribute('role','status');
-    fileInput=el('input');fileInput.type='file';fileInput.multiple=true;fileInput.hidden=true;fileInput.onchange=()=>{addFiles([...fileInput.files]).catch(e=>report(e.message));fileInput.value='';};
+    fileInput=el('input');fileInput.type='file';fileInput.multiple=true;fileInput.hidden=true;fileInput.onchange=()=>{addFiles([...fileInput.files],pickerPurpose).catch(e=>report(e.message));fileInput.value='';};
     disc.ondragover=e=>{e.preventDefault();disc.classList.add('drag');};disc.ondragleave=e=>{if(!disc.contains(e.relatedTarget))disc.classList.remove('drag');};disc.ondrop=e=>{e.preventDefault();disc.classList.remove('drag');tick();addFiles([...e.dataTransfer.files]).catch(err=>report(err.message));};
     wheel.append(head,previewBox,disc,footer,wheelHint,fileInput);
     wheel.onkeydown=e=>{
