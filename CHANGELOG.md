@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.183] - 2026-10-20
+
+### Sửa lỗi
+- Chuyển công cụ bắt đầu lựa chọn mới; Gộp PDF hiện PDF riêng và có nút thêm PDF ngay trong bước chọn.
+- Thêm file giữ đúng công cụ đang dùng; có nút bỏ các bản sao đã chọn khỏi khay.
+
 ## [26.10.182] - 2026-10-20
 
 ### Sửa lỗi
