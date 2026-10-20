@@ -276,6 +276,16 @@ async def tro_ly_tra_loi(tin: str, phien: str = "", nguon: str = "web", chat_id:
     phien = re.sub(r"[^A-Za-z0-9_-]", "", str(phien or ""))[:40] or ("p" + secrets.token_hex(6))
     lich = [{"vai": x["vai"], "noi_dung": x["noi_dung"]} for x in v2.lich_su_tro_ly(phien, 20)]
     boi = v2.boi_canh_tro_ly()
+    if _DEPS.thong_tin_ai and isinstance(boi.get("tong_quan"), dict):
+        try:    # trạng thái AI thật (engine đang dùng), không phải giá trị mặc định của kho
+            boi["tong_quan"]["ai"] = {**(boi["tong_quan"].get("ai") or {}), **(_DEPS.thong_tin_ai() or {})}
+        except Exception:
+            pass
+    if _DEPS.co_telegram and isinstance(boi.get("tong_quan"), dict):
+        try:
+            boi["tong_quan"]["telegram"] = bool(_DEPS.co_telegram())
+        except Exception:
+            pass
     try:
         boi["bo_nao"] = doi_social_bo_nao.boi_canh_tro_ly(tin)
     except Exception as ex:
