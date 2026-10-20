@@ -382,7 +382,8 @@ def tra_loi_binh_luan(nc, bl, noi_dung: str, hanh_dong: str = "tra_loi_binh_luan
 _NUT_CHIA_SE = ["Chia sẻ", "Share", "Gửi nội dung này cho bạn bè hoặc đăng lên trang cá nhân của bạn.",
                 "Send this to friends or post it on your profile."]
 _CHIA_SE_NGAY = re.compile(r"^\s*(Chia sẻ ngay|Share now)", re.I)
-_DA_CHIA_SE = re.compile(r"(Đã chia sẻ|đã được chia sẻ|Shared to your|Shared|Đã đăng)", re.I)
+_DA_CHIA_SE = re.compile(r"(Đã chia sẻ|đã được chia sẻ|Shared to your|Shared to Feed|Shared to feed|"
+                         r"Đã chia sẻ lên)", re.I)
 
 
 def chia_se(nc, pham_vi) -> str:
@@ -392,9 +393,13 @@ def chia_se(nc, pham_vi) -> str:
         return "khong_thay"
     if not nc.duoc_bam_cong_khai("chia sẻ bài lên tường", "chia_se"):
         return "chay_thu"
+    trang = nut.page
+    try:
+        truoc = trang.get_by_text(_DA_CHIA_SE).count()      # chữ có sẵn trên trang không tính là xác nhận
+    except Exception:
+        truoc = 0
     nc.tay.bam(nut)                     # mở menu chia sẻ
     nc.tay.nghi(1.2, 2.5)
-    trang = nut.page
     ngay = dau_tien_thay([trang.get_by_role("menuitem", name=_CHIA_SE_NGAY),
                           trang.get_by_role("button", name=_CHIA_SE_NGAY),
                           trang.get_by_role("dialog").get_by_role("button", name=re_nhan("Chia sẻ", "Share",
@@ -407,11 +412,15 @@ def chia_se(nc, pham_vi) -> str:
             pass
         return "khong_thay"
     nc.tay.bam(ngay)
-    try:
-        trang.get_by_text(_DA_CHIA_SE).first.wait_for(state="visible", timeout=ms(10000))
-        return "thanh_cong"
-    except Exception:
-        return "khong_chac"
+    han = time.monotonic() + ms(10000) / 1000
+    while time.monotonic() < han:
+        try:
+            if trang.get_by_text(_DA_CHIA_SE).count() > truoc:
+                return "thanh_cong"
+        except Exception:
+            pass
+        time.sleep(0.4)
+    return "khong_chac"
 
 
 # ---------------------------------------------------------------------------- nhóm
@@ -424,7 +433,8 @@ _SOAN_NHOM = re.compile(r"(Bạn viết gì đi|Write something|Tạo bài viế
 
 
 def trang_thai_nhom(page) -> str:
-    """'da_vao' | 'cho_duyet' | 'chua_vao' | 'khong_ro' theo nút và ô soạn trên trang nhóm."""
+    """'da_vao' | 'cho_duyet' | 'chua_vao' | 'khong_ro' theo nút và ô soạn trên trang nhóm.
+    Thứ tự: nút trạng thái (Đã tham gia / Đã yêu cầu) > nút Tham gia > ô soạn bài."""
     for vai in ("button", "link"):
         try:
             if page.get_by_role(vai, name=_DA_VAO).count():
@@ -434,13 +444,14 @@ def trang_thai_nhom(page) -> str:
         except Exception:
             pass
     try:
-        if page.get_by_role("button", name=_SOAN_NHOM).count() or page.get_by_text(_SOAN_NHOM).count():
-            return "da_vao"
+        nut = page.get_by_role("button", name=re_nhan(*_THAM_GIA))
+        if nut.count() and nut.first.is_visible():
+            return "chua_vao"
     except Exception:
         pass
     try:
-        if page.get_by_role("button", name=re_nhan(*_THAM_GIA)).count():
-            return "chua_vao"
+        if page.get_by_role("button", name=_SOAN_NHOM).count() or page.get_by_text(_SOAN_NHOM).count():
+            return "da_vao"
     except Exception:
         pass
     return "khong_ro"

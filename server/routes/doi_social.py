@@ -56,6 +56,8 @@ KIEU_TINH = {"html": "text/html", "js": "text/javascript", "css": "text/css", "s
              "png": "image/png", "webp": "image/webp", "json": "application/json"}
 WORKER_BO_QUA = {"worker.json", "worker.log"}           # cấu hình + nhật ký riêng của từng máy
 THAN_TOI_DA = 12_000_000                  # ảnh chụp toàn trang base64 + bước
+THAN_NHAP_TOI_DA = 80_000_000             # nháp kèm ảnh/video dạng base64
+THAN_KQ_TOI_DA = 15_000_000               # tệp kết quả CSV 10MB dạng base64
 ANH_AI_TOI_DA = 4
 ANH_AI_BYTE = 5 * 1024 * 1024
 MUC_DICH_AI = {"cham_bai", "viet_binh_luan", "tra_loi_binh_luan", "tra_loi_tin_nhan", "tra_loi_cau_hoi_nhom",
@@ -375,9 +377,9 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             return None, JSONResponse({"error": ly_do_chan()}, status_code=403)
         return m, None
 
-    async def _json(request: Request) -> dict:
+    async def _json(request: Request, toi_da: int = THAN_TOI_DA) -> dict:
         body = await request.body()
-        if len(body) > THAN_TOI_DA:
+        if len(body) > toi_da:
             raise ValueError("thân yêu cầu quá lớn")
         try:
             raw = json.loads(body.decode("utf-8") or "{}")
@@ -585,7 +587,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         if err:
             return err
         try:
-            d = await _json(request)
+            d = await _json(request, THAN_NHAP_TOI_DA)
             n = v2.tao_ban_nhap_tu_may(d.get("viec_id"), m["id"], d)
         except ValueError as e:
             return _loi_v(e)
@@ -602,6 +604,47 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         except ValueError as e:
             return _loi_v(e)
         return {"ok": True, "ban_nhap": n}
+
+    @app.get("/doi-social/may/ban-nhap/tep/{nid}/{luu}")
+    async def ds_may_nhap_tep(nid: int, luu: str, request: Request):
+        m, err = await _may(request)
+        if err:
+            return err
+        if not v2.nhap_cua_may(nid, m["id"]):
+            return _loi("nháp này không do việc của máy này giữ", 403)
+        p = v2.duong_tep_nhap(nid, luu)
+        return FileResponse(str(p)) if p else _loi("không có tệp", 404)
+
+    @app.post("/doi-social/may/tep-ket-qua/{vid}")
+    async def ds_may_tep_ket_qua(vid: int, request: Request):
+        m, err = await _may(request)
+        if err:
+            return err
+        tam = None
+        try:
+            v2.viec_cua_may(vid, m["id"])
+            if (request.headers.get("content-type") or "").startswith("multipart/form-data"):
+                form = await request.form(max_files=1, max_fields=5)
+                f = form.get("tep")
+                if not isinstance(f, UploadFile) or not f.filename:
+                    raise ValueError("chưa gửi tệp (trường 'tep')")
+                tam = await _luu_tai_len(f, v2.KQ_TOI_DA)
+                kq = v2.luu_tep_ket_qua(vid, m["id"], str(form.get("ten") or f.filename), tam)
+            else:
+                d = await _json(request, THAN_KQ_TOI_DA)
+                try:
+                    b = base64.b64decode(str(d.get("b64") or ""))
+                except Exception:
+                    raise ValueError("base64 hỏng")
+                if not b:
+                    raise ValueError("tệp rỗng")
+                kq = v2.luu_tep_ket_qua(vid, m["id"], str(d.get("ten") or "ket-qua.csv"), b)
+        except ValueError as e:
+            return _loi_v(e)
+        finally:
+            if tam:
+                Path(tam).unlink(missing_ok=True)
+        return {"ok": True, **kq}
 
     @app.post("/doi-social/may/ban-nhap/{nid}/ket-qua")
     async def ds_may_nhap_ket_qua(nid: int, request: Request):
@@ -644,7 +687,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         try:
             d = await _json(request)
             b = v2.ket_qua_kho(bid, m["id"], bool(d.get("ok")), bool(d.get("da_bam_dang")),
-                               d.get("link") or "", d.get("loi") or "")
+                               d.get("link") or "", d.get("loi") or "", hong=bool(d.get("hong")))
         except ValueError as e:
             return _loi_v(e)
         return {"ok": True, "trang_thai": b["trang_thai"]}
@@ -1039,6 +1082,16 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         return Response(v2.su_kien_csv(**_loc_sk(request)).encode("utf-8"), media_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": "attachment; filename=doi-social-nhat-ky.csv"})
 
+    @app.get("/doi-social/ket-qua/{vid}/{ten}")
+    def ds_tep_ket_qua(vid: int, ten: str):
+        c = _chan()
+        if c:
+            return c
+        p = v2.duong_tep_ket_qua(vid, ten)
+        if not p:
+            return _loi("không có tệp", 404)
+        return FileResponse(str(p), media_type="text/csv; charset=utf-8", filename=p.name)
+
     @app.get("/doi-social/kho")
     def ds_kho_tong(nen_tang: str = Query("")):
         c = _chan()
@@ -1232,6 +1285,44 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         except Exception as e:
             return _loi(f"AI lỗi: {type(e).__name__}: {str(e)[:300]}", 502)
         return {"ok": True, "ban_nhap": n}
+
+    @app.post("/doi-social/ban-nhap/{nid}/tep")
+    async def ds_nhap_tep(nid: int, request: Request):
+        c = _chan()
+        if c:
+            return c
+        if not (request.headers.get("content-type") or "").startswith("multipart/form-data"):
+            return _loi("gửi dạng multipart/form-data (trường 'tep')")
+        tam = []
+        try:
+            n = v2.lay_ban_nhap(nid)
+            if not n:
+                return _loi("không có nháp này", 404)
+            if n["trang_thai"] not in ("cho_duyet", "het_han", "loi"):
+                raise ValueError("chỉ thêm tệp cho nháp đang chờ duyệt, hết hạn hoặc lỗi")
+            form = await request.form(max_files=20, max_fields=5)
+            tep = [f for f in (form.getlist("tep") + form.getlist("tep[]")) if isinstance(f, UploadFile) and f.filename]
+            if not tep:
+                raise ValueError("chưa chọn tệp")
+            for f in tep:
+                v2.kiem_duoi_kho(f.filename)
+            for f in tep:
+                tam.append((f.filename, await _luu_tai_len(f, v2.KHO_TOI_DA)))
+            v2.them_tep_nhap(nid, tam)
+        except ValueError as e:
+            return _loi(e)
+        finally:
+            for _, p in tam:
+                Path(p).unlink(missing_ok=True)
+        return {"ok": True, "ban_nhap": v2.lay_ban_nhap(nid)}
+
+    @app.get("/doi-social/ban-nhap/tep/{nid}/{luu}")
+    def ds_nhap_xem_tep(nid: int, luu: str):
+        c = _chan()
+        if c:
+            return c
+        p = v2.duong_tep_nhap(nid, luu)
+        return FileResponse(str(p)) if p else _loi("không có tệp", 404)
 
     @app.put("/doi-social/ban-nhap/{nid}")
     async def ds_sua_nhap(nid: int, request: Request):

@@ -242,6 +242,67 @@ check("trí nhớ chống lặp theo nick và cả đội",
       v2.da_lam("n1", "fb_bl:https://fb.com/p/9") and not v2.da_lam("n2", "fb_bl:https://fb.com/p/9")
       and v2.da_lam("n2", "fb_bl:https://fb.com/p/9", ca_doi=True))
 
+# ---- bổ sung: muc_tieu + tệp nháp, kho hỏng, tệp kết quả, hành động lạ, X cách 10 phút
+ds.nhip(MA, kich_ban=["fb_binh_luan_nhom_sp", "fb_dang_tuong_kho", "fb_nuoi_nick", "fb_tra_loi_binh_luan",
+                      "x_dang_kho"], song_song=3)
+dm = v2.tao_dot(kich_ban="fb_tra_loi_binh_luan", nick=["n4"], tham_so={"che_do": "duyet_truoc"})
+gm = ds.nhan_viec(MA)
+check("việc cho nháp có tệp được giao", gm and gm["dot_id"] == dm["id"])
+nt = v2.tao_ban_nhap_tu_may(gm["id"], MA, {
+    "loai": "tra_loi", "noi_dang": "fb_tuong", "noi_dung": "Cảm ơn chị",
+    "muc_tieu": {"tac_gia": "Lan", "trich": "đẹp quá", "link_binh_luan": "https://fb.com/c/9"},
+    "tep": [{"ten": "anh.jpg", "b64": base64.b64encode(b"\xff\xd8nhap").decode()}]})
+check("nháp lưu muc_tieu và tệp", nt["muc_tieu"]["tac_gia"] == "Lan" and nt["tep"][0]["luu"] == "00.jpg"
+      and v2.duong_tep_nhap(nt["id"], "00.jpg").read_bytes() == b"\xff\xd8nhap"
+      and v2.duong_tep_nhap(nt["id"], "../x") is None)
+check("tệp nháp đuôi lạ bị chặn", raises(lambda: v2.tao_ban_nhap_tu_may(gm["id"], MA, {
+    "loai": "tra_loi", "noi_dang": "fb_tuong", "noi_dung": "x", "tep": [{"ten": "a.exe", "b64": "eA=="}]}), "chỉ nhận"))
+ds.ghi_ket_qua(gm["id"], MA, True, "xong")
+vt = ds.lay_viec(v2.duyet_ban_nhap(nt["id"], True)["viec_id"])
+check("việc dang_ban_nhap mang muc_tieu + tep",
+      vt["tham_so"]["tham_so"]["muc_tieu"]["link_binh_luan"] == "https://fb.com/c/9"
+      and vt["tham_so"]["tham_so"]["tep"] == [{"ten": "anh.jpg", "luu": "00.jpg"}])
+check("nháp đang giữ cho việc của máy A, máy B không thấy",
+      v2.nhap_cua_may(nt["id"], MA) and v2.nhap_cua_may(nt["id"], MB) is None)
+# kho hỏng
+ih = v2.them_kho(nen_tang="facebook", noi_dung="Bài hỏng")
+dkh = v2.tao_dot(kich_ban="fb_dang_tuong_kho", nick=["n1"], tham_so={"kho": "chung"}, song_song=3)
+gkh = [x for x in [ds.nhan_viec(MA) for _ in range(2)] if x and x["dot_id"] == dkh["id"]][0]
+kh_b = v2.lay_kho_cho_viec(gkh["id"], MA)
+r_h = v2.ket_qua_kho(kh_b["id"], MA, False, False, loi="ảnh không mở được", hong=True)
+check("kho hong=true -> loi 'bài hỏng', không về hàng chờ", r_h["trang_thai"] == "loi" and r_h["loi"].startswith("bài hỏng:"))
+# tệp kết quả
+check("tệp kết quả chỉ nhận csv", raises(lambda: v2.luu_tep_ket_qua(gkh["id"], MA, "a.exe", b"x"), ".csv"))
+check("máy khác không gửi tệp kết quả", raises(lambda: v2.luu_tep_ket_qua(gkh["id"], MB, "a.csv", b"x"), "không thuộc"))
+v2.luu_tep_ket_qua(gkh["id"], MA, "../../ket qua.csv", b"a,b\n1,2\n")
+tkq = v2.ds_tep_ket_qua(gkh["id"])
+check("tệp kết quả lưu tên an toàn, liệt kê trong chi tiết đợt",
+      tkq and tkq[0]["ten"] == "ket_qua.csv" and v2.duong_tep_ket_qua(gkh["id"], "../x") is None
+      and any(x["tep_ket_qua"] for x in v2.lay_dot(dkh["id"])["viec"]))
+# hành động lạ
+sk2 = v2.ghi_su_kien(gkh["id"], MA, {"hanh_dong": "dang_nhap", "ket_qua": "thanh_cong", "chi_tiet": "Đăng nhập lại"})
+check("hành động lạ: ghi sự kiện, không đếm hạn mức", "dang_nhap" not in sk2["con_lai"]
+      and any(x["hanh_dong"] == "dang_nhap" for x in v2.ds_su_kien(nick="n1")["muc"]))
+ds.ghi_ket_qua(gkh["id"], MA, True, "xong")
+# X cách 10 phút xuyên đợt
+with ds._db() as c:
+    c.execute("INSERT INTO su_kien(luc, nick_id, nen_tang, hanh_dong, ket_qua) VALUES(?,?,?,?,?)",
+              (time.time() - 120, "n1", "x", "dang_tuong", "thanh_cong"))
+dx = v2.tao_dot(kich_ban="x_dang_kho", nick=["n1"], tham_so={"kho": "chung"}, song_song=3)
+gx = [ds.nhan_viec(MA) for _ in range(3)]
+check("X: bài trước của nick < 10 phút thì chưa giao", not any(x and x["dot_id"] == dx["id"] for x in gx)
+      and v2.lay_dot(dx["id"])["viec"][0]["trang_thai"] == "cho_chay")
+for x in gx:
+    if x:
+        ds.ghi_ket_qua(x["id"], MA, True, "xong")
+with ds._db() as c:
+    c.execute("UPDATE su_kien SET luc=? WHERE nick_id='n1' AND nen_tang='x'", (time.time() - 11 * 60,))
+gx = [ds.nhan_viec(MA) for _ in range(3)]
+check("X: quá 10 phút thì giao", any(x and x["dot_id"] == dx["id"] for x in gx))
+for x in gx:
+    if x:
+        ds.ghi_ket_qua(x["id"], MA, True, "xong")
+
 # ---- CSV
 csv = v2.su_kien_csv()
 check("CSV có BOM và tiêu đề tiếng Việt", csv.startswith("﻿") and "Thời gian" in csv and "Thành công" in csv)
@@ -311,7 +372,8 @@ with TestClient(app) as tc:
           and b"worker.json" not in z.content)
     check("bản cập nhật cần token", tc.get("/doi-social/may/ban-cap-nhat").status_code == 401)
     dw = tc.post("/doi-social/dot-chay", json={"kich_ban": "fb_tra_loi_binh_luan", "nick": ["n1"],
-                                              "tham_so": {"san_pham": str(sp["id"]), "che_do": "chay_thu"}}).json()
+                                              "tham_so": {"san_pham": str(sp["id"]), "che_do": "chay_thu"},
+                                              "song_song": 2}).json()
     check("tạo đợt qua HTTP", dw["ok"] and len(dw["dot"]["viec"]) == 1)
     vw = tc.get("/doi-social/may/viec?cho=0", headers=HA).json()["viec"]
     check("worker nhận việc đợt qua long-poll", vw and vw["dot_id"] == dw["dot"]["id"])
@@ -397,6 +459,28 @@ with TestClient(app) as tc:
     check("CSV qua HTTP có BOM", c.status_code == 200 and c.content.startswith(b"\xef\xbb\xbf"))
     check("dòng thời gian phân trang", tc.get("/doi-social/su-kien?moi_trang=2").json()["tong"] >= 2)
     check("gioi-han-v2 GET", tc.get("/doi-social/gioi-han-v2").json()["mac_dinh"]["chung"]["viec_ngay_moi"] == 20)
+
+    # bổ sung HTTP: tệp nháp, tệp kết quả, kho hỏng
+    vgiu = ds.lay_viec(v2.lay_ban_nhap(nt["id"])["giu_boi_viec"])
+    check("worker tải tệp nháp đang giữ", tc.get(f"/doi-social/may/ban-nhap/tep/{nt['id']}/00.jpg", headers=HA).content
+          == b"\xff\xd8nhap" and vgiu["may_id"] == MA)
+    check("máy khác không tải tệp nháp (403)",
+          tc.get(f"/doi-social/may/ban-nhap/tep/{nt['id']}/00.jpg", headers=HB).status_code == 403)
+    r = tc.post(f"/doi-social/may/tep-ket-qua/{gkh['id']}", headers=HA,
+                files=[("tep", ("quet.csv", "a,b\n3,4\n".encode(), "text/csv"))])
+    check("tệp kết quả multipart", r.status_code == 200 and r.json()["ten"] == "quet.csv", r.text)
+    r = tc.post(f"/doi-social/may/tep-ket-qua/{gkh['id']}", headers=HA,
+                json={"ten": "b.csv", "b64": base64.b64encode(b"x,y\n").decode()})
+    check("tệp kết quả base64", r.status_code == 200)
+    check("máy khác gửi tệp kết quả bị 403",
+          tc.post(f"/doi-social/may/tep-ket-qua/{gkh['id']}", headers=HB, json={"ten": "c.csv", "b64": "eA=="}).status_code == 403)
+    r = tc.get(f"/doi-social/ket-qua/{gkh['id']}/quet.csv")
+    check("tải tệp kết quả (đăng nhập)", r.status_code == 200 and r.content == b"a,b\n3,4\n")
+    check("lịch sử chạy liệt kê tep_ket_qua", any(len(x["tep_ket_qua"]) == 3 for x in
+                                                  tc.get("/doi-social/lich-su?moi_trang=200").json()["muc"]))
+    r = tc.post("/doi-social/ban-nhap/" + str(v2.tao_ban_nhap(loai="bai_dang", noi_dang="instagram", noi_dung="IG")["id"])
+                + "/tep", files=[("tep", ("p.png", b"\x89PNG", "image/png"))])
+    check("web thêm tệp cho nháp", r.status_code == 200 and r.json()["ban_nhap"]["tep"][0]["luu"] == "00.png", r.text)
 
     # đường tĩnh
     check("tĩnh: app.js phục vụ được", tc.get("/apps/doi-social/app.js").status_code == 200)

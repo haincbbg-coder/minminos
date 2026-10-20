@@ -41,6 +41,9 @@ TL_DUOI = {".txt", ".md", ".pdf", ".docx"}
 TL_TOI_DA = 5 * 1024 * 1024
 TL_CHU_TOI_DA = 200_000
 NHUONG_GIO = 12
+KQ_DUOI = {".csv"}
+KQ_TOI_DA = 10 * 1024 * 1024
+X_CACH_PHUT = 10                 # X: hai bài của cùng nick cách nhau ít nhất 10 phút (xuyên đợt)
 TEN_NEN_TANG = dict(kb.NEN_TANG)
 
 _BUOC: dict = {}                 # viec_id -> deque 30 dòng nhật ký trực tiếp (mục "Đang chạy")
@@ -117,6 +120,12 @@ def tao_bang(c) -> None:
     CREATE TABLE IF NOT EXISTS da_lam(nick_id TEXT, khoa TEXT, luc REAL, PRIMARY KEY(nick_id, khoa));
     CREATE INDEX IF NOT EXISTS da_lam_khoa ON da_lam(khoa);
     """)
+    import sqlite3
+    for bang, cot in (("ban_nhap", "muc_tieu TEXT DEFAULT '{}'"),):
+        try:
+            c.execute(f"ALTER TABLE {bang} ADD COLUMN {cot}")
+        except sqlite3.OperationalError:
+            pass
 
 
 def _now() -> float:
@@ -424,6 +433,12 @@ def chuan_bi_giao(c, r, g: dict) -> str:
         nghi = random.Random(int(r["id"])).uniform(float(a), float(b)) * 60
         if cuoi and now - cuoi < nghi:
             return "cho"
+    if nen == "x" and "dang_tuong" in hd and not r["chay_thu"]:
+        cuoi_x = c.execute("SELECT MAX(luc) FROM su_kien WHERE nick_id=? AND nen_tang='x' AND hanh_dong='dang_tuong' "
+                           "AND ket_qua='thanh_cong'", (r["nick_id"],)).fetchone()[0]
+        if cuoi_x and now - cuoi_x < X_CACH_PHUT * 60:
+            return "cho"
+    if not noi_bo and not r["chay_thu"]:
         tran_ngay = int(g["chung"].get("viec_ngay_lau" if muc == "lau" else "viec_ngay_moi", 0))
         da = c.execute("SELECT COUNT(*) FROM viec WHERE nick_id=? AND bat_dau>=? AND chay_thu=0 "
                        "AND ky_nang NOT IN ('fb_dang_bai','dang_ban_nhap','fb_gui_tin')",
@@ -622,6 +637,8 @@ def lay_dot(dot_id, kem_viec: bool = True) -> Optional[dict]:
         if kem_viec:
             d["viec"] = [ds._dong(x) for x in c.execute("SELECT * FROM viec WHERE dot_id=? ORDER BY id",
                                                         (d["id"],)).fetchall()]
+            for x in d["viec"]:
+                x["tep_ket_qua"] = ds_tep_ket_qua(x["id"])
             d["su_kien"] = [dict(x) for x in c.execute("SELECT * FROM su_kien WHERE dot_id=? ORDER BY id DESC LIMIT 50",
                                                        (d["id"],)).fetchall()]
     return d
@@ -841,7 +858,7 @@ def ghi_su_kien(vid, may_id: str, d: dict) -> dict:
             meta["canh_bao"].pop(nen, None)
         _luu_meta(c, meta)
         hds = list((kb.THEO_ID.get(v["ky_nang"]) or {}).get("hanh_dong") or ts.get("hanh_dong") or [])
-        if hd and hd not in hds:
+        if hd and hd in kb.HANH_DONG and hd not in hds:     # hành động lạ (vd dang_nhap): ghi, không đếm
             hds.append(hd)
         con = _han_muc(c, v["nick_id"], nen, hds, None, now)
         dung = v["trang_thai"] != "dang_chay"
@@ -942,6 +959,47 @@ def su_kien_csv(tu=None, den=None, nick="", tinh_nang="", ket_qua="", kich_ban="
     return "﻿" + buf.getvalue()
 
 
+def _thu_muc_kq(vid) -> Path:
+    return ds._goc / "ket-qua" / str(int(vid))
+
+
+def luu_tep_ket_qua(vid, may_id: str, ten: str, du_lieu) -> dict:
+    """Worker gửi tệp kết quả (CSV ≤ 10MB). `du_lieu` = bytes hoặc đường dẫn tạm."""
+    viec_cua_may(vid, may_id)
+    ten = _ten_an_toan(ten)
+    if Path(ten).suffix.lower() not in KQ_DUOI:
+        raise ValueError("tệp kết quả chỉ nhận .csv")
+    import re
+    ten = re.sub(r"[^A-Za-z0-9._-]", "_", ten)[:100]
+    d = _thu_muc_kq(vid)
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / ten
+    if isinstance(du_lieu, (bytes, bytearray)):
+        if len(du_lieu) > KQ_TOI_DA:
+            raise ValueError("tệp kết quả quá lớn (tối đa 10MB)")
+        p.write_bytes(bytes(du_lieu))
+    else:
+        if Path(du_lieu).stat().st_size > KQ_TOI_DA:
+            raise ValueError("tệp kết quả quá lớn (tối đa 10MB)")
+        shutil.move(str(du_lieu), str(p))
+    return {"ten": ten, "co": p.stat().st_size}
+
+
+def ds_tep_ket_qua(vid) -> list:
+    d = _thu_muc_kq(vid)
+    if not d.is_dir():
+        return []
+    return [{"ten": p.name, "co": p.stat().st_size} for p in sorted(d.iterdir()) if p.is_file()]
+
+
+def duong_tep_ket_qua(vid, ten: str) -> Optional[Path]:
+    ten = str(ten or "")
+    if not ten or "/" in ten or "\\" in ten or ".." in ten or ten.startswith("."):
+        return None
+    p = _thu_muc_kq(_int(vid, 0)) / ten
+    return p if p.is_file() else None
+
+
 def lich_su(trang_thai: str = "", kich_ban: str = "", trang=1, moi_trang=50) -> dict:
     t, m, off = _trang(trang, moi_trang)
     q, a = " FROM viec v LEFT JOIN dot_chay d ON d.id=v.dot_id WHERE 1=1", []
@@ -959,6 +1017,7 @@ def lich_su(trang_thai: str = "", kich_ban: str = "", trang=1, moi_trang=50) -> 
     for r in rows:
         v = ds._dong(r)
         v["ten_mau"] = _ten_mau(v["ky_nang"])
+        v["tep_ket_qua"] = ds_tep_ket_qua(v["id"])
         muc.append(v)
     return {"tong": tong, "trang": t, "muc": muc}
 
@@ -1188,8 +1247,10 @@ def bai_kho_cua_may(bid, may_id: str) -> Optional[dict]:
     return _dong_kho(r) if r else None
 
 
-def ket_qua_kho(bid, may_id: str, ok: bool, da_bam_dang: bool, link: str = "", loi: str = "") -> dict:
-    """ok -> da_dang; lỗi trước khi bấm Đăng -> về hàng chờ; lỗi SAU khi bấm -> loi (không tự đăng lại)."""
+def ket_qua_kho(bid, may_id: str, ok: bool, da_bam_dang: bool, link: str = "", loi: str = "",
+                hong: bool = False) -> dict:
+    """ok -> da_dang; lỗi trước khi bấm Đăng -> về hàng chờ; lỗi SAU khi bấm -> loi (không tự đăng lại);
+    `hong` (bài hỏng: tệp lỗi, quá dài...) -> loi ngay, không quay lại hàng chờ."""
     with ds._khoa, ds._db() as c:
         r = c.execute("SELECT k.* FROM kho_bai k JOIN viec v ON v.id=k.giu_boi_viec WHERE k.id=? AND v.may_id=? "
                       "AND k.trang_thai='dang_giu'", (_int(bid), may_id)).fetchone()
@@ -1198,6 +1259,9 @@ def ket_qua_kho(bid, may_id: str, ok: bool, da_bam_dang: bool, link: str = "", l
         if ok:
             c.execute("UPDATE kho_bai SET trang_thai='da_dang', giu_boi_viec=NULL, luc_dang=?, link=?, loi='' WHERE id=?",
                       (_now(), _chu(link, 500), r["id"]))
+        elif hong:
+            c.execute("UPDATE kho_bai SET trang_thai='loi', giu_boi_viec=NULL, loi=? WHERE id=?",
+                      ("bài hỏng: " + (_chu(loi, 480) or "không rõ lý do"), r["id"]))
         elif not da_bam_dang:
             c.execute("UPDATE kho_bai SET trang_thai='cho', giu_boi_viec=NULL, loi=? WHERE id=?", (_chu(loi, 500), r["id"]))
         else:
@@ -1213,12 +1277,72 @@ def _dong_nhap(r) -> dict:
     d["tep"] = _j(d.get("tep"), [])
     d["ket_qua"] = _j(d.get("ket_qua"), {})
     d["chay_thu"] = bool(d.get("chay_thu"))
+    d["muc_tieu"] = _j(d.get("muc_tieu"), {})
     return d
+
+
+def _thu_muc_nhap(nid) -> Path:
+    return ds._goc / "nhap" / str(int(nid))
+
+
+def _muc_tieu(v) -> dict:
+    if v in (None, ""):
+        return {}
+    if not isinstance(v, dict):
+        raise ValueError("muc_tieu phải là object")
+    s = _dj(v)
+    if len(s) > 20000:
+        raise ValueError("muc_tieu quá lớn")
+    return v
+
+
+def them_tep_nhap(nid, tep) -> list:
+    """Gắn tệp ảnh/video cho nháp. `tep` = [(ten, bytes | đường_dẫn_tạm)]. Trả danh sách tệp của nháp."""
+    tep = list(tep or [])
+    for ten, _ in tep:
+        kiem_duoi_kho(ten)
+    n = lay_ban_nhap(nid)
+    if not n:
+        raise ValueError(f"không có nháp #{nid}")
+    ds_tep = list(n["tep"])
+    if len(ds_tep) + len(tep) > 20:
+        raise ValueError("nháp tối đa 20 tệp")
+    thu_muc = _thu_muc_nhap(nid)
+    for ten, nguon in tep:
+        thu_muc.mkdir(parents=True, exist_ok=True)
+        d = thu_muc / f"{len(ds_tep):02d}{kiem_duoi_kho(ten)}"
+        if isinstance(nguon, (bytes, bytearray)):
+            if len(nguon) > KHO_TOI_DA:
+                raise ValueError(f"tệp '{_ten_an_toan(ten)}' quá lớn")
+            d.write_bytes(bytes(nguon))
+        else:
+            shutil.move(str(nguon), str(d))
+        ds_tep.append({"ten": _ten_an_toan(ten), "luu": d.name, "co": d.stat().st_size})
+    with ds._khoa, ds._db() as c:
+        c.execute("UPDATE ban_nhap SET tep=? WHERE id=?", (_dj(ds_tep), _int(nid)))
+    return ds_tep
+
+
+def duong_tep_nhap(nid, luu: str) -> Optional[Path]:
+    luu = str(luu or "")
+    if not luu or "/" in luu or "\\" in luu or ".." in luu or luu.startswith("."):
+        return None
+    p = _thu_muc_nhap(_int(nid, 0)) / luu
+    return p if p.is_file() else None
+
+
+def nhap_cua_may(nid, may_id: str) -> Optional[dict]:
+    """Nháp đang được một việc của máy này giữ (để Worker tải tệp)."""
+    with ds._db() as c:
+        r = c.execute("SELECT b.* FROM ban_nhap b JOIN viec v ON v.id=b.giu_boi_viec WHERE b.id=? AND v.may_id=?",
+                      (_int(nid), may_id)).fetchone()
+    return _dong_nhap(r) if r else None
 
 
 def tao_ban_nhap(*, loai: str, noi_dang: str, noi_dung: str, nick_id: str = "", nick_ten: str = "", nhom: str = "",
                  link_goc: str = "", bai_goc: str = "", ly_do: str = "", san_pham_id="", het_han_gio=None,
-                 viec_tao: str = "", chay_thu: bool = False, tep=None) -> dict:
+                 viec_tao: str = "", chay_thu: bool = False, tep=None, muc_tieu=None) -> dict:
+    """`tep` = [(ten, bytes | đường_dẫn_tạm)] ảnh/video kèm nháp."""
     if loai not in LOAI_NHAP:
         raise ValueError("loại nháp phải là binh_luan | bai_dang | tra_loi")
     if noi_dang not in NOI_DANG:
@@ -1228,17 +1352,29 @@ def tao_ban_nhap(*, loai: str, noi_dang: str, noi_dung: str, nick_id: str = "", 
         raise ValueError("nháp rỗng")
     if len(noi_dung) > ds.CHU_TOI_DA:
         raise ValueError(f"nháp quá dài (tối đa {ds.CHU_TOI_DA} ký tự)")
+    mt = _muc_tieu(muc_tieu)
+    tep = list(tep or [])
+    for ten, _ in tep:
+        kiem_duoi_kho(ten)
     gio = 72 if loai == "bai_dang" else 18
     if het_han_gio not in (None, ""):
         gio = max(1, min(24 * 30, _int(het_han_gio, gio)))
     now = _now()
     with ds._khoa, ds._db() as c:
         nid = c.execute("INSERT INTO ban_nhap(loai, noi_dang, nick_id, nick_ten, nhom, link_goc, bai_goc, ly_do, "
-                        "noi_dung, san_pham_id, trang_thai, tao_luc, het_han, viec_tao, ket_qua, tep, chay_thu) "
-                        "VALUES(?,?,?,?,?,?,?,?,?,?,'cho_duyet',?,?,?,'{}',?,?)",
+                        "noi_dung, san_pham_id, trang_thai, tao_luc, het_han, viec_tao, ket_qua, tep, chay_thu, muc_tieu) "
+                        "VALUES(?,?,?,?,?,?,?,?,?,?,'cho_duyet',?,?,?,'{}','[]',?,?)",
                         (loai, noi_dang, _chu(nick_id, 80), _chu(nick_ten, 200), _chu(nhom, 300), _chu(link_goc, 500),
                          _chu(bai_goc, 4000), _chu(ly_do, 1000), noi_dung, _chu(san_pham_id, 40), now,
-                         now + gio * 3600, _chu(viec_tao, 40), _dj(list(tep or [])[:20]), int(bool(chay_thu)))).lastrowid
+                         now + gio * 3600, _chu(viec_tao, 40), int(bool(chay_thu)), _dj(mt))).lastrowid
+    if tep:
+        try:
+            them_tep_nhap(nid, tep)
+        except Exception:
+            with ds._db() as c:
+                c.execute("DELETE FROM ban_nhap WHERE id=?", (nid,))
+            shutil.rmtree(str(_thu_muc_nhap(nid)), ignore_errors=True)
+            raise
     return lay_ban_nhap(nid)
 
 
@@ -1246,11 +1382,24 @@ def tao_ban_nhap_tu_may(vid, may_id: str, d: dict) -> dict:
     v = viec_cua_may(vid, may_id)
     ts = v.get("tham_so") or {}
     sp = d.get("san_pham_id") or (ts.get("tham_so") or {}).get("san_pham") or ""
+    import base64
+    tep = []
+    raw = d.get("tep") or []
+    if not isinstance(raw, list):
+        raise ValueError("tep phải là danh sách {ten, b64}")
+    for t in raw[:20]:
+        if not isinstance(t, dict) or not t.get("ten") or not t.get("b64"):
+            raise ValueError("mỗi tệp cần {ten, b64}")
+        kiem_duoi_kho(t["ten"])
+        try:
+            tep.append((str(t["ten"]), base64.b64decode(str(t["b64"]).split(",")[-1])))
+        except Exception:
+            raise ValueError(f"tệp '{_ten_an_toan(t['ten'])}' base64 hỏng")
     return tao_ban_nhap(loai=str(d.get("loai") or ""), noi_dang=str(d.get("noi_dang") or ""),
                         noi_dung=d.get("noi_dung") or "", nick_id=v["nick_id"], nick_ten=v["nick_ten"],
                         nhom=d.get("nhom") or "", link_goc=d.get("link_goc") or "", bai_goc=d.get("bai_goc") or "",
                         ly_do=d.get("ly_do") or "", san_pham_id=sp, het_han_gio=d.get("het_han_gio"),
-                        viec_tao=str(v["id"]), chay_thu=bool(v.get("chay_thu")), tep=d.get("tep") or [])
+                        viec_tao=str(v["id"]), chay_thu=bool(v.get("chay_thu")), tep=tep, muc_tieu=d.get("muc_tieu"))
 
 
 def lay_ban_nhap(nid) -> Optional[dict]:
@@ -1316,7 +1465,9 @@ def duyet_ban_nhap(nid, dong_y: bool) -> dict:
             vts = {"kich_ban": "dang_ban_nhap", "nen_tang": nen, "chay_thu": False, "dot_id": None, "han_muc": {},
                    "nghi_giay": [], "hanh_dong": _hd_nhap(n),
                    "tham_so": {"ban_nhap_id": n["id"], "loai": n["loai"], "noi_dang": n["noi_dang"],
-                               "link_goc": n["link_goc"], "nhom": n["nhom"], "noi_dung": n["noi_dung"], "tep": n["tep"]}}
+                               "link_goc": n["link_goc"], "nhom": n["nhom"], "noi_dung": n["noi_dung"],
+                               "tep": [{"ten": t.get("ten"), "luu": t.get("luu")} for t in n["tep"]],
+                               "muc_tieu": n["muc_tieu"]}}
             vid = c.execute("INSERT INTO viec(ky_nang, may_id, nick_id, nick_ten, tham_so, trang_thai, tao_luc, "
                             "duyet_luc, nguon, chay_thu) VALUES(?,?,?,?,?,'cho_chay',?,?,'duyet',0)",
                             ("dang_ban_nhap", nk["may_id"], nk["id"], nk["ten"], _dj(vts), now, now)).lastrowid
