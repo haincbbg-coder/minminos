@@ -148,6 +148,148 @@
       ch.node, h("p", {}, nut, " ", nutNhap)));
   }
 
+  async function taiTuLieu(id, files) {
+    // Giữ đúng thứ tự chọn file; lỗi upload phải dừng trước khi dựng.
+    for (var f of Array.from(files)) {
+      var r = await api("/du-an/" + id + "/tai-lieu?ten=" + encodeURIComponent(f.name),
+        { method: "POST", body: f, raw: true });
+      if (!r.ok) throw new Error(f.name + ": " + r.error);
+    }
+  }
+
+  function veTuLieu() {
+    var ten = h("input", { "aria-label": "Tên video", placeholder: "Ví dụ: Bộ sưu tập thu đông" });
+    var files = h("input", { type: "file", multiple: true, accept: "image/png,image/jpeg,image/webp,video/mp4,video/quicktime,video/webm", "aria-label": "Ảnh và clip của tôi" });
+    var ratio = h("select", { "aria-label": "Tỉ lệ video" }, h("option", { value: "9:16" }, "9:16 dọc"),
+      h("option", { value: "16:9" }, "16:9 ngang"), h("option", { value: "1:1" }, "1:1 vuông"));
+    var message = h("p", { class: "nho", role: "status" });
+    var create = h("button", { class: "btn", onclick: async function () {
+      if (!files.files.length) { message.textContent = "Chọn ít nhất một ảnh hoặc clip."; return; }
+      if (files.files.length > 30) { message.textContent = "Mỗi bản dựng tối đa 30 ảnh/clip."; return; }
+      create.disabled = true;
+      var id = "";
+      try {
+        var r = await api("/du-an", { method: "POST", body: { ten: ten.value || "Video từ tư liệu",
+          y_tuong: ten.value || "Dựng từ ảnh và clip của tôi", nguon: "tu_lieu", ti_le: ratio.value, nen_tang: [], che_do_dang: "duyet" } });
+        if (!r.ok) throw new Error(r.error);
+        id = r.id;
+        message.textContent = "Đang tải tư liệu…";
+        await taiTuLieu(id, files.files);
+        state.xem = id; veChiTiet();
+      } catch (e) {
+        message.textContent = e.message + (id ? " Dự án đã lưu trong mục Dự án; mở để thêm lại file còn thiếu." : "");
+        create.disabled = false;
+      }
+    } }, "Tải lên và sắp cảnh");
+    main.replaceChildren(h("section", { class: "card" }, h("h2", {}, "Dựng video từ ảnh và clip thật"),
+      h("p", { class: "nho" }, "Dùng tư liệu của bạn, không tạo lại sản phẩm bằng AI. Sắp cảnh, thêm lời đọc và nhạc trước khi dựng. Video chỉ được đăng khi bạn chọn đăng."),
+      h("label", {}, "Tên video", ten), h("label", {}, "Ảnh và clip (tối đa 30 file)", files),
+      h("label", {}, "Khung hình", ratio), h("p", {}, create), message));
+  }
+
+  function bienTapTuLieu(p) {
+    var b = p.ban_dung || {}, assets = p.tai_lieu || [];
+    var rows = (b.canh || assets.filter(function (x) { return x.loai !== "audio"; }).map(function (x) {
+      return { rel: x.rel, giay: 5, chu: "" };
+    })).map(function (x) { return Object.assign({}, x); });
+    var list = h("div", { class: "material-scenes" });
+    var feedback = h("p", { class: "nho", role: "status" });
+    function select(items, value, name) {
+      var e = h("select", { "aria-label": name }, items.map(function (x) { return h("option", { value: x[0] }, x[1]); }));
+      if (value != null) e.value = String(value);
+      return e;
+    }
+    var audios = [["", "Không chọn"]].concat(assets.filter(function (a) { return a.loai === "audio"; }).map(function (a) { return [a.rel, a.ten]; }));
+    var controls = {
+      giong: select([["khong", "Không lời đọc"], ["edge", "Edge TTS"], ["elevenlabs", "ElevenLabs đã kết nối"], ["tep", "File lời đọc của tôi"]], b.giong || "khong", "Nguồn lời đọc"),
+      voice: select([["vi-VN-HoaiMyNeural", "Hoài My · nữ · tiếng Việt"], ["vi-VN-NamMinhNeural", "Nam Minh · nam · tiếng Việt"],
+        ["en-US-JennyNeural", "Jenny · English"], ["en-US-GuyNeural", "Guy · English"]], b.voice, "Giọng Edge"),
+      toc_do: h("input", { type: "number", min: .75, max: 1.25, step: .05, value: b.toc_do || 1, "aria-label": "Tốc độ lời đọc" }),
+      nhac: select(audios, b.nhac, "Nhạc nền"),
+      loi_doc: select(audios, b.loi_doc, "File lời đọc"),
+      am_nhac: h("input", { type: "number", min: 0, max: 1, step: .05, value: b.am_nhac == null ? .15 : b.am_nhac, "aria-label": "Âm lượng nhạc" }),
+      am_giong: h("input", { type: "number", min: 0, max: 2, step: .1, value: b.am_giong == null ? 1 : b.am_giong, "aria-label": "Âm lượng lời đọc" }),
+      phu_de: h("input", { type: "checkbox", "aria-label": "Hiện phụ đề" }),
+      co_chu: h("input", { type: "number", min: 10, max: 32, value: b.co_chu || 18, "aria-label": "Cỡ phụ đề" }),
+      mau: h("input", { type: "color", value: b.mau || "#ffffff", "aria-label": "Màu phụ đề" }),
+      vi_tri: select([["duoi", "Dưới"], ["tren", "Trên"]], b.vi_tri, "Vị trí phụ đề"),
+      khung: select([["fit", "Giữ trọn hình, thêm nền"], ["crop", "Lấp đầy, cắt phần thừa"]], b.khung, "Cách đặt ảnh")
+    };
+    controls.phu_de.checked = b.phu_de !== false;
+    function read() {
+      var d = { canh: rows };
+      Object.keys(controls).forEach(function (k) { d[k] = k === "phu_de" ? controls[k].checked : controls[k].value; });
+      return d;
+    }
+    function draw() {
+      list.replaceChildren();
+      rows.forEach(function (c, i) {
+        var a = assets.find(function (a) { return a.rel === c.rel; });
+        if (!a) return;
+        var sec = h("input", { type: "number", min: 1, max: 30, step: .5, value: c.giay, "aria-label": "Giây cảnh " + (i+1),
+          oninput: function () { c.giay = +sec.value; } });
+        var text = h("textarea", { "aria-label": "Lời cảnh " + (i+1), maxlength: 600, placeholder: "Lời đọc / chữ phụ đề của cảnh này",
+          oninput: function () { c.chu = text.value; } }); text.value = c.chu;
+        var url = API + "/du-an/" + p.id + "/tep?rel=" + encodeURIComponent(c.rel);
+        list.appendChild(h("div", { class: "canh" },
+          a.loai === "anh" ? h("img", { src: url, alt: a.ten }) : h("video", { src: url, controls: true, preload: "metadata" }),
+          h("b", {}, "Cảnh " + (i+1) + " · " + a.ten),
+          h("label", {}, "Thời lượng tối thiểu (giây)", sec), h("label", {}, "Lời cảnh", text),
+          h("div", { class: "scene-actions" },
+            h("button", { type: "button", class: "btn phu", disabled: i === 0, onclick: function () { [rows[i-1], rows[i]] = [rows[i], rows[i-1]]; draw(); } }, "Lên"),
+            h("button", { type: "button", class: "btn phu", disabled: i === rows.length-1, onclick: function () { [rows[i+1], rows[i]] = [rows[i], rows[i+1]]; draw(); } }, "Xuống"),
+            h("button", { type: "button", class: "btn phu", onclick: function () { rows.splice(i, 1); draw(); } }, "Bỏ khỏi bản dựng"))));
+      });
+    }
+    draw();
+    var addAsset = select([["", "Chọn tư liệu đã tải"]].concat(assets.filter(function (a) { return a.loai !== "audio"; }).map(function (a) { return [a.rel, a.ten]; })), "", "Thêm cảnh từ khay");
+    var upload = h("input", { type: "file", multiple: true, accept: "image/*,video/*,audio/*", "aria-label": "Thêm ảnh clip hoặc âm thanh" });
+    async function save() {
+      var r = await api("/du-an/" + p.id + "/ban-dung", { method: "PUT", body: read() });
+      if (!r.ok) throw new Error(r.error);
+    }
+    var saveBtn = h("button", { class: "btn phu" }, "Lưu bản dựng");
+    var runBtn = h("button", { class: "btn" }, "Lưu và dựng video");
+    async function commit(run) {
+      saveBtn.disabled = runBtn.disabled = true;
+      try {
+        await save();
+        if (run) {
+          var r = await api("/du-an/" + p.id + "/chay", { method: "POST" });
+          if (!r.ok) throw new Error(r.error);
+        }
+        veChiTiet();
+      } catch (e) { feedback.textContent = e.message; saveBtn.disabled = runBtn.disabled = false; }
+    }
+    saveBtn.onclick = function () { commit(false); }; runBtn.onclick = function () { commit(true); };
+    var fieldset = h("fieldset", { disabled: p.dang_chay, class: "material-editor" },
+      h("legend", {}, "Bản dựng từ tư liệu"),
+      h("p", { class: "nho" }, "Thứ tự cảnh cũng là thứ tự xuất video. Clip ngắn được lặp đến đủ thời lượng; âm thanh gốc của clip được tắt."),
+      list, h("div", { class: "hang" }, addAsset, h("button", { class: "btn phu", onclick: function () {
+        if (addAsset.value && rows.length < 30) { rows.push({ rel: addAsset.value, giay: 5, chu: "" }); draw(); }
+      } }, "Thêm cảnh")),
+      h("label", {}, "Thêm tư liệu / nhạc / bản thu", upload),
+      h("button", { class: "btn phu", onclick: async function () {
+        if (!upload.files.length) { feedback.textContent = "Chọn file trước khi tải lên."; return; }
+        fieldset.disabled = true;
+        try { await save(); await taiTuLieu(p.id, upload.files); veChiTiet(); }
+        catch (e) { feedback.textContent = e.message; fieldset.disabled = false; }
+      } }, "Tải thêm file"),
+      h("h3", {}, "Âm thanh"),
+      h("div", { class: "hang" }, h("label", {}, "Nguồn lời đọc", controls.giong), h("label", {}, "Giọng Edge", controls.voice),
+        h("label", {}, "Tốc độ (0,75–1,25)", controls.toc_do)),
+      h("p", { class: "nho" }, "Edge gửi lời cảnh tới dịch vụ đọc Microsoft. ElevenLabs dùng khoá đã kết nối. File lời đọc phát từ đầu video, không tự căn theo từng từ."),
+      h("div", { class: "hang" }, h("label", {}, "File lời đọc", controls.loi_doc), h("label", {}, "Âm lượng lời", controls.am_giong)),
+      h("div", { class: "hang" }, h("label", {}, "Nhạc nền", controls.nhac), h("label", {}, "Âm lượng nhạc (0–1)", controls.am_nhac)),
+      h("h3", {}, "Hình và phụ đề"),
+      h("label", { class: "check-label" }, controls.phu_de, "Hiện phụ đề"),
+      h("div", { class: "hang" }, h("label", {}, "Cỡ chữ", controls.co_chu), h("label", {}, "Màu chữ", controls.mau),
+        h("label", {}, "Vị trí", controls.vi_tri), h("label", {}, "Khung ảnh", controls.khung)),
+      h("p", { class: "nho" }, "Edge dùng mốc lời đọc khi dịch vụ cung cấp; các chế độ khác hiển thị phụ đề theo cảnh. Lời đọc dài sẽ kéo dài cảnh."),
+      h("p", { class: "scene-actions" }, saveBtn, runBtn), feedback);
+    return h("section", { class: "card" }, fieldset);
+  }
+
   function veLo() {
     var y = h("textarea", { style: "min-height:220px", placeholder: "Mỗi ý tưởng một đoạn, cách nhau bằng MỘT DÒNG TRỐNG. Tối đa 30 ý tưởng một lô." });
     var ten = h("input", { placeholder: "Tên lô (vd: Truyện cổ tích tuần 1)" });
@@ -198,15 +340,19 @@
       h("div", { class: "dong" }, h("div", {}, h("h2", {}, p.ten), chip(p.trang_thai), " ", p.dang_chay ? h("span", { class: "tt chay" }, "đang chạy") : null),
         h("div", {},
           h("button", { class: "btn phu", onclick: function () { state.tab = "du-an"; chonTab(); } }, "Quay lại"), " ",
-          h("button", { class: "btn", disabled: p.dang_chay, onclick: function () { api("/du-an/" + p.id + "/chay", { method: "POST" }).then(function (r) { if (!r.ok) toast(r.error); veChiTiet(); }); } },
+          h("button", { class: "btn", disabled: p.dang_chay || p.nguon === "tu_lieu", onclick: function () { api("/du-an/" + p.id + "/chay", { method: "POST" }).then(function (r) { if (!r.ok) toast(r.error); veChiTiet(); }); } },
             p.canh && p.canh.length ? "Chạy tiếp / làm lại phần thiếu" : "Chạy"), " ",
           h("button", { class: "btn nguy", disabled: p.dang_chay, onclick: function () { if (confirm("Xoá dự án này cùng mọi tệp của nó?")) api("/du-an/" + p.id, { method: "DELETE" }).then(function () { state.tab = "du-an"; chonTab(); }); } }, "Xoá"))),
       p.loi ? h("p", { class: "nho", style: "color:var(--loi)" }, p.loi) : null,
       h("p", {}, p.y_tuong)));
 
+    if (p.nguon === "tu_lieu") ra.push(bienTapTuLieu(p));
+
     if (p.ket_qua && p.ket_qua.video) {
       var v = h("video", { controls: true, src: API + "/du-an/" + p.id + "/tep?rel=" + encodeURIComponent(p.ket_qua.video) });
       var dangCard = h("div", { class: "card" }, h("h3", {}, "Video hoàn chỉnh (" + p.ket_qua.giay + " giây, " + p.ket_qua.kich_co + ")"), v);
+      dangCard.appendChild(h("p", {}, h("a", { class: "btn tai-file", href: API + "/du-an/" + p.id + "/tep?tai=true&rel=" + encodeURIComponent(p.ket_qua.video), download: "video.mp4" }, "Tải video MP4"), " ",
+        p.ket_qua.srt ? h("a", { class: "btn tai-file", href: API + "/du-an/" + p.id + "/tep?tai=true&rel=" + encodeURIComponent(p.ket_qua.srt), download: "subtitles.srt" }, "Tải phụ đề SRT") : null));
       var tt = h("div", {});
       (p.nen_tang || []).forEach(function (nt) {
         var s = (p.dang || {})[nt] || {};
@@ -321,6 +467,7 @@
     napTrangThai().then(function (ok) {
       if (!ok) return;
       if (state.tab === "moi") veMoi();
+      else if (state.tab === "tu-lieu") veTuLieu();
       else if (state.tab === "lo") veLo();
       else if (state.tab === "ket-noi") veKetNoi();
       else veDanhSach();

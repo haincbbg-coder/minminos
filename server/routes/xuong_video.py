@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 
 import giay_phep
 import routes.ket_noi_ngoai as knn
-from xuong_video import chay, dang, ghep, kho, khoa
+from xuong_video import chay, dang, ghep, kho, khoa, tu_lieu
 
 APP_ID = "xuong_video"
 GOC = "/apps/xuong-video"
@@ -245,6 +245,8 @@ def register(app: FastAPI, ask: Callable[[str, str, List[str]], Awaitable[str]],
             body = await request.json()
         except Exception:
             return _loi("Dữ liệu không đúng.")
+        if chay.dang_chay(pid):
+            return _loi("Dự án đang dựng, chờ xong rồi sửa.", 409)
         kw = {}
         for k in TRUONG_SUA:
             if k in body:
@@ -287,24 +289,46 @@ def register(app: FastAPI, ask: Callable[[str, str, List[str]], Awaitable[str]],
         """Nhận THÔ (body là bytes của tệp, tên ở query) để khỏi phụ thuộc multipart."""
         if (c := _chan()):
             return c
-        data = await request.body()
-        rel, loi = kho.them_tai_lieu(pid, ten, data)
+        if chay.dang_chay(pid):
+            return _loi("Dự án đang dựng, chờ xong rồi thêm file.", 409)
+        data = bytearray()
+        async for chunk in request.stream():
+            data.extend(chunk)
+            if len(data) > 200 * 1024 * 1024:
+                return _loi("File quá 200MB.", 413)
+        rel, loi = kho.them_tai_lieu(pid, ten, bytes(data))
         return _loi(loi) if loi else {"ok": True, "rel": rel}
 
     @app.get(A + "/du-an/{pid}/tep")
-    def xv_tep(pid: str, rel: str):
+    def xv_tep(pid: str, rel: str, tai: bool = False):
         if (c := _chan()):
             return c
         f = kho.duong_dan_file(pid, rel)
         if not f:
             return _loi("Không thấy tệp.", 404)
-        return FileResponse(str(f))
+        return FileResponse(str(f), filename=f.name if tai else None)
+
+    @app.put(A + "/du-an/{pid}/ban-dung")
+    async def xv_ban_dung(pid: str, request: Request):
+        if (c := _chan()):
+            return c
+        p = kho.doc(pid)
+        if not p or p.get("nguon") != "tu_lieu":
+            return _loi("Không có dự án dựng tư liệu này.", 404)
+        if chay.dang_chay(pid):
+            return _loi("Dự án đang dựng, chờ xong rồi sửa.", 409)
+        try:
+                b = tu_lieu.chuan_hoa(p, await request.json(), nhap=True)
+        except (ValueError, TypeError) as e:
+            return _loi(str(e))
+        kho.cap_nhat(pid, ban_dung=b, ket_qua={}, dang={}, che_do_dang="duyet", trang_thai="nhap", loi="")
+        return {"ok": True, "ban_dung": b}
 
     def _bat_dau(pid: str):
         _giu(chay.san_xuat(pid, ask, chep, _thong_bao))
 
     @app.post(A + "/du-an/{pid}/chay")
-    def xv_chay(pid: str):
+    async def xv_chay(pid: str):
         if (c := _chan()):
             return c
         if not kho.doc(pid):
@@ -313,6 +337,12 @@ def register(app: FastAPI, ask: Callable[[str, str, List[str]], Awaitable[str]],
             return _loi("Dự án đang chạy rồi.", 409)
         if not shutil.which("ffmpeg"):
             return _loi("Máy chủ chưa cài ffmpeg nên không ghép được video.", 400)
+        p = kho.doc(pid)
+        if p.get("nguon") == "tu_lieu":
+            try:
+                tu_lieu.chuan_hoa(p, p.get("ban_dung") or {})
+            except ValueError as e:
+                return _loi(str(e))
         _bat_dau(pid)
         return {"ok": True}
 

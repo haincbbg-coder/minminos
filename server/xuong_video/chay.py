@@ -151,28 +151,33 @@ async def san_xuat(pid: str, ask: AskFn, chep: ChepFn, thong_bao: Optional[Notif
             return
         cfg = khoa.cai_dat()
         kho.cap_nhat(pid, loi="")
-        if not (p.get("canh") or []):
-            await kich_ban.lap(pid, ask, chep)
+        if p.get("nguon") == "tu_lieu":
+            from . import tu_lieu
+            kho.dat_trang_thai(pid, "dang_ghep")
+            await tu_lieu.dung(pid)
+        else:
+            if not (p.get("canh") or []):
+                await kich_ban.lap(pid, ask, chep)
+                p = kho.doc(pid)
+            kho.dat_trang_thai(pid, "dang_tao_anh")
+            await _anh_nhan_vat(pid, p, cfg["anh"])
             p = kho.doc(pid)
-        kho.dat_trang_thai(pid, "dang_tao_anh")
-        await _anh_nhan_vat(pid, p, cfg["anh"])
-        p = kho.doc(pid)
-        co_giong = bool(khoa.lay("elevenlabs").get("api_key"))
-        if not co_giong:
-            kho.nhat_ky(pid, "Chưa có khoá ElevenLabs: bỏ qua giọng đọc, video sẽ không có lời.", "warn")
-        kho.dat_trang_thai(pid, "dang_tao_video")
-        kq = await asyncio.gather(*[_mot_canh(pid, int(c["stt"]), cfg["anh"], cfg["video"], cfg["giong"], co_giong)
-                                    for c in p["canh"]], return_exceptions=True)
-        dung = [e for e in kq if isinstance(e, _Dung)]
-        hong = [e for e in kq if isinstance(e, Exception) and not isinstance(e, _Dung)]
-        if dung or hong:
-            e = (dung or hong)[0]
-            kho.dat_trang_thai(pid, "loi", str(e))
-            kho.nhat_ky(pid, f"Dừng giữa chừng: {e}", "loi")
-            tb(f"Xưởng video: '{p.get('ten')}' dừng giữa chừng", str(e))
-            return
-        kho.dat_trang_thai(pid, "dang_ghep")
-        await _ghep.ghep(pid, bool(cfg.get("ghep_phu_de", True)))
+            co_giong = bool(khoa.lay("elevenlabs").get("api_key"))
+            if not co_giong:
+                kho.nhat_ky(pid, "Chưa có khoá ElevenLabs: bỏ qua giọng đọc, video sẽ không có lời.", "warn")
+            kho.dat_trang_thai(pid, "dang_tao_video")
+            kq = await asyncio.gather(*[_mot_canh(pid, int(c["stt"]), cfg["anh"], cfg["video"], cfg["giong"], co_giong)
+                                        for c in p["canh"]], return_exceptions=True)
+            dung = [e for e in kq if isinstance(e, _Dung)]
+            hong = [e for e in kq if isinstance(e, Exception) and not isinstance(e, _Dung)]
+            if dung or hong:
+                e = (dung or hong)[0]
+                kho.dat_trang_thai(pid, "loi", str(e))
+                kho.nhat_ky(pid, f"Dừng giữa chừng: {e}", "loi")
+                tb(f"Xưởng video: '{p.get('ten')}' dừng giữa chừng", str(e))
+                return
+            kho.dat_trang_thai(pid, "dang_ghep")
+            await _ghep.ghep(pid, bool(cfg.get("ghep_phu_de", True)))
         kho.dat_trang_thai(pid, "san_sang")
         kho.nhat_ky(pid, "Video đã ghép xong.")
         p = kho.doc(pid)

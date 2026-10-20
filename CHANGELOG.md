@@ -7,7 +7,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.184] - 2026-10-20
 
 ### Thêm mới
-- Xưởng video: dựng từ ảnh/clip thật, nhạc nền và phụ đề có thể chỉnh trước khi xuất.
+- Xưởng video có mục Ảnh/clip của tôi: tải tư liệu thật, đổi thứ tự, bỏ/thêm cảnh và chỉnh thời lượng trước khi dựng.
+- Chọn file lời đọc, Edge TTS hoặc ElevenLabs đã kết nối; thêm nhạc nền, chỉnh âm lượng, màu và vị trí phụ đề. Kết quả có nút xem và tải MP4/SRT.
+
+### Sửa lỗi
+- Nút Chạy khởi động tác vụ nền đúng luồng, tránh lỗi máy chủ trước khi dựng video.
 
 ## [26.10.183] - 2026-10-20
 
