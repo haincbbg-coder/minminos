@@ -21579,7 +21579,7 @@ async def _tg_callback(data, chat=None):
         kh = kh if isinstance(kh, dict) else {}
         dau = f"🧭 Kế hoạch #{kid}: {str(kh.get('mo_ta') or '').strip()}".rstrip(": ")
         if gat == "1":
-            so = len(kh.get("dot_ids") or [])
+            so = len([d for d in (kh.get("dot_ids") or []) if d])
             return {"text": dau + f"\n\n✅ Đã duyệt. Đã tạo {so} đợt chạy, máy ở nhà sẽ bắt đầu ở lượt tới. "
                                   "Kết quả xem ở Đội Social > Nhật ký hoạt động.", "alert": "Đã duyệt"}
         return {"text": dau + "\n\n✕ Đã từ chối, không chạy gì.", "alert": "Đã từ chối"}
