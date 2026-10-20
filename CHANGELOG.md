@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.190] - 2026-10-21
+
+### Sửa lỗi
+- Trang Đội Social luôn tải đúng giao diện của bản mới sau mỗi lần cập nhật, không còn kẹt bản cũ trong bộ nhớ trình duyệt (thẻ chọn agent ở Kiến thức cho Agent trước đó không hiện).
+- Đăng bài: chạy thử gõ nội dung tới bước Đăng rồi bỏ nháp; khi đăng thật thì xoá bản nháp cũ còn trong ô soạn trước khi gõ để không đăng lẫn chữ cũ.
+- Bình luận nhóm chạy thử vẫn đọc bài của nhóm công khai để viết nháp; nhóm AI tìm được ghi vào Kho group FB chờ bạn duyệt.
+
 ## [26.10.189] - 2026-10-21
 
 ### Thêm mới
