@@ -46,7 +46,8 @@ function napPet() {
   const doc = {
     documentElement: { dataset: { javisTheme: "dark" }, getAttribute: () => "dark", classList: { contains: () => false } },
     addEventListener() {}, querySelectorAll: () => [], querySelector: () => el(),
-    getElementById: () => el(), createElement: () => el(), createElementNS: () => el(), body: el(),
+    // This settings-only fixture has no shared tool launcher.
+    getElementById: (id) => id === "mm-tool-launcher" ? null : el(), createElement: () => el(), createElementNS: () => el(), body: el(),
   };
   new Function("window", "document", "localStorage", "navigator", "matchMedia",
     "requestAnimationFrame", "cancelAnimationFrame", "getComputedStyle",
