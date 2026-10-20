@@ -46,6 +46,17 @@ def _dau_tien_thay(cands, timeout_ms: int = 15000):
     return None
 
 
+def mo_trang(page, url: str) -> None:
+    """page.goto chịu được Facebook tự chuyển hướng (vd thêm &_ps=dest_url khi mở Trang): Playwright
+    báo 'interrupted by another navigation' dù trang vẫn tới nơi. Gặp lỗi đó thì chờ trang ổn định."""
+    try:
+        page.goto(url, wait_until="domcontentloaded", timeout=60000)
+    except Exception as e:
+        if "interrupted by another navigation" not in str(e):
+            raise
+        page.wait_for_load_state("domcontentloaded", timeout=60000)
+
+
 def dang_bai(page, viec: dict, tep_cuc_bo: list, nhat_ky) -> str:
     """Thực hiện đăng. Raise LoiKyNang với câu dễ hiểu khi hỏng. Trả thông điệp thành công."""
     ts = viec.get("tham_so") or {}
@@ -54,7 +65,7 @@ def dang_bai(page, viec: dict, tep_cuc_bo: list, nhat_ky) -> str:
     tay = Nguoi(page)
 
     nhat_ky(f"Mở {noi_dang}")
-    page.goto(noi_dang, wait_until="domcontentloaded", timeout=60000)
+    mo_trang(page, noi_dang)
     tay.nghi(2.5, 5.0)
     url = page.url.lower()
     if "/login" in url or "checkpoint" in url or page.locator("input[name='pass']").count():
@@ -72,7 +83,7 @@ def dang_bai(page, viec: dict, tep_cuc_bo: list, nhat_ky) -> str:
                 tay.bam(xn)
             page.wait_for_load_state("domcontentloaded", timeout=60000)
             tay.nghi(4.0, 7.0)
-            page.goto(noi_dang, wait_until="domcontentloaded", timeout=60000)
+            mo_trang(page, noi_dang)
             tay.nghi(2.5, 5.0)
     tay.luot(1)
     page.mouse.wheel(0, -2000)
