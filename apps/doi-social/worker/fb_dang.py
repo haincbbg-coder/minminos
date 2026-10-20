@@ -28,6 +28,48 @@ _CHO_DUYET = re.compile(r"(chờ (quản trị viên|phê duyệt|duyệt)|đang
                         r"is pending|submitted for (admin )?approval|đã gửi .* quản trị viên)", re.I)
 
 
+_QUAY_LAI = re_nhan("Quay lại", "Trở lại", "Back")
+_BO_NHAP = re_nhan("Bỏ", "Bỏ bài viết", "Rời khỏi", "Rời khỏi trang", "Discard", "Leave", "Leave page")
+
+
+def _bo_hop_soan(nc) -> None:
+    """Chạy thử: xoá chữ vừa gõ, đóng hộp soạn và bỏ bản nháp (không đăng). Facebook hỏi 'Bỏ bài viết?' thì chọn Bỏ."""
+    try:   # đang ở bước 2 (sau Tiếp) thì quay lại bước soạn
+        if not nc.page.get_by_role("dialog").filter(has=nc.page.locator("[contenteditable='true']")).count():
+            lui = dau_tien_thay([nc.page.get_by_role("dialog").get_by_role("button", name=_QUAY_LAI)], 2500)
+            if lui:
+                lui.click(timeout=5000)
+                nc.tay.nghi(1.0, 2.0)
+    except Exception:
+        pass
+    try:   # xoá chữ trước, kẻo Facebook giữ bản nháp trong ô 'Bạn đang nghĩ gì?'
+        hop = nc.page.get_by_role("dialog").filter(has=nc.page.locator("[contenteditable='true']")).last
+        o = hop.locator("[contenteditable='true']").first
+        if o.count():
+            o.click(timeout=5000)
+            nc.tay.phim("Control+a")
+            nc.tay.phim("Delete")
+            nc.tay.nghi(0.5, 1.0)
+    except Exception:
+        pass
+    for _ in range(3):
+        try:
+            nc.tay.phim("Escape")
+        except Exception:
+            pass
+        nc.tay.nghi(0.8, 1.5)
+        nut = dau_tien_thay([nc.page.get_by_role("dialog").get_by_role("button", name=_BO_NHAP)], 2500)
+        if nut:
+            try:
+                nut.click(timeout=5000)
+            except Exception:
+                pass
+            nc.tay.nghi(0.8, 1.5)
+        if not nc.page.get_by_role("dialog").filter(has=nc.page.locator("[contenteditable='true']")).count():
+            nc.nhat_ky("Chạy thử: đã đóng hộp soạn và bỏ bản nháp")
+            return
+
+
 class KetQuaDang(dict):
     """{trang_thai: da_dang|cho_duyet|da_bam|chay_thu, link, da_bam_dang}."""
 
@@ -79,11 +121,19 @@ def dang_noi_dung(nc, noi_dang: str, noi_dung: str, tep: Optional[List[str]] = N
         raise _loi("bấm ô soạn bài nhưng hộp 'Tạo bài viết' không hiện ra", False)
     o_chu = hop.locator("[contenteditable='true'][role='textbox'], [contenteditable='true']").first
     if nc.chay_thu:
-        nc.nhat_ky("Chạy thử: đã mở được hộp soạn bài, không gõ nội dung và không tải tệp")
-    if noi_dung and not nc.chay_thu:
+        nc.nhat_ky("Chạy thử: đã mở hộp soạn bài, gõ nội dung để kiểm đường đi (không tải tệp, không bấm Đăng)")
+    if noi_dung:
         nc.nhat_ky(f"Gõ nội dung ({len(noi_dung)} ký tự, từng chữ)")
         tay.bam(o_chu)
         tay.nghi(0.6, 1.4)
+        try:     # Facebook giữ bản nháp cũ trong ô soạn: xoá sạch trước khi gõ để không đăng lẫn chữ cũ
+            if (o_chu.inner_text(timeout=2000) or "").strip():
+                nc.nhat_ky("Ô soạn còn bản nháp cũ, xoá trước khi gõ")
+                tay.phim("Control+a")
+                tay.phim("Delete")
+                tay.nghi(0.4, 0.9)
+        except Exception:
+            pass
         tay.go(noi_dung)
         tay.nghi(1.0, 2.2)
     if tep and not nc.chay_thu:
@@ -119,10 +169,7 @@ def dang_noi_dung(nc, noi_dang: str, noi_dung: str, tep: Optional[List[str]] = N
         raise _loi("nút Đăng đang bị khoá (Facebook chưa nhận nội dung hoặc tệp chưa tải xong)", False)
     noi = "nhóm" if "/groups/" in url else ("Trang" if noi_dang else "tường")
     if not bam_cong_khai(nc, nut_dang, f"bấm Đăng bài lên {noi} ({len(noi_dung)} ký tự, {len(tep)} tệp)", hanh_dong):
-        try:
-            tay.phim("Escape")         # đóng hộp soạn (đang trống nên Facebook không hỏi bỏ nháp)
-        except Exception:
-            pass
+        _bo_hop_soan(nc)
         return KetQuaDang(trang_thai="chay_thu", link="", da_bam_dang=False)
     nc.nhat_ky("Đã bấm Đăng")
     han = time.monotonic() + (15 * 60 if tep else 120)
