@@ -3,18 +3,82 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Đội Social</title>
-<link rel="stylesheet" href="/static/app-theme.css">
-<script src="/static/theme.js?v=26.10.66"></script>
-<link rel="stylesheet" href="styles.css?v=26.10.186">
+<title>Đội Social · MinMin</title>
+<meta name="color-scheme" content="light dark">
+<script>
+  (function () {
+    var t = "";
+    try { t = localStorage.getItem("doi-social.theme") || ""; } catch (e) {}
+    if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  })();
+</script>
+<link rel="stylesheet" href="styles.css?v=26.10.187">
 </head>
-<body data-mm-app="doi-social">
-<header class="top">
-  <h1>Đội Social</h1>
-  <div class="nho">Nhắn Telegram cho MinMin, máy ở nhà mở profile GPM và đăng như người thật.</div>
-</header>
-<main id="main"><div class="card">Đang tải...</div></main>
-<div id="toast" class="toast" hidden></div>
-<script src="app.js?v=26.10.186"></script>
+<body>
+<div class="shell">
+  <aside class="side" id="side" aria-label="Điều hướng">
+    <a class="brand" href="#/tong-quan">
+      <span class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="32" height="32"><defs><linearGradient id="lg-b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c3aed"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#lg-b)"/><path d="M8 22V11l4.5 6 3.5-5 3.5 5L24 11v11" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="brand-txt"><b>MinMin</b><small>Đội Social</small></span>
+    </a>
+    <nav class="nav" id="nav">
+      <a class="nav-i" data-nav="tong-quan" href="#/tong-quan"><i data-ic="home"></i><span>Tổng quan</span></a>
+      <div class="nav-g" data-g="agents">
+        <button class="nav-gh" type="button" data-toggle-g="agents"><span>AI Agents</span><i data-ic="chev"></i></button>
+        <div class="nav-gb">
+          <a class="nav-i" data-nav="automation" href="#/automation"><i data-ic="bolt"></i><span>Automation</span></a>
+          <a class="nav-i" data-nav="nhat-ky" href="#/nhat-ky"><i data-ic="activity"></i><span>Nhật ký hoạt động</span></a>
+          <a class="nav-i" data-nav="kho" href="#/kho"><i data-ic="box"></i><span>Kho nội dung</span></a>
+          <a class="nav-i" data-nav="nhom-fb" href="#/nhom-fb"><i data-ic="users"></i><span>Kho group FB</span></a>
+          <a class="nav-i" data-nav="duyet" href="#/duyet"><i data-ic="check"></i><span>Duyệt nội dung</span><em class="nav-n" id="n-duyet" hidden></em></a>
+          <a class="nav-i" data-nav="tin-nhan" href="#/tin-nhan"><i data-ic="chat"></i><span>Tin nhắn</span><em class="nav-n" id="n-tin" hidden></em></a>
+          <a class="nav-i" data-nav="tro-ly" href="#/tro-ly"><i data-ic="spark"></i><span>Trợ lý AI</span></a>
+          <a class="nav-i" data-nav="kien-thuc" href="#/kien-thuc"><i data-ic="book"></i><span>Kiến thức cho Agent</span></a>
+        </div>
+      </div>
+      <div class="nav-g" data-g="quanly">
+        <button class="nav-gh" type="button" data-toggle-g="quanly"><span>Quản lý</span><i data-ic="chev"></i></button>
+        <div class="nav-gb">
+          <a class="nav-i" data-nav="tai-khoan" href="#/tai-khoan"><i data-ic="user"></i><span>Tài khoản</span></a>
+          <a class="nav-i" data-nav="gioi-han" href="#/gioi-han"><i data-ic="gauge"></i><span>Giới hạn nick</span></a>
+          <a class="nav-i" data-nav="may" href="#/may"><i data-ic="monitor"></i><span>Máy ở nhà</span></a>
+        </div>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="sf-row">
+        <div class="sf-name"><b>MinMin · Đội Social</b><small id="sf-ver">phiên bản 26.10.187</small></div>
+        <button class="icon-btn" type="button" id="theme-btn" title="Đổi sáng / tối" aria-label="Đổi sáng / tối"><i data-ic="moon"></i></button>
+      </div>
+      <a class="sf-back" href="/"><i data-ic="back"></i><span>Về MinMin</span></a>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" type="button" id="menu-btn" aria-label="Mở menu"><i data-ic="menu"></i></button>
+      <b id="top-title">Đội Social</b>
+    </header>
+    <main id="view" class="content" tabindex="-1"></main>
+  </div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div id="tip" class="tip" hidden></div>
+<script src="app.js?v=26.10.187"></script>
+<script src="views/tong-quan.js?v=26.10.187"></script>
+<script src="views/automation.js?v=26.10.187"></script>
+<script src="views/chay-hang-loat.js?v=26.10.187"></script>
+<script src="views/nhat-ky.js?v=26.10.187"></script>
+<script src="views/kho.js?v=26.10.187"></script>
+<script src="views/nhom-fb.js?v=26.10.187"></script>
+<script src="views/duyet.js?v=26.10.187"></script>
+<script src="views/tin-nhan.js?v=26.10.187"></script>
+<script src="views/tro-ly.js?v=26.10.187"></script>
+<script src="views/kien-thuc.js?v=26.10.187"></script>
+<script src="views/tai-khoan.js?v=26.10.187"></script>
+<script src="views/gioi-han.js?v=26.10.187"></script>
+<script src="views/may.js?v=26.10.187"></script>
 </body>
 </html>
