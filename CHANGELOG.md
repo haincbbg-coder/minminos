@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.180] - 2026-10-20
+
+### Cải thiện
+- Vòng công cụ mở tiếp các vòng con để chọn file, cắt ảnh, đổi định dạng và kích thước; không bật khay hay bảng chỉnh ảnh hình chữ nhật.
+- Xem ảnh đang sửa cạnh vòng điều khiển, chọn nhiều file theo từng trang và trở lại bằng nút ở tâm.
+
 ## [26.10.179] - 2026-10-20
 ### Thêm mới
 - Vòng công cụ nổi: bấm nút tròn để mở các mô-đun quanh tâm, chọn ảnh/PDF rồi xử lý ngay. Giữ khay file cũ và các bản sao.
