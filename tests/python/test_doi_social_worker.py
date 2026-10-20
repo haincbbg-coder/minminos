@@ -35,7 +35,7 @@ from ngu_canh import LoiKyNang, NguCanh  # noqa: E402
 
 mw.NHAT_KY = Path(tempfile.mkdtemp()) / "worker.log"     # không ghi log test vào thư mục Worker thật
 
-check("PHIEN_BAN là 26.10.187", mw.PHIEN_BAN == "26.10.187")
+check("PHIEN_BAN khớp VERSION của repo", mw.PHIEN_BAN == (ROOT / "VERSION").read_text().strip())
 
 
 # ---------------------------------------------------------------------------- MinMin giả

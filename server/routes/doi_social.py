@@ -1141,7 +1141,21 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         p = v2.duong_tep_ket_qua(vid, ten)
         if not p:
             return _loi("không có tệp", 404)
-        return FileResponse(str(p), media_type="text/csv; charset=utf-8", filename=p.name)
+        kieu = "text/plain; charset=utf-8" if p.suffix.lower() == ".txt" else "text/csv; charset=utf-8"
+        return FileResponse(str(p), media_type=kieu, filename=p.name)
+
+    @app.post("/doi-social/kham-trang")
+    async def ds_kham_trang(request: Request):
+        c = _chan()
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            v = v2.tao_kham_trang(str(d.get("nick") or ""), str(d.get("url") or ""), d.get("cuon") or 2)
+        except ValueError as e:
+            return _loi(e)
+        danh_thuc(v["may_id"])
+        return {"ok": True, "viec": v}
 
     @app.get("/doi-social/kho")
     def ds_kho_tong(nen_tang: str = Query("")):

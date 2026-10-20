@@ -38,7 +38,8 @@ KY_NANG = {
 }
 # 26.10.187: mọi id mẫu trong danh mục cũng là kỹ năng (việc của đợt chạy), cộng hai kỹ năng nội
 # bộ máy chủ tự tạo: đăng một nháp đã duyệt, và gửi một tin Messenger chủ tự gõ.
-KY_NANG_NOI_BO = {"dang_ban_nhap": "Đăng nháp đã duyệt", "fb_gui_tin": "Gửi tin nhắn chủ gõ"}
+KY_NANG_NOI_BO = {"dang_ban_nhap": "Đăng nháp đã duyệt", "fb_gui_tin": "Gửi tin nhắn chủ gõ",
+                  "kham_trang": "Khám trang (chẩn đoán, không bấm gì)"}
 
 
 def _nap_ky_nang() -> None:

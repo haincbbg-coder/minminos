@@ -41,7 +41,7 @@ TL_DUOI = {".txt", ".md", ".pdf", ".docx"}
 TL_TOI_DA = 5 * 1024 * 1024
 TL_CHU_TOI_DA = 200_000
 NHUONG_GIO = 12
-KQ_DUOI = {".csv"}
+KQ_DUOI = {".csv", ".txt"}
 KQ_TOI_DA = 10 * 1024 * 1024
 X_CACH_PHUT = 10                 # X: hai bài của cùng nick cách nhau ít nhất 10 phút (xuyên đợt)
 TEN_NEN_TANG = dict(kb.NEN_TANG)
@@ -388,6 +388,8 @@ def may_lam_duoc(ky: str, ho_tro: set, r) -> bool:
         nt = (_j(r["tham_so"], {}) or {}).get("nen_tang") or ""
         return ("dang_ban_nhap" in ho_tro or f"dang_ban_nhap:{nt}" in ho_tro
                 or (nt == "facebook" and any(str(x).startswith("fb_") for x in ho_tro)))
+    if ky == "kham_trang":
+        return "kham_trang" in ho_tro
     if ky == "fb_gui_tin":
         return "fb_gui_tin" in ho_tro or any(str(x).startswith("fb_") for x in ho_tro)
     return ky in ho_tro
@@ -971,7 +973,7 @@ def luu_tep_ket_qua(vid, may_id: str, ten: str, du_lieu) -> dict:
     viec_cua_may(vid, may_id)
     ten = _ten_an_toan(ten)
     if Path(ten).suffix.lower() not in KQ_DUOI:
-        raise ValueError("tệp kết quả chỉ nhận .csv")
+        raise ValueError("tệp kết quả chỉ nhận .csv hoặc .txt")
     import re
     ten = re.sub(r"[^A-Za-z0-9._-]", "_", ten)[:100]
     d = _thu_muc_kq(vid)
@@ -2020,6 +2022,24 @@ def tra_loi_tay(hid, noi_dung: str) -> dict:
         c.execute("UPDATE hoi_thoai SET trang_thai='bot_dang_lo', nhuong_den=?, cap_nhat=? WHERE id=?",
                   (now + NHUONG_GIO * 3600, now, h["id"]))
     return {"hoi_thoai": lay_hoi_thoai(hid), "viec": ds.lay_viec(vid)}
+
+
+def tao_kham_trang(nick: str, url: str, cuon: int = 2) -> dict:
+    """Việc chẩn đoán: máy nhà mở `url` trong profile, cuộn, ghi dàn ý phần tử (vai trò, nhãn, chữ)
+    thành tệp .txt gửi về. KHÔNG bấm gì. Dùng để sửa bộ chọn phần tử khi Facebook/TikTok đổi giao diện."""
+    url = str(url or "").strip()
+    if not url.startswith("https://"):
+        raise ValueError("link phải bắt đầu bằng https://")
+    now = _now()
+    with ds._khoa, ds._db() as c:
+        nicks = _tim_nick_ds(c, [nick])
+        nk = nicks[0]
+        vts = {"kich_ban": "kham_trang", "nen_tang": "", "chay_thu": True, "dot_id": None, "han_muc": {},
+               "nghi_giay": [], "hanh_dong": [], "tham_so": {"url": url[:2000], "cuon": max(0, min(10, _int(cuon, 2)))}}
+        vid = c.execute("INSERT INTO viec(ky_nang, may_id, nick_id, nick_ten, tham_so, trang_thai, tao_luc, duyet_luc, "
+                        "nguon, chay_thu) VALUES('kham_trang',?,?,?,?,'cho_chay',?,?,'web',1)",
+                        (nk["may_id"], nk["id"], nk["ten"], _dj(vts), now, now)).lastrowid
+    return ds.lay_viec(vid)
 
 
 # ------------------------------------------------------------------ kế hoạch + trợ lý
