@@ -4,6 +4,15 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.184] - 2026-10-20
+
+### Thêm mới
+- Xưởng video có mục Ảnh/clip của tôi: tải tư liệu thật, đổi thứ tự, bỏ/thêm cảnh và chỉnh thời lượng trước khi dựng.
+- Chọn file lời đọc, Edge TTS hoặc ElevenLabs đã kết nối; thêm nhạc nền, chỉnh âm lượng, màu và vị trí phụ đề. Kết quả có nút xem và tải MP4/SRT.
+
+### Sửa lỗi
+- Nút Chạy khởi động tác vụ nền đúng luồng, tránh lỗi máy chủ trước khi dựng video.
+
 ## [26.10.183] - 2026-10-20
 
 ### Sửa lỗi

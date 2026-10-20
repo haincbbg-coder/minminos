@@ -72,6 +72,8 @@ def tao(data: dict) -> str:
         "trang_thai": "nhap", "loi": "", "tao_luc": time.time(), "sua_luc": time.time(),
         "kich_ban": {}, "canh": [], "nhan_vat": [], "ket_qua": {}, "dang": {}, "nhat_ky": [],
         "so_video_da_tao": 0,
+        "nguon": "tu_lieu" if data.get("nguon") == "tu_lieu" else "ai",
+        "ban_dung": {},
     }
     thu_muc(pid).mkdir(parents=True, exist_ok=True)
     _ghi(p)
@@ -172,6 +174,7 @@ def duong_dan_file(pid: str, rel: str) -> Optional[Path]:
 
 
 DUOI_ANH = {".png", ".jpg", ".jpeg", ".webp"}
+DUOI_AUDIO = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
 DUOI_VIDEO = {".mp4", ".mov", ".m4v", ".webm"}
 
 
@@ -179,8 +182,8 @@ def them_tai_lieu(pid: str, ten_goc: str, noi_dung: bytes) -> tuple:
     """Lưu một tài liệu tham khảo (ảnh/video). Trả (rel, loi)."""
     ten = re.sub(r"[^\w.\-]", "_", Path(str(ten_goc or "")).name)[:80] or "tep"
     duoi = Path(ten).suffix.lower()
-    if duoi not in DUOI_ANH | DUOI_VIDEO:
-        return "", "Chỉ nhận ảnh (png, jpg, webp) hoặc video (mp4, mov, webm)."
+    if duoi not in DUOI_ANH | DUOI_VIDEO | DUOI_AUDIO:
+        return "", "Chỉ nhận ảnh, video hoặc âm thanh (mp3, wav, m4a, aac, ogg, flac)."
     if not noi_dung or len(noi_dung) > 200 * 1024 * 1024:
         return "", "File rỗng hoặc quá 200MB."
     p = doc(pid)
@@ -195,5 +198,5 @@ def them_tai_lieu(pid: str, ten_goc: str, noi_dung: bytes) -> tuple:
     dich.write_bytes(noi_dung)
     rel = "tai-lieu/" + dich.name
     cap_nhat(pid, tai_lieu=lambda ds: list(ds or []) + [
-        {"rel": rel, "loai": "anh" if duoi in DUOI_ANH else "video", "ten": ten_goc[:80]}])
+        {"rel": rel, "loai": "anh" if duoi in DUOI_ANH else "video" if duoi in DUOI_VIDEO else "audio", "ten": ten_goc[:80]}])
     return rel, ""

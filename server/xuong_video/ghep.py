@@ -35,7 +35,7 @@ async def _chay(argv: List[str], han: int = CHAY_TOI_DA) -> str:
 
 async def do_dai(p: Path) -> float:
     try:
-        o = await _chay(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(p)], 60)
+        o = await _chay(["ffprobe", "-protocol_whitelist", "file,pipe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(p)], 60)
         return float(o.strip() or 0)
     except (LoiGhep, ValueError):
         return 0.0
