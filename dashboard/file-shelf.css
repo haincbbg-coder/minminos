@@ -84,6 +84,7 @@
 .mm-orbit-center strong{letter-spacing:0;font-size:12px}
 @media(max-width:800px){.mm-orbit-preview{right:0;bottom:calc(100% + 12px);width:100%;height:min(24vh,180px)}.mm-orbit-preview canvas,.mm-orbit-preview img{max-height:100%;max-width:100%}.mm-orbit:has(.mm-orbit-preview:not([hidden])){width:min(280px,calc(100vw - 28px));bottom:100px}}
 @media(max-height:650px){.mm-orbit:has(.mm-orbit-preview:not([hidden])){bottom:50px;width:230px}.mm-orbit-preview{max-height:110px}.mm-orbit-hint{font-size:10px}}
+@media(max-height:650px){.mm-orbit:not(:has(.mm-orbit-preview:not([hidden]))){bottom:80px;width:min(240px,calc(100vw - 28px))}.mm-orbit-footer{gap:5px;margin-top:8px}.mm-orbit-footer button{font-size:10px;padding:6px 9px}}
 
 /* One floating control: the existing animated pet lives inside the tool button. */
 .mm-shelf-launch .pet.pet-docked{position:absolute;inset:0!important;width:100%;height:100%;transform:none;pointer-events:none;z-index:auto}
