@@ -209,10 +209,171 @@ def _ds_hoi_thoai(nc, toi_da: int) -> list:
     return chua[:toi_da]
 
 
+# ---------------------------------------------------------------------------- Hộp thư Meta Business Suite
+# Nick đang ở danh nghĩa Trang (quản trị fanpage) mở /messages/ thì Facebook chuyển sang Hộp thư của
+# Business Suite (business.facebook.com/latest/inbox). Bố cục quan sát 21/10/2026 bằng kỹ năng khám trang:
+#  - lọc "Chưa đọc": div[role=button][aria-label="Chưa đọc"];
+#  - mỗi hội thoại: div[role=presentation] cao ~92px ở cột trái, chữ "Tên  Bạn: <tin cuối>  ngày" ("Bạn:" =
+#    tin cuối do Trang gửi, tức khách KHÔNG chờ), kèm grid nút "Chuyển đến thư mục Xong";
+#  - khung tin: div[role=region] "Vùng chứa danh sách tin nhắn...", tin của Trang nằm nửa phải;
+#  - ô soạn: div[role=textbox] contenteditable ở chân khung, Enter để gửi.
+_BS_LOC_CHUA_DOC = re.compile(r"^(Chưa đọc|Unread)$", re.I)
+
+
+def _bs_ds_hoi_thoai(nc, toi_da: int) -> list:
+    try:
+        nut = dau_tien_thay([nc.page.get_by_role("button", name=_BS_LOC_CHUA_DOC)], ms(6000))
+        if nut:
+            nc.tay.bam(nut)          # chỉ lọc danh sách, không phải thao tác công khai
+            nc.tay.nghi(2.0, 3.5)
+    except Exception:
+        pass
+    try:
+        ds = nc.page.evaluate(r"""() => {
+          const out = [];
+          document.querySelectorAll('div[role="presentation"]').forEach((e, i) => {
+            const r = e.getBoundingClientRect();
+            if (r.height < 50 || r.height > 140 || r.x > 200 || r.width < 250) return;
+            const t = (e.innerText || '').trim(); if (!t) return;
+            const dong = t.split('\n').map(x => x.trim()).filter(Boolean);
+            out.push({i: i, ten: dong[0] || '', tin_cuoi: dong.slice(1, 3).join(' '), y: r.y});
+          });
+          return out;
+        }""") or []
+    except Exception:
+        ds = []
+    ra = [h for h in ds if h.get("ten") and not str(h.get("tin_cuoi") or "").startswith(("Bạn:", "You:"))]
+    ra.reverse()                    # danh sách mới nhất ở trên: khách chờ lâu nhất xử lý trước
+    return ra[:toi_da]
+
+
+def _bs_mo(nc, h: dict) -> bool:
+    loc = nc.page.locator('div[role="presentation"]').nth(int(h["i"]))
+    try:
+        loc.scroll_into_view_if_needed(timeout=5000)
+        nc.tay.bam(loc)
+    except Exception as e:
+        nc.nhat_ky(f"Bấm mở hội thoại bằng tay người lỗi ({type(e).__name__}: {str(e)[:120]}), thử bấm thẳng")
+        try:
+            loc.click(timeout=8000)
+        except Exception as e2:
+            nc.nhat_ky(f"Không mở được hội thoại: {type(e2).__name__}: {str(e2)[:160]}")
+            return False
+    nc.tay.nghi(2.5, 4.5)
+    return True
+
+
+def _bs_doc(nc) -> list:
+    try:
+        return nc.page.evaluate(r"""() => {
+          const vung = document.querySelector('div[role="region"]'); if (!vung) return [];
+          const r = vung.getBoundingClientRect(); const giua = r.left + r.width / 2;
+          const out = []; const da = new Set();
+          vung.querySelectorAll('div[dir="auto"], span[dir="auto"]').forEach(el => {
+            if (el.querySelector('[dir="auto"]')) return;          // chỉ lấy lá
+            const t = (el.innerText || '').trim(); if (!t || t.length > 2000 || da.has(el)) return;
+            const b = el.getBoundingClientRect(); if (!b.width) return;
+            if (/^\d{1,2}:\d{2}/.test(t) && t.length < 25) return;   // mốc giờ
+            da.add(el);
+            out.push({tu: (b.left + b.width / 2) > giua ? 'bot' : 'khach', noi_dung: t});
+          });
+          return out.slice(-20);
+        }""") or []
+    except Exception:
+        return []
+
+
+def _bs_vung(nc) -> str:
+    """Mô tả cấu trúc (không chứa nội dung tin) để chẩn đoán khi đọc khung tin không ra."""
+    try:
+        return nc.page.evaluate(r"""() => {
+          const v = [...document.querySelectorAll('div[role="region"]')];
+          return v.map(e => { const r = e.getBoundingClientRect();
+            return (e.getAttribute('aria-label') || '').slice(0, 40) + ' @' + Math.round(r.x) + ',' + Math.round(r.y) + ' ' +
+              Math.round(r.width) + 'x' + Math.round(r.height) + ' dir=' + e.querySelectorAll('[dir="auto"]').length +
+              ' row=' + e.querySelectorAll('[role="row"],[role="gridcell"],[role="listitem"]').length; }).join(' ; ') || 'không có';
+        }""")
+    except Exception as e:
+        return f"lỗi {type(e).__name__}"
+
+
+def _bs_gui(nc, noi_dung: str, mo_ta: str) -> str:
+    o = dau_tien_thay([nc.page.locator('div[role="textbox"][contenteditable="true"]').last,
+                       nc.page.get_by_role("textbox").last], ms(8000))
+    if not o:
+        return "khong_thay"
+    if not nc.duoc_bam_cong_khai(mo_ta, "tra_loi_tin_nhan"):
+        return "chay_thu"
+    nc.tay.bam(o)
+    nc.tay.nghi(0.5, 1.2)
+    nc.tay.go_binh_luan(noi_dung)
+    nc.tay.nghi(0.8, 2.0)
+    nc.tay.phim("Enter")
+    return "thanh_cong" if thay_chu(nc.page.locator('div[role="region"]').first, noi_dung, 12000) else "khong_hien"
+
+
+def _bs_tra_loi(nc, sp: str) -> str:
+    ds = _bs_ds_hoi_thoai(nc, int(nc.ts.get("so_hoi_thoai") or 10))
+    nc.nhat_ky(f"Hộp thư Business Suite: {len(ds)} hội thoại khách đang chờ")
+    lam = xem = 0
+    for h in ds:
+        if phai_dung(nc) or nc.con_lai("tra_loi_tin_nhan") <= 0:
+            break
+        try:
+            if not _bs_mo(nc, h):
+                continue
+            tin = _bs_doc(nc)
+            nc.nhat_ky(f"Đọc khung tin: {len(tin)} dòng ({sum(1 for t in tin if t['tu'] == 'khach')} của khách), "
+                       f"vùng tin: {_bs_vung(nc)}")
+            if not tin or tin[-1]["tu"] != "khach":
+                continue
+            xem += 1
+            link = nc.page.url
+            ht = nc.hoi_thoai(khach_ten=h["ten"], khach_link=link, tin=tin, san_pham_id=sp)
+            if not ht.get("bot_duoc_tra_loi", True):
+                nc.su_kien("tra_loi_tin_nhan", "bo_qua", f"Bạn đang tự trả lời {h['ten']}, bot nhường", link=link)
+                continue
+            kq = nc.ai("tra_loi_tin_nhan", {"hoi_thoai": {"khach_ten": h["ten"], "khach_link": link, "tin": tin},
+                                            "san_pham_id": sp})
+            noi_dung = str(kq.get("noi_dung") or "").strip()
+            tay_ = bool(kq.get("can_tra_loi_tay"))
+            if tay_ or kq.get("sdt"):
+                nc.hoi_thoai(khach_ten=h["ten"], khach_link=link, tin=tin, san_pham_id=sp,
+                             trang_thai="can_tra_loi_tay" if tay_ else "bot_dang_lo", sdt=str(kq.get("sdt") or ""))
+            if not noi_dung:
+                continue
+            if nc.che_do != "dang_luon":
+                nc.su_kien("tra_loi_tin_nhan", "thong_tin",
+                           ("Chạy thử: " if nc.chay_thu else "Duyệt trước (chưa có hàng duyệt tin nhắn): ")
+                           + f"sẽ trả lời {h['ten']}: {noi_dung[:100]}" + (" [cần trả lời tay]" if tay_ else ""), link=link)
+                continue
+            r = _bs_gui(nc, noi_dung, f"gửi tin cho {h['ten']}")
+            if r == "thanh_cong":
+                lam += 1
+                nc.hoi_thoai(khach_ten=h["ten"], khach_link=link, san_pham_id=sp,
+                             tin=tin + [{"tu": "bot", "noi_dung": noi_dung}],
+                             **({"trang_thai": "can_tra_loi_tay"} if tay_ else {}))
+                nc.su_kien("tra_loi_tin_nhan", "thanh_cong",
+                           (f"Gửi câu giữ khách, cần bạn trả lời tay ({kq.get('ly_do') or 'câu khó'})" if tay_
+                            else f"Trả lời {h['ten']}: {noi_dung[:100]}"), link=link)
+            else:
+                nc.su_kien("tra_loi_tin_nhan", "loi", "Không thấy ô nhập tin" if r == "khong_thay"
+                           else "Đã gửi nhưng chưa thấy tin hiện", link=link)
+        except LoiKyNang as e:
+            if e.ma:
+                raise
+            nc.su_kien("tra_loi_tin_nhan", "loi", str(e))
+        nc.tay.nghi(20.0, 60.0)
+    return (f"Trả lời {lam} hội thoại (Hộp thư Trang)." if nc.che_do == "dang_luon"
+            else f"Đã xem {xem} hội thoại khách đang chờ trên Hộp thư Trang (không gửi).")
+
+
 def fb_tra_loi_tin_nhan(nc) -> str:
     sp = str(nc.ts.get("san_pham") or "")
     mo_va_kiem(nc, FB + "/messages/t/")
     nc.tay.nghi(2.0, 4.0)
+    if "business.facebook.com" in (nc.page.url or ""):
+        return _bs_tra_loi(nc, sp)
     _kiem_pin(nc)
     ds = _ds_hoi_thoai(nc, int(nc.ts.get("so_hoi_thoai") or 10))
     nc.nhat_ky(f"Có {len(ds)} hội thoại chưa đọc cần xem")

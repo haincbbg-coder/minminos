@@ -1161,7 +1161,8 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             return c
         try:
             d = await _than(request)
-            v = v2.tao_kham_trang(str(d.get("nick") or ""), str(d.get("url") or ""), d.get("cuon") or 2)
+            v = v2.tao_kham_trang(str(d.get("nick") or ""), str(d.get("url") or ""), d.get("cuon") or 0,
+                                  str(d.get("trong") or ""), str(d.get("chon") or ""))
         except ValueError as e:
             return _loi(e)
         danh_thuc(v["may_id"])
