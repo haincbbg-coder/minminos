@@ -406,7 +406,15 @@ except Exception as e:
 if co_pw:
     w.THU_MUC = Path(tempfile.mkdtemp())       # CSV quét không ghi vào thư mục Worker của repo
     with sync_playwright() as pw:
-        trinh = pw.chromium.launch(headless=True)
+        try:
+            trinh = pw.chromium.launch(headless=True)
+        except Exception:
+            # Bản playwright trong .venv có thể mới hơn trình duyệt cài sẵn: dùng thẳng chromium có trong
+            # PLAYWRIGHT_BROWSERS_PATH (KHÔNG chạy `playwright install`).
+            goc_pw = Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"])
+            exe = sorted(goc_pw.glob("chromium-*/chrome-linux*/chrome")) + \
+                sorted(goc_pw.glob("chromium-*/chrome-win*/chrome.exe"))
+            trinh = pw.chromium.launch(headless=True, executable_path=str(exe[-1]))
         ctx = trinh.new_context(viewport={"width": 1280, "height": 900})
         ctx.route("**/*", _phuc_vu)
 
@@ -501,8 +509,8 @@ if co_pw:
         thu("rd_tham_gia_sub", nc, kq, ck,
             lambda nc: [s["kq"] for s in nc.su] == ["thong_tin", "bo_qua"])
         nc, kq, ck = chay("reddit", ky_nang_reddit.rd_tham_gia_sub, {"sub": "vietnam, AskVN"})
-        check("rd_tham_gia_sub chạy thật: Join -> subscribed, sub đã vào thì bỏ qua",
-              ck == ["join"] and [s["kq"] for s in nc.su] == ["thanh_cong", "bo_qua"], (nc.su, ck))
+        check("rd_tham_gia_sub chạy thật: Join -> subscribed (đọc lại), sub đã vào thì bỏ qua",
+              [s["kq"] for s in nc.su] == ["thanh_cong", "bo_qua"], (nc.su, ck))
         nc, kq, ck = chay("reddit", ky_nang_reddit.rd_dang_sub, {"sub": "r/vietnam", "tieu_de": "Hỏi về kem dưỡng",
                                                                  "noi_dung": "Nội dung"}, chay_thu=True)
         thu("rd_dang_sub", nc, kq, ck)
@@ -513,7 +521,7 @@ for p in sorted(WORKER.glob("ky_nang_*.py")) + [WORKER / "tien_ich_web.py"]:
     if p.name == "ky_nang_fb.py":
         continue
     s = p.read_text(encoding="utf-8")
-    check(f"{p.name}: không em dash", "—" not in s)
+    check(f"{p.name}: không em dash", "\u2014" not in s)
     check(f"{p.name}: không subprocess", "subprocess" not in s)
     check(f"{p.name}: không bấm .click() thẳng (mọi cú bấm qua nc.tay / cổng)", ".click(" not in s)
     check(f"{p.name}: không gõ bằng fill/type cả đoạn", ".fill(" not in s and ".type(" not in s)

@@ -77,7 +77,7 @@
       function ve(d) {
         var ai = d.ai || {}, so = d.so7 || {}, nen = d.nen_tang_dung || [], may = d.may || [], bd = d.bieu_do || [], cx = d.can_xu_ly || [];
         var mayOn = may.filter(function (m) { return m.online; }).length;
-        var tg = d.telegram !== false;
+        var tg = !!d.telegram;
         var h = '<section class="hero"><div class="hero-l">' +
           '<span class="hero-on' + (mayOn ? "" : " off") + '"><span class="dotx ' + (mayOn ? "on pulse" : "warn") + '"></span>' +
           (mayOn ? "Agent đang trực" : "Máy ở nhà đang tắt") + (tg ? " · Telegram" : "") + "</span>" +

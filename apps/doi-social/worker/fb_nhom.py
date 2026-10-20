@@ -186,7 +186,9 @@ def _chay_binh_luan_nhom(nc, nhom: list, tu_tham_gia: bool) -> str:
             if tu_tham_gia is not None:
                 mo_va_kiem(nc, link)
                 tt = trang_thai_nhom(nc.page)
-                if tt != "da_vao":
+                if tt == "khong_ro":
+                    nc.nhat_ky("Không đọc được trạng thái thành viên của nhóm, vẫn thử quét bài")
+                elif tt != "da_vao":
                     if tt == "cho_duyet":
                         nc.bao_nhom(link, tinh_trang="cho_duyet")
                         nc.su_kien("binh_luan_nhom", "bo_qua", "Nick đang chờ duyệt vào nhóm", nhom=link)

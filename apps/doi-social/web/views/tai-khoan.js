@@ -72,7 +72,7 @@
         });
       }
       function luuMeta(body, msg) {
-        body.ids = soChon().map(function (x) { return isNaN(+x) ? x : +x; });
+        body.ids = soChon();
         return DS.api("POST", "/doi-social/nick/meta", body).then(function (d) {
           if (d.ok === false) return false;
           DS.toast(msg.replace("{n}", body.ids.length), "ok"); DS.boNho("nick"); nap(); return true;

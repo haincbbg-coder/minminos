@@ -9,8 +9,7 @@
   }
   function tienTrinh(t) {
     t = t || {};
-    var tong = t.tong || 0, xong = t.xong || 0, loi = t.loi || 0, dang = t.dang || 0, ok = Math.max(0, xong - loi);
-    if (t.thanh_cong != null) ok = t.thanh_cong;
+    var tong = t.tong || 0, ok = t.xong || 0, loi = t.loi || 0, dang = t.dang || 0, bo = t.bo || 0, xong = ok + loi + bo;
     var pc = function (n) { return tong ? (n / tong * 100).toFixed(1) + "%" : "0"; };
     return '<div class="prog"><div class="bar"><i class="p-ok" style="width:' + pc(ok) + '"></i><i class="p-err" style="width:' + pc(loi) + '"></i><i class="p-run" style="width:' + pc(dang) +
       '"></i></div><span>' + xong + "/" + tong + " · ✓" + ok + " ✗" + loi + "</span></div>";
@@ -63,11 +62,10 @@
         var ds = DS.list(d, "viec");
         if (!ds.length) { box.innerHTML = '<div class="row small muted" style="padding:6px 0">' + ic("clock") + "Không có nick nào đang chạy.</div>"; return; }
         box.innerHTML = ds.map(function (v) {
-          var m = mauId[v.kich_ban || v.ky_nang] || {};
-          var buoc = v.buoc || v.nhat_ky || [];
-          var cuoi = v.dong || (buoc.length ? buoc[buoc.length - 1] : "");
+          var m = mauId[v.ky_nang] || {};
+          var nk = v.nhat_ky || [], cuoi = v.buoc_cuoi || (nk.length ? (nk[nk.length - 1].dong || nk[nk.length - 1]) : "");
           return '<div class="run">' + DS.av(v.nick_ten) + '<div class="grow" style="min-width:0"><div class="row"><b>' + esc(v.nick_ten) + "</b>" + DS.icNT(m.nen_tang, 18) +
-            '<span class="small">' + esc(m.ten || v.nhan_ky_nang || v.ky_nang || "") + '</span><span class="tiny muted">· bắt đầu ' + esc(DS.tuongDoi(v.bat_dau || v.nhan_luc || v.tao_luc)) + "</span></div>" +
+            '<span class="small">' + esc(v.ten_mau || m.ten || v.ky_nang || "") + '</span><span class="tiny muted">· bắt đầu ' + esc(DS.tuongDoi(v.bat_dau || v.nhan_luc || v.tao_luc)) + "</span></div>" +
             (cuoi ? '<div class="small muted clip" style="margin-top:3px">' + ic("activity") + " " + esc(cuoi) + "</div>" : "") + "</div>" + DS.bd("Đang chạy", "brand", true) + "</div>";
         }).join("");
       });
@@ -100,7 +98,7 @@
           ds.map(function (e) {
             var m = mauId[e.kich_ban] || {};
             return '<tr><td class="nw"><b>' + DS.gioPhut(e.luc) + '</b><div class="sub">' + esc(DS.gio(e.luc).slice(0, 5)) + '</div></td><td class="nw"><div class="row" style="flex-wrap:nowrap">' +
-              DS.icNT(e.nen_tang || m.nen_tang, 18) + esc(e.nick_ten || "") + "</div></td><td><div class=\"b\" style=\"font-weight:500\">" + esc(DS.tenHD(KB, e.hanh_dong) || m.ten || "") +
+              DS.icNT(e.nen_tang || m.nen_tang, 18) + esc(e.nick_ten || "") + "</div></td><td><div class=\"b\" style=\"font-weight:500\">" + esc(e.nhan_hanh_dong || DS.tenHD(KB, e.hanh_dong) || m.ten || "") +
               '</div><div class="sub">' + esc(e.tinh_nang || m.tinh_nang || "") + '</div></td><td style="max-width:220px"><div class="clip">' + esc(e.nhom || "") + '</div><div class="sub clip">' +
               esc(e.san_pham || "") + "</div></td><td>" + kq(e) + '</td><td style="min-width:220px;max-width:380px"><div class="small">' + esc(e.chi_tiet || "") + "</div>" +
               (e.link ? '<a class="tiny" href="' + esc(e.link) + '" target="_blank" rel="noopener">' + ic("link") + " Mở bài</a>" : "") + "</td></tr>";
@@ -150,7 +148,7 @@
           ds.map(function (x) {
             var m = mauId[x.kich_ban] || {};
             return '<tr class="click" data-act="mo-dot" data-id="' + x.id + '"><td><b>' + esc(x.ten || "Đợt #" + x.id) + '</b><div class="sub">' + (x.nick || []).length + ' nick</div></td><td><div class="row" style="flex-wrap:nowrap">' +
-              DS.icNT(m.nen_tang, 18) + '<span class="clip" style="max-width:200px">' + esc(m.ten || x.kich_ban) + "</span></div>" + (x.chay_thu ? DS.bd("Chạy thử", "brand") : "") + "</td><td>" +
+              DS.icNT(m.nen_tang, 18) + '<span class="clip" style="max-width:200px">' + esc(x.ten_mau || m.ten || x.kich_ban) + "</span></div>" + (x.chay_thu ? DS.bd("Chạy thử", "brand") : "") + "</td><td>" +
               DS.bdMap(DS.TT_DOT, x.trang_thai) + "</td><td>" + tienTrinh(x.tien_trinh) + '</td><td class="num">' + (x.song_song || 1) + '</td><td class="small muted">' +
               esc({ web: "Trang web", lich: "Lịch hẹn", tro_ly: "Trợ lý AI", telegram: "Telegram" }[x.nguon] || x.nguon || "") + '</td><td class="nw small">' + DS.gio(x.tao_luc) + "</td></tr>";
           }).join("") + "</tbody></table></div>";
@@ -161,7 +159,7 @@
       function ve() {
         DS.api("GET", "/doi-social/dot-chay/" + id).then(function (d) {
           if (d.ok === false) { m.body.innerHTML = DS.rong("Chưa tải được", esc(d.error), "list"); return; }
-          var dot = d.dot || d, viec = d.viec || [], sk = d.su_kien || [], mau = mauId[dot.kich_ban] || {};
+          var dot = d.dot || {}, viec = dot.viec || [], sk = dot.su_kien || [], mau = mauId[dot.kich_ban] || {};
           m.el.querySelector(".modal-h h3").textContent = dot.ten || "Đợt #" + id;
           var h = '<div class="row-sb"><div class="row">' + DS.icNT(mau.nen_tang, 26) + "<b>" + esc(mau.ten || dot.kich_ban) + "</b>" + DS.bdMap(DS.TT_DOT, dot.trang_thai) + (dot.chay_thu ? DS.bd("Chạy thử", "brand") : "") +
             '</div><div style="min-width:220px">' + tienTrinh(dot.tien_trinh) + "</div></div>" +
@@ -171,7 +169,7 @@
           h += '<div class="sec-t" style="margin-top:16px">Việc theo nick (' + viec.length + ')</div><div class="tw" style="border:1px solid var(--line);border-radius:12px"><table class="tbl"><thead><tr><th>Nick</th><th>Trạng thái</th><th>Kết quả</th><th>Máy báo</th></tr></thead><tbody>' +
             (viec.length ? viec.map(function (v) {
               var dm = v.ket_qua || v.dem || {};
-              return "<tr><td><b>" + esc(v.nick_ten) + "</b></td><td>" + DS.bdMap(DS.TT_VIEC, v.trang_thai) + '</td><td class="small nw">✓' + (dm.thanh_cong || 0) + " · bỏ qua " + (dm.bo_qua || 0) + " · ✗" + (dm.loi || 0) +
+              return "<tr><td><b>" + esc(v.nick_ten) + "</b></td><td>" + DS.ttViec(v) + '</td><td class="small nw">✓' + (dm.thanh_cong || 0) + " · bỏ qua " + (dm.bo_qua || 0) + " · ✗" + (dm.loi || 0) +
                 '</td><td class="small muted">' + esc(v.thong_diep || "") + "</td></tr>";
             }).join("") : '<tr><td colspan="4" class="muted">Chưa có việc.</td></tr>') + "</tbody></table></div>";
           if (sk.length) h += '<div class="sec-t" style="margin-top:16px">Sự kiện gần nhất</div><div class="logbox">' + sk.map(function (e) {
@@ -205,7 +203,7 @@
 
   // ================================================================ tab Lịch sử chạy
   function tabLichSu(el, ctx, KB) {
-    var mauId = DS.mauTheoId(KB), F = { trang_thai: "", kich_ban: "", trang: 1 }, cache = {};
+    var mauId = DS.mauTheoId(KB), F = { trang_thai: ctx.q.tt || "", kich_ban: "", trang: 1 }, cache = {};
     var body = el.querySelector("#nk-body");
     body.innerHTML = '<div class="card card-x"><div class="card-h"><h3>Lịch sử chạy <span class="sub" id="ls-tong"></span></h3></div><div style="height:12px"></div><div class="filters">' +
       '<select class="sel" id="ls-tt"><option value="">Mọi trạng thái</option><option value="cho_chay">Chờ máy nhận</option><option value="dang_chay">Đang chạy</option><option value="xong">Thành công</option><option value="loi">Thất bại</option><option value="bo">Đã huỷ</option></select>' +
@@ -224,8 +222,8 @@
         box.innerHTML = '<div class="tw" style="border-top:0"><table class="tbl tbl-in"><thead><tr><th>#</th><th>Đợt</th><th>Mẫu</th><th>Nick</th><th>Trạng thái</th><th>Bắt đầu</th><th></th></tr></thead><tbody>' +
           ds.map(function (v) {
             var m = mauId[v.kich_ban || v.ky_nang] || {};
-            return '<tr><td class="muted small">#' + v.id + '</td><td class="small">' + esc(v.dot_ten || (v.dot_id ? "Đợt #" + v.dot_id : "Việc lẻ")) + '</td><td><div class="row" style="flex-wrap:nowrap">' + DS.icNT(m.nen_tang, 18) +
-              '<span class="clip" style="max-width:220px">' + esc(v.mau_ten || m.ten || v.nhan_ky_nang || v.ky_nang || "") + "</span></div></td><td><b>" + esc(v.nick_ten || "") + "</b></td><td>" + DS.bdMap(DS.TT_VIEC, v.trang_thai) +
+            return '<tr><td class="muted small">#' + v.id + '</td><td class="small">' + esc(v.ten_dot || (v.dot_id ? "Đợt #" + v.dot_id : "Việc lẻ")) + '</td><td><div class="row" style="flex-wrap:nowrap">' + DS.icNT(m.nen_tang, 18) +
+              '<span class="clip" style="max-width:220px">' + esc(v.ten_mau || m.ten || v.nhan_ky_nang || v.ky_nang || "") + "</span></div></td><td><b>" + esc(v.nick_ten || "") + "</b></td><td>" + DS.ttViec(v) +
               (v.chay_thu ? " " + DS.bd("Chạy thử", "brand") : "") + '</td><td class="nw small">' + DS.gio(v.bat_dau || v.nhan_luc || v.tao_luc) + '</td><td><button class="btn btn-xs" data-act="xem" data-id="' + v.id + '">' + ic("eye") + "Xem</button></td></tr>";
           }).join("") + "</tbody></table></div>" + DS.phanTrang(tong, d.trang || F.trang, d.moi_trang || 50);
       });
@@ -233,7 +231,7 @@
     function xem(v) {
       var m = mauId[v.kich_ban || v.ky_nang] || {}, buoc = v.buoc || [];
       DS.modal({ title: "Lượt #" + v.id + " · " + (v.nick_ten || ""), wide: true,
-        body: '<div class="row">' + DS.icNT(m.nen_tang, 24) + "<b>" + esc(m.ten || v.nhan_ky_nang || v.ky_nang || "") + "</b>" + DS.bdMap(DS.TT_VIEC, v.trang_thai) + "</div>" +
+        body: '<div class="row">' + DS.icNT(m.nen_tang, 24) + "<b>" + esc(v.ten_mau || m.ten || v.nhan_ky_nang || v.ky_nang || "") + "</b>" + DS.ttViec(v) + "</div>" +
           '<div class="small muted mt-s">Tạo ' + DS.gioDu(v.tao_luc) + (v.xong_luc ? " · xong " + DS.gioDu(v.xong_luc) : "") + "</div>" +
           (v.thong_diep ? '<div class="note mt-s ' + (v.trang_thai === "loi" ? "note-err" : "") + '">' + ic(v.trang_thai === "loi" ? "alert" : "info") + "<span>" + esc(v.thong_diep) + "</span></div>" : "") +
           '<div class="sec-t" style="margin-top:16px">Các bước máy ở nhà ghi lại</div>' + (buoc.length ? '<div class="logbox">' + buoc.map(esc).join("\n") + "</div>" : '<div class="small muted">Không có bước nào.</div>') +

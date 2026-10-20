@@ -419,7 +419,8 @@ _THAM_GIA = ["Tham gia nhóm", "Join group", "Tham gia", "Join"]
 _DA_VAO = re.compile(r"^\s*(Đã tham gia|Joined|Thành viên|Member)\s*$", re.I)
 _CHO_DUYET_VAO = re.compile(r"^\s*(Đã yêu cầu|Requested|Hủy yêu cầu|Huỷ yêu cầu|Cancel request|"
                             r"Đang chờ duyệt|Pending)\s*$", re.I)
-_SOAN_NHOM = re.compile(r"(Bạn viết gì đi|Write something|Tạo bài viết công khai|Create a public post)", re.I)
+_SOAN_NHOM = re.compile(r"(Bạn viết gì đi|Write something|Tạo bài viết công khai|Create a public post|"
+                        r"Bạn đang nghĩ gì|What's on your mind)", re.I)
 
 
 def trang_thai_nhom(page) -> str:

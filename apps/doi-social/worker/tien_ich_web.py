@@ -158,17 +158,29 @@ def trong_khung(page, loc, toi_da: int = 30) -> list:
 
 def bam_cong_khai(nc, loc, mo_ta: str) -> bool:
     """Bấm một nút CÔNG KHAI. Chạy thử -> KHÔNG bấm, ghi nhật ký, trả False."""
-    if getattr(nc, "chay_thu", False):
-        nc.nhat_ky(f"Chạy thử: không bấm '{mo_ta}'")
+    if not _duoc_cong_khai(nc, mo_ta):
         return False
     nc.tay.bam(loc)
     return True
 
 
+def _duoc_cong_khai(nc, mo_ta: str) -> bool:
+    """Chạy thử -> False (ghi nhật ký qua chốt chặn của lõi nếu lõi có, để lõi đếm số lần chặn)."""
+    if not getattr(nc, "chay_thu", False):
+        return True
+    f = getattr(nc, "duoc_bam_cong_khai", None)
+    if callable(f):
+        try:
+            f(mo_ta)
+        except Exception:
+            pass
+    nc.nhat_ky(f"Chạy thử: không bấm/gửi '{mo_ta}'")
+    return False
+
+
 def enter_cong_khai(nc, mo_ta: str) -> bool:
     """Nhấn Enter để GỬI (ô chat/bình luận). Chạy thử -> không nhấn."""
-    if getattr(nc, "chay_thu", False):
-        nc.nhat_ky(f"Chạy thử: không nhấn Enter để '{mo_ta}'")
+    if not _duoc_cong_khai(nc, mo_ta):
         return False
     nc.page.keyboard.press("Enter")
     return True

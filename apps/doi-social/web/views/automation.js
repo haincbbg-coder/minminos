@@ -85,8 +85,8 @@
       h += '<div class="card card-x"><div class="tw"><table class="tbl tbl-in"><thead><tr><th>Tên</th><th>Mẫu</th><th class="num">Số nick</th><th>Lịch</th><th>Bật</th><th>Lần kế</th><th>Lần trước</th><th class="num">Số lần / lỗi</th><th></th></tr></thead><tbody>';
       h += ds.map(function (l) {
         var m = mau[l.kich_ban] || {};
-        return "<tr><td><b>" + esc(l.ten || m.ten || "Lịch #" + l.id) + "</b></td><td><div class=\"row\" style=\"flex-wrap:nowrap\">" + DS.icNT(m.nen_tang, 20) + '<span class="clip" style="max-width:220px">' +
-          esc(m.ten || l.kich_ban) + '</span></div></td><td class="num">' + (l.nick || []).length + '</td><td class="nw">' + esc(l.mo_ta_lich || DS.moTaCron(l.cron)) +
+        return "<tr><td><b>" + esc(l.ten || l.ten_mau || m.ten || "Lịch #" + l.id) + "</b></td><td><div class=\"row\" style=\"flex-wrap:nowrap\">" + DS.icNT(m.nen_tang, 20) + '<span class="clip" style="max-width:220px">' +
+          esc(l.ten_mau || m.ten || l.kich_ban) + '</span></div></td><td class="num">' + (l.so_nick != null ? l.so_nick : (l.nick || []).length) + '</td><td class="nw">' + esc(l.mo_ta_lich || DS.moTaCron(l.cron)) +
           '<div class="sub">' + esc(l.cron || "") + "</div></td><td>" + DS.sw('data-act="bat-lich" data-id="' + l.id + '" aria-label="Bật lịch"', !!l.bat) + '</td><td class="nw">' +
           (l.bat && l.lan_ke ? esc(DS.tuongDoi(l.lan_ke)) + '<div class="sub">' + DS.gio(l.lan_ke) + "</div>" : '<span class="muted">Đang tắt</span>') + '</td><td class="nw">' +
           (l.lan_truoc ? esc(DS.tuongDoi(l.lan_truoc)) : '<span class="muted">Chưa chạy</span>') + '</td><td class="num">' + DS.so(l.so_lan || 0) + " / " +

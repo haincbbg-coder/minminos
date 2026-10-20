@@ -39,10 +39,11 @@
           '<a class="btn" href="#/kien-thuc">' + ic("plus") + 'Thêm sản phẩm mới</a><button class="btn btn-pri" data-act="mo-them">' + ic("plus") + "Thêm nhóm</button>") +
           '<div class="card"><div class="fgrid"><div class="fld"><label for="nf-sp">Sản phẩm</label><select class="sel" id="nf-sp">' + KT.map(function (k) {
             var t = thongKe(k.id, TAT_CA);
-            return '<option value="' + esc(k.id) + '"' + (String(k.id) === sp ? " selected" : "") + ">" + esc(k.ten) + " - " + t.duyet + " nhóm đã duyệt · " + t.coNick + " đã có nick tham gia</option>";
+            var duyet = k.so_nhom != null ? k.so_nhom : t.duyet, coNick = k.so_nhom_co_nick != null ? k.so_nhom_co_nick : t.coNick;
+            return '<option value="' + esc(k.id) + '"' + (String(k.id) === sp ? " selected" : "") + ">" + esc(k.ten) + " - " + duyet + " nhóm đã duyệt · " + coNick + " đã có nick tham gia</option>";
           }).join("") + '</select></div><div class="fld"><label>Tóm tắt</label><div class="mini" id="nf-tk" style="padding-top:4px"></div></div></div>' +
           '<div id="nf-them" hidden class="mt"><div class="fld"><label for="nf-links">Link nhóm (mỗi dòng một nhóm)</label><textarea class="ta" id="nf-links" rows="4" placeholder="https://www.facebook.com/groups/...&#10;https://www.facebook.com/groups/..."></textarea>' +
-          '<div class="hint">Nhóm mới ở trạng thái Chờ duyệt. Bạn duyệt rồi Agent mới dùng. Mẫu "Tham gia nhóm theo sản phẩm" cũng tự tìm và thêm nhóm vào đây.</div></div>' +
+          '<div class="hint">Nhóm bạn tự dán được tính là Đã duyệt. Nhóm do mẫu "Tham gia nhóm theo sản phẩm" tự tìm sẽ nằm ở Chờ duyệt để bạn xem trước.</div></div>' +
           '<div class="row mt-s" style="justify-content:flex-end"><button class="btn" data-act="dong-them">Thôi</button><button class="btn btn-pri" data-act="them">Thêm vào kho</button></div></div></div>' +
           '<div class="card card-x mt"><div id="nf-ds"></div></div>';
       }
@@ -132,7 +133,7 @@
           dem();
           m.body.addEventListener("change", dem);
           m.foot.querySelector("#tt-luu").onclick = function () {
-            var ids = Array.prototype.map.call(m.body.querySelectorAll("input:checked"), function (i) { return isNaN(+i.value) ? i.value : +i.value; });
+            var ids = Array.prototype.map.call(m.body.querySelectorAll("input:checked"), function (i) { return i.value; });
             sua(g.id, { nick_tuong_tac: ids }).then(function (d) { if (d.ok !== false) { m.close(); nap(); } });
           };
         }
