@@ -58,6 +58,9 @@ BANG_NHAN_BIET: Dict[str, list] = {
     ] + _CAPTCHA_CHUNG,
     "tiktok": [
         ("dang_xuat", "url", r"/login(/|\?|$)"),
+        # Chưa đăng nhập: TikTok vẫn cho xem For You nhưng bật hộp "Đăng nhập vào TikTok" (thấy thật 21/10/2026).
+        ("dang_xuat", "css", "[data-e2e='login-modal'], #login-modal"),
+        ("dang_xuat", "chu", r"^(Đăng nhập vào TikTok|Log in to TikTok)$"),
         ("captcha", "css", "#captcha-verify-image, .captcha_verify_container, #tiktok-verify-ele, "
                            "div[class*='captcha_verify']"),
         ("captcha", "chu", r"(Kéo thanh trượt|Drag the slider|Xác minh để tiếp tục|Verify to continue)"),

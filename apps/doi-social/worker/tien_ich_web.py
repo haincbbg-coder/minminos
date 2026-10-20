@@ -248,6 +248,13 @@ def kiem_chan(nc, cho_phep_trang_dang_nhap: bool = False) -> None:
         pass
     if _co_re(page, _CAPTCHA):
         raise LoiKyNang(f"{nc.nen_tang}: gặp captcha, dừng nick này", "captcha")
+    if not cho_phep_trang_dang_nhap:
+        try:      # hộp "Đăng nhập vào TikTok"... hiện đè lên trang khi profile chưa đăng nhập
+            nc.kiem_dang_nhap()
+        except LoiKyNang:
+            raise
+        except Exception:
+            pass
     if _co_re(page, _QUA_NHANH):
         raise LoiKyNang(f"{nc.nen_tang}: nền tảng báo thao tác quá nhanh / bị giới hạn", "qua_nhanh")
 
