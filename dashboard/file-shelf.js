@@ -251,7 +251,8 @@
       {label:'Sửa ảnh',icon:'edit',run:()=>moduleAction('edit')},
       {label:'Ghép ảnh',icon:'collage',run:()=>moduleAction('collage')},
       {label:'Gộp PDF',icon:'pdf',run:()=>moduleAction('pdf')},
-      {label:'Tải / xem',icon:'download',run:()=>moduleAction('download')}
+      {label:'Tải / xem',icon:'download',run:()=>moduleAction('download')},
+      ...(window.JavisPet?[{label:'Linh thú',icon:'collage',run:()=>setView(()=>drawWheel('LINH THÚ',window.JavisPet.quickActions().map(a=>({label:a.label,icon:'files',run:()=>{closeWheel();a.run();}})),showTools,'Công cụ'))}]:[])
     ],()=>closeWheel(),'Thu vòng'));
     report('Chọn công cụ · thả file vào vòng');
   }
@@ -291,7 +292,8 @@
   function init() {
     if(!R)return;
     launcher=button('',()=>{if(busy)return;tick();if(!wheel.hidden){closeWheel();return;}auth().then(()=>store()).then(showTools).catch(e=>report(e.message));},'mm-shelf-launch');
-    launcher.append(icon('collage'),el('span','0','mm-orbit-badge'));launcher.title='Vòng công cụ';launcher.hidden=true;launcher.setAttribute('aria-expanded','false');launcher.setAttribute('aria-controls','mm-file-orbit');
+    launcher.append(icon('collage'),el('span','0','mm-orbit-badge'));launcher.id='mm-tool-launcher';
+    launcher.title='Vòng công cụ';launcher.hidden=true;launcher.setAttribute('aria-expanded','false');launcher.setAttribute('aria-controls','mm-file-orbit');
     wheel=el('section',null,'mm-orbit');wheel.id='mm-file-orbit';wheel.hidden=true;wheel.setAttribute('aria-label','Vòng công cụ');
     const head=el('div',null,'mm-orbit-head');heading=el('span','CÔNG CỤ CỦA BẠN');
     soundButton=button('',()=>{soundOn=!soundOn;try{localStorage.setItem('minmin-file-sound',soundOn?'on':'off');}catch(_){}updateSound();tick();},'mm-orbit-sound');
@@ -313,6 +315,7 @@
     };
     document.addEventListener('pointerdown',e=>{if(!wheel.hidden&&!wheel.contains(e.target)&&!launcher.contains(e.target)&&!busy)closeWheel(false);});
     document.body.append(launcher,wheel);
+    if(window.JavisPet)window.JavisPet.dockLauncher(launcher);
     if(channel)channel.onmessage=()=>store().catch(()=>{});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)auth().catch(()=>{});});
     auth().then(()=>store()).catch(()=>{});

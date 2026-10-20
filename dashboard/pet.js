@@ -977,6 +977,7 @@
     doiLinhVatCu(cfg);
     dung();
     veMenu();
+    dockLauncher(document.getElementById("mm-tool-launcher"));
     apDung();
     apDungTrangThai();
     giamChuyenDong = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -1250,7 +1251,31 @@
     });
   }
 
+  // Keep the live rig and its state, but let the shared launcher own interaction.
+  function dockLauncher(host) {
+    if (!el || !host || el.parentNode === host) return;
+    moMenu(false);
+    var body = document.createElement("span");
+    body.className = "pet-body";
+    while (nutBody.firstChild) body.appendChild(nutBody.firstChild);
+    nutBody.replaceWith(body);
+    nutBody = body;
+    el.classList.add("pet-docked");
+    el.setAttribute("aria-hidden", "true");
+    host.appendChild(el);
+    function sync() { host.classList.toggle("mm-has-pet", !el.hidden); }
+    new MutationObserver(sync).observe(el, { attributes: true, attributeFilter: ["hidden"] });
+    sync();
+  }
+
   window.JavisPet = {
+    dockLauncher: dockLauncher,
+    quickActions: function () {
+      veMenu();
+      return Array.from(menu.querySelectorAll("button")).map(function (b) {
+        return { label: b.textContent, run: function () { b.click(); } };
+      });
+    },
     setState: setState,
     react: react,
     setCfg: setCfg,
