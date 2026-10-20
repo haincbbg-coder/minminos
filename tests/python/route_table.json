@@ -5490,6 +5490,16 @@
  {
   "order": 551,
   "type": "APIRoute",
+  "path": "/apps/xuong-video/api/du-an/{pid}/ban-dung",
+  "name": "xv_ban_dung",
+  "methods": [
+   "PUT"
+  ],
+  "trong": null
+ },
+ {
+  "order": 552,
+  "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/chay",
   "name": "xv_chay",
   "methods": [
@@ -5498,7 +5508,7 @@
   "trong": null
  },
  {
-  "order": 552,
+  "order": 553,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/duyet",
   "name": "xv_duyet",
@@ -5508,7 +5518,7 @@
   "trong": null
  },
  {
-  "order": 553,
+  "order": 554,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/dang-ngay",
   "name": "xv_dang_ngay",
@@ -5518,7 +5528,7 @@
   "trong": null
  },
  {
-  "order": 554,
+  "order": 555,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/lo",
   "name": "xv_lo",
@@ -5528,7 +5538,7 @@
   "trong": null
  },
  {
-  "order": 555,
+  "order": 556,
   "type": "APIRoute",
   "path": "/apps/viral-studio",
   "name": "root",
@@ -5538,7 +5548,7 @@
   "trong": null
  },
  {
-  "order": 556,
+  "order": 557,
   "type": "APIRoute",
   "path": "/apps/viral-studio/",
   "name": "page",
@@ -5548,7 +5558,7 @@
   "trong": null
  },
  {
-  "order": 557,
+  "order": 558,
   "type": "APIRoute",
   "path": "/apps/viral-studio/assets/{name}",
   "name": "assets",
@@ -5558,7 +5568,7 @@
   "trong": null
  },
  {
-  "order": 558,
+  "order": 559,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/state",
   "name": "state",
@@ -5568,7 +5578,7 @@
   "trong": null
  },
  {
-  "order": 559,
+  "order": 560,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/action/{action}",
   "name": "action",
@@ -5578,7 +5588,7 @@
   "trong": null
  },
  {
-  "order": 560,
+  "order": 561,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/export/{kind}",
   "name": "export",
@@ -5588,7 +5598,7 @@
   "trong": null
  },
  {
-  "order": 561,
+  "order": 562,
   "type": "APIRoute",
   "path": "/share/rename",
   "name": "share_rename",
@@ -5598,7 +5608,7 @@
   "trong": null
  },
  {
-  "order": 562,
+  "order": 563,
   "type": "APIRoute",
   "path": "/bien-dong",
   "name": "bien_dong_page",
@@ -5608,7 +5618,7 @@
   "trong": null
  },
  {
-  "order": 563,
+  "order": 564,
   "type": "APIRoute",
   "path": "/bien-dong/casso/{token}",
   "name": "bien_dong_casso",
@@ -5618,7 +5628,7 @@
   "trong": null
  },
  {
-  "order": 564,
+  "order": 565,
   "type": "APIRoute",
   "path": "/bien-dong/giao-dich",
   "name": "bien_dong_giao_dich",
@@ -5628,7 +5638,7 @@
   "trong": null
  },
  {
-  "order": 565,
+  "order": 566,
   "type": "APIRoute",
   "path": "/bien-dong/cai-dat",
   "name": "bien_dong_cai_dat",
@@ -5638,7 +5648,7 @@
   "trong": null
  },
  {
-  "order": 566,
+  "order": 567,
   "type": "APIRoute",
   "path": "/bien-dong/cai-dat",
   "name": "bien_dong_luu_cai_dat",
@@ -5648,7 +5658,7 @@
   "trong": null
  },
  {
-  "order": 567,
+  "order": 568,
   "type": "APIRoute",
   "path": "/bien-dong/doi-token",
   "name": "bien_dong_doi_token",
@@ -5658,7 +5668,7 @@
   "trong": null
  },
  {
-  "order": 568,
+  "order": 569,
   "type": "APIRoute",
   "path": "/bien-dong/thu",
   "name": "bien_dong_thu",
@@ -5668,7 +5678,7 @@
   "trong": null
  },
  {
-  "order": 569,
+  "order": 570,
   "type": "APIRoute",
   "path": "/hook/{token}",
   "name": "hook_vao",
@@ -5678,7 +5688,7 @@
   "trong": null
  },
  {
-  "order": 570,
+  "order": 571,
   "type": "APIRoute",
   "path": "/webhooks",
   "name": "wh_ds",
@@ -5688,7 +5698,7 @@
   "trong": null
  },
  {
-  "order": 571,
+  "order": 572,
   "type": "APIRoute",
   "path": "/webhooks",
   "name": "wh_tao",
@@ -5698,7 +5708,7 @@
   "trong": null
  },
  {
-  "order": 572,
+  "order": 573,
   "type": "APIRoute",
   "path": "/webhooks/doi-token",
   "name": "wh_doi",
@@ -5708,7 +5718,7 @@
   "trong": null
  },
  {
-  "order": 573,
+  "order": 574,
   "type": "APIRoute",
   "path": "/webhooks/cap-nhat",
   "name": "wh_capnhat",
@@ -5718,7 +5728,7 @@
   "trong": null
  },
  {
-  "order": 574,
+  "order": 575,
   "type": "APIRoute",
   "path": "/webhooks/xoa",
   "name": "wh_xoa",
@@ -5728,7 +5738,7 @@
   "trong": null
  },
  {
-  "order": 575,
+  "order": 576,
   "type": "APIRoute",
   "path": "/webhooks/thu",
   "name": "wh_thu",
