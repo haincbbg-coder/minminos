@@ -80,7 +80,7 @@
           var ts = v.tham_so || {}, m = mau[v.ky_nang] || {};
           return '<tr><td class="small muted">#' + v.id + '</td><td style="max-width:320px"><div class="b" style="font-weight:500">' + esc(v.nhan_ky_nang || m.ten || v.ky_nang) + "</div>" +
             (ts.noi_dung ? '<div class="sub clamp1">' + esc(ts.noi_dung) + "</div>" : "") + (v.thong_diep ? '<div class="sub clamp1">Máy báo: ' + esc(v.thong_diep) + "</div>" : "") + "</td><td>" + esc(v.nick_ten || "") + "</td><td>" +
-            DS.bdMap(DS.TT_VIEC, v.trang_thai) + '</td><td class="small nw">' + DS.gio(v.tao_luc) + '</td><td class="nw">' +
+            DS.ttViec(v) + '</td><td class="small nw">' + DS.gio(v.tao_luc) + '</td><td class="nw">' +
             (v.trang_thai === "cho_duyet" ? '<button class="btn btn-xs btn-ok" data-act="duyet-viec" data-id="' + v.id + '">Duyệt đăng</button> <button class="btn btn-xs" data-act="bo-viec" data-id="' + v.id + '">Bỏ</button>' :
               '<button class="btn btn-xs" data-act="xem-viec" data-id="' + v.id + '">' + ic("eye") + "Xem</button>") + "</td></tr>";
         }).join("") + "</tbody></table></div>";
@@ -135,7 +135,7 @@
         "bo-viec": function (t) { duyetViec(t.getAttribute("data-id"), false); },
         "xem-viec": function (t) {
           var v = viecTheoId(t.getAttribute("data-id")); if (!v) return;
-          DS.modal({ title: "Việc #" + v.id + " · " + (v.nick_ten || ""), wide: true, body: '<div class="row">' + DS.bdMap(DS.TT_VIEC, v.trang_thai) + '<span class="small muted">' + DS.gioDu(v.tao_luc) + "</span></div>" +
+          DS.modal({ title: "Việc #" + v.id + " · " + (v.nick_ten || ""), wide: true, body: '<div class="row">' + DS.ttViec(v) + '<span class="small muted">' + DS.gioDu(v.tao_luc) + "</span></div>" +
             ((v.tham_so || {}).noi_dung ? '<div class="body-txt">' + esc(v.tham_so.noi_dung) + "</div>" : "") + (v.thong_diep ? '<div class="note mt-s">' + ic("info") + "<span>" + esc(v.thong_diep) + "</span></div>" : "") +
             ((v.buoc || []).length ? '<div class="logbox mt-s">' + v.buoc.map(esc).join("\n") + "</div>" : "") +
             (v.co_anh ? '<img class="shot" loading="lazy" src="/doi-social/anh/' + encodeURIComponent(v.id) + '.png" alt="Ảnh chụp kết quả">' : "") });

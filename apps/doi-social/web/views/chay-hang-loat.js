@@ -271,7 +271,7 @@
           if (!nick.length) { DS.toast("Chọn ít nhất một nick", "err"); return; }
           var r = docThamSo();
           if (r.loi) { DS.toast(r.loi, "err"); return; }
-          var body = { ten: S.ten.trim(), kich_ban: m.id, nick: nick.map(function (x) { return isNaN(+x) ? x : +x; }), tham_so: r.ts, song_song: S.song_song,
+          var body = { ten: S.ten.trim(), kich_ban: m.id, nick: nick, tham_so: r.ts, song_song: S.song_song,
             chay_an: S.chay_an, che_do: S.che_do };
           if (S.che_do === "hen") {
             body.cron = S.lich.kieu === "cron" ? String(S.lich.cron || "").trim() : DS.taoCron(S.lich.kieu, S.lich);

@@ -43,7 +43,7 @@
       DS.api("POST", "/doi-social/kho", fd).then(function (d) {
         btn.disabled = false; btn.textContent = "Thêm vào kho";
         if (d.ok === false) return;
-        var n = (d.muc || d.bai || []).length || d.so || tachBai(nd).length || 1;
+        var n = d.so || (d.ids || []).length || tachBai(nd).length || 1;
         DS.toast("Đã thêm " + n + " bài vào kho", "ok"); m.close(); xong();
       });
     };
@@ -191,14 +191,14 @@
         "viet": function (b) {
           var noi = body.querySelector("#vb-noi").value;
           var req = { san_pham_id: body.querySelector("#vb-sp").value, noi_dang: noi, so_ban: so, yeu_cau: body.querySelector("#vb-yc").value.trim() };
-          var nk = body.querySelector("#vb-nick").value; if (nk) req.nick_id = isNaN(+nk) ? nk : +nk;
+          var nk = body.querySelector("#vb-nick").value; if (nk) req.nick_id = nk;
           var nh = body.querySelector("#vb-nhom").value.trim(); if (nh && noi === "fb_nhom") req.nhom = nh;
           b.disabled = true; b.innerHTML = '<span class="typing"><span></span><span></span><span></span></span> AI đang viết...';
           body.querySelector("#vb-kq").innerHTML = "";
           DS.api("POST", "/doi-social/viet-bai", req).then(function (d) {
             b.disabled = false; b.innerHTML = ic("spark") + "Viết bài";
             if (d.ok === false) return;
-            var n = (d.ban_nhap || d.muc || d.ids || []).length || d.so || so;
+            var n = (d.muc || []).length || so;
             body.querySelector("#vb-kq").innerHTML = '<div class="note note-ok mt">' + ic("ok") + '<div class="grow">Đã gửi <b>' + n + " bản nháp</b> sang Duyệt nội dung." +
               '</div><a class="btn btn-sm btn-ok" href="#/duyet">Đi tới Duyệt nội dung</a></div>';
             DS.capNhatHuyHieu();

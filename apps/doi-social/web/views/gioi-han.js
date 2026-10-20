@@ -143,7 +143,7 @@
         });
         DS.bind(b, {
           "ap-thang": function () {
-            var v = b.querySelector("#tu-thang").value, ids = Object.keys(chon).filter(function (k) { return chon[k]; }).map(function (x) { return isNaN(+x) ? x : +x; });
+            var v = b.querySelector("#tu-thang").value, ids = Object.keys(chon).filter(function (k) { return chon[k]; });
             if (!/^\d{4}-\d{2}$/.test(v)) { DS.toast("Chọn tháng tạo", "err"); return; }
             DS.api("POST", "/doi-social/nick/meta", { ids: ids, tao_tu: v }).then(function (d) {
               if (d.ok === false) return;

@@ -3,7 +3,7 @@
   "use strict";
   var esc = DS.esc, ic = DS.ic;
   var TT_KH = { cho_duyet: ["Chờ bạn duyệt", "warn"], dang_chay: ["Đang chạy", "brand"], hoan_tat: ["Hoàn tất", "ok"], tu_choi: ["Đã từ chối", "mu"] };
-  var TT_BUOC = { cho: ["Chờ", "mu"], chuan_bi: ["Chuẩn bị", "info"], dang_chay: ["Đang chạy", "brand"], xong: ["Xong", "ok"], hoan_tat: ["Xong", "ok"], loi: ["Lỗi", "err"], bo: ["Bỏ", "mu"], huy: ["Đã huỷ", "mu"] };
+  var TT_BUOC = { cho: ["Đang chờ", "info"], tu_choi: ["Không chạy", "mu"], "?": ["Không rõ", "mu"], chuan_bi: ["Chuẩn bị", "info"], dang_chay: ["Đang chạy", "brand"], xong: ["Xong", "ok"], hoan_tat: ["Xong", "ok"], loi: ["Lỗi", "err"], bo: ["Bỏ", "mu"], huy: ["Đã huỷ", "mu"] };
 
   DS.view("tro-ly", {
     title: "Trợ lý AI",
@@ -40,7 +40,7 @@
           '<ol class="steps">' + buoc.map(function (b) {
             var m = mauId[b.kich_ban] || {}, nk = (b.nick || []).map(function (id) { return NICK[id] || id; });
             var tb = b.trang_thai ? (TT_BUOC[b.trang_thai] || [b.trang_thai, "mu"]) : (cho ? null : k.trang_thai === "hoan_tat" ? TT_BUOC.xong : k.trang_thai === "dang_chay" ? TT_BUOC.dang_chay : null);
-            return '<li><div class="grow" style="min-width:0"><div class="row">' + DS.icNT(m.nen_tang, 18) + '<span class="b" style="font-weight:600">' + esc(m.ten || b.kich_ban) + "</span>" + (tb ? DS.bd(tb[0], tb[1]) : "") + "</div>" +
+            return '<li><div class="grow" style="min-width:0"><div class="row">' + DS.icNT(m.nen_tang, 18) + '<span class="b" style="font-weight:600">' + esc(b.ten_mau || m.ten || b.kich_ban) + "</span>" + (tb ? DS.bd(tb[0], tb[1]) : "") + "</div>" +
               '<div class="tiny muted" style="margin-top:2px">' + (nk.length ? nk.length + " nick: " + esc(nk.slice(0, 3).join(", ")) + (nk.length > 3 ? "..." : "") : "Chưa chọn nick") + "</div>" +
               (b.ghi_chu ? '<div class="small" style="margin-top:2px">' + esc(b.ghi_chu) + "</div>" : "") + "</div></li>";
           }).join("") + "</ol>" +
@@ -141,8 +141,8 @@
             m.body.innerHTML = ds.map(function (p) {
               var id = p.phien || p.id;
               return '<button class="nick-row" style="width:100%;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;background:var(--card);text-align:left" data-phien="' + esc(id) + '">' +
-                '<span class="botav">' + ic("chat") + '</span><span class="grow" style="min-width:0"><span class="b clip" style="display:block">' + esc(p.tieu_de || p.tin_dau || "Phiên " + id) + '</span><span class="tiny muted">' +
-                DS.gio(p.luc || p.cap_nhat) + (p.so_tin ? " · " + p.so_tin + " tin" : "") + "</span></span></button>";
+                '<span class="botav">' + ic("chat") + '</span><span class="grow" style="min-width:0"><span class="b clip" style="display:block">' + esc(p.tieu_de || p.dau || "Phiên " + id) + '</span><span class="tiny muted">' +
+                DS.gio(p.cuoi || p.luc) + (p.so_tin ? " · " + p.so_tin + " tin" : "") + "</span></span></button>";
             }).join("");
             m.body.addEventListener("click", function (e) {
               var b = e.target.closest("[data-phien]"); if (!b) return;

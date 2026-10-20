@@ -67,6 +67,7 @@
     monitor: '<rect x="3" y="4" width="18" height="12" rx="2.5"/><path d="M8 20h8M12 16v4"/>',
     chev: '<path d="m6 9 6 6 6-6"/>',
     chevr: '<path d="m9 6 6 6-6 6"/>',
+    list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
     moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -134,6 +135,10 @@
   DS.KET_QUA = { thanh_cong: ["Thành công", "ok"], bo_qua: ["Bỏ qua", "mu"], loi: ["Lỗi", "err"], thong_tin: ["Thông tin", "info"], het_bai: ["Hết bài", "warn"] };
   DS.TT_VIEC = { cho_duyet: ["Chờ duyệt", "warn"], cho_chay: ["Chờ máy nhận", "info"], dang_chay: ["Đang chạy", "brand"], xong: ["Thành công", "ok"],
     loi: ["Thất bại", "err"], bo: ["Đã huỷ", "mu"], bo_qua: ["Bỏ qua", "mu"] };
+  DS.ttViec = function (v) {
+    if (v && v.trang_thai === "bo" && (v.ket_qua || {}).bo_qua) return DS.bd("Bỏ qua", "mu");
+    return DS.bdMap(DS.TT_VIEC, v && v.trang_thai);
+  };
   DS.TT_DOT = { cho: ["Đang chờ", "info"], dang_chay: ["Đang chạy", "brand"], hoan_tat: ["Hoàn tất", "ok"], huy: ["Đã huỷ", "mu"] };
   DS.CANH_BAO = { dang_xuat: "Đăng xuất", checkpoint: "Checkpoint", captcha: "Captcha", qua_nhanh: "Bị chặn vì quá nhanh" };
   DS.bd = function (txt, kieu, dot) {
