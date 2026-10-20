@@ -42,6 +42,11 @@ def kham_trang(nc) -> str:
     if not url.startswith("https://"):
         from ngu_canh import LoiKyNang
         raise LoiKyNang("thiếu link cần khám")
+    trong_url = ""
+    if "#minmin-trong=" in url:     # cho phép gửi vùng soi kèm link (máy chủ cũ chưa có trường riêng)
+        import urllib.parse
+        url, trong_url = url.split("#minmin-trong=", 1)
+        trong_url = urllib.parse.unquote(trong_url)
     nc.nhat_ky(f"Khám trang {url} (không bấm gì)")
     nc.mo(url)
     time.sleep(6)
@@ -55,6 +60,28 @@ def kham_trang(nc) -> str:
         except Exception as e:
             ds = [f"(không đọc được dàn ý: {e})"]
         dong.append(f"## Màn {i + 1} (tag | role | aria-label | chữ | href | thuộc tính | vị trí)")
+        dong.extend(ds)
+        dong.append("")
+    trong = str(nc.ts.get("trong") or trong_url or "")
+    if trong:   # soi kỹ một vùng: mọi phần tử chữ (dir=auto) kèm vị trí, để biết tin bên trái/phải...
+        try:
+            ds = nc.page.evaluate(r"""([trong, chon]) => {
+              const goc = document.querySelector(trong); if (!goc) return ['(không thấy vùng ' + trong + ')'];
+              const gr = goc.getBoundingClientRect();
+              const out = ['# vùng ' + Math.round(gr.x) + ',' + Math.round(gr.y) + ' ' + Math.round(gr.width) + 'x' + Math.round(gr.height)];
+              for (const e of goc.querySelectorAll(chon)) {
+                const r = e.getBoundingClientRect(); if (!r.width) continue;
+                const t = (e.innerText || '').replace(/\s+/g, ' ').trim(); if (!t) continue;
+                const cha = e.closest('[role]');
+                out.push(Math.round(r.x) + ',' + Math.round(r.y) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' | ' + e.tagName.toLowerCase()
+                  + ' | cha:' + (cha ? cha.getAttribute('role') + ':' + (cha.getAttribute('aria-label') || '').slice(0, 50) : '') + ' | ' + t.slice(0, 160));
+                if (out.length > 1500) break;
+              }
+              return out;
+            }""", [trong, str(nc.ts.get("chon") or "[dir='auto']")])
+        except Exception as e:
+            ds = [f"(lỗi soi vùng: {e})"]
+        dong.append(f"## Soi vùng {trong}")
         dong.extend(ds)
         dong.append("")
     try:

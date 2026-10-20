@@ -2024,7 +2024,7 @@ def tra_loi_tay(hid, noi_dung: str) -> dict:
     return {"hoi_thoai": lay_hoi_thoai(hid), "viec": ds.lay_viec(vid)}
 
 
-def tao_kham_trang(nick: str, url: str, cuon: int = 2) -> dict:
+def tao_kham_trang(nick: str, url: str, cuon: int = 2, trong: str = "", chon: str = "") -> dict:
     """Việc chẩn đoán: máy nhà mở `url` trong profile, cuộn, ghi dàn ý phần tử (vai trò, nhãn, chữ)
     thành tệp .txt gửi về. KHÔNG bấm gì. Dùng để sửa bộ chọn phần tử khi Facebook/TikTok đổi giao diện."""
     url = str(url or "").strip()
@@ -2035,7 +2035,8 @@ def tao_kham_trang(nick: str, url: str, cuon: int = 2) -> dict:
         nicks = _tim_nick_ds(c, [nick])
         nk = nicks[0]
         vts = {"kich_ban": "kham_trang", "nen_tang": "", "chay_thu": True, "dot_id": None, "han_muc": {},
-               "nghi_giay": [], "hanh_dong": [], "tham_so": {"url": url[:2000], "cuon": max(0, min(10, _int(cuon, 2)))}}
+               "nghi_giay": [], "hanh_dong": [], "tham_so": {"url": url[:2000], "cuon": max(0, min(10, _int(cuon, 2))),
+                                                          "trong": str(trong or "")[:300], "chon": str(chon or "")[:300]}}
         vid = c.execute("INSERT INTO viec(ky_nang, may_id, nick_id, nick_ten, tham_so, trang_thai, tao_luc, duyet_luc, "
                         "nguon, chay_thu) VALUES('kham_trang',?,?,?,?,'cho_chay',?,?,'web',1)",
                         (nk["may_id"], nk["id"], nk["ten"], _dj(vts), now, now)).lastrowid
