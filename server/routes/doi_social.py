@@ -698,7 +698,12 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         if err:
             return err
         try:
-            return {"ok": True, "muc": v2.nhom_cho_viec(viec_id, m["id"])}
+            muc = v2.nhom_cho_viec(viec_id, m["id"])
+            v = v2.viec_cua_may(viec_id, m["id"])
+            sp_id = str(((v.get("tham_so") or {}).get("tham_so") or {}).get("san_pham") or "")
+            kt = v2.lay_kien_thuc(sp_id, day_du=False) if sp_id else None
+            sp = {"id": kt["id"], "ten": kt.get("ten", ""), "tu_khoa": kt.get("tu_khoa", "")} if kt else None
+            return {"ok": True, "muc": muc, "san_pham": sp, "tu_khoa": (sp or {}).get("tu_khoa", "")}
         except ValueError as e:
             return _loi_v(e)
 

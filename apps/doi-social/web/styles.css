@@ -484,3 +484,4 @@ i[data-ic] { display: inline-flex; font-style: normal; }
   .modal-b { padding: 16px; }
   .bub, .cm { max-width: 92%; }
 }
+.tbl .av + div .sub, .tbl .av + div .b { white-space: nowrap; }

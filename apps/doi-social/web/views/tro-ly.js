@@ -40,8 +40,8 @@
           '<ol class="steps">' + buoc.map(function (b) {
             var m = mauId[b.kich_ban] || {}, nk = (b.nick || []).map(function (id) { return NICK[id] || id; });
             var tb = b.trang_thai ? (TT_BUOC[b.trang_thai] || [b.trang_thai, "mu"]) : (cho ? null : k.trang_thai === "hoan_tat" ? TT_BUOC.xong : k.trang_thai === "dang_chay" ? TT_BUOC.dang_chay : null);
-            return '<li><div class="grow" style="min-width:0"><div class="row">' + DS.icNT(m.nen_tang, 18) + '<span class="b" style="font-weight:600">' + esc(b.ten_mau || m.ten || b.kich_ban) + "</span>" + (tb ? DS.bd(tb[0], tb[1]) : "") + "</div>" +
-              '<div class="tiny muted" style="margin-top:2px">' + (nk.length ? nk.length + " nick: " + esc(nk.slice(0, 3).join(", ")) + (nk.length > 3 ? "..." : "") : "Chưa chọn nick") + "</div>" +
+            return '<li><div class="grow" style="min-width:0"><div class="row" style="flex-wrap:nowrap;align-items:flex-start">' + DS.icNT(m.nen_tang, 18) + '<span class="b grow" style="font-weight:600;min-width:0">' + esc(b.ten_mau || m.ten || b.kich_ban) + "</span></div>" +
+              '<div class="row tiny muted" style="margin-top:3px;gap:6px">' + (tb ? DS.bd(tb[0], tb[1]) : "") + "<span>" + (nk.length ? nk.length + " nick: " + esc(nk.slice(0, 3).join(", ")) + (nk.length > 3 ? "..." : "") : "Chưa chọn nick") + "</span></div>" +
               (b.ghi_chu ? '<div class="small" style="margin-top:2px">' + esc(b.ghi_chu) + "</div>" : "") + "</div></li>";
           }).join("") + "</ol>" +
           (cho ? '<div class="row mt-s" style="justify-content:flex-end"><button class="btn btn-sm" data-act="tu-choi" data-id="' + k.id + '">Từ chối</button><button class="btn btn-sm btn-ok" data-act="duyet-kh" data-id="' + k.id + '">' +

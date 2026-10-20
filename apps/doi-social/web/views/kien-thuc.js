@@ -94,7 +94,7 @@
             var dangSua = q.trang_thai === "cho_ban" || suaQA[q.id];
             return '<div class="qa' + (q.trang_thai === "cho_ban" ? " wait" : "") + '" data-qa="' + q.id + '"><div class="row-sb" style="flex-wrap:nowrap;align-items:flex-start"><div class="q">' + esc(q.hoi) + "</div>" +
               '<button class="btn btn-xs btn-ghost btn-dan" data-act="xoa-qa" aria-label="Xoá">' + ic("trash") + "</button></div>" +
-              (q.nguon || q.luc ? '<div class="tiny muted">' + esc(q.nguon ? "Từ " + q.nguon : "") + (q.luc ? (q.nguon ? " · " : "") + DS.gio(q.luc) : "") + "</div>" : "") +
+              (q.nguon || q.luc ? '<div class="tiny muted">' + esc(q.nguon ? ({ chu: "Bạn thêm", ai: "AI ghi lại khi khách hỏi" }[q.nguon] || "Từ " + q.nguon) : "") + (q.luc ? (q.nguon ? " · " : "") + DS.gio(q.luc) : "") + "</div>" : "") +
               (dangSua ? '<textarea class="ta" style="margin-top:8px" rows="2" placeholder="Câu trả lời của bạn">' + esc(q.dap || "") + '</textarea><div class="row mt-s" style="justify-content:flex-end">' +
                 (suaQA[q.id] ? '<button class="btn btn-sm btn-ghost" data-act="huy-qa">Thôi</button>' : "") + '<button class="btn btn-sm btn-pri" data-act="tra-loi">Lưu trả lời</button></div>' :
                 '<div class="a">' + esc(q.dap) + '</div><button class="linkbtn small" data-act="sua-qa">Sửa</button>') + "</div>";
