@@ -16,11 +16,9 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import io
 import json
 import sys
 import time
-import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Awaitable, Callable, Optional
@@ -146,6 +144,8 @@ def duyet_va_bao(vid, dong_y: bool) -> dict:
 
 
 def _goi_worker_zip() -> bytes:
+    import io
+    import zipfile        # nạp lúc cần: zipfile tốn ~27ms, không đáng đánh thuế lúc khởi động
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(WORKER_DIR.rglob("*")):
