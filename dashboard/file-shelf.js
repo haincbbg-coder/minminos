@@ -2,9 +2,10 @@
 (function () {
   'use strict';
   const R = window.MinMinFileRules;
-  let db, owner = '', items = [], selected = new Set(), panel, launcher, list, status, busy = false;
+  let db, owner = '', items = [], selected = new Set(), launcher, busy = false;
   let pdfLoading;
   let wheel, wheelCenter, wheelHint, fileInput, audioContext, soundButton;
+  let drawCurrent, disc, footer, heading, previewBox, editorCleanup;
   let soundOn = true;
   try { soundOn = localStorage.getItem('minmin-file-sound') !== 'off'; } catch (_) {}
   let workQueue=Promise.resolve();
@@ -17,14 +18,14 @@
   async function auth() {
     const res = await fetch('/auth/status', {cache:'no-store'}), a = await res.json();
     if (!res.ok || !a.authed) {
-      if (panel) panel.hidden = true;
       if (wheel) wheel.hidden = true;
+      clearPreview();drawCurrent=null;
       if (launcher) launcher.hidden = true;
       items = []; selected.clear();
       throw Error('Đăng nhập MinMin để mở khay.');
     }
     const next = a.username || 'local';
-    if (owner !== next) { items = []; selected.clear(); }
+    if (owner !== next) { items = []; selected.clear(); clearPreview(); drawCurrent=null; if(wheel)wheel.hidden=true; }
     owner = next;
     if (launcher) launcher.hidden = false;
   }
@@ -51,14 +52,14 @@
       tx.onabort = tx.onerror = () => reject(error || Error('Không lưu được khay; bộ nhớ trình duyệt có thể đã đầy.'));
     });
   }
-  function report(text) { if(status) status.textContent = text; const note=document.querySelector('.mm-file-dialog[open] .mm-note');if(note)note.textContent=text; }
+  function report(text) { if(wheelHint)wheelHint.textContent=text; }
   function task(fn) {
     // Preserve rapid additions from different inbox messages; never silently drop a click.
     workQueue=workQueue.then(async()=>{
       busy = true; report('Đang xử lý…'); render();
       try { await auth(); await fn(); }
       catch(e) { report(e.message || 'Không xử lý được file.'); }
-      finally { busy = false; if(status && status.textContent==='Đang xử lý…') report(''); render(); }
+      finally { busy = false; if(wheelHint && wheelHint.textContent==='Đang xử lý…') report(''); render(); }
     });
     return workQueue;
   }
@@ -110,48 +111,43 @@
     const url = URL.createObjectURL(blob), a = el('a'); a.href=url; a.download=name;
     document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
   }
-  function dialog(title) {
-    const d = el('dialog',null,'mm-file-dialog'), h=el('header');
-    h.append(el('h2',title),button('Đóng',()=>d.close())); d.append(h); document.body.append(d);
-    d.addEventListener('close',()=>d.remove(),{once:true}); d.showModal(); return d;
-  }
   async function picture(blob) {
     const img = await createImageBitmap(blob);
     if(img.width * img.height > 24000000) { img.close(); throw Error('Ảnh quá lớn để chỉnh sửa trên trình duyệt (tối đa 24 triệu điểm ảnh).'); }
     return img;
   }
-  function field(parent,label,tag,options) {
-    const l = el('label',label), n = el(tag);
-    if(tag==='select') options.forEach(([v,t]) => { const o=el('option',t);o.value=v;n.append(o); });
-    l.append(n);parent.append(l);return n;
+  function clearPreview() {
+    if(editorCleanup) { editorCleanup(); editorCleanup=null; }
+    if(previewBox) { previewBox.replaceChildren(); previewBox.hidden=true; }
   }
   async function editImage(item) {
-    const img=await picture(item.blob), d=dialog('Chỉnh ảnh · '+item.name), canvas=el('canvas');
-    const fields=el('div',null,'mm-file-fields'); d.append(canvas,fields);
-    const ratio=field(fields,'Cắt giữa ảnh','select',[['0','Giữ nguyên'],['1','Vuông 1:1'],['0.5625','Dọc 9:16'],['1.77777778','Ngang 16:9'],['0.75','Dọc 3:4']]);
-    const width=field(fields,'Chiều rộng (px)','input');width.type='number';width.min='64';width.max='4096';width.value=String(Math.min(img.width,1920));
-    const format=field(fields,'Định dạng','select',[['image/png','PNG'],['image/jpeg','JPG'],['image/webp','WebP']]);
-    const text=field(fields,'Chú thích dưới ảnh','input');text.maxLength=100;
-    let turns=0;
+    clearPreview();
+    const img=await picture(item.blob), canvas=el('canvas');
+    editorCleanup=()=>img.close();previewBox.append(canvas);previewBox.hidden=false;
+    let ratio=0, width=Math.min(img.width,1920), format='image/png', turns=0, caption='';
     function paint() {
-      const sw=turns%2?img.height:img.width, sh=turns%2?img.width:img.height;
-      const c=R.crop(sw,sh,Number(ratio.value)), w=Math.max(64,Math.min(4096,Number(width.value)||1920));
-      const h=Math.round(w*c.h/c.w);
-      if(w*h>16000000) throw Error('Ảnh đầu ra quá lớn. Giảm chiều rộng hoặc chọn tỷ lệ cắt.');
-      canvas.width=w;canvas.height=h;
-      const ctx=canvas.getContext('2d');
-      if(format.value==='image/jpeg') {ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);}
+      const sw=turns%2?img.height:img.width,sh=turns%2?img.width:img.height;
+      const c=R.crop(sw,sh,ratio),w=width,h=Math.round(w*c.h/c.w);
+      if(w*h>16000000)throw Error('Ảnh đầu ra quá lớn. Chọn chiều rộng nhỏ hơn.');
+      canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');
+      if(format==='image/jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);}
       ctx.save();ctx.scale(w/c.w,h/c.h);ctx.translate(-c.x,-c.y);ctx.translate(sw/2,sh/2);ctx.rotate(turns*Math.PI/2);ctx.drawImage(img,-img.width/2,-img.height/2);ctx.restore();
-      if(text.value) { const fs=Math.max(16,Math.round(w/32));ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(0,h-fs*2.4,w,fs*2.4);ctx.fillStyle='#fff';ctx.font=`${fs}px sans-serif`;ctx.textAlign='center';ctx.fillText(text.value,w/2,h-fs*.85,w-24); }
+      if(caption){const fs=Math.max(16,Math.round(w/32));ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(0,h-fs*2.4,w,fs*2.4);ctx.fillStyle='#fff';ctx.font=`${fs}px sans-serif`;ctx.textAlign='center';ctx.fillText(caption,w/2,h-fs*.85,w-24);}
     }
-    function update() {try {paint(); note.textContent='Bản gốc được giữ nguyên. Chú thích được gắn vào bản sao.';} catch(e){note.textContent=e.message;} }
-    const note=el('p','', 'mm-note'); d.append(note);
-    fields.oninput=update;
-    const actions=el('div',null,'mm-shelf-actions');
-    actions.append(button('Xoay 90°',()=>{turns=(turns+1)%4;update();}),button('Lưu bản sao vào khay',async()=>{
-      await task(async()=>{paint();const blob=await new Promise(resolve=>canvas.toBlob(resolve,format.value,.9));if(!blob)throw Error('Không xuất được ảnh.');await add(blob,R.nameCopy(item.name,blob.type.split('/')[1].replace('jpeg','jpg')),item.name);d.close();report('Đã lưu ảnh mới vào khay.');});
-    },'mm-primary'));
-    d.append(actions);d.addEventListener('close',()=>img.close(),{once:true});update();
+    function safePaint(){try{paint();}catch(e){report(e.message);}}
+    function choices(title,rows,set){setView(()=>drawWheel(title,rows.map(([v,label])=>({label,icon:'edit',run:()=>{set(v);menu();safePaint();}})),menu,'Quay lại'));}
+    function menu(){
+      setView(()=>drawWheel('SỬA ẢNH',[
+        {label:'Cắt tỷ lệ',icon:'edit',run:()=>choices('TỶ LỆ CẮT',[[0,'Nguyên ảnh'],[1,'1 : 1'],[.5625,'9 : 16'],[1.77777778,'16 : 9'],[.75,'3 : 4']],v=>ratio=v)},
+        {label:'Xoay 90°',icon:'edit',run:()=>{turns=(turns+1)%4;safePaint();}},
+        {label:format==='image/jpeg'?'JPG':format.split('/')[1].toUpperCase(),icon:'files',run:()=>choices('ĐỊNH DẠNG', [['image/png','PNG'],['image/jpeg','JPG'],['image/webp','WebP']],v=>format=v)},
+        {label:width+' px',icon:'collage',run:()=>choices('CHIỀU RỘNG',[[640,'640 px'],[1080,'1080 px'],[1920,'1920 px'],[2560,'2560 px'],[4096,'4096 px']],v=>width=v)},
+        {label:'Chú thích',icon:'edit',run:()=>{menu();const input=el('input');input.placeholder='Chú thích dưới ảnh';input.setAttribute('aria-label','Chú thích dưới ảnh');input.maxLength=100;input.value=caption;input.oninput=()=>{caption=input.value;safePaint();};footer.append(input);input.focus();}},
+        {label:'Lưu bản sao',icon:'download',run:()=>task(async()=>{paint();const blob=await new Promise(r=>canvas.toBlob(r,format,.9));if(!blob)throw Error('Không xuất được ảnh.');await add(blob,R.nameCopy(item.name,blob.type.split('/')[1].replace('jpeg','jpg')),item.name);clearPreview();showFiles();report('Đã lưu bản sao. Chọn ảnh rồi bấm Dùng file đã chọn.');})}
+      ],()=>{clearPreview();showTools();},'Quay lại'));
+      report(item.name+' · bản gốc được giữ nguyên');
+    }
+    paint();menu();
   }
   async function pdf() {
     if(window.PDFLib) return window.PDFLib;
@@ -177,14 +173,7 @@
       }
     }
     const blob=new Blob([await output.save()],{type:'application/pdf'});
-    await add(blob,'Ho-so-gop.pdf',`${chosen.length} file · ${count} trang`);report(`Đã tạo PDF ${count} trang. Chọn Xem / sửa để xem trước khi tải hoặc in.`);
-  }
-  async function preview(item) {
-    if(item.type==='image') return editImage(item);
-    if(item.type!=='pdf') {download(item.blob,item.name);return;}
-    const d=dialog(item.name), url=URL.createObjectURL(item.blob), frame=el('iframe');frame.title='Xem trước PDF';frame.src=url;
-    d.append(frame,button('Tải PDF để in',()=>download(item.blob,item.name),'mm-primary'));
-    d.addEventListener('close',()=>URL.revokeObjectURL(url),{once:true});
+    await add(blob,'Ho-so-gop.pdf',`${chosen.length} file · ${count} trang`);report(`Đã tạo PDF ${count} trang. Chọn file rồi mở Tải / xem để xem hoặc in.`);
   }
   async function collage() {
     const chosen=items.filter(x=>selected.has(x.id));
@@ -195,29 +184,12 @@
     const blob=await new Promise(r=>c.toBlob(r,'image/png'));await add(blob,'Anh-ghep.png',`${chosen.length} ảnh`);report('Đã thêm ảnh ghép vào khay.');
   }
   function render() {
-    if(!list) return;
+    if(!launcher)return;
     launcher.setAttribute('aria-label',`Mở vòng công cụ · ${items.length} file`);
     launcher.querySelector('.mm-orbit-badge').textContent=items.length;
-    if(wheelCenter) wheelCenter.querySelector('small').textContent=`${selected.size} chọn / ${items.length} file`;
-    if(wheel) wheel.querySelectorAll('.mm-orbit-sector').forEach(b=>{b.disabled=busy;});
-    list.replaceChildren();
-    thumbURLs.forEach(url=>URL.revokeObjectURL(url));thumbURLs=[];
-    items.forEach((item,index)=>{
-      const li=el('li',null,'mm-shelf-item'), check=el('input');check.type='checkbox';check.checked=selected.has(item.id);check.setAttribute('aria-label','Chọn '+item.name);
-      check.onchange=()=>{if(check.checked) selected.add(item.id);else selected.delete(item.id);render();};
-      const body=el('div');
-      if(item.type==='image') {const thumb=el('img');thumb.src=URL.createObjectURL(item.blob);thumbURLs.push(thumb.src);thumb.alt='';thumb.loading='lazy';thumb.className='mm-shelf-thumb';body.append(thumb);}
-      body.append(el('strong',`${index+1}. ${item.name}`),el('small',`${(item.blob.size/1048576).toFixed(2)} MB · ${item.source}`));
-      const tools=el('div',null,'mm-row-tools');
-      tools.append(button(item.type==='file'?'Tải file':'Xem / sửa',()=>task(()=>preview(item))),button('Tải',()=>download(item.blob,item.name)),button('↑',()=>task(()=>store(rows=>R.move(rows,item.id,-1)))),button('↓',()=>task(()=>store(rows=>R.move(rows,item.id,1)))),button('Bỏ khỏi khay',()=>task(async()=>{await store(rows=>rows.filter(x=>x.id!==item.id));report('Đã bỏ bản sao khỏi khay. File gốc không thay đổi.');})));
-      tools.children[2].setAttribute('aria-label','Đưa lên: '+item.name);tools.children[3].setAttribute('aria-label','Đưa xuống: '+item.name);
-      body.append(tools);li.append(check,body);list.append(li);
-    });
-    panel.querySelector('.mm-shelf-count').textContent=`Đã chọn ${selected.size}/${items.length} · Gộp theo thứ tự trong khay`;
-    panel.querySelectorAll('button').forEach(b=>{b.disabled=busy;});
-    document.querySelectorAll('.mm-file-dialog .mm-primary').forEach(b=>{b.disabled=busy;});
+    if(drawCurrent && !wheel.hidden)drawCurrent();
   }
-  async function open() { await auth(); closeWheel(false); panel.hidden=false; await store(); }
+  async function open() { await auth(); await store(); clearPreview();showFiles(); }
   // Short tactile noise, synthesized locally; no media downloads or autoplay.
   function tick() {
     if(!soundOn) return;
@@ -236,6 +208,7 @@
   }
   function closeWheel(focus=true) {
     if(wheel)wheel.hidden=true;
+    clearPreview();
     launcher.setAttribute('aria-expanded','false');
     if(focus)launcher.focus();
   }
@@ -244,88 +217,106 @@
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');
     const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',paths[name]);svg.append(path);return svg;
   }
-  function wedge(index) {
-    const points=[],angle=index*60-90;
-    for(let a=angle-28;a<=angle+28;a+=2)points.push([50+48*Math.cos(a*Math.PI/180),50+48*Math.sin(a*Math.PI/180)]);
-    for(let a=angle+28;a>=angle-28;a-=2)points.push([50+20*Math.cos(a*Math.PI/180),50+20*Math.sin(a*Math.PI/180)]);
+  function wedge(index,count=6) {
+    const points=[],angle=index*360/count-90,half=180/count-2;
+    for(let a=angle-half;a<=angle+half;a+=2)points.push([50+48*Math.cos(a*Math.PI/180),50+48*Math.sin(a*Math.PI/180)]);
+    for(let a=angle+half;a>=angle-half;a-=2)points.push([50+20*Math.cos(a*Math.PI/180),50+20*Math.sin(a*Math.PI/180)]);
     return 'polygon('+points.map(p=>p.map(v=>v.toFixed(3)+'%').join(' ')).join(',')+')';
   }
-  async function moduleAction(kind) {
-    const chosen=items.filter(x=>selected.has(x.id));
-    if(kind==='add'){fileInput.click();return;}
-    await open();
-    if(kind==='files'){report('Chọn file trong khay, rồi mở vòng công cụ để xử lý.');return;}
-    if(kind==='edit'){
-      if(chosen.length===1&&chosen[0].type==='image')return task(()=>preview(chosen[0]));
-      report('Chọn một ảnh rồi bấm Sửa ảnh, hoặc bấm Xem / sửa ngay trên ảnh.');return;
-    }
-    if(kind==='collage')return task(collage);
-    if(kind==='pdf')return task(mergePDF);
-    if(kind==='download'){
-      if(chosen.length!==1){report('Chọn một file để tải. Với nhiều ảnh/PDF, chọn Gộp PDF để tải cùng một file.');return;}
-      download(chosen[0].blob,chosen[0].name);report('Đã yêu cầu tải '+chosen[0].name);
-    }
+  function setView(draw) {
+    drawCurrent=draw;wheel.hidden=false;launcher.setAttribute('aria-expanded','true');draw();wheelCenter.focus();
   }
-  function initWheel() {
-    launcher=button('',()=>{
-      tick();
-      if(!wheel.hidden){closeWheel();return;}
-      auth().then(()=>store()).then(()=>{
-        panel.hidden=true;wheel.hidden=false;launcher.setAttribute('aria-expanded','true');wheelCenter.focus();
-      }).catch(e=>report(e.message));
-    },'mm-shelf-launch');
-    launcher.append(icon('collage'),el('span','0','mm-orbit-badge'));
-    launcher.title='Vòng công cụ';launcher.hidden=true;launcher.setAttribute('aria-expanded','false');launcher.setAttribute('aria-controls','mm-file-orbit');
-    wheel=el('section',null,'mm-orbit');wheel.id='mm-file-orbit';wheel.hidden=true;wheel.setAttribute('aria-label','Vòng công cụ');
-    const head=el('div',null,'mm-orbit-head');head.append(el('span','CÔNG CỤ CỦA BẠN'));
-    soundButton=button('',()=>{soundOn=!soundOn;try{localStorage.setItem('minmin-file-sound',soundOn?'on':'off');}catch(_){}updateSound();tick();},'mm-orbit-sound');
-    function updateSound(){soundButton.textContent=soundOn?'Âm thanh: bật':'Âm thanh: tắt';soundButton.setAttribute('aria-pressed',String(soundOn));}
-    updateSound();head.append(soundButton);
-    const disc=el('div',null,'mm-orbit-disc');
-    const modules=[['add','Thêm file','Thả file vào tâm hoặc chọn từ máy'],['files','Khay file','Xem và chọn các file đã lưu'],['edit','Sửa ảnh','Cắt · xoay · PNG / JPG / WebP'],['collage','Ghép ảnh','Ghép từ 2 đến 9 ảnh đã chọn'],['pdf','Gộp PDF','Gộp ảnh và PDF theo thứ tự khay'],['download','Tải file','Tải file đang chọn về máy']];
-    const buttons=[];
-    modules.forEach(([kind,label,hint],i)=>{
-      const b=button('',()=>{tick();moduleAction(kind).catch(e=>report(e.message));},'mm-orbit-sector');
-      b.style.clipPath=wedge(i);b.style.setProperty('--delay',i*24+'ms');b.setAttribute('aria-label',label);b.title=hint;
-      const content=el('span',null,'mm-orbit-label'),a=(i*60-90)*Math.PI/180;
-      content.style.left=(50+34*Math.cos(a))+'%';content.style.top=(50+34*Math.sin(a))+'%';content.append(icon(kind),el('span',label));b.append(content);
-      b.onpointerenter=b.onfocus=()=>{wheelHint.textContent=hint;};
-      buttons.push(b);disc.append(b);
+  function drawWheel(title,entries,back,centerText='Quay lại') {
+    if(!entries.length)entries=[{label:'Thêm file',icon:'add',hint:'Chọn file từ máy hoặc thả vào vòng',run:()=>fileInput.click()}];
+    const focused=disc.contains(document.activeElement)?document.activeElement.getAttribute('aria-label'):null;
+    thumbURLs.forEach(url=>URL.revokeObjectURL(url));thumbURLs=[];
+    heading.textContent=title;disc.replaceChildren();footer.replaceChildren();
+    entries.forEach((entry,i)=>{
+      const b=button('',()=>{tick();Promise.resolve().then(entry.run).catch(e=>report(e.message));},'mm-orbit-sector');
+      b.style.clipPath=wedge(i,entries.length);b.style.setProperty('--delay',i*24+'ms');b.setAttribute('aria-label',entry.name||entry.label);b.title=entry.hint||entry.name||entry.label;b.disabled=busy;
+      if(entry.checked!==undefined)b.setAttribute('aria-pressed',String(entry.checked));
+      const content=el('span',null,'mm-orbit-label'),a=(i*360/entries.length-90)*Math.PI/180;
+      content.style.left=(50+34*Math.cos(a))+'%';content.style.top=(50+34*Math.sin(a))+'%';
+      if(entry.item?.type==='image'){const im=el('img');im.src=URL.createObjectURL(entry.item.blob);thumbURLs.push(im.src);im.alt='';content.append(im);}else content.append(icon(entry.icon||'files'));
+      content.append(el('span',entry.label));b.append(content);b.onpointerenter=b.onfocus=()=>{wheelHint.textContent=entry.hint||entry.name||entry.label;};disc.append(b);
     });
-    wheelCenter=button('',()=>{tick();closeWheel();},'mm-orbit-center');wheelCenter.setAttribute('aria-label','Thu vòng công cụ');
-    wheelCenter.append(icon('close'),el('strong','MINMIN'),el('small','0 file'));disc.append(wheelCenter);
-    wheelHint=el('p','Chọn công cụ · thả file vào tâm','mm-orbit-hint');wheelHint.setAttribute('aria-live','polite');
-    disc.ondragover=e=>{e.preventDefault();disc.classList.add('drag');wheelHint.textContent='Thả để thêm vào khay';};
-    disc.ondragleave=e=>{if(!disc.contains(e.relatedTarget))disc.classList.remove('drag');};
-    disc.ondrop=e=>{e.preventDefault();disc.classList.remove('drag');tick();addFiles([...e.dataTransfer.files]).catch(err=>report(err.message));};
-    wheel.append(head,disc,wheelHint);
-    wheel.onkeydown=e=>{
-      if(e.key==='Escape'){e.preventDefault();closeWheel();}
-      if(['ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Home','End'].includes(e.key)){
-        e.preventDefault();let i=buttons.indexOf(document.activeElement);const step=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;
-        i=e.key==='Home'?0:e.key==='End'?5:(i+step+6)%6;buttons[i].focus();
-      }
-    };
-    document.addEventListener('pointerdown',e=>{if(!wheel.hidden&&!wheel.contains(e.target)&&!launcher.contains(e.target))closeWheel(false);});
+    wheelCenter=button('',()=>{if(busy)return;tick();back();},'mm-orbit-center');wheelCenter.setAttribute('aria-label',centerText);
+    wheelCenter.append(icon('close'),el('strong',centerText),el('small',`${selected.size} chọn / ${items.length} file`));disc.append(wheelCenter);
+    if(focused)([...disc.querySelectorAll('button')].find(b=>b.getAttribute('aria-label')===focused)||wheelCenter).focus();
+  }
+  function showTools(){
+    clearPreview();setView(()=>drawWheel('CÔNG CỤ CỦA BẠN',[
+      {label:'Thêm file',icon:'add',run:()=>fileInput.click()},
+      {label:'Chọn file',icon:'files',run:()=>showFiles()},
+      {label:'Sửa ảnh',icon:'edit',run:()=>moduleAction('edit')},
+      {label:'Ghép ảnh',icon:'collage',run:()=>moduleAction('collage')},
+      {label:'Gộp PDF',icon:'pdf',run:()=>moduleAction('pdf')},
+      {label:'Tải / xem',icon:'download',run:()=>moduleAction('download')}
+    ],()=>closeWheel(),'Thu vòng'));
+    report('Chọn công cụ · thả file vào vòng');
+  }
+  function showFiles(pending='',page=0){
+    clearPreview();
+    setView(()=>{
+      const rows=items.filter(x=>!['edit','collage'].includes(pending)||x.type==='image');
+      const pages=Math.max(1,Math.ceil(rows.length/6));page=Math.max(0,Math.min(page,pages-1));
+      drawWheel('CHỌN FILE · '+(page+1)+' / '+pages,rows.slice(page*6,page*6+6).map(item=>({
+        label:item.name,name:'Chọn '+item.name,item,checked:selected.has(item.id),hint:item.name+' · '+item.source,
+        run:()=>{if(selected.has(item.id))selected.delete(item.id);else{if(['edit','download'].includes(pending))selected.clear();selected.add(item.id);}drawCurrent();}
+      })),showTools,'Công cụ');
+      footer.append(button('‹',()=>showFiles(pending,page-1)),button('Dùng file đã chọn',()=>{tick();if(pending)moduleAction(pending,true);else showTools();},'mm-primary'),button('›',()=>showFiles(pending,page+1)));
+      footer.children[0].disabled=page===0||busy;footer.children[2].disabled=page===pages-1||busy;footer.children[1].disabled=busy;
+      footer.children[0].setAttribute('aria-label','Trang file trước');footer.children[2].setAttribute('aria-label','Trang file sau');
+      if(!rows.length){footer.append(button('Thêm file',()=>fileInput.click()));report('Chưa có file phù hợp. Thả file vào vòng hoặc bấm Thêm file.');}
+    });
+    if(items.length)report(pending?'Chọn file rồi bấm Dùng file đã chọn.':'Bấm từng múi để chọn hoặc bỏ chọn file.');
+  }
+  async function moduleAction(kind,confirmed=false){
+    const chosen=items.filter(x=>selected.has(x.id));
+    const valid=kind==='edit'?chosen.length===1&&chosen[0].type==='image':kind==='download'?chosen.length===1:kind==='collage'?chosen.length>=2&&chosen.length<=9&&chosen.every(x=>x.type==='image'):chosen.length&&chosen.every(x=>['image','pdf'].includes(x.type));
+    if(!valid){if(!confirmed)showFiles(kind);report(kind==='edit'?'Chọn đúng một ảnh.':kind==='download'?'Chọn đúng một file.':kind==='collage'?'Chọn từ 2 đến 9 ảnh.':'Chọn ảnh và PDF để gộp.');return;}
+    if(kind==='edit')return task(()=>editImage(chosen[0]));
+    if(kind==='download')return showFileActions(chosen[0]);
+    return task(async()=>{if(kind==='collage')await collage();else await mergePDF();const message=wheelHint.textContent;showFiles();report(message);});
+  }
+  function showFileActions(item){
+    clearPreview();setView(()=>drawWheel(item.name,[
+      {label:'Tải về',icon:'download',run:()=>download(item.blob,item.name)},
+      {label:item.type==='image'?'Sửa ảnh':'Xem file',icon:'edit',run:()=>{if(item.type==='image')return task(()=>editImage(item));if(item.type==='pdf'){const url=URL.createObjectURL(item.blob);thumbURLs.push(url);const a=el('a');a.href=url;a.target='_blank';a.rel='noopener';a.click();}else download(item.blob,item.name);}},
+      {label:'Đưa lên',icon:'files',run:()=>task(()=>store(rows=>R.move(rows,item.id,-1)))},
+      {label:'Đưa xuống',icon:'files',run:()=>task(()=>store(rows=>R.move(rows,item.id,1)))},
+      {label:'Bỏ khỏi khay',icon:'close',run:()=>task(async()=>{await store(rows=>rows.filter(x=>x.id!==item.id));showFiles();report('Đã bỏ bản sao khỏi khay; file gốc giữ nguyên.');})}
+    ],showTools,'Công cụ'));
   }
   function init() {
-    if(!R) return;
-    initWheel();
-    panel=el('section',null,'mm-shelf');panel.id='mm-file-shelf';panel.hidden=true;panel.setAttribute('aria-label','Khay làm việc');
-    const h=el('header');h.append(el('h2','Khay làm việc'),button('Thu gọn',()=>{panel.hidden=true;launcher.setAttribute('aria-expanded','false');launcher.focus();}));
-    const input=fileInput=el('input');input.type='file';input.multiple=true;input.hidden=true;input.onchange=()=>{addFiles([...input.files]).catch(e=>report(e.message));input.value='';};
-    const drop=el('div',null,'mm-shelf-drop');drop.append(button('Thêm file từ máy',()=>input.click()),el('p','Hoặc kéo ảnh, PDF và tài liệu vào đây.'));
-    drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag');};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');addFiles([...e.dataTransfer.files]).catch(err=>report(err.message));};
-    const actions=el('div',null,'mm-shelf-actions');actions.append(button('Chọn tất cả',()=>{selected=new Set(items.map(x=>x.id));render();}),button('Bỏ chọn',()=>{selected.clear();render();}),button('Gộp PDF',()=>task(mergePDF),'mm-primary'),button('Ghép ảnh',()=>task(collage)));
-    list=el('ol',null,'mm-shelf-list');status=el('div',null,'mm-shelf-status');status.setAttribute('role','status');
-    panel.append(h,el('p','Bản sao lưu trên trình duyệt này, dùng chung giữa các màn hình MinMin. File gốc được giữ nguyên. Tối đa 40 file / 100 MB.'),drop,input,el('p','', 'mm-shelf-count'),list,actions,status);
-    panel.onkeydown=e=>{if(e.key==='Escape'){panel.hidden=true;launcher.setAttribute('aria-expanded','false');launcher.focus();}};
-    document.body.append(launcher,wheel,panel);
-    if(channel) channel.onmessage=()=>{store().catch(()=>{});};
+    if(!R)return;
+    launcher=button('',()=>{if(busy)return;tick();if(!wheel.hidden){closeWheel();return;}auth().then(()=>store()).then(showTools).catch(e=>report(e.message));},'mm-shelf-launch');
+    launcher.append(icon('collage'),el('span','0','mm-orbit-badge'));launcher.title='Vòng công cụ';launcher.hidden=true;launcher.setAttribute('aria-expanded','false');launcher.setAttribute('aria-controls','mm-file-orbit');
+    wheel=el('section',null,'mm-orbit');wheel.id='mm-file-orbit';wheel.hidden=true;wheel.setAttribute('aria-label','Vòng công cụ');
+    const head=el('div',null,'mm-orbit-head');heading=el('span','CÔNG CỤ CỦA BẠN');
+    soundButton=button('',()=>{soundOn=!soundOn;try{localStorage.setItem('minmin-file-sound',soundOn?'on':'off');}catch(_){}updateSound();tick();},'mm-orbit-sound');
+    function updateSound(){soundButton.textContent=soundOn?'Âm thanh: bật':'Âm thanh: tắt';soundButton.setAttribute('aria-pressed',String(soundOn));}
+    updateSound();head.append(heading,soundButton);disc=el('div',null,'mm-orbit-disc');footer=el('div',null,'mm-orbit-footer');
+    previewBox=el('div',null,'mm-orbit-preview');previewBox.hidden=true;previewBox.setAttribute('aria-label','Ảnh đang sửa');
+    wheelHint=el('p','Chọn công cụ','mm-orbit-hint');wheelHint.setAttribute('role','status');
+    fileInput=el('input');fileInput.type='file';fileInput.multiple=true;fileInput.hidden=true;fileInput.onchange=()=>{addFiles([...fileInput.files]).catch(e=>report(e.message));fileInput.value='';};
+    disc.ondragover=e=>{e.preventDefault();disc.classList.add('drag');};disc.ondragleave=e=>{if(!disc.contains(e.relatedTarget))disc.classList.remove('drag');};disc.ondrop=e=>{e.preventDefault();disc.classList.remove('drag');tick();addFiles([...e.dataTransfer.files]).catch(err=>report(err.message));};
+    wheel.append(head,previewBox,disc,footer,wheelHint,fileInput);
+    wheel.onkeydown=e=>{
+      if(e.target.tagName==='INPUT')return;
+      if(e.key==='Escape'&&!busy){e.preventDefault();closeWheel();}
+      if(['ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Home','End'].includes(e.key)){
+        const buttons=[...disc.querySelectorAll('.mm-orbit-sector')];if(!buttons.length)return;
+        e.preventDefault();let i=buttons.indexOf(document.activeElement),n=buttons.length,step=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;
+        i=e.key==='Home'?0:e.key==='End'?n-1:(i+step+n)%n;buttons[i].focus();
+      }
+    };
+    document.addEventListener('pointerdown',e=>{if(!wheel.hidden&&!wheel.contains(e.target)&&!launcher.contains(e.target)&&!busy)closeWheel(false);});
+    document.body.append(launcher,wheel);
+    if(channel)channel.onmessage=()=>store().catch(()=>{});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)auth().catch(()=>{});});
     auth().then(()=>store()).catch(()=>{});
-    // Deliberate opt-in buttons in inbox and invoices; never intercept normal downloads.
-    document.addEventListener('click',e=>{const b=e.target.closest('[data-shelf-url]');if(!b)return;addURL(b.dataset.shelfUrl,b.dataset.shelfName,b.dataset.shelfSource).catch(err=>report(err.message));});
+    document.addEventListener('click',e=>{const b=e.target.closest('[data-shelf-url]');if(b)addURL(b.dataset.shelfUrl,b.dataset.shelfName,b.dataset.shelfSource).catch(err=>report(err.message));});
   }
   window.MinMinShelf={open,addFiles,addURL};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();

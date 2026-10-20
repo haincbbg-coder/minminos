@@ -39,3 +39,14 @@ Tải file. Chọn file trong khay rồi mở vòng để xử lý. Thả file v
 Mỗi múi có phản hồi màu/nổi/lún. Tiếng tách được tạo cục bộ, chỉ khi bấm; công tắc âm
 thanh ghi nhớ trên trình duyệt. Không tải âm thanh bên ngoài. Mũi tên chuyển múi,
 Enter/Space kích hoạt, Escape hoặc nút giữa thu lại. Tôn trọng giảm chuyển động.
+
+
+## Vòng con (26.10.180)
+
+Chọn file mở vòng tối đa sáu file mỗi trang; chọn nhiều file qua các trang rồi bấm
+Dùng file đã chọn. Mỗi file hiện ảnh thu nhỏ và tên đầy đủ khi trỏ/đặt focus. Sửa ảnh
+mở vòng Cắt tỷ lệ, Xoay, Định dạng, Chiều rộng, Chú thích, Lưu bản sao. Tỷ lệ,
+định dạng và kích thước mở tiếp vòng con; tâm vòng quay lại cấp trước. Bản xem trước
+nằm cạnh vòng trên máy tính và phía trên trên điện thoại. Không tạo khay hay dialog
+chỉnh ảnh hình chữ nhật. Tải / xem mở vòng tải, xem, sắp thứ tự và bỏ bản sao.
+PDF mở trong trình xem PDF của trình duyệt; hộp chọn file vẫn dùng hộp hệ điều hành.
