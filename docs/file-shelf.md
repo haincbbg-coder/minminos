@@ -54,3 +54,14 @@ PDF mở trong trình xem PDF của trình duyệt; hộp chọn file vẫn dùn
 ### Linh thú trong nút công cụ (26.10.181)
 
 Trên dashboard, linh thú đang chạy được đặt trong nút vòng công cụ; giữ nguyên màu, hình dáng và trạng thái. Nhánh Linh thú mở các lối tắt cũ bằng vòng con. Tắt linh thú trả lại biểu tượng công cụ; trang không nạp linh thú vẫn dùng nút công cụ bình thường.
+
+### Chọn, xử lý và tải kết quả (26.10.182)
+
+Mở Sửa ảnh, Ghép ảnh hoặc Gộp PDF luôn qua bước chọn file và nút thực hiện có tên
+tương ứng. Sửa ảnh cho chọn tỷ lệ cắt giữa, xoay, định dạng và chiều rộng rồi Lưu kết quả.
+Kết quả ảnh có bản xem trước; ảnh và PDF đều có nút Tải kết quả ngay bên dưới vòng.
+
+Bấm lại một file để bỏ chọn, hoặc Bỏ chọn tất cả để xoá lựa chọn qua mọi trang.
+Đóng vòng bằng ×, Escape, nút giữa hoặc Đóng cũng xoá lựa chọn và bản xem trước.
+Các file vẫn ở khay để dùng lại; muốn bỏ bản sao lưu trong khay, mở Tải / xem,
+chọn file rồi Bỏ khỏi khay. File gốc trên máy không thay đổi.
