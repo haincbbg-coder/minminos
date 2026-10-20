@@ -1,0 +1,141 @@
+"""Kỹ năng: đăng một bài Facebook (tường cá nhân, Trang hoặc nhóm) như người thật.
+
+Các bước, mỗi bước ghi vào nhật ký để gửi về MinMin:
+  1. Mở nơi đăng (link Trang/nhóm, hoặc tường của nick), đọc lướt một chút.
+  2. Kiểm tra nick còn đăng nhập (không bị đẩy về trang login/checkpoint).
+  3. Bấm ô "Bạn đang nghĩ gì?" / "Tạo bài viết" bằng chuột di theo đường cong.
+  4. Gõ nội dung từng chữ (nguoi.Nguoi.go).
+  5. Bấm "Ảnh/video", chọn tệp, chờ tải lên xong.
+  6. Đọc lại vài giây, bấm "Tiếp" nếu có, rồi "Đăng".
+  7. Chờ hộp soạn bài đóng, tìm lại câu đầu của bài trên trang, chụp màn hình.
+
+Chọn phần tử theo VAI TRÒ + NHÃN (role/aria-label) bằng cả tiếng Việt và tiếng Anh thay vì
+class CSS, vì class của Facebook đổi liên tục còn nhãn trợ năng thì hiếm khi đổi.
+"""
+from __future__ import annotations
+
+import re
+import time
+
+from nguoi import Nguoi
+
+_MO_O_SOAN = re.compile(r"(Bạn đang nghĩ gì|What's on your mind|Viết gì đó|Write something|"
+                        r"Tạo bài viết công khai|Tạo bài viết|Create post|Create a public post)", re.I)
+_ANH_VIDEO = re.compile(r"^(Ảnh/video|Ảnh/Video|Photo/video|Photo/Video)$", re.I)
+_TIEP = re.compile(r"^(Tiếp|Next)$", re.I)
+_DANG = re.compile(r"^(Đăng|Post|Đăng bài)$", re.I)
+
+
+class LoiKyNang(RuntimeError):
+    pass
+
+
+def _dau_tien_thay(cands, timeout_ms: int = 15000):
+    """Locator đầu tiên trong danh sách đang hiện trên trang, chờ tối đa timeout."""
+    han = time.monotonic() + timeout_ms / 1000
+    while time.monotonic() < han:
+        for loc in cands:
+            try:
+                if loc.count() and loc.first.is_visible():
+                    return loc.first
+            except Exception:
+                pass
+        time.sleep(0.4)
+    return None
+
+
+def dang_bai(page, viec: dict, tep_cuc_bo: list, nhat_ky) -> str:
+    """Thực hiện đăng. Raise LoiKyNang với câu dễ hiểu khi hỏng. Trả thông điệp thành công."""
+    ts = viec.get("tham_so") or {}
+    noi_dung = str(ts.get("noi_dung") or "")
+    noi_dang = str(ts.get("noi_dang") or "") or "https://www.facebook.com/me"
+    tay = Nguoi(page)
+
+    nhat_ky(f"Mở {noi_dang}")
+    page.goto(noi_dang, wait_until="domcontentloaded", timeout=60000)
+    tay.nghi(2.5, 5.0)
+    url = page.url.lower()
+    if "/login" in url or "checkpoint" in url or page.locator("input[name='pass']").count():
+        raise LoiKyNang("nick chưa đăng nhập Facebook hoặc đang bị checkpoint - mở profile trong GPM kiểm tra tay")
+    tay.luot(1)
+    page.mouse.wheel(0, -2000)
+    tay.nghi(0.8, 1.6)
+
+    nhat_ky("Tìm ô soạn bài")
+    o_mo = _dau_tien_thay([page.get_by_role("button", name=_MO_O_SOAN),
+                           page.get_by_text(_MO_O_SOAN)], 20000)
+    if not o_mo:
+        raise LoiKyNang("không thấy ô 'Bạn đang nghĩ gì?' / 'Tạo bài viết' ở nơi đăng này "
+                        "(nick có quyền đăng ở đây không?)")
+    tay.bam(o_mo)
+    tay.nghi(1.5, 3.0)
+
+    hop = _dau_tien_thay([page.get_by_role("dialog").filter(has=page.locator("[contenteditable='true']"))], 20000)
+    if not hop:
+        raise LoiKyNang("bấm ô soạn bài nhưng hộp 'Tạo bài viết' không hiện ra")
+    o_chu = hop.locator("[contenteditable='true'][role='textbox'], [contenteditable='true']").first
+
+    if noi_dung:
+        nhat_ky(f"Gõ nội dung ({len(noi_dung)} ký tự, từng chữ)")
+        tay.bam(o_chu)
+        tay.nghi(0.6, 1.4)
+        tay.go(noi_dung)
+        tay.nghi(1.0, 2.2)
+
+    if tep_cuc_bo:
+        nhat_ky(f"Tải {len(tep_cuc_bo)} ảnh/video")
+        nut_anh = _dau_tien_thay([hop.get_by_role("button", name=_ANH_VIDEO),
+                                  hop.locator("[aria-label='Ảnh/video'], [aria-label='Photo/video']")], 10000)
+        o_tep = hop.locator("input[type='file']")
+        if nut_anh and not o_tep.count():
+            tay.bam(nut_anh)
+            tay.nghi(1.0, 2.0)
+        if not o_tep.count():
+            raise LoiKyNang("không tìm thấy chỗ chọn ảnh/video trong hộp soạn bài")
+        o_tep.first.set_input_files(tep_cuc_bo)
+        han = time.monotonic() + 15 * 60
+        tay.nghi(3.0, 5.0)
+        while time.monotonic() < han:      # chờ thanh tải lên biến mất
+            if not hop.get_by_role("progressbar").count():
+                break
+            time.sleep(2)
+        tay.nghi(1.5, 3.0)
+
+    tay.nghi(1.5, 4.0)    # đọc lại bài như người trước khi bấm Đăng
+    nut_tiep = _dau_tien_thay([hop.get_by_role("button", name=_TIEP)], 2500)
+    if nut_tiep:
+        nhat_ky("Bấm Tiếp")
+        tay.bam(nut_tiep)
+        tay.nghi(1.5, 3.0)
+        hop = _dau_tien_thay([page.get_by_role("dialog")], 10000) or hop
+    nut_dang = _dau_tien_thay([hop.get_by_role("button", name=_DANG),
+                               hop.locator("[aria-label='Đăng'], [aria-label='Post']")], 15000)
+    if not nut_dang:
+        raise LoiKyNang("không thấy nút Đăng trong hộp soạn bài")
+    if nut_dang.get_attribute("aria-disabled") == "true":
+        raise LoiKyNang("nút Đăng đang bị khoá (Facebook chưa nhận nội dung hoặc tệp chưa tải xong)")
+    nhat_ky("Bấm Đăng")
+    tay.bam(nut_dang)
+
+    han = time.monotonic() + (15 * 60 if tep_cuc_bo else 120)
+    while time.monotonic() < han:
+        try:
+            if not hop.is_visible():
+                break
+        except Exception:
+            break
+        time.sleep(1.5)
+    else:
+        raise LoiKyNang("đã bấm Đăng nhưng hộp soạn bài không đóng (Facebook có thể đang báo lỗi)")
+    tay.nghi(3.0, 6.0)
+
+    dau = next((d.strip() for d in noi_dung.splitlines() if d.strip()), "")[:40]
+    if dau:
+        try:
+            page.get_by_text(dau, exact=False).first.wait_for(timeout=20000)
+            nhat_ky("Đã thấy bài trên trang")
+            return "Đã đăng và thấy bài trên trang."
+        except Exception:
+            nhat_ky("Đăng xong nhưng chưa thấy bài ngay (có thể chờ duyệt nhóm hoặc video đang xử lý)")
+            return "Đã bấm Đăng, hộp soạn bài đã đóng; chưa thấy bài ngay trên trang (nhóm chờ duyệt hoặc video đang xử lý)."
+    return "Đã bấm Đăng, hộp soạn bài đã đóng."

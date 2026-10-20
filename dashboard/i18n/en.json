@@ -3482,6 +3482,8 @@
   "knn.app.bo_chung_tu_ke_toan.mo_ta": "Generate document packs from invoices: warehouse slips, delivery records, processing contracts, payroll, timesheets, tax and social insurance files.",
   "knn.app.xuong_video.ten": "Video studio",
   "knn.app.xuong_video.mo_ta": "Mass-produce videos from an idea, images or a sample video: script, images, video, voice-over and captions, then auto-publish to YouTube, Shorts and Facebook Reels on a schedule.",
+  "knn.app.doi_social.ten": "Social Team",
+  "knn.app.doi_social.mo_ta": "Message Telegram and MinMin writes the post, then opens a GPM Login profile on your home PC and posts to Facebook like a real person: types letter by letter, uploads photos/videos, asks approval first and sends back a screenshot.",
   "knn.app.dieu_khien_may.ten": "Computer control",
   "knn.app.dieu_khien_may.mo_ta": "MinMin sees the screen and operates the home computer, only inside apps you allow, with an emergency stop.",
   "call.connecting": "Connecting",

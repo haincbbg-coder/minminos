@@ -3482,6 +3482,8 @@
   "knn.app.bo_chung_tu_ke_toan.mo_ta": "Tự tạo bộ chứng từ từ hóa đơn: phiếu nhập/xuất kho, giao nhận, gia công, hợp đồng, lương, chấm công, thuế và BHXH để tải ZIP và in.",
   "knn.app.xuong_video.ten": "Xưởng video",
   "knn.app.xuong_video.mo_ta": "Sản xuất video hàng loạt từ ý tưởng, ảnh hoặc video mẫu: tự viết kịch bản, tạo ảnh, video, giọng đọc, ghép phụ đề rồi tự đăng YouTube, Shorts, Facebook Reels theo lịch.",
+  "knn.app.doi_social.ten": "Đội Social",
+  "knn.app.doi_social.mo_ta": "Nhắn Telegram, MinMin viết bài rồi tự mở profile GPM Login trên máy ở nhà để đăng Facebook như người thật: gõ từng chữ, tải ảnh/video, duyệt trước khi đăng, gửi ảnh chụp kết quả.",
   "knn.app.dieu_khien_may.ten": "Điều khiển máy tính",
   "knn.app.dieu_khien_may.mo_ta": "MinMin xem màn hình và thao tác trên máy tính ở nhà, chỉ trong ứng dụng bạn cấp quyền, có phanh khẩn cấp.",
   "call.connecting": "Đang kết nối",

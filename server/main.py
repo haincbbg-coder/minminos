@@ -242,6 +242,10 @@ _AUTH_PUBLIC_EXACT = ("/", "/favicon.ico", "/auth/status", "/auth/login", "/auth
 _AUTH_LOCAL_EXACT = ("/telegram/send-file", "/reminders", "/reminders/cancel", "/reminders/update")
 # Mắt Nhà: (đường, phương thức) duy nhất được miễn đăng nhập - xem routes/mat_nha.py.
 _MAT_NHA_CONG_KHAI = ("/mat-nha/su-kien", "POST")
+# Đội Social (26.10.185): MinMin Worker ở máy nhà gọi GET/POST dưới tiền tố này, không có cookie.
+# Mỗi endpoint tự kiểm token máy (header x-minmin-may) hoặc mã ghép 6 số - xem routes/doi_social.py.
+# Chỉ miễn GET/POST: DELETE /doi-social/may/<id> (gỡ máy) vẫn phải đăng nhập.
+_DOI_SOCIAL_MAY = ("/doi-social/may/", ("GET", "POST"))
 # Biến động số dư (26.10.119): Casso đẩy giao dịch vào POST /bien-dong/casso/<mã>, không có
 # cookie. Miễn ĐÚNG mẫu này (khớp trọn, một đoạn mã) với POST - xem routes/bien_dong.py.
 _BIEN_DONG_CONG_KHAI = (r"/bien-dong/casso/[A-Za-z0-9_-]{20,80}", "POST")
@@ -316,6 +320,7 @@ async def _auth_guard(request: Request, call_next):
                   # Miễn ĐÚNG một cặp (đường, POST); endpoint tự kiểm header x-mat-nha-token.
                   # GET cùng đường (đọc sự kiện) vẫn phải đăng nhập.
                   or (path, request.method) == _MAT_NHA_CONG_KHAI
+                  or (path.startswith(_DOI_SOCIAL_MAY[0]) and request.method in _DOI_SOCIAL_MAY[1])
                   # Biến động số dư: webhook Casso. Endpoint tự kiểm mã trong đường (404 nếu
                   # sai) và chữ ký HMAC. GET cùng đường, đường có thêm đoạn, dấu "/" cuối
                   # và mọi đường /bien-dong khác vẫn phải đăng nhập.
@@ -21553,6 +21558,17 @@ async def _tg_callback(data, chat=None):
             ok, why = False, str(e)
         return {"text": ("Đã " + ("ĐỒNG Ý" if gat == "1" else "TỪ CHỐI") + f" yêu cầu #{ma}. MinMin làm tiếp.")
                 if ok else f"Không quyết được: {why}", "alert": "Đã ghi nhận" if ok else why}
+    if data.startswith("ds:"):
+        # Đội Social (26.10.185): Duyệt / Bỏ một bài chờ đăng
+        try:
+            _, vid, gat = data.split(":", 2)
+            v = doi_social_routes.duyet_va_bao(int(vid), gat == "1")
+        except Exception as e:
+            return {"alert": f"Không duyệt được: {e}"[:190]}
+        if gat == "1":
+            return {"text": doi_social.tom_tat(v) + "\n\n✅ Đã duyệt. Máy ở nhà sẽ mở profile và đăng.",
+                    "alert": "Đã duyệt"}
+        return {"text": doi_social.tom_tat(v) + "\n\n✕ Đã bỏ bài này.", "alert": "Đã bỏ"}
     if data == "mx":
         return {"text": "Đã đóng bảng chọn model.", "alert": "Đã đóng"}
     # ---- nút chọn brain (bs:<idx> | bx) - tác động PHIÊN của người bấm ----
@@ -22747,6 +22763,53 @@ async def _mat_nha_bao_chu(text: str):
 mat_nha_routes.register(app, mat_nha_routes.MatNhaDeps(dashboard_dir=Path(DASHBOARD_PATH),
                                                        bao_chu=_mat_nha_bao_chu))
 assert mat_nha_routes.LOI_VAO_CONG_KHAI == _MAT_NHA_CONG_KHAI
+
+# Đội Social (26.10.185): máy nhà (GPM Login) đăng bài như người thật, giao việc qua Telegram.
+import doi_social   # noqa: E402
+import routes.doi_social as doi_social_routes   # noqa: E402
+doi_social.mo(cfgmod.STATE_DIR / "doi-social")
+doi_social.dat_goc_tep([BRAINS_DIR, str(_default_brain_dir()), str(cfgmod.STATE_DIR)])
+assert doi_social_routes.TIEN_TO_MAY == _DOI_SOCIAL_MAY[0]
+
+
+def _ds_nut_duyet(vid) -> dict:
+    return {"inline_keyboard": [[{"text": "✅ Duyệt đăng", "callback_data": f"ds:{vid}:1"},
+                                 {"text": "✕ Bỏ", "callback_data": f"ds:{vid}:0"}]]}
+
+
+async def _ds_bao(viec: dict, su_kien: str):
+    """Báo chủ về một việc của Đội Social: xin duyệt (kèm nút), hoặc kết quả (kèm ảnh chụp).
+    Gửi về đúng chat đã giao việc nếu biết, không thì chat đầu tiên trong whitelist."""
+    tom = doi_social.tom_tat(viec)
+    chat = viec.get("chat_id") or ""
+    if su_kien == "cho_duyet":
+        tieu = "📝 Bài chờ duyệt"
+    elif su_kien == "xong":
+        tieu = "✅ Đã đăng xong"
+    else:
+        tieu = "⚠️ Đăng không được"
+    than = f"{tieu}\n{tom}"
+    if su_kien != "cho_duyet" and viec.get("thong_diep"):
+        than += f"\n\nMáy nhà báo: {viec['thong_diep']}"
+    try:
+        await _bo_vao_hom_thu("", than, kind="system", label="Đội Social", source="doi-social")
+    except Exception as e:
+        print(f"[doi-social] inbox: {type(e).__name__}: {e}", file=sys.stderr)
+    if not (_TG_BOT and (_TG_BOT.chat_ids or [])):
+        return
+    dich = chat if chat and chat in [str(x) for x in _TG_BOT.chat_ids] else _TG_BOT.chat_ids[0]
+    if su_kien == "cho_duyet":
+        await _TG_BOT.send_text(dich, than, reply_markup=_ds_nut_duyet(viec["id"]))
+        return
+    anh = doi_social.duong_anh(viec["id"])
+    if anh:
+        await _TG_BOT.send_file(str(anh), caption=than[:1000], chat=dich)
+    else:
+        await _TG_BOT.send_text(dich, than)
+
+
+_DS_DEPS = doi_social_routes.DoiSocialDeps(bao=_ds_bao)
+doi_social_routes.register(app, _DS_DEPS)
 
 # Kết nối ngoài (26.10.3): app của nhà phát hành, mở khoá bằng mã kích hoạt + điều khoản sử dụng.
 import routes.ket_noi_ngoai as ket_noi_ngoai_routes   # noqa: E402

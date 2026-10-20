@@ -1,0 +1,19 @@
+MINMIN WORKER - máy ở nhà làm việc cho Đội Social
+
+Cần có: Windows 10/11, GPM Login đang mở, Python 3.11 trở lên.
+
+1. GPM Login > Cài đặt > API Gateway: giữ Local API url là http://localhost:9495.
+   KHÔNG cần tick "Cho phép remote từ internet" (Worker chạy trên chính máy này).
+2. Bấm đúp cai-dat.bat (một lần).
+3. Trên MinMin mở Kết nối ngoài > Đội Social > "Tạo mã ghép", rồi bấm đúp ghep-may.bat,
+   nhập địa chỉ MinMin và mã 6 số.
+4. Bấm đúp chay.bat. Để cửa sổ này mở (thu nhỏ được). Máy tắt hoặc đóng cửa sổ thì việc chờ đó,
+   bật lại là làm tiếp.
+
+Kiểm tra nhanh một profile: .venv\Scripts\python minmin_worker.py thu "Tên profile"
+
+Lưu ý:
+- Chỉ điều khiển được profile Chrome (profile Firefox của GPM không có cổng điều khiển).
+- Muốn đăng với tư cách Trang: trong profile đó hãy chuyển trang cá nhân sang Trang trước,
+  hoặc giao việc với link Trang mà nick là quản trị.
+- Nhật ký nằm ở worker.log, token máy ở worker.json (đừng gửi file này cho ai).
