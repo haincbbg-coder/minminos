@@ -239,6 +239,28 @@ def _kt_ai(sp, cau_hoi: str = ""):
         return kt
 
 
+def _goi_ai_vai(viec: str):
+    """goi_ai đã gắn vai trò từ agent MinMin (agents/<slug>.md trong bộ não) cho loại việc này."""
+    goc_ai = _DEPS.goi_ai
+    if not goc_ai:
+        return None
+    try:
+        phu = doi_social_bo_nao.phu_luc_vai(viec, v2.vai_agent())
+    except Exception as ex:
+        print(f"[doi-social] vai agent lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)
+        phu = ""
+    if not phu:
+        return goc_ai
+
+    async def goi(prompt, anh):
+        return await goc_ai(phu + prompt, anh)
+    return goi
+
+
+_VIEC_THEO_MUC = {"tra_loi_tin_nhan": "tra_loi_tin_nhan", "tra_loi_binh_luan": "tra_loi_binh_luan",
+                  "viet_binh_luan": "viet_binh_luan", "viet_bai": "viet_bai", "tra_loi_cau_hoi_nhom": "viet_binh_luan"}
+
+
 def _ngu_canh_ai(du_lieu: dict) -> str:
     """Chữ ngữ cảnh để tự tra bộ não: nội dung bài, bình luận, tin nhắn cuối của khách, câu hỏi nhóm."""
     if not isinstance(du_lieu, dict):
@@ -291,7 +313,7 @@ async def tro_ly_tra_loi(tin: str, phien: str = "", nguon: str = "web", chat_id:
     except Exception as ex:
         print(f"[doi-social] bộ não cho trợ lý lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)
     import doi_social_ai
-    kq = await doi_social_ai.tro_ly(tin, lich, boi, goi_ai=_DEPS.goi_ai) or {}
+    kq = await doi_social_ai.tro_ly(tin, lich, boi, goi_ai=_goi_ai_vai("tro_ly") or _DEPS.goi_ai) or {}
     tra_loi = str(kq.get("tra_loi") or "").strip()
     kh = None
     k = kq.get("ke_hoach")
@@ -610,7 +632,8 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             kt = _kt_ai(sp, _ngu_canh_ai(du_lieu))
             import doi_social_ai
             try:
-                kq = await doi_social_ai.xu_ly_may(muc, du_lieu, duong, goi_ai=deps.goi_ai, kien_thuc=kt)
+                kq = await doi_social_ai.xu_ly_may(muc, du_lieu, duong, kien_thuc=kt,
+                                                   goi_ai=_goi_ai_vai(_VIEC_THEO_MUC.get(muc, "")) or deps.goi_ai)
             except ValueError as e:
                 return _loi(e)
             except Exception as e:
@@ -1264,7 +1287,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         import doi_social_ai
         yeu_cau = str(d.get("yeu_cau") or "")[:2000]
         try:
-            bai = await doi_social_ai.viet_bai(kt, noi_dang, so_ban, yeu_cau, goi_ai=deps.goi_ai)
+            bai = await doi_social_ai.viet_bai(kt, noi_dang, so_ban, yeu_cau, goi_ai=_goi_ai_vai("viet_bai") or deps.goi_ai)
         except ValueError as e:
             return _loi(e)
         except Exception as e:
@@ -1354,7 +1377,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         import doi_social_ai
         try:
             moi = await doi_social_ai.viet_lai(n, _kt_ai(n.get("san_pham_id"), n.get("bai_goc") or ""),
-                                               str(d.get("yeu_cau") or "")[:2000], goi_ai=deps.goi_ai)
+                                               str(d.get("yeu_cau") or "")[:2000], goi_ai=_goi_ai_vai("viet_bai") or deps.goi_ai)
             n = v2.sua_ban_nhap(nid, moi)
         except ValueError as e:
             return _loi(e)
@@ -1426,6 +1449,24 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             return c
         t = doi_social_bo_nao.doc_tep(path, 20000)
         return {"ok": True, "tep": t} if t else _loi("không đọc được tệp này trong bộ não", 404)
+
+    @app.get("/doi-social/agent-vai")
+    def ds_agent_vai():
+        c = _chan()
+        if c:
+            return c
+        return {"ok": True, "gia_tri": v2.vai_agent(), "viec": doi_social_bo_nao.VIEC_AI,
+                "agent": doi_social_bo_nao.ds_agent()}
+
+    @app.post("/doi-social/agent-vai")
+    async def ds_dat_agent_vai(request: Request):
+        c = _chan()
+        if c:
+            return c
+        try:
+            return {"ok": True, "gia_tri": v2.dat_vai_agent(await _than(request))}
+        except ValueError as e:
+            return _loi(e)
 
     @app.post("/doi-social/kien-thuc/tu-bo-nao")
     async def ds_kt_tu_bo_nao(request: Request):
