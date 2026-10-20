@@ -76,6 +76,7 @@ jobs:
             echo "ĐỎ (test JS):$dsdo"
             echo "======================================================"
             { echo "### Test JS đỏ"; for t in $dsdo; do echo "- \`$t\`"; done; } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Test JS đỏ::$dsdo"
           fi
           exit $status
 
@@ -103,6 +104,7 @@ jobs:
             echo "ĐỎ (test Python):$dsdo"
             echo "======================================================"
             { echo "### Test Python đỏ"; for t in $dsdo; do echo "- \`$t\`"; done; } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Test Python đỏ::$dsdo"
           fi
           exit $status
 
