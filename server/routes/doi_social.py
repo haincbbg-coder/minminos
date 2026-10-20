@@ -83,6 +83,7 @@ class DoiSocialDeps:
     thong_tin_ai: Optional[Callable[[], dict]] = None                    # -> {engine, mo_hinh, nhin_anh, san_sang}
     bao_ke_hoach: Optional[Callable[[dict], Awaitable]] = None           # gửi kế hoạch + nút dsk:<id>:1|0
     bao_su_kien: Optional[Callable[[str, str], Awaitable]] = None        # (tiêu đề, nội dung) -> hòm thư + Telegram
+    co_telegram: Optional[Callable[[], bool]] = None                     # Telegram đã nối chưa (huy hiệu Tổng quan)
 
 
 def ly_do_chan() -> Optional[str]:
@@ -903,6 +904,10 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         if c:
             return c
         tq = v2.tong_quan(ngay)
+        try:
+            tq["telegram"] = bool(deps.co_telegram()) if deps.co_telegram else False
+        except Exception:
+            tq["telegram"] = False
         if deps.thong_tin_ai:
             try:
                 tq["ai"] = {**tq["ai"], **(deps.thong_tin_ai() or {})}
@@ -1018,7 +1023,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
         try:
             d = await _than(request)
             l = v2.sua_lich(lid, bat=d.get("bat"), ten=d.get("ten"), cron=d.get("cron"), nick=d.get("nick"),
-                            tham_so=d.get("tham_so"))
+                            tham_so=d.get("tham_so"), song_song=d.get("song_song"), chay_an=d.get("chay_an"))
         except ValueError as e:
             return _loi(e)
         return {"ok": True, "lich": l}

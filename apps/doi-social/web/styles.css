@@ -489,3 +489,4 @@ i[data-ic] { display: inline-flex; font-style: normal; }
 }
 .tbl .av + div .sub, .tbl .av + div .b { white-space: nowrap; }
 .filters .inp-ic .inp { width: 100%; }
+.tbl-gon th, .tbl-gon td { padding-left: 10px; padding-right: 10px; }

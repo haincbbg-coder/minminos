@@ -7,7 +7,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.187] - 2026-10-20
 
 ### Thêm mới
-- **Đội Social** mở thành ứng dụng đầy đủ (đang làm).
+- **Đội Social thành ứng dụng đầy đủ** (Kết nối ngoài): Tổng quan có biểu đồ 14 ngày và mục Cần bạn xử lý, Automation với 41 mẫu cho Facebook, TikTok, YouTube, Threads, Instagram, X, Reddit, chạy hàng loạt nhiều nick và hẹn lịch.
+- Thêm Nhật ký hoạt động, Kho nội dung, Kho group FB, Duyệt nội dung, Tin nhắn khách, Kiến thức cho Agent và Giới hạn nick theo tuổi nick. Tài khoản lấy thẳng từ GPM Login, không cần proxy hay đăng nhập lại.
+- **Trợ lý AI**: hỏi bằng lời, MinMin lên kế hoạch các bước, bấm Duyệt (trên web hoặc Telegram) mới chạy. Mẫu AI mặc định chạy thử, chỉ viết nháp chờ duyệt.
+- MinMin Worker 26.10.187 chạy song song nhiều nick và tự cập nhật khi MinMin có bản mới.
 
 ## [26.10.186] - 2026-10-20
 
