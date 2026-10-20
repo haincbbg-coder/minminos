@@ -19,12 +19,13 @@
     const res = await fetch('/auth/status', {cache:'no-store'}), a = await res.json();
     if (!res.ok || !a.authed) {
       if (wheel) wheel.hidden = true;
+      clearPreview();drawCurrent=null;
       if (launcher) launcher.hidden = true;
       items = []; selected.clear();
       throw Error('Đăng nhập MinMin để mở khay.');
     }
     const next = a.username || 'local';
-    if (owner !== next) { items = []; selected.clear(); }
+    if (owner !== next) { items = []; selected.clear(); clearPreview(); drawCurrent=null; if(wheel)wheel.hidden=true; }
     owner = next;
     if (launcher) launcher.hidden = false;
   }
@@ -139,7 +140,7 @@
       setView(()=>drawWheel('SỬA ẢNH',[
         {label:'Cắt tỷ lệ',icon:'edit',run:()=>choices('TỶ LỆ CẮT',[[0,'Nguyên ảnh'],[1,'1 : 1'],[.5625,'9 : 16'],[1.77777778,'16 : 9'],[.75,'3 : 4']],v=>ratio=v)},
         {label:'Xoay 90°',icon:'edit',run:()=>{turns=(turns+1)%4;safePaint();}},
-        {label:format.split('/')[1].toUpperCase(),icon:'files',run:()=>choices('ĐỊNH DẠNG', [['image/png','PNG'],['image/jpeg','JPG'],['image/webp','WebP']],v=>format=v)},
+        {label:format==='image/jpeg'?'JPG':format.split('/')[1].toUpperCase(),icon:'files',run:()=>choices('ĐỊNH DẠNG', [['image/png','PNG'],['image/jpeg','JPG'],['image/webp','WebP']],v=>format=v)},
         {label:width+' px',icon:'collage',run:()=>choices('CHIỀU RỘNG',[[640,'640 px'],[1080,'1080 px'],[1920,'1920 px'],[2560,'2560 px'],[4096,'4096 px']],v=>width=v)},
         {label:'Chú thích',icon:'edit',run:()=>{menu();const input=el('input');input.placeholder='Chú thích dưới ảnh';input.setAttribute('aria-label','Chú thích dưới ảnh');input.maxLength=100;input.value=caption;input.oninput=()=>{caption=input.value;safePaint();};footer.append(input);input.focus();}},
         {label:'Lưu bản sao',icon:'download',run:()=>task(async()=>{paint();const blob=await new Promise(r=>canvas.toBlob(r,format,.9));if(!blob)throw Error('Không xuất được ảnh.');await add(blob,R.nameCopy(item.name,blob.type.split('/')[1].replace('jpeg','jpg')),item.name);clearPreview();showFiles();report('Đã lưu bản sao. Chọn ảnh rồi bấm Dùng file đã chọn.');})}

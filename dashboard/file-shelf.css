@@ -82,5 +82,5 @@
 .mm-orbit-preview[hidden]{display:none}
 .mm-orbit-preview canvas{display:block;max-width:100%;max-height:60vh;width:auto;height:auto;object-fit:contain;margin:auto;filter:drop-shadow(0 8px 16px #0003)}
 .mm-orbit-center strong{letter-spacing:0;font-size:12px}
-@media(max-width:800px){.mm-orbit-preview{right:0;bottom:calc(100% + 12px);width:100%;height:min(24vh,180px)}.mm-orbit-preview canvas{max-height:100%;max-width:100%}.mm-orbit:has(.mm-orbit-preview:not([hidden])){width:min(280px,calc(100vw - 28px));bottom:100px}.mm-orbit:has(.mm-orbit-preview:not([hidden])) .mm-orbit-head{visibility:hidden}}
+@media(max-width:800px){.mm-orbit-preview{right:0;bottom:calc(100% + 12px);width:100%;height:min(24vh,180px)}.mm-orbit-preview canvas{max-height:100%;max-width:100%}.mm-orbit:has(.mm-orbit-preview:not([hidden])){width:min(280px,calc(100vw - 28px));bottom:100px}}
 @media(max-height:650px){.mm-orbit:has(.mm-orbit-preview:not([hidden])){bottom:50px;width:230px}.mm-orbit-preview{max-height:110px}.mm-orbit-hint{font-size:10px}}
