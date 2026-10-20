@@ -135,7 +135,7 @@
       if(caption){const fs=Math.max(16,Math.round(w/32));ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(0,h-fs*2.4,w,fs*2.4);ctx.fillStyle='#fff';ctx.font=`${fs}px sans-serif`;ctx.textAlign='center';ctx.fillText(caption,w/2,h-fs*.85,w-24);}
     }
     function safePaint(){try{paint();}catch(e){report(e.message);}}
-    function choices(title,rows,set){setView(()=>drawWheel(title,rows.map(([v,label])=>({label,icon:'edit',run:()=>{set(v);safePaint();menu();}})),menu,'Quay lại'));}
+    function choices(title,rows,set){setView(()=>drawWheel(title,rows.map(([v,label])=>({label,icon:'edit',run:()=>{set(v);menu();safePaint();}})),menu,'Quay lại'));}
     function menu(){
       setView(()=>drawWheel('SỬA ẢNH',[
         {label:'Cắt tỷ lệ',icon:'edit',run:()=>choices('TỶ LỆ CẮT',[[0,'Nguyên ảnh'],[1,'1 : 1'],[.5625,'9 : 16'],[1.77777778,'16 : 9'],[.75,'3 : 4']],v=>ratio=v)},
