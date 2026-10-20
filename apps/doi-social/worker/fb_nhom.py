@@ -119,8 +119,9 @@ def _binh_luan_mot_nhom(nc, link: str, ten: str, so_quet: int, con_toi_da: int) 
     mo_va_kiem(nc, link_nhom_moi(link))
     ten = ten_trang(nc.page) or ten or link
     ds = doc_bai_nhom(nc, so_quet)
+    nc.nhat_ky(f"Đọc được {len(ds)} bài mới trong nhóm, AI chấm từng bài")
     hop, lam = 0, 0
-    for muc in ds:
+    for i, muc in enumerate(ds, 1):
         if lam >= con_toi_da or phai_dung(nc) or nc.con_lai("binh_luan_nhom") <= 0:
             break
         bai = muc["bai"]
@@ -130,6 +131,8 @@ def _binh_luan_mot_nhom(nc, link: str, ten: str, so_quet: int, con_toi_da: int) 
             nc.su_kien("binh_luan_nhom", "bo_qua", "Bỏ qua: bài đã có bình luận của nick khác trong đội", link=lb, nhom=ten)
             continue
         cham = nc.ai("cham_bai", {"bai": bai, "san_pham_id": sp}, [muc["anh"]] if muc.get("anh") else [])
+        nc.nhat_ky(f"Bài {i}/{len(ds)}: điểm {cham.get('diem', '?')}"
+                   + (" (đối thủ)" if cham.get("la_doi_thu") else "") + (" -> chọn" if cham.get("chon") else ""))
         if cham.get("la_doi_thu") or not cham.get("chon"):
             continue
         hop += 1
@@ -199,7 +202,12 @@ def _chay_binh_luan_nhom(nc, nhom: list, tu_tham_gia: bool) -> str:
                     kq = vao_nhom(nc, link, str(nc.ts.get("san_pham") or ""))
                     if kq in ("da_vao", "cho_duyet"):
                         nc.bao_nhom(link, ten=ten_trang(nc.page), tinh_trang=kq, them_moi=True)
-                    if kq != "da_vao":
+                    if kq == "chay_thu":
+                        # Chạy thử: chưa vào nhóm nhưng nhóm công khai vẫn đọc được bài, nên vẫn quét và
+                        # viết nháp để chủ xem AI sẽ làm gì (nhóm kín thì quét ra 0 bài).
+                        nc.nhat_ky("Chạy thử: nick chưa vào nhóm, vẫn đọc bài công khai để viết nháp")
+                        mo_va_kiem(nc, link)
+                    elif kq != "da_vao":
                         continue
                     nc.nghi_thao_tac()
             tong += _binh_luan_mot_nhom(nc, link, str(n.get("ten") or ""), so_quet, toi_da - tong)
