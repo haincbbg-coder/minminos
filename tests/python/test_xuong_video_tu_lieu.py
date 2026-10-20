@@ -117,11 +117,15 @@ with TestClient(app) as client:
     assert r.status_code == 200 and "attachment" in r.headers["content-disposition"]
     assert client.get(f"{api}/du-an/{pid}/tep", params={"rel": "../../khoa.json"}).status_code == 404
     called = []
+    from threading import Event
+    started = Event()
     async def capture(pid, *args):
         called.append(pid)
+        started.set()
     original = chay.san_xuat
     chay.san_xuat = capture
     assert client.post(f"{api}/du-an/{pid}/chay").status_code == 200
+    assert started.wait(2), "background task did not start"
     assert called == [pid], called
     chay.san_xuat = original
     print("PASS licence, asset ownership, busy edits, explicit download and async start")
