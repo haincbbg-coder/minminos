@@ -21558,6 +21558,15 @@ async def _tg_callback(data, chat=None):
             ok, why = False, str(e)
         return {"text": ("Đã " + ("ĐỒNG Ý" if gat == "1" else "TỪ CHỐI") + f" yêu cầu #{ma}. MinMin làm tiếp.")
                 if ok else f"Không quyết được: {why}", "alert": "Đã ghi nhận" if ok else why}
+    if data.startswith("ub:"):
+        # Up bài từ Google Sheet (26.10.186): Duyệt / Bỏ một dòng
+        try:
+            _, dong, gat = data.split(":", 2)
+            up = up_bai_routes.may()
+            msg = await up.duyet(int(dong), gat == "1") if up else "Up bài chưa chạy"
+        except Exception as e:
+            return {"alert": f"Không duyệt được: {e}"[:190]}
+        return {"text": f"Dòng {dong}: {msg}", "alert": msg[:190]}
     if data.startswith("ds:"):
         # Đội Social (26.10.185): Duyệt / Bỏ một bài chờ đăng
         try:
@@ -22810,6 +22819,122 @@ async def _ds_bao(viec: dict, su_kien: str):
 
 _DS_DEPS = doi_social_routes.DoiSocialDeps(bao=_ds_bao)
 doi_social_routes.register(app, _DS_DEPS)
+
+# Up bài tự động từ Google Sheet (26.10.186): đọc Sheet UP BÀI, tải video, AI viết content, đăng Reels.
+import up_bai as up_bai_mod   # noqa: E402
+import routes.up_bai as up_bai_routes   # noqa: E402
+
+
+def _ub_ket_noi_sheet():
+    import mcp_store
+    for c in mcp_store.resolved(enabled_only=True):
+        if c.get("connector_id") == "google-sheets":
+            return c
+    raise RuntimeError("chưa có kết nối Google Sheets đang bật (trang Kết nối)")
+
+
+async def _ub_goi_sheet(tool: str, args: dict):
+    import mcp_client
+    raw = await mcp_client.pool.call_tool(mcp_client._conn_spec(_ub_ket_noi_sheet()), tool, args)
+    if isinstance(raw, str) and raw.startswith("ERROR:"):
+        raise RuntimeError("Google Sheets: " + raw[6:].strip()[:300])
+    if isinstance(raw, str):
+        try:
+            return json.loads(raw)
+        except Exception:
+            return raw
+    return raw
+
+
+async def _ub_doc_sheet(sheet_id: str, tab: str):
+    d = await _ub_goi_sheet("get_sheet_data", {"spreadsheet_id": sheet_id, "sheet": tab})
+    try:
+        return [[str(x) for x in r] for r in d["valueRanges"][0].get("values", [])]
+    except Exception:
+        raise RuntimeError(f"Google Sheets trả dữ liệu lạ cho tab '{tab}': {str(d)[:200]}")
+
+
+async def _ub_ghi_o(sheet_id: str, tab: str, ranges: dict):
+    if ranges:
+        await _ub_goi_sheet("batch_update_cells", {"spreadsheet_id": sheet_id, "sheet": tab, "ranges": ranges})
+
+
+async def _ub_them_dong(sheet_id: str, tab: str, row: list):
+    rows = await _ub_doc_sheet(sheet_id, tab)
+    n = len(rows) + 1
+    cuoi = up_bai_mod.cot_chu(max(0, len(row) - 1))
+    await _ub_goi_sheet("update_cells", {"spreadsheet_id": sheet_id, "sheet": tab,
+                                          "range": f"A{n}:{cuoi}{n}", "data": [[str(x) for x in row]]})
+
+
+async def _ub_nhin_anh(paths: list, prompt: str) -> str:
+    """AI xem khung hình: ChatGPT (OAuth) nếu đã nối - đường duy nhất chắc chắn NHÌN được ảnh; không
+    thì đưa đường dẫn ảnh cho engine chính (Claude Code/Codex mở được file ảnh)."""
+    import image_vision
+    goc = str(_default_brain_dir())
+    if image_vision.connected():
+        r = await image_vision.describe_images(paths[:4], question=prompt, vault_root=goc, timeout_s=240)
+        if r.get("ok"):
+            return r["text"]
+    ds = "\n".join(f"- {p}" for p in paths)
+    out = await _tg_answer(prompt + f"\n\nCác khung hình nằm ở (hãy mở xem từng ảnh):\n{ds}",
+                           {"chat_id": "up-bai"}, None, channel="cli", phien_kho="", ghi_kho=False)
+    return str(out.get("text") if isinstance(out, dict) else out or "")
+
+
+_UB_MPG = {}
+
+
+async def _ub_token_page(page_id: str) -> str:
+    import importlib.util
+    if "m" not in _UB_MPG:
+        f = PROJECT_ROOT / "system" / "plugins" / "meta-pages-graph" / "plugin.py"
+        spec = importlib.util.spec_from_file_location("_ub_meta_pages", str(f))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _UB_MPG["m"] = mod
+    mod = _UB_MPG["m"]
+    tok = await mod._token()
+    if not tok:
+        raise RuntimeError("chưa kết nối Facebook Trang (trang Kết nối)")
+    pid, ptok, _ten, err = await mod._resolve_page({"page_id": page_id}, tok)
+    if err or not ptok:
+        raise RuntimeError(str(err or "không lấy được quyền đăng của Trang").replace("ERROR: ", ""))
+    return ptok
+
+
+async def _ub_bao(the: dict, su_kien: str):
+    dong = the.get("dong")
+    if su_kien in ("cho_duyet", "cho_dang"):
+        tieu = "📝 Bài chờ duyệt" if su_kien == "cho_duyet" else "🕒 Bài đã sẵn sàng, chờ tới giờ đăng"
+        than = (f"{tieu} - dòng {dong} Sheet UP BÀI\nTrang: {the.get('page')}"
+                + (f" · Mã: {the.get('ma')}" if the.get("ma") else "") + (f" · Giá: {the.get('gia')}" if the.get("gia") else "")
+                + f"\nAI nhận diện: {the.get('nhan_dien')}\n\n{the.get('content')}")
+    elif su_kien == "da_dang":
+        than = f"✅ Đã đăng Reels - dòng {dong}\nTrang: {the.get('page')}\n{the.get('link_bai')}"
+    else:
+        than = f"⚠️ Up bài lỗi - dòng {dong}\nTrang: {the.get('page')}\nLink: {the.get('link')}\nLỗi: {the.get('loi')}"
+    try:
+        await _bo_vao_hom_thu("", than, kind="system", label="Up bài", source="up-bai")
+    except Exception as e:
+        print(f"[up-bai] inbox: {type(e).__name__}: {e}", file=sys.stderr)
+    if not (_TG_BOT and (_TG_BOT.chat_ids or [])):
+        return
+    chu = _TG_BOT.chat_ids[0]
+    if the.get("anh") and Path(the["anh"]).exists():
+        await _TG_BOT.send_file(the["anh"], caption=f"Khung hình video dòng {dong}", chat=chu)
+    rm = None
+    if su_kien == "cho_duyet":
+        rm = {"inline_keyboard": [[{"text": "✅ Duyệt đăng", "callback_data": f"ub:{dong}:1"},
+                                   {"text": "✕ Bỏ", "callback_data": f"ub:{dong}:0"}]]}
+    await _TG_BOT.send_text(chu, than[:3900], reply_markup=rm)
+
+
+up_bai_routes.register(app, up_bai_mod.Deps(
+    doc_sheet=_ub_doc_sheet, ghi_o=_ub_ghi_o, them_dong=_ub_them_dong, nhin_anh=_ub_nhin_anh,
+    token_page=_ub_token_page, bao=_ub_bao, http=lambda: __import__('httpx').AsyncClient(timeout=180),
+    thu_muc=Path(_default_brain_dir()) / "attachments" / "up-bai", goc_brain=str(_default_brain_dir())),
+    cfgmod.STATE_DIR)
 
 # Kết nối ngoài (26.10.3): app của nhà phát hành, mở khoá bằng mã kích hoạt + điều khoản sử dụng.
 import routes.ket_noi_ngoai as ket_noi_ngoai_routes   # noqa: E402
