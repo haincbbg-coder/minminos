@@ -32,11 +32,13 @@ import sys
 import time
 import unicodedata
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-VN = timezone(timedelta(hours=7))
+import localefmt
+
+VN = localefmt.tz()       # múi giờ của chủ (mặc định Việt Nam), lấy từ cài đặt chung
 TAB_CAU_HINH = "CẤU HÌNH PAGE"
 TAB_HANG_DOI = "HÀNG ĐỢI UP BÀI"
 TAB_NHAT_KY = "NHẬT KÝ"
@@ -58,7 +60,7 @@ GIO_BAT_DAU, GIO_KET_THUC, CACH_PHUT, BAI_NGAY = 8, 22, 60, 3
 
 
 def bay_gio() -> datetime:
-    return datetime.now(VN)
+    return localefmt.now()
 
 
 def _bo_dau(s: str) -> str:
@@ -241,7 +243,9 @@ def boc_json(text: str) -> Optional[dict]:
 # ------------------------------------------------------------------ video (ffmpeg / yt-dlp)
 
 def _chay(lenh: List[str], timeout: float = 600) -> subprocess.CompletedProcess:
-    return subprocess.run(lenh, capture_output=True, text=True, timeout=timeout, errors="replace")
+    import winproc
+    return subprocess.run(lenh, capture_output=True, text=True, timeout=timeout, errors="replace",
+                          **winproc.kwargs_no_window())
 
 
 def tai_video(link: str, dich: Path) -> Path:
