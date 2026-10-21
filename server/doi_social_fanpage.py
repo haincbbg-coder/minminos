@@ -1558,8 +1558,12 @@ def _kiem_media_loai(loai: str, media: list) -> None:
 def tao_bai(*, trang_ids=None, nhom_id=None, loai: str = "chu", noi_dung=None, kho_id=None, media=None,
             chia: str = "", binh_luan=None, kho_binh_luan_id=None, story=None, ig=None, hen="tu_dong",
             chay_thu: bool = False, nguon: str = "tay", link: str = "", so_bai: int = 1, rnd=None,
-            now: Optional[float] = None) -> dict:
-    """Tạo bài hàng loạt (mục 8 hợp đồng). Raise ValueError tiếng Việt."""
+            now: Optional[float] = None, ep_duyet: bool = False) -> dict:
+    """Tạo bài hàng loạt (mục 8 hợp đồng). Raise ValueError tiếng Việt.
+
+    `hen`: 'tu_dong' (lịch nhóm/Trang) | 'ngay' | mốc epoch | {"bat_dau": epoch, "cach_phut": n}
+    (26.10.200: bài thứ k, đếm qua mọi Trang theo thứ tự tạo, đăng lúc bat_dau + k*cach_phut).
+    `ep_duyet`: luôn vào chờ duyệt dù nhóm tắt duyet_truoc (bài AI viết)."""
     import random
     rnd = rnd or random
     now = _now() if now is None else now
@@ -1656,9 +1660,24 @@ def tao_bai(*, trang_ids=None, nhom_id=None, loai: str = "chu", noi_dung=None, k
         bai_moi.append({"trang_id": t["id"], "nhom_id": t.get("nhom_id"), "loai": loai, "noi_dung": cap_chu,
                         "media": m, "link": link if loai == "chu" else "", "binh_luan": bl, "story": int(st),
                         "ig": int(g), "hen_luc": None, "cach_hen": "tool",
-                        "trang_thai": "cho_duyet" if hl.get("duyet_truoc", True) else "cho_dang",
+                        "trang_thai": "cho_duyet" if (ep_duyet or hl.get("duyet_truoc", True)) else "cho_dang",
                         "nguon": nguon, "khoa_trung": khoa, "trang_ten": t["ten"], "trang_anh": t.get("anh") or ""})
     # ---- giờ đăng
+    if isinstance(hen, dict):
+        try:
+            bd = float(hen.get("bat_dau") or now)
+            cach = max(0, min(7 * 24 * 60, int(hen.get("cach_phut") or 0)))
+        except (TypeError, ValueError):
+            raise ValueError("giờ bắt đầu / khoảng cách không hợp lệ")
+        if bd < now - 60:
+            raise ValueError("giờ bắt đầu đã qua")
+        if bd > now + 60 * 86400:
+            raise ValueError("giờ bắt đầu tối đa 60 ngày tới")
+        for k, b in enumerate(bai_moi):
+            b["hen_luc"] = bd + k * cach * 60
+            lich = hieu_luc(b["trang_id"])["lich"]
+            b["cach_hen"] = cach_hen_cho(loai, lich.get("cach", "tool"), b["hen_luc"], now)
+        dem_trang = {}
     for chi_so, t in enumerate(trang):
         vt = dem_trang.get(t["id"]) or []
         if not vt:

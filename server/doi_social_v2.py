@@ -128,7 +128,9 @@ def tao_bang(c) -> None:
     for bang, cot in (("ban_nhap", "muc_tieu TEXT DEFAULT '{}'"),
                       ("kien_thuc", "nguon_bo_nao TEXT DEFAULT '[]'"),
                       ("kien_thuc", "tu_tra_bo_nao INTEGER DEFAULT 1"),
-                      ("viec", "lenh TEXT DEFAULT ''")):
+                      ("viec", "lenh TEXT DEFAULT ''"),
+                      ("ban_nhap", "hen_luc REAL"),          # 26.10.200: giờ đăng chủ chọn khi viết bài AI
+                      ("viec", "chay_sau REAL")):            # 26.10.200: việc chỉ giao cho máy từ mốc này
         try:
             c.execute(f"ALTER TABLE {bang} ADD COLUMN {cot}")
         except sqlite3.OperationalError:
@@ -1459,8 +1461,9 @@ def nhap_cua_may(nid, may_id: str) -> Optional[dict]:
 
 def tao_ban_nhap(*, loai: str, noi_dang: str, noi_dung: str, nick_id: str = "", nick_ten: str = "", nhom: str = "",
                  link_goc: str = "", bai_goc: str = "", ly_do: str = "", san_pham_id="", het_han_gio=None,
-                 viec_tao: str = "", chay_thu: bool = False, tep=None, muc_tieu=None) -> dict:
-    """`tep` = [(ten, bytes | đường_dẫn_tạm)] ảnh/video kèm nháp."""
+                 viec_tao: str = "", chay_thu: bool = False, tep=None, muc_tieu=None, hen_luc=None) -> dict:
+    """`tep` = [(ten, bytes | đường_dẫn_tạm)] ảnh/video kèm nháp. `hen_luc` (epoch): đã duyệt thì máy
+    chỉ đăng từ mốc này; nháp không hết hạn trước mốc đó."""
     if loai not in LOAI_NHAP:
         raise ValueError("loại nháp phải là binh_luan | bai_dang | tra_loi")
     if noi_dang not in NOI_DANG:
@@ -1478,13 +1481,26 @@ def tao_ban_nhap(*, loai: str, noi_dang: str, noi_dung: str, nick_id: str = "", 
     if het_han_gio not in (None, ""):
         gio = max(1, min(24 * 30, _int(het_han_gio, gio)))
     now = _now()
+    hl = None
+    if hen_luc not in (None, ""):
+        try:
+            hl = float(hen_luc)
+        except (TypeError, ValueError):
+            raise ValueError("giờ đăng không hợp lệ")
+        if hl < now - 120:
+            raise ValueError("giờ đăng đã qua")
+        if hl > now + 60 * 86400:
+            raise ValueError("giờ đăng tối đa 60 ngày tới")
+    het = now + gio * 3600
+    if hl:
+        het = max(het, hl + 6 * 3600)        # nháp hẹn xa vẫn chờ duyệt được tới sát giờ đăng
     with ds._khoa, ds._db() as c:
         nid = c.execute("INSERT INTO ban_nhap(loai, noi_dang, nick_id, nick_ten, nhom, link_goc, bai_goc, ly_do, "
-                        "noi_dung, san_pham_id, trang_thai, tao_luc, het_han, viec_tao, ket_qua, tep, chay_thu, muc_tieu) "
-                        "VALUES(?,?,?,?,?,?,?,?,?,?,'cho_duyet',?,?,?,'{}','[]',?,?)",
+                        "noi_dung, san_pham_id, trang_thai, tao_luc, het_han, viec_tao, ket_qua, tep, chay_thu, muc_tieu, "
+                        "hen_luc) VALUES(?,?,?,?,?,?,?,?,?,?,'cho_duyet',?,?,?,'{}','[]',?,?,?)",
                         (loai, noi_dang, _chu(nick_id, 80), _chu(nick_ten, 200), _chu(nhom, 300), _chu(link_goc, 500),
                          _chu(bai_goc, 4000), _chu(ly_do, 1000), noi_dung, _chu(san_pham_id, 40), now,
-                         now + gio * 3600, _chu(viec_tao, 40), int(bool(chay_thu)), _dj(mt))).lastrowid
+                         het, _chu(viec_tao, 40), int(bool(chay_thu)), _dj(mt), hl)).lastrowid
     if tep:
         try:
             them_tep_nhap(nid, tep)
@@ -1586,9 +1602,11 @@ def duyet_ban_nhap(nid, dong_y: bool) -> dict:
                                "link_goc": n["link_goc"], "nhom": n["nhom"], "noi_dung": n["noi_dung"],
                                "tep": [{"ten": t.get("ten"), "luu": t.get("luu")} for t in n["tep"]],
                                "muc_tieu": n["muc_tieu"]}}
+            hl = n.get("hen_luc")
             vid = c.execute("INSERT INTO viec(ky_nang, may_id, nick_id, nick_ten, tham_so, trang_thai, tao_luc, "
-                            "duyet_luc, nguon, chay_thu) VALUES(?,?,?,?,?,'cho_chay',?,?,'duyet',0)",
-                            ("dang_ban_nhap", nk["may_id"], nk["id"], nk["ten"], _dj(vts), now, now)).lastrowid
+                            "duyet_luc, nguon, chay_thu, chay_sau) VALUES(?,?,?,?,?,'cho_chay',?,?,'duyet',0,?)",
+                            ("dang_ban_nhap", nk["may_id"], nk["id"], nk["ten"], _dj(vts), now, now,
+                             hl if hl and hl > now else None)).lastrowid
         c.execute("UPDATE ban_nhap SET trang_thai='da_duyet', giu_boi_viec=? WHERE id=?", (vid, n["id"]))
     return lay_ban_nhap(nid) | {"viec_id": vid}
 
@@ -1616,8 +1634,8 @@ def lay_ban_nhap_cho_viec(vid, may_id: str, noi_dang: str = "", san_pham: str = 
         if v["trang_thai"] != "dang_chay":
             raise ValueError("việc không còn đang chạy")
         q = ("SELECT * FROM ban_nhap WHERE trang_thai='da_duyet' AND giu_boi_viec IS NULL "
-             "AND (nick_id='' OR nick_id=?)")
-        a = [v["nick_id"]]
+             "AND (nick_id='' OR nick_id=?) AND (hen_luc IS NULL OR hen_luc<=?)")
+        a = [v["nick_id"], _now()]
         if noi_dang:
             q += " AND noi_dang=?"
             a.append(noi_dang)

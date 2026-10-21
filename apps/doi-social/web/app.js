@@ -146,6 +146,7 @@
     if (v && v.trang_thai === "dang_chay" && v.lenh === "tam_dung") return DS.bd("Đang tạm dừng", "warn", true);
     if (v && v.trang_thai === "dang_chay" && v.lenh === "huy") return DS.bd("Đang huỷ...", "err", true);
     if (v && v.trang_thai === "dang_chay") return DS.bd("Đang chạy", "brand", true);
+    if (v && v.trang_thai === "cho_chay" && v.chay_sau && v.chay_sau * 1000 > Date.now()) return DS.bd("Hẹn " + DS.gio(v.chay_sau), "info");
     return DS.bdMap(DS.TT_VIEC, v && v.trang_thai);
   };
 
