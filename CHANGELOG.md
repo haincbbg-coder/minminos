@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.201] - 2026-10-21
+### Thêm mới
+- **Theo dõi trang web không tốn token** (cổng từ Javis 0.239). Canh một trang theo lịch và báo khi trang đổi, khi hiện một cụm chữ (ví dụ "Còn hàng"), hoặc khi giá xuống dưới ngưỡng bố đặt. Hiểu giá kiểu Việt (1,25 triệu, 250k, 1tr2). Tạo bằng lời trong chat hoặc ở trang Việc định kỳ.
+
 ## [26.10.199] - 2026-10-21
 ### Thêm mới
 - **Việc nền hỏi lại bố được rồi chạy tiếp bằng câu trả lời** (cổng từ Javis 0.235). Việc nền thiếu thông tin không còn kẹt ở "Cần bạn xử lý": nó hỏi, bố trả lời ngay trong chat hoặc trên thẻ việc, việc chạy tiếp chứ không làm lại từ đầu.

@@ -77,7 +77,7 @@ check("mã sai -> 400", r.status_code == 400)
 rc._SAI.clear()
 ma = cl.post("/apps/concat/api/ma-ghep").json()["ma"]
 check("mã ghép 6 số", len(ma) == 6 and ma.isdigit())
-g = cl.post("/concat/may/ghep", json={"ma": ma, "ten": "PC nhà", "phien_ban": "26.10.199"}).json()
+g = cl.post("/concat/may/ghep", json={"ma": ma, "ten": "PC nhà", "phien_ban": "26.10.201"}).json()
 TOKEN = g.get("token", "")
 H = {"x-minmin-may": TOKEN}
 check("ghép xong nhận token mmc_", g.get("ok") and TOKEN.startswith("mmc_"), g)
