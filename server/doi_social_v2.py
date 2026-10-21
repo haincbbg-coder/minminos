@@ -375,6 +375,11 @@ def ds_nick() -> list:
         for r in c.execute("SELECT * FROM dich_den ORDER BY nen_tang, loai, ten"):
             dich.setdefault(r["nick_id"], []).append({k: r[k] for k in ("id", "nen_tang", "loai", "ten", "link", "anh",
                                                                         "cap_nhat")})
+        quet = {}
+        for r in c.execute("SELECT nick_id, MAX(CASE WHEN trang_thai='xong' THEN xong_luc END) xl, "
+                           "SUM(CASE WHEN trang_thai IN ('cho_chay','dang_chay') THEN 1 ELSE 0 END) dang "
+                           "FROM viec WHERE ky_nang='quet_tai_khoan' GROUP BY nick_id"):
+            quet[r["nick_id"]] = (r["xl"], bool(r["dang"]))
         for n in ds.ds_nick():
             m = _meta(c, n["id"])
             tuoi = _tuoi_ngay(m["tao_tu"], now)
@@ -384,7 +389,9 @@ def ds_nick() -> list:
                        "ghi_chu": m["ghi_chu"], "tuoi_ngay": tuoi, "muc": _muc(m, g, now),
                        "canh_bao": m["canh_bao"], "lan_chay": m["lan_chay"],
                        "online": bool((may.get(n["may_id"]) or {}).get("online")),
-                       "dich_den": dich.get(n["id"], [])})
+                       "dich_den": dich.get(n["id"], []),
+                       "quet_luc": (quet.get(n["id"]) or (None, False))[0],
+                       "dang_quet": (quet.get(n["id"]) or (None, False))[1]})
     return ra
 
 

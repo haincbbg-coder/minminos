@@ -95,6 +95,9 @@
     file: '<path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
     robot: '<rect x="4" y="8" width="16" height="11" rx="3.5"/><path d="M12 4v4M9 13v1M15 13v1M2 13v2M22 13v2"/><circle cx="12" cy="3.5" r="1"/>',
     stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+    pause: '<rect x="6.5" y="5" width="3.5" height="14" rx="1.2"/><rect x="14" y="5" width="3.5" height="14" rx="1.2"/>',
+    scan: '<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M4 12h16"/>',
+    ext: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>',
     phone: '<path d="M6.5 3h3l1.5 4.5-2 1.5a11 11 0 0 0 6 6l1.5-2L21 14.5v3a2 2 0 0 1-2 2A16 16 0 0 1 4.5 5a2 2 0 0 1 2-2z"/>',
     filter: '<path d="M4 5h16l-6 8v6l-4-2v-4z"/>',
     image: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5-5 4 4 2.5-2.5L20 19"/>',
@@ -133,11 +136,91 @@
   };
   DS.NOI_DANG_NT = { fb_nhom: "facebook", fb_tuong: "facebook", fb_trang: "facebook", threads: "threads", instagram: "instagram", reddit: "reddit", x: "x", tiktok: "tiktok" };
   DS.KET_QUA = { thanh_cong: ["Thành công", "ok"], bo_qua: ["Bỏ qua", "mu"], loi: ["Lỗi", "err"], thong_tin: ["Thông tin", "info"], het_bai: ["Hết bài", "warn"] };
-  DS.TT_VIEC = { cho_duyet: ["Chờ duyệt", "warn"], cho_chay: ["Chờ máy nhận", "info"], dang_chay: ["Đang chạy", "brand"], xong: ["Thành công", "ok"],
+  DS.TT_VIEC = { cho_duyet: ["Chờ duyệt", "warn"], cho_chay: ["Chờ máy nhận", "info"], tam_dung: ["Tạm dừng", "warn"], dang_chay: ["Đang chạy", "brand"], xong: ["Thành công", "ok"],
     loi: ["Thất bại", "err"], bo: ["Đã huỷ", "mu"], bo_qua: ["Bỏ qua", "mu"] };
   DS.ttViec = function (v) {
     if (v && v.trang_thai === "bo" && (v.ket_qua || {}).bo_qua) return DS.bd("Bỏ qua", "mu");
+    if (v && v.trang_thai === "dang_chay" && v.lenh === "tam_dung") return DS.bd("Đang tạm dừng", "warn", true);
+    if (v && v.trang_thai === "dang_chay" && v.lenh === "huy") return DS.bd("Đang huỷ...", "err", true);
+    if (v && v.trang_thai === "dang_chay") return DS.bd("Đang chạy", "brand", true);
     return DS.bdMap(DS.TT_VIEC, v && v.trang_thai);
+  };
+
+  // ---------------------------------------------------------------- điều khiển từng việc (tạm dừng / tiếp tục / huỷ)
+  DS.viecXong = function (v) { return !v || ["xong", "loi", "bo"].indexOf(v.trang_thai) >= 0; };
+  DS.viecTam = function (v) { return !!v && (v.trang_thai === "tam_dung" || (v.trang_thai === "dang_chay" && v.lenh === "tam_dung")); };
+  DS.nutViec = function (v) {
+    if (DS.viecXong(v) || v.lenh === "huy") return "";
+    var id = esc(v.id), h = '<span class="vr-nut">';
+    if (DS.viecTam(v)) h += '<button class="btn btn-xs btn-soft" type="button" data-act="dk-viec" data-hd="tiep_tuc" data-id="' + id + '" title="Tiếp tục việc này">' + DS.ic("play") + "Tiếp tục</button>";
+    else h += '<button class="btn btn-xs" type="button" data-act="dk-viec" data-hd="tam_dung" data-id="' + id + '" title="Tạm dừng việc này">' + DS.ic("pause") + "Tạm dừng</button>";
+    return h + '<button class="btn btn-xs btn-dan-soft" type="button" data-act="dk-viec" data-hd="huy" data-id="' + id + '" title="Huỷ việc này">' + DS.ic("x") + "Huỷ</button></span>";
+  };
+  // gọi API cho một việc; trả viec mới, hoặc null khi bố thôi / lỗi
+  DS.dieuKhienViec = function (id, hd, tenNick, nut) {
+    var hoi = hd === "huy" ? DS.xacNhan("Huỷ việc của " + (tenNick || "nick này") + "? Nick khác trong đợt vẫn chạy tiếp.", "Huỷ việc", true) : Promise.resolve(true);
+    return hoi.then(function (ok) {
+      if (!ok) return null;
+      if (nut) nut.disabled = true;
+      return DS.api("POST", "/doi-social/viec/" + encodeURIComponent(id) + "/dieu-khien", { hanh_dong: hd }).then(function (d) {
+        if (nut) nut.disabled = false;
+        if (d.ok === false) return null;
+        var v = d.viec || {};
+        DS.toast(hd === "huy" ? (v.trang_thai === "dang_chay" ? "Đã báo dừng, máy ở nhà sẽ huỷ sau vài giây" : "Đã huỷ việc") :
+          hd === "tam_dung" ? (v.trang_thai === "dang_chay" ? "Đã báo tạm dừng, máy dừng ở thao tác kế tiếp" : "Đã tạm dừng, máy sẽ không nhận việc này") : "Đã cho chạy tiếp", "ok");
+        return v;
+      });
+    });
+  };
+
+  // ---------------------------------------------------------------- nơi đăng đã quét (Trang Facebook, tài khoản IG/TikTok/Threads)
+  DS.NT_QUET = ["facebook", "instagram", "tiktok", "threads"];
+  DS._dangQuet = {};
+  DS.dichDen = function (n, nt) { return ((n && n.dich_den) || []).filter(function (d) { return !nt || d.nen_tang === nt; }); };
+  DS.trangFB = function (n) { return DS.dichDen(n, "facebook").filter(function (d) { return d.loai === "trang"; }); };
+  DS.quetLuc = function (n) { var t = (n && n.quet_luc) || 0; DS.dichDen(n).forEach(function (d) { if (d.cap_nhat > t) t = d.cap_nhat; }); return t; };
+  DS.choQuet = function (n) {
+    if (n && n.dang_quet) return true;              // máy chủ báo còn việc quét chờ / đang chạy
+    var t = DS._dangQuet[n.id]; return !!t && Date.now() - t < 15 * 60000 && !(DS.quetLuc(n) * 1000 > t);
+  };
+  DS.tenTk = function (d) { var t = String(d.ten || ""); return d.loai === "tai_khoan" && t && t.charAt(0) !== "@" && !/\s/.test(t) ? "@" + t : t; };
+  // chip tóm tắt cho một nick; `gon` = huy hiệu nhỏ (danh sách chọn nick)
+  DS.chipDichDen = function (n, gon) {
+    var ds = DS.dichDen(n);
+    if (!ds.length) return DS.choQuet(n) ? '<span class="tiny muted dd-cho">' + DS.ic("clock") + "đang chờ quét</span>" : gon ? "" :
+      '<span class="small muted">' + (n && n.quet_luc ? "đã quét, không có Trang hay tài khoản nào" : "chưa quét") + "</span>";
+    var h = "", tr = DS.trangFB(n), sz = gon ? 14 : 16;
+    if (tr.length) h += (gon ? '<span class="bd bd-out dd-chip">' : '<button type="button" class="bd bd-out dd-chip" data-act="xem-trang" data-id="' + esc(n.id) + '" title="Xem tên các Trang">') +
+      DS.icNT("facebook", sz) + (gon ? tr.length + " Trang" : "Facebook · " + tr.length + " Trang") + (gon ? "</span>" : "</button>");
+    else if (DS.dichDen(n, "facebook").length && !gon) h += '<span class="bd bd-out dd-chip">' + DS.icNT("facebook", sz) + "Chỉ tường cá nhân</span>";
+    ["instagram", "tiktok", "threads"].forEach(function (nt) {
+      DS.dichDen(n, nt).slice(0, gon ? 1 : 3).forEach(function (d) {
+        var noi = DS.icNT(nt, sz) + '<span class="clip">' + esc(DS.tenTk(d)) + "</span>";
+        h += gon ? '<span class="bd bd-out dd-chip">' + noi + "</span>" : '<a class="bd bd-out dd-chip" href="' + esc(d.link) + '" target="_blank" rel="noopener" title="' + esc(DS.tenNT(nt) + ": " + d.ten) + '">' + noi + "</a>";
+      });
+    });
+    return h;
+  };
+  DS.moDsTrang = function (n) {
+    var tr = DS.trangFB(n);
+    DS.modal({ title: "Trang Facebook của " + n.ten,
+      body: '<p class="small muted" style="margin:0 0 10px">' + tr.length + " Trang nick này đang quản lý" + (DS.quetLuc(n) ? ", quét " + esc(DS.tuongDoi(DS.quetLuc(n))) : "") + ".</p>" +
+        '<div class="dd-ds">' + tr.map(function (d) {
+          return '<a class="dd-dong" href="' + esc(d.link) + '" target="_blank" rel="noopener">' + (d.anh ? '<img class="av" src="' + esc(d.anh) + '" alt="" loading="lazy">' : DS.av(d.ten)) +
+            '<span class="grow" style="min-width:0"><b class="clip" style="display:block">' + esc(d.ten) + '</b><span class="tiny muted clip" style="display:block">' + esc(d.link.replace(/^https:\/\/(www\.)?/, "")) + "</span></span>" + DS.ic("ext") + "</a>";
+        }).join("") + "</div>" });
+  };
+  // giao quét cho các nick; trả số việc đã giao (hoặc -1 khi lỗi)
+  DS.quetTaiKhoan = function (ids) {
+    return DS.api("POST", "/doi-social/quet-tai-khoan", { nick: ids }).then(function (d) {
+      if (d.ok === false) return -1;
+      var so = d.so != null ? d.so : DS.list(d).length;
+      ids.forEach(function (i) { DS._dangQuet[i] = Date.now(); });
+      if (so) DS.toast("Đã giao " + so + " nick cho máy ở nhà quét, khoảng 1 phút mỗi nick. Kết quả tự hiện khi xong.", "ok");
+      else DS.toast("Các nick này đang có lượt quét chờ chạy rồi.", "info");
+      DS.boNho("nick");
+      return so;
+    });
   };
   DS.TT_DOT = { cho: ["Đang chờ", "info"], dang_chay: ["Đang chạy", "brand"], hoan_tat: ["Hoàn tất", "ok"], huy: ["Đã huỷ", "mu"] };
   DS.CANH_BAO = { dang_xuat: "Đăng xuất", checkpoint: "Checkpoint", captcha: "Captcha", qua_nhanh: "Bị chặn vì quá nhanh" };

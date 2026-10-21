@@ -11,9 +11,9 @@
   DS.view("tai-khoan", {
     title: "Tài khoản",
     render: function (el, ctx) {
-      var F = { tim: "", thu_muc: "", nhan: "", may: "" }, chon = {}, ds = [];
+      var F = { tim: "", thu_muc: "", nhan: "", may: "", dd: "" }, chon = {}, ds = [];
       el.innerHTML = DS.ph("Tài khoản", "Profile GPM Login trên các máy ở nhà. Gắn nhãn nền tảng để lọc nick khi chạy mẫu.",
-        '<button class="btn" data-act="tai-lai">' + ic("refresh") + "Làm mới</button>") +
+        '<button class="btn" data-act="tai-lai">' + ic("refresh") + 'Làm mới</button><button class="btn btn-pri" data-act="quet" id="tk-quet">' + ic("scan") + "Quét Trang &amp; tài khoản</button>") +
         '<div class="note mb">' + ic("info") + "<span>Tài khoản lấy từ GPM Login trên máy ở nhà, đã đăng nhập sẵn - không cần thêm tài khoản hay proxy. Muốn thêm nick, tạo profile trong GPM rồi máy ở nhà tự báo lên.</span></div>" +
         '<div class="card card-x"><div class="filters" id="tk-loc"></div><div id="tk-bulk"></div><div id="tk-ds">' + '<div class="tw"><table class="tbl tbl-in"><tbody>' + DS.skelDong(8, 6) + "</tbody></table></div></div></div>";
 
@@ -25,6 +25,9 @@
           if (F.may && String(n.may_id) !== F.may) return false;
           if (F.nhan === "_chua" && (n.nhan || []).length) return false;
           if (F.nhan && F.nhan !== "_chua" && (n.nhan || []).indexOf(F.nhan) < 0) return false;
+          if (F.dd === "trang" && !DS.trangFB(n).length) return false;
+          if (F.dd === "da" && !DS.dichDen(n).length) return false;
+          if (F.dd === "chua" && DS.dichDen(n).length) return false;
           return true;
         });
       }
@@ -35,11 +38,15 @@
           '<select class="sel" id="tk-tm"><option value="">Mọi thư mục</option>' + Object.keys(tm).sort().map(function (k) { return "<option" + (F.thu_muc === k ? " selected" : "") + ' value="' + esc(k) + '">' + esc(k) + " (" + tm[k] + ")</option>"; }).join("") + "</select>" +
           '<select class="sel" id="tk-nhan"><option value="">Mọi nền tảng</option>' + DS.NT_THU_TU.map(function (k) { return '<option value="' + k + '"' + (F.nhan === k ? " selected" : "") + ">" + DS.tenNT(k) + "</option>"; }).join("") +
           '<option value="_chua"' + (F.nhan === "_chua" ? " selected" : "") + ">Chưa gắn nhãn</option></select>" +
+          '<select class="sel" id="tk-dd" aria-label="Lọc theo nơi đăng">' + [["", "Mọi nơi đăng"], ["trang", "Có Trang Facebook"], ["da", "Đã quét"], ["chua", "Chưa quét"]].map(function (x) {
+            return '<option value="' + x[0] + '"' + (F.dd === x[0] ? " selected" : "") + ">" + x[1] + "</option>";
+          }).join("") + "</select>" +
           (Object.keys(may).length > 1 ? '<select class="sel" id="tk-may"><option value="">Mọi máy</option>' + Object.keys(may).map(function (k) { return '<option value="' + esc(k) + '"' + (F.may === k ? " selected" : "") + ">" + esc(may[k]) + "</option>"; }).join("") + "</select>" : "");
       }
       function soChon() { return Object.keys(chon).filter(function (k) { return chon[k]; }); }
       function veBulk() {
-        var n = soChon().length;
+        var n = soChon().length, q = el.querySelector("#tk-quet");
+        if (q) q.innerHTML = ic("scan") + (n ? "Quét " + n + " nick đã chọn" : "Quét Trang &amp; tài khoản");
         el.querySelector("#tk-bulk").innerHTML = n ? '<div class="filters" style="background:var(--brand-soft)"><b>' + n + ' nick đã chọn</b><span class="grow"></span><button class="btn btn-sm" data-act="gan-nhan">' + ic("tag") +
           'Gắn nhãn nền tảng</button><button class="btn btn-sm" data-act="tao-tu">' + ic("calendar") + 'Đặt "tạo từ"</button><button class="btn btn-sm btn-ghost" data-act="bo-chon">Bỏ chọn</button></div>' : "";
       }
@@ -48,16 +55,17 @@
         if (!ds.length) { box.innerHTML = DS.rong("Chưa có nick nào", 'Ghép máy ở nhà có GPM Login để MinMin đọc danh sách profile. <a href="#/may">Mở Máy ở nhà</a>', "list"); return; }
         if (!l.length) { box.innerHTML = DS.rong("Không có nick khớp bộ lọc", "", "list"); return; }
         var tatCa = l.every(function (n) { return chon[n.id]; });
-        box.innerHTML = '<div class="tw"><table class="tbl tbl-in" style="min-width:900px"><thead><tr><th class="w1"><input type="checkbox" class="cb" id="tk-all"' + (tatCa ? " checked" : "") +
-          ' aria-label="Chọn tất cả"></th><th>Nick</th><th>Thư mục</th><th>Trạng thái</th><th>Nền tảng</th><th>Cảnh báo</th><th>Chạy lần cuối</th><th>Mức</th></tr></thead><tbody>' +
+        box.innerHTML = '<div class="tw"><table class="tbl tbl-in" style="min-width:980px"><thead><tr><th class="w1"><input type="checkbox" class="cb" id="tk-all"' + (tatCa ? " checked" : "") +
+          ' aria-label="Chọn tất cả"></th><th>Nick</th><th>Thư mục</th><th>Trạng thái</th><th>Nền tảng</th><th>Nơi đăng đã quét</th><th>Cảnh báo</th><th>Chạy lần cuối</th><th>Mức</th></tr></thead><tbody>' +
           l.map(function (n) {
             var cb = n.canh_bao || {}, cbk = Object.keys(cb);
             return '<tr><td><input type="checkbox" class="cb" data-chon="' + esc(n.id) + '"' + (chon[n.id] ? " checked" : "") + '></td><td><div class="row" style="flex-wrap:nowrap">' + DS.av(n.ten) +
               '<div style="min-width:0"><div class="b clip" style="max-width:220px">' + esc(n.ten) + '</div><div class="sub">' + esc(n.may_ten || "") + (n.trinh_duyet ? " · " + esc(n.trinh_duyet) : "") + "</div></div></div></td>" +
               '<td class="small nw">' + (n.nhom ? '<span class="row" style="flex-wrap:nowrap;gap:4px">' + ic("folder") + esc(n.nhom) + "</span>" : '<span class="muted">Không thư mục</span>') + "</td>" +
               '<td class="nw"><span class="row" style="flex-wrap:nowrap;gap:6px"><span class="dotx' + (n.online ? " on" : "") + '"></span>' + (n.online ? "Online" : '<span class="muted">Ngoại tuyến</span>') + "</span></td>" +
-              '<td><div class="row" style="gap:4px">' + ((n.nhan || []).length ? n.nhan.map(function (t) { return '<span class="bd bd-out" style="padding-left:3px">' + DS.icNT(t, 16) + esc(DS.tenNT(t)) + "</span>"; }).join("") :
+              '<td><div class="row" style="gap:4px">' + ((n.nhan || []).length ? n.nhan.map(function (t) { return '<span title="' + esc(DS.tenNT(t)) + '" style="display:inline-flex">' + DS.icNT(t, 20) + "</span>"; }).join("") :
                 '<span class="small muted">Chưa gắn</span>') + "</div></td>" +
+              '<td><div class="dd-cell">' + DS.chipDichDen(n) + "</div>" + (DS.quetLuc(n) ? '<div class="sub" title="' + esc(DS.gioDu(DS.quetLuc(n))) + '">quét ' + esc(DS.tuongDoi(DS.quetLuc(n))) + "</div>" : "") + "</td>" +
               "<td>" + (cbk.length ? cbk.map(function (k) { return DS.bd((DS.CANH_BAO[cb[k]] || cb[k]) + " · " + DS.tenNT(k), "err", true); }).join(" ") : '<span class="small muted">Không</span>') + "</td>" +
               '<td class="small nw">' + (n.lan_chay ? DS.tuongDoi(n.lan_chay) : '<span class="muted">Chưa chạy</span>') + "</td>" +
               '<td class="nw">' + DS.mucNick(n) + (n.tao_tu ? '<div class="sub">tạo ' + esc(n.tao_tu.split("-").reverse().join("/")) + "</div>" : "") + "</td></tr>";
@@ -84,6 +92,7 @@
         if (t.id === "tk-tm") F.thu_muc = t.value;
         else if (t.id === "tk-nhan") F.nhan = t.value;
         else if (t.id === "tk-may") F.may = t.value;
+        else if (t.id === "tk-dd") F.dd = t.value;
         else if (t.id === "tk-all") { loc().forEach(function (n) { chon[n.id] = t.checked; }); veBulk(); veDs(); return; }
         else if (t.getAttribute("data-chon")) { chon[t.getAttribute("data-chon")] = t.checked; veBulk(); return; }
         else return;
@@ -92,6 +101,20 @@
       DS.bind(el, {
         "tai-lai": function () { nap(true); },
         "bo-chon": function () { chon = {}; veBulk(); veDs(); },
+        "xem-trang": function (t) { var n = ds.filter(function (x) { return String(x.id) === t.getAttribute("data-id"); })[0]; if (n) DS.moDsTrang(n); },
+        "quet": function (b) {
+          var ids = soChon(), tatCa = !ids.length;
+          if (tatCa) ids = loc().map(function (n) { return String(n.id); });
+          if (!ids.length) { DS.toast("Không có nick nào để quét", "err"); return; }
+          var cau = "Quét " + ids.length + " nick" + (tatCa ? (ids.length === ds.length ? " (tất cả)" : " đang hiện theo bộ lọc") : " đã chọn") +
+            "? Máy ở nhà mở từng profile, chỉ đọc danh sách Trang Facebook và tài khoản Instagram, TikTok, Threads. Mất khoảng 1 phút mỗi nick" +
+            (ids.length > 1 ? " (chừng " + ids.length + " phút nếu chạy lần lượt)." : ".");
+          (ids.length > 1 ? DS.xacNhan(cau, "Quét " + ids.length + " nick") : Promise.resolve(true)).then(function (ok) {
+            if (!ok) return;
+            b.disabled = true;
+            DS.quetTaiKhoan(ids).then(function () { b.disabled = false; veDs(); });
+          });
+        },
         "gan-nhan": function () {
           var ids = soChon(), co = {};
           ds.forEach(function (n) { if (ids.indexOf(String(n.id)) >= 0) (n.nhan || []).forEach(function (t) { co[t] = (co[t] || 0) + 1; }); });
@@ -119,6 +142,12 @@
           };
         }
       });
+      // đang chờ máy quét: tự làm mới danh sách mỗi 20 giây để thấy kết quả
+      ctx.every(function () {
+        var a = document.activeElement;
+        if (a && el.contains(a) && a.matches("input:not([type=checkbox]),select")) return;
+        if (ds.some(DS.choQuet)) nap(true);
+      }, 20000);
       return nap(false);
     }
   });

@@ -76,6 +76,22 @@ check("list đọc khoá muc", DS.list({ ok: true, muc: [1, 2] }).length === 2 &
 check("tuongDoi tương lai", /nữa$/.test(DS.tuongDoi(Date.now() / 1000 + 8 * 3600)));
 check("việc bỏ vì hết hạn mức hiện Bỏ qua", DS.ttViec({ trang_thai: "bo", ket_qua: { bo_qua: 1 } }).includes("Bỏ qua"));
 
+// điều khiển từng việc: nhãn trạng thái + nút trên dòng
+check("tam_dung hiện Tạm dừng", DS.ttViec({ trang_thai: "tam_dung" }).includes("Tạm dừng"));
+check("đang chạy + lệnh tạm dừng hiện Đang tạm dừng", DS.ttViec({ trang_thai: "dang_chay", lenh: "tam_dung" }).includes("Đang tạm dừng"));
+check("đang chạy + lệnh huỷ hiện Đang huỷ", DS.ttViec({ trang_thai: "dang_chay", lenh: "huy" }).includes("Đang huỷ"));
+const nut = (v) => DS.nutViec(v);
+check("việc chờ có nút Tạm dừng + Huỷ", /data-hd="tam_dung"/.test(nut({ id: 1, trang_thai: "cho_chay" })) && /data-hd="huy"/.test(nut({ id: 1, trang_thai: "cho_chay" })));
+check("việc tạm dừng có nút Tiếp tục + Huỷ", /data-hd="tiep_tuc"/.test(nut({ id: 1, trang_thai: "tam_dung" })) && !/data-hd="tam_dung"/.test(nut({ id: 1, trang_thai: "tam_dung" })));
+check("đang chạy bị lệnh tạm dừng có nút Tiếp tục", /data-hd="tiep_tuc"/.test(nut({ id: 1, trang_thai: "dang_chay", lenh: "tam_dung" })));
+check("việc đã kết thúc không có nút", ["xong", "loi", "bo"].every((t) => nut({ id: 1, trang_thai: t }) === "") && nut({ id: 1, trang_thai: "dang_chay", lenh: "huy" }) === "");
+// nơi đăng đã quét
+const nk = { id: "p1", ten: "A", dich_den: [{ nen_tang: "facebook", loai: "trang", ten: "Shop X", link: "https://facebook.com/x", cap_nhat: 100 },
+  { nen_tang: "facebook", loai: "ca_nhan", ten: "A", link: "https://facebook.com/a", cap_nhat: 120 }, { nen_tang: "instagram", loai: "tai_khoan", ten: "shopx", link: "https://instagram.com/shopx", cap_nhat: 90 }] };
+check("đếm Trang Facebook bỏ tường cá nhân", DS.trangFB(nk).length === 1 && DS.quetLuc(nk) === 120);
+check("chip nơi đăng có số Trang và @tài khoản", /1 Trang/.test(DS.chipDichDen(nk)) && /@shopx/.test(DS.chipDichDen(nk)));
+check("nick chưa quét hiện chữ chưa quét", /chưa quét/.test(DS.chipDichDen({ id: "p2", dich_den: [] })) && DS.chipDichDen({ id: "p2" }, true) === "");
+
 // api không ném lỗi khi máy chủ lỗi / mất mạng
 const loi = await Promise.all([
   (ctx.fetch = () => Promise.resolve({ ok: false, status: 400, text: () => Promise.resolve('{"ok":false,"error":"sai"}') }), DS.api("GET", "/x", null, { quiet: true })),
