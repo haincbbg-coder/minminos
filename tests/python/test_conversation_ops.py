@@ -88,6 +88,18 @@ class OpsTests(unittest.TestCase):
         self.event(-600, kind='customer')
         self.assertEqual(ops.report()['pending_count'], 1)
 
+    def test_system_notice_does_not_end_customer_wait(self):
+        self.event(-600)
+        self.event(-10, kind='system', text='Đã chuyển cho người trực')
+        self.assertEqual(ops.report()['pending_count'], 1)
+        self.assertEqual(ops.report()['overdue_count'], 1)
+
+    def test_profile_without_customer_does_not_silently_drop_notes(self):
+        cid = self.event(kind='human')['conversation_id']
+        with self.assertRaises(ValueError):
+            ops.save_profile(cid, revision=0, owner='Mai', tags=[], note='Không được mất ghi chú')
+        self.assertEqual(ops.profile(cid)['revision'], 0)
+
     def test_shared_customer_profile_conflicts_across_conversations(self):
         a = self.event(chat='a')['conversation_id']
         b = self.event(chat='b')['conversation_id']

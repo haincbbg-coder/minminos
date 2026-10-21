@@ -46,8 +46,9 @@
         '<label>Người phụ trách<input class="co-owner" maxlength="120" value="' + esc(c.owner) + '"></label>' +
         '<p class="co-muted">Tên để phối hợp công việc. MinMin đang dùng phiên quản trị chung; nhãn này không giới hạn quyền truy cập.</p>' +
         (c.chat_type === 'group' ? '<p class="co-muted">Thẻ và ghi chú thuộc hồ sơ người gửi được liên kết, không đại diện mọi thành viên nhóm.</p>' : '') +
-        '<label>Thẻ, ngăn cách bằng dấu phẩy<input class="co-tags" value="' + esc((c.customer_tags || []).join(', ')) + '"></label>' +
-        '<label>Ghi chú<textarea class="co-note" rows="4" maxlength="4000">' + esc(c.customer_note || '') + '</textarea></label>' +
+        (c.customer_id ? '' : '<p class="co-muted">Hội thoại chưa liên kết khách. Hiện chỉ lưu được người phụ trách.</p>') +
+        '<label>Thẻ, ngăn cách bằng dấu phẩy<input class="co-tags"' + (c.customer_id ? '' : ' disabled') + ' value="' + esc((c.customer_tags || []).join(', ')) + '"></label>' +
+        '<label>Ghi chú<textarea class="co-note" rows="4" maxlength="4000"' + (c.customer_id ? '' : ' disabled') + '>' + esc(c.customer_note || '') + '</textarea></label>' +
         '<div class="co-actions"><button class="s-btn co-save">Lưu hồ sơ</button>' +
         '<button class="s-btn-ghost co-summary"' + (c.bot_id ? '' : ' disabled') + '>AI tóm tắt</button></div>' +
         '<p class="co-status" role="status"></p><div class="co-summary-text"></div>' +

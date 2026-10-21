@@ -58,11 +58,13 @@ def save_profile(cid, *, revision, owner, tags, note):
         raise ValueError('Tên phụ trách tối đa 120 ký tự, ghi chú tối đa 4.000 ký tự.')
     with cs._lock:
         db = _db()
-        c = profile(cid)
-        if c['revision'] != revision:
-            raise ValueError('Hồ sơ vừa được sửa ở cửa sổ khác. Mở lại hồ sơ rồi lưu.')
         try:
             db.execute('BEGIN IMMEDIATE')
+            c = profile(cid)
+            if c['revision'] != revision:
+                raise ValueError('Hồ sơ vừa được sửa ở cửa sổ khác. Mở lại hồ sơ rồi lưu.')
+            if not c.get('customer_id') and (tags or note):
+                raise ValueError('Hội thoại chưa liên kết khách. Hiện chỉ lưu được người phụ trách.')
             db.execute('INSERT INTO conversation_ops VALUES(?,?,?) ON CONFLICT(conversation_id) '
                        'DO UPDATE SET owner=excluded.owner,revision=excluded.revision',
                        (cid, owner.strip(), revision + 1))
@@ -158,7 +160,7 @@ def report(days=7, channel='zalo_personal', account_id='', sla=300):
             'SELECT c.id,MIN(m.created_at) AS since FROM conversations c '
             'JOIN channel_accounts a ON a.id=c.channel_account_id '
             'JOIN messages m ON m.conversation_id=c.id '
-            'WHERE ' + where + " AND c.last_sender_type='customer' AND c.mode!='closed' "
+            'WHERE ' + where + " AND c.mode!='closed' "
             "AND m.sender_type='customer' AND NOT EXISTS (SELECT 1 FROM messages r "
             "WHERE r.conversation_id=c.id AND r.sender_type IN ('human','ai') "
             "AND (r.created_at>m.created_at OR (r.created_at=m.created_at AND r.id>m.id))) "
