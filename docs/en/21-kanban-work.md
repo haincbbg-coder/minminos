@@ -333,6 +333,18 @@ Three possibilities, in order of likelihood: you are standing in **another brain
 **Background work eats your whole quota.**
 Each job is a real AI session. Lower the parallel worker count with `JAVIS_KANBAN_MAX_WORKERS=1`, or set the mode to **Off** when you do not need it. Watch the consumption on the [Usage](23-usage-and-cost.md) page, which separates "Javis running by itself" from "You typing".
 
+## A job that asks you, and never sends twice (26.10.199)
+
+**A job can ask you.** When a job lacks something only you know it stops with one question instead of starting over. The question shows in the chat where you gave the job (with an answer box right under it) and on the job card on the Work page. Answer anywhere, including a normal message in chat: the job goes back to the queue, carries on with your answer and does not use up an attempt. Every question and answer is kept, in order, for the next run to read.
+
+**No double sending.** A background job that runs again (a temporary error, a server restart, you pressing Retry) used to call the same tools again, including sending a Zalo message, posting or creating an order. Now each outside action is written to a ledger before it runs:
+
+- Already done in an earlier run: not done again, the earlier result is returned.
+- The server stopped or the connection dropped while the call was in flight, so nobody knows if it arrived: MinMin does NOT resend, it asks you. Answer "sent" to skip it, "not sent" to send it again.
+- A clear error from the service: it may be called again.
+
+A limit to know: the ledger only protects jobs run by **Claude Code** or by an API brain. Jobs run through Codex, Grok Build, Antigravity or Muse Code cannot carry the job id to the hub yet, so they are not protected. Normal chat and scheduled reminders do not go through this ledger.
+
 ## Related
 
 - [Recurring jobs and reminders](08-recurring-jobs.md) - loops on a cycle and reminders at a fixed time.

@@ -3820,5 +3820,18 @@
   "cs.buy_price": "Price: {x}",
   "cs.buy_send_fp": "Send your server fingerprint to the seller to get a code:",
   "cs.buy_code_ph": "Paste the purchase code from the seller (MMB1...)",
-  "cs.buy_use": "Use code"
+  "cs.buy_use": "Use code",
+  "kanban.answer_ph": "Type your answer...",
+  "kanban.answer_send": "Send answer",
+  "kanban.answer_title": "This job is asking you",
+  "kanban.answer_info": "The job stopped because it needs something only you know. Send an answer and the job goes back to the queue and carries on with it, without using up another attempt. You can also answer right in the chat where you gave the job.",
+  "kanban.qa_title": "Questions and answers",
+  "kanban.qa_q": "Asked:",
+  "kanban.qa_a": "You answered:",
+  "viec.st_hoi": "Background job needs your answer",
+  "viec.hoi_ph": "Type your answer...",
+  "viec.hoi_gui": "Send",
+  "viec.hoi_da_gui": "Sent, the job is carrying on.",
+  "viec.hoi_loi": "Could not send. Try again or answer on the Work page.",
+  "info.more": "Show explanation"
 }

@@ -30,6 +30,7 @@ import localefmt
 import mcp_catalog
 import mcp_client
 import mcp_store
+import once_ledger
 import skill_router
 import skill_usage
 from config import STATE_DIR
@@ -309,7 +310,13 @@ def _guard(ent, fn, mode):
                            "tool": tool, "mode": mode, "cls": cls, "ok": True, "ms": 0, "err": "",
                            "args_keys": sorted((args or {}).keys()), "cache": True})
             return tu_dem
-        result = await mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, args)
+        if cls == "read":
+            result = await mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, args)
+        else:
+            # Cổng từ Javis 0.238.0: một việc Kanban chạy lại không được gửi, đăng hay tạo đơn hai lần
+            # (once_ledger.py). Ngoài việc nền thì gọi thẳng như cũ.
+            result = await once_ledger.run(
+                fn, args, lambda a: mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, a))
         # NÉN KHÔNG MẤT SỐ: JSON thụt dòng + trường rỗng là token đốt không; dump lại dạng đặc,
         # mọi giá trị giữ nguyên. Áp ở đây nên mọi não (API lẫn CLI qua HTTP) đều hưởng.
         if _nen_bat() and isinstance(result, str) and not result.startswith("ERROR:"):
@@ -1559,9 +1566,15 @@ async def handle_http(request):
     # Header chỉ nhận đường dẫn thư mục có thật; thiếu header thì `resolve_vault` suy ra brain
     # đang mở rồi NÓI RA ở kết quả tool (xem khối chú thích ở `_brain_dang_mo`). Bearer
     # hub_token vẫn là lớp auth bắt buộc phía trên.
-    return await tra_loi_jsonrpc(request, mode, include_plugins=include_plugins,
-                                 include_ambient=include_ambient,
-                                 raw_vault=request.headers.get("x-javis-vault"))
+    # Mã việc nền (cổng từ Javis 0.238.0): máy chủ ghi header này vào cấu hình MCP RIÊNG của lượt
+    # Claude Code chạy việc Kanban; model không đặt được header. Không có thì không phải việc nền.
+    _tok_job = once_ledger.bind_job(request.headers.get(once_ledger.JOB_HEADER.lower()) or "")
+    try:
+        return await tra_loi_jsonrpc(request, mode, include_plugins=include_plugins,
+                                     include_ambient=include_ambient,
+                                     raw_vault=request.headers.get("x-javis-vault"))
+    finally:
+        once_ledger.reset_job(_tok_job)
 
 
 async def _handle_one_traced(msg, *args, **kwargs):

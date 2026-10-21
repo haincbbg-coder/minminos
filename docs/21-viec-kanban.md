@@ -333,6 +333,18 @@ Ba khả năng, theo thứ tự hay gặp: bạn đang đứng ở **brain khác
 **Việc nền chiếm hết hạn mức của bạn.**
 Mỗi việc là một phiên AI thật. Hạ số worker song song bằng `JAVIS_KANBAN_MAX_WORKERS=1`, hoặc đặt chế độ về **Tắt** khi không cần. Theo dõi lượng tiêu thụ ở trang [Mức dùng](23-muc-dung-token.md), chỗ tách riêng "Javis tự chạy" với "Bạn gõ tay".
 
+## Việc nền hỏi lại bạn, và không gửi trùng (26.10.199)
+
+**Việc hỏi lại bạn.** Việc thiếu một thông tin chỉ bạn biết thì dừng lại với một câu hỏi, không chạy lại từ đầu. Câu hỏi hiện ở khung chat đã giao việc (kèm ô trả lời ngay dưới) và trên thẻ việc ở trang Việc. Bạn trả lời ở đâu cũng được, kể cả nhắn bình thường trong chat: việc quay lại hàng đợi, chạy tiếp với câu trả lời và không tốn thêm lượt thử. Hỏi nhiều lần thì mọi lượt hỏi đáp được giữ lại theo thứ tự cho lần chạy sau đọc.
+
+**Không gửi trùng.** Việc nền chạy lại (lỗi tạm, máy chủ khởi động lại, bạn bấm Thử lại) từng gọi lại đúng những công cụ đã gọi, kể cả gửi tin Zalo, đăng bài, tạo đơn. Giờ mỗi thao tác ra ngoài được ghi vào sổ trước khi gọi:
+
+- Đã làm xong ở lần trước: không làm lại, trả kết quả cũ.
+- Máy chủ dừng hoặc mất kết nối đúng lúc đang gọi, không ai biết đã tới nơi chưa: MinMin KHÔNG tự gửi lại mà hỏi bạn. Trả lời "đã gửi" là bỏ qua, "chưa gửi" là gửi lại.
+- Lỗi rõ ràng từ dịch vụ: được gọi lại.
+
+Giới hạn cần biết: sổ này chỉ bảo vệ việc chạy bằng **Claude Code** hoặc bằng bộ não API. Việc chạy qua Codex, Grok Build, Antigravity hay Muse Code chưa mang được mã việc tới hub nên chưa được bảo vệ. Chat thường và việc định kỳ không đi qua sổ này.
+
 ## Liên quan
 
 - [Việc định kỳ & Nhắc hẹn](08-viec-dinh-ky.md) - việc lặp theo chu kỳ và nhắc hẹn có mốc giờ.
