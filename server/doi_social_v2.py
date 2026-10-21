@@ -133,6 +133,8 @@ def tao_bang(c) -> None:
             c.execute(f"ALTER TABLE {bang} ADD COLUMN {cot}")
         except sqlite3.OperationalError:
             pass
+    import doi_social_fanpage     # 26.10.194: bảng Fanpage (Graph API) dùng chung tệp SQLite
+    doi_social_fanpage.tao_bang(c)
 
 
 def _now() -> float:

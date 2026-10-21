@@ -402,6 +402,14 @@ async def mot_nhip_nen() -> None:
     if so and so != _NHAC_NHAP.get("so") and now - _NHAC_NHAP.get("luc", 0) > 3600:
         _NHAC_NHAP.update(so=so, luc=now)
         v2.bao("Nội dung chờ duyệt", f"{so} nháp AI đang chờ bạn duyệt trong Đội Social > Duyệt nội dung.")
+    # 26.10.194: Fanpage (Graph API) chạy thành task riêng để một lần tải video lớn không giữ chân
+    # vòng nền của lịch hẹn; fpg.nhip tự chống chạy chồng. Lỗi ở đây không được làm gãy vòng cũ.
+    try:
+        import doi_social_fanpage_graph as fpg
+        if not fpg._DANG["chay"]:
+            _chay_nen(lambda: fpg.nhip(_DEPS), "nhịp Fanpage")
+    except Exception as ex:
+        print(f"[doi-social] nhịp Fanpage lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)
     _xa_bao()
 
 
@@ -1796,3 +1804,715 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             return {"ok": True, "ke_hoach": duyet_ke_hoach_va_chay(kid, False)}
         except ValueError as e:
             return _loi(e)
+
+    _dang_ky_fanpage(app, _chan, _than)
+
+
+# ---------------------------------------------------------------- 26.10.194: Fanpage qua Graph API
+# Hợp đồng: docs/doi-social/FANPAGE.md mục 8. Cùng cổng với các endpoint web khác (đăng nhập ở
+# main._auth_guard + `_chan()` mở khoá app). Riêng GET /doi-social/fp/cong-khai/{ma} KHÔNG cookie
+# (Instagram tải tệp qua URL này): tự kiểm mã HMAC có hạn 2 giờ, chỉ phục vụ tệp media của Fanpage.
+
+TIEN_TO_CONG_KHAI = "/doi-social/fp/cong-khai/"
+_GOC_NHO: dict = {}
+
+
+def _nho_goc(request: Request) -> None:
+    """Nhớ gốc URL công khai (https://ten-mien) từ yêu cầu web gần nhất, cho URL tệp gửi Instagram."""
+    try:
+        host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(",")[0].strip()
+        proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
+        if not host or proto not in ("http", "https"):
+            return
+        if re.match(r"^(localhost|127\.|0\.0\.0\.0|\[::1\]|testserver|10\.|192\.168\.)", host):
+            return
+        goc = f"{proto}://{host}"
+        if _GOC_NHO.get("g") != goc:
+            import doi_social_fanpage as fp
+            fp.dat_goc_cong_khai(goc)
+            _GOC_NHO["g"] = goc
+    except Exception:
+        pass
+
+
+async def _ai_tra_loi_bl(bl: dict, trang: dict) -> str:
+    """Soạn câu trả lời bình luận bằng bộ não MinMin (vai 'tra_loi_binh_luan')."""
+    import doi_social_fanpage as fp
+    goi = _goi_ai_vai("tra_loi_binh_luan")
+    if not goi:
+        raise ValueError(_loi_ai())
+    tri = ""
+    try:
+        b = doi_social_bo_nao.boi_canh_tro_ly(bl.get("noi_dung") or "")
+        tri = "\n".join(x for x in (b.get("ky_uc") or "", b.get("tai_lieu") or "") if x)[:6000]
+    except Exception as ex:
+        print(f"[doi-social] bộ não cho bình luận lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)
+    bai = ""
+    with doi_social._db() as c:
+        r = c.execute("SELECT noi_dung FROM fp_bai WHERE post_id=? LIMIT 1", (bl.get("post_id") or "",)).fetchone()
+        if r:
+            bai = (r["noi_dung"] or "")[:1500]
+    prompt = (f"Bạn trực Fanpage '{trang.get('ten') or ''}'. Viết MỘT câu trả lời ngắn (tối đa 2 câu), lịch sự, "
+              "xưng 'em' và gọi khách 'anh/chị', cho bình luận của khách dưới đây. Không bịa giá, size, chính sách "
+              "nếu tri thức không nói; khi khách hỏi giá hoặc thông tin riêng thì mời khách nhắn tin cho Trang. "
+              "Chỉ trả về đúng câu trả lời, không giải thích, không dùng dấu ngoặc kép.\n\n"
+              + (f"Bài đăng:\n{bai}\n\n" if bai else "")
+              + f"Bình luận của {bl.get('tu_ten') or 'khách'}:\n{(bl.get('noi_dung') or '')[:1500]}\n"
+              + (f"\nTri thức doanh nghiệp (chỉ dùng khi liên quan):\n{tri}\n" if tri else ""))
+    chu = str(await goi(prompt, []) or "").strip().strip('"').strip()
+    return fp._loc_token(chu)[:1000]
+
+
+def _dang_ky_fanpage(app: FastAPI, _chan, _than) -> None:
+    import doi_social_fanpage as fp
+    import doi_social_fanpage_graph as fpg
+    fpg.dat_ai(_ai_tra_loi_bl)
+    P = "/doi-social/fp"
+
+    def _cua(request: Request):
+        c = _chan()
+        if c:
+            return c
+        _nho_goc(request)
+        return None
+
+    def _so_nguyen(v, mac=None):
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return mac
+
+    def _canh_bao_moi():
+        return fp.kiem_loi(fpg.so_ket_noi(), fpg.co_yt_dlp())
+
+    def _kenh_ra(k: dict) -> dict:
+        return {**k, "co_yt_dlp": fpg.co_yt_dlp()}
+
+    # ---- tổng quan
+    @app.get(P + "/tong-quan")
+    def fp_tong_quan(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        kl = fp.kiem_luc()
+        if not kl or time.time() - kl > 600:
+            _canh_bao_moi()
+        return {"ok": True, **fp.tong_quan()}
+
+    # ---- token
+    @app.get(P + "/token")
+    def fp_ds_token(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        fpg.nguon_token()
+        return {"ok": True, "muc": fp.ds_token()}
+
+    @app.post(P + "/token")
+    async def fp_them_token(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            t = fp.them_token(d.get("nhan") or "", d.get("token") or "", d.get("loai") or "nguoi_dung")
+        except ValueError as e:
+            return _loi(e)
+        try:
+            t = await fpg.kiem_token(t["id"])
+        except Exception as ex:
+            print(f"[doi-social/fanpage] kiểm token mới lỗi: {type(ex).__name__}", file=sys.stderr)
+        return {"ok": True, "token": t}
+
+    @app.post(P + "/token/{tid}/kiem")
+    async def fp_kiem_token(tid: str, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            return {"ok": True, "token": await fpg.kiem_token(tid)}
+        except ValueError as e:
+            return _loi(e, 404)
+
+    @app.delete(P + "/token/{tid}")
+    def fp_xoa_token(tid: str, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            return {"ok": True} if fp.xoa_token(tid) else _loi("không có token này", 404)
+        except ValueError as e:
+            return _loi(e)
+
+    # ---- Trang
+    @app.post(P + "/trang/dong-bo")
+    async def fp_dong_bo(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, **await fpg.dong_bo_trang()}
+
+    @app.get(P + "/trang")
+    def fp_ds_trang(request: Request, nhom: str = Query(""), q: str = Query(""), sap_xep: str = Query("ten")):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, **fp.ds_trang(nhom, q, sap_xep)}
+
+    @app.patch(P + "/trang/{trang_id}")
+    async def fp_sua_trang(trang_id: str, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            kw = {}
+            if "nhom_id" in d:
+                kw["nhom_id"] = d.get("nhom_id")
+            return {"ok": True, "trang": fp.sua_trang(trang_id, cau_hinh=d.get("cau_hinh"), bat=d.get("bat"), **kw)}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.post(P + "/trang/hanh-dong")
+    async def fp_hd_trang(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            return {"ok": True, **await fpg.hanh_dong_trang(d.get("ids") or [], str(d.get("hanh_dong") or ""), d)}
+        except ValueError as e:
+            return _loi(e)
+
+    # ---- nhóm
+    @app.get(P + "/nhom")
+    def fp_ds_nhom(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, "muc": fp.ds_nhom()}
+
+    @app.post(P + "/nhom")
+    async def fp_tao_nhom(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            return {"ok": True, "nhom": fp.tao_nhom(d.get("ten") or "", d.get("mo_ta") or "", d.get("cau_hinh"))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.patch(P + "/nhom/{nid}")
+    async def fp_sua_nhom(nid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            return {"ok": True, "nhom": fp.sua_nhom(nid, d.get("ten"), d.get("mo_ta"), d.get("cau_hinh"))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.delete(P + "/nhom/{nid}")
+    def fp_xoa_nhom(nid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True} if fp.xoa_nhom(nid) else _loi("không có nhóm này", 404)
+
+    # ---- kho
+    @app.get(P + "/kho")
+    def fp_ds_kho(request: Request, loai: str = Query("")):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, "muc": fp.ds_kho(loai)}
+
+    @app.post(P + "/kho")
+    async def fp_tao_kho(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            return {"ok": True, "kho": fp.tao_kho(d.get("ten") or "", d.get("loai") or "", d.get("che_do") or "ngau_nhien",
+                                                  d.get("muc") or [], d.get("gan"), d.get("mau_link") or "")}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.get(P + "/kho/{kid}")
+    def fp_lay_kho(kid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        k = fp.lay_kho(kid)
+        return {"ok": True, "kho": k} if k else _loi("không có kho này", 404)
+
+    @app.patch(P + "/kho/{kid}")
+    async def fp_sua_kho(kid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            return {"ok": True, "kho": fp.sua_kho(kid, d.get("ten"), d.get("che_do"), d.get("muc"), d.get("gan"),
+                                                  d.get("mau_link"))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.delete(P + "/kho/{kid}")
+    def fp_xoa_kho(kid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True} if fp.xoa_kho(kid) else _loi("không có kho này", 404)
+
+    @app.post(P + "/kho/{kid}/nhap")
+    async def fp_nhap_kho(kid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            return {"ok": True, **fp.nhap_kho(kid, str(d.get("chu") or ""))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.post(P + "/thu-spin")
+    async def fp_thu_spin(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+        except ValueError as e:
+            return _loi(e)
+        mau = str(d.get("mau") or "")[:fp.CHU_TOI_DA]
+        ten_tep = str(d.get("ten_tep") or "")
+        bien = {"ten_trang": d.get("ten_trang") or None,
+                "ten_tep": Path(fp.ten_goc(ten_tep)).stem if ten_tep else None}
+        return {"ok": True, "mau_thu": [fp.spin(mau, None, bien) for _ in range(5)]}
+
+    @app.post(P + "/thu-link")
+    async def fp_thu_link(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            return {"ok": True, "link": fp.dung_link(str(d.get("mau_link") or ""), str(d.get("ten_tep") or ""))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.post(P + "/lich/xem-truoc")
+    async def fp_xem_lich(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            gio = fp.xem_truoc_lich(d.get("cau_hinh_lich"), str(d.get("trang_id") or ""), _so_nguyen(d.get("so"), 10))
+            return {"ok": True, "gio": gio}
+        except ValueError as e:
+            return _loi(e)
+
+    # ---- media
+    @app.post(P + "/media")
+    async def fp_tai_media(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        if not (request.headers.get("content-type") or "").startswith("multipart/form-data"):
+            return _loi("gửi dạng multipart/form-data, mỗi tệp ở trường 'tep'")
+        ra, tam = [], []
+        try:
+            form = await request.form(max_files=50, max_fields=20)
+            tep = [f for f in (form.getlist("tep") + form.getlist("tep[]")) if isinstance(f, UploadFile) and f.filename]
+            if not tep:
+                return _loi("chưa có tệp nào")
+            for f in tep:
+                fp.kiem_duoi_media(f.filename)
+            for f in tep:
+                loai = fp.kiem_duoi_media(f.filename)
+                p = await _luu_tai_len(f, fp.ANH_TOI_DA if loai == "anh" else fp.VIDEO_TOI_DA)
+                tam.append(p)
+                ra.append(fp.luu_media(f.filename, p))
+        except ValueError as e:
+            return _loi(e)
+        finally:
+            for p in tam:
+                Path(p).unlink(missing_ok=True)
+        return {"ok": True, "muc": ra}
+
+    @app.get(P + "/media")
+    def fp_ds_media(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, "muc": fp.ds_media()}
+
+    @app.get(P + "/media/{tep:path}")
+    def fp_xem_media(tep: str, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        p = fp.duong_media(tep)
+        return FileResponse(str(p)) if p else _loi("không có tệp", 404)
+
+    # ---- bài
+    def _loc_bai(request: Request) -> dict:
+        qp = request.query_params
+        return {"trang_thai": qp.get("trang_thai", ""), "trang": qp.get("trang", ""), "nhom": qp.get("nhom", ""),
+                "loai": qp.get("loai", ""), "tu": _so(qp.get("tu"), 0) or None, "den": _so(qp.get("den"), 0) or None,
+                "q": qp.get("q", "")}
+
+    @app.get(P + "/bai")
+    def fp_ds_bai(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        qp = request.query_params
+        try:
+            return {"ok": True, **fp.ds_bai(**_loc_bai(request), sap_xep=qp.get("sap_xep", "moi"),
+                                            trang_so=qp.get("trang_so", 1), moi_trang=qp.get("moi_trang", 50))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.get(P + "/bai/xuat.csv")
+    def fp_xuat_bai(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            chu = fp.bai_csv(**_loc_bai(request))
+        except ValueError as e:
+            return _loi(e)
+        return Response(chu, media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": "attachment; filename=fanpage-bai.csv"})
+
+    @app.post(P + "/bai/tao")
+    async def fp_tao_bai(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            hen = d.get("hen", "tu_dong")
+            if isinstance(hen, str) and re.fullmatch(r"\d{9,11}(\.\d+)?", hen):
+                hen = float(hen)
+            kq = fp.tao_bai(trang_ids=d.get("trang_ids"), nhom_id=d.get("nhom_id"), loai=str(d.get("loai") or "chu"),
+                            noi_dung=d.get("noi_dung"), kho_id=d.get("kho_id"), media=d.get("media"),
+                            chia=str(d.get("chia") or ""), binh_luan=d.get("binh_luan"),
+                            kho_binh_luan_id=d.get("kho_binh_luan_id"), story=d.get("story"), ig=d.get("ig"), hen=hen,
+                            chay_thu=bool(d.get("chay_thu")), nguon=str(d.get("nguon") or "tay"),
+                            link=str(d.get("link") or ""), so_bai=_so_nguyen(d.get("so_bai"), 1) or 1)
+        except ValueError as e:
+            return _loi(e)
+        return {"ok": True, **kq}
+
+    @app.patch(P + "/bai/{bid}")
+    async def fp_sua_bai(bid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            kw = {"hen_luc": d.get("hen_luc")} if "hen_luc" in d else {}
+            return {"ok": True, "bai": fp.sua_bai(bid, d.get("noi_dung"), binh_luan=d.get("binh_luan"),
+                                                  link=d.get("link"), **kw)}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.post(P + "/bai/hanh-dong")
+    async def fp_hd_bai(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            kq = fp.hanh_dong_bai(d.get("ids") or [], str(d.get("hanh_dong") or ""))
+        except ValueError as e:
+            return _loi(e)
+        if d.get("hanh_dong") == "dang_ngay" and kq["so"] and not fpg._DANG["chay"]:
+            _chay_nen(lambda: fpg.nhip(_DEPS), "đăng ngay Fanpage")
+        return {"ok": True, **kq}
+
+    @app.post(P + "/bai/{bid}/kiem-tra")
+    async def fp_kiem_bai(bid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            kq = await fpg.kiem_tra_bai(bid)
+        except ValueError as e:
+            return _loi(e, 404)
+        ra = {"ok": kq["ok"], "dat": kq["ok"], "buoc": kq["buoc"]}
+        if not kq["ok"]:
+            ra["error"] = "có bước kiểm tra chưa đạt: " + ", ".join(x["ten"] for x in kq["buoc"] if not x["ok"])
+        return ra
+
+    # ---- bình luận
+    @app.get(P + "/binh-luan")
+    def fp_ds_bl(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        qp = request.query_params
+        return {"ok": True, **fp.ds_binh_luan(qp.get("trang", ""), qp.get("trang_thai", ""),
+                                              qp.get("chi_khach", "") in ("1", "true"), qp.get("q", ""),
+                                              _so(qp.get("tu"), 0) or None, qp.get("trang_so", 1),
+                                              qp.get("moi_trang", 50))}
+
+    @app.post(P + "/binh-luan/quet")
+    async def fp_quet_bl(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+        except ValueError as e:
+            return _loi(e)
+        ids = [str(d["trang"])] if d.get("trang") else fp.ids_trang()
+        so, loi = 0, []
+        for tid in ids:
+            try:
+                so += await fpg.quet_binh_luan(tid)
+            except ValueError as e:
+                loi.append({"id": tid, "loi": str(e)})
+        if d.get("trang") and loi:
+            return _loi(loi[0]["loi"])
+        return {"ok": True, "so_moi": so, "loi": loi}
+
+    @app.post(P + "/binh-luan/hanh-dong")
+    async def fp_hd_bl(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+        except ValueError as e:
+            return _loi(e)
+        hd = str(d.get("hanh_dong") or "")
+        ids = [str(x) for x in (d.get("ids") or [])][:200]
+        if hd not in ("tra_loi", "gui", "an", "hien", "bo_qua", "ai_soan"):
+            return _loi(f"hành động lạ: {hd}")
+        if not ids:
+            return _loi("chưa chọn bình luận nào")
+        if hd == "ai_soan" and len(ids) > 20:
+            return _loi("AI soạn tối đa 20 bình luận mỗi lần")
+        so, loi, muc = 0, [], []
+        for cid in ids:
+            try:
+                if hd == "tra_loi":
+                    bl = fp.lay_binh_luan(cid) or {}
+                    t = fp.hang_trang(bl.get("trang_id") or "") or {}
+                    await fpg.tra_loi_binh_luan(cid, fp.spin(str(d.get("chu") or ""), None, {"ten_trang": t.get("ten")}))
+                elif hd == "gui":
+                    await fpg.gui_binh_luan(cid)
+                elif hd in ("an", "hien"):
+                    await fpg.an_binh_luan(cid, hd == "an")
+                elif hd == "bo_qua":
+                    if not fp.lay_binh_luan(cid):
+                        raise ValueError("không có bình luận này")
+                    fp.dat_binh_luan(cid, trang_thai="bo_qua")
+                else:
+                    await fpg.soan_ai(cid)
+                so += 1
+                muc.append(fp.lay_binh_luan(cid))
+            except ValueError as e:
+                loi.append({"id": cid, "loi": str(e)})
+        if not so and loi:
+            return JSONResponse({"ok": False, "error": loi[0]["loi"], "loi": loi}, status_code=400)
+        return {"ok": True, "so": so, "loi": loi, "muc": muc}
+
+    # ---- quy tắc
+    @app.get(P + "/quy-tac")
+    def fp_ds_qt(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, "muc": fp.ds_quy_tac()}
+
+    @app.post(P + "/quy-tac")
+    async def fp_tao_qt(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            return {"ok": True, "quy_tac": fp.tao_quy_tac(await _than(request))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.patch(P + "/quy-tac/{qid}")
+    async def fp_sua_qt(qid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            return {"ok": True, "quy_tac": fp.sua_quy_tac(qid, await _than(request))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.delete(P + "/quy-tac/{qid}")
+    def fp_xoa_qt(qid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True} if fp.xoa_quy_tac(qid) else _loi("không có quy tắc này", 404)
+
+    @app.post(P + "/tu-dong")
+    async def fp_tu_dong(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            cd = fp.dat_cai_dat({"dung_tu_dong": bool(d.get("dung"))})
+        except ValueError as e:
+            return _loi(e)
+        fp.ghi_nk("tu_dong", "", None, "thong_tin", "bật Dừng mọi tự động" if cd["dung_tu_dong"] else "chạy lại tự động")
+        _canh_bao_moi()
+        return {"ok": True, "dung_tu_dong": cd["dung_tu_dong"]}
+
+    # ---- báo cáo
+    @app.get(P + "/bao-cao")
+    def fp_bao_cao(request: Request, trang: str = Query(""), ngay: int = Query(7)):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, **fp.bao_cao(trang, ngay)}
+
+    @app.post(P + "/bao-cao/cap-nhat")
+    async def fp_cap_nhat_bc(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+        except ValueError as e:
+            return _loi(e)
+        return {"ok": True, **await fpg.cap_nhat_so_lieu(str(d.get("trang") or ""))}
+
+    # ---- cảnh báo
+    @app.get(P + "/canh-bao")
+    def fp_canh_bao(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        muc = _canh_bao_moi()
+        return {"ok": True, "muc": muc, "dem": fp.dem_canh_bao(muc), "kiem_luc": fp.kiem_luc()}
+
+    @app.post(P + "/canh-bao/kiem")
+    def fp_kiem_canh_bao(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        muc = _canh_bao_moi()
+        return {"ok": True, "muc": muc, "dem": fp.dem_canh_bao(muc), "kiem_luc": fp.kiem_luc()}
+
+    @app.get(P + "/canh-bao/lich-su")
+    def fp_ls_canh_bao(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, "muc": fp.lich_su_canh_bao()}
+
+    @app.get(P + "/canh-bao/xuat")
+    def fp_xuat_chan_doan(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return Response(fp.xuat_chan_doan(fpg.so_ket_noi(), fpg.co_yt_dlp()), media_type="text/plain; charset=utf-8",
+                        headers={"Content-Disposition": "attachment; filename=fanpage-chan-doan.txt"})
+
+    # ---- kênh nguồn
+    @app.get(P + "/kenh")
+    def fp_ds_kenh(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, "muc": [_kenh_ra(k) for k in fp.ds_kenh()], "co_yt_dlp": fpg.co_yt_dlp()}
+
+    @app.post(P + "/kenh")
+    async def fp_tao_kenh(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            return {"ok": True, "kenh": _kenh_ra(fp.tao_kenh(await _than(request)))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.patch(P + "/kenh/{kid}")
+    async def fp_sua_kenh(kid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            return {"ok": True, "kenh": _kenh_ra(fp.sua_kenh(kid, await _than(request)))}
+        except ValueError as e:
+            return _loi(e)
+
+    @app.delete(P + "/kenh/{kid}")
+    def fp_xoa_kenh(kid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True} if fp.xoa_kenh(kid) else _loi("không có kênh này", 404)
+
+    @app.post(P + "/kenh/{kid}/quet")
+    async def fp_quet_kenh(kid: int, request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            kq = await fpg.quet_kenh(kid)
+        except ValueError as e:
+            return _loi(e, 404)
+        return {"ok": True, **kq, "kenh": _kenh_ra(fp.lay_kenh(kid))}
+
+    # ---- Instagram, cài đặt
+    @app.get(P + "/instagram")
+    def fp_instagram(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, "muc": fp.ds_instagram()}
+
+    @app.get(P + "/cai-dat")
+    def fp_cai_dat(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        return {"ok": True, "cai_dat": fp.cai_dat(), "goc_cong_khai": fp.goc_cong_khai(), "co_yt_dlp": fpg.co_yt_dlp(),
+                "so_ket_noi": fpg.so_ket_noi()}
+
+    @app.post(P + "/cai-dat")
+    async def fp_dat_cai_dat(request: Request):
+        c = _cua(request)
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            cd = fp.dat_cai_dat(d.get("cai_dat") if isinstance(d.get("cai_dat"), dict) else d)
+            if "goc_cong_khai" in d:
+                fp.dat_goc_cong_khai(str(d.get("goc_cong_khai") or ""))
+                _GOC_NHO["g"] = fp.goc_cong_khai()
+        except ValueError as e:
+            return _loi(e)
+        return {"ok": True, "cai_dat": cd, "goc_cong_khai": fp.goc_cong_khai()}
+
+    # ---- URL công khai cho Instagram (KHÔNG cookie: main._auth_guard miễn đúng mẫu này với GET)
+    @app.get(TIEN_TO_CONG_KHAI + "{ma}")
+    def fp_cong_khai(ma: str, request: Request):
+        ip = _ip(request)
+        if _bi_chan(ip):
+            return JSONResponse({"error": "quá nhiều yêu cầu sai, thử lại sau"}, status_code=429)
+        if ly_do_chan():
+            return JSONResponse({"error": "không có"}, status_code=404)
+        p = fp.doc_ma_cong_khai(ma)
+        if not p:
+            _ghi_sai(ip)
+            return JSONResponse({"error": "không có hoặc đã hết hạn"}, status_code=404)
+        return FileResponse(str(p), headers={"Cache-Control": "public, max-age=3600"})
