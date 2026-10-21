@@ -959,7 +959,7 @@ async def soan_cau_tra_loi(conv: dict, tin_khach: dict) -> dict:
     return {"ok": True, "text": dap}
 
 
-async def thu_bot(bot_id: str, cau_hoi: str, chat_type: str = "private") -> dict:
+async def thu_bot(bot_id: str, cau_hoi: str, chat_type: str = "private", *, max_chars: int = 2000) -> dict:
     """THỬ BOT: chạy đúng đường trả lời thật của bot với một câu hỏi gõ tay, để chủ xem bot sẽ
     nói gì TRƯỚC khi phục vụ khách. Chỉ ĐỌC, không có tác dụng phụ:
       - ép mức quyền Chỉ đọc cho lượt này (bot đang để Toàn quyền cũng không gọi được tool),
@@ -972,8 +972,7 @@ async def thu_bot(bot_id: str, cau_hoi: str, chat_type: str = "private") -> dict
     text = str(cau_hoi or "").strip()
     if not text:
         return {"ok": False, "ly_do": "khong_co_cau_hoi"}
-    if len(text) > 2000:
-        text = text[:2000]
+    text = text[:max(1, min(int(max_chars), 16000))]
     chat_type = "group" if str(chat_type or "") == "group" else "private"
     chat_id = f"thu-bot:{cfg['id']}"
     cfg = chatbot_store.hieu_luc(dict(cfg), chat_id, chat_type)[0]

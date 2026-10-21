@@ -22,6 +22,7 @@ import channel_accounts
 import channels
 import chatbot_store
 import conversations
+import conversation_ops
 import routes.channels as channels_routes
 
 router = APIRouter()
@@ -125,10 +126,11 @@ def register(app, deps: ConversationsDeps):
 
     @router.get("/conversations")
     async def conversations_list(channel: str = "", bot_id: str = "", account_id: str = "",
-                                 q: str = "", mode: str = "", limit: int = 50, offset: int = 0):
+                                 q: str = "", mode: str = "", limit: int = 50, offset: int = 0,
+                                 tag: str = "", unread: bool = False):
         """Danh sách hội thoại mới nhất trước, kèm vài con số đầu trang (cùng bộ lọc)."""
         items = conversations.danh_sach(channel=channel, bot_id=bot_id, account_id=account_id,
-                                        q=q, mode=mode, limit=limit, offset=offset)
+                                        q=q, mode=mode, limit=limit, offset=offset, tag=tag, unread=unread)
         return {"ok": True, "items": items,
                 "stats": conversations.thong_ke(bot_id=bot_id, channel=channel, account_id=account_id),
                 "channels": channels.cho_giao_dien()}
@@ -218,6 +220,7 @@ def register(app, deps: ConversationsDeps):
         if c.get("bot_id") and str(c.get("mode") or "ai") == "ai":
             conversations.dat_che_do(conv_id, "human")
             tiep_quan = True
+        conversation_ops.record_safely('reply', conv_id, {'message_id': r.get('message_id')})
         return {"ok": True, "message_id": r.get("message_id"), "tiep_quan": tiep_quan,
                 "conversation": conversations.chi_tiet(conv_id)}
 
@@ -230,6 +233,8 @@ def register(app, deps: ConversationsDeps):
             return _404()
         tin = _tin_khach_cuoi(conv_id)
         r = await chatbot_runtime.soan_cau_tra_loi(c, tin)
+        if r.get('ok'):
+            conversation_ops.record_safely('draft', conv_id)
         return r if r.get("ok") else _loi_soan(r)
 
     @router.post("/conversations/{conv_id}/tra-loi-giup")
@@ -328,6 +333,7 @@ def register(app, deps: ConversationsDeps):
         if not ok:
             return JSONResponse({"ok": False, "error": err},
                                 status_code=404 if "không có" in err else 400)
+        conversation_ops.record_safely('mode', conv_id, {'mode': mode})
         return {"ok": True, "conversation": conversations.chi_tiet(conv_id)}
 
     app.include_router(router)

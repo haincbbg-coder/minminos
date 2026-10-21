@@ -59,7 +59,7 @@
   var TIN_TRANG = 40;       // số tin mỗi lần tải (khung tin)
   var _soDong = TRANG, _hetDS = false, _locCu = "", _dangTaiThem = false;
   var _hetCu = false, _dangTaiCu = false, _giuNhom = 100;
-  var TABS = ["inbox", "kenh", "chatbot"];
+  var TABS = ["inbox", "kenh", "chatbot", "ops"];
   var _host = null, _timer = null, _tab = "inbox";
   var _items = [], _stats = {}, _dauVet = "";
   var _kenhLoc = "", _botLoc = "", _tkLoc = "", _q = "";
@@ -71,6 +71,7 @@
   var _tkMoiBrain = false;  // tab Tài khoản bot: đang xem của MỌI brain thay vì brain đang mở
   var _cho = null;          // bộ lọc / tab chờ áp khi trang mở từ nơi khác (nút trên thẻ bot)
   var _dangGui = false;
+  var _tagLoc = "", _unreadLoc = false;
 
   var ic = function (n) { return window.ic ? window.ic(n) : ""; };
   var LOC = function () { return (window.JavisI18n && JavisI18n.locale()) || "vi-VN"; };
@@ -135,11 +136,11 @@
   function veTabs() {
     var b = _host && _host.querySelector(".ht-tabs");
     if (!b) return;
-    var NHAN = { inbox: ["ht.tab_inbox", "messages-square"], kenh: ["ht.tab_kenh", "plug"], chatbot: ["ht.tab_chatbot", "headset"] };
+    var NHAN = { inbox: ["ht.tab_inbox", "messages-square"], kenh: ["ht.tab_kenh", "plug"], chatbot: ["ht.tab_chatbot", "headset"], ops: ["", "chart-column"] };
     b.innerHTML = TABS.map(function (t) {
       var chuaDoc = (t === "inbox" && _stats.chua_doc) ? '<span class="ht-badge">' + _stats.chua_doc + '</span>' : "";
       return '<button type="button" class="ht-tab' + (t === _tab ? " on" : "") + '" data-t="' + t + '">' +
-        ic(NHAN[t][1]) + ' <span>' + esc(window.t(NHAN[t][0])) + '</span>' + chuaDoc + '</button>';
+        ic(NHAN[t][1]) + ' <span>' + esc(t === 'ops' ? 'Vận hành' : window.t(NHAN[t][0])) + '</span>' + chuaDoc + '</button>';
     }).join("");
     b.querySelectorAll(".ht-tab").forEach(function (n) {
       n.onclick = function () { chonTab(n.dataset.t); };
@@ -163,6 +164,7 @@
     body.innerHTML = "";
     if (_tab === "kenh") return renderKenh(body);
     if (_tab === "chatbot") return renderChatbot(body);
+    if (_tab === "ops" && window.JavisConversationOps) return window.JavisConversationOps.render(body);
     return renderInbox(body);
   }
 
@@ -210,6 +212,7 @@
   function renderInbox(body) {
     if (_cho) {
       _botLoc = _cho.bot_id || ""; _kenhLoc = _cho.channel || ""; _tkLoc = _cho.account_key || "";
+      if (_cho.conversation_id) { _chon = _cho.conversation_id; _msgs = []; _dauVetTin = ''; _hetCu = false; }
       _cho = null;
     }
     body.innerHTML =
@@ -219,6 +222,8 @@
           '<div class="ht-loc"></div>' +
           '<select class="ht-bot"><option value="">' + esc(window.t("ht.moi_bot")) + '</option></select>' +
           '<input class="ht-search" placeholder="' + esc(window.t("ht.tim_ph")) + '">' +
+          '<input class="ht-tag-filter" aria-label="Lọc theo thẻ" placeholder="Thẻ khách hàng" value="' + esc(_tagLoc) + '">' +
+          '<label><input type="checkbox" class="ht-unread-filter"' + (_unreadLoc ? ' checked' : '') + '> Chưa đọc</label>' +
         '</div>' +
         '<div class="ht-body">' +
           '<div class="ht-list"><div class="ht-empty">' + esc(window.t("common.loading")) + '</div></div>' +
@@ -228,8 +233,10 @@
       '</div>';
     var s = body.querySelector(".ht-search");
     s.oninput = function () { _q = s.value.trim(); tai(); };
+    body.querySelector('.ht-tag-filter').oninput = function () { _tagLoc = this.value.trim(); tai(); };
+    body.querySelector('.ht-unread-filter').onchange = function () { _unreadLoc = this.checked; tai(); };
     body.querySelector(".ht-bot").onchange = function (e) { _botLoc = e.target.value; tai(); };
-    taiTK(false).catch(function () {}).then(function () { tai(); if (_chon) taiTin(false); });
+    taiTK(false).catch(function () {}).then(function () { tai(); if (_chon) mo(_chon); });
   }
 
   // Ô chọn bot: dựng từ danh sách tài khoản (tài khoản nào có bot trực). Chỉ hiện khi có từ
@@ -253,11 +260,12 @@
     var box = _host && _host.querySelector(".ht-list");
     if (!box) return;
     // Đổi bộ lọc / ô tìm thì quay về trang đầu, không giữ số dòng đã cuộn của bộ lọc cũ.
-    var loc = [_kenhLoc, _botLoc, _tkLoc, _q].join("|");
+    var loc = [_kenhLoc, _botLoc, _tkLoc, _q, _tagLoc, _unreadLoc].join("|");
     if (loc !== _locCu) { _locCu = loc; _soDong = TRANG; }
     var url = "/conversations?limit=" + _soDong +
       "&channel=" + encodeURIComponent(_kenhLoc) + "&bot_id=" + encodeURIComponent(_botLoc) +
-      "&account_id=" + encodeURIComponent(_tkLoc) + "&q=" + encodeURIComponent(_q);
+      "&account_id=" + encodeURIComponent(_tkLoc) + "&q=" + encodeURIComponent(_q) +
+      '&tag=' + encodeURIComponent(_tagLoc) + '&unread=' + (_unreadLoc ? 'true' : 'false');
     try {
       var d = await api(url);
       _items = d.items || [];
@@ -527,6 +535,7 @@
       };
       box.querySelector(".ht-send").onclick = function () { gui(c); };
     }
+    if (window.JavisConversationOps) window.JavisConversationOps.attach(box, c);
   }
 
   // Ô trả lời khách. Nói rõ hai điều trước khi bấm gửi: gửi từ đây là TIẾP QUẢN (bot đang
@@ -549,6 +558,13 @@
     var ta = box && box.querySelector(".ht-compose textarea");
     var nut = box && box.querySelector(".ht-send");
     if (!ta || _dangGui) return;
+    if (window.JavisConversationOps && /^\/[a-zA-Z0-9_-]+$/.test(ta.value.trim())) {
+      _dangGui = true;
+      try { await window.JavisConversationOps.slash(ta, c.customer_name || c.title); }
+      catch (e) { alert(e.message); }
+      _dangGui = false;
+      return; // chèn nháp trước; người trực đọc rồi bấm Gửi lần nữa.
+    }
     var txt = ta.value.trim();
     if (!txt) return;
     _dangGui = true;
