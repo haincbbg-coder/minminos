@@ -60,6 +60,14 @@ check("mọi script chạy được " + napLoi, !napLoi);
 const DS = ctx.DS;
 const ROUTE = ["tong-quan", "automation", "chay-hang-loat", "nhat-ky", "kho", "nhom-fb", "duyet", "tin-nhan", "tro-ly", "kien-thuc", "tai-khoan", "gioi-han", "may"];
 check("đủ 13 màn theo mục 5", ROUTE.every((r) => DS.views[r] && typeof DS.views[r].render === "function"));
+// 26.10.202: phần Fanpage dùng chung nằm ở DS.fp, KHÔNG có biến toàn cục FP. Màn ngoài fp-* muốn dùng
+// phải tự lấy "var FP = DS.fp" (lỗi thật: Viết bài AI rơi về chế độ nick vì gọi FP không tồn tại).
+{
+  const ngoaiFp = fs.readdirSync(path.join(WEB, "views")).filter((f) => f.endsWith(".js") && !f.startsWith("fp-"));
+  const sai = ngoaiFp.filter((f) => { const s = fs.readFileSync(path.join(WEB, "views", f), "utf8"); return /\bFP\./.test(s) && !/var FP = DS\.fp/.test(s); });
+  check("màn ngoài fp-* dùng FP thì lấy từ DS.fp: " + sai.join(","), !sai.length);
+  check("không có biến toàn cục FP (đúng là DS.fp)", typeof ctx.FP === "undefined" && !!DS.fp);
+}
 check("thanh bên trỏ đúng route", ROUTE.filter((r) => r !== "chay-hang-loat").every((r) => html.includes(`href="#/${r}"`)));
 
 ctx.location.hash = "#/kien-thuc/12?tab=hoi-dap";

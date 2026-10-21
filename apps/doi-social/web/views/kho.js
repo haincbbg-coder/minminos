@@ -157,7 +157,8 @@
   function tabViet(el, ctx) {
     var body = el.querySelector("#kho-body");
     body.innerHTML = DS.skel(6);
-    var layTrangFp = (window.FP && FP.layTrang) ? FP.layTrang().catch(function () { return {}; }) : Promise.resolve({});
+    var FP = DS.fp;              // phần dùng chung của Fanpage (views/fp-chung.js)
+    var layTrangFp = (FP && FP.layTrang) ? FP.layTrang().catch(function () { return {}; }) : Promise.resolve({});
     return Promise.all([DS.layKienThuc(true), DS.layNick(), layTrangFp]).then(function (a) {
       if (!ctx.alive) return;
       var kt = DS.list(a[0], "kien_thuc").filter(function (x) { return (x.loai || "san_pham") === "san_pham"; }), nick = DS.list(a[1], "nick");
@@ -300,7 +301,7 @@
         }[S.lich];
         if (S.lich === "gio" && !q("#vb-bd").value) {
           var t = new Date(Date.now() + 30 * 60000); t.setMinutes(Math.ceil(t.getMinutes() / 15) * 15, 0, 0);
-          q("#vb-bd").value = FP ? FP.dtLocal(t.getTime() / 1000) : "";
+          q("#vb-bd").value = FP.dtLocal(t.getTime() / 1000);
         }
       }
       function req(xemTruoc) {
