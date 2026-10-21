@@ -229,6 +229,14 @@ def _bao_ket_qua(nc, kq: KetQuaDang, hanh_dong: str, nhom: str = "", link_noi: s
 
 
 # ---------------------------------------------------------------------------- mẫu
+def _dang_len(nc) -> str:
+    """Nơi đăng chọn từ danh sách đã quét (Trang của nick); rỗng = tường cá nhân."""
+    d = str(nc.ts.get("dang_len") or "").strip()
+    if d:
+        nc.nhat_ky(f"Đăng lên: {d}")
+    return chuan_link(d) if d else ""
+
+
 def fb_dang_tuong_kho(nc) -> str:
     so = int(nc.ts.get("so_bai") or 1)
     xong = 0
@@ -241,7 +249,7 @@ def fb_dang_tuong_kho(nc) -> str:
             break
         noi_dung = str(bai.get("noi_dung") or "")
         try:
-            kq = dang_noi_dung(nc, "", noi_dung, bai.get("tep_cuc_bo"), "dang_tuong")
+            kq = dang_noi_dung(nc, _dang_len(nc), noi_dung, bai.get("tep_cuc_bo"), "dang_tuong")
         except LoiKyNang as e:
             da_bam = bool(getattr(e, "da_bam_dang", False))
             nc.xong_kho(bai["id"], False, da_bam, loi=str(e))
@@ -376,7 +384,7 @@ def fb_dang_tuong_ai(nc) -> str:
             nc.su_kien("dang_tuong", "bo_qua", "Không còn bài AI đã duyệt cho tường", ma="het_bai")
             break
         try:
-            kq = dang_noi_dung(nc, "", str(bn.get("noi_dung") or ""), bn.get("tep_cuc_bo") or [], "dang_tuong")
+            kq = dang_noi_dung(nc, _dang_len(nc), str(bn.get("noi_dung") or ""), bn.get("tep_cuc_bo") or [], "dang_tuong")
         except LoiKyNang as e:
             nc.xong_ban_nhap(bn["id"], False, loi=str(e))
             raise

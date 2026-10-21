@@ -117,13 +117,18 @@ def tao_bang(c) -> None:
     CREATE TABLE IF NOT EXISTS tro_ly(id INTEGER PRIMARY KEY AUTOINCREMENT, phien TEXT, vai TEXT,
         noi_dung TEXT, ke_hoach_id INTEGER, luc REAL);
     CREATE INDEX IF NOT EXISTS tro_ly_phien ON tro_ly(phien, id);
+    CREATE TABLE IF NOT EXISTS dich_den(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, nick_id TEXT, nen_tang TEXT, loai TEXT, ten TEXT, link TEXT,
+        ma TEXT DEFAULT '', anh TEXT DEFAULT '', cap_nhat REAL, UNIQUE(nick_id, nen_tang, link));
+    CREATE INDEX IF NOT EXISTS dich_den_nick ON dich_den(nick_id);
     CREATE TABLE IF NOT EXISTS da_lam(nick_id TEXT, khoa TEXT, luc REAL, PRIMARY KEY(nick_id, khoa));
     CREATE INDEX IF NOT EXISTS da_lam_khoa ON da_lam(khoa);
     """)
     import sqlite3
     for bang, cot in (("ban_nhap", "muc_tieu TEXT DEFAULT '{}'"),
                       ("kien_thuc", "nguon_bo_nao TEXT DEFAULT '[]'"),
-                      ("kien_thuc", "tu_tra_bo_nao INTEGER DEFAULT 1")):
+                      ("kien_thuc", "tu_tra_bo_nao INTEGER DEFAULT 1"),
+                      ("viec", "lenh TEXT DEFAULT ''")):
         try:
             c.execute(f"ALTER TABLE {bang} ADD COLUMN {cot}")
         except sqlite3.OperationalError:
@@ -366,6 +371,10 @@ def ds_nick() -> list:
     may = {m["id"]: m for m in ds.ds_may()}
     ra = []
     with ds._db() as c:
+        dich = {}
+        for r in c.execute("SELECT * FROM dich_den ORDER BY nen_tang, loai, ten"):
+            dich.setdefault(r["nick_id"], []).append({k: r[k] for k in ("id", "nen_tang", "loai", "ten", "link", "anh",
+                                                                        "cap_nhat")})
         for n in ds.ds_nick():
             m = _meta(c, n["id"])
             tuoi = _tuoi_ngay(m["tao_tu"], now)
@@ -374,7 +383,8 @@ def ds_nick() -> list:
                        "co_proxy": bool(n.get("co_proxy")), "nhan": m["nhan"], "tao_tu": m["tao_tu"],
                        "ghi_chu": m["ghi_chu"], "tuoi_ngay": tuoi, "muc": _muc(m, g, now),
                        "canh_bao": m["canh_bao"], "lan_chay": m["lan_chay"],
-                       "online": bool((may.get(n["may_id"]) or {}).get("online"))})
+                       "online": bool((may.get(n["may_id"]) or {}).get("online")),
+                       "dich_den": dich.get(n["id"], [])})
     return ra
 
 
@@ -413,8 +423,8 @@ def may_lam_duoc(ky: str, ho_tro: set, r) -> bool:
         nt = (_j(r["tham_so"], {}) or {}).get("nen_tang") or ""
         return ("dang_ban_nhap" in ho_tro or f"dang_ban_nhap:{nt}" in ho_tro
                 or (nt == "facebook" and any(str(x).startswith("fb_") for x in ho_tro)))
-    if ky == "kham_trang":
-        return "kham_trang" in ho_tro
+    if ky in ("kham_trang", "quet_tai_khoan"):
+        return ky in ho_tro
     if ky == "fb_gui_tin":
         return "fb_gui_tin" in ho_tro or any(str(x).startswith("fb_") for x in ho_tro)
     return ky in ho_tro
@@ -605,6 +615,10 @@ def tao_dot(*, kich_ban, nick, tham_so, ten="", song_song=1, chay_an=False, nguo
             phan = _chia_deu(dong, len(nicks))
         for i, n in enumerate(nicks):
             tsn = dict(ts)
+            for f in m["tham_so"]:          # nơi đăng chọn riêng cho từng nick: {nick_id: link}
+                if f["kieu"] == "dich_den":
+                    gt = ts.get(f["key"])
+                    tsn[f["key"]] = str((gt.get(n["id"]) if isinstance(gt, dict) else gt) or "")
             if phan is not None:
                 if not phan[i]:
                     continue
@@ -619,10 +633,11 @@ def tao_dot(*, kich_ban, nick, tham_so, ten="", song_song=1, chay_an=False, nguo
 
 
 def _tien_trinh(c, dot_id: int) -> dict:
-    d = {"tong": 0, "xong": 0, "loi": 0, "dang": 0, "cho": 0, "bo": 0}
+    d = {"tong": 0, "xong": 0, "loi": 0, "dang": 0, "cho": 0, "bo": 0, "tam": 0}
     for r in c.execute("SELECT trang_thai, COUNT(*) n FROM viec WHERE dot_id=? GROUP BY trang_thai", (dot_id,)):
         d["tong"] += r["n"]
-        k = {"xong": "xong", "loi": "loi", "dang_chay": "dang", "cho_chay": "cho", "bo": "bo"}.get(r["trang_thai"])
+        k = {"xong": "xong", "loi": "loi", "dang_chay": "dang", "cho_chay": "cho", "bo": "bo",
+             "tam_dung": "tam"}.get(r["trang_thai"])
         if k:
             d[k] += r["n"]
     return d
@@ -642,7 +657,7 @@ def _cap_nhat_dot(c, dot_id: int, now: float) -> None:
     if not r or r["trang_thai"] in ("hoan_tat",):
         return
     tt = _tien_trinh(c, dot_id)
-    con = tt["cho"] + tt["dang"]
+    con = tt["cho"] + tt["dang"] + tt["tam"]
     if con == 0 and r["trang_thai"] in ("cho", "dang_chay"):
         c.execute("UPDATE dot_chay SET trang_thai='hoan_tat', xong_luc=? WHERE id=?", (now, dot_id))
         bao("Đợt chạy xong", f"{r['ten']}: thành công {tt['xong']}, lỗi {tt['loi']}, bỏ qua {tt['bo']}"
@@ -694,7 +709,9 @@ def huy_dot(dot_id) -> dict:
         if r["trang_thai"] in ("hoan_tat", "huy"):
             raise ValueError("đợt này đã kết thúc, không huỷ được nữa")
         c.execute("UPDATE dot_chay SET trang_thai='huy' WHERE id=?", (_int(dot_id),))
-        ids = [x[0] for x in c.execute("SELECT id FROM viec WHERE dot_id=? AND trang_thai='cho_chay'", (_int(dot_id),))]
+        ids = [x[0] for x in c.execute("SELECT id FROM viec WHERE dot_id=? AND trang_thai IN ('cho_chay','tam_dung')",
+                                       (_int(dot_id),))]
+        c.execute("UPDATE viec SET lenh='huy' WHERE dot_id=? AND trang_thai='dang_chay'", (_int(dot_id),))
         for vid in ids:
             c.execute("UPDATE viec SET trang_thai='bo', thong_diep='đợt chạy bị huỷ', xong_luc=? WHERE id=?", (now, vid))
             sau_viec(c, vid)
@@ -702,14 +719,76 @@ def huy_dot(dot_id) -> dict:
     return lay_dot(dot_id, kem_viec=False)
 
 
-def can_dung(vid) -> bool:
-    """Worker hỏi: việc này có phải dừng không (đợt bị huỷ, hoặc việc không còn đang chạy)."""
+def lenh_viec(vid) -> dict:
+    """Worker hỏi giữa các thao tác: {dung, tam_dung}. dung = huỷ (việc/đợt) hoặc việc không còn chạy."""
     with ds._db() as c:
-        r = c.execute("SELECT v.trang_thai, d.trang_thai AS dtt FROM viec v LEFT JOIN dot_chay d ON d.id=v.dot_id "
+        r = c.execute("SELECT v.trang_thai, v.lenh, d.trang_thai AS dtt FROM viec v LEFT JOIN dot_chay d ON d.id=v.dot_id "
                       "WHERE v.id=?", (_int(vid),)).fetchone()
     if not r:
-        return True
-    return r["trang_thai"] != "dang_chay" or r["dtt"] == "huy"
+        return {"dung": True, "tam_dung": False}
+    lenh = r["lenh"] or ""
+    dung = r["trang_thai"] != "dang_chay" or r["dtt"] == "huy" or lenh == "huy"
+    return {"dung": dung, "tam_dung": (not dung) and lenh == "tam_dung"}
+
+
+def can_dung(vid) -> bool:
+    return lenh_viec(vid)["dung"]
+
+
+DIEU_KHIEN = ("tam_dung", "tiep_tuc", "huy")
+
+
+def dieu_khien_viec(vid, hanh_dong: str) -> dict:
+    """Nút trên từng dòng tài khoản: tạm dừng / tiếp tục / huỷ MỘT việc (không đụng cả đợt).
+
+    - Việc chưa chạy: tạm dừng = giữ lại không giao cho máy; tiếp tục = trả về hàng chờ; huỷ = bỏ.
+    - Việc đang chạy: ghi lệnh, máy nhà đọc ở lần hỏi kế tiếp (vài giây) rồi đứng chờ / chạy tiếp / dừng.
+    Trả việc sau khi đổi. Raise ValueError câu tiếng Việt."""
+    if hanh_dong not in DIEU_KHIEN:
+        raise ValueError("hành động phải là tam_dung, tiep_tuc hoặc huy")
+    now = _now()
+    with ds._khoa, ds._db() as c:
+        r = c.execute("SELECT id, trang_thai, lenh, dot_id FROM viec WHERE id=?", (_int(vid),)).fetchone()
+        if not r:
+            raise ValueError(f"không có việc #{vid}")
+        tt, lenh = r["trang_thai"], r["lenh"] or ""
+        if tt in ("xong", "loi", "bo"):
+            raise ValueError("việc này đã kết thúc")
+        if hanh_dong == "tam_dung":
+            if tt in ("cho_chay", "cho_duyet"):
+                c.execute("UPDATE viec SET trang_thai='tam_dung', lenh='' WHERE id=?", (r["id"],))
+            elif tt == "dang_chay":
+                c.execute("UPDATE viec SET lenh='tam_dung' WHERE id=?", (r["id"],))
+        elif hanh_dong == "tiep_tuc":
+            if tt == "tam_dung":
+                c.execute("UPDATE viec SET trang_thai='cho_chay', lenh='' WHERE id=?", (r["id"],))
+            elif tt == "dang_chay" and lenh == "tam_dung":
+                c.execute("UPDATE viec SET lenh='' WHERE id=?", (r["id"],))
+        else:
+            if tt in ("cho_chay", "tam_dung", "cho_duyet"):
+                c.execute("UPDATE viec SET trang_thai='bo', lenh='', thong_diep='Bạn đã huỷ việc này', xong_luc=? "
+                          "WHERE id=?", (now, r["id"]))
+                sau_viec(c, r["id"])
+            else:
+                c.execute("UPDATE viec SET lenh='huy' WHERE id=?", (r["id"],))
+        if r["dot_id"]:
+            _cap_nhat_dot(c, r["dot_id"], now)
+    return ds.lay_viec(vid)
+
+
+def dieu_khien_dot(dot_id, hanh_dong: str) -> dict:
+    """Tạm dừng / tiếp tục cả đợt = áp cho mọi việc chưa kết thúc của đợt."""
+    if hanh_dong not in ("tam_dung", "tiep_tuc"):
+        raise ValueError("hành động phải là tam_dung hoặc tiep_tuc")
+    with ds._db() as c:
+        ids = [x[0] for x in c.execute("SELECT id FROM viec WHERE dot_id=? AND trang_thai IN "
+                                       "('cho_chay','tam_dung','dang_chay')", (_int(dot_id),))]
+    for vid in ids:
+        try:
+            dieu_khien_viec(vid, hanh_dong)
+        except ValueError:
+            pass
+    return lay_dot(dot_id, kem_viec=False)
 
 
 # ------------------------------------------------------------------ lịch hẹn
@@ -2291,6 +2370,79 @@ def boi_canh_tro_ly() -> dict:
     tq.pop("bieu_do", None)
     return {"mau": [{"id": m["id"], "ten": m["ten"], "nen_tang": m["nen_tang"], "mo_ta": m["mo_ta"],
                      "tham_so": [f["key"] for f in m["tham_so"]], "san_sang": ss.get(m["id"], False)} for m in kb.MAU],
-            "nick": [{"id": n["id"], "ten": n["ten"], "nhan": n["nhan"]} for n in ds_nick()],
+            "nick": [{"id": n["id"], "ten": n["ten"], "nhan": n["nhan"],
+                      "noi_dang": [{"nen_tang": d["nen_tang"], "loai": d["loai"], "ten": d["ten"], "link": d["link"]}
+                                   for d in (n.get("dich_den") or [])][:15]} for n in ds_nick()],
             "kien_thuc": [{"id": k["id"], "ten": k["ten"], "loai": k["loai"]} for k in ds_kien_thuc()],
             "tong_quan": tq | {"hom_nay_theo_nick": hom_nay_theo_nick()}}
+
+
+# ------------------------------------------------------------------ nơi đăng đã quét (Trang, tài khoản)
+NEN_TANG_QUET = ("facebook", "instagram", "tiktok", "threads")
+LOAI_DICH = ("ca_nhan", "trang", "tai_khoan")
+
+
+def tao_quet_tai_khoan(nick, nen_tang=None) -> list:
+    """Một việc `quet_tai_khoan` cho mỗi nick: máy nhà mở profile, đọc Trang Facebook nick quản lý và tài
+    khoản Instagram / TikTok / Threads đang đăng nhập. Chỉ đọc, không bấm gì."""
+    nt = [x for x in (nen_tang or NEN_TANG_QUET) if x in NEN_TANG_QUET] or list(NEN_TANG_QUET)
+    now = _now()
+    ra = []
+    with ds._khoa, ds._db() as c:
+        for n in _tim_nick_ds(c, nick):
+            if c.execute("SELECT 1 FROM viec WHERE nick_id=? AND ky_nang='quet_tai_khoan' AND trang_thai IN "
+                         "('cho_chay','dang_chay')", (n["id"],)).fetchone():
+                continue
+            vts = {"kich_ban": "quet_tai_khoan", "nen_tang": "", "chay_thu": True, "dot_id": None, "han_muc": {},
+                   "nghi_giay": [], "hanh_dong": [], "tham_so": {"nen_tang": nt}}
+            ra.append(c.execute("INSERT INTO viec(ky_nang, may_id, nick_id, nick_ten, tham_so, trang_thai, tao_luc, "
+                                "duyet_luc, nguon, chay_thu) VALUES('quet_tai_khoan',?,?,?,?,'cho_chay',?,?,'web',1)",
+                                (n["may_id"], n["id"], n["ten"], _dj(vts), now, now)).lastrowid)
+    return [ds.lay_viec(v) for v in ra]
+
+
+def ghi_dich_den(vid, may_id: str, nen_tang_da_quet, muc) -> dict:
+    """Worker gửi kết quả quét. Nền tảng đã quét được thay toàn bộ danh sách cũ của nick (Trang bị gỡ
+    quyền thì biến mất); nền tảng không quét được giữ nguyên. Gắn nhãn nền tảng cho nick theo kết quả."""
+    v = viec_cua_may(vid, may_id)
+    nick_id = v["nick_id"]
+    da_quet = [x for x in (nen_tang_da_quet or []) if x in NEN_TANG_QUET]
+    sach = []
+    for m in (muc or [])[:200]:
+        if not isinstance(m, dict):
+            continue
+        nt, link = str(m.get("nen_tang") or ""), str(m.get("link") or "").strip()
+        if nt not in NEN_TANG_QUET or not link.startswith("https://"):
+            continue
+        sach.append({"nen_tang": nt, "loai": m.get("loai") if m.get("loai") in LOAI_DICH else "tai_khoan",
+                     "ten": _chu(m.get("ten"), 200) or link, "link": link[:500], "ma": _chu(m.get("ma"), 100),
+                     "anh": str(m.get("anh") or "")[:500] if str(m.get("anh") or "").startswith("https://") else ""})
+    now = _now()
+    with ds._khoa, ds._db() as c:
+        for nt in da_quet:
+            c.execute("DELETE FROM dich_den WHERE nick_id=? AND nen_tang=?", (nick_id, nt))
+        for m in sach:
+            if m["nen_tang"] not in da_quet:
+                continue
+            c.execute("INSERT OR REPLACE INTO dich_den(nick_id, nen_tang, loai, ten, link, ma, anh, cap_nhat) "
+                      "VALUES(?,?,?,?,?,?,?,?)", (nick_id, m["nen_tang"], m["loai"], m["ten"], m["link"], m["ma"],
+                                                 m["anh"], now))
+        co = {r[0] for r in c.execute("SELECT DISTINCT nen_tang FROM dich_den WHERE nick_id=?", (nick_id,))}
+        meta = _meta(c, nick_id)
+        nhan = [x for x in (meta.get("nhan") or []) if x not in da_quet or x in co]
+        nhan += [x for x in sorted(co) if x not in nhan]
+        meta["nhan"] = nhan
+        _luu_meta(c, meta)
+    return {"so": len([m for m in sach if m["nen_tang"] in da_quet]), "nhan": nhan}
+
+
+def ds_dich_den(nick_id: str = "", nen_tang: str = "") -> list:
+    q, a = "SELECT * FROM dich_den WHERE 1=1", []
+    if nick_id:
+        q += " AND nick_id=?"
+        a.append(nick_id)
+    if nen_tang:
+        q += " AND nen_tang=?"
+        a.append(nen_tang)
+    with ds._db() as c:
+        return [dict(r) for r in c.execute(q + " ORDER BY nick_id, nen_tang, loai, ten", a).fetchall()]

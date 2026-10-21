@@ -18,6 +18,9 @@ Kiểu tham số (`kieu`):
   bat         bật/tắt
   san_pham    chọn một mục trong Kiến thức cho Agent (`loai` = san_pham | chu_de | ca_hai)
   kho         nguồn kho nội dung: "chung" (dùng chung) | "theo_nick" (thư mục riêng từng nick)
+  dich_den    nơi đăng chọn từ danh sách đã quét của TỪNG nick (Trang Facebook, tài khoản...):
+              giá trị {nick_id: link} ("" = tường cá nhân / tài khoản đang đăng nhập); máy chủ tách
+              ra mỗi việc một link. `nen_tang` nói danh sách nào.
 
 Chế độ nội dung AI (`che_do`, có ở mọi mẫu AI tự viết chữ):
   chay_thu     chỉ đọc + viết nháp vào Duyệt nội dung, KHÔNG đăng gì (mặc định)
@@ -74,6 +77,8 @@ def _bat(key, nhan, mac=True):
 KHO = {"key": "kho", "nhan": "Lấy bài từ kho", "kieu": "kho", "mac_dinh": "chung",
        "lua_chon": [["chung", "Kho dùng chung (mỗi bài một nick)"], ["theo_nick", "Kho riêng của từng nick"]]}
 PHUT_NUOI = _so("phut", "Lướt bao nhiêu phút", 10, 3, 60)
+DANG_LEN_FB = {"key": "dang_len", "nhan": "Đăng lên (Trang hoặc tường, chọn cho từng nick)", "kieu": "dich_den",
+               "nen_tang": "facebook", "mac_dinh": ""}
 
 
 def _m(id, nen_tang, nhom, ten, mo_ta, chi_tiet, hanh_dong, tham_so, tinh_nang, ai=False):
@@ -96,7 +101,7 @@ MAU = [
        "Mỗi lượt lấy bài kế tiếp trong kho. Đăng xong chuyển bài sang 'Đã đăng'. Lỗi trước khi bấm Đăng thì "
        "trả bài về hàng chờ; lỗi sau khi đã bấm Đăng thì để ở 'Lỗi', không tự đăng lại. Kho hết bài thì báo "
        "'Hết bài' (vàng), không tính là lỗi.",
-       ["dang_tuong"], [KHO, _so("so_bai", "Số bài mỗi nick", 1, 1, 3)], "Đăng bài"),
+       ["dang_tuong"], [DANG_LEN_FB, KHO, _so("so_bai", "Số bài mỗi nick", 1, 1, 3)], "Đăng bài"),
     _m("fb_dang_nhom_link", "facebook", "dang_bai", "Đăng bài vào nhóm theo link",
        "Dán link các nhóm, nick đăng cùng một nội dung (hoặc lấy từ kho) vào từng nhóm.",
        "Nick chưa vào nhóm thì bỏ qua nhóm đó (ghi 'chưa tham gia'). Giữa hai nhóm nghỉ ngẫu nhiên theo giới "
@@ -110,7 +115,7 @@ MAU = [
        "Đăng các bài AI viết cho tường cá nhân mà bạn đã duyệt.",
        "Lấy bài 'Bài đăng · Tường' đã duyệt (của nick đó hoặc chưa gán nick). Đọc lại tường thấy bài mới tính "
        "là thành công.",
-       ["dang_tuong"], [_sp(False), _so("so_bai", "Số bài mỗi nick", 1, 1, 3)], "Đăng bài"),
+       ["dang_tuong"], [DANG_LEN_FB, _sp(False), _so("so_bai", "Số bài mỗi nick", 1, 1, 3)], "Đăng bài"),
     _m("fb_tuong_tac_link", "facebook", "tuong_tac", "Tương tác bài theo link",
        "Mở từng link bài viết: thả cảm xúc, bình luận, chia sẻ như người thật.",
        "Bình luận lấy ngẫu nhiên từ danh sách bạn nhập (mỗi dòng một câu) hoặc để AI viết theo bài. Mỗi nick "
@@ -338,6 +343,15 @@ def kiem_tham_so(mau_id: str, ts: dict) -> dict:
             v = v[:500]
         elif kieu == "san_pham":
             v = str(v or "").strip()
+        elif kieu == "dich_den":
+            if isinstance(v, dict):
+                v = {str(k)[:80]: str(x or "").strip()[:500] for k, x in list(v.items())[:500]}
+                sai = [x for x in v.values() if x and not x.startswith("https://")]
+            else:
+                v = str(v or "").strip()[:500]
+                sai = [v] if v and not v.startswith("https://") else []
+            if sai:
+                raise ValueError(f"nơi đăng phải là link https:// ({sai[0][:60]})")
         else:
             v = str(v or "").strip()[:20000]
         if f.get("bat_buoc") and v in ("", [], None):

@@ -886,6 +886,9 @@ async def tro_ly(tin: str, lich_su: list, boi_canh: dict, *, goi_ai: GoiAI) -> d
                         + f": {_cat(_chu(m.get('mo_ta')), 160)} | tham số: {_khai_bao_mau(str(m.get('id')), _khoa_mau(m))}")
     dong_nick = [f"- id={n.get('id')} {_cat(_chu(n.get('ten')), 60)}"
                  + (f" nhãn={','.join(map(str, n.get('nhan') or []))}" if n.get("nhan") else "")
+                 + ("".join(f"\n    nơi đăng {_chu(d.get('nen_tang'))}/{_chu(d.get('loai'))}: {_cat(_chu(d.get('ten')), 60)} "
+                            f"-> {_cat(_chu(d.get('link')), 120)}"
+                            for d in (n.get("noi_dang") or [])[:15] if isinstance(d, dict)))
                  for n in (bc.get("nick") or [])[:200] if isinstance(n, dict)]
     dong_kt = [f"- id={k.get('id')} {_cat(_chu(k.get('ten')), 80)} ({k.get('loai')})"
                for k in (bc.get("kien_thuc") or [])[:80] if isinstance(k, dict)]
@@ -909,6 +912,10 @@ async def tro_ly(tin: str, lich_su: list, boi_canh: dict, *, goi_ai: GoiAI) -> d
         "- Việc cần nội dung (đăng bài lên Trang, nhóm, tường): TỰ VIẾT nội dung hoàn chỉnh, hấp dẫn, tự nhiên vào "
         "tham số (vd mẫu fb_dang_nhom_link: links = link Trang/nhóm, nguon = nhap, noi_dung = bài bạn viết). Thiếu link "
         "Trang/nhóm thì hỏi lại chủ, ke_hoach = null.\n"
+        "- Đăng lên một Trang/fanpage: tìm Trang đó trong 'nơi đăng' của các nick, chọn nick quản lý Trang, dùng mẫu "
+        "fb_dang_tuong_kho hoặc fb_dang_tuong_ai với tham số dang_len = {\"<id nick>\": \"<link Trang>\"}; hoặc mẫu "
+        "fb_dang_nhom_link với links = [link Trang], nguon = nhap, noi_dung = bài bạn viết. Không thấy Trang trong "
+        "danh sách thì nói chủ bấm Quét tài khoản ở trang Tài khoản.\n"
         "- Không biết dùng nick nào: chọn nick có nhãn đúng nền tảng; chủ nói 'tất cả' thì liệt kê mọi id phù hợp.\n"
         "- Có kế hoạch thì tra_loi tóm tắt 1-2 câu và nhắc chủ bấm Duyệt để chạy. Không nói là đã chạy.\n"
         "- Việc không làm được bằng các mẫu này thì nói thẳng, ke_hoach = null.\n\n"
