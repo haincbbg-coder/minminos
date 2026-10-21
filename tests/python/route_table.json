@@ -7454,5 +7454,135 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 748,
+  "type": "APIRoute",
+  "path": "/concat/may/ghep",
+  "name": "cc_may_ghep",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 749,
+  "type": "APIRoute",
+  "path": "/concat/may/nhip",
+  "name": "cc_may_nhip",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 750,
+  "type": "APIRoute",
+  "path": "/concat/may/viec",
+  "name": "cc_may_viec",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 751,
+  "type": "APIRoute",
+  "path": "/concat/may/tep/{vid}/{so}",
+  "name": "cc_may_tep",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 752,
+  "type": "APIRoute",
+  "path": "/concat/may/tai-len/{vid}",
+  "name": "cc_may_tai_len",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 753,
+  "type": "APIRoute",
+  "path": "/concat/may/ket-qua/{vid}",
+  "name": "cc_may_ket_qua",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 754,
+  "type": "APIRoute",
+  "path": "/apps/concat",
+  "name": "cc_goc",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 755,
+  "type": "APIRoute",
+  "path": "/apps/concat/",
+  "name": "cc_trang",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 756,
+  "type": "APIRoute",
+  "path": "/apps/concat/{ten}",
+  "name": "cc_tinh",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 757,
+  "type": "APIRoute",
+  "path": "/apps/concat/api/trang-thai",
+  "name": "cc_trang_thai",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 758,
+  "type": "APIRoute",
+  "path": "/apps/concat/api/ma-ghep",
+  "name": "cc_ma_ghep",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 759,
+  "type": "APIRoute",
+  "path": "/apps/concat/api/may/{may_id}",
+  "name": "cc_go_may",
+  "methods": [
+   "DELETE"
+  ],
+  "trong": null
+ },
+ {
+  "order": 760,
+  "type": "APIRoute",
+  "path": "/apps/concat/api/bo-cai.zip",
+  "name": "cc_bo_cai",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]

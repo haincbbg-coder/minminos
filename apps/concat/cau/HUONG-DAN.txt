@@ -1,0 +1,15 @@
+CẦU NỐI CONCAT - cho MinMin điều khiển trình dựng video Concat trên máy này
+
+Cần có: Windows 10/11, Concat 0.2.8 trở lên đã cài, Python 3.8 trở lên.
+Không cần cài thư viện nào thêm.
+
+1. (Nên làm) Mở Concat > Cài đặt > Tự động hoá > bật "Script và ứng dụng".
+   Khi cửa sổ Concat đang mở, MinMin làm việc qua chính cửa sổ đó và không đụng dự án bạn đang sửa.
+   Concat tắt thì cầu nối tự chạy bộ máy dựng không cửa sổ.
+2. Trên MinMin mở Kết nối ngoài > Concat > "Tạo mã ghép", rồi bấm đúp ghep-may.bat,
+   nhập địa chỉ MinMin và mã 6 số.
+3. Bấm đúp chay.bat. Để cửa sổ này mở (thu nhỏ được).
+
+Dự án và video xuất nằm ở: Videos\MinMin Concat (đổi bằng "thu_muc_lam_viec" trong cau-noi.json).
+Kiểm tra nhanh Concat MCP: python concat_cau.py thu
+Nhật ký ở cau-noi.log, token máy ở cau-noi.json (đừng gửi file này cho ai).

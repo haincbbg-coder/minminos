@@ -1,0 +1,14 @@
+name: Concat (dựng video ở máy nhà)
+slug: concat
+version: 1.0.0
+description: Điều khiển trình dựng video Concat trên máy tính ở nhà qua cầu nối - tạo dự án, nhập video và ảnh từ bộ não, cắt ghép, chữ, phụ đề, keyframe, hiệu ứng, xuất MP4 rồi đưa video về bộ não.
+author: Javis (bundled)
+enabled: true
+min_mode: readonly
+tools:
+  - concat_trang_thai
+  - concat_cong_cu
+  - concat_goi
+  - concat_ket_qua
+  - concat_lay_tep
+hooks: []

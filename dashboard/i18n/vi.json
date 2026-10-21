@@ -3484,6 +3484,8 @@
   "knn.app.xuong_video.mo_ta": "Sản xuất video hàng loạt từ ý tưởng, ảnh hoặc video mẫu: tự viết kịch bản, tạo ảnh, video, giọng đọc, ghép phụ đề rồi tự đăng YouTube, Shorts, Facebook Reels theo lịch.",
   "knn.app.doi_social.ten": "Đội Social",
   "knn.app.doi_social.mo_ta": "Nhắn Telegram, MinMin viết bài rồi tự mở profile GPM Login trên máy ở nhà để đăng Facebook như người thật: gõ từng chữ, tải ảnh/video, duyệt trước khi đăng, gửi ảnh chụp kết quả.",
+  "knn.app.concat.ten": "Concat (dựng video)",
+  "knn.app.concat.mo_ta": "MinMin điều khiển trình dựng video Concat trên máy ở nhà: tạo dự án, nhập video và ảnh, cắt ghép, chèn chữ, phụ đề, hiệu ứng rồi xuất MP4 và đưa video về bộ não, chỉ bằng lời nhắn.",
   "knn.app.dieu_khien_may.ten": "Điều khiển máy tính",
   "knn.app.dieu_khien_may.mo_ta": "MinMin xem màn hình và thao tác trên máy tính ở nhà, chỉ trong ứng dụng bạn cấp quyền, có phanh khẩn cấp.",
   "call.connecting": "Đang kết nối",

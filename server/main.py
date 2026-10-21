@@ -251,6 +251,9 @@ _DOI_SOCIAL_MAY = ("/doi-social/may/", ("GET", "POST"))
 # trong thư mục media Fanpage - xem routes/doi_social.py (fp_cong_khai).
 _DOI_SOCIAL_CONG_KHAI = (r"/doi-social/fp/cong-khai/[A-Za-z0-9_.-]{20,600}", ("GET", "HEAD"))
 _DOI_SOCIAL_CONG_KHAI_RE = re.compile(_DOI_SOCIAL_CONG_KHAI[0])
+# Concat (26.10.196): cầu nối ở máy nhà gọi GET/POST dưới tiền tố này, không có cookie. Mỗi
+# endpoint tự kiểm token máy hoặc mã ghép 6 số - xem routes/concat.py. DELETE vẫn phải đăng nhập.
+_CONCAT_MAY = ("/concat/may/", ("GET", "POST"))
 # Biến động số dư (26.10.119): Casso đẩy giao dịch vào POST /bien-dong/casso/<mã>, không có
 # cookie. Miễn ĐÚNG mẫu này (khớp trọn, một đoạn mã) với POST - xem routes/bien_dong.py.
 _BIEN_DONG_CONG_KHAI = (r"/bien-dong/casso/[A-Za-z0-9_-]{20,80}", "POST")
@@ -328,6 +331,7 @@ async def _auth_guard(request: Request, call_next):
                   or (path.startswith(_DOI_SOCIAL_MAY[0]) and request.method in _DOI_SOCIAL_MAY[1])
                   or (request.method in _DOI_SOCIAL_CONG_KHAI[1]
                       and _DOI_SOCIAL_CONG_KHAI_RE.fullmatch(path) is not None)
+                  or (path.startswith(_CONCAT_MAY[0]) and request.method in _CONCAT_MAY[1])
                   # Biến động số dư: webhook Casso. Endpoint tự kiểm mã trong đường (404 nếu
                   # sai) và chữ ký HMAC. GET cùng đường, đường có thêm đoạn, dấu "/" cuối
                   # và mọi đường /bien-dong khác vẫn phải đăng nhập.
@@ -23199,6 +23203,15 @@ import routes.webhooks as webhooks_routes   # noqa: E402
 webhooks_routes.register(app, webhooks_routes.WebhooksDeps(
     nhac_hen=lambda: reminders_feature, duong_dan_goc=lambda r: str(r.base_url)))
 assert webhooks_routes.LOI_VAO_CONG_KHAI == _HOOK_CONG_KHAI
+
+# Concat (26.10.196): MinMin điều khiển trình dựng video Concat ở máy nhà qua cầu nối + MCP của
+# Concat - routes/concat.py, kho server/concat_cau.py. Đăng ký ở đuôi cho bảng route.
+import concat_cau   # noqa: E402
+import routes.concat as concat_routes   # noqa: E402
+concat_cau.mo(cfgmod.STATE_DIR / "concat")
+concat_cau.dat_goc_tep([BRAINS_DIR, str(_default_brain_dir())])
+assert concat_routes.TIEN_TO_MAY == _CONCAT_MAY[0]
+concat_routes.register(app, goc_brain=lambda b: _brain_root(b) if b else str(_default_brain_dir()))
 
 if __name__ == "__main__":
     import uvicorn
