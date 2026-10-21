@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.198] - 2026-10-21
+
+### Sửa lỗi
+- **Kết nối Higgsfield: hết báo "Đổi code thất bại: invalid_grant".** Đó là lỗi che mất nguyên nhân thật. Giờ MinMin chỉ xin đúng các quyền máy chủ cần, và nếu Higgsfield từ chối quyền nào thì tự bỏ quyền đó rồi mở lại trang đăng nhập.
+- Nhà cung cấp từ chối đăng nhập thì hiện đúng tên lỗi thay vì mã rỗng đem đi đổi (cách làm lấy từ Javis 0.175.1).
+
 ## [26.10.197] - 2026-10-21
 
 ### Sửa lỗi

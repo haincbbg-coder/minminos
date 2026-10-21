@@ -10,6 +10,7 @@ Không import mcp_client/mcp_hub (tránh vòng import).
 import base64
 import hashlib
 import json
+import re
 import secrets as _secrets
 import sys
 import time
@@ -136,6 +137,7 @@ async def _discover(url):
     """Tìm authorization server metadata cho 1 MCP url. Trả dict metadata hoặc None."""
     async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
         issuer = None
+        www_scope, prm_scopes = "", []
         try:
             r = await client.post(url, json={"jsonrpc": "2.0", "id": 1, "method": "initialize",
                                              "params": {"protocolVersion": "2025-06-18", "capabilities": {},
@@ -146,6 +148,10 @@ async def _discover(url):
             for part in www.split(","):
                 if "resource_metadata" in part:
                     m = part.split("=", 1)[-1].strip().strip('"')
+            # scope="..." trong WWW-Authenticate: phạm vi máy chủ MCP nói nó CẦN (chuẩn MCP, ưu tiên số một).
+            ms = re.search(r'scope="([^"]*)"', www)
+            if ms:
+                www_scope = ms.group(1).strip()
             # Chống SSRF: metadata URL do server trả về CHỈ được fetch khi cùng host với
             # chính MCP url user đã khai (chuẩn RFC 9728 đặt metadata cùng origin).
             if m:
@@ -153,6 +159,7 @@ async def _discover(url):
                 up = urllib.parse.urlparse(url)
                 if mp.scheme in ("http", "https") and mp.netloc == up.netloc:
                     rm = (await client.get(m)).json()
+                    prm_scopes = [str(x) for x in (rm.get("scopes_supported") or []) if str(x).strip()]
                     servers = rm.get("authorization_servers") or []
                     if servers:
                         issuer = servers[0]
@@ -190,22 +197,39 @@ async def _discover(url):
                 if r.status_code == 200:
                     md = r.json()
                     if md.get("authorization_endpoint") and md.get("token_endpoint"):
+                        md["_www_scope"], md["_prm_scopes"] = www_scope, prm_scopes
                         return md
             except Exception:
                 continue
     return None
 
 
-# Scope chỉ ứng dụng được cấp phép sẵn mới xin được (Clerk của Higgsfield trả invalid_scope cho client
-# tự đăng ký DCR nếu xin private_metadata). Đăng nhập không cần chúng nên bỏ khỏi danh sách xin.
-SCOPE_DCR_CAM = {"private_metadata", "public_metadata", "unsafe_metadata"}
+# Chọn phạm vi (scope) cho nhánh DISCOVERY (cổng từ Javis 0.175.1). Xin NGUYÊN danh sách `scopes_supported` của máy chủ
+# đăng nhập là sai: đó là mọi phạm vi máy đó BIẾT, không phải phạm vi ứng dụng được phép xin. Higgsfield đăng nhập qua
+# Clerk: danh sách có `private_metadata`, ứng dụng tự đăng ký (DCR) không được xin, Clerk trả invalid_scope. Thứ tự theo
+# chuẩn MCP: scope trong WWW-Authenticate của máy chủ MCP, rồi `scopes_supported` của protected resource metadata
+# (RFC 9728), cuối cùng mới tới danh sách của máy chủ đăng nhập. Phạm vi nhà cung cấp đã từ chối một lần
+# (`blocked_scopes`, ghi lúc nhận invalid_scope) bị bỏ ở mọi nguồn; `scope_omit` = không gửi scope nào.
+def _chon_scopes(md, ent):
+    ent = ent or {}
+    if ent.get("scope_omit"):
+        return []
+    chan = {str(x) for x in (ent.get("blocked_scopes") or [])}
+    for nguon in (str(md.get("_www_scope") or "").split(), md.get("_prm_scopes") or [], md.get("scopes_supported") or []):
+        if nguon:
+            return [str(x) for x in nguon if str(x).strip() and str(x) not in chan]
+    return []
 
 
-def loc_scope_dcr(scopes):
-    return [s for s in (scopes or []) if str(s).strip().lower() not in SCOPE_DCR_CAM]
+def _scope_bi_tu_choi(desc):
+    """Tên phạm vi trong lời báo invalid_scope, vd Clerk: "... not allowed to request scope 'private_metadata'"."""
+    return [x for x in re.findall(r"""['"`]([A-Za-z0-9_.:/-]+)['"`]""", str(desc or "")) if x.lower() != "scope"]
 
 
-async def start_auth(conn_id, redirect_uri, qua_tram=False):
+_SCOPE_THU_LAI = 2   # tự bỏ phạm vi bị từ chối rồi mở lại trang đăng nhập tối đa ngần ấy lần, tránh vòng lặp
+
+
+async def start_auth(conn_id, redirect_uri, qua_tram=False, _retry=0):
     """Bắt đầu OAuth cho 1 connection. Trả {ok, url?} hoặc {ok:False, error}.
 
     2 nhánh:
@@ -297,7 +321,7 @@ async def start_auth(conn_id, redirect_uri, qua_tram=False):
             if dcr_detail:
                 msg += f" (máy chủ báo: {dcr_detail})"
             return {"ok": False, "error": msg}
-        scopes = loc_scope_dcr(md.get("scopes_supported") or [])
+        scopes = _chon_scopes(md, ent)
         scope_param, scope_sep = "scope", " "
         extra_params = {}
         add_resource = True
@@ -314,7 +338,8 @@ async def start_auth(conn_id, redirect_uri, qua_tram=False):
         _pending.pop(k, None)
     _pending[state] = {"conn_id": conn_id, "verifier": verifier, "token_endpoint": token_endpoint,
                        "client_id": client_id, "client_secret": client_secret,
-                       "redirect_uri": redirect_uri, "provider": provider, "ts": now}
+                       "redirect_uri": redirect_uri, "provider": provider, "ts": now,
+                       "discovery": not explicit, "retry": _retry}
     q = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "state": state}
     if not is_meta:                   # Meta classic flow KHÔNG dùng PKCE (client_secret đủ)
         q["code_challenge"] = challenge
@@ -348,10 +373,30 @@ def _email_from_id_token(idt):
         return ""
 
 
-async def handle_callback(state, code, tram=""):
+async def handle_callback(state, code, tram="", error="", error_description=""):
     p = _pending.pop(state or "", None)
     if not p:
         return {"ok": False, "error": "Phiên OAuth không hợp lệ hoặc đã hết hạn - thử lại từ đầu"}
+    if error:
+        # Nhà cung cấp báo lỗi ngay ở bước xin quyền: KHÔNG có code để đổi (đem chuỗi rỗng đi đổi chỉ ra "invalid_grant",
+        # che mất lỗi thật). invalid_scope có cách gỡ: bỏ phạm vi bị từ chối rồi mở lại trang đăng nhập.
+        if error == "invalid_scope" and p.get("discovery") and p.get("retry", 0) < _SCOPE_THU_LAI:
+            store = _load()
+            ent = store.get(p["conn_id"]) or {}
+            bad = _scope_bi_tu_choi(error_description)
+            if bad:
+                cu = list(ent.get("blocked_scopes") or [])
+                ent["blocked_scopes"] = cu + [x for x in bad if x not in cu]
+            else:
+                ent["scope_omit"] = True   # không biết phạm vi nào sai: thử lại không xin phạm vi nào
+            store[p["conn_id"]] = ent
+            _save(store)
+            again = await start_auth(p["conn_id"], p["redirect_uri"], _retry=p.get("retry", 0) + 1)
+            if again.get("ok"):
+                return {"ok": False, "retry_url": again["url"], "conn_id": p["conn_id"]}
+        detail = f"{error}: {error_description}" if error_description else error
+        return {"ok": False, "conn_id": p["conn_id"],
+                "error": "Nhà cung cấp từ chối đăng nhập (" + detail[:300] + "). Bấm Kết nối lại để thử từ đầu."}
     is_meta = (p.get("provider") == "meta")
     try:
         if p.get("tram"):
