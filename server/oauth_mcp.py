@@ -196,6 +196,15 @@ async def _discover(url):
     return None
 
 
+# Scope chỉ ứng dụng được cấp phép sẵn mới xin được (Clerk của Higgsfield trả invalid_scope cho client
+# tự đăng ký DCR nếu xin private_metadata). Đăng nhập không cần chúng nên bỏ khỏi danh sách xin.
+SCOPE_DCR_CAM = {"private_metadata", "public_metadata", "unsafe_metadata"}
+
+
+def loc_scope_dcr(scopes):
+    return [s for s in (scopes or []) if str(s).strip().lower() not in SCOPE_DCR_CAM]
+
+
 async def start_auth(conn_id, redirect_uri, qua_tram=False):
     """Bắt đầu OAuth cho 1 connection. Trả {ok, url?} hoặc {ok:False, error}.
 
@@ -288,7 +297,7 @@ async def start_auth(conn_id, redirect_uri, qua_tram=False):
             if dcr_detail:
                 msg += f" (máy chủ báo: {dcr_detail})"
             return {"ok": False, "error": msg}
-        scopes = md.get("scopes_supported") or []
+        scopes = loc_scope_dcr(md.get("scopes_supported") or [])
         scope_param, scope_sep = "scope", " "
         extra_params = {}
         add_resource = True
