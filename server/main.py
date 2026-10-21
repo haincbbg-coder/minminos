@@ -11458,6 +11458,57 @@ tasks_feature.deps.learn_hook = learn_feature.enqueue_job
 
 
 # ============================================================
+# 26.10.201 (cổng từ Javis 0.239.0): theo dõi trang web không tốn token (web_watch.py). Mỗi lượt canh
+# chỉ tải trang và so chữ; chỉ khi có chuyện mới mới báo, và chỉ gọi AI khi chủ bật "tóm tắt bằng AI".
+# ============================================================
+import web_watch
+
+
+async def _watch_send(chat_id, text, viec=None, web="", brain="", dedup=""):
+    # Hook báo của MinMin chưa nhận `brain`/`dedup` (Javis 0.186), nên bỏ hai tham số đó.
+    return await _notify_owner(chat_id, text, kind="report", source="watch", viec=viec, web=web)
+
+
+async def _watch_summarize(prompt: str) -> str:
+    """Tóm tắt một thay đổi: model nền, CHỈ CHỮ, thư mục rỗng, không MCP (nội dung trang là dữ liệu lạ)."""
+    import tempfile as _tf
+    with _tf.TemporaryDirectory(prefix="minmin-watch-") as trong:
+        cli = claude_engine(system_prompt="Bạn tóm tắt ngắn một thay đổi trên trang web cho chủ shop. "
+                                          "Chỉ trả lời bằng chữ, 1-3 câu.",
+                            cwd=trong, tag="web-watch-summary", allowed_tools=["__khong_co_tool__"])
+        mcpf = _empty_mcp_file()
+        if mcpf:
+            cli.mcp_config = mcpf
+            cli.mcp_strict = True
+        cli.disallowed_tools = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "LS", "WebFetch",
+                                "WebSearch", "Task", "NotebookEdit", "TodoWrite"]
+        cli = _aux_swap(cli, mode="suggest", tag="web-watch-summary")
+        cli.khong_tool = True       # engine API: không xin tool nào từ hub
+        try:
+            cli.profile = None      # Codex: không nạp profile MCP
+        except Exception:
+            pass
+        if not cli.is_available():
+            raise RuntimeError("background engine not ready")
+        final = ""
+        async for ev in cli.query(prompt):
+            if ev.get("type") == "final":
+                final = ev.get("content", "") or ""
+            elif ev.get("type") == "error":
+                raise RuntimeError(str(ev.get("content") or "engine error")[:200])
+        return final
+
+
+watch_feature = web_watch.register(app, web_watch.WebWatchDeps(
+    state_dir=lambda: cfgmod.STATE_DIR,
+    brain_root=lambda b: str(Path(_brain_root(b)).resolve()),
+    send=_watch_send,
+    summarize=_watch_summarize,
+    channels=lambda: _kenh_con_thieu(),    # định nghĩa SAU khối này nên gọi trễ
+))
+
+
+# ============================================================
 # NHẮC HẸN TỪ CHAT (reminders.py) - "30 phút nữa nhắc anh...", "8h30 sáng mai...".
 # Javis tự đặt qua POST /reminders (localhost), scheduler nền đánh thức đúng giờ → bắn Telegram.
 # mode notify = nhắn lại · mode task = chạy engine (đọc MCP, ghi nháp) rồi báo. KHÔNG tiền/đơn.
@@ -12514,6 +12565,10 @@ async def _start_scheduler():
         tasks_feature.start()
     except Exception as e:
         print(f"[kanban start] {e}", file=_sys.stderr)
+    try:
+        watch_feature.start()      # 0.239.0: vòng canh trang web (web_watch.py), không gọi model
+    except Exception as e:
+        print(f"[web watch start] {e}", file=_sys.stderr)
     try:
         connect_health.on_engine_down = _loop_notify   # đèn báo não → Telegram, chỉ 1 lần mỗi đợt chết
         connect_health.start()   # vòng check sức khoẻ kết nối + probe đèn báo não

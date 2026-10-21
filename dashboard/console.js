@@ -2088,6 +2088,7 @@
         <span class="dim" id="lpSearchNote" style="display:none;font-size:12px;color:var(--text3);margin-left:8px"></span>
       </div>
       <div id="lpGroups">${esc(window.t("common.loading"))}</div>
+      <div id="wwSection"></div>
       <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.si_log_head"))} · <select id="lpLogFilter" class="loop-sel" style="font-size:13px"><option value="">${esc(window.t("cs.si_log_all"))}</option></select></h3><div id="lpLog">${esc(window.t("common.loading"))}</div></div>
     </div>`;
 
@@ -2664,6 +2665,8 @@
     }
     el.querySelector("#lpLogFilter").onchange = loadLog;
     { const s = el.querySelector("#lpSearch"); if (s) s.oninput = applyLpSearch; }
+    { const ww = el.querySelector("#wwSection");
+      if (ww && window.JavisWebWatch) window.JavisWebWatch.mount(ww, fbrain); }
     ensureBrains();   // nạp sẵn danh sách brain cho ô chọn (không chờ /viec/all vốn nặng)
     loadAll(); loadLog();
   }
