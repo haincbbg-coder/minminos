@@ -646,3 +646,24 @@ svg.fp-spark .ar { fill: var(--brand-soft); opacity: .8; }
   .fp-cb-ds { grid-template-columns: minmax(0, 1fr); }
   .btn.fp-stop { width: 100%; }
 }
+
+/* ---------------------------------------------------------------- Viết bài AI theo bước (26.10.200) */
+.clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.vb-buoc { display: flex; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line2); }
+.vb-buoc:first-of-type { border-top: 0; padding-top: 4px; }
+.vb-so { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.vb-td { font-weight: 600; margin-bottom: 8px; }
+.vb .seg { flex-wrap: wrap; }
+.vb .hint { margin-top: 6px; }
+.vb-trang { border: 1px solid var(--line); border-radius: 12px; max-height: 240px; overflow: auto; }
+.vb-trang .av { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.vb-anh { position: relative; display: inline-block; }
+.vb-anh img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; }
+.vb-anh-x { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: var(--err); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.vb-anh-x svg { width: 12px; height: 12px; }
+.vb-chot { display: flex; align-items: center; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line2); flex-wrap: wrap; }
+.vb-kh { align-self: start; position: sticky; top: 16px; }
+.vb-kh .tbl td { vertical-align: top; }
+.vb-ra-ds { margin-top: 10px; display: grid; gap: 8px; max-height: 420px; overflow: auto; }
+.vb-ra-dong { padding: 8px 10px; border: 1px solid var(--line2); border-radius: 10px; }
+@media (max-width: 900px) { .vb-kh { position: static; } }

@@ -235,7 +235,7 @@
       var F = { trang_thai: ctx.q.trang_thai || "", trang: ctx.q.trang || "", nhom: ctx.q.nhom || "", loai: "", tu: "", den: "", q: "", sap_xep: "moi", trang_so: 1 };
       var chon = {}, ds = [], dem = {};
       el.innerHTML = DS.ph("Bài đăng Fanpage", "Bài tạo hàng loạt, từ kho, từ kênh nguồn hay AI đều vào Chờ duyệt. Bấm Duyệt thì MinMin mới đăng theo lịch.",
-        '<button class="btn" data-act="lam-moi">' + ic("refresh") + 'Làm mới</button><a class="btn" id="fb-csv" href="#">' + ic("download") + 'Xuất CSV</a><button class="btn btn-pri" data-act="tao">' + ic("plus") + "Tạo bài hàng loạt</button>") +
+        '<button class="btn" data-act="lam-moi">' + ic("refresh") + 'Làm mới</button><a class="btn" id="fb-csv" href="#">' + ic("download") + 'Xuất CSV</a><a class="btn" href="#/kho?tab=viet&che_do=api">' + ic("spark") + 'AI viết bài cho Trang</a><button class="btn btn-pri" data-act="tao">' + ic("plus") + "Tạo bài hàng loạt</button>") +
         '<div class="card card-x"><div class="filters" style="padding-bottom:0;border-bottom:0"><div class="chips" id="fb-tt"></div></div><div class="filters" id="fb-loc">' +
         '<div class="inp-ic" style="min-width:180px;flex:1">' + ic("search") + '<input class="inp" id="fb-q" placeholder="Tìm trong nội dung"></div>' +
         '<select class="sel" id="fb-trang" aria-label="Trang"><option value="">Mọi Trang</option></select><select class="sel" id="fb-nhom" aria-label="Nhóm"><option value="">Mọi nhóm</option></select>' +

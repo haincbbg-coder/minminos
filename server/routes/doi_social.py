@@ -146,6 +146,8 @@ _DEPS = DoiSocialDeps()      # register() thay bằng deps thật; plugin dùng 
 
 
 _VONG: list = []             # vòng sự kiện của server, nhớ lúc khởi động
+DS_TEN_NOI_DANG = {"fb_nhom": "Nhóm Facebook", "fb_tuong": "Tường Facebook", "fb_trang": "Trang Facebook",
+                   "threads": "Threads", "instagram": "Instagram", "reddit": "Reddit", "x": "X", "tiktok": "TikTok"}
 
 
 def _chay_nen(coro_fn, mo_ta: str) -> None:
@@ -1339,45 +1341,166 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
 
     @app.post("/doi-social/viet-bai")
     async def ds_viet_bai(request: Request):
+        """Viết bài AI (26.10.200 làm lại cho rõ nơi đăng và giờ đăng).
+
+        che_do 'api': đăng lên các Fanpage đã chọn qua Graph API (máy chủ đăng, không cần máy nhà).
+            so_ban = số bài MỖI Trang; AI viết riêng từng bài để các Trang không trùng chữ.
+        che_do 'nick': một nick ở máy nhà đăng; noi_dang = nhóm / tường / Trang / IG...; với Trang FB
+            chọn một Trang trong các Trang nick đó quản lý (dich). so_ban = số bài khác nhau.
+        lich: 'duyet' (đăng ngay khi bạn duyệt) | 'nhom' (theo lịch nhóm Trang, chỉ API) |
+            'gio' (bat_dau + cach_phut giữa các bài).
+        xem_truoc: chỉ trả kế hoạch (nơi đăng, giờ), không gọi AI, không tạo gì."""
         c = _chan()
         if c:
             return c
+        import doi_social_fanpage as fp
         try:
             d = await _than(request)
-            noi_dang = str(d.get("noi_dang") or "")
-            if noi_dang not in v2.NOI_DANG:
-                raise ValueError("chọn nơi đăng hợp lệ")
-            kt = _kt_ai(d.get("san_pham_id"), str(d.get("yeu_cau") or ""))
-            if not kt:
-                raise ValueError("chọn sản phẩm/chủ đề trong Kiến thức cho Agent")
-            nick_id, nick_ten = str(d.get("nick_id") or ""), ""
-            if nick_id:
-                n = [x for x in doi_social.ds_nick() if x["id"] == nick_id]
-                if not n:
-                    raise ValueError(f"không thấy nick '{nick_id}'")
-                nick_ten = n[0]["ten"]
+            che_do = str(d.get("che_do") or ("nick" if d.get("noi_dang") else "api"))
+            if che_do not in ("api", "nick"):
+                raise ValueError("che_do phải là api hoặc nick")
             so_ban = max(1, min(5, int(d.get("so_ban") or 1)))
+            yeu_cau = str(d.get("yeu_cau") or "")[:2000]
+            xem_truoc = bool(d.get("xem_truoc"))
+            lich = str(d.get("lich") or "duyet")
+            if lich not in ("duyet", "nhom", "gio"):
+                raise ValueError("lich phải là duyet, nhom hoặc gio")
+            now = time.time()
+            bat_dau = float(d.get("bat_dau") or 0) or now
+            cach_phut = max(0, min(7 * 24 * 60, int(d.get("cach_phut") or 0)))
+            if lich == "gio" and bat_dau < now - 120:
+                raise ValueError("giờ bắt đầu đã qua, chọn lại giờ")
+            media = [str(x) for x in (d.get("media") or []) if str(x or "").strip()][:10]
+            for m in media:
+                if not fp.duong_media(m):
+                    raise ValueError(f"không thấy ảnh '{m}', tải lên lại")
+                if fp.loai_media(m) != "anh":
+                    raise ValueError("Viết bài AI chỉ kèm ảnh (video thì dùng Tạo bài hàng loạt ở Bài đăng Fanpage)")
+            kieu_anh = str(d.get("kieu_anh") or ("album" if len(media) > 1 else "mot_anh"))
+            kt = None
+            if not xem_truoc:
+                kt = _kt_ai(d.get("san_pham_id"), yeu_cau)
+                if not kt:
+                    raise ValueError("chọn sản phẩm/chủ đề trong Kiến thức cho Agent")
+            if che_do == "api":
+                ids = [str(x) for x in (d.get("trang_ids") or []) if str(x or "").strip()]
+                if not ids and d.get("nhom_id"):
+                    ids = [t["id"] for t in fp.ds_trang(nhom=int(d["nhom_id"])).get("muc", []) if t.get("bat")]
+                ids = list(dict.fromkeys(ids))
+                if not ids:
+                    raise ValueError("chọn ít nhất một Fanpage")
+                tong = len(ids) * so_ban
+                if tong > 20:
+                    raise ValueError(f"tối đa 20 bài mỗi lần (đang là {len(ids)} Trang x {so_ban} bài). "
+                                     "Bớt Trang hoặc bớt số bài mỗi Trang")
+                if kieu_anh == "album" and len(media) < 2:
+                    kieu_anh = "mot_anh"
+                loai = "chu" if not media else ("album" if kieu_anh == "album" else "anh")
+                nhom_media = None
+                if media:
+                    nhom_media = [list(media) for _ in range(tong)] if loai == "album" else \
+                        [[media[k % len(media)]] for k in range(tong)]
+                hen = {"duyet": "ngay", "nhom": "tu_dong"}.get(lich) or {"bat_dau": bat_dau, "cach_phut": cach_phut}
+                tham = dict(trang_ids=ids, loai=loai, media=nhom_media, chia="mot_trang", hen=hen, nguon="ai",
+                            ep_duyet=True, binh_luan="", story=False, ig=False)
+            else:
+                noi_dang = str(d.get("noi_dang") or "")
+                if noi_dang not in v2.NOI_DANG:
+                    raise ValueError("chọn nơi đăng hợp lệ")
+                nick_id, nick_ten = str(d.get("nick_id") or ""), ""
+                nk = None
+                if nick_id:
+                    nk = next((x for x in v2.ds_nick() if x["id"] == nick_id), None)
+                    if not nk:
+                        raise ValueError(f"không thấy nick '{nick_id}'")
+                    nick_ten = nk["ten"]
+                dich, dich_ten = str(d.get("dich") or d.get("nhom") or "").strip(), str(d.get("dich_ten") or "").strip()
+                if noi_dang == "fb_trang":
+                    if not nk:
+                        raise ValueError("đăng lên Trang Facebook qua máy nhà cần chọn nick quản lý Trang đó")
+                    if not dich.startswith("https://"):
+                        raise ValueError("chọn Trang sẽ đăng (bấm Quét Trang nếu danh sách trống)")
+                    if not dich_ten:
+                        dich_ten = next((x["ten"] for x in nk.get("dich_den") or [] if x.get("link") == dich), "") or dich
+                elif noi_dang in ("instagram", "tiktok", "threads", "x", "reddit") and not nk:
+                    raise ValueError("chọn nick sẽ đăng (mỗi nick một tài khoản trên nền tảng này)")
+                elif noi_dang == "fb_nhom" and dich and not dich_ten:
+                    dich_ten = dich
+                gio_tung_bai = [None if lich == "duyet" else bat_dau + k * cach_phut * 60 for k in range(so_ban)]
+                if lich == "nhom":
+                    raise ValueError("lịch theo nhóm Trang chỉ dùng khi đăng qua Fanpage API")
         except (ValueError, TypeError) as e:
             return _loi(e)
+
+        # ---- kế hoạch (cũng là phần xem trước)
+        if che_do == "api":
+            try:
+                xt = fp.tao_bai(**tham, noi_dung=[f"(Bài AI số {k + 1})" for k in range(tong)], chay_thu=True)
+            except ValueError as e:
+                return _loi(e)
+            ke_hoach = [{"kenh": "api", "dich_ten": x.get("trang_ten"), "dich_id": x.get("trang_id"),
+                         "dich_anh": x.get("trang_anh"), "hen_luc": x.get("hen_luc"), "cach_hen": x.get("cach_hen"),
+                         "loai": x.get("loai"), "media": x.get("media")} for x in (xt.get("xem_truoc") or [])]
+        else:
+            ten_dich = {"fb_tuong": "Tường của " + (nick_ten or "nick"), "fb_nhom": dich_ten or "nhóm của sản phẩm (Kho group FB)"}
+            ke_hoach = [{"kenh": "nick", "noi_dang": noi_dang, "nick_ten": nick_ten or "nick nào rảnh",
+                         "dich_ten": ten_dich.get(noi_dang) or dich_ten or (DS_TEN_NOI_DANG.get(noi_dang, noi_dang) + " của " + (nick_ten or "nick")),
+                         "dich_link": dich, "hen_luc": gio_tung_bai[k], "loai": "anh" if media else "chu", "media": media}
+                        for k in range(so_ban)]
+        if xem_truoc:
+            return {"ok": True, "xem_truoc": True, "ke_hoach": ke_hoach}
         if not deps.goi_ai:
             return _loi(_loi_ai(), 503)
         import doi_social_ai
-        yeu_cau = str(d.get("yeu_cau") or "")[:2000]
+        goi = _goi_ai_vai("viet_bai") or deps.goi_ai
+        can = len(ke_hoach)
+        nd_ai = "fb_trang" if che_do == "api" else noi_dang
+        bai: list = []
         try:
-            bai = await doi_social_ai.viet_bai(kt, noi_dang, so_ban, yeu_cau, goi_ai=_goi_ai_vai("viet_bai") or deps.goi_ai)
+            for _ in range(can // 5 + 3):
+                if len(bai) >= can:
+                    break
+                yc = yeu_cau
+                if bai:
+                    yc = (yeu_cau + "\n" if yeu_cau else "") + ("Đã có các bài mở đầu bằng: " + "; ".join(
+                        x[:70].replace("\n", " ") for x in bai[-12:]) + ". Viết KHÁC hẳn các bài đó (góc kể, câu mở).")
+                for x in await doi_social_ai.viet_bai(kt, nd_ai, min(5, can - len(bai)), yc, goi_ai=goi):
+                    if x not in bai:
+                        bai.append(x)
         except ValueError as e:
-            return _loi(e)
+            if not bai:
+                return _loi(e)
         except Exception as e:
-            return _loi(f"AI lỗi: {type(e).__name__}: {str(e)[:300]}", 502)
-        muc = []
-        for nd in (bai or [])[:so_ban]:
-            if str(nd or "").strip():
-                muc.append(v2.tao_ban_nhap(loai="bai_dang", noi_dang=noi_dang, noi_dung=str(nd), nick_id=nick_id,
-                                           nick_ten=nick_ten, nhom=str(d.get("nhom") or ""), san_pham_id=str(kt["id"]),
-                                           ly_do=("Viết theo yêu cầu: " + yeu_cau) if yeu_cau else "Viết từ hồ sơ sản phẩm"))
-        if not muc:
+            if not bai:
+                return _loi(f"AI lỗi: {type(e).__name__}: {str(e)[:300]}", 502)
+        if not bai:
             return _loi("AI không trả về bài nào, thử lại", 502)
-        return {"ok": True, "muc": muc}
+        while len(bai) < can:                   # AI viết thiếu: xoay vòng các bản đã có, có ghi chú
+            bai.append(bai[len(bai) % max(1, len(bai))])
+        if che_do == "api":
+            try:
+                kq = fp.tao_bai(**tham, noi_dung=bai[:can])
+            except ValueError as e:
+                return _loi(e)
+            return {"ok": True, "che_do": "api", "so": kq["so"], "bo_trung": kq.get("bo_trung", 0),
+                    "muc": kq["muc"], "ke_hoach": ke_hoach}
+        tep = []
+        for m in media:
+            pth = fp.duong_media(m)
+            tep.append((fp.ten_goc(m), pth.read_bytes()))
+        muc = []
+        try:
+            for k, nd in enumerate(bai[:can]):
+                muc.append(v2.tao_ban_nhap(
+                    loai="bai_dang", noi_dang=noi_dang, noi_dung=str(nd), nick_id=nick_id, nick_ten=nick_ten,
+                    nhom=dich if noi_dang in ("fb_trang", "fb_nhom") else "", san_pham_id=str(kt["id"]),
+                    ly_do=("Viết theo yêu cầu: " + yeu_cau) if yeu_cau else "Viết từ hồ sơ sản phẩm",
+                    tep=list(tep), hen_luc=gio_tung_bai[k],
+                    muc_tieu={"dich_ten": ke_hoach[k]["dich_ten"]} if ke_hoach[k].get("dich_ten") else None))
+        except ValueError as e:
+            if not muc:
+                return _loi(e)
+        return {"ok": True, "che_do": "nick", "so": len(muc), "muc": muc, "ke_hoach": ke_hoach}
 
     @app.get("/doi-social/ban-nhap")
     def ds_ds_nhap(trang_thai: str = Query("cho_duyet"), noi_dang: str = Query(""), san_pham: str = Query(""),
