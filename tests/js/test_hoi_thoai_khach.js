@@ -79,8 +79,9 @@ check("khong doan gi theo id kenh: logo va nhan lay tu danh sach server (khong c
 check("tra loi khach tu Hop thu qua /reply, chi khi kenh co nang luc",
       SRC.includes('"/reply", { method: "POST", body: fd({ text: txt })') &&
       SRC.includes('nangLuc(c.channel, "tra_loi_tu_javis")'));
-check("ba tab Hop thu | Kenh | Chatbot, tab Chatbot uy quyen cho chatbots.js",
-      /TABS = \["inbox", "kenh", "chatbot"\]/.test(SRC) && SRC.includes("window.JavisChatbots.render"));
+check("bon tab Hop thu | Kenh | Chatbot | Van hanh, uy quyen dung module",
+      /TABS = \["inbox", "kenh", "chatbot", "ops"\]/.test(SRC) &&
+      SRC.includes("window.JavisChatbots.render") && SRC.includes("window.JavisConversationOps.render(body)"));
 check("dien thoai: mo hoi thoai la them lop thread-on, co nut quay lai",
       SRC.includes('classList.add("thread-on")') && SRC.includes(".ht-back") &&
       /\.ht-wrap\.thread-on \.ht-list \{ display: none; \}/.test(CSS) &&
