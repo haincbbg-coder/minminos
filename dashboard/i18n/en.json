@@ -3832,5 +3832,6 @@
   "viec.hoi_ph": "Type your answer...",
   "viec.hoi_gui": "Send",
   "viec.hoi_da_gui": "Sent, the job is carrying on.",
-  "viec.hoi_loi": "Could not send. Try again or answer on the Work page."
+  "viec.hoi_loi": "Could not send. Try again or answer on the Work page.",
+  "info.more": "Show explanation"
 }
