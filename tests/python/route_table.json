@@ -4421,7 +4421,7 @@
   "order": 444,
   "type": "APIRoute",
   "path": "/conversation-ops/profile/{cid}",
-  "name": "profile",
+  "name": "ops_profile_http",
   "methods": [
    "GET"
   ],
@@ -4431,7 +4431,7 @@
   "order": 445,
   "type": "APIRoute",
   "path": "/conversation-ops/profile/{cid}",
-  "name": "save_profile",
+  "name": "ops_save_profile_http",
   "methods": [
    "PUT"
   ],
@@ -4441,7 +4441,7 @@
   "order": 446,
   "type": "APIRoute",
   "path": "/conversation-ops/templates",
-  "name": "templates",
+  "name": "ops_templates_http",
   "methods": [
    "GET"
   ],
@@ -4451,7 +4451,7 @@
   "order": 447,
   "type": "APIRoute",
   "path": "/conversation-ops/templates",
-  "name": "save_template",
+  "name": "ops_save_template_http",
   "methods": [
    "PUT"
   ],
@@ -4461,7 +4461,7 @@
   "order": 448,
   "type": "APIRoute",
   "path": "/conversation-ops/report",
-  "name": "report",
+  "name": "ops_report_http",
   "methods": [
    "GET"
   ],
@@ -4471,7 +4471,7 @@
   "order": 449,
   "type": "APIRoute",
   "path": "/conversation-ops/audit",
-  "name": "audit",
+  "name": "ops_audit_http",
   "methods": [
    "GET"
   ],
@@ -4481,7 +4481,7 @@
   "order": 450,
   "type": "APIRoute",
   "path": "/conversation-ops/summary/{cid}",
-  "name": "summary",
+  "name": "ops_summary_http",
   "methods": [
    "POST"
   ],
@@ -4491,7 +4491,7 @@
   "order": 451,
   "type": "APIRoute",
   "path": "/conversation-ops/audit.csv",
-  "name": "export_audit",
+  "name": "ops_export_audit_http",
   "methods": [
    "GET"
   ],

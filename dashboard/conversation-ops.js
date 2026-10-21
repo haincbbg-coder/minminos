@@ -119,7 +119,7 @@
       '<label>Mục tiêu phản hồi<select class="co-sla"><option value="60">1 phút</option><option value="300" selected>5 phút</option><option value="900">15 phút</option><option value="3600">1 giờ</option></select></label></div>' +
       '<p class="co-updated" role="status"></p><div class="co-report">Đang tải…</div>' +
       '<details class="co-section"><summary>Mẫu trả lời dùng chung</summary><div class="co-template-list"></div>' +
-      '<form class="co-template-form"><label>Mã /lệnh<input name="code" required maxlength="40" placeholder="chao"></label>' +
+      '<form class="co-template-form"><label>Mã /lệnh<input name="code" required maxlength="40" placeholder="Ví dụ: chao"></label>' +
       '<label>Nội dung<textarea name="text" required maxlength="8000" rows="3" placeholder="Chào {tenKhach}, em có thể hỗ trợ gì cho mình ạ?"></textarea></label>' +
       '<button class="s-btn">Lưu mẫu</button><p class="co-template-status" role="status"></p></form></details>' +
       '<details class="co-section"><summary>Nhật ký vận hành</summary><p class="co-muted">Thao tác từ bản này, dưới phiên quản trị chung. Nhật ký không có nút sửa/xóa; quản trị máy chủ vẫn có quyền với cơ sở dữ liệu.</p>' +

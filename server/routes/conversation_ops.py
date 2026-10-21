@@ -22,40 +22,40 @@ def register(app):
     r = APIRouter(prefix='/conversation-ops')
 
     @r.get('/profile/{cid}')
-    def profile(cid: int):
+    def ops_profile_http(cid: int):
         try:
             return {'ok': True, 'profile': ops.profile(cid)}
         except LookupError as e:
             return JSONResponse({'ok': False, 'error': str(e)}, status_code=404)
 
     @r.put('/profile/{cid}')
-    def save_profile(cid: int, data: Profile):
+    def ops_save_profile_http(cid: int, data: Profile):
         try:
             return {'ok': True, 'profile': ops.save_profile(cid, **data.model_dump())}
         except (LookupError, ValueError) as e:
             return JSONResponse({'ok': False, 'error': str(e)}, status_code=404 if isinstance(e, LookupError) else 409)
 
     @r.get('/templates')
-    def templates():
+    def ops_templates_http():
         return {'ok': True, 'items': ops.templates()}
 
     @r.put('/templates')
-    def save_template(data: Template):
+    def ops_save_template_http(data: Template):
         try:
             return {'ok': True, 'code': ops.save_template(data.code, data.text)}
         except ValueError as e:
             return JSONResponse({'ok': False, 'error': str(e)}, status_code=400)
 
     @r.get('/report')
-    def report(days: int = 7, channel: str = 'zalo_personal', account_id: str = '', sla: int = 300):
+    def ops_report_http(days: int = 7, channel: str = 'zalo_personal', account_id: str = '', sla: int = 300):
         return {'ok': True, 'report': ops.report(days, channel, account_id, sla)}
 
     @r.get('/audit')
-    def audit():
+    def ops_audit_http():
         return {'ok': True, 'items': ops.audit()}
 
     @r.post('/summary/{cid}')
-    async def summary(cid: int):
+    async def ops_summary_http(cid: int):
         import json
         import chatbot_runtime
         import conversations
@@ -78,7 +78,7 @@ def register(app):
         return {'ok': True, 'text': result['text'], 'message_count': len(msgs)}
 
     @r.get('/audit.csv')
-    def export_audit():
+    def ops_export_audit_http():
         import csv
         import io
         out = io.StringIO()
