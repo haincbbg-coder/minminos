@@ -24,11 +24,12 @@
       el.innerHTML = DS.ph("Máy ở nhà", "Máy Windows chạy GPM Login và MinMin Worker. Máy nhận việc từ đây, mở profile và làm như người thật.",
         '<a class="btn" href="/doi-social/tai-worker.zip">' + ic("download") + 'Tải MinMin Worker</a><button class="btn btn-pri" data-act="ma">' + ic("link") + "Tạo mã ghép</button>") +
         '<div id="may-ma"></div>' + DS.skel(6);
-      var D = {}, KB = null, maGhep = "";
+      var D = {}, KB = null, maGhep = "", NK = [];
 
       function nap() {
-        return Promise.all([DS.api("GET", "/doi-social/trang-thai"), DS.api("GET", "/up-bai/trang-thai", null, { quiet: true }), DS.layKichBan()]).then(function (a) {
+        return Promise.all([DS.api("GET", "/doi-social/trang-thai"), DS.api("GET", "/up-bai/trang-thai", null, { quiet: true }), DS.layKichBan(), DS.layNick()]).then(function (a) {
           if (!ctx.alive) return;
+          if (a[3].ok !== false) NK = DS.list(a[3], "nick");
           if (a[0].ok === false) { el.innerHTML = DS.ph("Máy ở nhà", "") + DS.loiThe(a[0].error, true); return; }
           D = a[0]; D.up_bai = a[1].ok === false ? null : a[1]; KB = a[2];
           ve();
@@ -37,6 +38,8 @@
       function ve() {
         var may = D.may || [], viec = D.viec || [], gh = D.gioi_han || {}, nick = D.nick || [], mau = DS.mauTheoId(KB);
         var foc = document.activeElement && el.contains(document.activeElement) ? document.activeElement.id : "";
+        var giu = {};
+        ["f-nick", "f-noi-sel", "f-noi", "f-nd"].forEach(function (k) { var x = el.querySelector("#" + k); if (x) giu[k] = x.value; });
         var h = DS.ph("Máy ở nhà", "Máy Windows chạy GPM Login và MinMin Worker. Máy nhận việc từ đây, mở profile và làm như người thật.",
           '<a class="btn" href="/doi-social/tai-worker.zip">' + ic("download") + 'Tải MinMin Worker</a><button class="btn btn-pri" data-act="ma">' + ic("link") + "Tạo mã ghép</button>");
         h += '<div id="may-ma">' + (maGhep || "") + "</div>";
@@ -66,7 +69,8 @@
         h += '<div><div class="card"><div class="card-h"><h3>' + ic("send") + 'Đăng thử một bài</h3></div><p class="small muted" style="margin:0 0 12px">Thường chỉ cần nhắn Telegram cho MinMin. Form này để thử nhanh một bài Facebook.</p>' +
           '<div class="fld"><label for="f-nick">Nick (tên profile GPM)</label><input class="inp" id="f-nick" list="ds-nick" placeholder="Gõ để chọn"><datalist id="ds-nick">' +
           nick.filter(function (n) { return n.trinh_duyet !== "firefox"; }).map(function (n) { return '<option value="' + esc(n.ten) + '">'; }).join("") + "</datalist></div>" +
-          '<div class="fld"><label for="f-noi">Nơi đăng</label><input class="inp" id="f-noi" placeholder="Link Trang hoặc nhóm; để trống là tường của nick"></div>' +
+          '<div class="fld"><label for="f-noi-sel">Nơi đăng</label><select class="sel" id="f-noi-sel"></select>' +
+          '<input class="inp mt-s" id="f-noi" placeholder="Link Trang hoặc nhóm, bắt đầu bằng https://" hidden><div class="hint" id="f-noi-hint"></div></div>' +
           '<div class="fld"><label for="f-nd">Nội dung</label><textarea class="ta" id="f-nd" rows="4"></textarea></div>' +
           '<div class="row mt-s" style="justify-content:flex-end"><button class="btn btn-pri btn-sm" data-act="dang-thu">Tạo bài (chờ duyệt)</button></div></div>' +
           '<div class="card"><div class="card-h"><h3>' + ic("gauge") + 'Giới hạn đăng thử</h3><a class="small" href="#/gioi-han">Giới hạn nick đầy đủ</a></div><div class="fgrid">' +
@@ -86,8 +90,30 @@
         }).join("") + "</tbody></table></div>";
         h += "</div>";
         el.innerHTML = h;
+        Object.keys(giu).forEach(function (k) { var x = el.querySelector("#" + k); if (x && k !== "f-noi-sel") x.value = giu[k]; });
+        veNoi(giu["f-noi-sel"]);
         if (foc) { var f = el.querySelector("#" + foc); if (f) f.focus(); }
       }
+      // nơi đăng của form Đăng thử: Trang đã quét của nick đang chọn, hoặc nhập link tay ở "Khác..."
+      function nickDangChon() {
+        var t = ((el.querySelector("#f-nick") || {}).value || "").trim().toLowerCase();
+        return t ? NK.filter(function (n) { return String(n.ten).toLowerCase() === t; })[0] : null;
+      }
+      function veNoi(giuChon) {
+        var sel = el.querySelector("#f-noi-sel"), hint = el.querySelector("#f-noi-hint");
+        if (!sel) return;
+        var cu = giuChon != null ? giuChon : sel.value, n = nickDangChon(), tr = n ? DS.trangFB(n) : [];
+        sel.innerHTML = '<option value="">Tường của nick</option>' + tr.map(function (d) { return '<option value="' + esc(d.link) + '">Trang: ' + esc(d.ten) + "</option>"; }).join("") +
+          '<option value="_khac">Khác... (nhập link Trang hoặc nhóm)</option>';
+        sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === cu; }) ? cu : "";
+        el.querySelector("#f-noi").hidden = sel.value !== "_khac";
+        if (!n) hint.innerHTML = "Chọn nick để thấy các Trang Facebook nick đó quản lý.";
+        else if (DS.choQuet(n)) hint.innerHTML = '<span class="dd-cho">' + ic("clock") + "Máy ở nhà đang quét Trang của nick này...</span>";
+        else if (!DS.dichDen(n, "facebook").length) hint.innerHTML = 'Nick này chưa quét Trang. <button class="linkbtn" type="button" data-act="quet-1">Quét ngay</button>';
+        else hint.innerHTML = tr.length + " Trang đã quét" + (DS.quetLuc(n) ? " · " + esc(DS.tuongDoi(DS.quetLuc(n))) : "") + '. <button class="linkbtn" type="button" data-act="quet-1">Quét lại</button>';
+      }
+      el.addEventListener("input", function (e) { if (e.target.id === "f-nick") veNoi(); });
+      el.addEventListener("change", function (e) { if (e.target.id === "f-nick") veNoi(); else if (e.target.id === "f-noi-sel") { var i = el.querySelector("#f-noi"); i.hidden = e.target.value !== "_khac"; if (!i.hidden) i.focus(); } });
       function viecTheoId(id) { return (D.viec || []).filter(function (v) { return String(v.id) === String(id); })[0]; }
       DS.bind(el, {
         "tai-lai": nap,
@@ -121,13 +147,21 @@
             DS.toast(k.loi ? k.loi : (k.bo_qua || ("Xử lý " + (k.xu_ly || 0) + " dòng, đăng " + (k.dang || 0) + " bài")), k.loi ? "err" : "ok"); nap();
           });
         },
+        "quet-1": function (b) {
+          var n = nickDangChon(); if (!n) return;
+          b.disabled = true;
+          DS.quetTaiKhoan([String(n.id)]).then(function () { veNoi(); });
+        },
         "dang-thu": function (b) {
           var nk = el.querySelector("#f-nick").value.trim(), nd = el.querySelector("#f-nd").value.trim();
+          var sv = el.querySelector("#f-noi-sel").value, noi = sv === "_khac" ? el.querySelector("#f-noi").value.trim() : sv;
           if (!nk || !nd) { DS.toast("Cần nick và nội dung", "err"); return; }
+          if (sv === "_khac" && noi.indexOf("https://") !== 0) { DS.toast("Link nơi đăng phải bắt đầu bằng https://", "err"); return; }
           b.disabled = true;
-          DS.api("POST", "/doi-social/viec", { nick: nk, noi_dang: el.querySelector("#f-noi").value.trim(), noi_dung: nd }).then(function (d) {
+          DS.api("POST", "/doi-social/viec", { nick: nk, noi_dang: noi, noi_dung: nd }).then(function (d) {
             b.disabled = false;
             if (d.ok === false) return;
+            el.querySelector("#f-nd").value = "";
             DS.toast("Đã tạo bài #" + ((d.viec && d.viec.id) || "") + ", chờ duyệt ở Việc gần đây", "ok"); nap();
           });
         },
@@ -152,6 +186,7 @@
       ctx.every(function () {
         var a = document.activeElement;
         if (a && el.contains(a) && a.matches("input,textarea,select")) return;
+        if (NK.some(DS.choQuet)) DS.boNho("nick");
         nap();
       }, 15000);
       return nap();

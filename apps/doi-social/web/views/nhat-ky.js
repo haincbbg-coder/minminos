@@ -9,10 +9,11 @@
   }
   function tienTrinh(t) {
     t = t || {};
-    var tong = t.tong || 0, ok = t.xong || 0, loi = t.loi || 0, dang = t.dang || 0, bo = t.bo || 0, xong = ok + loi + bo;
+    var tong = t.tong || 0, ok = t.xong || 0, loi = t.loi || 0, dang = t.dang || 0, bo = t.bo || 0, tam = t.tam || 0, xong = ok + loi + bo;
     var pc = function (n) { return tong ? (n / tong * 100).toFixed(1) + "%" : "0"; };
     return '<div class="prog"><div class="bar"><i class="p-ok" style="width:' + pc(ok) + '"></i><i class="p-err" style="width:' + pc(loi) + '"></i><i class="p-run" style="width:' + pc(dang) +
-      '"></i></div><span>' + xong + "/" + tong + " · ✓" + ok + " ✗" + loi + "</span></div>";
+      '"></i><i class="p-tam" style="width:' + pc(tam) + '"></i></div><span>' + xong + "/" + tong + " · ✓" + ok + " ✗" + loi +
+      (tam ? ' · <b style="color:var(--warn);font-weight:600">' + tam + " tạm dừng</b>" : "") + "</span></div>";
   }
   DS.tienTrinh = tienTrinh;
 
@@ -59,16 +60,23 @@
         var box = body.querySelector("#nk-dang");
         if (!box || !ctx.alive) return;
         if (d.ok === false) { box.innerHTML = '<div class="small muted">' + esc(d.error) + "</div>"; return; }
-        var ds = DS.list(d, "viec");
-        if (!ds.length) { box.innerHTML = '<div class="row small muted" style="padding:6px 0">' + ic("clock") + "Không có nick nào đang chạy.</div>"; return; }
-        box.innerHTML = ds.map(function (v) {
-          var m = mauId[v.ky_nang] || {};
-          var nk = v.nhat_ky || [], cuoi = v.buoc_cuoi || (nk.length ? (nk[nk.length - 1].dong || nk[nk.length - 1]) : "");
-          return '<div class="run">' + DS.av(v.nick_ten) + '<div class="grow" style="min-width:0"><div class="row"><b>' + esc(v.nick_ten) + "</b>" + DS.icNT(m.nen_tang, 18) +
-            '<span class="small">' + esc(v.ten_mau || m.ten || v.ky_nang || "") + '</span><span class="tiny muted">· bắt đầu ' + esc(DS.tuongDoi(v.bat_dau || v.nhan_luc || v.tao_luc)) + "</span></div>" +
-            (cuoi ? '<div class="small muted clip" style="margin-top:3px">' + ic("activity") + " " + esc(cuoi) + "</div>" : "") + "</div>" + DS.bd("Đang chạy", "brand", true) + "</div>";
-        }).join("");
+        dangDs = DS.list(d, "viec");
+        veDang();
       });
+    }
+    var dangDs = [];
+    function veDang() {
+      var box = body.querySelector("#nk-dang");
+      if (!box) return;
+      if (!dangDs.length) { box.innerHTML = '<div class="row small muted" style="padding:6px 0">' + ic("clock") + "Không có nick nào đang chạy.</div>"; return; }
+      box.innerHTML = dangDs.map(function (v) {
+        var m = mauId[v.ky_nang] || {};
+        var nk = v.nhat_ky || [], cuoi = v.buoc_cuoi || (nk.length ? (nk[nk.length - 1].dong || nk[nk.length - 1]) : "");
+        return '<div class="run' + (DS.viecTam(v) ? " tam" : "") + '" data-vid="' + esc(v.id) + '">' + DS.av(v.nick_ten) + '<div class="grow" style="min-width:0"><div class="row"><b>' + esc(v.nick_ten) + "</b>" + DS.icNT(m.nen_tang, 18) +
+          '<span class="small">' + esc(v.ten_mau || m.ten || v.ky_nang || "") + '</span><span class="tiny muted">· bắt đầu ' + esc(DS.tuongDoi(v.bat_dau || v.nhan_luc || v.tao_luc)) + "</span>" +
+          (v.dot_id ? '<a class="tiny" href="#/nhat-ky?tab=dot&dot=' + encodeURIComponent(v.dot_id) + '">Đợt #' + esc(v.dot_id) + "</a>" : "") + DS.ttViec(v) + "</div>" +
+          (cuoi ? '<div class="vr-buoc">' + ic("activity") + "<span>" + esc(cuoi) + "</span></div>" : "") + "</div>" + DS.nutViec(v) + "</div>";
+      }).join("");
     }
     function napNick() {
       return DS.api("GET", "/doi-social/hom-nay-theo-nick", null, { quiet: true }).then(function (d) {
@@ -119,6 +127,14 @@
       F.trang = 1; napTL();
     });
     DS.bind(body, {
+      "dk-viec": function (t) {
+        var id = t.getAttribute("data-id"), v = dangDs.filter(function (x) { return String(x.id) === id; })[0] || {};
+        DS.dieuKhienViec(id, t.getAttribute("data-hd"), v.nick_ten, t).then(function (moi) {
+          if (!moi || !ctx.alive) return;
+          dangDs = dangDs.map(function (x) { return String(x.id) === id ? Object.assign({}, x, moi, { nhat_ky: x.nhat_ky, buoc_cuoi: x.buoc_cuoi }) : x; }).filter(function (x) { return x.trang_thai === "dang_chay"; });
+          veDang();
+        });
+      },
       "lam-moi": function () { tatCa(); },
       "trang": function (t) { F.trang = +t.getAttribute("data-trang") || 1; napTL(); }
     });
@@ -154,51 +170,138 @@
           }).join("") + "</tbody></table></div>";
       });
     }
-    function moDot(id) {
-      var m = DS.modal({ title: "Đợt #" + id, wide: true, body: DS.skel(5) });
-      function ve() {
-        DS.api("GET", "/doi-social/dot-chay/" + id).then(function (d) {
-          if (d.ok === false) { m.body.innerHTML = DS.rong("Chưa tải được", esc(d.error), "list"); return; }
-          var dot = d.dot || {}, viec = dot.viec || [], sk = dot.su_kien || [], mau = mauId[dot.kich_ban] || {};
-          m.el.querySelector(".modal-h h3").textContent = dot.ten || "Đợt #" + id;
-          var h = '<div class="row-sb"><div class="row">' + DS.icNT(mau.nen_tang, 26) + "<b>" + esc(mau.ten || dot.kich_ban) + "</b>" + DS.bdMap(DS.TT_DOT, dot.trang_thai) + (dot.chay_thu ? DS.bd("Chạy thử", "brand") : "") +
-            '</div><div style="min-width:220px">' + tienTrinh(dot.tien_trinh) + "</div></div>" +
-            '<div class="small muted mt-s">Tạo ' + DS.gioDu(dot.tao_luc) + (dot.xong_luc ? " · xong " + DS.gioDu(dot.xong_luc) : "") + " · song song " + (dot.song_song || 1) + (dot.chay_an ? " · chạy ẩn" : "") + "</div>";
-          var ts = dot.tham_so || {};
-          if (Object.keys(ts).length) h += '<div class="logbox mt-s" style="max-height:120px">' + esc(Object.keys(ts).map(function (k) { return k + ": " + (Array.isArray(ts[k]) ? ts[k].join(", ") : ts[k]); }).join("\n")) + "</div>";
-          h += '<div class="sec-t" style="margin-top:16px">Việc theo nick (' + viec.length + ')</div><div class="tw" style="border:1px solid var(--line);border-radius:12px"><table class="tbl"><thead><tr><th>Nick</th><th>Trạng thái</th><th>Kết quả</th><th>Máy báo</th></tr></thead><tbody>' +
-            (viec.length ? viec.map(function (v) {
-              var dm = v.ket_qua || v.dem || {};
-              return "<tr><td><b>" + esc(v.nick_ten) + "</b></td><td>" + DS.ttViec(v) + '</td><td class="small nw">✓' + (dm.thanh_cong || 0) + " · bỏ qua " + (dm.bo_qua || 0) + " · ✗" + (dm.loi || 0) +
-                '</td><td class="small muted">' + esc(v.thong_diep || "") + "</td></tr>";
-            }).join("") : '<tr><td colspan="4" class="muted">Chưa có việc.</td></tr>') + "</tbody></table></div>";
-          if (sk.length) h += '<div class="sec-t" style="margin-top:16px">Sự kiện gần nhất</div><div class="logbox">' + sk.map(function (e) {
-            return esc(DS.gioPhut(e.luc) + "  " + (e.nick_ten || "") + "  [" + ((DS.KET_QUA[e.ket_qua] || [e.ket_qua])[0]) + "]  " + (e.chi_tiet || ""));
-          }).join("\n") + "</div>";
-          m.body.innerHTML = h;
-          var dang = dot.trang_thai === "cho" || dot.trang_thai === "dang_chay";
-          m.foot.innerHTML = (dang ? '<button class="btn btn-dan" data-huy>' + ic("stop") + "Huỷ đợt</button>" : "") + '<button class="btn" data-x>Đóng</button>';
-          var b = m.foot.querySelector("[data-huy]");
-          if (b) b.onclick = function () {
-            DS.xacNhan("Huỷ đợt này? Việc chưa chạy sẽ bị bỏ, việc đang chạy được báo dừng.", "Huỷ đợt", true).then(function (ok) {
-              if (!ok) return;
-              DS.api("POST", "/doi-social/dot-chay/" + id + "/huy", {}).then(function (r) { if (r.ok !== false) { DS.toast("Đã huỷ đợt", "ok"); ve(); nap(); } });
-            });
-          };
-        });
-      }
-      ve();
-    }
     DS.bind(body, {
       "loc": function (t) {
         loc = t.getAttribute("data-v");
         Array.prototype.forEach.call(body.querySelectorAll("#dt-loc .chip"), function (c) { c.classList.toggle("on", c === t); });
         nap();
       },
-      "mo-dot": function (t) { moDot(t.getAttribute("data-id")); }
+      "mo-dot": function (t) { DS.datQ({ dot: t.getAttribute("data-id") }); }
     });
     ctx.every(nap, 10000);
     return nap();
+  }
+
+  // ================================================================ chi tiết một đợt: #/nhat-ky?tab=dot&dot=<id>
+  function xemViec(v, mauId) {
+    var m = mauId[v.kich_ban || v.ky_nang] || {}, buoc = v.buoc || [];
+    DS.modal({ title: "Lượt #" + v.id + " · " + (v.nick_ten || ""), wide: true,
+      body: '<div class="row">' + DS.icNT(m.nen_tang, 24) + "<b>" + esc(v.ten_mau || m.ten || v.nhan_ky_nang || v.ky_nang || "") + "</b>" + DS.ttViec(v) + "</div>" +
+        '<div class="small muted mt-s">Tạo ' + DS.gioDu(v.tao_luc) + (v.xong_luc ? " · xong " + DS.gioDu(v.xong_luc) : "") + "</div>" +
+        (v.thong_diep ? '<div class="note mt-s ' + (v.trang_thai === "loi" ? "note-err" : "") + '">' + ic(v.trang_thai === "loi" ? "alert" : "info") + "<span>" + esc(v.thong_diep) + "</span></div>" : "") +
+        '<div class="sec-t" style="margin-top:16px">Các bước máy ở nhà ghi lại</div>' + (buoc.length ? '<div class="logbox">' + buoc.map(function (b) { return esc(typeof b === "string" ? b : (b.dong || JSON.stringify(b))); }).join("\n") + "</div>" : '<div class="small muted">Không có bước nào.</div>') +
+        (v.co_anh ? '<div class="sec-t" style="margin-top:16px">Ảnh chụp màn hình</div><img class="shot" loading="lazy" src="/doi-social/anh/' + encodeURIComponent(v.id) + '.png" alt="Ảnh chụp kết quả lượt ' + v.id + '">' : "") });
+  }
+  DS.xemViec = xemViec;
+
+  function tabChiTietDot(el, ctx, KB, id) {
+    var mauId = DS.mauTheoId(KB), dot = null, viec = [], buoc = {}, nickTen = {}, linkTen = {};
+    var body = el.querySelector("#nk-body");
+    body.innerHTML = '<a class="back" href="#/nhat-ky?tab=dot">' + ic("back") + "Tất cả đợt chạy</a>" + DS.skel(6);
+    var napNick = DS.layNick().then(function (d) {
+      DS.list(d, "nick").forEach(function (n) { nickTen[n.id] = n.ten; (n.dich_den || []).forEach(function (x) { linkTen[x.link] = x.ten; }); });
+    });
+    function conChay() { return dot && (dot.trang_thai === "cho" || dot.trang_thai === "dang_chay"); }
+    function veThamSo(ts) {
+      return Object.keys(ts).map(function (k) {
+        var v = ts[k];
+        if (v && typeof v === "object" && !Array.isArray(v)) v = Object.keys(v).map(function (nid) { return (nickTen[nid] || nid) + " → " + (v[nid] ? (linkTen[v[nid]] || v[nid]) : "tường / tài khoản chính"); }).join("; ");
+        return k + ": " + (Array.isArray(v) ? v.join(", ") : v);
+      }).join("\n");
+    }
+    function noiDang(v) {
+      var ts = ((v.tham_so || {}).tham_so) || {}, m = mauId[dot.kich_ban] || {}, k = (m.tham_so || []).filter(function (f) { return f.kieu === "dich_den"; })[0];
+      if (!k) return "";
+      var l = ts[k.key];
+      return '<span class="tiny muted clip" style="max-width:240px" title="' + esc(l || "") + '">' + ic("chevr") + esc(l ? (linkTen[l] || "Trang đã chọn") : (k.nen_tang === "facebook" || !k.nen_tang ? "Tường cá nhân" : "Tài khoản chính")) + "</span>";
+    }
+    function dongViec(v) {
+      var dm = v.ket_qua || v.dem || {}, cuoi = v.trang_thai === "dang_chay" ? buoc[v.id] : "";
+      var phu = cuoi ? '<div class="vr-buoc">' + ic("activity") + "<span>" + esc(cuoi) + "</span></div>" : v.thong_diep ? '<div class="vr-buoc"><span>' + esc(v.thong_diep) + "</span></div>" : "";
+      return '<div class="vr' + (DS.viecTam(v) ? " tam" : "") + '" data-vid="' + esc(v.id) + '">' + DS.av(v.nick_ten) + '<div class="vr-main"><div class="vr-t"><b class="clip" style="max-width:260px">' + esc(v.nick_ten) + "</b>" + DS.ttViec(v) +
+        noiDang(v) + "</div>" + phu + "</div>" +
+        (DS.viecXong(v) || (dm.thanh_cong || dm.loi || dm.bo_qua) ? '<span class="vr-kq">✓' + (dm.thanh_cong || 0) + " · bỏ qua " + (dm.bo_qua || 0) + " · ✗" + (dm.loi || 0) + "</span>" : "") +
+        '<span class="vr-act">' + DS.nutViec(v) + '<button class="btn btn-xs btn-ghost" type="button" data-act="xem" data-id="' + esc(v.id) + '" title="Xem nhật ký và ảnh">' + ic("eye") + "Xem</button></span></div>";
+    }
+    function veDs() {
+      var box = body.querySelector("#dc-viec");
+      if (!box) return;
+      body.querySelector("#dc-so").textContent = "(" + viec.length + ")";
+      box.innerHTML = viec.length ? viec.map(dongViec).join("") : '<div class="small muted" style="padding:14px">Chưa có việc.</div>';
+    }
+    function veDau() {
+      var mau = mauId[dot.kich_ban] || {}, tam = viec.some(DS.viecTam), chayDuoc = viec.some(function (v) { return !DS.viecXong(v) && !DS.viecTam(v) && v.lenh !== "huy"; });
+      var h = '<div class="row-sb"><div class="row" style="min-width:0">' + DS.icNT(mau.nen_tang, 30) + '<div style="min-width:0"><h3 style="margin:0;font-size:16px">' + esc(dot.ten || "Đợt #" + dot.id) + '</h3><div class="row small muted" style="gap:6px;margin-top:2px">' +
+        esc(dot.ten_mau || mau.ten || dot.kich_ban) + DS.bdMap(DS.TT_DOT, dot.trang_thai) + (dot.chay_thu ? DS.bd("Chạy thử", "brand") : "") + "</div></div></div>" +
+        (conChay() ? '<div class="dot-act">' + (chayDuoc ? '<button class="btn btn-sm" data-act="dot-dk" data-hd="tam_dung">' + ic("pause") + "Tạm dừng tất cả</button>" : "") +
+          (tam ? '<button class="btn btn-sm btn-soft" data-act="dot-dk" data-hd="tiep_tuc">' + ic("play") + "Tiếp tục tất cả</button>" : "") +
+          '<button class="btn btn-sm btn-dan" data-act="dot-huy">' + ic("stop") + "Huỷ đợt</button></div>" : "") + "</div>" +
+        '<div class="mt-s" style="max-width:520px">' + tienTrinh(dot.tien_trinh) + "</div>" +
+        '<div class="small muted mt-s">Tạo ' + DS.gioDu(dot.tao_luc) + (dot.xong_luc ? " · xong " + DS.gioDu(dot.xong_luc) : "") + " · song song " + (dot.song_song || 1) + (dot.chay_an ? " · chạy ẩn" : "") +
+        (conChay() ? ' · <span class="row" style="display:inline-flex;gap:4px"><span class="dotx on pulse"></span>tự làm mới mỗi 5 giây</span>' : "") + "</div>";
+      body.querySelector("#dc-dau").innerHTML = h;
+    }
+    function veKhung() {
+      var ts = dot.tham_so || {}, sk = dot.su_kien || [];
+      body.innerHTML = '<a class="back" href="#/nhat-ky?tab=dot">' + ic("back") + "Tất cả đợt chạy</a>" +
+        '<div class="card" id="dc-dau"></div>' +
+        '<div class="card card-x"><div class="card-h"><h3>Việc theo nick <span class="sub" id="dc-so"></span></h3><span class="tiny muted an-dt">Bấm nút trên dòng để tạm dừng hoặc huỷ riêng một nick</span></div><div id="dc-viec"></div></div>' +
+        (Object.keys(ts).length ? '<div class="card"><div class="card-h"><h3>Tham số</h3></div><div class="logbox" style="max-height:160px">' + esc(veThamSo(ts)) + "</div></div>" : "") +
+        '<div class="card" id="dc-sk"' + (sk.length ? "" : " hidden") + '><div class="card-h"><h3>Sự kiện gần nhất</h3></div><div class="logbox" id="dc-sk-b"></div></div>';
+      veDau(); veDs(); veSk();
+    }
+    function veSk() {
+      var sk = dot.su_kien || [], b = body.querySelector("#dc-sk-b");
+      if (!b) return;
+      body.querySelector("#dc-sk").hidden = !sk.length;
+      b.textContent = sk.map(function (e) { return DS.gioPhut(e.luc) + "  " + (e.nick_ten || "") + "  [" + ((DS.KET_QUA[e.ket_qua] || [e.ket_qua])[0]) + "]  " + (e.chi_tiet || ""); }).join("\n");
+    }
+    function nap(lan) {
+      return Promise.all([DS.api("GET", "/doi-social/dot-chay/" + encodeURIComponent(id), null, { quiet: !!lan }), DS.api("GET", "/doi-social/dang-chay", null, { quiet: true }), napNick]).then(function (a) {
+        if (!ctx.alive) return;
+        var d = a[0];
+        if (d.ok === false) { if (!lan) body.innerHTML = '<a class="back" href="#/nhat-ky?tab=dot">' + ic("back") + "Tất cả đợt chạy</a>" + DS.loiThe(d.error); return; }
+        var dauTien = !dot;
+        dot = d.dot || {}; viec = dot.viec || [];
+        buoc = {};
+        DS.list(a[1], "viec").forEach(function (v) {
+          var nk = v.nhat_ky || [];
+          buoc[v.id] = v.buoc_cuoi || (nk.length ? (nk[nk.length - 1].dong || nk[nk.length - 1]) : "");
+          viec.forEach(function (x) { if (String(x.id) === String(v.id) && v.lenh != null && x.lenh == null) x.lenh = v.lenh; });
+        });
+        if (dauTien) veKhung(); else { veDau(); veDs(); veSk(); }
+      });
+    }
+    function capNhat(moi) {
+      viec = viec.map(function (x) { return String(x.id) === String(moi.id) ? Object.assign({}, x, moi) : x; });
+      veDs(); veDau();
+      nap(true);
+    }
+    DS.bind(body, {
+      "dk-viec": function (t) {
+        var vid = t.getAttribute("data-id"), v = viec.filter(function (x) { return String(x.id) === vid; })[0] || {};
+        DS.dieuKhienViec(vid, t.getAttribute("data-hd"), v.nick_ten, t).then(function (moi) { if (moi && ctx.alive) capNhat(moi); });
+      },
+      "xem": function (t) { var v = viec.filter(function (x) { return String(x.id) === t.getAttribute("data-id"); })[0]; if (v) xemViec(v, mauId); },
+      "dot-dk": function (t) {
+        var hd = t.getAttribute("data-hd");
+        t.disabled = true;
+        DS.api("POST", "/doi-social/dot-chay/" + encodeURIComponent(id) + "/dieu-khien", { hanh_dong: hd }).then(function (r) {
+          t.disabled = false;
+          if (r.ok === false) return;
+          DS.toast(hd === "tam_dung" ? "Đã tạm dừng cả đợt, nick đang chạy dừng ở thao tác kế tiếp" : "Đã cho cả đợt chạy tiếp", "ok");
+          nap(true);
+        });
+      },
+      "dot-huy": function () {
+        DS.xacNhan("Huỷ cả đợt? Việc chưa chạy sẽ bị bỏ, việc đang chạy được báo dừng.", "Huỷ đợt", true).then(function (ok) {
+          if (!ok) return;
+          DS.api("POST", "/doi-social/dot-chay/" + encodeURIComponent(id) + "/huy", {}).then(function (r) { if (r.ok !== false) { DS.toast("Đã huỷ đợt", "ok"); nap(true); } });
+        });
+      }
+    });
+    ctx.every(function () { if (conChay() && !document.querySelector(".modal-bg")) nap(true); }, 5000);
+    return nap(0);
   }
 
   // ================================================================ tab Lịch sử chạy
@@ -228,15 +331,7 @@
           }).join("") + "</tbody></table></div>" + DS.phanTrang(tong, d.trang || F.trang, d.moi_trang || 50);
       });
     }
-    function xem(v) {
-      var m = mauId[v.kich_ban || v.ky_nang] || {}, buoc = v.buoc || [];
-      DS.modal({ title: "Lượt #" + v.id + " · " + (v.nick_ten || ""), wide: true,
-        body: '<div class="row">' + DS.icNT(m.nen_tang, 24) + "<b>" + esc(v.ten_mau || m.ten || v.nhan_ky_nang || v.ky_nang || "") + "</b>" + DS.ttViec(v) + "</div>" +
-          '<div class="small muted mt-s">Tạo ' + DS.gioDu(v.tao_luc) + (v.xong_luc ? " · xong " + DS.gioDu(v.xong_luc) : "") + "</div>" +
-          (v.thong_diep ? '<div class="note mt-s ' + (v.trang_thai === "loi" ? "note-err" : "") + '">' + ic(v.trang_thai === "loi" ? "alert" : "info") + "<span>" + esc(v.thong_diep) + "</span></div>" : "") +
-          '<div class="sec-t" style="margin-top:16px">Các bước máy ở nhà ghi lại</div>' + (buoc.length ? '<div class="logbox">' + buoc.map(esc).join("\n") + "</div>" : '<div class="small muted">Không có bước nào.</div>') +
-          (v.co_anh ? '<div class="sec-t" style="margin-top:16px">Ảnh chụp màn hình</div><img class="shot" loading="lazy" src="/doi-social/anh/' + encodeURIComponent(v.id) + '.png" alt="Ảnh chụp kết quả lượt ' + v.id + '">' : "") });
-    }
+    function xem(v) { xemViec(v, mauId); }
     body.addEventListener("change", function (e) {
       if (e.target.id === "ls-tt") F.trang_thai = e.target.value;
       else if (e.target.id === "ls-mau") F.kich_ban = e.target.value;
@@ -259,6 +354,7 @@
         '<div id="nk-body" class="stack">' + DS.skel(6) + "</div>";
       return DS.layKichBan().then(function (kb) {
         if (!ctx.alive) return;
+        if (tab === "dot" && ctx.q.dot) return tabChiTietDot(el, ctx, kb, ctx.q.dot);
         if (tab === "dot") return tabDot(el, ctx, kb);
         if (tab === "lich-su") return tabLichSu(el, ctx, kb);
         return tabHoatDong(el, ctx, kb);

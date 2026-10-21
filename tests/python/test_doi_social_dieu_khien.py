@@ -83,8 +83,11 @@ kq = v2.ghi_dich_den(gq["id"], MA, ["facebook", "instagram"], [
 check("ghi nơi đăng: chỉ nền tảng đã quét, bỏ link bẩn", kq["so"] == 3)
 check("nhãn nền tảng tự gắn theo kết quả quét", set(kq["nhan"]) == {"facebook", "instagram"})
 nk = [n for n in v2.ds_nick() if n["id"] == "n1"][0]
-check("danh sách nick kèm nơi đăng", len(nk["dich_den"]) == 3 and nk["nhan"] == kq["nhan"])
+check("danh sách nick kèm nơi đăng + đang quét", len(nk["dich_den"]) == 3 and nk["nhan"] == kq["nhan"]
+      and nk["dang_quet"] is True and nk["quet_luc"] is None)
 ds.ghi_ket_qua(gq["id"], MA, True, "ok", [])
+nk = [n for n in v2.ds_nick() if n["id"] == "n1"][0]
+check("quét xong có thời điểm quét", nk["dang_quet"] is False and nk["quet_luc"])
 q2 = v2.tao_quet_tai_khoan(["n1"], ["facebook"])
 g2 = ds.nhan_viec(MA)
 v2.ghi_dich_den(g2["id"], MA, ["facebook"], [{"nen_tang": "facebook", "loai": "trang", "ten": "Hằng Yên Store",

@@ -32,6 +32,9 @@
         return '<div class="fld">' + nhan + '<select class="sel" id="' + id + '" data-ts="' + k + '">' + ds.map(function (x) {
           return '<option value="' + esc(x[0]) + '"' + (String(v) === String(x[0]) ? " selected" : "") + ">" + esc(x[1]) + "</option>";
         }).join("") + "</select></div>";
+      case "dich_den":
+        return '<div class="fld full"><label>' + esc(f.nhan) + (f.bat_buoc ? ' <span class="req">*</span>' : "") + '</label><div class="dd-box" data-dd="' + esc(k) + '" data-nt="' + esc(f.nen_tang || "facebook") + '"></div>' +
+          '<div class="hint">Danh sách Trang lấy từ lần quét gần nhất của từng nick. Nick mới thêm Trang thì bấm Quét lại ở trang Tài khoản.</div></div>';
       case "san_pham":
         var loai = f.loai || "san_pham";
         var opt = kt.filter(function (x) { return loai === "ca_hai" || (x.loai || "san_pham") === loai; });
@@ -54,7 +57,7 @@
     render: function (el, ctx) {
       el.innerHTML = '<a class="back" href="#/automation">' + ic("back") + "Automation</a>" + DS.ph("Chạy hàng loạt", "Giao một mẫu việc cho nhiều nick. Máy ở nhà mở từng profile GPM và làm như người thật.") + DS.skel(8);
       var S = { mau: ctx.q.mau || "", chon: {}, tim: "", locNhan: true, chuaNhan: true, thuMuc: "", ts: {}, ten: "", song_song: 1, chay_an: false,
-        che_do: "ngay", lich: { kieu: "ngay", gio: "08:00", n: 2, cron: "0 8 * * *" } };
+        ddTim: {}, che_do: "ngay", lich: { kieu: "ngay", gio: "08:00", n: 2, cron: "0 8 * * *" } };
       var KB, NICK = [], KT = [], MAU = [];
 
       Promise.all([DS.layKichBan(), DS.layNick(true), DS.layKienThuc()]).then(function (a) {
@@ -67,6 +70,12 @@
         if (!S.mau || !MAU.some(function (m) { return m.id === S.mau; })) S.mau = "";
         veKhung();
       });
+
+      // nick đang chờ máy quét: tải lại danh sách mỗi 20 giây để Trang mới hiện ra
+      ctx.every(function () {
+        if (!NICK.some(DS.choQuet)) return;
+        DS.layNick(true).then(function (d) { if (!ctx.alive || d.ok === false) return; NICK = DS.list(d, "nick"); if (el.querySelector("#chl-nick")) veNick(); });
+      }, 20000);
 
       function mau() { for (var i = 0; i < MAU.length; i++) if (MAU[i].id === S.mau) return MAU[i]; return null; }
       function khop() {
@@ -147,9 +156,10 @@
           var trang = !x.online ? DS.bd("Máy tắt", "mu", true) : cbk.length ? DS.bd((DS.CANH_BAO[cb[cbk[0]]] || cb[cbk[0]]) + " · " + DS.tenNT(cbk[0]), "err", true) : DS.bd("Sẵn sàng", "ok", true);
           return '<label class="nick-row' + (on ? " on" : "") + '"><input type="checkbox" class="cb" data-nick="' + esc(x.id) + '"' + (on ? " checked" : "") + ">" + DS.av(x.ten) +
             '<div class="grow" style="min-width:0"><div class="b clip">' + esc(x.ten) + '</div><div class="tiny muted clip">' + esc(x.nhom || "Không thư mục") + " · " + esc(x.may_ten || "") +
-            '</div></div><div class="row" style="flex-wrap:nowrap">' + (x.nhan || []).slice(0, 4).map(function (t) { return DS.icNT(t, 18); }).join("") + "</div>" + trang + "</label>";
+            '</div>' + (function () { var c = DS.chipDichDen(x, true); return c ? '<div class="dd-mini">' + c + "</div>" : ""; })() + '</div><div class="row an-dt" style="flex-wrap:nowrap">' + (x.nhan || []).slice(0, 4).map(function (t) { return DS.icNT(t, 18); }).join("") + "</div>" + trang + "</label>";
         }).join("");
         nut();
+        veDichDen();
       }
 
       function veThamSo() {
@@ -158,7 +168,7 @@
         sec.hidden = false;
         var ds = m.tham_so || [];
         if (!ds.length) { box.innerHTML = '<div class="small muted">Mẫu này không cần tham số.</div>'; return; }
-        var thuong = ds.filter(function (f) { return f.kieu !== "bat" && f.kieu !== "doan" && f.kieu !== "ds_link" && !(f.kieu === "chon" && (f.key === "che_do" || (f.lua_chon || []).length <= 3)) && f.kieu !== "kho"; });
+        var thuong = ds.filter(function (f) { return f.kieu !== "bat" && f.kieu !== "dich_den" && f.kieu !== "doan" && f.kieu !== "ds_link" && !(f.kieu === "chon" && (f.key === "che_do" || (f.lua_chon || []).length <= 3)) && f.kieu !== "kho"; });
         var rong = ds.filter(function (f) { return thuong.indexOf(f) < 0 && f.kieu !== "bat"; });
         var bat = ds.filter(function (f) { return f.kieu === "bat"; });
         var h = "";
@@ -167,6 +177,40 @@
         if (bat.length) h += '<div style="margin-top:14px">' + bat.map(function (f) { return truong(f, S.ts, KT); }).join("") + "</div>";
         box.innerHTML = h;
         goiYCheDo();
+        veDichDen();
+      }
+
+      // ---- nơi đăng cho từng nick (tham số kieu dich_den): giá trị {nick_id: link}, "" = tường / tài khoản đang đăng nhập
+      function nickChon() { return NICK.filter(function (n) { return S.chon[n.id]; }); }
+      function dsDich(n, nt) { return DS.dichDen(n, nt).filter(function (d) { return d.loai !== "ca_nhan"; }); }
+      function veDichDen() {
+        Array.prototype.forEach.call(el.querySelectorAll("[data-dd]"), function (box) {
+          var k = box.getAttribute("data-dd"), nt = box.getAttribute("data-nt");
+          if (!S.ts[k] || typeof S.ts[k] !== "object") S.ts[k] = {};
+          var gt = S.ts[k], chon = nickChon();
+          var tenTuong = nt === "facebook" ? "Tường cá nhân" : "Tài khoản đang đăng nhập", donVi = nt === "facebook" ? "Trang" : "tài khoản";
+          if (!chon.length) { box.innerHTML = '<div class="small muted" style="padding:12px">Chọn nick ở mục trên, mỗi nick sẽ có một dòng để chọn đăng lên ' + donVi + " nào.</div>"; return; }
+          var ten = {}, chua = chon.filter(function (n) { return !DS.dichDen(n).length && !DS.choQuet(n); });
+          chon.forEach(function (n) { dsDich(n, nt).forEach(function (d) { ten[d.ten] = (ten[d.ten] || 0) + 1; }); });
+          var tk = Object.keys(ten).sort(function (a, b) { return ten[b] - ten[a] || a.localeCompare(b); });
+          var h = '<div class="dd-tools">';
+          if (chon.length > 1 && tk.length) h += '<div class="inp-ic grow" style="min-width:200px">' + ic("search") + '<input class="inp inp-sm" data-dd-tim="' + esc(k) + '" list="dd-ten-' + esc(k) +
+            '" placeholder="Gõ tên ' + donVi + ' để áp cho mọi nick có ' + donVi + ' đó" value="' + esc(S.ddTim[k] || "") + '"><datalist id="dd-ten-' + esc(k) + '">' +
+            tk.map(function (t) { return '<option value="' + esc(t) + '">' + ten[t] + " nick</option>"; }).join("") + '</datalist></div><button class="btn btn-sm btn-soft" type="button" data-act="dd-ap" data-k="' + esc(k) + '">Chọn ' + donVi + " giống nhau</button>";
+          h += '<button class="btn btn-sm btn-ghost" type="button" data-act="dd-tuong" data-k="' + esc(k) + '">Tất cả về ' + tenTuong.toLowerCase() + "</button>";
+          if (chua.length) h += '<button class="btn btn-sm" type="button" data-act="dd-quet" data-ids="' + esc(chua.map(function (n) { return n.id; }).join(",")) + '">' + ic("scan") + "Quét " + chua.length + " nick chưa quét</button>";
+          h += '</div><div class="dd-list">' + chon.map(function (n) {
+            var ds = dsDich(n, nt), v = gt[n.id] || "", co = !v || ds.some(function (d) { return d.link === v; }), daQuet = DS.dichDen(n).length > 0 || !!n.quet_luc;
+            var phu = daQuet ? (ds.length ? ds.length + " " + donVi : "Không quản lý " + donVi + " nào") + (DS.quetLuc(n) ? " · quét " + DS.tuongDoi(DS.quetLuc(n)) : "") : DS.choQuet(n) ? "Đang chờ máy quét..." : "Chưa quét " + donVi;
+            var sel = '<select class="sel" data-dd-k="' + esc(k) + '" data-dd-nick="' + esc(n.id) + '" aria-label="Nơi đăng của ' + esc(n.ten) + '"><option value="">' + tenTuong + "</option>" +
+              ds.map(function (d) { return '<option value="' + esc(d.link) + '"' + (d.link === v ? " selected" : "") + ">" + esc(DS.tenTk(d)) + "</option>"; }).join("") +
+              (co ? "" : '<option value="' + esc(v) + '" selected>Link đã chọn trước đó</option>') + "</select>";
+            return '<div class="dd-pick"><div class="row" style="flex-wrap:nowrap;min-width:0">' + DS.av(n.ten) + '<div style="min-width:0"><div class="b clip">' + esc(n.ten) + '</div><div class="tiny clip ' +
+              (daQuet ? "muted" : DS.choQuet(n) ? "dd-cho" : "muted") + '">' + esc(phu) + '</div></div></div><span class="ar">' + ic("chevr") + "</span>" +
+              (daQuet || DS.choQuet(n) ? sel : '<div class="dd-chua"><div class="grow" style="min-width:150px">' + sel + '</div><button class="btn btn-xs" type="button" data-act="dd-quet" data-ids="' + esc(n.id) + '">' + ic("scan") + "Quét</button></div>") + "</div>";
+          }).join("") + "</div>";
+          box.innerHTML = h;
+        });
       }
       function goiYCheDo() {
         var hEl = el.querySelector("#cd-hint");
@@ -213,7 +257,12 @@
             if (sai.length) loi = loi || "Link phải bắt đầu bằng https:// (" + sai[0].slice(0, 50) + ")";
           }
           if (f.kieu === "bat") v = !!v;
-          if (f.bat_buoc && (v === "" || v == null || (Array.isArray(v) && !v.length))) loi = loi || "Thiếu '" + f.nhan + "'";
+          if (f.kieu === "dich_den") {
+            var o = v && typeof v === "object" ? v : {}, gon = {};
+            Object.keys(S.chon).forEach(function (id) { if (S.chon[id]) gon[id] = o[id] || ""; });
+            v = gon;
+          }
+          if (f.bat_buoc && f.kieu !== "dich_den" && (v === "" || v == null || (Array.isArray(v) && !v.length))) loi = loi || "Thiếu '" + f.nhan + "'";
           ra[f.key] = v;
         });
         return { ts: ra, loi: loi };
@@ -224,6 +273,7 @@
         var t = e.target;
         if (t.id === "chl-ten") S.ten = t.value;
         else if (t.id === "chl-tim") { S.tim = t.value; veNick(); }
+        else if (t.dataset && t.dataset.ddTim) S.ddTim[t.dataset.ddTim] = t.value;
         else if (t.dataset && t.dataset.ts && t.type !== "checkbox") S.ts[t.dataset.ts] = t.value;
         else if (t.id === "chl-gio" || t.id === "chl-n" || t.id === "chl-cron") {
           if (t.id === "chl-gio") S.lich.gio = t.value;
@@ -249,6 +299,11 @@
           t.closest(".nick-row").classList.toggle("on", t.checked);
           el.querySelector("#chl-dem").textContent = soChon() + "/" + NICK.length + " đã chọn · " + khop().length + " khớp lọc";
           nut();
+          veDichDen();
+        } else if (t.dataset.ddNick) {
+          var dk = t.dataset.ddK;
+          if (!S.ts[dk] || typeof S.ts[dk] !== "object") S.ts[dk] = {};
+          S.ts[dk][t.dataset.ddNick] = t.value;
         } else if (t.dataset.ts) S.ts[t.dataset.ts] = t.type === "checkbox" ? t.checked : t.value;
       });
       el.addEventListener("click", function (e) {
@@ -264,6 +319,26 @@
       DS.bind(el, {
         "chon-het": function () { khop().forEach(function (n) { S.chon[n.id] = true; }); veNick(); },
         "bo-chon": function () { S.chon = {}; veNick(); },
+        "dd-tuong": function (t) { S.ts[t.getAttribute("data-k")] = {}; veDichDen(); },
+        "dd-ap": function (t) {
+          var k = t.getAttribute("data-k"), box = el.querySelector('[data-dd="' + k + '"]'), nt = box.getAttribute("data-nt");
+          var q = String(S.ddTim[k] || "").trim().toLowerCase();
+          if (!q) { DS.toast("Gõ tên Trang trước", "err"); return; }
+          var gt = S.ts[k] || (S.ts[k] = {}), chon = nickChon(), trung = 0;
+          chon.forEach(function (n) {
+            var ds = dsDich(n, nt), d = ds.filter(function (x) { return String(x.ten).toLowerCase() === q; })[0];
+            if (!d) { var g = ds.filter(function (x) { return String(x.ten).toLowerCase().indexOf(q) >= 0; }); if (g.length === 1) d = g[0]; }
+            if (d) { gt[n.id] = d.link; trung++; }
+          });
+          veDichDen();
+          if (!trung) DS.toast("Không nick nào đã chọn có Trang tên như vậy", "err");
+          else DS.toast("Đã chọn cho " + trung + "/" + chon.length + " nick" + (trung < chon.length ? ", nick còn lại giữ nguyên lựa chọn cũ" : ""), "ok");
+        },
+        "dd-quet": function (t) {
+          var ids = t.getAttribute("data-ids").split(",").filter(Boolean);
+          t.disabled = true;
+          DS.quetTaiKhoan(ids).then(function () { veNick(); });
+        },
         "bat-dau": function (b) {
           var m = mau();
           if (!m) { DS.toast("Chọn mẫu trước", "err"); return; }
@@ -282,7 +357,7 @@
             b.disabled = false;
             if (d.ok === false) return;
             if (S.che_do === "hen") { DS.toast("Đã lưu lịch hẹn " + DS.moTaCron(body.cron).toLowerCase(), "ok"); DS.go("automation", { tab: "lich" }); }
-            else { DS.toast("Đã tạo đợt chạy cho " + nick.length + " nick" + (m.san_sang === false ? ", chờ máy ở nhà hỗ trợ mẫu" : ""), "ok"); DS.go("nhat-ky", { tab: "dot" }); }
+            else { DS.toast("Đã tạo đợt chạy cho " + nick.length + " nick" + (m.san_sang === false ? ", chờ máy ở nhà hỗ trợ mẫu" : ""), "ok"); DS.go("nhat-ky", d.dot && d.dot.id ? { tab: "dot", dot: d.dot.id } : { tab: "dot" }); }
           });
         }
       });
