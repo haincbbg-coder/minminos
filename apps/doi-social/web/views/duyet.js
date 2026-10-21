@@ -60,7 +60,8 @@
           '<span class="muted">|</span><span>' + esc(DS.NOI_DANG[b.noi_dang] || b.noi_dang) + "</span>" + (b.chay_thu ? DS.bd("Chạy thử", "brand") : "") + (cho ? "" : DS.bdMap({ da_duyet: ["Đã duyệt", "info"], da_dang: ["Đã đăng", "ok"],
             da_bo: ["Đã bỏ", "mu"], loi: ["Lỗi", "err"], het_han: ["Hết hạn", "mu"] }, b.trang_thai)) + "</div>" +
           '<div class="dr-meta">' + (b.nick_ten ? "<span>" + ic("user") + esc(b.nick_ten) + "</span>" : "<span>" + ic("user") + "Chưa gán nick</span>") +
-          (b.nhom ? '<span class="clip" style="max-width:260px">' + ic("users") + esc(b.nhom) + "</span>" : "") + (sp ? "<span>" + ic("tag") + esc(sp.ten) + "</span>" : "") +
+          ((b.muc_tieu && b.muc_tieu.dich_ten) || b.nhom ? '<span class="clip" style="max-width:300px" title="' + esc(b.nhom || "") + '">' + ic(b.noi_dang === "fb_trang" ? "flag" : "users") + "Đăng lên: " + esc((b.muc_tieu && b.muc_tieu.dich_ten) || b.nhom) + "</span>" : "") +
+          (b.hen_luc ? '<span style="color:var(--brand)">' + ic("calendar") + "Đăng lúc " + esc(DS.gio(b.hen_luc)) + "</span>" : (b.loai === "bai_dang" && cho ? "<span>" + ic("calendar") + "Đăng ngay khi duyệt</span>" : "")) + (sp ? "<span>" + ic("tag") + esc(sp.ten) + "</span>" : "") +
           (cho && b.het_han ? '<span style="color:var(--warn)">' + ic("clock") + esc(conLai(b.het_han)) + "</span>" : "<span>" + ic("clock") + DS.gio(b.tao_luc) + "</span>") +
           (b.link_goc ? '<a href="' + esc(b.link_goc) + '" target="_blank" rel="noopener">' + ic("link") + " Mở bài gốc</a>" : "") + "</div></div></div>" +
           (b.bai_goc ? '<div class="quote"><span class="clamp2" data-act="mo-goc" style="cursor:pointer" title="Bấm để xem đủ"><b>Bài gốc:</b> ' + esc(b.bai_goc) + "</span></div>" : "") +
