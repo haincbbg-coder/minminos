@@ -26,7 +26,14 @@ _JS_TRANG_FB = r"""() => {
     const anh = img ? (img.getAttribute('xlink:href') || img.getAttribute('href') || img.src || '') : '';
     out[href] = {ten: m[2].trim(), link: href, anh: anh};
   });
-  return Object.values(out);
+  // Trang đang có tin (story) thì ảnh đại diện trỏ tới /stories/...: lấy link từ dòng tên Trang thay vào.
+  const theoTen = {};
+  goc.querySelectorAll('a[href]').forEach(a => {
+    const t = (a.innerText || '').trim(); const h = a.href || '';
+    if (t && /facebook\.com\//.test(h) && !/\/stories\//.test(h) && !theoTen[t]) theoTen[t] = h;
+  });
+  return Object.values(out).map(x => (/\/stories\//.test(x.link) && theoTen[x.ten]) ? {...x, link: theoTen[x.ten]} : x)
+    .filter(x => !/\/stories\//.test(x.link));
 }"""
 
 
