@@ -15,6 +15,7 @@ readable snapshot so older installations and brain backups keep working.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -37,6 +38,7 @@ import localefmt
 import localefmt          # giờ hiển thị theo múi giờ người dùng, không phải giờ máy chủ
 import limit_learner      # nhận diện "gói thuê bao hết lượt" - CÙNG bộ mẫu với khung chat
 import limit_resume       # mượn hằng trừ hao / trần chờ của khung chat, không đẻ bộ số thứ hai
+import task_store
 from task_store import TaskStore, VALID_STATUS
 
 
@@ -466,11 +468,8 @@ class TasksFeature:
                     transient=self._is_transient(error),
                 )
             elif needs_input:
-                final_task = self.store.block(
-                    tid,
-                    worker_id,
-                    "needs_input",
-                    self._needs_input_reason(result),
+                final_task = self.store.ask(
+                    tid, worker_id, self._needs_input_reason(result, task_store.QA_TEXT_MAX),
                     result=result,
                 )
             else:
@@ -763,10 +762,30 @@ nói rõ đã được phép tự hành động; nếu không thì để auto đ
             disallowed.extend(["Bash", "WebFetch", "WebSearch"])
         return list(dict.fromkeys(tools)), mode, disallowed
 
+    @staticmethod
+    def _hoi_dap(task: dict) -> str:
+        """Khối HỎI ĐÁP VỚI CHỦ cho lần chạy sau một câu trả lời (0.235.0). Rỗng khi chưa ai trả lời.
+
+        Chỉ đưa các lượt ĐÃ có câu trả lời. Kèm "lần trước đã làm tới đâu" của lượt cuối để
+        worker đi tiếp từ đó thay vì làm lại từ đầu (có thể là gửi tin hay đăng bài lần hai)."""
+        qa = [x for x in ((task.get("metadata") or {}).get("qa") or [])
+              if isinstance(x, dict) and x.get("a")]
+        if not qa:
+            return ""
+        dong = ["HỎI ĐÁP VỚI CHỦ (câu trả lời là dữ kiện chủ đã chốt, dùng luôn, KHÔNG hỏi lại):"]
+        for i, x in enumerate(qa, 1):
+            dong.append(f"{i}. Hỏi: {x.get('q') or ''}\n   Chủ trả lời: {x.get('a') or ''}")
+        tien_do = str(qa[-1].get("progress") or "").strip()
+        if tien_do:
+            dong.append("LẦN CHẠY TRƯỚC ĐÃ BÁO (đi tiếp từ đây; phần đã xong, nhất là gửi tin, "
+                        "đăng bài, tạo đơn, thì KHÔNG làm lại):\n" + tien_do)
+        return "\n".join(dong)
+
     async def _execute(self, task: dict) -> tuple[str, str, bool, dict]:
         route = str(task.get("route") or "auto").strip()
         intent = str(task.get("intent") or task.get("title") or "")
         tools, mode, disallowed = self._lane_tools(task)
+        hoi_dap = self._hoi_dap(task)
 
         if route.startswith("wf:"):
             slug = route[3:].strip()
@@ -774,7 +793,8 @@ nói rõ đã được phép tự hành động; nếu không thì để auto đ
             error = ""
             try:
                 async for event in self.deps.execute_workflow(
-                    task["brain_root"], slug, intent, tools, source="kanban"
+                    task["brain_root"], slug, intent + ("\n\n" + hoi_dap if hoi_dap else ""),
+                    tools, source="kanban",
                 ):
                     kind = event.get("type")
                     if kind == "done":
@@ -825,9 +845,10 @@ MỤC TIÊU:
 
 ĐIỀU KIỆN HOÀN THÀNH:
 {json.dumps(acceptance, ensure_ascii=False)}
-
+{chr(10) + hoi_dap + chr(10) if hoi_dap else ""}
 Nếu thiếu một quyết định hoặc dữ liệu mà không thể suy ra an toàn, kết quả phải bắt đầu
-bằng [[NEEDS_INPUT]] và nêu đúng một lý do cụ thể. Nếu hoàn thành, báo cáo ngắn: đã làm
+bằng [[NEEDS_INPUT]] và nêu đúng MỘT câu hỏi cụ thể, trả lời được trong một câu; chủ sẽ
+trả lời và việc chạy tiếp với câu trả lời đó. Nếu hoàn thành, báo cáo ngắn: đã làm
 gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng.
 """.strip()
         # Ai đang làm (sổ hành động) + bộ gom chứng cứ cho ĐÚNG lần chạy này.
@@ -948,7 +969,7 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
         )
 
     @staticmethod
-    def _needs_input_reason(result: str) -> str:
+    def _needs_input_reason(result: str, limit: int = 200) -> str:
         """MỘT ý ngắn đủ đọc trên điện thoại. Worker hay kể lể vài dòng rồi mới nêu điều
         còn thiếu ở CUỐI, nên lấy dòng cuối có nghĩa chứ không phải câu mở đầu."""
         text = (result or "").replace("[[NEEDS_INPUT]]", "").strip()
@@ -956,7 +977,7 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
         lines = [ln for ln in lines if len(ln) > 8]
         if not lines:
             return "Worker cần thêm thông tin để tiếp tục."
-        return lines[-1][:200]
+        return lines[-1][:limit]
 
     @staticmethod
     def _artifacts(result: str, root: str) -> list[dict]:
@@ -1081,10 +1102,56 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             print(f"[kanban] xếp việc {task.get('id', '')} vào hàng đợi học lỗi: "
                   f"{type(e).__name__}: {e}", file=sys.stderr)
 
+    @staticmethod
+    def _cau_hoi_dang_cho(task: dict) -> str:
+        """Câu hỏi việc đang chờ chủ trả lời, "" khi không có (0.235.0)."""
+        if str(task.get("block_kind") or "") != "needs_input":
+            return ""
+        qa = (task.get("metadata") or {}).get("qa") or []
+        cuoi = qa[-1] if qa and isinstance(qa[-1], dict) else {}
+        return "" if cuoi.get("a") else str(cuoi.get("q") or "").strip()
+
+    async def _bao_cau_hoi(self, task: dict) -> None:
+        """Báo RIÊNG một câu hỏi của việc nền về đúng người đã giao việc, kèm cách trả lời.
+
+        Không gom chung rổ "việc kẹt": mỗi câu hỏi cần một câu trả lời riêng, nhét vào danh
+        sách gạch đầu dòng là mất chỗ để trả lời. Khoá chống trùng là mã việc + băm câu hỏi,
+        nên báo lại sau một lần khởi động lại không rung chuông lần hai, còn câu hỏi MỚI của
+        cùng việc thì vẫn báo. Khoá mang cả số thứ tự lượt hỏi: worker hỏi lại ĐÚNG câu cũ sau khi
+        đã được trả lời là một lượt mới, phải rung lại chứ không bị coi là bản trùng."""
+        if not self.deps.report:
+            return
+        hoi = self._cau_hoi_dang_cho(task)
+        tid, ten = str(task.get("id") or ""), str(task.get("title") or "")
+        dau = localefmt.chu(f"❓ Việc '{ten}' cần bạn trả lời để chạy tiếp.",
+                            f"❓ Job '{ten}' needs your answer to carry on.")
+        cach = localefmt.chu(
+            f"Trả lời ngay trong khung chat này (nói rõ là trả lời việc '{ten}', mã {tid}), "
+            "hoặc gõ vào ô trả lời của việc ở trang Việc.",
+            f"Reply right here in this chat (say it is for job '{ten}', id {tid}), "
+            "or type into the job's answer box on the Work page.")
+        try:
+            await self.deps.report(
+                task.get("chat_id", ""),
+                channel_context.strip_control_blocks("\n\n".join([dau, hoi, cach])),
+                quiet=False,
+                ngan=channel_context.strip_control_blocks("\n\n".join([dau, hoi[:400], cach])),
+                viec={"kind": "task", "status": "hoi", "title": ten, "id": tid},
+                # Khung chat web có ô trả lời ngay dưới thẻ (dashboard/chat-viec.js).
+                web=channel_context.strip_control_blocks("\n\n".join([hoi, localefmt.chu(
+                    f"Gõ câu trả lời vào ô ngay bên dưới, hoặc trả lời trong chat (mã việc {tid}).",
+                    f"Type your answer in the box just below, or reply in chat (job id {tid}).")])),
+            )
+        except Exception as e:
+            print(f"[kanban] báo câu hỏi của việc {tid} lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+
     async def _report(self, task: dict) -> None:
         if not self.deps.report:
             return
         status = str(task.get("status") or "")
+        if status == "blocked" and self._cau_hoi_dang_cho(task):
+            await self._bao_cau_hoi(task)
+            return
         if status == "blocked":
             await self._gom_bao(task)
             return
@@ -1204,8 +1271,36 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             "running": bool(workers),
         }
 
+    async def answer(self, task_id: str, text: str, brain: str = "", by: str = "owner") -> dict:
+        """Chủ trả lời câu hỏi của một việc đang chờ: việc về hàng đợi và chạy tiếp với câu trả lời.
+
+        Một cửa cho cả trang Việc (`POST /kanban/task/answer`) lẫn tool `javis_task` op=answer,
+        nên chat web, Telegram hay Zalo đi cùng một đường. `brain` rỗng thì không kiểm brain
+        (tool đã tự kiểm theo vault của nó)."""
+        task = self.store.get_task(task_id)
+        if not task or (brain and task.get("brain_root") != self._ensure(brain)):
+            return {"ok": False, "error": localefmt.chu("Không tìm thấy việc", "Job not found")}
+        done, err = self.store.answer(task_id, text, by=by)
+        if not done:
+            return {"ok": False, "error": {
+                "empty": localefmt.chu("Câu trả lời đang trống", "The answer is empty"),
+                "not_waiting": localefmt.chu("Việc này không còn chờ câu trả lời",
+                                             "This job is no longer waiting for an answer"),
+            }.get(err, localefmt.chu("Không tìm thấy việc", "Job not found"))}
+        await self._asnapshot(str(done["brain_root"]))
+        self.wake()
+        return {"ok": True, "status": done["status"],
+                "orchestration": self.store.board_mode(str(done["brain_root"]))}
+
     def _make_router(self) -> APIRouter:
         router = APIRouter()
+
+        @router.post("/kanban/task/answer")
+        async def kanban_answer(
+            id: str = Form(...), answer: str = Form(""), brain: str = Form("")
+        ):
+            # `brain` rỗng: thẻ câu hỏi trong khung chat không biết brain, mã việc đã đủ định danh.
+            return await self.answer(id, answer, brain=brain)
 
         @router.get("/kanban")
         async def kanban_get(brain: str = Query("brain")):

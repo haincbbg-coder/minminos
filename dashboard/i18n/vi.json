@@ -3820,5 +3820,17 @@
   "cs.buy_price": "Giá: {x}",
   "cs.buy_send_fp": "Gửi vân tay máy của bạn cho người bán để được cấp mã:",
   "cs.buy_code_ph": "Dán mã mua người bán gửi (MMB1...)",
-  "cs.buy_use": "Dùng mã"
+  "cs.buy_use": "Dùng mã",
+  "kanban.answer_ph": "Gõ câu trả lời của bạn...",
+  "kanban.answer_send": "Gửi trả lời",
+  "kanban.answer_title": "Việc đang hỏi bạn",
+  "kanban.answer_info": "Việc dừng lại vì thiếu một thông tin chỉ bạn biết. Gửi câu trả lời là việc tự quay lại hàng đợi và chạy tiếp với câu trả lời đó, không tính thêm lượt thử. Bạn cũng có thể trả lời ngay trong khung chat đã giao việc.",
+  "kanban.qa_title": "Hỏi đáp với bạn",
+  "kanban.qa_q": "Hỏi:",
+  "kanban.qa_a": "Bạn trả lời:",
+  "viec.st_hoi": "Việc nền cần bạn trả lời",
+  "viec.hoi_ph": "Gõ câu trả lời...",
+  "viec.hoi_gui": "Gửi",
+  "viec.hoi_da_gui": "Đã gửi, việc đang chạy tiếp.",
+  "viec.hoi_loi": "Chưa gửi được, thử lại hoặc trả lời ở trang Việc."
 }
