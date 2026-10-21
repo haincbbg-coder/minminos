@@ -246,6 +246,11 @@ _MAT_NHA_CONG_KHAI = ("/mat-nha/su-kien", "POST")
 # Mỗi endpoint tự kiểm token máy (header x-minmin-may) hoặc mã ghép 6 số - xem routes/doi_social.py.
 # Chỉ miễn GET/POST: DELETE /doi-social/may/<id> (gỡ máy) vẫn phải đăng nhập.
 _DOI_SOCIAL_MAY = ("/doi-social/may/", ("GET", "POST"))
+# Đội Social Fanpage (26.10.194): Instagram tải ảnh/video của bài qua URL công khai có mã HMAC hạn
+# 2 giờ. Miễn ĐÚNG mẫu này (một đoạn mã) với GET/HEAD; endpoint tự kiểm chữ ký, hạn, và chỉ phục vụ tệp
+# trong thư mục media Fanpage - xem routes/doi_social.py (fp_cong_khai).
+_DOI_SOCIAL_CONG_KHAI = (r"/doi-social/fp/cong-khai/[A-Za-z0-9_.-]{20,600}", ("GET", "HEAD"))
+_DOI_SOCIAL_CONG_KHAI_RE = re.compile(_DOI_SOCIAL_CONG_KHAI[0])
 # Biến động số dư (26.10.119): Casso đẩy giao dịch vào POST /bien-dong/casso/<mã>, không có
 # cookie. Miễn ĐÚNG mẫu này (khớp trọn, một đoạn mã) với POST - xem routes/bien_dong.py.
 _BIEN_DONG_CONG_KHAI = (r"/bien-dong/casso/[A-Za-z0-9_-]{20,80}", "POST")
@@ -321,6 +326,8 @@ async def _auth_guard(request: Request, call_next):
                   # GET cùng đường (đọc sự kiện) vẫn phải đăng nhập.
                   or (path, request.method) == _MAT_NHA_CONG_KHAI
                   or (path.startswith(_DOI_SOCIAL_MAY[0]) and request.method in _DOI_SOCIAL_MAY[1])
+                  or (request.method in _DOI_SOCIAL_CONG_KHAI[1]
+                      and _DOI_SOCIAL_CONG_KHAI_RE.fullmatch(path) is not None)
                   # Biến động số dư: webhook Casso. Endpoint tự kiểm mã trong đường (404 nếu
                   # sai) và chữ ký HMAC. GET cùng đường, đường có thêm đoạn, dấu "/" cuối
                   # và mọi đường /bien-dong khác vẫn phải đăng nhập.
