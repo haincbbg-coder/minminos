@@ -60,6 +60,7 @@ CAP = [
     ("docs/24-cli-terminal.md", "docs/en/24-cli.md"),
     ("docs/28-hoi-thoai-khach.md", "docs/en/28-customer-conversations.md"),
     ("docs/30-ket-noi-da-tai-khoan.md", "docs/en/30-multi-account-connectors.md"),
+    ("docs/32-theo-doi-trang.md", "docs/en/32-page-watch.md"),
     ("docs/25-chatbot.md", "docs/en/25-chatbots.md"),
     ("docs/26-kenh-zalo-bot.md", "docs/en/26-zalo-bot-channel.md"),
     ("docs/27-tab-code-terminal.md", "docs/en/27-code-terminal.md"),

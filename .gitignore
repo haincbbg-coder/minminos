@@ -185,3 +185,4 @@ node_modules/
 # Đội Social (26.10.185): kho máy nhà/việc/ảnh chụp - dữ liệu chạy, không commit
 /server/doi-social/
 /server/concat/
+server/web_watch.sqlite3*
