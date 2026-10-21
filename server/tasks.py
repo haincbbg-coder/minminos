@@ -38,6 +38,7 @@ import localefmt
 import localefmt          # giờ hiển thị theo múi giờ người dùng, không phải giờ máy chủ
 import limit_learner      # nhận diện "gói thuê bao hết lượt" - CÙNG bộ mẫu với khung chat
 import limit_resume       # mượn hằng trừ hao / trần chờ của khung chat, không đẻ bộ số thứ hai
+import once_ledger
 import task_store
 from task_store import TaskStore, VALID_STATUS
 
@@ -116,6 +117,8 @@ class TasksFeature:
         self.deps = deps
         state_dir = Path(deps.state_dir or Path(__file__).parent)
         self.store = TaskStore(state_dir / "kanban.sqlite3")
+        # Sổ "làm đúng một lần" (0.238.0) nằm cạnh kho việc: cùng thư mục trạng thái, sao lưu cùng nhau.
+        once_ledger.configure(state_dir / "once_ledger.sqlite3")
         self.max_workers = max(1, min(8, int(os.getenv("JAVIS_KANBAN_MAX_WORKERS", "2"))))
         self._workers: dict[str, asyncio.Task] = {}
         self._worker_ids: dict[str, str] = {}
@@ -450,9 +453,27 @@ class TasksFeature:
                 )
                 return
 
-            result, error, needs_input, metadata = await asyncio.wait_for(
-                self._execute(task), timeout=self._tran_giay_viec()
-            )
+            # 0.238.0: thao tác ra ngoài của việc ghi sổ theo mã việc (once_ledger.py), nên lần chạy lại không
+            # gửi, đăng hay tạo đơn lần hai. Còn thao tác chưa rõ đã tới nơi chưa thì hỏi chủ TRƯỚC khi chạy.
+            job = f"kanban:{tid}"
+            treo = once_ledger.unknowns(job)
+            if treo:
+                final_task = self.store.ask(tid, worker_id, self._cau_hoi_ghi_ngoai(treo),
+                                            extra_meta={"once_pending": True})
+                return
+            tok = once_ledger.bind_job(job)
+            try:
+                result, error, needs_input, metadata = await asyncio.wait_for(
+                    self._execute(task), timeout=self._tran_giay_viec()
+                )
+            finally:
+                once_ledger.reset_job(tok)
+            treo = once_ledger.unknowns(job)
+            if treo:
+                # Một lời gọi ra ngoài hết giờ hay đứt kết nối giữa chừng: chạy lại hay báo xong đều có thể sai.
+                final_task = self.store.ask(tid, worker_id, self._cau_hoi_ghi_ngoai(treo), result=result,
+                                            extra_meta={"once_pending": True})
+                return
             # Soi CẢ result: nhà cung cấp hay in câu hết lượt ngay chỗ câu trả lời chứ không
             # báo lỗi, và bản trước coi đó là việc XONG với "kết quả" là một câu tiếng Anh.
             het_luot = self._het_luot(error, "" if error else result)
@@ -522,6 +543,40 @@ class TasksFeature:
     # ------------------------------------------------------------------
     # AI specification and execution lanes
     # ------------------------------------------------------------------
+    def _gan_ma_viec(self, cli, task: dict) -> None:
+        """Cho Claude Code báo mã việc cho hub (sổ làm đúng một lần, cổng từ Javis 0.238.0).
+
+        Claude Code gọi hub qua HTTP từ tiến trình con nên ContextVar không tới được hub. Ghi một
+        bản cấu hình MCP RIÊNG của việc này (copy cấu hình hub chung + header `X-Javis-Job`) rồi trỏ
+        engine vào đó. Cấu hình dùng chung không bao giờ bị sửa, nên việc khác chạy song song không
+        mang nhầm mã. Engine khác (Codex, Grok Build, Antigravity, Muse) chưa có đường này: việc của
+        chúng không có mã nên không được sổ bảo vệ, và `once_ledger.run` gọi thẳng như cũ."""
+        src = str(getattr(cli, "mcp_config", "") or "")
+        if not src or not Path(src).name.startswith(".mcp_hub_"):
+            return
+        try:
+            data = json.loads(Path(src).read_text(encoding="utf-8"))
+            ent = (data.get("mcpServers") or {}).get("javis")
+            if not isinstance(ent, dict):
+                return
+            ent.setdefault("headers", {})[once_ledger.JOB_HEADER] = f"kanban:{task['id']}"
+            dst = Path(src).parent / f".mcp_job_{hashlib.sha1(str(task['id']).encode()).hexdigest()[:12]}.json"
+            dst.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            try:
+                os.chmod(dst, 0o600)     # có hub token, siết như file gốc
+            except Exception:
+                pass
+            cli.mcp_config = str(dst)
+            hom_qua = time.time() - 2 * 86400
+            for f in Path(src).parent.glob(".mcp_job_*.json"):
+                try:
+                    if f != dst and f.stat().st_mtime < hom_qua:
+                        f.unlink()
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[kanban] không gắn được mã việc vào cấu hình MCP: {type(e).__name__}: {e}", file=sys.stderr)
+
     def _base_cli(
         self,
         task: dict,
@@ -548,6 +603,8 @@ class TasksFeature:
             if mcp_file:
                 cli.mcp_config = mcp_file
                 cli.mcp_strict = True
+        if mode in ("auto", "full"):
+            self._gan_ma_viec(cli, task)
         cli = aux_engine.apply(self.deps, cli, mode=mode, tag=cli.tag)
         try:
             # Trần chung cho fork nền (mặc định 1 giờ, env JAVIS_BG_MAX_WALL_S) - việc Kanban
@@ -1103,6 +1160,20 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
                   f"{type(e).__name__}: {e}", file=sys.stderr)
 
     @staticmethod
+    def _cau_hoi_ghi_ngoai(treo: list) -> str:
+        """Câu hỏi cho chủ khi có thao tác ra ngoài không rõ đã tới nơi chưa (0.238.0)."""
+        dong = "\n".join(f"- {x.get('target') or x.get('tool')}" for x in treo[:5])
+        if len(treo) > 5:
+            dong += localefmt.chu(f"\n- ...và {len(treo) - 5} thao tác nữa", f"\n- ...and {len(treo) - 5} more")
+        return localefmt.chu(
+            f"Lần chạy trước có {len(treo)} thao tác ra ngoài mà Javis không chắc đã tới nơi (máy chủ dừng hoặc mất "
+            f"kết nối đúng lúc đang gọi):\n{dong}\nBạn kiểm tra giúp rồi trả lời \"đã gửi\" (Javis bỏ qua, không làm "
+            "lại) hoặc \"chưa gửi\" (Javis làm lại).",
+            f"The previous run made {len(treo)} outside action(s) that Javis cannot confirm went through (the server "
+            f"stopped or the connection dropped mid-call):\n{dong}\nPlease check, then answer \"sent\" (Javis skips "
+            "them) or \"not sent\" (Javis does them again).")
+
+    @staticmethod
     def _cau_hoi_dang_cho(task: dict) -> str:
         """Câu hỏi việc đang chờ chủ trả lời, "" khi không có (0.235.0)."""
         if str(task.get("block_kind") or "") != "needs_input":
@@ -1280,6 +1351,11 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
         task = self.store.get_task(task_id)
         if not task or (brain and task.get("brain_root") != self._ensure(brain)):
             return {"ok": False, "error": localefmt.chu("Không tìm thấy việc", "Job not found")}
+        if (task.get("metadata") or {}).get("once_pending") and str(text or "").strip() \
+                and task.get("status") == "blocked":
+            # Câu hỏi "đã gửi chưa" (0.238.0): chốt sổ trước khi việc chạy lại. Chỉ câu mở đầu bằng ý
+            # "chưa / làm lại" mới cho làm lại; còn lại coi như đã làm, để không gửi trùng.
+            once_ledger.resolve(f"kanban:{task_id}", done=not once_ledger.answer_means_redo(text))
         done, err = self.store.answer(task_id, text, by=by)
         if not done:
             return {"ok": False, "error": {

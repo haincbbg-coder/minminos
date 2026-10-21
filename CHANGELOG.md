@@ -8,7 +8,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Thêm mới
 - **Việc nền hỏi lại bố được rồi chạy tiếp bằng câu trả lời** (cổng từ Javis 0.235). Việc nền thiếu thông tin không còn kẹt ở "Cần bạn xử lý": nó hỏi, bố trả lời ngay trong chat hoặc trên thẻ việc, việc chạy tiếp chứ không làm lại từ đầu.
 ### Sửa lỗi
-- **Việc nền chạy lại không còn gửi tin, đăng bài hay tạo đơn hai lần** (cổng từ Javis 0.238). Máy chủ dừng đúng lúc đang gửi thì MinMin hỏi bố, không tự gửi lại.
+- **Việc nền chạy lại không còn gửi tin, đăng bài hay tạo đơn hai lần** (cổng từ Javis 0.238). Máy chủ dừng đúng lúc đang gửi thì MinMin hỏi bố, không tự gửi lại. Hiện bảo vệ việc chạy bằng Claude Code và bộ não API; Codex, Grok Build, Antigravity, Muse Code chưa có.
 
 ## [26.10.198] - 2026-10-21
 

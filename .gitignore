@@ -31,6 +31,7 @@ server/mcp_servers.json
 server/mcp_servers.v1.bak.json
 server/.mcp_config.json
 server/.mcp_hub_*.json
+server/.mcp_job_*.json
 server/.secret_key
 server/.hub_token
 # Tàn dư từ bản cũ (trước 0.64.47, tính năng đã bỏ; server tự xoá file này lúc boot).
@@ -41,6 +42,7 @@ server/.api_tokens.json
 server/auth_audit.jsonl*
 server/.oauth_mcp.json
 server/mcp_audit.jsonl*
+server/hanh-dong.jsonl*
 # Thư mục CHỨA CREDENTIAL do kết nối sinh ra lúc chạy. connector-cred là kho token mà một số
 # connector tự giữ (workspace-mcp); purge-trash giữ tạm chính những thư mục đó 30 ngày sau khi
 # người dùng xoá kết nối, để bấm nhầm còn lấy lại được. Cả hai TUYỆT ĐỐI không lên repo.
@@ -84,6 +86,7 @@ server/capability_registry.db*.corrupt-*
 # Bổ sung 0.9.241: 6 artifact dưới đây vừa KHÔNG track vừa KHÔNG ignore, nên một cú
 # `git add -A` là commit thẳng dữ liệu chạy + trạng thái deploy vào repo.
 server/kanban.sqlite3*
+server/once_ledger.sqlite3*
 # workflow_runs.sqlite3: kho lịch sử chạy quy trình (Task 2 Cộng sự), cùng lớp với
 # kanban.sqlite3* trên - test không đặt JAVIS_STATE_DIR sẽ ghi rơi vào server/ vì
 # execute_workflow giờ luôn chạm workflow_runs.get_store().

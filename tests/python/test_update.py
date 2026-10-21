@@ -304,7 +304,9 @@ _khoa = dict(_re2.findall(r'/static/(\S+?\.(?:js|css))\?v=([\w.]+)', _html))
 check("mọi file .js/.css đều được gắn khoá cache, không sót cái nào",
       len(_khoa) > 30 and all(v for v in _khoa.values()))
 check("KHÔNG còn khoá cache gõ tay ?v=72 (đã thay bằng khoá server tính)",
-      "?v=72" not in _html)
+      # Khoá là vân tay hex nên có thể BẮT ĐẦU bằng "72" (1/256 mỗi file, dính khi nội dung file đổi):
+      # chỉ coi là khoá gõ tay khi đúng hai chữ số, không kèm ký tự nào phía sau.
+      not _re2.search(r"\?v=72(?![\w.])", _html))
 _fps = main._asset_fps(_html)
 check("khoá là VÂN TAY nội dung của chính file đó",
       _khoa.get("console.js") == _fps.get("console.js") != None)
