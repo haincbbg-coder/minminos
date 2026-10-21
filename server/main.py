@@ -4588,9 +4588,13 @@ async def connect_oauth_start(request: Request):
 
 
 @app.get("/connect/oauth/callback")
-async def connect_oauth_callback(state: str = Query(""), code: str = Query(""), tram: str = Query("")):
-    res = await oauth_mcp.handle_callback(state, code, tram)
+async def connect_oauth_callback(state: str = Query(""), code: str = Query(""), tram: str = Query(""),
+                                 error: str = Query(""), error_description: str = Query("")):
+    # Nhà cung cấp báo lỗi ở bước xin quyền (vd invalid_scope của Higgsfield/Clerk) thì không có code.
+    res = await oauth_mcp.handle_callback(state, code, tram, error, error_description)
     mcp_hub.invalidate_cache()
+    if res.get("retry_url"):
+        return RedirectResponse(url=res["retry_url"], status_code=302)
     if res.get("ok"):
         _write_codex_profile()
         # Vừa có token: kiểm lại đèn ngay, không thì chip vẫn báo "Kết nối lại" tới vòng quét
