@@ -22468,6 +22468,8 @@ channels_routes._DEPS.stop_bot = chatbot_runtime.stop_bot
 conversations_routes.register(app, conversations_routes.ConversationsDeps(
     bot_status=chatbot_runtime.status,
 ))
+import routes.conversation_ops as conversation_ops_routes   # noqa: E402
+conversation_ops_routes.register(app)
 
 # Trang Coding (0.63.0): sổ repo, ràng buộc phiên, worktree, điểm hồi. Không có deps - kho
 # `coding_store` đứng một mình, không cần gì từ main. Chiều phụ thuộc ngược lại thì có:

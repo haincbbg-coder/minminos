@@ -7,7 +7,9 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.195] - 2026-10-21
 
 ### Thêm mới
-- Không gian Zalo tập trung: hội thoại, hồ sơ khách, mẫu trả lời, trợ lý và báo cáo chăm sóc khách hàng.
+- Hộp thư khách có hồ sơ, người phụ trách, thẻ và ghi chú; lọc khách theo thẻ hoặc tin chưa đọc.
+- Tạo mẫu trả lời /lệnh, tự điền tên khách vào bản nháp. AI tóm tắt hội thoại khi đã gắn Chatbot.
+- Tab Vận hành đo thời gian chờ từ tin đầu, mục tiêu phản hồi, lượng tin người/AI và nhật ký thao tác.
 
 ## [26.10.194] - 2026-10-21
 

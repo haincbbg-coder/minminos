@@ -489,7 +489,7 @@ def _conv_public(r: dict) -> dict:
 
 
 def danh_sach(channel: str = "", bot_id: str = "", account_id: str = "", q: str = "",
-              mode: str = "", limit: int = 50, offset: int = 0) -> List[dict]:
+              mode: str = "", limit: int = 50, offset: int = 0, tag: str = "", unread: bool = False) -> List[dict]:
     """Danh sách hội thoại, MỚI NHẤT TRƯỚC, kèm tên khách và kênh.
 
     `q` tìm theo tên khách, tiêu đề, id chat, tin cuối (LIKE, không phân biệt hoa thường).
@@ -505,6 +505,11 @@ def danh_sach(channel: str = "", bot_id: str = "", account_id: str = "", q: str 
         where.append("c.channel_account_id=?"); args.append(str(account_id))
     if mode:
         where.append("c.mode=?"); args.append(str(mode))
+    if unread:
+        where.append('c.unread_count>0')
+    if tag:
+        where.append('EXISTS (SELECT 1 FROM json_each(k.tags_json) WHERE value=?)')
+        args.append(str(tag))
     if q:
         like = f"%{str(q).strip()}%"
         where.append("(k.name LIKE ? OR c.title LIKE ? OR c.external_chat_id LIKE ? OR c.last_message LIKE ?)")

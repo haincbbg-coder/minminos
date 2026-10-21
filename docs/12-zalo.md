@@ -1,5 +1,9 @@
 # Zalo Agent MCP
 
+> Chăm khách trên nhiều tài khoản, thẻ, ghi chú, mẫu /lệnh và báo cáo SLA:
+> xem [Vận hành Zalo trong MinMin](zalo-van-hanh.md). Hộp thư có adapter ghi tin khi chủ bật
+> theo dõi; phần MCP bên dưới là luồng MinMin đọc/gửi thay chủ qua công cụ.
+
 ***Tiếng Việt** · [English](en/12-zalo-agent-mcp.md)*
 
 > **Javis có BA chỗ dính tới Zalo, đừng lẫn.** Trang này nói về chỗ thứ nhất: đăng nhập
