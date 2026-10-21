@@ -212,7 +212,7 @@
   function renderInbox(body) {
     if (_cho) {
       _botLoc = _cho.bot_id || ""; _kenhLoc = _cho.channel || ""; _tkLoc = _cho.account_key || "";
-      if (_cho.conversation_id) _chon = _cho.conversation_id;
+      if (_cho.conversation_id) { _chon = _cho.conversation_id; _msgs = []; _dauVetTin = ''; _hetCu = false; }
       _cho = null;
     }
     body.innerHTML =
@@ -236,7 +236,7 @@
     body.querySelector('.ht-tag-filter').onchange = function () { _tagLoc = this.value.trim(); tai(); };
     body.querySelector('.ht-unread-filter').onchange = function () { _unreadLoc = this.checked; tai(); };
     body.querySelector(".ht-bot").onchange = function (e) { _botLoc = e.target.value; tai(); };
-    taiTK(false).catch(function () {}).then(function () { tai(); if (_chon) taiTin(false); });
+    taiTK(false).catch(function () {}).then(function () { tai(); if (_chon) mo(_chon); });
   }
 
   // Ô chọn bot: dựng từ danh sách tài khoản (tài khoản nào có bot trực). Chỉ hiện khi có từ

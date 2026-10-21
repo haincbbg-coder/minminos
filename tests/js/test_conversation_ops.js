@@ -12,7 +12,7 @@ vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,'../../dashboard/conve
 (async()=>{
   const ops = context.window.JavisConversationOps;
   const field = {value:'/chao',focus(){this.focused=true;}};
-  assert.strictEqual(await ops.slash(field,'Lan'),'true' === 'true');
+  assert.strictEqual(await ops.slash(field,'Lan'),true);
   assert.strictEqual(field.value,'Chào Lan, Lan cần gì ạ?');
   assert.strictEqual(field.focused,true);
   assert.strictEqual(requests.length,1);

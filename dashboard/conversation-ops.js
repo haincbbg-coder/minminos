@@ -124,6 +124,8 @@
       '<button class="s-btn">Lưu mẫu</button><p class="co-template-status" role="status"></p></form></details>' +
       '<details class="co-section"><summary>Nhật ký vận hành</summary><p class="co-muted">Thao tác từ bản này, dưới phiên quản trị chung. Nhật ký không có nút sửa/xóa; quản trị máy chủ vẫn có quyền với cơ sở dữ liệu.</p>' +
       '<a href="/conversation-ops/audit.csv" download>Xuất 500 thao tác gần nhất (CSV)</a><div class="co-audit"></div></details></div>';
+    // Giữ đúng cây của lượt render: tab-body được dùng lại khi chuyển sang Hộp thư.
+    host = host.querySelector('.co-work');
     var generation = 0;
     async function load() {
       var current = ++generation;

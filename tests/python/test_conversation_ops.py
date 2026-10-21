@@ -83,6 +83,23 @@ class OpsTests(unittest.TestCase):
         ops._db().rollback()
         self.assertEqual(len(ops.audit()), 2)
 
+    def test_customer_after_reply_same_timestamp_still_waits(self):
+        self.event(-600, kind='human')
+        self.event(-600, kind='customer')
+        self.assertEqual(ops.report()['pending_count'], 1)
+
+    def test_shared_customer_profile_conflicts_across_conversations(self):
+        a = self.event(chat='a')['conversation_id']
+        b = self.event(chat='b')['conversation_id']
+        with cs._lock:
+            db = cs._conn()
+            db.execute('UPDATE conversations SET customer_id=? WHERE id=?', (cs.chi_tiet(a)['customer_id'], b))
+            db.commit()
+        ops.profile(b)  # B mở trước khi A sửa, giữ revision 0.
+        ops.save_profile(a, revision=0, owner='Mai', tags=['VIP'], note='giữ lại')
+        with self.assertRaises(ValueError):
+            ops.save_profile(b, revision=0, owner='Nam', tags=[], note='không được ghi đè')
+
     def test_api_profile_validation_and_summary_is_preview(self):
         app = FastAPI(); routes.register(app); client = TestClient(app)
         cid = self.event()['conversation_id']

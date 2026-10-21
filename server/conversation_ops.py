@@ -159,8 +159,9 @@ def report(days=7, channel='zalo_personal', account_id='', sla=300):
             'JOIN channel_accounts a ON a.id=c.channel_account_id '
             'JOIN messages m ON m.conversation_id=c.id '
             'WHERE ' + where + " AND c.last_sender_type='customer' AND c.mode!='closed' "
-            "AND m.sender_type='customer' AND m.created_at>COALESCE((SELECT MAX(r.created_at) "
-            "FROM messages r WHERE r.conversation_id=c.id AND r.sender_type IN ('human','ai')),0) "
+            "AND m.sender_type='customer' AND NOT EXISTS (SELECT 1 FROM messages r "
+            "WHERE r.conversation_id=c.id AND r.sender_type IN ('human','ai') "
+            "AND (r.created_at>m.created_at OR (r.created_at=m.created_at AND r.id>m.id))) "
             'GROUP BY c.id', args).fetchall()
         customers = db.execute('SELECT COUNT(*) FROM customers k JOIN channel_accounts a '
                                'ON a.id=k.channel_account_id WHERE ' + where + ' AND k.created_at>=?',
