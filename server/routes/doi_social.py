@@ -1999,7 +1999,8 @@ def _dang_ky_fanpage(app: FastAPI, _chan, _than) -> None:
             return c
         try:
             d = await _than(request)
-            return {"ok": True, "nhom": fp.tao_nhom(d.get("ten") or "", d.get("mo_ta") or "", d.get("cau_hinh"))}
+            n = fp.tao_nhom(d.get("ten") or "", d.get("mo_ta") or "", d.get("cau_hinh"))
+            return {"ok": True, "id": n["id"], "nhom": n}
         except ValueError as e:
             return _loi(e)
 
@@ -2470,7 +2471,7 @@ def _dang_ky_fanpage(app: FastAPI, _chan, _than) -> None:
             kq = await fpg.quet_kenh(kid)
         except ValueError as e:
             return _loi(e, 404)
-        return {"ok": True, **kq, "kenh": _kenh_ra(fp.lay_kenh(kid))}
+        return {"ok": True, **kq, "so_moi": kq.get("so", 0), "kenh": _kenh_ra(fp.lay_kenh(kid))}
 
     # ---- Instagram, cài đặt
     @app.get(P + "/instagram")
@@ -2485,7 +2486,8 @@ def _dang_ky_fanpage(app: FastAPI, _chan, _than) -> None:
         c = _cua(request)
         if c:
             return c
-        return {"ok": True, "cai_dat": fp.cai_dat(), "goc_cong_khai": fp.goc_cong_khai(), "co_yt_dlp": fpg.co_yt_dlp(),
+        cd = fp.cai_dat()
+        return {"ok": True, **cd, "cai_dat": cd, "goc_cong_khai": fp.goc_cong_khai(), "co_yt_dlp": fpg.co_yt_dlp(),
                 "so_ket_noi": fpg.so_ket_noi()}
 
     @app.post(P + "/cai-dat")
@@ -2501,7 +2503,7 @@ def _dang_ky_fanpage(app: FastAPI, _chan, _than) -> None:
                 _GOC_NHO["g"] = fp.goc_cong_khai()
         except ValueError as e:
             return _loi(e)
-        return {"ok": True, "cai_dat": cd, "goc_cong_khai": fp.goc_cong_khai()}
+        return {"ok": True, **cd, "cai_dat": cd, "goc_cong_khai": fp.goc_cong_khai()}
 
     # ---- URL công khai cho Instagram (KHÔNG cookie: main._auth_guard miễn đúng mẫu này với GET)
     @app.get(TIEN_TO_CONG_KHAI + "{ma}")

@@ -998,7 +998,7 @@ def nhap_kho(kid, chu: str) -> dict:
 
 def so_tu_ten_tep(ten: str) -> Optional[int]:
     """'12.mp4', 'phim_12.jpg', 'tap-012.mp4' -> 12. Không có số -> None."""
-    so = re.findall(r"\d+", ten_goc(ten))
+    so = re.findall(r"\d+", Path(ten_goc(ten)).stem)
     return int(so[-1]) if so else None
 
 
@@ -1483,7 +1483,7 @@ def ds_bai(trang_thai="", trang="", nhom="", loai="", tu=None, den=None, q="", s
                          "LIMIT ? OFFSET ?", (*a, m, off)).fetchall()
         dem = {r[0]: r[1] for r in c.execute(f"SELECT b.trang_thai, COUNT(*) {tu_bang}{wh0} GROUP BY b.trang_thai",
                                             a0).fetchall()}
-    return {"muc": [_dong_bai(r) for r in rows], "tong": tong, "trang": t, "dem": dem}
+    return {"muc": [_dong_bai(r) for r in rows], "tong": tong, "trang": t, "dem": {**{x: 0 for x in TT_BAI}, **dem}}
 
 
 def bai_csv(**loc) -> str:
@@ -2239,7 +2239,9 @@ def _dong_kenh(r) -> dict:
     d["theo_doi"] = bool(d.get("theo_doi"))
     with ds._db() as c:
         ten = {x["id"]: x["ten"] for x in c.execute("SELECT id, ten FROM fp_trang").fetchall()}
+        nh = c.execute("SELECT ten FROM fp_nhom WHERE id=?", (d.get("nhom_id"),)).fetchone() if d.get("nhom_id") else None
     d["trang_ten"] = [ten.get(x, x) for x in d["trang_ids"]]
+    d["nhom_ten"] = nh["ten"] if nh else ""
     return d
 
 

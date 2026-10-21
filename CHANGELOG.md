@@ -7,7 +7,12 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.194] - 2026-10-21
 
 ### Thêm mới
-- Đang làm: Fanpage qua Graph API trong Đội Social (đăng hẹn lịch, kho nội dung, bình luận, báo cáo, cảnh báo lỗi).
+- **Fanpage (API) trong Đội Social**: đăng lên Trang bằng token của Trang, chạy ngay trên máy chủ, không cần máy ở nhà. Dùng kết nối "Facebook Trang" sẵn có, dán thêm token tay được, tự xoay token khi một token lỗi.
+- **Nhóm Trang có lịch đăng**: khung giờ cố định hoặc mỗi N giờ, khung giờ hoạt động, lệch ngẫu nhiên, trải giờ giữa các Trang, chọn MinMin đăng hay hẹn sẵn trên Facebook. Trang kế thừa cấu hình nhóm, sửa riêng được.
+- **Kho nội dung, bình luận, link, tiểu sử**: spin `{a|b}`, lấy ngẫu nhiên, lần lượt hoặc khớp số thứ tự tệp, link tự dựng từ tên tệp.
+- **Tạo bài hàng loạt**: chữ, ảnh, album, video, Reels, story, kèm bình luận sau đăng, story kèm, đăng sang Instagram. Có xem trước, chống đăng trùng, mặc định chờ duyệt.
+- **Bình luận gộp mọi Trang**: quét ngay, trả lời, ẩn, AI soạn, quy tắc từ khoá tự trả lời/tự ẩn (mặc định chờ duyệt, bật Tự gửi mới tự gửi), nút Dừng mọi tự động.
+- **Kênh nguồn** (tải video mới từ TikTok, YouTube... về cho Trang), **Báo cáo** theo Trang và theo bài, **Cảnh báo lỗi** có cách sửa và nút tới chỗ sửa.
 
 ## [26.10.193] - 2026-10-21
 
