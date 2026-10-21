@@ -63,6 +63,23 @@
     return s + "</svg>";
   }
 
+  // Thẻ nhỏ Fanpage (API, 26.10.194): máy chủ chưa có hay lỗi thì không hiện gì.
+  function theFanpage(box) {
+    if (!box) return;
+    DS.api("GET", "/doi-social/fp/tong-quan", null, { quiet: true }).then(function (d) {
+      if (!box.isConnected) return;
+      if (!d || d.ok === false) { box.innerHTML = ""; return; }
+      var tr = d.trang || {}, bai = d.bai || {}, cb = d.canh_bao || {};
+      box.innerHTML = '<div class="card mt fp-tq-the"><div class="card-h"><h3>' + ic("flag") + "Fanpage (API)" + (d.dung_tu_dong ? DS.bd("Đang dừng tự động", "err", true) : "") + "</h3>" +
+        '<div class="row">' + (cb.chan ? '<a class="bd bd-err" href="#/fp-canh-bao">' + ic("alert") + DS.so(cb.chan) + " lỗi chặn đứng</a>" : cb.nang ? '<a class="bd bd-warn" href="#/fp-canh-bao">' + DS.so(cb.nang) + " cảnh báo</a>" : "") +
+        '<a class="small" href="#/fp-tong-quan">Mở Fanpage</a></div></div><div class="mini"><div><b>' + DS.so(tr.tong || 0) + "</b><span>Trang · " + DS.so(tr.co_lich || 0) + ' có lịch</span></div>' +
+        '<div><b style="color:var(--ok)">' + DS.so(bai.da_dang || 0) + "</b><span>Đã đăng</span></div><div><b>" + DS.so((bai.cho_dang || 0) + (bai.da_hen_fb || 0)) + "</b><span>Chờ đăng</span></div>" +
+        '<div><a href="#/fp-bai?trang_thai=cho_duyet" style="color:inherit"><b style="color:' + (bai.cho_duyet ? "var(--warn)" : "inherit") + '">' + DS.so(bai.cho_duyet || 0) + "</b></a><span>Chờ duyệt</span></div>" +
+        '<div><b style="color:' + (bai.loi ? "var(--err)" : "inherit") + '">' + DS.so(bai.loi || 0) + "</b><span>Lỗi</span></div>" +
+        '<div><b>' + DS.so(d.nguoi_theo_doi || 0) + "</b><span>Người theo dõi</span></div></div></div>";
+    });
+  }
+
   DS.view("tong-quan", {
     title: "Tổng quan",
     render: function (el, ctx) {
@@ -112,6 +129,7 @@
           the("ok", "ico-ok", "Thành công", DS.so(so.thanh_cong || 0), ty + "% số lượt") +
           the("play", "ico-info", "Đang chạy", DS.so(so.dang_chay || 0), '<a href="#/nhat-ky">xem trực tiếp</a>') +
           the("alert", "ico-err", "Lỗi", DS.so(so.loi || 0), '<a href="#/nhat-ky?tab=hoat-dong&kq=loi">xem lỗi</a>') + "</div>";
+        h += '<div id="tq-fp"></div>';
 
         var tong = 0, tc = 0;
         bd.forEach(function (x) { tong += (x.thanh_cong || 0) + (x.loi || 0); tc += x.thanh_cong || 0; });
@@ -128,6 +146,7 @@
         }).join("");
         h += '<div class="sep"></div><a class="small" href="#/nhat-ky">Mở nhật ký hoạt động</a></div></div>';
         el.innerHTML = h;
+        theFanpage(el.querySelector("#tq-fp"));
 
         var c = el.querySelector("#chart");
         if (c) {

@@ -546,3 +546,103 @@ button.dd-chip:hover, a.dd-chip:hover { border-color: var(--brand); color: var(-
   .dot-act { width: 100%; }
   .dot-act .btn { flex: 1; }
 }
+
+/* ------------------------------------------------------------------ Fanpage (API) 26.10.194 */
+.nav-n-err { background: var(--err); }
+.av.fp-av { object-fit: cover; background: var(--mu-soft); }
+.av.av-s { width: 22px; height: 22px; font-size: 9.5px; }
+.fp-thumbs { flex-wrap: nowrap; align-items: center; flex: none; }
+.fp-thumbs img, .fp-thumbs .vid { width: 44px; height: 44px; }
+.fp-tt { display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px; }
+.fp-tog { display: flex; flex-wrap: wrap; gap: 4px; }
+.fp-t { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px dashed var(--line); color: var(--mu2); white-space: nowrap; }
+.fp-t.on { border-style: solid; border-color: transparent; background: var(--brand-soft); color: var(--brand-ink); }
+.fp-t.warn { border-style: solid; border-color: transparent; background: var(--warn-soft); color: var(--warn); }
+.filters.fp-bulk { background: var(--brand-soft); position: relative; z-index: 6; }
+.tbl tbody tr.fp-on td { background: color-mix(in srgb, var(--brand-soft) 70%, transparent); }
+.tbl tbody tr.fp-off td { opacity: .62; }
+.tbl tbody tr.fp-off td:first-child, .tbl tbody tr.fp-off td:last-child { opacity: 1; }
+td.fp-cbo { cursor: pointer; user-select: none; -webkit-user-select: none; }
+.fp-lich { text-align: left; color: var(--ink2); }
+.fp-lich .ic { width: 14px; height: 14px; color: var(--mu); }
+.fp-code { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--mu-soft); border-radius: 6px; padding: 2px 6px; color: var(--ink2); white-space: nowrap; }
+/* menu Hành động */
+.fp-dd { position: relative; }
+.fp-dd > .btn .ic:last-child { width: 14px; height: 14px; }
+.fp-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 250px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 30; }
+.fp-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; background: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left; font-weight: 500; color: var(--ink); }
+.fp-menu button:hover { background: var(--hover); }
+.fp-menu button .ic { width: 16px; height: 16px; color: var(--mu); }
+.fp-menu-sep { height: 1px; background: var(--line); margin: 5px 4px; }
+.fp-menu-t { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--warn); padding: 4px 10px 2px; }
+/* nhóm */
+.fp-nhom .stack > * + * { margin-top: 4px; }
+.fp-nhom .stack .ic { width: 15px; height: 15px; color: var(--mu); }
+.fp-nhom-ic { width: 34px; height: 34px; border-radius: 10px; background: var(--brand-soft); color: var(--brand); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+/* cấu hình */
+.fp-ch .sec:first-child { padding-top: 4px; }
+.fp-xt { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card2); }
+.fp-xt .ic { width: 15px; height: 15px; color: var(--brand); }
+.fp-gio { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.fp-gio .bd { font-variant-numeric: tabular-nums; }
+.hint.fp-warn-hint { color: var(--warn); font-weight: 600; display: flex; gap: 5px; align-items: flex-start; margin-top: 4px; }
+.hint.fp-warn-hint .ic { width: 14px; height: 14px; margin-top: 1px; }
+/* tải tệp */
+.fp-up { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 10px; }
+.fp-up-i { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card2); display: flex; flex-direction: column; }
+.fp-up-i img, .fp-up-i .vid { width: 100%; height: 72px; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--mu); background: var(--mu-soft); }
+.fp-up-i .tiny { padding: 3px 6px; }
+.fp-up-x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(17, 24, 39, .7); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.fp-up-x .ic { width: 13px; height: 13px; }
+/* kiểm tra */
+.fp-buoc li.ok .ic { color: var(--ok); }
+.fp-buoc li.loi .ic { color: var(--err); }
+.fp-buoc li .ic { width: 16px; height: 16px; }
+/* spin */
+.fp-spin-help p { margin: 0 0 8px; color: var(--ink2); }
+.fp-spin-help code, .hint code { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--mu-soft); border-radius: 5px; padding: 1px 5px; color: var(--brand-ink); }
+.fp-spin-kq { margin: 0; padding-left: 20px; font-size: 12.5px; }
+.fp-spin-kq li { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.fp-spin-kq li:last-child { border-bottom: 0; }
+/* bình luận */
+.fp-rep { display: flex; gap: 6px; align-items: flex-start; margin-top: 6px; padding: 6px 9px; border-radius: 9px; background: var(--ok-soft); font-size: 12.5px; color: var(--ink2); }
+.fp-rep.cho { background: var(--warn-soft); }
+.fp-rep .ic { width: 14px; height: 14px; margin-top: 2px; color: var(--mu); flex: none; }
+.tbl tr.fp-tl-row td { background: var(--card2); }
+.fp-tl .ta { min-height: 60px; }
+.btn.fp-stop { background: var(--err); border-color: transparent; color: #fff; height: 38px; padding: 0 16px; box-shadow: 0 4px 14px rgba(220, 38, 38, .28); }
+.btn.fp-stop:hover { background: var(--err); filter: brightness(1.07); }
+.fp-dung-note { align-items: center; }
+.fp-dung-note > .ic { color: var(--err); }
+/* biểu đồ mini */
+svg.fp-spark { display: block; flex: none; overflow: visible; }
+svg.fp-spark .ln { fill: none; stroke: var(--brand); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+svg.fp-spark .ar { fill: var(--brand-soft); opacity: .8; }
+.chart .bar-info { fill: #60a5fa; }
+/* cảnh báo */
+.fp-cb-strip { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 12px; background: var(--info-soft); color: var(--ink2); text-decoration: none !important; }
+.fp-cb-strip > .ic { color: var(--info); }
+.fp-cb-strip.nang { background: var(--warn-soft); } .fp-cb-strip.nang > .ic { color: var(--warn); }
+.fp-cb-strip.chan { background: var(--err-soft); } .fp-cb-strip.chan > .ic { color: var(--err); }
+.fp-cb-strip:hover { filter: brightness(.98); }
+.fp-cb-ds { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+.fp-cb { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--info); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; }
+.fp-cb.nang { border-left-color: var(--warn); }
+.fp-cb.chan { border-left-color: var(--err); background: color-mix(in srgb, var(--err-soft) 35%, var(--card)); }
+.fp-cb-h { display: flex; gap: 10px; align-items: flex-start; }
+.fp-cb-ic { width: 28px; height: 28px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--info-soft); color: var(--info); }
+.fp-cb-ic .ic { width: 16px; height: 16px; }
+.fp-cb.nang .fp-cb-ic { background: var(--warn-soft); color: var(--warn); }
+.fp-cb.chan .fp-cb-ic { background: var(--err-soft); color: var(--err); }
+.fp-cb-sua { margin-top: 8px; padding: 8px 10px; border-radius: 9px; background: var(--card2); border: 1px solid var(--line2); font-size: 12.5px; color: var(--ink2); }
+.fp-cb-so.chan .ico { background: var(--err-soft); color: var(--err); }
+.fp-cb-so.nang .ico { background: var(--warn-soft); color: var(--warn); }
+.fp-cb-so.nhac .ico { background: var(--info-soft); color: var(--info); }
+.fp-tq-the .card-h h3 .bd { margin-left: 4px; }
+.fp-tq-the a.bd { text-decoration: none !important; }
+.fp-tq-the a.bd .ic { width: 13px; height: 13px; }
+@media (max-width: 760px) {
+  .fp-menu { right: auto; left: 0; min-width: 230px; }
+  .fp-cb-ds { grid-template-columns: minmax(0, 1fr); }
+  .btn.fp-stop { width: 100%; }
+}
