@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.192] - 2026-10-21
+
+### Thêm mới
+- **Quét Trang và tài khoản**: máy ở nhà đọc các Trang Facebook mỗi nick quản lý và tài khoản Instagram, TikTok, Threads đang đăng nhập. Khi đăng bài chỉ cần chọn Trang trong danh sách cho từng nick, không phải đi tìm link.
+- **Tạm dừng, tiếp tục, huỷ từng tài khoản** ngay trên dòng của tài khoản đó khi chạy hàng loạt, không phải huỷ cả đợt. Có thêm tạm dừng / tiếp tục cả đợt.
+- Trợ lý AI biết các Trang của từng nick, nên nhắn "đăng bài lên Trang X" là tự chọn đúng nick quản lý Trang đó.
+
 ## [26.10.191] - 2026-10-21
 
 ### Sửa lỗi

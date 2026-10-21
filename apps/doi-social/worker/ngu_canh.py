@@ -184,7 +184,7 @@ class NguCanh:
 
     SO_LAN_THU = 3
     GIAN_CACH_THU = (2.0, 5.0, 10.0)
-    HOI_DUNG_MOI_GIAY = 15.0
+    HOI_DUNG_MOI_GIAY = 8.0
 
     def __init__(self, may_chu, viec: dict, page=None, ctx=None, nhat_ky=None,
                  thu_muc_tam=None, rng: Optional[random.Random] = None, toc_do: float = 1.0,
@@ -314,12 +314,30 @@ class NguCanh:
             self._lan_hoi_dung = bay_gio
             try:
                 d = self.may_chu.goi("GET", f"/doi-social/may/dung/{self.vid}", None) or {}
+                if d.get("tam_dung") and not d.get("dung"):
+                    d = self._cho_tiep_tuc()
                 if d.get("dung"):
                     self._dung = True
-                    self.nhat_ky("MinMin báo dừng (đợt bị huỷ)")
+                    self.nhat_ky("MinMin báo dừng (bạn huỷ việc hoặc đợt)")
             except Exception:
                 pass        # hỏi cờ dừng hỏng thì làm tiếp, lần sau hỏi lại
         return self._dung
+
+    def _cho_tiep_tuc(self) -> dict:
+        """Chủ bấm Tạm dừng: đứng yên (giữ trình duyệt) tới khi Tiếp tục hoặc Huỷ. Tối đa 6 giờ."""
+        self.nhat_ky("Tạm dừng theo lệnh của bạn, chờ Tiếp tục")
+        han = time.monotonic() + 6 * 3600
+        while time.monotonic() < han:
+            time.sleep(5)
+            try:
+                d = self.may_chu.goi("GET", f"/doi-social/may/dung/{self.vid}", None) or {}
+            except Exception:
+                continue
+            if d.get("dung") or not d.get("tam_dung"):
+                if not d.get("dung"):
+                    self.nhat_ky("Tiếp tục chạy")
+                return d
+        return {"dung": True}
 
     def nghi_thao_tac(self) -> None:
         a, b = self.nghi_giay

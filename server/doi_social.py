@@ -39,7 +39,8 @@ KY_NANG = {
 # 26.10.187: mọi id mẫu trong danh mục cũng là kỹ năng (việc của đợt chạy), cộng hai kỹ năng nội
 # bộ máy chủ tự tạo: đăng một nháp đã duyệt, và gửi một tin Messenger chủ tự gõ.
 KY_NANG_NOI_BO = {"dang_ban_nhap": "Đăng nháp đã duyệt", "fb_gui_tin": "Gửi tin nhắn chủ gõ",
-                  "kham_trang": "Khám trang (chẩn đoán, không bấm gì)"}
+                  "kham_trang": "Khám trang (chẩn đoán, không bấm gì)",
+                  "quet_tai_khoan": "Quét Trang / tài khoản của nick"}
 
 
 def _nap_ky_nang() -> None:
@@ -525,11 +526,12 @@ def duong_tep(vid, luu: str) -> Optional[Path]:
 def ghi_ket_qua(vid, may_id: str, ok: bool, thong_diep: str = "", buoc=None, anh: bytes = b"",
                 dem: Optional[dict] = None) -> dict:
     with _khoa, _db() as c:
-        r = c.execute("SELECT may_id, trang_thai FROM viec WHERE id=?", (int(vid),)).fetchone()
+        r = c.execute("SELECT may_id, trang_thai, lenh FROM viec WHERE id=?", (int(vid),)).fetchone()
         if not r or r["may_id"] != may_id:
             raise ValueError("việc không thuộc máy này")
         if r["trang_thai"] != "dang_chay":
             raise ValueError(f"việc #{vid} không ở trạng thái đang chạy")
+        huy = (r["lenh"] or "") == "huy"
         co_anh = 0
         if anh:
             (_goc / "anh" / f"{int(vid)}.png").write_bytes(anh[:8 * 1024 * 1024])
@@ -542,7 +544,8 @@ def ghi_ket_qua(vid, may_id: str, ok: bool, thong_diep: str = "", buoc=None, anh
                 except (TypeError, ValueError):
                     kq[k] = 0
         c.execute("UPDATE viec SET trang_thai=?, xong_luc=?, thong_diep=?, buoc=?, co_anh=?, ket_qua=? WHERE id=?",
-                  ("xong" if ok else "loi", _bay_gio(), str(thong_diep or "")[:1000],
+                  ("bo" if huy else ("xong" if ok else "loi"), _bay_gio(),
+                   (("Bạn đã huỷ việc này. " if huy else "") + str(thong_diep or ""))[:1000],
                    json.dumps(list(buoc or [])[:50], ensure_ascii=False), co_anh,
                    json.dumps(kq), int(vid)))
         import doi_social_v2

@@ -589,7 +589,19 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             v2.viec_cua_may(vid, m["id"])
         except ValueError as e:
             return _loi_v(e)
-        return {"ok": True, "dung": v2.can_dung(vid)}
+        return {"ok": True, **v2.lenh_viec(vid)}
+
+    @app.post("/doi-social/may/dich-den")
+    async def ds_may_dich_den(request: Request):
+        m, err = await _may(request)
+        if err:
+            return err
+        try:
+            d = await _json(request)
+            kq = v2.ghi_dich_den(d.get("viec_id"), m["id"], d.get("nen_tang") or [], d.get("muc") or [])
+        except ValueError as e:
+            return _loi_v(e)
+        return {"ok": True, **kq}
 
     @app.post("/doi-social/may/ai")
     async def ds_may_ai(request: Request):
@@ -1184,6 +1196,55 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             return _loi("không có tệp", 404)
         kieu = "text/plain; charset=utf-8" if p.suffix.lower() == ".txt" else "text/csv; charset=utf-8"
         return FileResponse(str(p), media_type=kieu, filename=p.name)
+
+    @app.post("/doi-social/viec/{vid}/dieu-khien")
+    async def ds_dieu_khien_viec(vid: int, request: Request):
+        c = _chan()
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            v = v2.dieu_khien_viec(vid, str(d.get("hanh_dong") or ""))
+        except ValueError as e:
+            return _loi(e)
+        if v and v.get("trang_thai") == "cho_chay":
+            danh_thuc(v["may_id"])
+        return {"ok": True, "viec": v}
+
+    @app.post("/doi-social/dot-chay/{did}/dieu-khien")
+    async def ds_dieu_khien_dot(did: int, request: Request):
+        c = _chan()
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            dot = v2.dieu_khien_dot(did, str(d.get("hanh_dong") or ""))
+        except ValueError as e:
+            return _loi(e)
+        for m in doi_social.ds_may():
+            danh_thuc(m["id"])
+        return {"ok": True, "dot": dot}
+
+    @app.get("/doi-social/dich-den")
+    def ds_dich_den(nick: str = Query(""), nen_tang: str = Query("")):
+        c = _chan()
+        if c:
+            return c
+        return {"ok": True, "muc": v2.ds_dich_den(nick, nen_tang)}
+
+    @app.post("/doi-social/quet-tai-khoan")
+    async def ds_quet_tai_khoan(request: Request):
+        c = _chan()
+        if c:
+            return c
+        try:
+            d = await _than(request)
+            ds_v = v2.tao_quet_tai_khoan(d.get("nick") or [], d.get("nen_tang") or None)
+        except ValueError as e:
+            return _loi(e)
+        for m in {v["may_id"] for v in ds_v}:
+            danh_thuc(m)
+        return {"ok": True, "muc": ds_v, "so": len(ds_v)}
 
     @app.post("/doi-social/kham-trang")
     async def ds_kham_trang(request: Request):
