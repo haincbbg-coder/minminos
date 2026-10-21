@@ -101,7 +101,10 @@
     phone: '<path d="M6.5 3h3l1.5 4.5-2 1.5a11 11 0 0 0 6 6l1.5-2L21 14.5v3a2 2 0 0 1-2 2A16 16 0 0 1 4.5 5a2 2 0 0 1 2-2z"/>',
     filter: '<path d="M4 5h16l-6 8v6l-4-2v-4z"/>',
     image: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5-5 4 4 2.5-2.5L20 19"/>',
-    video: '<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10.5 5-3v9l-5-3z"/>'
+    video: '<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10.5 5-3v9l-5-3z"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4.5L17 13H5"/>',
+    chart: '<path d="M4 4v16h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>',
+    key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14.5 8.5l2 2"/>'
   };
   DS.ic = function (ten, cls) {
     return '<svg class="ic ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + (IC[ten] || IC.info) + "</svg>";
@@ -492,6 +495,13 @@
     });
     DS.api("GET", "/doi-social/ban-nhap?trang_thai=cho_duyet&moi_trang=1", null, { quiet: true }).then(function (d) {
       if (d.ok !== false) huyHieu("n-duyet", (d.dem && d.dem.cho_duyet) != null ? d.dem.cho_duyet : d.tong);
+    });
+    // Fanpage (API, 26.10.194): bài chờ duyệt + số lỗi chặn đứng. Máy chủ chưa có thì im lặng.
+    DS.api("GET", "/doi-social/fp/bai?trang_thai=cho_duyet&moi_trang=1", null, { quiet: true }).then(function (d) {
+      if (d.ok !== false) huyHieu("n-fp-duyet", (d.dem && d.dem.cho_duyet) != null ? d.dem.cho_duyet : d.tong);
+    });
+    DS.api("GET", "/doi-social/fp/canh-bao", null, { quiet: true }).then(function (d) {
+      if (d.ok !== false) huyHieu("n-fp-cb", (d.dem && d.dem.chan) || 0);
     });
   };
 
