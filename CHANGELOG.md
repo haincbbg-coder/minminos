@@ -7,7 +7,14 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.200] - 2026-10-21
 
 ### Cải thiện
-- Đang làm: Viết bài AI chọn đúng Fanpage, đúng Trang của nick, có lịch đăng.
+- **Viết bài AI làm lại theo 6 bước rõ ràng**: viết về sản phẩm nào, đăng ở đâu, mấy bài, ảnh kèm, khi nào đăng, dặn thêm AI. Bên phải có **Kế hoạch đăng** xem trước từng bài sẽ lên đâu, lúc mấy giờ.
+- **Đăng lên Fanpage bằng AI**: chọn một hay nhiều Fanpage (chọn nhanh theo nhóm Trang), máy chủ đăng, không cần máy ở nhà. AI viết riêng từng bài cho từng Trang nên không Trang nào trùng chữ. Tối đa 20 bài mỗi lần.
+- **Trang Facebook qua nick**: chọn nick rồi chọn đúng Trang trong các Trang nick đó quản lý (có nút Quét Trang khi danh sách trống). Instagram, TikTok, Threads hiện đúng tài khoản nick đang đăng nhập. Nhóm Facebook chọn được từ Kho group FB.
+- **Số bài** giờ có giải thích: với Fanpage là số bài mỗi Trang, với nick là số bài khác nhau, mỗi bài một lần đăng.
+- **Lịch đăng**: ngay khi duyệt, theo lịch nhóm Trang, hoặc chọn giờ bài đầu và khoảng cách giữa các bài. Máy ở nhà chỉ nhận việc khi tới giờ; Nhật ký hiện "Hẹn" kèm giờ.
+- Kèm ảnh cho bài AI (mỗi bài một ảnh xoay vòng, hoặc cả bộ ảnh).
+- Sau khi viết, các bài hiện ngay bên dưới, có nút **Duyệt cả N bài**. Bài AI luôn chờ duyệt, kể cả khi nhóm Trang tắt Duyệt trước.
+- Duyệt nội dung hiện rõ "Đăng lên: tên Trang/nhóm" và giờ đăng của từng bài. Bài đăng Fanpage có nút "AI viết bài cho Trang".
 
 ## [26.10.198] - 2026-10-21
 

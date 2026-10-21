@@ -485,6 +485,8 @@ def nhan_viec(may_id: str) -> Optional[dict]:
                            (may_id,)).fetchall():
             if r["nick_id"] in nick_ban:
                 continue
+            if r["chay_sau"] and r["chay_sau"] > _bay_gio():      # việc hẹn giờ (bài AI chủ chọn giờ đăng)
+                continue
             ky = r["ky_nang"]
             if ky == "fb_dang_bai":
                 if dang >= may_ss:

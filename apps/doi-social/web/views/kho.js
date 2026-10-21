@@ -147,64 +147,307 @@
     return nap();
   }
 
+  // ================================================================ Viết bài AI (26.10.200)
+  // Rõ ba câu hỏi: đăng ở đâu (Fanpage qua API, hay nick ở máy nhà + đúng Trang/nhóm/tài khoản),
+  // bao nhiêu bài, khi nào đăng. Bên phải là kế hoạch đăng xem trước, cập nhật theo từng lựa chọn.
+  var CACH_PHUT = [[0, "cùng lúc"], [15, "15 phút"], [30, "30 phút"], [60, "1 giờ"], [120, "2 giờ"], [180, "3 giờ"], [360, "6 giờ"], [720, "12 giờ"], [1440, "1 ngày"]];
+  var NOI_NICK = ["fb_trang", "fb_nhom", "fb_tuong", "instagram", "tiktok", "threads", "x", "reddit"];
+  var NT_TK = { instagram: "instagram", tiktok: "tiktok", threads: "threads" };
+
   function tabViet(el, ctx) {
     var body = el.querySelector("#kho-body");
     body.innerHTML = DS.skel(6);
-    return Promise.all([DS.layKienThuc(true), DS.layNick()]).then(function (a) {
+    var layTrangFp = (window.FP && FP.layTrang) ? FP.layTrang().catch(function () { return {}; }) : Promise.resolve({});
+    return Promise.all([DS.layKienThuc(true), DS.layNick(), layTrangFp]).then(function (a) {
       if (!ctx.alive) return;
       var kt = DS.list(a[0], "kien_thuc").filter(function (x) { return (x.loai || "san_pham") === "san_pham"; }), nick = DS.list(a[1], "nick");
+      var trangFp = DS.list(a[2]).filter(function (t) { return t.bat !== 0 && t.bat !== false; });
       if (!kt.length) {
         body.innerHTML = '<div class="card">' + DS.rong("Chưa có sản phẩm nào", "AI viết bài dựa trên hồ sơ sản phẩm (mô tả, giá, giọng văn). Thêm một sản phẩm trước.", "book",
           '<a class="btn btn-pri" href="#/kien-thuc">' + ic("plus") + "Thêm sản phẩm</a>") + "</div>";
         return;
       }
-      var spDau = ctx.q.sp || kt[0].id;
-      body.innerHTML = '<div class="grid g-21"><div class="card"><div class="card-h"><h3>' + ic("spark") + 'Viết bài bằng AI</h3></div>' +
-        '<div class="fgrid"><div class="fld"><label for="vb-sp">Sản phẩm <span class="req">*</span></label><select class="sel" id="vb-sp">' + kt.map(function (x) {
-          return '<option value="' + esc(x.id) + '"' + (String(x.id) === String(spDau) ? " selected" : "") + ">" + esc(x.ten) + (x.trang_thai === "cho_duyet" ? " (chờ duyệt)" : "") + "</option>";
-        }).join("") + '</select></div><div class="fld"><label for="vb-noi">Nơi đăng <span class="req">*</span></label><select class="sel" id="vb-noi">' + Object.keys(DS.NOI_DANG).map(function (k) {
-          return '<option value="' + k + '">' + esc(DS.NOI_DANG[k]) + "</option>";
-        }).join("") + "</select></div>" +
-        '<div class="fld"><label for="vb-nick">Nick đăng (tuỳ chọn)</label><select class="sel" id="vb-nick"><option value="">Chưa gán, nick nào rảnh thì đăng</option>' + nick.map(function (n) {
-          return '<option value="' + esc(n.id) + '">' + esc(n.ten) + "</option>";
-        }).join("") + '</select></div><div class="fld"><label for="vb-so">Số bản</label><div class="seg" id="vb-so">' + [1, 2, 3, 4, 5].map(function (n) {
-          return '<button type="button" data-v="' + n + '" class="' + (n === 3 ? "on" : "") + '">' + n + "</button>";
-        }).join("") + "</div></div></div>" +
-        '<div class="fld" id="vb-nhom-f"><label for="vb-nhom">Nhóm Facebook (tuỳ chọn)</label><input class="inp" id="vb-nhom" placeholder="Link hoặc tên nhóm; để trống thì đăng vào nhóm của sản phẩm trong Kho group FB"></div>' +
-        '<div class="fld"><label for="vb-yc">Yêu cầu thêm cho AI</label><textarea class="ta" id="vb-yc" rows="4" placeholder="Ví dụ: giọng kể chuyện, nhắc ưu đãi cuối tuần, không quá 120 chữ, có câu hỏi cuối bài"></textarea></div>' +
-        '<div class="row-sb mt"><span class="small muted">Bài AI viết đi vào Duyệt nội dung, chưa đăng gì cho tới khi bạn duyệt.</span><button class="btn btn-pri btn-lg" data-act="viet">' + ic("spark") +
-        'Viết bài</button></div><div id="vb-kq"></div></div>' +
-        '<div class="card"><div class="card-h"><h3>Cách hoạt động</h3></div><ol class="steps" style="margin:0">' +
-        "<li><div><b>AI đọc hồ sơ sản phẩm</b><div class=\"small muted\">Mô tả, giá, tài liệu, hỏi đáp, giọng văn và lời dặn riêng ở Kiến thức cho Agent.</div></div></li>" +
-        "<li><div><b>Viết nhiều bản khác nhau</b><div class=\"small muted\">Mỗi bản một góc kể, hợp với nơi đăng (độ dài, cách dùng hashtag).</div></div></li>" +
-        "<li><div><b>Bạn duyệt</b><div class=\"small muted\">Sửa tại chỗ, bỏ bản không ưng, hoặc nhờ AI viết lại.</div></div></li>" +
-        "<li><div><b>Máy ở nhà đăng</b><div class=\"small muted\">Bài đã duyệt được mẫu \"Đăng bài AI đã duyệt\" lấy ra đăng đúng nick, đúng nhóm.</div></div></li></ol></div></div>";
-      var so = 3;
-      function capNhom() { body.querySelector("#vb-nhom-f").hidden = body.querySelector("#vb-noi").value !== "fb_nhom"; }
-      capNhom();
-      body.querySelector("#vb-noi").addEventListener("change", capNhom);
-      body.querySelector("#vb-so").addEventListener("click", function (e) {
-        var b = e.target.closest("button"); if (!b) return; so = +b.getAttribute("data-v");
-        Array.prototype.forEach.call(this.children, function (x) { x.classList.toggle("on", x === b); });
+      var S = {
+        sp: String(ctx.q.sp || kt[0].id),
+        che_do: ctx.q.che_do === "nick" || ctx.q.che_do === "api" ? ctx.q.che_do : (trangFp.length ? "api" : "nick"),
+        noi: NOI_NICK.indexOf(ctx.q.noi) >= 0 ? ctx.q.noi : "fb_trang", nick: "", dich: "", dich_ten: "",
+        so: 1, lich: "duyet", bat_dau: null, cach: 60, anh: [], kieu_anh: "mot_anh", nhomFb: null
+      };
+      var boChon = null, henXem = null, lanXem = 0;
+
+      function seg(id, ds, v) {
+        return '<div class="seg" id="' + id + '">' + ds.map(function (x) {
+          return '<button type="button" data-v="' + esc(x[0]) + '" class="' + (String(x[0]) === String(v) ? "on" : "") + '">' + esc(x[1]) + "</button>";
+        }).join("") + "</div>";
+      }
+      function buoc(so, tieuDe, noi) {
+        return '<div class="vb-buoc"><div class="vb-so">' + so + '</div><div class="grow" style="min-width:0"><div class="vb-td">' + tieuDe + "</div>" + noi + "</div></div>";
+      }
+
+      body.innerHTML = '<div class="grid g-21 vb"><div class="card"><div class="card-h"><h3>' + ic("spark") + 'Viết bài bằng AI</h3></div>' +
+        buoc(1, "Viết về sản phẩm nào", '<div class="row" style="flex-wrap:nowrap"><select class="sel grow" id="vb-sp">' + kt.map(function (x) {
+          return '<option value="' + esc(x.id) + '"' + (String(x.id) === S.sp ? " selected" : "") + ">" + esc(x.ten) + (x.trang_thai === "cho_duyet" ? " (chờ duyệt)" : "") + "</option>";
+        }).join("") + '</select><a class="btn btn-ghost btn-sm" href="#/kien-thuc">Sửa hồ sơ</a></div><div class="hint">AI đọc mô tả, giá, tài liệu, giọng văn và lời dặn của sản phẩm này ở Kiến thức cho Agent.</div>') +
+        buoc(2, "Đăng ở đâu", seg("vb-cd", [["api", "Fanpage (máy chủ đăng)"], ["nick", "Nick ở máy nhà"]], S.che_do) +
+          '<div class="hint" id="vb-cd-g"></div><div id="vb-dich" class="mt-s"></div>') +
+        buoc(3, '<span id="vb-so-td">Số bài</span>', seg("vb-so", [[1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"]], S.so) + '<div class="hint" id="vb-so-g"></div>') +
+        buoc(4, "Ảnh kèm <span class=\"muted\" style=\"font-weight:400\">(tuỳ chọn)</span>", '<div class="row"><label class="btn btn-sm">' + ic("upload") +
+          'Chọn ảnh<input type="file" id="vb-anh" accept="image/*" multiple hidden></label><span class="small muted" id="vb-anh-tt">Không kèm ảnh thì đăng bài chữ.</span></div>' +
+          '<div id="vb-anh-ds" class="mt-s"></div><div id="vb-anh-kieu" class="mt-s" hidden>' + seg("vb-ka", [["mot_anh", "Mỗi bài 1 ảnh (xoay vòng)"], ["album", "Mỗi bài cả bộ ảnh"]], S.kieu_anh) + "</div>") +
+        buoc(5, "Khi nào đăng", '<div id="vb-lich-seg"></div><div class="hint" id="vb-lich-g"></div>' +
+          '<div class="fgrid mt-s" id="vb-gio" hidden><div class="fld"><label for="vb-bd">Bài đầu tiên lúc</label><input class="inp" type="datetime-local" id="vb-bd"></div>' +
+          '<div class="fld"><label for="vb-cach">Các bài cách nhau</label><select class="sel" id="vb-cach">' + CACH_PHUT.map(function (x) {
+            return '<option value="' + x[0] + '"' + (x[0] === S.cach ? " selected" : "") + ">" + x[1] + "</option>";
+          }).join("") + "</select></div></div>") +
+        buoc(6, "Dặn thêm AI <span class=\"muted\" style=\"font-weight:400\">(tuỳ chọn)</span>", '<textarea class="ta" id="vb-yc" rows="3" placeholder="Ví dụ: giọng kể chuyện, nhắc ưu đãi cuối tuần, không quá 120 chữ, có câu hỏi cuối bài"></textarea>') +
+        '<div class="vb-chot"><div class="grow small" id="vb-tom"></div><button class="btn btn-pri btn-lg" data-act="viet">' + ic("spark") + '<span id="vb-nut">Viết bài</span></button></div><div id="vb-kq"></div></div>' +
+        '<div class="card vb-kh"><div class="card-h"><h3>' + ic("calendar") + 'Kế hoạch đăng</h3><span class="small muted" id="vb-kh-n"></span></div><div id="vb-kh"></div>' +
+        '<div class="note mt"><span class="small">Mọi bài AI viết đều <b>chờ bạn duyệt</b>. Chưa duyệt thì chưa có gì lên mạng, kể cả khi đã tới giờ hẹn.</span></div></div></div>';
+      var q = function (s) { return body.querySelector(s); };
+
+      // ---------------------------------------------------------------- đăng ở đâu
+      function nickCua(id) { return nick.filter(function (n) { return String(n.id) === String(id); })[0]; }
+      function veDich() {
+        var h = "", box = q("#vb-dich");
+        q("#vb-cd-g").innerHTML = S.che_do === "api"
+          ? "Máy chủ MinMin đăng thẳng lên Fanpage bằng kết nối Facebook Trang, không cần máy ở nhà bật. Chọn một hay nhiều Trang."
+          : "Máy ở nhà mở nick trong GPM rồi đăng như người thật. Dùng cho nhóm, tường cá nhân, Instagram, TikTok, Threads, hoặc Trang của một nick.";
+        if (S.che_do === "api") {
+          if (!trangFp.length) {
+            box.innerHTML = '<div class="note note-warn">' + ic("alert") + '<div class="grow">Chưa có Fanpage nào. Nối "Facebook Trang" ở trang Kết nối rồi vào <b>Trang &amp; Nhóm</b> bấm <b>Đồng bộ Trang</b>.</div><a class="btn btn-sm" href="#/fp-trang">Mở Trang &amp; Nhóm</a></div>';
+            boChon = null;
+          } else {
+            box.innerHTML = '<div id="vb-fp"></div>';
+            boChon = FP.boChonTrang(q("#vb-fp"), trangFp, S.trangChon || [], { cao: 240, doi: function () { S.trangChon = boChon.lay(); capNhat(); } });
+          }
+          return capNhat();
+        }
+        boChon = null;
+        var nk = nickCua(S.nick);
+        h += '<div class="fgrid"><div class="fld"><label for="vb-noi">Đăng vào</label><select class="sel" id="vb-noi">' + NOI_NICK.map(function (k) {
+          return '<option value="' + k + '"' + (k === S.noi ? " selected" : "") + ">" + esc(DS.NOI_DANG[k]) + "</option>";
+        }).join("") + '</select></div><div class="fld"><label for="vb-nick">Nick đăng</label><select class="sel" id="vb-nick"><option value="">' +
+          (S.noi === "fb_nhom" || S.noi === "fb_tuong" ? "Nick nào rảnh thì đăng" : "Chọn nick") + "</option>" + nick.map(function (n) {
+            var tr = DS.trangFB(n).length, tk = NT_TK[S.noi] ? DS.dichDen(n, NT_TK[S.noi])[0] : null;
+            var phu = S.noi === "fb_trang" ? (tr ? " · " + tr + " Trang" : " · chưa có Trang") : (tk ? " · " + DS.tenTk(tk) : "");
+            return '<option value="' + esc(n.id) + '"' + (String(n.id) === String(S.nick) ? " selected" : "") + ">" + esc(n.ten) + esc(phu) + "</option>";
+          }).join("") + "</select></div></div>";
+        if (S.noi === "fb_trang") {
+          if (!nk) h += '<div class="hint">Chọn nick quản lý Trang. Số bên cạnh tên nick là số Trang máy đã quét được.</div>';
+          else {
+            var tr = DS.trangFB(nk);
+            if (!tr.length) {
+              h += '<div class="note note-warn mt-s">' + ic("alert") + '<div class="grow">' + (DS.choQuet(nk) ? "Máy ở nhà đang quét Trang của nick này, khoảng 1 phút. Bấm Làm mới sau đó." :
+                "Chưa thấy Trang nào của nick này. Bấm Quét Trang để máy ở nhà đọc danh sách Trang nick đang quản lý.") + '</div><button class="btn btn-sm" type="button" data-act="quet">' + ic("refresh") + (DS.choQuet(nk) ? "Làm mới" : "Quét Trang") + "</button></div>";
+            } else {
+              if (!tr.some(function (d) { return d.link === S.dich; })) { S.dich = tr[0].link; S.dich_ten = tr[0].ten; }
+              h += '<div class="fld mt-s"><label>Trang sẽ đăng <span class="req">*</span></label><div class="vb-trang">' + tr.map(function (d) {
+                var on = d.link === S.dich;
+                return '<label class="nick-row' + (on ? " on" : "") + '"><input type="radio" name="vb-tr" value="' + esc(d.link) + '"' + (on ? " checked" : "") + ">" +
+                  (d.anh ? '<img class="av" src="' + esc(d.anh) + '" alt="" loading="lazy">' : DS.av(d.ten)) + '<span class="grow clip"><b>' + esc(d.ten) + '</b></span><a class="tiny" href="' + esc(d.link) + '" target="_blank" rel="noopener">Mở</a></label>';
+              }).join("") + '</div><div class="hint">Danh sách quét ' + esc(DS.tuongDoi(DS.quetLuc(nk)) || "") + '. Thiếu Trang? <a href="#" data-act="quet">Quét lại</a>.</div></div>';
+            }
+          }
+        } else if (S.noi === "fb_nhom") {
+          var nh = S.nhomFb || [];
+          h += '<div class="fld mt-s"><label for="vb-nhom">Nhóm</label><select class="sel" id="vb-nhom"><option value="">Để máy chọn nhóm nick đã tham gia (trong Kho group FB của sản phẩm)</option>' + nh.map(function (g) {
+            return '<option value="' + esc(g.link) + '"' + (g.link === S.dich ? " selected" : "") + ">" + esc(g.ten || g.link) + "</option>";
+          }).join("") + '<option value="__khac"' + (S.dich && !nh.some(function (g) { return g.link === S.dich; }) ? " selected" : "") + '>Nhóm khác, dán link...</option></select>' +
+            '<input class="inp mt-s" id="vb-nhom-link" placeholder="https://www.facebook.com/groups/..." value="' + esc(S.dich && !nh.some(function (g) { return g.link === S.dich; }) ? S.dich : "") + '"' +
+            (S.dich && !nh.some(function (g) { return g.link === S.dich; }) ? "" : " hidden") + '><div class="hint">' + (nh.length ? nh.length + " nhóm của sản phẩm này trong Kho group FB." : 'Sản phẩm chưa có nhóm nào trong <a href="#/nhom-fb">Kho group FB</a>.') + "</div></div>";
+        } else if (S.noi === "fb_tuong") {
+          h += '<div class="hint">Đăng lên trang cá nhân (tường) của ' + (nk ? "<b>" + esc(nk.ten) + "</b>" : "nick được chọn") + ".</div>";
+        } else if (NT_TK[S.noi]) {
+          if (nk) {
+            var tk = DS.dichDen(nk, NT_TK[S.noi])[0];
+            h += tk ? '<div class="hint">Đăng lên tài khoản <b>' + esc(DS.tenTk(tk)) + "</b> mà nick này đang đăng nhập.</div>"
+              : '<div class="note note-warn mt-s">' + ic("alert") + '<div class="grow">Chưa thấy tài khoản ' + esc(DS.NOI_DANG[S.noi]) + ' của nick này, có thể profile chưa đăng nhập. Máy sẽ báo lỗi lúc đăng nếu chưa đăng nhập.</div><button class="btn btn-sm" type="button" data-act="quet">Quét lại</button></div>';
+          }
+        } else h += '<div class="hint">Đăng bằng tài khoản ' + esc(DS.NOI_DANG[S.noi]) + " mà profile của nick đang đăng nhập.</div>";
+        box.innerHTML = h;
+        if (S.noi !== "fb_trang" && S.noi !== "fb_nhom") { S.dich = ""; S.dich_ten = ""; }
+        capNhat();
+      }
+      function napNhomFb() {
+        S.nhomFb = null;
+        return DS.api("GET", "/doi-social/nhom-fb" + DS.qs({ san_pham: S.sp }), null, { quiet: true }).then(function (d) {
+          S.nhomFb = DS.list(d).filter(function (g) { return g.trang_thai !== "den"; });
+          if (S.che_do === "nick" && S.noi === "fb_nhom") veDich();
+        });
+      }
+
+      // ---------------------------------------------------------------- số bài, lịch
+      function soTrang() { return S.che_do === "api" ? (S.trangChon || []).length : 1; }
+      function tongBai() { return S.che_do === "api" ? soTrang() * S.so : S.so; }
+      function veSo() {
+        q("#vb-so-td").textContent = S.che_do === "api" ? "Mỗi Trang mấy bài" : "Số bài";
+        var n = soTrang(), t = tongBai();
+        q("#vb-so-g").innerHTML = S.che_do === "api"
+          ? (n ? n + " Trang x " + S.so + " bài = <b>" + t + " bài</b>. AI viết riêng từng bài, không Trang nào trùng chữ với Trang nào." : "Chọn Trang ở bước 2.") + (t > 20 ? ' <span style="color:var(--err)">Tối đa 20 bài mỗi lần.</span>' : "")
+          : "AI viết <b>" + S.so + " bài khác nhau</b> (khác góc kể, khác câu mở). Mỗi bài là một lần đăng riêng" + (S.so > 1 ? ", nên đặt giờ cách nhau ở bước 5" : "") + ". Khi duyệt, bạn bỏ được bài không ưng.";
+      }
+      function veLich() {
+        var ds = [["duyet", "Ngay khi duyệt"]];
+        if (S.che_do === "api") ds.push(["nhom", "Theo lịch nhóm Trang"]);
+        ds.push(["gio", "Chọn giờ"]);
+        if (S.lich === "nhom" && S.che_do !== "api") S.lich = "duyet";
+        q("#vb-lich-seg").innerHTML = seg("vb-lich", ds, S.lich);
+        q("#vb-gio").hidden = S.lich !== "gio";
+        q("#vb-lich-g").innerHTML = {
+          duyet: S.che_do === "api" ? "Bạn bấm Duyệt bài nào thì máy chủ đăng bài đó trong khoảng 1 phút." : "Bạn bấm Duyệt thì máy ở nhà nhận việc và đăng ngay khi rảnh (máy cần đang bật).",
+          nhom: "Mỗi Trang đăng vào khung giờ trống kế tiếp trong lịch của nhóm Trang (hoặc lịch riêng của Trang), có lệch ngẫu nhiên. Đặt lịch ở Trang &amp; Nhóm.",
+          gio: "Bài 1 đăng lúc giờ bạn chọn, các bài sau cách nhau đều. Duyệt trước giờ đó; duyệt trễ thì bài đăng ngay lúc duyệt."
+        }[S.lich];
+        if (S.lich === "gio" && !q("#vb-bd").value) {
+          var t = new Date(Date.now() + 30 * 60000); t.setMinutes(Math.ceil(t.getMinutes() / 15) * 15, 0, 0);
+          q("#vb-bd").value = FP ? FP.dtLocal(t.getTime() / 1000) : "";
+        }
+      }
+      function req(xemTruoc) {
+        var r = { san_pham_id: S.sp, che_do: S.che_do, so_ban: S.so, lich: S.lich, xem_truoc: !!xemTruoc, yeu_cau: q("#vb-yc").value.trim() };
+        if (S.lich === "gio") { r.bat_dau = FP.tuDt(q("#vb-bd").value); r.cach_phut = +q("#vb-cach").value; }
+        if (S.anh.length) { r.media = S.anh.map(function (x) { return x.tep; }); r.kieu_anh = S.kieu_anh; }
+        if (S.che_do === "api") r.trang_ids = S.trangChon || [];
+        else { r.noi_dang = S.noi; if (S.nick) r.nick_id = S.nick; if (S.dich) { r.dich = S.dich; r.dich_ten = S.dich_ten; } }
+        return r;
+      }
+      function thieu() {
+        if (S.che_do === "api" && !soTrang()) return "Chọn ít nhất một Fanpage ở bước 2.";
+        if (S.che_do === "api" && tongBai() > 20) return "Tối đa 20 bài mỗi lần, bớt Trang hoặc bớt số bài mỗi Trang.";
+        if (S.che_do === "nick" && S.noi === "fb_trang" && !S.nick) return "Chọn nick quản lý Trang ở bước 2.";
+        if (S.che_do === "nick" && S.noi === "fb_trang" && !S.dich) return "Chọn Trang sẽ đăng ở bước 2.";
+        if (S.che_do === "nick" && NOI_NICK.indexOf(S.noi) >= 3 && !S.nick) return "Chọn nick sẽ đăng ở bước 2.";
+        if (S.lich === "gio" && !q("#vb-bd").value) return "Chọn giờ đăng bài đầu tiên ở bước 5.";
+        return "";
+      }
+      function capNhat() {
+        veSo();
+        var t = tongBai(), loi = thieu();
+        q("#vb-nut").textContent = "Viết " + (t || "") + " bài";
+        q("#vb-tom").innerHTML = loi ? '<span style="color:var(--warn)">' + ic("alert") + esc(loi) + "</span>" :
+          "AI viết <b>" + t + " bài</b>, tất cả vào <b>chờ duyệt</b>" + (S.che_do === "api" ? " ở Bài đăng Fanpage." : " ở Duyệt nội dung.");
+        q("[data-act=viet]").disabled = !!loi;
+        clearTimeout(henXem);
+        if (loi) { q("#vb-kh").innerHTML = '<div class="small muted" style="padding:8px 0">' + esc(loi) + "</div>"; q("#vb-kh-n").textContent = ""; return; }
+        henXem = setTimeout(xemTruoc, 350);
+      }
+      function xemTruoc() {
+        var lan = ++lanXem;
+        DS.api("POST", "/doi-social/viet-bai", req(true), { quiet: true }).then(function (d) {
+          if (lan !== lanXem || !ctx.alive) return;
+          if (d.ok === false) { q("#vb-kh").innerHTML = '<div class="note note-err">' + ic("alert") + "<span>" + esc(d.error || "Chưa xem trước được") + "</span></div>"; return; }
+          veKeHoach(d.ke_hoach || []);
+        });
+      }
+      function moTaGio(x) {
+        if (!x.hen_luc) return '<span class="muted">Khi bạn duyệt</span>';
+        var s = DS.gio(x.hen_luc) + ' <span class="tiny muted">(' + esc(DS.tuongDoi(x.hen_luc)) + ")</span>";
+        if (x.cach_hen === "fb") s += ' <span class="bd bd-out" title="Duyệt xong MinMin gửi bài sang Facebook hẹn sẵn">FB tự đăng</span>';
+        return s;
+      }
+      function veKeHoach(kh) {
+        q("#vb-kh-n").textContent = kh.length + " bài";
+        q("#vb-kh").innerHTML = kh.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Đăng lên</th><th>Lúc đăng</th></tr></thead><tbody>' + kh.map(function (x, i) {
+          var dich = x.kenh === "api" ? (FP.avTrang({ ten: x.dich_ten, anh: x.dich_anh }) + "<b>" + esc(x.dich_ten || x.dich_id) + '</b><div class="tiny muted">Fanpage · máy chủ đăng</div>')
+            : (DS.icNT(DS.NOI_DANG_NT[x.noi_dang] || "facebook", 18) + "<b>" + esc(x.dich_ten || "") + '</b><div class="tiny muted">' + esc(DS.NOI_DANG[x.noi_dang] || "") + " · nick " + esc(x.nick_ten || "") + "</div>");
+          return "<tr><td>" + (i + 1) + '</td><td><div class="row" style="flex-wrap:nowrap;gap:8px"><div class="grow" style="min-width:0">' + dich + "</div></div></td><td>" + moTaGio(x) +
+            (x.media && x.media.length ? '<div class="tiny muted">' + ic("image") + (Array.isArray(x.media[0]) ? x.media[0].length : x.media.length) + " ảnh</div>" : "") + "</td></tr>";
+        }).join("") + "</tbody></table></div>" : '<div class="small muted">Chưa có bài nào trong kế hoạch.</div>';
+      }
+
+      // ---------------------------------------------------------------- ảnh
+      function veAnh() {
+        q("#vb-anh-ds").innerHTML = S.anh.length ? '<div class="row">' + S.anh.map(function (x, i) {
+          return '<span class="vb-anh"><img src="' + esc(FP.tepUrl(x.tep)) + '" alt=""><button type="button" class="vb-anh-x" data-act="bo-anh" data-i="' + i + '" aria-label="Bỏ ảnh">' + ic("x") + "</button></span>";
+        }).join("") + "</div>" : "";
+        q("#vb-anh-tt").textContent = S.anh.length ? S.anh.length + " ảnh" : "Không kèm ảnh thì đăng bài chữ.";
+        q("#vb-anh-kieu").hidden = S.anh.length < 2;
+        capNhat();
+      }
+      q("#vb-anh").addEventListener("change", function () {
+        var f = this.files; if (!f || !f.length) return;
+        var fd = new FormData(); Array.prototype.forEach.call(f, function (x) { fd.append("tep", x); });
+        q("#vb-anh-tt").textContent = "Đang tải ảnh lên...";
+        DS.api("POST", "/doi-social/fp/media", fd).then(function (d) {
+          if (d.ok !== false) S.anh = S.anh.concat(DS.list(d).filter(function (x) { return x.loai === "anh"; })).slice(0, 10);
+          veAnh();
+        });
+        this.value = "";
       });
+
+      // ---------------------------------------------------------------- sự kiện
+      body.addEventListener("click", function (e) {
+        var b = e.target.closest(".seg button"); if (!b) return;
+        var sg = b.parentNode.id, v = b.getAttribute("data-v");
+        Array.prototype.forEach.call(b.parentNode.children, function (x) { x.classList.toggle("on", x === b); });
+        if (sg === "vb-cd") { S.che_do = v; veLich(); veDich(); }
+        else if (sg === "vb-so") { S.so = +v; capNhat(); }
+        else if (sg === "vb-lich") { S.lich = v; veLich(); capNhat(); }
+        else if (sg === "vb-ka") { S.kieu_anh = v; capNhat(); }
+      });
+      body.addEventListener("change", function (e) {
+        var t = e.target;
+        if (t.id === "vb-sp") { S.sp = t.value; napNhomFb(); capNhat(); }
+        else if (t.id === "vb-noi") { S.noi = t.value; S.dich = ""; S.dich_ten = ""; veDich(); }
+        else if (t.id === "vb-nick") { S.nick = t.value; S.dich = ""; veDich(); }
+        else if (t.name === "vb-tr") {
+          S.dich = t.value; var nk = nickCua(S.nick), d = DS.trangFB(nk).filter(function (x) { return x.link === t.value; })[0];
+          S.dich_ten = d ? d.ten : ""; Array.prototype.forEach.call(body.querySelectorAll(".vb-trang .nick-row"), function (r) { r.classList.toggle("on", r.querySelector("input").checked); });
+          capNhat();
+        } else if (t.id === "vb-nhom") {
+          var khac = t.value === "__khac"; q("#vb-nhom-link").hidden = !khac;
+          S.dich = khac ? q("#vb-nhom-link").value.trim() : t.value; S.dich_ten = khac ? S.dich : (t.options[t.selectedIndex].text || ""); capNhat();
+        } else if (t.id === "vb-bd" || t.id === "vb-cach") capNhat();
+      });
+      body.addEventListener("input", function (e) { if (e.target.id === "vb-nhom-link") { S.dich = e.target.value.trim(); S.dich_ten = S.dich; capNhat(); } });
+
       DS.bind(body, {
+        "bo-anh": function (b) { S.anh.splice(+b.getAttribute("data-i"), 1); veAnh(); },
+        "quet": function () {
+          var nk = nickCua(S.nick); if (!nk) return;
+          if (DS.choQuet(nk)) { DS.boNho("nick"); return DS.layNick().then(function (d) { nick = DS.list(d, "nick"); veDich(); }); }
+          DS.quetTaiKhoan([nk.id]).then(function () { veDich(); });
+        },
         "viet": function (b) {
-          var noi = body.querySelector("#vb-noi").value;
-          var req = { san_pham_id: body.querySelector("#vb-sp").value, noi_dang: noi, so_ban: so, yeu_cau: body.querySelector("#vb-yc").value.trim() };
-          var nk = body.querySelector("#vb-nick").value; if (nk) req.nick_id = nk;
-          var nh = body.querySelector("#vb-nhom").value.trim(); if (nh && noi === "fb_nhom") req.nhom = nh;
-          b.disabled = true; b.innerHTML = '<span class="typing"><span></span><span></span><span></span></span> AI đang viết...';
-          body.querySelector("#vb-kq").innerHTML = "";
-          DS.api("POST", "/doi-social/viet-bai", req).then(function (d) {
-            b.disabled = false; b.innerHTML = ic("spark") + "Viết bài";
-            if (d.ok === false) return;
-            var n = (d.muc || []).length || so;
-            body.querySelector("#vb-kq").innerHTML = '<div class="note note-ok mt">' + ic("ok") + '<div class="grow">Đã gửi <b>' + n + " bản nháp</b> sang Duyệt nội dung." +
-              '</div><a class="btn btn-sm btn-ok" href="#/duyet">Đi tới Duyệt nội dung</a></div>';
+          var loi = thieu(); if (loi) return DS.toast(loi, "warn");
+          b.disabled = true; b.innerHTML = '<span class="typing"><span></span><span></span><span></span></span> AI đang viết ' + tongBai() + " bài...";
+          q("#vb-kq").innerHTML = tongBai() > 5 ? '<div class="small muted mt">Nhiều bài nên AI viết thành từng lượt 5 bài, mất khoảng ' + Math.ceil(tongBai() / 5) * 30 + " giây.</div>" : "";
+          DS.api("POST", "/doi-social/viet-bai", req(false)).then(function (d) {
+            b.disabled = false; b.innerHTML = ic("spark") + '<span id="vb-nut">Viết ' + tongBai() + " bài</span>";
+            if (d.ok === false) { q("#vb-kq").innerHTML = ""; return; }
+            veKetQua(d);
             DS.capNhatHuyHieu();
           });
         }
       });
+
+      function veKetQua(d) {
+        var api = d.che_do === "api", muc = d.muc || [], ids = muc.map(function (x) { return x.id; });
+        q("#vb-kq").innerHTML = '<div class="card vb-ra mt"><div class="row-sb"><div><b>Đã viết ' + muc.length + " bài, đang chờ bạn duyệt</b>" +
+          (d.bo_trung ? '<div class="tiny muted">Bỏ ' + d.bo_trung + " bài trùng với bài đã có.</div>" : "") + '</div><div class="row">' +
+          '<a class="btn btn-sm" href="' + (api ? "#/fp-bai?trang_thai=cho_duyet" : "#/duyet") + '">' + (api ? "Mở Bài đăng Fanpage" : "Mở Duyệt nội dung") + "</a>" +
+          '<button class="btn btn-sm btn-ok" data-act="duyet-het">' + ic("check") + "Duyệt cả " + muc.length + " bài</button></div></div>" +
+          '<div class="vb-ra-ds">' + muc.map(function (x) {
+            var noi = api ? (x.trang_ten || x.trang_id) : ((x.muc_tieu && x.muc_tieu.dich_ten) || DS.NOI_DANG[x.noi_dang] || "");
+            return '<div class="vb-ra-dong"><div class="tiny muted">' + ic(api ? "flag" : "user") + esc(noi) + " · " + (x.hen_luc ? "đăng " + esc(DS.gio(x.hen_luc)) : "đăng khi duyệt") + '</div><div class="clamp3 small">' + esc(x.noi_dung || "") + "</div></div>";
+          }).join("") + "</div></div>";
+        DS.bind(q("#vb-kq"), {
+          "duyet-het": function (b) {
+            DS.xacNhan("Duyệt " + ids.length + " bài? Bài sẽ lên " + (api ? "Fanpage" : "mạng") + " công khai đúng giờ trong kế hoạch.", "Duyệt và đăng").then(function (ok) {
+              if (!ok) return;
+              b.disabled = true;
+              var p = api ? DS.api("POST", "/doi-social/fp/bai/hanh-dong", { ids: ids, hanh_dong: "duyet" }) : DS.api("POST", "/doi-social/ban-nhap/duyet-nhieu", { ids: ids, dong_y: true });
+              p.then(function (r) {
+                if (r.ok === false) { b.disabled = false; return; }
+                var so = api ? (r.so || 0) : (r.xong || []).length;
+                DS.toast("Đã duyệt " + so + " bài.", "ok"); b.innerHTML = ic("check") + "Đã duyệt"; DS.capNhatHuyHieu();
+              });
+            });
+          }
+        });
+      }
+
+      veLich(); veDich(); napNhomFb();
     });
   }
 
