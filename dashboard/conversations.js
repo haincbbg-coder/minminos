@@ -233,7 +233,7 @@
       '</div>';
     var s = body.querySelector(".ht-search");
     s.oninput = function () { _q = s.value.trim(); tai(); };
-    body.querySelector('.ht-tag-filter').onchange = function () { _tagLoc = this.value.trim(); tai(); };
+    body.querySelector('.ht-tag-filter').oninput = function () { _tagLoc = this.value.trim(); tai(); };
     body.querySelector('.ht-unread-filter').onchange = function () { _unreadLoc = this.checked; tai(); };
     body.querySelector(".ht-bot").onchange = function (e) { _botLoc = e.target.value; tai(); };
     taiTK(false).catch(function () {}).then(function () { tai(); if (_chon) mo(_chon); });
