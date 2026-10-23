@@ -1211,6 +1211,9 @@ def _clip_tool_result(result, max_chars: int = 8000, head_ratio: float = 0.6, te
     mất phần đó âm thầm. Giữ đầu + cuối + dòng báo bỏ bao nhiêu → model thấy cả hai mép
     và BIẾT data bị thiếu (không tưởng đủ rồi báo sai). Port head+tail của Hermes
     code_execution_tool."""
+    # 26.10.204: tool đọc web tự phân trang (offset/limit), cắt ở 8.000 là mất đúng đoạn cần đọc.
+    if max_chars == 8000 and ten_tool in ("javis_web_fetch", "javis_web_search"):
+        max_chars = 60_000
     text = str(result)
     if len(text) <= max_chars:
         return text
