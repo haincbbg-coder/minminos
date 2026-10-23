@@ -2006,7 +2006,7 @@
         "write": [],
         "danger": []
       },
-      "risk": "Tra giọng và số dư là chỉ đọc. Việc ĐỌC văn bản thành file (công cụ javis_vieneu_speak của plugin Đọc văn bản bằng giọng VieNeu) tạo file trong brain và TRỪ token thật của tài khoản VieNeu theo số ký tự, nên chỉ chạy từ mức Tự động trở lên.\n\nKhoá API được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký. Ai có khoá này tiêu được token của bạn, nên xoá khoá trên VieNeu khi không dùng nữa.",
+      "risk": "Tra giọng và số dư là chỉ đọc.\nĐọc văn bản thành file (công cụ javis_vieneu_speak) tạo file trong brain và TRỪ token thật của tài khoản VieNeu theo số ký tự, nên chỉ chạy từ mức Tự động trở lên.\n\nKhoá API được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.\nAi có khoá này tiêu được token của bạn, nên xoá khoá trên VieNeu khi không dùng nữa.",
       "default_perm": "readonly"
     }
   ]
