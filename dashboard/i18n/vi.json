@@ -3881,5 +3881,7 @@
   "models.agy_step3": "Copy nguyên địa chỉ trên thanh URL của trang đó, dán vào ô dưới rồi bấm Xác nhận (làm ngay, mã chỉ sống vài phút).",
   "models.agy_checking": "Đang kiểm tra đăng nhập...",
   "models.agy_ok": "Đã kết nối gói Google. Chọn model và bấm Đặt làm bộ não chính nếu muốn.",
-  "models.agy_manual": "Cách làm tay (nếu nút không chạy)"
+  "models.agy_manual": "Cách làm tay (nếu nút không chạy)",
+  "models.agy_install_timeout": "Cài quá lâu chưa xong. Bấm Cài đặt lại hoặc xem cách làm tay bên dưới.",
+  "models.agy_paste_ph": "Dán địa chỉ http://localhost... vào đây"
 }
