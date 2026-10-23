@@ -9,7 +9,10 @@ docker = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 workflow = (ROOT / ".github/workflows/docker-publish.yml").read_text(encoding="utf-8")
 assert "ARG CODEX_CLI_VERSION=" in docker
 assert "@openai/codex@${CODEX_CLI_VERSION}" in docker
-assert "npm view @openai/codex@latest version" in workflow
+# Phát hành vẫn lấy bản Codex MỚI NHẤT, nhưng (26.10.209) lùi dần khi gói linux-x64 của bản
+# đó chưa tải được - không thì một bản hỏng phía OpenAI làm hỏng luôn bản phát hành MinMin.
+assert "npm view @openai/codex versions" in workflow
+assert "-linux-x64" in workflow and "curl -sfIL" in workflow
 assert "CODEX_CLI_VERSION=${{ env.CODEX_CLI_VERSION }}" in workflow
 
 # Execute the actual installer function with an already installed codex.
