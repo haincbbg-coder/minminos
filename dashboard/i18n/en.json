@@ -3881,5 +3881,7 @@
   "models.agy_step3": "Copy the full address from that page's URL bar, paste it below and press Confirm (do it right away, the code lives a few minutes).",
   "models.agy_checking": "Checking sign-in...",
   "models.agy_ok": "Google plan connected. Pick a model and set it as main brain if you like.",
-  "models.agy_manual": "Manual way (if the button fails)"
+  "models.agy_manual": "Manual way (if the button fails)",
+  "models.agy_install_timeout": "Install is taking too long. Press Install again or see the manual way below.",
+  "models.agy_paste_ph": "Paste the http://localhost... address here"
 }

@@ -1010,7 +1010,7 @@ def _mo_pty(args: list):
         master, slave = pty.openpty()
         proc = subprocess.Popen(args, stdin=slave, stdout=slave, stderr=slave,
                                 env=_env_dang_nhap(), start_new_session=True, close_fds=True,
-                                cwd=str(_home_dir()))
+                                cwd=str(_home_dir()), creationflags=_no_window())
         os.close(slave)
         return proc, master
     except Exception:

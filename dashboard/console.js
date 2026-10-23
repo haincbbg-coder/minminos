@@ -4739,7 +4739,7 @@
         }
         if ((d && !d.dang_chay && d.ok === false) || Date.now() > han) {
           agi.disabled = false; agi.textContent = t("models.agy_btn_install");
-          if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.timeout_login"));
+          if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.agy_install_timeout"));
           return;
         }
         setTimeout(quay, 2000);
@@ -4771,7 +4771,7 @@
         <div><b>2.</b> ${esc(t("models.agy_step2"))}</div>
         <div><b>3.</b> ${esc(t("models.agy_step3"))}</div>
         <div class="prov-action" style="flex-wrap:wrap;margin-top:6px">
-          <input class="js-input" id="agyCode" spellcheck="false" autocomplete="off" style="flex:1;min-width:220px" placeholder="http://localhost:...">
+          <input class="js-input" id="agyCode" spellcheck="false" autocomplete="off" style="flex:1;min-width:220px" placeholder="${esc(t("models.agy_paste_ph"))}">
           <button class="gcard-btn" id="agySend">${esc(t("models.agy_btn_send"))}</button>
         </div>`;
       const gui = box.querySelector("#agySend"), o = box.querySelector("#agyCode");
