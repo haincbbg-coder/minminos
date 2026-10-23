@@ -37,7 +37,16 @@ jobs:
       - name: Resolve current Codex CLI version
         shell: bash
         run: |
-          version="$(npm view @openai/codex@latest version)"
+          # Bản `latest` có thể đã khai trên npm nhưng gói nhị phân linux chưa tải được (gặp
+          # thật 2026-10-23: 0.164.0 khai `@openai/codex@0.164.0-linux-x64` mà tarball 404,
+          # `npm install -g` cài xong lõi rồi `codex --version` nổ, phát hành 26.10.208 đỏ hai
+          # lần). Nên lùi dần về bản gần nhất mà tarball linux-x64 THỰC SỰ tải được.
+          version=""
+          for v in $(npm view @openai/codex versions --json | python3 -c "import json,sys;v=[x for x in json.load(sys.stdin) if x.count('.')==2 and '-' not in x];print(' '.join(reversed(v[-8:])))"); do
+            tb="$(npm view "@openai/codex@${v}-linux-x64" dist.tarball 2>/dev/null || true)"
+            if [ -n "$tb" ] && curl -sfIL "$tb" >/dev/null; then version="$v"; break; fi
+            echo "Bỏ qua Codex $v: gói linux-x64 chưa tải được"
+          done
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid Codex version: $version"; exit 1; }
           echo "CODEX_CLI_VERSION=$version" >> "$GITHUB_ENV"
           echo "Codex CLI: $version" >> "$GITHUB_STEP_SUMMARY"

@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.209] - 2026-10-23
+
+### Sửa lỗi
+- Phát hành lại phần sửa đăng nhập Google của 26.10.208 (bản đó đóng gói hỏng vì bản Codex mới nhất của OpenAI chưa tải về được). Từ nay khi bản Codex mới bị lỗi, MinMin tự lùi về bản Codex gần nhất dùng được thay vì đóng gói hỏng.
+
 ## [26.10.208] - 2026-10-23
 
 ### Sửa lỗi
