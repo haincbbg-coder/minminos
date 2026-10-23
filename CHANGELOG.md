@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.210] - 2026-10-23
+
+### Sửa lỗi
+- **Đăng nhập Google cho Antigravity: link bị cụt, Google báo "thiếu response_type".** Link đăng nhập rất dài, Antigravity bẻ xuống nhiều dòng và MinMin chỉ lấy được dòng đầu. Giờ MinMin lấy đủ cả link.
+
 ## [26.10.209] - 2026-10-23
 
 ### Sửa lỗi
