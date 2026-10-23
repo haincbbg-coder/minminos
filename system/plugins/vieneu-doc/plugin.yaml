@@ -1,0 +1,10 @@
+name: Đọc văn bản bằng giọng VieNeu
+slug: vieneu-doc
+version: 1.0.0
+description: Đọc văn bản tiếng Việt thành file âm thanh (mp3 hoặc wav) bằng giọng AI của VieNeu, lưu vào brain. Cần nối VieNeu ở trang Kết nối (dán khoá API vn_sk_...).
+author: MinMin (bundled)
+enabled: true
+min_mode: safe
+tools:
+  - javis_vieneu_speak
+hooks: []

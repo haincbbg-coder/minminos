@@ -1972,6 +1972,42 @@
       },
       "default_perm": "readonly",
       "risk": "Connector cho phép agent chạy công cụ phân tích nhị phân cục bộ.\nGiữ ở Chỉ đọc; chỉ bật chạy/ghi mục tiêu khi thực sự cần.\nNên để riêng ở instance của chủ, không đẩy xuống instance học viên trừ khi bán như app cao cấp."
+    },
+    {
+      "id": "vieneu",
+      "name": "VieNeu (giọng đọc tiếng Việt)",
+      "icon": "🎙️",
+      "category": "Marketing",
+      "description": "Giọng đọc AI tiếng Việt VieNeu, hơn 1.000 giọng đủ ba miền, đọc đúng cả số và công thức. MinMin xem được danh sách giọng, số dư token và đọc văn bản thành file mp3 hoặc wav lưu vào brain (làm lời bình cho video, quảng cáo). Mỗi kết nối là một khoá API, thêm nhiều kết nối nếu có nhiều tài khoản.",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "vieneu",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "api_key",
+            "label": "Khoá API VieNeu",
+            "placeholder": "Ví dụ: vn_sk_..."
+          }
+        ],
+        "guide": "1. Đăng nhập vieneu.io bằng tài khoản Google, vào trang Nhà phát triển.\n2. Gói dùng thử 7 ngày có sẵn (30 lần gọi mỗi ngày); muốn dùng lâu thì mua gói token (từ 99.000 đồng).\n3. Bấm tạo khoá API và chép ngay khoá vn_sk_... vì VieNeu chỉ hiện nó MỘT lần.\n4. Dán khoá vào ô Khoá API của kết nối này, lưu rồi bấm Test.\n5. Nhờ MinMin: \"đọc đoạn này bằng giọng Ngọc Lan\" hoặc \"liệt kê giọng nữ miền Nam\".\n\nVieNeu tính theo số ký tự gửi đi, mỗi lần đọc tối thiểu 50 ký tự. Khoá vn_test_ bị giới hạn 100 từ mỗi lần, chỉ để thử.\nCó hai tài khoản VieNeu thì thêm một kết nối mới với khoá riêng.",
+        "guide_url": "https://docs.vieneu.io/docs/cloud-api/quickstart"
+      },
+      "validate": {
+        "tool": "vieneu_so_du",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "vieneu_danh_sach_giong",
+          "vieneu_so_du"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Tra giọng và số dư là chỉ đọc. Việc ĐỌC văn bản thành file (công cụ javis_vieneu_speak của plugin Đọc văn bản bằng giọng VieNeu) tạo file trong brain và TRỪ token thật của tài khoản VieNeu theo số ký tự, nên chỉ chạy từ mức Tự động trở lên.\n\nKhoá API được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký. Ai có khoá này tiêu được token của bạn, nên xoá khoá trên VieNeu khi không dùng nữa.",
+      "default_perm": "readonly"
     }
   ]
 }

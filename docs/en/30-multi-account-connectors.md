@@ -30,6 +30,7 @@ Nothing to install: MinMin calls each platform's API from Python, on a home PC o
 | Shipping | J&T Express | 1 partner account | Tracking, cancel (J&T has no public create-order API) |
 | Social | Instagram | 1 professional account | Publish images, carousels, Reels; read posts, comments, insights |
 | Social | Threads | 1 profile | Publish text, image, video, carousel; replies; insights |
+| Marketing | VieNeu | 1 API key | Browse Vietnamese voices and token balance; read text aloud into an mp3/wav file saved in the brain (tool `javis_vieneu_speak`, 26.10.211) |
 | Social | X (Twitter) | 1 account | Post, reply, delete; recent posts (X charges per post) |
 | Invoices & tax | MISA meInvoice | 1 tax code | Invoice templates, invoice status, view link |
 

@@ -30,6 +30,7 @@ nhà lẫn VPS.
 | Vận chuyển | J&T Express | 1 tài khoản đối tác | Tra hành trình, huỷ đơn (J&T chưa công khai API tạo đơn) |
 | Mạng xã hội | Instagram | 1 tài khoản chuyên nghiệp | Đăng ảnh, carousel, Reels; đọc bài, bình luận, chỉ số |
 | Mạng xã hội | Threads | 1 hồ sơ | Đăng chữ, ảnh, video, carousel; trả lời; chỉ số |
+| Marketing | VieNeu | 1 khoá API | Xem giọng đọc tiếng Việt, số dư token; đọc văn bản ra file mp3/wav lưu vào brain (công cụ `javis_vieneu_speak`, 26.10.211) |
 | Mạng xã hội | X (Twitter) | 1 tài khoản | Đăng bài, trả lời, xoá bài; đọc bài gần đây (X tính phí mỗi bài) |
 | Hoá đơn & thuế | MISA meInvoice | 1 mã số thuế | Mẫu hoá đơn, trạng thái hoá đơn, link xem |
 
