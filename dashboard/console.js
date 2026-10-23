@@ -4157,12 +4157,11 @@
         </div>`;
       }
       if (p.id === "antigravity-cli") {
-        // Bộ não thứ 10. Không có nút "Đăng nhập" ở đây và đó là quyết định có lý do: đăng nhập
-        // của `agy` là một giao diện bàn phím trong terminal, token thì nằm trong keyring hệ
-        // điều hành chứ không phải file. Bản 0.30-0.32.1 có thử lái luồng đó qua một terminal
-        // giả - chạy được trên Linux nhưng trên trang hiện ra một ô terminal bấm không ăn, còn
-        // Windows không có pseudo-terminal nên luôn tắc. Người dùng `agy` vốn là dân code, gõ
-        // một lệnh nhanh hơn hẳn. Nên thẻ này chỉ đưa đúng lệnh cần gõ.
+        // Bộ não thứ 10: gói Google (AI Pro / Ultra) qua Antigravity CLI. Từ 26.10.205 có nút
+        // Cài đặt + Đăng nhập Google ngay trên thẻ, khuôn giống Claude: máy chủ chạy `agy`
+        // trong pty, đưa link lên đây, người dùng đăng nhập Google rồi dán lại địa chỉ
+        // localhost trình duyệt nhảy tới. Không cần trang Code (Terminal) - chủ MinMin ẩn nó.
+        // MinMin không giữ token; `agy` tự cất.
         const dn = p.dang_nhap || {};
         const st = on
           ? t("models.st_logged_in") + (p.auth_method ? " · " + esc(p.auth_method) : "")
@@ -4171,19 +4170,22 @@
         return `<div class="prov-card ${p.is_main ? "main" : ""}">
           ${provHead(p, on, "MCP/skill", st)}
           <div class="prov-note">${esc(t("models.agy_note"))}</div>
-          ${p.cli_found ? "" : `<div class="prov-steps">
-            <div>${esc(t("models.cli_install"))}<br><code>${esc(p.cai_lenh || "")}</code></div>
-          </div>`}
-          ${on ? "" : `<div class="prov-steps">
-            <div><b>${esc(t("models.agy_login"))}</b> <code>${esc(dn.dang_nhap || "agy")}</code></div>
-            <div>${esc(dn.ghi_chu || "")}</div>
-            ${dn.cuu_ho ? `<div class="gcard-meta">${esc(dn.cuu_ho)}</div>` : ""}
-            <div>${esc(t("models.agy_done"))}</div>
-          </div>`}
+          <div id="agyBox" class="prov-steps" style="display:none"></div>
           <div class="prov-action" style="flex-wrap:wrap">
-            <button class="gcard-btn ghost" data-agycheck="1">${esc(t("qs.recheck"))}</button>
+            ${on
+              ? `<button class="gcard-btn ghost" data-agycheck="1">${esc(t("qs.recheck"))}</button>`
+              : (p.cli_found
+                  ? `<button class="gcard-btn" data-agylogin="1">${esc(t("models.agy_btn_login"))}</button>`
+                  : `<button class="gcard-btn" data-agyinstall="1">${esc(t("models.agy_btn_install"))}</button>`)
+                + `<button class="gcard-btn ghost" data-agycheck="1">${esc(t("qs.recheck"))}</button>`}
             <span id="agyMsg" class="gcard-meta" style="margin-left:10px;flex:1;min-width:200px">${on ? "" : esc(p.auth_error || "")}</span>
           </div>
+          ${on ? "" : `<details class="gcard-meta" style="margin-top:6px"><summary>${esc(t("models.agy_manual"))}</summary>
+            ${p.cli_found ? "" : `<div>${esc(t("models.cli_install"))}<br><code>${esc(p.cai_lenh || "")}</code></div>`}
+            <div><b>${esc(t("models.agy_login"))}</b> <code>${esc(dn.dang_nhap || "agy")}</code></div>
+            <div>${esc(dn.ghi_chu || "")}</div>
+            ${dn.cuu_ho ? `<div>${esc(dn.cuu_ho)}</div>` : ""}
+          </details>`}
         </div>`;
       }
       if (p.kind === "cli") {   // Claude Code - trạng thái + login/logout nạp động qua /claude/status
@@ -4713,6 +4715,83 @@
         _daHoiModel.delete("antigravity-cli");
         setTimeout(() => renderModelsCloudTab(el), 700);
       } else if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.not_works")) + mcpTxt;
+    };
+    // ---- Antigravity CLI (gói Google AI Pro): cài + đăng nhập ngay trên trang (26.10.205) ----
+    const agi = el.querySelector("[data-agyinstall]");
+    if (agi) agi.onclick = async () => {
+      const msg = el.querySelector("#agyMsg"), box = el.querySelector("#agyBox");
+      agi.disabled = true; agi.textContent = t("models.agy_installing");
+      if (msg) msg.textContent = t("models.agy_install_wait");
+      try { await fetch("/antigravity/install", { method: "POST" }); } catch (e) {}
+      const han = Date.now() + 600000;
+      const quay = async () => {
+        let d = null;
+        try { d = await (await fetch("/antigravity/install-poll")).json(); } catch (e) {}
+        if (d && d.cli_path) {
+          if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.agy_installed"));
+          setTimeout(() => renderModelsCloudTab(el), 800);
+          return;
+        }
+        const log = (d && d.nhat_ky) || [];
+        if (box && log.length) {
+          box.style.display = "";
+          box.innerHTML = `<code style="white-space:pre-wrap">${esc(log.slice(-6).join("\n"))}</code>`;
+        }
+        if ((d && !d.dang_chay && d.ok === false) || Date.now() > han) {
+          agi.disabled = false; agi.textContent = t("models.agy_btn_install");
+          if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.agy_install_timeout"));
+          return;
+        }
+        setTimeout(quay, 2000);
+      };
+      setTimeout(quay, 1500);
+    };
+    const agl = el.querySelector("[data-agylogin]");
+    if (agl) agl.onclick = async () => {
+      const msg = el.querySelector("#agyMsg"), box = el.querySelector("#agyBox");
+      agl.disabled = true; const cu = agl.textContent; agl.textContent = t("models.opening");
+      if (msg) msg.textContent = t("models.agy_ask");
+      let r = null;
+      try { r = await (await fetch("/antigravity/login-start", { method: "POST" })).json(); }
+      catch (e) { r = { ok: false, error: t("common.net_err") }; }
+      agl.disabled = false; agl.textContent = cu;
+      if (!r || !r.ok) {
+        if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.cant_open"));
+        if (box && r && r.nhat_ky && r.nhat_ky.length) {
+          box.style.display = "";
+          box.innerHTML = `<code style="white-space:pre-wrap">${esc(r.nhat_ky.slice(-8).join("\n"))}</code>`;
+        }
+        return;
+      }
+      if (r.xong) { _daHoiModel.delete("antigravity-cli"); renderModelsCloudTab(el); return; }
+      if (msg) msg.textContent = "";
+      if (!box) return;
+      box.style.display = "";
+      box.innerHTML = `<div><b>1.</b> ${esc(t("models.agy_step1"))}<br><a href="${esc(r.url)}" target="_blank" rel="noopener" style="word-break:break-all">${esc(r.url)}</a></div>
+        <div><b>2.</b> ${esc(t("models.agy_step2"))}</div>
+        <div><b>3.</b> ${esc(t("models.agy_step3"))}</div>
+        <div class="prov-action" style="flex-wrap:wrap;margin-top:6px">
+          <input class="js-input" id="agyCode" spellcheck="false" autocomplete="off" style="flex:1;min-width:220px" placeholder="${esc(t("models.agy_paste_ph"))}">
+          <button class="gcard-btn" id="agySend">${esc(t("models.agy_btn_send"))}</button>
+        </div>`;
+      const gui = box.querySelector("#agySend"), o = box.querySelector("#agyCode");
+      gui.onclick = async () => {
+        const v = (o.value || "").trim();
+        if (!v) { o.focus(); return; }
+        gui.disabled = true; gui.textContent = t("models.agy_checking");
+        if (msg) msg.textContent = t("models.agy_checking");
+        let d = null;
+        try {
+          const f = new FormData(); f.append("code", v);
+          d = await (await fetch("/antigravity/login-code", { method: "POST", body: f })).json();
+        } catch (e) { d = { ok: false, error: t("common.net_err") }; }
+        gui.disabled = false; gui.textContent = t("models.agy_btn_send");
+        if (d && d.ok) {
+          if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.agy_ok"));
+          _daHoiModel.delete("antigravity-cli");
+          setTimeout(() => renderModelsCloudTab(el), 800);
+        } else if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.login_incomplete"));
+      };
     };
     // ---- Grok Build CLI: đăng nhập device code ngay trên trang ----
     const gkl = el.querySelector("[data-groklogin]");

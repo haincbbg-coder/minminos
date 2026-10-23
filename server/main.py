@@ -4018,11 +4018,37 @@ async def muse_check(brain: str = "brain"):
     return d
 
 
-# Không có endpoint đăng nhập cho `agy`, và đó là quyết định có lý do (0.32.2). Bản trước lái
-# luồng đăng nhập của CLI qua một pseudo-terminal: chạy được trên Linux nhưng đẻ ra một ô
-# terminal nhỏ trên trang mà bấm vào không ăn, còn Windows thì không có PTY nên luôn tắc. Người
-# dùng `agy` đều là dân code sẵn terminal trong tay, nên gõ một lệnh gọn hơn hẳn một luồng UI
-# nửa vời. Thẻ Models chỉ đưa lệnh và nút Kiểm tra lại.
+# Đăng nhập `agy` ngay trên trang Models (26.10.205). Quyết định "không có nút" của 0.32.2 đã
+# hết lý do - xem chú thích đầu khối "Cài + đăng nhập" trong antigravity_cli. Khuôn giống
+# Claude: login-start trả link, login-code nhận địa chỉ người dùng dán lại.
+
+
+@app.post("/antigravity/install")
+async def antigravity_install():
+    """Cài Antigravity CLI bằng lệnh chính chủ, chạy nền. Giao diện hỏi /antigravity/install-poll."""
+    return await asyncio.to_thread(antigravity_cli.cai_dat_start)
+
+
+@app.get("/antigravity/install-poll")
+def antigravity_install_poll():
+    return antigravity_cli.cai_dat_trang_thai()
+
+
+@app.post("/antigravity/login-start")
+async def antigravity_login_start():
+    """Bước 1: chạy `agy` trên máy chủ, trả link đăng nhập Google để mở ở máy người dùng."""
+    return await asyncio.to_thread(antigravity_cli.login_start)
+
+
+@app.post("/antigravity/login-code")
+async def antigravity_login_code(code: str = Form("")):
+    """Bước 2: nhận địa chỉ localhost (hoặc mã) người dùng dán lại sau khi đăng nhập Google."""
+    return await asyncio.to_thread(antigravity_cli.login_code, code)
+
+
+@app.get("/antigravity/login-poll")
+def antigravity_login_poll():
+    return antigravity_cli.login_trang_thai()
 
 
 @app.post("/claude/login")
