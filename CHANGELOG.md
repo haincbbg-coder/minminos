@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.211] - 2026-10-23
+### Thêm mới
+- **VieNeu trong Chợ MinMin.** Nối giọng đọc tiếng Việt VieNeu bằng khoá API (vn_sk_...): MinMin xem được hơn 1.000 giọng ba miền và số dư token.
+- **Đọc văn bản ra file âm thanh.** Nhờ MinMin "đọc đoạn này bằng giọng Ngọc Lan": ra file mp3 hoặc wav lưu vào brain, làm lời bình cho video hay quảng cáo. Văn bản dài tự chia đoạn rồi ghép lại.
+- Mỗi lần đọc trừ token thật của tài khoản VieNeu theo số ký tự, nên chỉ chạy từ mức Tự động trở lên.
+
 ## [26.10.210] - 2026-10-23
 
 ### Sửa lỗi

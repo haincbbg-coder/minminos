@@ -19,10 +19,14 @@ class _Resp:
     def __init__(self, code, body):
         self.status_code = code
         self._b = body
-        self.text = body if isinstance(body, str) else json.dumps(body)
+        # Thân dạng bytes = âm thanh/file nhị phân (cầu nối VieNeu): không có text, không phải JSON.
+        self.content = body if isinstance(body, bytes) else (
+            body.encode("utf-8") if isinstance(body, str) else json.dumps(body).encode("utf-8"))
+        self.text = "" if isinstance(body, bytes) else (body if isinstance(body, str) else json.dumps(body))
+        self.headers = {}
 
     def json(self):
-        if isinstance(self._b, str):
+        if isinstance(self._b, (str, bytes)):
             raise ValueError("không phải JSON")
         return self._b
 
