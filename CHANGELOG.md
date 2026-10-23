@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.205] - 2026-10-23
+
+### Thêm mới
+- **Dùng gói Google AI Pro (Gemini Pro) làm bộ não của MinMin, không cần API key.** Thẻ Google Antigravity CLI ở trang Models giờ có nút **Cài đặt** và **Đăng nhập Google** giống Claude: bấm, mở link, đăng nhập Google, dán lại địa chỉ trình duyệt hiện ra là xong. Không phải mở Terminal.
+
 ## [26.10.203] - 2026-10-21
 
 ### Sửa lỗi
