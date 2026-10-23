@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.204] - 2026-10-23
+### Thêm mới
+- **Bộ não API biết tìm và đọc web** (cổng từ Javis 0.259). Cả bảy engine API giờ có công cụ tìm web (không cần key) và đọc trang, có rào chặn địa chỉ mạng nội bộ.
+
 ## [26.10.203] - 2026-10-21
 
 ### Sửa lỗi
