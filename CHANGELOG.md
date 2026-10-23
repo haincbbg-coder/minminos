@@ -10,6 +10,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - **Đọc văn bản ra file âm thanh.** Nhờ MinMin "đọc đoạn này bằng giọng Ngọc Lan": ra file mp3 hoặc wav lưu vào brain, làm lời bình cho video hay quảng cáo. Văn bản dài tự chia đoạn rồi ghép lại.
 - Mỗi lần đọc trừ token thật của tài khoản VieNeu theo số ký tự, nên chỉ chạy từ mức Tự động trở lên.
 
+## [26.10.210] - 2026-10-23
+
+### Sửa lỗi
+- **Đăng nhập Google cho Antigravity: link bị cụt, Google báo "thiếu response_type".** Link đăng nhập rất dài, Antigravity bẻ xuống nhiều dòng và MinMin chỉ lấy được dòng đầu. Giờ MinMin lấy đủ cả link.
+
 ## [26.10.209] - 2026-10-23
 
 ### Sửa lỗi
