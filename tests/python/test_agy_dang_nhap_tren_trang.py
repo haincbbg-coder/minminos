@@ -70,7 +70,20 @@ GIA = textwrap.dedent(f'''\
         phim = sys.stdin.readline()
         if phim.strip() not in ("", "1"):
             print("Google Cloud project flow", flush=True); time.sleep(60)
-    print("Sign in with Google: https://accounts.google.com/o/oauth2/v2/auth?client_id=abc&redirect_uri=http%3A%2F%2Flocalhost%3A" + str(cong), flush=True)
+    link = ("https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
+            "&code_challenge=Ab12Cd34Ef56Gh78Ij90Kl12Mn34Op56Qr78St90Uv1&code_challenge_method=S256"
+            "&redirect_uri=http%3A%2F%2Flocalhost%3A" + str(cong) + "%2Foauth-callback&response_type=code"
+            "&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform&state=xyz123")
+    open(DAU + ".link", "w").write(link)
+    print("Sign in with Google:", flush=True)
+    if os.environ.get("AGY_GIA_BE") == "1":
+        # Bản bẻ link xuống dòng theo 78 cột, bất kể màn hình rộng bao nhiêu (ảnh 2026-10-23:
+        # MinMin 26.10.209 chỉ lấy dòng đầu, Google báo thiếu response_type).
+        for i in range(0, len(link), 78):
+            print("  " + link[i:i + 78], flush=True)
+        print("", flush=True)
+    else:
+        print(link, flush=True)
     if che_do == "dan" and os.environ.get("SSH_CONNECTION"):
         print("Paste the callback URL here:", flush=True)
         dong = sys.stdin.readline()
@@ -104,7 +117,7 @@ check("link localhost không bị coi là link đăng nhập",
 
 
 def chay(che_do: str):
-    for p in (DAU, Path(str(DAU) + ".cong")):
+    for p in (DAU, Path(str(DAU) + ".cong"), Path(str(DAU) + ".link")):
         try:
             p.unlink()
         except FileNotFoundError:
@@ -114,6 +127,11 @@ def chay(che_do: str):
     r = ag.login_start(cho_giay=15)
     if not r.get("url"): print("   ->", r.get("error", "")[:400], r.get("xong"))
     check(f"[{che_do}] login_start trả link Google", r.get("ok") and "accounts.google.com" in r.get("url", ""))
+    link_that = Path(str(DAU) + ".link").read_text()
+    if r.get("url") and r.get("url") != link_that:
+        print("   -> link nhận:", r.get("url")[:200], "...", len(r.get("url")), "vs", len(link_that))
+    check(f"[{che_do}{' bẻ dòng' if os.environ.get('AGY_GIA_BE') else ''}] link đủ, không cụt (có response_type)",
+          r.get("url") == link_that)
     cong = Path(str(DAU) + ".cong").read_text()
     d = ag.login_code(f"http://localhost:{cong}/oauth-callback?code=ma-dung&state=s", cho_giay=12)
     if not d.get("ok"):
@@ -125,6 +143,9 @@ def chay(che_do: str):
 chay("dan")        # bản có ô dán (phiên từ xa)
 os.environ["AGY_GIA_MENU"] = "1"
 chay("dan")        # bản thật 2026-10-23: menu "Select login method" trước, phải tự chọn mục 1
+os.environ["AGY_GIA_BE"] = "1"
+chay("dan")        # link bị bẻ thành nhiều dòng 78 cột - phải nối lại đủ
+os.environ.pop("AGY_GIA_BE", None)
 os.environ.pop("AGY_GIA_MENU", None)
 chay("loopback")   # bản chỉ mở cổng, không hỏi - máy chủ tự gọi callback
 

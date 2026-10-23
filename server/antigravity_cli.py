@@ -997,6 +997,8 @@ def _env_dang_nhap() -> dict:
     e.setdefault("LANG", "C.UTF-8")
     e.setdefault("NO_BROWSER", "1")
     e.setdefault("BROWSER", "echo")       # CLI nào gọi trình duyệt thì chỉ in link ra
+    e["COLUMNS"] = "1000"                 # cùng lý do màn hình giả rộng ở _mo_pty
+    e["LINES"] = "50"
     if not e.get("SSH_CONNECTION"):
         e["SSH_CONNECTION"] = "127.0.0.1 0 127.0.0.1 22"
         e.setdefault("SSH_CLIENT", "127.0.0.1 0 22")
@@ -1008,6 +1010,14 @@ def _mo_pty(args: list):
     try:
         import pty
         master, slave = pty.openpty()
+        # Màn hình giả RỘNG 1000 cột. Mặc định ~80 cột, và link đăng nhập Google (dài vài trăm
+        # ký tự) bị CLI bẻ xuống nhiều dòng: MinMin chỉ lấy được dòng đầu, Google báo
+        # "Required parameter is missing: response_type" (ảnh chủ MinMin, 2026-10-23).
+        try:
+            import fcntl, struct, termios
+            fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 1000, 0, 0))
+        except Exception:
+            pass
         proc = subprocess.Popen(args, stdin=slave, stdout=slave, stderr=slave,
                                 env=_env_dang_nhap(), start_new_session=True, close_fds=True,
                                 cwd=str(_home_dir()), creationflags=_no_window())
@@ -1079,13 +1089,39 @@ def _doc_luong(proc, fd) -> None:
         except Exception:
             return ""
 
-    def _thu_bat(s):
+    # Lưới thứ hai cho link bị bẻ dòng (khi CLI không theo bề rộng màn hình giả): link chạm
+    # cuối dòng thì giữ ở `dang_noi`, nối tiếp những dòng sau chỉ gồm ký tự URL, và chỉ chốt
+    # khi gặp dòng thường hoặc CLI im lặng. Chốt sớm là đưa lên trang một link cụt.
+    dang_noi = {"u": ""}
+    _KY_TU_URL = re.compile(r"^[A-Za-z0-9\-._~%!$&'()*+,;=:@/?#\[\]]+$")
+    _VIEN = "│┃|║ \t"
+
+    def _chot():
+        if dang_noi["u"] and not _LOGIN["url"]:
+            _LOGIN["url"] = dang_noi["u"].rstrip(".,);]")
+        dang_noi["u"] = ""
+
+    def _thu_bat(s, het_dong=False):
         if _LOGIN["url"]:
             return
-        for m in _URL_RE.finditer(_lam_sach(s)):
-            u = m.group(0).rstrip(".,);]")
-            if _la_link_dang_nhap(u):
-                _LOGIN["url"] = u
+        sach = _lam_sach(s)
+        if dang_noi["u"]:
+            if not het_dong:
+                return          # dòng nối tiếp chưa in xong, chờ hết dòng
+            manh = sach.strip(_VIEN)
+            if manh and _KY_TU_URL.match(manh) and "://" not in manh:
+                dang_noi["u"] += manh
+                return
+            _chot()
+            return
+        for m in _URL_RE.finditer(sach):
+            u = m.group(0)
+            if _la_link_dang_nhap(u.rstrip(".,);]")):
+                cham_cuoi = not sach[m.end():].strip(_VIEN)
+                if het_dong and cham_cuoi:
+                    dang_noi["u"] = u
+                elif het_dong or not cham_cuoi:
+                    _LOGIN["url"] = u.rstrip(".,);]")
                 return
 
     def _co_le_chon():
@@ -1125,19 +1161,22 @@ def _doc_luong(proc, fd) -> None:
                 if proc.poll() is not None:
                     break
                 time.sleep(0.05)
+                # CLI im lặng mà đang nối dở một link: coi như link đã in xong.
+                if dang_noi["u"] and not buf.strip():
+                    _chot()
                 _co_le_chon()
                 continue
             gan_day = (gan_day + ch)[-3000:]
             for c in ch:
                 if c in "\r\n":
                     if buf.strip():
-                        _thu_bat(buf)
+                        _thu_bat(buf, het_dong=True)
                         _ghi(_LOGIN, buf)
                     buf = ""
                 else:
                     buf += c
                     if len(buf) > 4000:
-                        _thu_bat(buf)
+                        _thu_bat(buf, het_dong=True)
                         _ghi(_LOGIN, buf)
                         buf = ""
             # Link dài hay bị TUI bẻ dòng bằng mã con trỏ chứ không bằng \n: thử bắt cả trên
@@ -1147,8 +1186,9 @@ def _doc_luong(proc, fd) -> None:
     except Exception as e:
         _ghi(_LOGIN, f"[MinMin đọc output lỗi] {type(e).__name__}: {e}")
     if buf.strip():
-        _thu_bat(buf)
+        _thu_bat(buf, het_dong=True)
         _ghi(_LOGIN, buf)
+    _chot()
     try:
         _LOGIN["ma_thoat"] = proc.wait(timeout=5)
         _ghi(_LOGIN, f"[agy kết thúc, mã thoát {_LOGIN['ma_thoat']}]")
