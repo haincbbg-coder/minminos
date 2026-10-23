@@ -497,9 +497,14 @@ check("card chỉ đúng lệnh cài", "data-agycheck" in _console)
 # không có PTY nên chưa bao giờ dùng được. Người dùng `agy` đều là dân code sẵn terminal - một
 # lệnh `agy` gọn hơn hẳn một luồng UI nửa vời. Muốn dựng lại thì phải là terminal tương tác
 # thật, không phải bản chỉ-đọc.
-check("thẻ Models KHÔNG dựng nút đăng nhập trên trang (0.32.2)", "data-agylogin" not in _console)
-check("và không còn gọi endpoint đăng nhập đã gỡ",
-      "/antigravity/login-start" not in _console and "/antigravity/login-start" not in _main_src)
+# 26.10.205 dựng lại nút, và KHÔNG phải ô terminal chỉ-đọc mà chú thích trên cấm: khuôn Claude
+# (link + ô dán địa chỉ callback), máy chủ còn tự gọi cổng callback cho bản `agy` không hỏi ô
+# dán. Lý do dựng lại: chủ MinMin ẩn trang Code (Terminal), nên "gõ một lệnh" là đường cụt với
+# chính người dùng chính. Luồng thật được giữ bởi test_agy_dang_nhap_tren_trang (agy giả, cả
+# hai bản: có ô dán và chỉ loopback).
+check("thẻ Models có nút đăng nhập trên trang (26.10.205)", "data-agylogin" in _console)
+check("nút đó đi luồng link + dán, không phải terminal giả",
+      "/antigravity/login-code" in _console and "/antigravity/login-start" in _main_src)
 check("thay vào đó đưa đúng lệnh cần gõ trong terminal", "p.dang_nhap" in _console)
 check("server cấp hướng dẫn đó cho trang Models",
       "antigravity_cli.login_huong_dan()" in _main_src)
