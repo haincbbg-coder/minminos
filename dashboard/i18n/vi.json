@@ -482,7 +482,7 @@
   "models.checking": "đang kiểm tra…",
   "models.cant_check": "không kiểm tra được",
   "models.grok_note": "Dùng gói SuperGrok hoặc X Premium+ của bạn, không cần mua API key. Đăng nhập được ngay tại đây kể cả khi MinMin chạy trên VPS.",
-  "models.agy_note": "Dùng gói Google của bạn, không cần mua API key. Đây là bản Google chỉ định thay cho Gemini CLI, và cho chọn đúng dàn model của Antigravity IDE - gồm cả model không phải của Google.",
+  "models.agy_note": "Dùng gói Google AI Pro / Ultra (Gemini Pro) bạn đang trả tiền làm bộ não, không cần API key. Chọn được đúng dàn model của Antigravity: Gemini Pro, Flash và cả Claude.",
   "models.cli_install": "Chưa thấy CLI trên máy. Cài một lần trên máy chạy MinMin:",
   "models.agy_login": "Đăng nhập trong terminal của máy chạy MinMin:",
   "models.agy_done": "Xong rồi bấm Kiểm tra lại ở dưới.",
@@ -3868,5 +3868,18 @@
   "ww.no_channel": "Chưa có kênh ngoài ({why}), nên báo chỉ nằm trong khung chat web và hòm thư, không tới điện thoại.",
   "ww.err_net": "Không gửi được, thử lại sau.",
   "ww.login": "Đăng nhập (khi trang cần)",
-  "ww.login_none": "Không cần đăng nhập"
+  "ww.login_none": "Không cần đăng nhập",
+  "models.agy_btn_install": "Cài đặt",
+  "models.agy_btn_login": "Đăng nhập Google",
+  "models.agy_btn_send": "Xác nhận",
+  "models.agy_installing": "Đang cài...",
+  "models.agy_install_wait": "Đang tải và cài Antigravity CLI lên máy chạy MinMin, mất khoảng 1 phút.",
+  "models.agy_installed": "Đã cài xong. Giờ bấm Đăng nhập Google.",
+  "models.agy_ask": "Đang mở phiên đăng nhập trên máy chủ...",
+  "models.agy_step1": "Mở link này, đăng nhập đúng tài khoản Google có gói AI Pro:",
+  "models.agy_step2": "Đăng nhập xong, trình duyệt nhảy sang một trang localhost báo không mở được. Đó là bước ĐÚNG.",
+  "models.agy_step3": "Copy nguyên địa chỉ trên thanh URL của trang đó, dán vào ô dưới rồi bấm Xác nhận (làm ngay, mã chỉ sống vài phút).",
+  "models.agy_checking": "Đang kiểm tra đăng nhập...",
+  "models.agy_ok": "Đã kết nối gói Google. Chọn model và bấm Đặt làm bộ não chính nếu muốn.",
+  "models.agy_manual": "Cách làm tay (nếu nút không chạy)"
 }

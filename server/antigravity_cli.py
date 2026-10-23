@@ -927,6 +927,379 @@ def login_huong_dan() -> dict:
     }
 
 
+
+
+# ---------------------------------------------------------------------------
+# Cài + đăng nhập NGAY TRÊN TRANG MODELS (26.10.205)
+# ---------------------------------------------------------------------------
+# Vì sao bỏ quyết định "không có nút" của 0.32.2. Lý do cũ có hai: (1) bản 0.30-0.32.1 vẽ một ô
+# terminal giả trên trang mà bấm vào không ăn, (2) luồng đăng nhập của `agy` khi đó là luồng
+# loopback - in link rồi nằm chờ một cổng localhost mà trình duyệt ở máy khác không với tới.
+# Cả hai đã đổi: (2) được chữa ở 0.55.46 bằng `SSH_CONNECTION` - `agy` thấy biến đó thì in link
+# và CHỜ DÁN ngược địa chỉ callback, đúng khuôn Claude (link + ô dán mã). Còn (1) không cần ô
+# terminal nào: giống thẻ Muse/Grok, máy chủ tự chạy `agy` trong pty, bóc link đưa lên trang, và
+# nhận lại đúng MỘT thứ người dùng dán. Chủ MinMin ẩn trang Code (Terminal) nên con đường "gõ
+# `agy` trong Terminal" thực tế là đường cụt với anh ấy - đó là lý do chính của khối này.
+#
+# Lưới an toàn cho chỗ CHƯA ĐO (bản `agy` có hỏi ô dán hay không): địa chỉ người dùng dán là
+# `http://localhost:<cổng>/...?code=...`, và cổng đó đang mở NGAY TRÊN máy chạy MinMin (chính
+# tiến trình `agy` mở). Nên ngoài việc gõ vào pty, máy chủ còn tự gọi GET tới đúng địa chỉ đó -
+# cùng việc mà `cuu_ho` trong `login_huong_dan` bảo người dùng tự curl. Một trong hai đường về
+# tới `agy` là đủ.
+#
+# MinMin KHÔNG đọc, không giữ token: token vẫn do `agy` cất (keyring/file của nó). Nhật ký đăng
+# nhập che mọi chuỗi giống bí mật, và địa chỉ callback dán vào không bao giờ ghi ra log.
+
+_LOGIN: dict = {"proc": None, "fd": None, "url": "", "log": None, "ma_thoat": None,
+                "bat_dau": 0.0, "da_dan": False}
+_CAI: dict = {"dang_chay": False, "ok": None, "log": None, "bat_dau": 0.0}
+_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b[()][A-Z0-9]|\x1b[=>]")
+_BIMAT_RE = re.compile(r"\b[A-Za-z0-9_\-]{32,}\b")
+_NHAT_KY_TOI_DA = 60
+
+
+def _lam_sach(s: str) -> str:
+    return _ANSI_RE.sub("", s or "")
+
+
+def _che(s: str) -> str:
+    """Che chuỗi giống bí mật. Link đăng nhập Google giữ nguyên (người dùng cần mở nó), nhưng
+    mọi tham số `code=`/`token=` trong URL thì che - đó là thứ đổi được ra phiên."""
+    s = re.sub(r"((?:code|token|access_token|refresh_token)=)[^&\s]+", r"\1[đã che]", s)
+    if "://" in s:
+        return s
+    return _BIMAT_RE.sub("[đã che]", s)
+
+
+def _ghi(store: dict, dong: str) -> None:
+    if store.get("log") is None:
+        return
+    d = _che(_lam_sach(dong).strip())
+    if d:
+        store["log"].append(d)
+
+
+def _nhat_ky(store: dict) -> list:
+    log = store.get("log")
+    return list(log) if log else []
+
+
+def _env_dang_nhap() -> dict:
+    """Môi trường cho `agy` đăng nhập: luôn ép luồng 'phiên từ xa' (in link + chờ dán).
+
+    Trang Models luôn được mở từ một trình duyệt KHÁC tiến trình `agy` (VPS, container, hay
+    chính máy Windows nhưng qua pty không có cửa sổ), nên luồng loopback 'trình duyệt cùng
+    máy' không bao giờ đúng ở đây. Không đè `SSH_CONNECTION` thật nếu có.
+    """
+    e = dict(os.environ)
+    e["TERM"] = "xterm-256color"
+    e.setdefault("LANG", "C.UTF-8")
+    e.setdefault("NO_BROWSER", "1")
+    e.setdefault("BROWSER", "echo")       # CLI nào gọi trình duyệt thì chỉ in link ra
+    if not e.get("SSH_CONNECTION"):
+        e["SSH_CONNECTION"] = "127.0.0.1 0 127.0.0.1 22"
+        e.setdefault("SSH_CLIENT", "127.0.0.1 0 22")
+    return e
+
+
+def _mo_pty(args: list):
+    """Chạy `args` trong pseudo-terminal (POSIX). Windows/không có pty -> ống thường."""
+    try:
+        import pty
+        master, slave = pty.openpty()
+        proc = subprocess.Popen(args, stdin=slave, stdout=slave, stderr=slave,
+                                env=_env_dang_nhap(), start_new_session=True, close_fds=True,
+                                cwd=str(_home_dir()))
+        os.close(slave)
+        return proc, master
+    except Exception:
+        proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, creationflags=_no_window(),
+                                env=_env_dang_nhap(), cwd=str(_home_dir()))
+        return proc, None
+
+
+def _gui(chu: str) -> bool:
+    proc, fd = _LOGIN.get("proc"), _LOGIN.get("fd")
+    b = chu.encode("utf-8")
+    try:
+        if fd is not None:
+            os.write(fd, b)
+            return True
+        if proc and proc.stdin:
+            proc.stdin.write(b)
+            proc.stdin.flush()
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _la_link_dang_nhap(url: str) -> bool:
+    """Link cần mở là link Google (accounts.google.com / antigravity...), KHÔNG phải mấy địa
+    chỉ localhost mà `agy` cũng có thể in ra (cổng callback)."""
+    # Soi HOST chứ không soi cả chuỗi: link Google thật mang `redirect_uri=http://localhost:...`
+    # trong tham số, soi chuỗi thì chính link cần mở lại bị loại.
+    from urllib.parse import urlsplit
+    try:
+        host = (urlsplit(url).hostname or "").lower()
+    except Exception:
+        return False
+    if not host or host in ("localhost", "127.0.0.1", "::1"):
+        return False
+    u = url.lower()
+    return ("google" in host) or ("antigravity" in u) or ("oauth" in u) or ("auth" in u)
+
+
+def _doc_luong(proc, fd) -> None:
+    """Đọc output của `agy`, bóc link đăng nhập. Thấy menu chọn cách đăng nhập mà chưa có link
+    thì Enter MỘT lần (mục mặc định là đăng nhập Google) - cùng cách thẻ Muse đang làm."""
+    buf = ""
+    da_enter = False
+    bat_dau = time.time()
+
+    def _doc():
+        if fd is not None:
+            try:
+                return os.read(fd, 4096).decode("utf-8", "replace")
+            except OSError:
+                return ""
+        try:
+            return proc.stdout.read(1).decode("utf-8", "replace")
+        except Exception:
+            return ""
+
+    def _thu_bat(s):
+        if _LOGIN["url"]:
+            return
+        for m in _URL_RE.finditer(_lam_sach(s)):
+            u = m.group(0).rstrip(".,);]")
+            if _la_link_dang_nhap(u):
+                _LOGIN["url"] = u
+                return
+
+    def _co_le_enter():
+        nonlocal da_enter
+        if (not da_enter and not _LOGIN["url"] and time.time() - bat_dau > 4
+                and re.search(r"sign in|log ?in|google|authenticate|select|choose",
+                              _lam_sach(buf), re.I)):
+            _gui("\r")
+            da_enter = True
+            _ghi(_LOGIN, "[MinMin bấm Enter chọn mục đăng nhập mặc định]")
+
+    try:
+        while True:
+            ch = _doc()
+            if not ch:
+                if proc.poll() is not None:
+                    break
+                time.sleep(0.05)
+                _co_le_enter()
+                continue
+            for c in ch:
+                if c in "\r\n":
+                    if buf.strip():
+                        _thu_bat(buf)
+                        _ghi(_LOGIN, buf)
+                    buf = ""
+                else:
+                    buf += c
+                    if len(buf) > 4000:
+                        _thu_bat(buf)
+                        _ghi(_LOGIN, buf)
+                        buf = ""
+            # Link dài hay bị TUI bẻ dòng bằng mã con trỏ chứ không bằng \n: thử bắt cả trên
+            # bộ đệm đang dở, đừng chờ hết dòng.
+            _thu_bat(buf)
+            _co_le_enter()
+    except Exception as e:
+        _ghi(_LOGIN, f"[MinMin đọc output lỗi] {type(e).__name__}: {e}")
+    if buf.strip():
+        _thu_bat(buf)
+        _ghi(_LOGIN, buf)
+    try:
+        _LOGIN["ma_thoat"] = proc.wait(timeout=5)
+        _ghi(_LOGIN, f"[agy kết thúc, mã thoát {_LOGIN['ma_thoat']}]")
+    except Exception:
+        pass
+
+
+def huy_dang_nhap() -> None:
+    proc, fd = _LOGIN.get("proc"), _LOGIN.get("fd")
+    if proc and proc.poll() is None:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    if fd is not None:
+        try:
+            os.close(fd)
+        except Exception:
+            pass
+    _LOGIN.update(proc=None, fd=None, url="", da_dan=False)
+
+
+def _xoa_cache_auth() -> None:
+    _AUTH_CACHE.update(ts=0.0, val=None)
+
+
+def login_start(cho_giay: float = 40.0) -> dict:
+    """Bước 1: chạy `agy` trong pty, trả link đăng nhập Google cho trang Models.
+
+    Đã đăng nhập rồi thì trả `xong` ngay. Không bóc được link trong `cho_giay` giây thì trả
+    lỗi kèm mấy dòng CLI vừa in - KHÔNG đoán.
+    """
+    cli = find_antigravity_cli()
+    if not cli:
+        return {"ok": False, "can_cai": True,
+                "error": "Chưa cài Antigravity CLI. Bấm Cài đặt trước."}
+    _xoa_cache_auth()
+    if auth_status(bo_qua_cache=True).get("connected"):
+        return {"ok": True, "xong": True, "url": ""}
+    huy_dang_nhap()
+    from collections import deque
+    try:
+        proc, fd = _mo_pty([cli])
+    except Exception as e:
+        return {"ok": False, "error": f"Không chạy được agy: {type(e).__name__}: {e}"}
+    _LOGIN.update(proc=proc, fd=fd, url="", ma_thoat=None, bat_dau=time.time(), da_dan=False,
+                  log=deque(maxlen=_NHAT_KY_TOI_DA))
+    _ghi(_LOGIN, "[MinMin chạy] agy (đăng nhập, qua pty)")
+    threading.Thread(target=_doc_luong, args=(proc, fd), name="minmin-agy-login",
+                     daemon=True).start()
+    han = time.time() + cho_giay
+    while time.time() < han and not _LOGIN["url"] and proc.poll() is None:
+        time.sleep(0.2)
+    if _LOGIN["url"]:
+        return {"ok": True, "xong": False, "url": _LOGIN["url"], "nhat_ky": _nhat_ky(_LOGIN)}
+    _xoa_cache_auth()
+    if auth_status(bo_qua_cache=True).get("connected"):
+        huy_dang_nhap()
+        return {"ok": True, "xong": True, "url": ""}
+    duoi = [x for x in _nhat_ky(_LOGIN) if not x.startswith("[")][-6:]
+    huy_dang_nhap()
+    return {"ok": False,
+            "error": (f"Antigravity CLI không in ra link đăng nhập trong {int(cho_giay)} giây."
+                      + (" CLI vừa in: " + " | ".join(x[:140] for x in duoi) if duoi else "")),
+            "nhat_ky": _nhat_ky(_LOGIN)}
+
+
+def _goi_callback_noi_bo(url: str) -> str:
+    """Gọi GET tới địa chỉ callback localhost (cổng `agy` đang mở trên CHÍNH máy này).
+
+    Chỉ chấp nhận localhost/127.0.0.1/[::1] - không bao giờ để ô dán biến thành công cụ gọi
+    một địa chỉ tuỳ ý từ máy chủ. Bỏ qua proxy vì đích là loopback.
+    """
+    from urllib.parse import urlsplit
+    import urllib.request
+    try:
+        p = urlsplit(url)
+    except Exception:
+        return "bỏ qua (không phải URL)"
+    if p.scheme not in ("http", "https") or (p.hostname or "") not in ("localhost", "127.0.0.1", "::1"):
+        return "bỏ qua (không phải địa chỉ localhost)"
+    try:
+        op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with op.open(url, timeout=10) as r:
+            return f"HTTP {r.status}"
+    except Exception as e:
+        code = getattr(e, "code", None)
+        return f"HTTP {code}" if code else f"{type(e).__name__}"
+
+
+def login_code(dan: str, cho_giay: float = 25.0) -> dict:
+    """Bước 2: nhận thứ người dùng dán (địa chỉ localhost trên thanh URL, hoặc một mã).
+
+    Đưa vào `agy` theo cả hai đường đã nói ở đầu khối, rồi chờ tới khi `agy models` trả được
+    danh sách - đó mới là bằng chứng đăng nhập xong, không phải câu chữ nào CLI in ra.
+    """
+    dan = (dan or "").strip().strip('"').strip("'")
+    if not dan:
+        return {"ok": False, "error": "Chưa dán gì. Dán nguyên địa chỉ trên thanh URL của trình duyệt."}
+    proc = _LOGIN.get("proc")
+    if not proc or proc.poll() is not None:
+        return {"ok": False, "het_phien": True,
+                "error": "Phiên đăng nhập đã đóng. Bấm Đăng nhập Google để mở lại link mới."}
+    _LOGIN["da_dan"] = True
+    _gui(dan + "\r")
+    _ghi(_LOGIN, "[MinMin dán địa chỉ callback vào agy]")
+    la_url = dan.lower().startswith(("http://", "https://"))
+    da_goi = False
+    han = time.time() + cho_giay
+    while time.time() < han:
+        time.sleep(1.0)
+        # Sau 3 giây mà vẫn chưa xong thì tự gọi cổng callback - lưới an toàn cho bản `agy`
+        # không hỏi ô dán (luồng loopback). Gọi một lần là đủ: mã OAuth chỉ đổi được một lần.
+        if la_url and not da_goi and time.time() > han - cho_giay + 3:
+            kq = _goi_callback_noi_bo(dan)
+            _ghi(_LOGIN, f"[MinMin gọi cổng callback trên máy chủ: {kq}]")
+            da_goi = True
+        _xoa_cache_auth()
+        if auth_status(bo_qua_cache=True).get("connected"):
+            # `agy` tương tác không tự thoát sau khi đăng nhập (vào màn chat). Tắt nó đi, kẻo
+            # một tiến trình chờ bàn phím vô hình nằm mãi trên máy chủ.
+            huy_dang_nhap()
+            return {"ok": True, "connected": True}
+    duoi = [x for x in _nhat_ky(_LOGIN) if not x.startswith("[")][-4:]
+    return {"ok": False,
+            "error": ("Chưa nhận được đăng nhập. Kiểm tra đã dán NGUYÊN địa chỉ (bắt đầu bằng "
+                      "http://localhost) và dán ngay sau khi đăng nhập - mã chỉ sống vài phút."
+                      + (" CLI nói: " + " | ".join(x[:140] for x in duoi) if duoi else "")),
+            "nhat_ky": _nhat_ky(_LOGIN)}
+
+
+def login_trang_thai() -> dict:
+    proc = _LOGIN.get("proc")
+    return {"dang_cho": bool(proc and proc.poll() is None), "url": _LOGIN.get("url", ""),
+            "ma_thoat": _LOGIN.get("ma_thoat"), "nhat_ky": _nhat_ky(_LOGIN)}
+
+
+def cai_dat_start() -> dict:
+    """Chạy lệnh cài chính chủ ở nền. Binary vào ~/.local/bin - trong Docker thư mục đó đã được
+    entrypoint link sang volume /data nên cài một lần là sống qua mọi lần cập nhật."""
+    if find_antigravity_cli():
+        return {"ok": True, "da_co": True}
+    if _CAI["dang_chay"]:
+        return {"ok": True, "dang_chay": True}
+    from collections import deque
+    _CAI.update(dang_chay=True, ok=None, log=deque(maxlen=_NHAT_KY_TOI_DA), bat_dau=time.time())
+    if os.name == "nt":
+        args = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+                LENH_CAI["windows"]]
+    else:
+        args = ["bash", "-c", "set -o pipefail; " + LENH_CAI["linux"]]
+
+    def _chay():
+        try:
+            p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 stdin=subprocess.DEVNULL, creationflags=_no_window(),
+                                 cwd=str(_home_dir()))
+            for dong in iter(p.stdout.readline, b""):
+                _ghi(_CAI, dong.decode("utf-8", "replace"))
+            ma = p.wait(timeout=600)
+            _ghi(_CAI, f"[lệnh cài kết thúc, mã thoát {ma}]")
+            _CAI["ok"] = bool(find_antigravity_cli())
+        except Exception as e:
+            _ghi(_CAI, f"[lỗi cài] {type(e).__name__}: {e}")
+            _CAI["ok"] = False
+        finally:
+            _CAI["dang_chay"] = False
+            _xoa_cache_auth()
+
+    threading.Thread(target=_chay, name="minmin-agy-install", daemon=True).start()
+    return {"ok": True, "dang_chay": True}
+
+
+def cai_dat_trang_thai() -> dict:
+    co = find_antigravity_cli()
+    d = {"dang_chay": _CAI["dang_chay"], "ok": _CAI["ok"] if not co else True,
+         "cli_path": co or "", "nhat_ky": _nhat_ky(_CAI)}
+    if _CAI["ok"] is False and not co:
+        d["error"] = "Cài không thành công. Xem nhật ký bên dưới."
+    return d
+
+
 # ---------------------------------------------------------------------------
 # MCP: đấu hub của Javis vào CLI
 # ---------------------------------------------------------------------------

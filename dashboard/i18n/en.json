@@ -482,7 +482,7 @@
   "models.checking": "checking…",
   "models.cant_check": "could not check",
   "models.grok_note": "Uses your SuperGrok or X Premium+ plan, no API key to buy. You can sign in right here, even when MinMin runs on a VPS.",
-  "models.agy_note": "Uses your Google plan, no API key to buy. This is Google's designated replacement for Gemini CLI, and it offers the exact model lineup of the Antigravity IDE - including non-Google models.",
+  "models.agy_note": "Uses the Google AI Pro / Ultra (Gemini Pro) plan you already pay for as the brain, no API key. Offers the Antigravity model lineup: Gemini Pro, Flash and Claude too.",
   "models.cli_install": "CLI not found on this machine. Install once on the machine running MinMin:",
   "models.agy_login": "Sign in from the terminal of the machine running MinMin:",
   "models.agy_done": "Then hit Check again below.",
@@ -3868,5 +3868,18 @@
   "ww.no_channel": "No outside channel yet ({why}), so alerts only reach the web chat and the inbox, not your phone.",
   "ww.err_net": "Could not send, try again later.",
   "ww.login": "Sign-in (when the page needs one)",
-  "ww.login_none": "No sign-in needed"
+  "ww.login_none": "No sign-in needed",
+  "models.agy_btn_install": "Install",
+  "models.agy_btn_login": "Sign in with Google",
+  "models.agy_btn_send": "Confirm",
+  "models.agy_installing": "Installing...",
+  "models.agy_install_wait": "Downloading and installing Antigravity CLI on the MinMin machine, about 1 minute.",
+  "models.agy_installed": "Installed. Now press Sign in with Google.",
+  "models.agy_ask": "Opening a sign-in session on the server...",
+  "models.agy_step1": "Open this link and sign in with the Google account that has the AI Pro plan:",
+  "models.agy_step2": "After signing in, the browser jumps to a localhost page that fails to load. That is the CORRECT step.",
+  "models.agy_step3": "Copy the full address from that page's URL bar, paste it below and press Confirm (do it right away, the code lives a few minutes).",
+  "models.agy_checking": "Checking sign-in...",
+  "models.agy_ok": "Google plan connected. Pick a model and set it as main brain if you like.",
+  "models.agy_manual": "Manual way (if the button fails)"
 }
