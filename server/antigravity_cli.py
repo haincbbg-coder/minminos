@@ -1056,14 +1056,23 @@ def _doc_luong(proc, fd) -> None:
     """Đọc output của `agy`, bóc link đăng nhập. Thấy menu chọn cách đăng nhập mà chưa có link
     thì Enter MỘT lần (mục mặc định là đăng nhập Google) - cùng cách thẻ Muse đang làm."""
     buf = ""
-    da_enter = False
+    gan_day = ""          # đuôi output gần nhất, KHÔNG reset theo dòng (xem _co_le_chon)
+    lan_chon = 0
+    luc_chon = 0.0
     bat_dau = time.time()
 
     def _doc():
         if fd is not None:
+            # CHỜ CÓ HẠN rồi mới đọc. `os.read` trên pty chặn vô hạn khi CLI im lặng, mà menu
+            # đăng nhập đúng là in xong rồi im - không có hạn chờ thì vòng lặp không bao giờ
+            # quay lại để bấm chọn (lỗi thật của 26.10.205).
             try:
+                import select
+                r, _, _ = select.select([fd], [], [], 0.5)
+                if not r:
+                    return ""
                 return os.read(fd, 4096).decode("utf-8", "replace")
-            except OSError:
+            except (OSError, ValueError):
                 return ""
         try:
             return proc.stdout.read(1).decode("utf-8", "replace")
@@ -1079,14 +1088,35 @@ def _doc_luong(proc, fd) -> None:
                 _LOGIN["url"] = u
                 return
 
-    def _co_le_enter():
-        nonlocal da_enter
-        if (not da_enter and not _LOGIN["url"] and time.time() - bat_dau > 4
-                and re.search(r"sign in|log ?in|google|authenticate|select|choose",
-                              _lam_sach(buf), re.I)):
-            _gui("\r")
-            da_enter = True
-            _ghi(_LOGIN, "[MinMin bấm Enter chọn mục đăng nhập mặc định]")
+    def _co_le_chon():
+        """Bản thật (đo 2026-10-23, ảnh chủ MinMin gửi) in menu rồi CHỜ:
+
+            Select login method:
+            > 1. Google OAuth
+              2. Use a Google Cloud project
+
+        Bản 26.10.205 soi `buf` - dòng ĐANG DỞ - mà menu kết thúc bằng xuống dòng nên `buf`
+        luôn rỗng lúc chờ, không bao giờ bấm. Giờ soi đuôi output gần nhất. Mục 1 là mục mặc
+        định (có dấu `>`), nên Enter là chọn Google OAuth. Bấm tối đa 3 lần cách nhau 5 giây,
+        đổi kiểu phím mỗi lần (\r, \n, rồi gõ "1" + \r) vì TUI mỗi bản hiểu phím khác nhau.
+        """
+        nonlocal lan_chon, luc_chon, gan_day
+        if _LOGIN["url"] or lan_chon >= 3:
+            return
+        now = time.time()
+        if now - bat_dau < 2 or (lan_chon and now - luc_chon < 5):
+            return
+        sach = _lam_sach(gan_day)
+        if not re.search(r"login method|google oauth|sign in|log ?in|select|choose", sach, re.I):
+            return
+        phim = ("\r", "\n", "1\r")[lan_chon]
+        _gui(phim)
+        lan_chon += 1
+        luc_chon = now
+        # Xoá đuôi đã soi: chỉ bấm tiếp khi menu VẼ LẠI. Không xoá thì chữ "Select login method"
+        # cũ còn nằm đó và lần bấm sau có thể rơi vào ô dán, gửi đi một dòng rỗng.
+        gan_day = ""
+        _ghi(_LOGIN, f"[MinMin chọn Google OAuth ở menu đăng nhập, lần {lan_chon}]")
 
     try:
         while True:
@@ -1095,8 +1125,9 @@ def _doc_luong(proc, fd) -> None:
                 if proc.poll() is not None:
                     break
                 time.sleep(0.05)
-                _co_le_enter()
+                _co_le_chon()
                 continue
+            gan_day = (gan_day + ch)[-3000:]
             for c in ch:
                 if c in "\r\n":
                     if buf.strip():
@@ -1112,7 +1143,7 @@ def _doc_luong(proc, fd) -> None:
             # Link dài hay bị TUI bẻ dòng bằng mã con trỏ chứ không bằng \n: thử bắt cả trên
             # bộ đệm đang dở, đừng chờ hết dòng.
             _thu_bat(buf)
-            _co_le_enter()
+            _co_le_chon()
     except Exception as e:
         _ghi(_LOGIN, f"[MinMin đọc output lỗi] {type(e).__name__}: {e}")
     if buf.strip():
@@ -1123,18 +1154,28 @@ def _doc_luong(proc, fd) -> None:
         _ghi(_LOGIN, f"[agy kết thúc, mã thoát {_LOGIN['ma_thoat']}]")
     except Exception:
         pass
+    # Luồng này SỞ HỮU fd pty: chỉ nó đóng, và chỉ sau khi đã thôi đọc (xem huy_dang_nhap).
+    if fd is not None:
+        if _LOGIN.get("fd") == fd:
+            _LOGIN["fd"] = None
+        try:
+            os.close(fd)
+        except Exception:
+            pass
 
 
 def huy_dang_nhap() -> None:
-    proc, fd = _LOGIN.get("proc"), _LOGIN.get("fd")
+    """Tắt `agy` đăng nhập. KHÔNG đóng fd pty ở đây - luồng đọc tự đóng khi nó thoát.
+
+    Đóng ở đây là lỗi thật đã gặp (26.10.206, CI đỏ chập chờn): luồng đọc còn đang chờ trên
+    số fd đó, hệ điều hành cấp lại đúng số ấy cho lần `open()` kế tiếp trong tiến trình
+    (ví dụ đọc main.py), và luồng đọc cũ HÚT MẤT nội dung của file kia - file đọc ra rỗng.
+    Giết tiến trình con là đủ: phía master nhận EIO, luồng đọc thoát và tự đóng fd của nó.
+    """
+    proc = _LOGIN.get("proc")
     if proc and proc.poll() is None:
         try:
             proc.kill()
-        except Exception:
-            pass
-    if fd is not None:
-        try:
-            os.close(fd)
         except Exception:
             pass
     _LOGIN.update(proc=None, fd=None, url="", da_dan=False)

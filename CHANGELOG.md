@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.208] - 2026-10-23
+
+### Sửa lỗi
+- **Đăng nhập Google cho Antigravity không hiện link.** Bản thật hỏi "Select login method" trước, MinMin chưa tự chọn mục "Google OAuth" nên đứng chờ. Giờ MinMin tự chọn rồi mới đưa link lên.
+- Tắt phiên đăng nhập Antigravity không còn làm MinMin đọc hỏng một file khác ngay sau đó.
+
 ## [26.10.207] - 2026-10-23
 ### Thêm mới
 - **Bộ não API biết tìm và đọc web** (cổng từ Javis 0.259). Cả bảy engine API giờ có công cụ tìm web (không cần key) và đọc trang, có rào chặn địa chỉ mạng nội bộ.

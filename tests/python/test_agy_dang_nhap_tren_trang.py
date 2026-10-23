@@ -61,7 +61,15 @@ GIA = textwrap.dedent(f'''\
     cong = s.server_address[1]
     open(DAU + ".cong", "w").write(str(cong))
     threading.Thread(target=s.serve_forever, daemon=True).start()
-    print("Welcome to Antigravity CLI")
+    print("Welcome to the Antigravity CLI. You are currently not signed in.")
+    if os.environ.get("AGY_GIA_MENU") == "1":
+        # Đúng như bản thật (ảnh 2026-10-23): in menu rồi CHỜ một phím.
+        print("Select login method:")
+        print("> 1. Google OAuth")
+        print("  2. Use a Google Cloud project", flush=True)
+        phim = sys.stdin.readline()
+        if phim.strip() not in ("", "1"):
+            print("Google Cloud project flow", flush=True); time.sleep(60)
     print("Sign in with Google: https://accounts.google.com/o/oauth2/v2/auth?client_id=abc&redirect_uri=http%3A%2F%2Flocalhost%3A" + str(cong), flush=True)
     if che_do == "dan" and os.environ.get("SSH_CONNECTION"):
         print("Paste the callback URL here:", flush=True)
@@ -104,14 +112,20 @@ def chay(che_do: str):
     os.environ["AGY_GIA_CHE_DO"] = che_do
     ag._xoa_cache_auth()
     r = ag.login_start(cho_giay=15)
+    if not r.get("url"): print("   ->", r.get("error", "")[:400], r.get("xong"))
     check(f"[{che_do}] login_start trả link Google", r.get("ok") and "accounts.google.com" in r.get("url", ""))
     cong = Path(str(DAU) + ".cong").read_text()
     d = ag.login_code(f"http://localhost:{cong}/oauth-callback?code=ma-dung&state=s", cho_giay=12)
+    if not d.get("ok"):
+        print("   ->", (d.get("error") or "")[:300], ag._nhat_ky(ag._LOGIN)[-6:])
     check(f"[{che_do}] login_code báo đã kết nối", d.get("ok") and d.get("connected"))
     check(f"[{che_do}] tiến trình agy đã được tắt sau khi xong", ag._LOGIN.get("proc") is None)
 
 
 chay("dan")        # bản có ô dán (phiên từ xa)
+os.environ["AGY_GIA_MENU"] = "1"
+chay("dan")        # bản thật 2026-10-23: menu "Select login method" trước, phải tự chọn mục 1
+os.environ.pop("AGY_GIA_MENU", None)
 chay("loopback")   # bản chỉ mở cổng, không hỏi - máy chủ tự gọi callback
 
 # 3. Dán khi phiên đã đóng thì nói rõ, không treo.
@@ -124,6 +138,8 @@ check("thẻ có nút Đăng nhập Google", "data-agylogin" in js and "/antigra
 check("thẻ có nút Cài đặt", "data-agyinstall" in js and "/antigravity/install" in js)
 src = (SERVER / "main.py").read_text(encoding="utf-8")
 for duong in ("/antigravity/install", "/antigravity/login-start", "/antigravity/login-code"):
+    if f'"{duong}"' not in src:
+        print("   -> main.py đọc được", len(src), "ký tự")
     check(f"có endpoint {duong}", f'"{duong}"' in src)
 
 if _fails:
