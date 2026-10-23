@@ -838,6 +838,29 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
         "Skill khả dụng (slug: mô tả): " + (listing or "(chưa có)"),
         {"name": {"type": "string"}}, ["name"], _skill)
 
+    # 26.10.204 (cổng từ Javis 0.259.0): tìm và đọc web cho engine API (Claude Code, Codex, Grok có
+    # WebSearch/WebFetch riêng trong CLI). Xem web_tools.py. Rào mạng nội bộ ở mọi chặng chuyển hướng.
+    async def _web_search(args):
+        import web_tools
+        args = args or {}
+        return await web_tools.tim(str(args.get("query") or ""), args.get("limit") or web_tools.TIM_MAC_DINH)
+
+    async def _web_fetch(args):
+        import web_tools
+        args = args or {}
+        return await web_tools.doc(str(args.get("url") or ""), args.get("offset") or 0,
+                                   args.get("limit") or web_tools.DOC_MAC_DINH)
+
+    add("javis_web_search", "Tìm trên web (tin mới, giá cả, tài liệu, bất cứ thứ gì cần thông tin hiện tại). "
+        "Trả danh sách tiêu đề, địa chỉ, đoạn trích; đọc kỹ trang nào thì gọi javis_web_fetch.",
+        {"query": {"type": "string"}, "limit": {"type": "integer", "description": "số kết quả, mặc định 5"}},
+        ["query"], _web_search)
+    add("javis_web_fetch", "Đọc một trang web hoặc file PDF theo url, trả nội dung dạng chữ (markdown). Trang "
+        "dài thì gọi lại với offset để đọc tiếp.",
+        {"url": {"type": "string"}, "offset": {"type": "integer"},
+         "limit": {"type": "integer", "description": "số ký tự, mặc định 15000, tối đa 50000"}},
+        ["url"], _web_fetch)
+
     # `javis_run_command` chỉ hiện khi phiên CÓ thư mục làm việc. Phiên chat thường không thấy
     # nó, nên không có chuyện một câu hỏi bình thường lại gọi được lệnh máy. Mức quyền vẫn do
     # chính `run_command` cưỡng chế lần nữa theo chip của phiên (hai lớp, không thay nhau).

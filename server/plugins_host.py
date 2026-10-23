@@ -64,7 +64,8 @@ _HTTP_NGUON = frozenset({"bundled", "pack", "user"})
 
 # Tên tool builtin/lõi - plugin KHÔNG được trùng (mcp_hub cũng skip lúc merge, đây là lớp 2).
 _RESERVED_TOOLS = {"javis_connections", "javis_read_file", "javis_list_dir",
-                   "javis_write_file", "javis_use_skill"}
+                   "javis_write_file", "javis_use_skill",
+                   "javis_web_search", "javis_web_fetch"}
 
 _lock = threading.Lock()
 # cache theo vault_root: {sig, plugins:[LoadedPlugin], hooks:{event:[cb]}, errors:{slug:msg}}
