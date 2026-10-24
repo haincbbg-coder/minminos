@@ -264,12 +264,16 @@ def _guard(ent, fn, mode):
         # bộ đếm tần suất: lượt thử không được làm phiền chủ bằng yêu cầu duyệt, không được ghi
         # vào sổ hành động thật, và không được ăn hạn mức chống spam của kết nối. Chỉ ghi Ý ĐỊNH
         # vào sổ của lượt thử. Tool ĐỌC vẫn đi tiếp như thường vì cần số thật để so cách làm.
-        if che_do_thu.dang_bat() and cls != "read":
+        # FAIL-CLOSED (lỗ người soát tìm ra): `classify` coi tên lạ là "read", nên ở chế độ thử chỉ
+        # tool được KHAI là đọc (classify_ro) mới chạy thật; "không rõ" cũng giả lập.
+        cls_thu = mcp_catalog.classify_ro(connector, tool, args) if che_do_thu.dang_bat() else ""
+        if che_do_thu.dang_bat() and (cls != "read" or cls_thu != "read"):
             che_do_thu.ghi_y_dinh(tool, args, nguon=f"mcp:{conn.get('connector_id') or ''}",
-                                  loai=loai, ly_do="" if ok else why)
+                                  loai=loai or ("chua_khai_doc" if cls_thu == "khong_ro" else ""),
+                                  ly_do="" if ok else why)
             if not ok:
                 return "ERROR: " + why
-            return che_do_thu.cau_gia_lap(tool, loai)
+            return che_do_thu.cau_gia_lap(tool, loai or ("tool chưa được khai là chỉ đọc" if cls_thu == "khong_ro" else ""))
         if ok and not _rate_ok(conn["id"], connector):
             ok, why = False, (f"Kết nối '{conn.get('label')}' vượt giới hạn tần suất "
                               f"(chống spam/khoá tài khoản). Chờ 1 phút rồi thử lại.")

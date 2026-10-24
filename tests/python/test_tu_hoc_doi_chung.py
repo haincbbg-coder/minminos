@@ -525,8 +525,8 @@ check("dọn brain tạm sau lượt", not (fe.thu_muc(rid4) / "nao-nen").exists
 
 # ---- phiên cải tiến: Claude chỉ đọc, MCP rỗng; API chỉ có 2 tool khoá trong thư mục ----
 ec = fe.dung_engine_cai_tien(Path(tempfile.mkdtemp()), {"provider": "anthropic-cli"})
-check("phiên cải tiến Claude: chỉ Read/Glob/Grep/LS", sorted(ec.allowed_tools) == sorted(["Read", "Glob", "Grep", "LS"]))
-check("phiên cải tiến Claude: cấm Write/Edit/Bash", all(x in ec.disallowed_tools for x in ("Write", "Edit", "Bash")))
+check("phiên cải tiến Claude: chỉ server đọc thư mục bằng chứng", ec.allowed_tools == ["mcp__harness"], ec.allowed_tools)
+check("phiên cải tiến Claude: cấm Write/Edit/Bash/Read", all(x in ec.disallowed_tools for x in ("Write", "Edit", "Bash", "Read")))
 tg = Path(tempfile.mkdtemp())
 (tg / "context").mkdir()
 (tg / "context" / "a.md").write_text("bằng chứng", encoding="utf-8")
