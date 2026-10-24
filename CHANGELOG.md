@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.220] - 2026-10-25
+### Thêm mới
+- **Gợi ý mã hàng cho nhân viên bán hàng** (đang làm): khách nhắn tới thì tra ra mã từ chính tin nhắn, từ ID quảng cáo, từ bài viết hoặc từ ảnh khách gửi.
+
 ## [26.10.219] - 2026-10-24
 
 ### Bảo mật
