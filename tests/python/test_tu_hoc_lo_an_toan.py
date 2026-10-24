@@ -182,13 +182,16 @@ try:
     r = thu(lambda: mcp_hub._guard(ent, "g__search_threads", "full")({"q": "don hang"}))
     check("2. thử: tool khai đọc (gmail/search_threads) vẫn gọi thật", goi_that == ["g__search_threads"], goi_that)
     # ngoài chế độ thử: hành vi cũ không đổi
-    check("2. ngoài thử: classify() cũ không đổi (forward vẫn 'read')",
-          mcp_catalog.classify(mcp_catalog.get("gmail"), "forward", {}) == "read")
+    # 26.10.219: forward/pause_campaign giờ đoán ra "danger" theo tên (mức Ghi nháp chặn hành
+    # động ra ngoài); classify_ro vẫn trả 'khong_ro' cho tên không đoán được gì.
+    check("2. ngoài thử: classify() đoán forward là 'danger' (26.10.219)",
+          mcp_catalog.classify(mcp_catalog.get("gmail"), "forward", {}) == "danger")
     check("2. hàm phân loại mới có trạng thái 'khong_ro'",
-          mcp_catalog.classify_ro(mcp_catalog.get("gmail"), "forward", {}) == "khong_ro"
+          mcp_catalog.classify_ro(mcp_catalog.get("gmail"), "forward", {}) == "danger"
+          and mcp_catalog.classify_ro(mcp_catalog.get("gmail"), "frobnicate", {}) == "khong_ro"
           and mcp_catalog.classify_ro(mcp_catalog.get("gmail"), "search_threads", {}) == "read"
           and mcp_catalog.classify_ro(mcp_catalog.get("gmail"), "create_draft", {}) == "write"
-          and mcp_catalog.classify_ro(None, "pause_campaign", {}) == "khong_ro")
+          and mcp_catalog.classify_ro(None, "pause_campaign", {}) == "danger")
     goi_that.clear()
     ent = {"conn": {"id": "c3", "connector_id": "gmail", "perm": "full", "label": "L"}, "tool": "forward", "spec": {}}
     asyncio.run(mcp_hub._guard(ent, "g__forward", "full")({"message_id": "m"}))
