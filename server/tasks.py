@@ -67,6 +67,9 @@ _TEN_GOI = {
     "grok-cli": "SuperGrok / X Premium",
     "muse-cli": "Meta Muse Code",
     "copilot-cli": "GitHub Copilot",
+    "kiro-cli": "Kiro",
+    "cursor-cli": "Cursor",
+    "vibe-cli": "Mistral Vibe",
     "antigravity-cli": "Google Antigravity",
     "gemini-cli": "Google",
 }

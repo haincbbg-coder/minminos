@@ -193,6 +193,10 @@ _DEFAULT = {
             "muse-cli": [],
             # Copilot CLI: danh muc lay tu `copilot help config` cua chinh ban CLI.
             "copilot-cli": [],
+            # Kiro / Cursor / Mistral Vibe CLI (26.10.215): hoi CLI, luoi cuoi trong tung module.
+            "kiro-cli": [],
+            "cursor-cli": [],
+            "vibe-cli": [],
             "openrouter": ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash-001", "deepseek/deepseek-v4.1-flash", "moonshotai/kimi-k3"],
         },
     },

@@ -247,7 +247,9 @@ for pid in [d["id"] for d in main.PROVIDER_DEFS]:
     check(f"_api_stream phục vụ được '{pid}'",
           f'prov == "{pid}"' in _as or pid == "anthropic-api"   # anthropic-api là nhánh mặc định
           # Bốn hãng API riêng (26.10.212) chung một nhánh tra bảng nha_api_rieng.
-          or (pid in main.nha_api_rieng.NHA and "prov in nha_api_rieng.NHA" in _as))
+          or (pid in main.nha_api_rieng.NHA and "prov in nha_api_rieng.NHA" in _as)
+          # Kiro / Cursor / Mistral Vibe (26.10.215) đi chung MỘT nhánh theo bảng cli_nao_chung.NAO.
+          or (pid in ("kiro-cli", "cursor-cli", "vibe-cli") and "cli_nao_chung.la_nao(prov)" in _as))
 check("gói ChatGPT dùng token OAuth, không cần API key", "openai_oauth.valid_creds()" in _as)
 # Gói Claude Code cũng không cần API key, nhưng KHÔNG phải bằng cách mượn token đăng nhập nữa:
 # nó chạy qua binary `claude`. Đây là canary chống hồi quy cho đúng chỗ đã làm khoá tài khoản.

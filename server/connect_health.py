@@ -304,7 +304,8 @@ def probe_claude_credentials(path=None) -> tuple[bool, str]:
 # không có phiên nào hết hạn ngầm, nên chúng KHÔNG có đèn báo não.
 _PROVIDER_ENGINE = {"anthropic-cli": "claude", "openai-oauth": "codex",
                     "grok-cli": "grok-cli", "muse-cli": "muse-cli",
-                    "copilot-cli": "copilot-cli"}
+                    "copilot-cli": "copilot-cli",
+                    "kiro-cli": "kiro-cli", "cursor-cli": "cursor-cli", "vibe-cli": "vibe-cli"}
 
 
 def engines_in_use() -> set:
