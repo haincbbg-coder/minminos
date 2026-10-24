@@ -1,0 +1,115 @@
+// Chạy trong trang Pancake: nhận phản hồi hội thoại/tin nhắn từ hook.js, tra mã, vẽ khung gợi ý.
+(function () {
+  const hoi = (m) => new Promise((r) => { try { chrome.runtime.sendMessage(m, r); } catch (e) { r({ ok: false, error: String(e) }); } });
+  const convs = {};            // id hội thoại -> {ad_ids, post_id, type}
+  let hienTai = null;          // {id, text, ad_ids, post_id, anh:[url]}
+  let bang = null;
+  let chanDoan = { convs: 0, tinNhan: 0, luc: 0 };
+
+  function chuoiHtml(s) { const d = document.createElement("div"); d.innerHTML = String(s || ""); return d.textContent || ""; }
+  function layAnh(m) {
+    const kq = [];
+    (m.attachments || []).forEach((a) => {
+      const u = a.url || a.preview_url || (a.image_data && (a.image_data.url || a.image_data.preview_url)) || a.src;
+      if (u && /^https?:/.test(u) && (!a.type || /photo|image|sticker/i.test(String(a.type)) || /\.(jpe?g|png|webp)/i.test(u))) kq.push(u);
+    });
+    return kq;
+  }
+  function docConversations(arr) {
+    arr.forEach((c) => {
+      if (!c || !c.id) return;
+      const ad = [].concat(c.ad_ids || c.ad_id || []).map(String).filter(Boolean);
+      convs[c.id] = { ad_ids: ad, post_id: c.post_id ? String(c.post_id) : "", type: c.type || "" };
+      chanDoan.convs++;
+    });
+  }
+  function docMessages(url, j) {
+    const mc = /\/conversations\/([^/?]+)\/messages/.exec(url);
+    const mp = /\/pages\/(\d+)\//.exec(url);
+    const id = mc ? decodeURIComponent(mc[1]) : (j.conversation_id || "");
+    const pageId = mp ? mp[1] : "";
+    const ds = (j.messages || []).filter(Boolean);
+    const khach = ds.filter((m) => { const f = m.from && m.from.id; return f && String(f) !== pageId; });
+    const gan = khach.slice(-8);
+    const text = gan.map((m) => chuoiHtml(m.original_message || m.message || m.text || "")).filter(Boolean).join("\n");
+    const anh = [];
+    gan.forEach((m) => layAnh(m).forEach((u) => anh.push(u)));
+    chanDoan.tinNhan += ds.length;
+    const c = convs[id] || {};
+    // hội thoại bình luận: tin nhắn có thể mang post_id riêng
+    const post = c.post_id || (ds.find((m) => m.post_id) || {}).post_id || "";
+    hienTai = { id, text, ad_ids: c.ad_ids || [], post_id: post ? String(post) : "", anh: anh.slice(-6) };
+  }
+  function nhan(url, body) {
+    let j; try { j = JSON.parse(body); } catch (e) { return; }
+    chanDoan.luc = Date.now();
+    if (Array.isArray(j.conversations)) docConversations(j.conversations);
+    if (Array.isArray(j.messages)) docMessages(url, j);
+    if (j.conversation && j.conversation.id) docConversations([j.conversation]);
+    ve();
+  }
+  window.addEventListener("message", (e) => {
+    if (e.source !== window || !e.data || e.data.nguon !== "mm-gy") return;
+    nhan(e.data.url, e.data.body);
+  });
+
+  // ---------------- khung gợi ý (Shadow DOM để CSS của Pancake không đụng vào)
+  let goc = null, root = null, thu = false;
+  function dung() {
+    if (goc || !document.body) return;
+    goc = document.createElement("div");
+    goc.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:2147483647;";
+    root = goc.attachShadow({ mode: "open" });
+    root.innerHTML = `<style>
+      .k{font:13px system-ui,sans-serif;width:290px;background:#fff;color:#222;border:1px solid #d0d5dd;border-radius:10px;box-shadow:0 4px 18px #0003;overflow:hidden}
+      .t{background:#0b5fff;color:#fff;padding:6px 10px;display:flex;justify-content:space-between;cursor:pointer;font-weight:600}
+      .n{padding:8px 10px;max-height:340px;overflow:auto}.u{border:1px solid #e4e7ec;border-radius:8px;padding:6px 8px;margin-bottom:6px}
+      .m{font-weight:700;font-size:15px}.s{color:#555;font-size:12px}.c{height:6px;background:#e4e7ec;border-radius:3px;margin:4px 0}
+      .c i{display:block;height:6px;border-radius:3px;background:#12b76a}.b{font-size:12px;color:#444}
+      button{border:0;background:#0b5fff;color:#fff;border-radius:6px;padding:3px 8px;margin-top:4px;cursor:pointer}
+      input{width:100%;box-sizing:border-box;padding:5px;border:1px solid #ccd;border-radius:6px}.g{color:#888;font-size:11px;margin-top:4px}
+      .ton0{color:#b42318;font-weight:600}.anh img{width:46px;height:46px;object-fit:cover;border-radius:6px;margin-right:4px}
+    </style><div class="k"><div class="t" id="t"><span>Gợi ý mã hàng</span><span id="x">–</span></div><div class="n" id="n"></div></div>`;
+    root.getElementById("t").onclick = () => { thu = !thu; root.getElementById("n").style.display = thu ? "none" : ""; root.getElementById("x").textContent = thu ? "+" : "–"; };
+    document.body.appendChild(goc);
+  }
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function the(u) {
+    const ton = u.ton == null ? "" : ` · tồn <span class="${u.ton <= 0 ? "ton0" : ""}">${u.ton}</span>`;
+    const bc = u.bang_chung.map((b) => esc(b.ly_do)).join("; ");
+    return `<div class="u"><div class="m">${esc(u.ma)} <span class="s">${esc(u.ten)}${ton}</span></div>
+      <div class="c"><i style="width:${Math.round(u.do_chac * 100)}%"></i></div><div class="b">${bc}</div>
+      <button data-ma="${esc(u.ma)}" data-nguon="${esc(u.bang_chung[0].nguon)}">Đúng mã này</button></div>`;
+  }
+  async function ve() {
+    dung(); if (!root) return;
+    const n = root.getElementById("n");
+    if (!bang) {
+      const r = await hoi({ loai: "bang" });
+      if (!r.ok) { n.innerHTML = `<div class="s">${esc(r.error || "")}. Bấm biểu tượng tiện ích để ghép với MinMin.</div>`; return; }
+      bang = r.bang;
+    }
+    if (!hienTai) { n.innerHTML = `<div class="s">Mở một hội thoại để xem gợi ý.</div>${chanDoanHtml()}`; return; }
+    const ds = self.mmTra(bang, hienTai);
+    let h = ds.length ? ds.slice(0, 4).map(the).join("") : `<div class="s">Chưa tra ra mã từ tin nhắn, quảng cáo hay bài viết của hội thoại này.</div>`;
+    if (hienTai.anh.length) h += `<div class="anh">${hienTai.anh.slice(-4).map((u) => `<img src="${esc(u)}">`).join("")}<div class="g">Khách gửi ${hienTai.anh.length} ảnh (so ảnh sẽ có ở bản sau)</div></div>`;
+    h += `<div style="margin-top:6px"><input id="q" placeholder="Gõ mã để tra tay, vd V33"></div><div id="kq"></div>${chanDoanHtml()}`;
+    n.innerHTML = h;
+    n.querySelectorAll("button[data-ma]").forEach((b) => b.onclick = async () => {
+      const khoa = b.dataset.nguon === "quang_cao" ? (hienTai.ad_ids[0] || "") : b.dataset.nguon === "bai_viet" ? hienTai.post_id : hienTai.id;
+      await hoi({ loai: "xac_nhan", du_lieu: { ma: b.dataset.ma, nguon: b.dataset.nguon, khoa } });
+      b.textContent = "Đã ghi nhận"; b.disabled = true;
+    });
+    const q = n.querySelector("#q");
+    q.oninput = () => {
+      const m = self.mmChuanMa(q.value); const s = bang.sku[m];
+      n.querySelector("#kq").innerHTML = m ? (s ? the({ ma: m, ten: s[0], ton: s[1], do_chac: 1, bang_chung: [{ nguon: "tin_nhan", ly_do: "tra tay" }] }) : `<div class="s">Không có mã ${esc(m)} trong bảng</div>`) : "";
+    };
+  }
+  function chanDoanHtml() {
+    const ad = hienTai ? hienTai.ad_ids.length : 0;
+    return `<div class="g">đọc ${chanDoan.convs} hội thoại, ${chanDoan.tinNhan} tin${hienTai ? `; ad_ids=${ad}, post=${hienTai.post_id ? "có" : "không"}, ảnh=${hienTai.anh.length}` : ""}</div>`;
+  }
+  document.addEventListener("DOMContentLoaded", () => { dung(); ve(); });
+  setInterval(() => { bang = null; }, 10 * 60 * 1000);
+})();

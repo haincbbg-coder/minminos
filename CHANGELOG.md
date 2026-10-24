@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.220] - 2026-10-25
+### Thêm mới
+- **Gợi ý mã hàng cho nhân viên bán hàng**: tiện ích mới trên Cốc Cốc/Chrome đọc hội thoại Pancake và hiện ngay mã hàng, độ chắc, vì sao và tồn kho. Tra theo mã khách nhắn, ID quảng cáo (kể cả mã trong tên chiến dịch), rồi ID bài viết. Bấm "Đúng mã này" thì MinMin nhớ cho lần sau.
+- Bộ não nạp dữ liệu bằng công cụ `javis_goi_y_ma_nap` và lấy mã ghép máy bằng `javis_goi_y_ma_ma_ghep`.
+- Tra theo ảnh khách gửi chưa có, sẽ làm ở bản sau.
+
 ## [26.10.219] - 2026-10-24
 
 ### Bảo mật

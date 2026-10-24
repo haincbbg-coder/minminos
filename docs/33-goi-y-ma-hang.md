@@ -1,0 +1,28 @@
+# 33 - Gợi ý mã hàng cho nhân viên bán hàng
+
+***Tiếng Việt** · [English](en/33-product-code-suggest.md)*
+
+Từ 26.10.220, khi khách nhắn tới Pancake, một tiện ích trên Cốc Cốc/Chrome hiện ngay **mã hàng khách đang hỏi**, kèm độ chắc, lý do và tồn kho. Nhân viên chỉ việc đối chiếu rồi bấm "Đúng mã này".
+
+Tra theo thứ tự từ chắc nhất:
+
+| Nguồn | Ví dụ |
+|---|---|
+| **Mã trong tin nhắn** | "giá mã V33 nhiêu shop" |
+| **ID quảng cáo** | khách bấm từ quảng cáo, tin nhắn mang `ad_ids` của Pancake |
+| **Tên chiến dịch** | "CÔNG TY TNHH MTV HALIMI - TÊN PAGE - P720" thì mã là P720 |
+| **ID bài viết** | khách bình luận dưới bài |
+
+Tra ngay trên máy nhân viên bằng bảng nạp sẵn nên chỉ mất vài mili giây, không tốn token AI. Tra theo ảnh khách gửi chưa có, sẽ làm ở bản sau.
+
+## Cài tiện ích
+
+1. Nhờ MinMin "tạo mã ghép gợi ý mã hàng" (công cụ `javis_goi_y_ma_ma_ghep`), được mã 6 số sống 15 phút.
+2. Trên Cốc Cốc mở `chrome://extensions`, bật Chế độ nhà phát triển, bấm "Tải tiện ích đã giải nén" và chọn thư mục `apps/goi-y-ma`.
+3. Bấm biểu tượng tiện ích, nhập địa chỉ MinMin và mã 6 số, bấm Ghép máy.
+
+## Nạp dữ liệu
+
+Bộ não tự lấy mã, tồn và ảnh từ POS, quảng cáo từ Meta, bài viết từ Pancake bằng các kết nối đã nối, rồi gọi `javis_goi_y_ma_nap` theo lô. Dùng `javis_goi_y_ma_tra` để thử tra một tin nhắn, một ID quảng cáo hoặc một ID bài viết.
+
+Mỗi lần nhân viên bấm "Đúng mã này", MinMin nhớ ID quảng cáo hoặc bài viết đó là mã nào cho lần sau.

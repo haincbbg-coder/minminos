@@ -31,6 +31,7 @@ Thanh điều hướng của dashboard gom **19 trang** thành **7 nhóm**: Tr�
 - [29 - Trạm đăng nhập Meta](29-tram-dang-nhap-meta.md) - cho người vận hành: dựng trạm để người dùng MinMin đăng nhập Facebook một chạm, không phải tự tạo app.
 - [30 - Kết nối đa tài khoản](30-ket-noi-da-tai-khoan.md) - Shopee, TikTok Shop, Lazada, GHN, GHTK, SePay, Casso, payOS, TikTok Ads, Zalo OA; mỗi kết nối một tài khoản.
 - [32 - Theo dõi trang web](32-theo-doi-trang.md) - canh giá, hàng về, chính sách mới theo lịch, không tốn token AI.
+- [33 - Gợi ý mã hàng](33-goi-y-ma-hang.md) - tiện ích Pancake hiện mã hàng khách hỏi theo tin nhắn, quảng cáo, bài viết.
 
 ### Việc chạy nền (nhóm Việc & Bộ não)
 - [08 - Việc định kỳ & Nhắc hẹn](08-viec-dinh-ky.md) - nhiều vòng lặp chạy nền + nhắc hẹn theo giờ hoặc cron.

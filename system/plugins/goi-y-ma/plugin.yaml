@@ -1,0 +1,12 @@
+name: Gợi ý mã hàng
+slug: goi-y-ma
+version: 1.0.0
+description: Nạp mã hàng, quảng cáo, bài viết vào bộ tra mã cho tiện ích Pancake, và tra thử mã từ tin nhắn, ID quảng cáo, ID bài viết.
+author: MinMin (bundled)
+enabled: true
+min_mode: safe
+tools:
+  - javis_goi_y_ma_nap
+  - javis_goi_y_ma_tra
+  - javis_goi_y_ma_ma_ghep
+hooks: []
