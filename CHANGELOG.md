@@ -7,7 +7,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.212] - 2026-10-24
 
 ### Thêm mới
-- (đang làm) 4 thẻ API key riêng DeepSeek, Qwen, GLM, MiniMax.
+- **Bốn bộ não API key mới trên trang Models: DeepSeek, Qwen, GLM, MiniMax.** Dán key là chat, gọi công cụ MCP, làm model chính, model việc nền hay model cho agent được ngay, có cả bể khoá dự phòng.
+- **Chọn vùng ngay trên thẻ** (quốc tế hay Trung Quốc, gói Coding Plan hay trả theo lượng). Qwen tự nhận key gói `sk-sp-` hay key thường. Hãng đổi địa chỉ thì tự dán Base URL ở mục Nâng cao.
+- Nút **Kiểm tra kết nối** gọi thử bằng key đã lưu và nói rõ lỗi nếu key không hợp vùng.
+- Lưu ý trên thẻ: gói "Coding Plan" của hãng có thể chỉ cho dùng trong công cụ lập trình, đọc điều khoản trước khi cho MinMin chạy nền bằng key gói.
 
 ## [26.10.211] - 2026-10-23
 ### Thêm mới

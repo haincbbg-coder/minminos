@@ -213,10 +213,12 @@ _DAU_NHE = ("haiku", "nano", "lite", "micro", "tiny", ":free", "-free", "flash-8
             "-1b", "-2b", "-3b", "-4b", "-7b", "-8b", "-9b", "-12b", "-14b")
 _DAU_NANG = ("opus", "ultra", "-pro", "pro-", "large", "-max", "max-", "thinking", "reason",
              "-405b", "-235b", "-480b", "-671b", "deepseek-r1", "grok-4", "gpt-4.1", "gpt-4.5",
-             "gpt-5", "o1", "o3", "o4", "sol")
+             "gpt-5", "o1", "o3", "o4", "sol",
+             # Hàng đầu của bốn nhà API riêng (26.10.212); bản -flash cùng dòng bị loại ở dưới.
+             "glm-5", "minimax-m3", "qwen3.7-plus")
 # "gpt-5-mini", "o4-mini", "r1-distill" không phải bậc nặng. Khớp theo RANH GIỚI TỪ: "gemini"
 # cũng chứa "mini" mà gemini-2.5-pro là bậc nặng thật.
-_RE_NANG_TRU = re.compile(r"(^|[-_.:/ ])(mini|nano|distill|lite)([-_.:/ ]|$)")
+_RE_NANG_TRU = re.compile(r"(^|[-_.:/ ])(mini|nano|distill|lite|flash)([-_.:/ ]|$)")
 
 
 def bac_cua_model(model_id: str) -> str:

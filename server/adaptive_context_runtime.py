@@ -254,7 +254,9 @@ class AdaptiveContextCanary:
         out = []
         for field_name, name in (("openrouter_key", "openrouter"), ("openai_api_key", "openai"),
                                  ("gemini_api_key", "gemini"), ("groq_api_key", "groq"),
-                                 ("anthropic_api_key", "anthropic")):
+                                 ("anthropic_api_key", "anthropic"),
+                                 ("deepseek_api_key", "deepseek"), ("qwen_api_key", "qwen"),
+                                 ("glm_api_key", "glm"), ("minimax_api_key", "minimax")):
             if str(model_cfg.get(field_name) or "").strip():
                 out.append(name)
         return tuple(out)

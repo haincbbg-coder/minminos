@@ -91,6 +91,7 @@ import nguon         # dẫn nguồn + neo số liệu dưới câu trả lời 
 import hanh_dong     # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
 import tiet_kiem        # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
 import be_khoa          # bể khoá xoay vòng cho nhà API (26.10.161)
+import nha_api_rieng    # bảng bốn bộ não API key riêng DeepSeek/Qwen/GLM/MiniMax (26.10.212)
 import tiem_lenh        # quét tiêm lệnh trong dữ liệu vào (26.10.164)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
@@ -1750,6 +1751,9 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
     # default_models là lưới cuối; /provider/models nạp bản LIVE từ api.meta.ai/v1/models.
     {"id": "meta",          "label": "Meta Muse (API)",         "kind": "api", "key_field": "meta_api_key",      "catalog_key": "meta",
      "default_models": ["muse-spark-1.3", "muse-spark-1.2", "muse-wonder-1.0"]},
+    # DeepSeek, Qwen (Alibaba), GLM (Zhipu/Z.ai), MiniMax (26.10.212): bốn thẻ API key riêng,
+    # mô tả MỘT chỗ trong nha_api_rieng.NHA (URL theo vùng, model mặc định, suy nghĩ).
+    *nha_api_rieng.provider_defs(),
     # Ollama Cloud. CỐ Ý không đấu bản chạy trên máy nhà: bản đó đòi một ô địa chỉ riêng, tức
     # một ca đặc biệt duy nhất xuyên suốt lớp này, trong khi phần đông người dùng Javis chạy
     # nó trên VPS - nơi "localhost" là chính cái container chứ không phải máy họ.
@@ -1890,6 +1894,9 @@ def _providers_view(cfg):
             # `antigravity_cli.login_huong_dan()` để biết vì sao. Thẻ Models chỉ đưa lại đúng
             # lệnh cần gõ.
             item["dang_nhap"] = antigravity_cli.login_huong_dan()
+        if p["id"] in nha_api_rieng.NHA:
+            # Vùng / Base URL / cờ gói Coding Plan cho thẻ. Không lộ key, chỉ lộ URL đang dùng.
+            item["rieng"] = nha_api_rieng.cho_giao_dien(p["id"], m)
         if p["id"] == "anthropic-cli":
             # Gói Claude Code chạy bằng gì, và có đang gánh việc nền không. Trang Models vẽ ô
             # chọn + cảnh báo từ ba field này. Cảnh báo đi kèm DỮ LIỆU chứ không hardcode ở
@@ -1957,6 +1964,8 @@ def _set_main_model(cfg, provider, model):
         m["engine"] = "ollama"
     elif provider == "openai-compat":
         m["engine"] = "openai-compat"
+    elif provider in nha_api_rieng.NHA:
+        m["engine"] = provider
     else:  # anthropic-cli
         m["engine"] = "cli"; m["claude_model"] = model
 
@@ -2057,7 +2066,8 @@ AGENT_PROVIDERS = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "ant
                    # Model chạy máy nhà cũng giao được việc nền cho agent. Bỏ nó ra khỏi đây
                    # là tính năng nửa vời: cài model về rồi mà chỉ chat tay được, không giao
                    # cho agent hay workflow nào chạy.
-                   "ollama-local", "openai-compat")
+                   "ollama-local", "openai-compat",
+                   *nha_api_rieng.IDS)
 
 
 def _agent_model_provider(model: str, provider: str = "") -> str:
@@ -2486,6 +2496,8 @@ def _api_stream_goc(prov, key, model, messages, reasoning="off"):
         return engine.ollama_local_stream(key, model, messages, reasoning)
     if prov == "openai-compat":
         return engine.openai_compat_stream(key, model, messages, reasoning)
+    if prov in nha_api_rieng.NHA:
+        return engine.nha_rieng_ham(prov)(key, model, messages, reasoning)
     if prov == "openai-oauth":
         creds = openai_oauth.valid_creds() or {}
         return engine.openai_responses_stream(creds.get("access_token", ""), creds.get("account_id", ""),
@@ -2510,6 +2522,13 @@ def _api_stream_goc(prov, key, model, messages, reasoning="off"):
 _trim_history = compaction.trim_history
 
 
+# Provider API đi vòng gọi tool + hub MCP. `_api_stream_mcp` viết lại tên thành chữ (test
+# test_engine_ngang_quyen đọc đúng dòng đó để so với MCP_PROVIDERS trên giao diện); tuple này
+# là bản để code khác và test hỏi, test_nha_api_rieng canh hai bản không lệch nhau.
+_API_CO_VONG_TOOL = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama",
+                     "openai-compat", *nha_api_rieng.IDS)
+
+
 def _hub_enabled():
     """Hub MCP bật (mặc định) → mọi engine đấu 1 điểm; tắt qua settings mcp.hub=false (fallback cũ)."""
     return bool(cfgmod.read_settings().get("mcp", {}).get("hub", True))
@@ -2522,7 +2541,8 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
     ChatGPT OAuth ở các kênh tương tác đi qua Codex CLI native MCP, không dùng fallback này."""
     tools, route = [], {}
     inventory_tools, inventory_route = [], {}
-    if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat"):
+    if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat",
+                "deepseek", "qwen", "glm", "minimax"):
         try:
             if _hub_enabled():
                 vault_root = _brain_root(brain) if brain else None
@@ -2579,11 +2599,14 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
                 return engine.meta_chat_with_mcp(k, model, messages, reasoning, tools, route)
             if prov == "openai-compat":
                 return engine.openai_compat_chat_with_mcp(k, model, messages, reasoning, tools, route)
+            if prov in nha_api_rieng.NHA:
+                return engine.nha_rieng_ham(prov, True)(k, model, messages, reasoning, tools, route)
             return engine.ollama_chat_with_mcp(k, model, messages, reasoning, tools, route)
         if prov == "ollama-local":
             return engine.ollama_local_chat_with_mcp(key, model, messages, reasoning, tools, route)
 
-        if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat"):
+        if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat",
+                "deepseek", "qwen", "glm", "minimax"):
             return engine.thu_lai_khi_tam_thoi(_vong_tool, nhan=f"{prov}/{model or 'mặc định'}+tool",
                                                xoay=_xoay)
     return _api_stream(prov, key, model, messages, reasoning)
@@ -3400,7 +3423,8 @@ def _schedule_cancel_reply(action: dict) -> str:
 def _api_label(prov):
     return {"openrouter": "OpenRouter", "openai": "OpenAI", "anthropic-api": "Anthropic API",
             "openai-oauth": "ChatGPT (OAuth)", "gemini": "Google Gemini",
-            "groq": "Groq", "xai": "xAI Grok API", "meta": "Meta Muse API", "ollama": "Ollama", "openai-compat": "OpenAI Compatible"}.get(prov, prov)
+            "groq": "Groq", "xai": "xAI Grok API", "meta": "Meta Muse API", "ollama": "Ollama", "openai-compat": "OpenAI Compatible",
+            **{pid: nha_api_rieng.ten_ngan(pid) + " API" for pid in nha_api_rieng.IDS}}.get(prov, prov)
 
 def _reasoning_level(mcfg):
     r = (mcfg or {}).get("reasoning", "off")
@@ -4760,6 +4784,18 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
                 m["openai_compat_key"] = ""
             m["openai_compat_base"] = new_base
             _PROV_MODELS_CACHE.pop("openai-compat", None)
+        # Vùng + Base URL tự dán của bốn thẻ API riêng. Vùng lạ về "" (Tự động); Base URL không
+        # phải http(s) thì bỏ qua thay vì lưu một địa chỉ chắc chắn hỏng.
+        for _pid in nha_api_rieng.IDS:
+            _fv, _fb = nha_api_rieng.truong_vung(_pid), nha_api_rieng.truong_base(_pid)
+            if _fv in patch:
+                _v = str(patch[_fv] or "").strip()
+                m[_fv] = _v if _v in nha_api_rieng.NHA[_pid]["vung"] else ""
+                _PROV_MODELS_CACHE.pop(_pid, None)
+            if _fb in patch:
+                _b = nha_api_rieng.chuan_base(patch[_fb] or "")
+                m[_fb] = _b if (not _b or nha_api_rieng.base_hop_le(_b)) else m.get(_fb, "")
+                _PROV_MODELS_CACHE.pop(_pid, None)
         # Ngắt kết nối 1 provider (xoá key). Nếu nó đang là MAIN → quay về Claude Code CLI để chat không gãy.
         if patch.get("clear_key"):
             d = _provider_def(patch["clear_key"])
@@ -5222,6 +5258,21 @@ async def _fetch_provider_models(provider, m):
             data = r.json().get("data", [])
         # xAI phục vụ cả model ảnh (grok-2-image...) trên cùng endpoint - lọc ra khỏi picker chat.
         ids = [x.get("id") for x in data if x.get("id") and "image" not in x["id"].lower()]
+        return sorted(ids) or None
+    if provider in nha_api_rieng.NHA:
+        key = m.get(nha_api_rieng.NHA[provider]["key_field"])
+        if not key:
+            return None
+        # Hỏi {base}/models chuẩn OpenAI. CHƯA ĐO trên key thật: endpoint gói Coding Plan của
+        # Qwen/GLM có thể không mở /models - khi đó provider_models_index rơi về danh sách mặc
+        # định của bảng (vẫn chọn được), kèm câu lỗi để chủ biết danh sách không phải bản live.
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.get(nha_api_rieng.models_url(provider, m),
+                            headers={"Authorization": f"Bearer {key}"})
+            r.raise_for_status()
+            data = r.json().get("data") or []
+        ids = [x.get("id") for x in data if isinstance(x, dict) and x.get("id")
+               and not any(k in x["id"].lower() for k in ("embed", "tts", "image", "speech", "rerank"))]
         return sorted(ids) or None
     if provider == "openai-compat":
         base = engine.openai_compat_base()
@@ -13132,7 +13183,7 @@ async def _dg_resolver(su_that: dict, brain: str):
 
 _DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli")
 _DG_NAO_API = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama",
-               "openai-compat", "ollama-local")
+               "openai-compat", "ollama-local", *nha_api_rieng.IDS)
 
 
 def _dg_ten_tool(n: str) -> str:
@@ -16928,7 +16979,8 @@ async def websocket_endpoint(ws: WebSocket):
                 # Nén NỀN phần lịch sử cũ sắp rơi khỏi cửa sổ (chỉ engine API - CLI tự quản
                 # context). Lỗi nén không ảnh hưởng lượt chat; lượt sau vẫn còn fallback trim.
                 if (not used_fast_path and kind == "api" and api_key and
-                        prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta")):
+                        prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta",
+                                 *nha_api_rieng.IDS)):
                     try:
                         asyncio.create_task(compaction.maybe_compact(
                             store, conv_sid, prov, api_key, api_model, _api_stream))
@@ -18705,6 +18757,49 @@ async def ollama_local_set_endpoint(endpoint: str = Form(""), key: str = Form(No
     # không để trong một đoạn hướng dẫn phía trên mà ai cũng lướt qua.
     return {"ok": True, "endpoint": ep, "reachable": p["reachable"], "error": p["error"],
             "canh_bao_cong_khai": ollama_local.la_ip_cong_khai(ep)}
+
+
+@app.post("/provider/nha-rieng/kiem")
+async def nha_rieng_kiem(request: Request):
+    """Kiểm tra sức khoẻ kết nối của một thẻ API riêng (DeepSeek/Qwen/GLM/MiniMax) bằng KEY ĐÃ
+    LƯU: hỏi {base}/models, endpoint không có /models (gói Coding Plan có thể vậy, CHƯA ĐO) thì
+    gửi một lượt chat 1 token. Không nhận key từ trình duyệt: kiểm cái máy chủ sẽ dùng thật.
+
+    Trả {ok, url, so_model, error}. Câu lỗi viết cho người đọc, không in key."""
+    import httpx
+    data = await request.json()
+    pid = str(data.get("prov") or "")
+    if pid not in nha_api_rieng.NHA:
+        return {"ok": False, "error": "Nhà cung cấp lạ."}
+    m = cfgmod.read_settings().get("model", {}) or {}
+    key = (m.get(nha_api_rieng.NHA[pid]["key_field"]) or "").strip()
+    if not key:
+        return {"ok": False, "error": "Chưa có API key - dán key rồi bấm Kết nối trước."}
+    base = nha_api_rieng.base_url(pid, m)
+    hdr = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    try:
+        async with httpx.AsyncClient(timeout=25) as c:
+            r = await c.get(base + "/models", headers=hdr)
+            if r.status_code == 200:
+                try:
+                    n = len(r.json().get("data") or [])
+                except Exception:
+                    n = 0
+                return {"ok": True, "url": base, "so_model": n}
+            if r.status_code not in (401, 403):
+                body = {"model": nha_api_rieng.model_mac_dinh(pid), "max_tokens": 8, "stream": False,
+                        "messages": [{"role": "user", "content": "ping"}],
+                        **nha_api_rieng.payload_suy_nghi(pid, "", "off")}
+                r = await c.post(base + "/chat/completions", headers=hdr, json=body)
+                if r.status_code == 200:
+                    return {"ok": True, "url": base, "so_model": 0}
+    except Exception as e:
+        return {"ok": False, "url": base, "error": f"Không gọi được {base} ({type(e).__name__}). "
+                                                  "Kiểm tra vùng hoặc Base URL trên thẻ."}
+    if r.status_code in (401, 403):
+        return {"ok": False, "url": base, "error": f"Key bị từ chối (HTTP {r.status_code}). Key gói "
+                "Coding Plan và key trả theo lượng KHÔNG dùng chéo endpoint: kiểm tra vùng đã chọn."}
+    return {"ok": False, "url": base, "error": f"HTTP {r.status_code}: {(r.text or '')[:200]}"}
 
 
 @app.post("/provider/openai-compat/connect")
@@ -20682,6 +20777,8 @@ def _bot_stream_co_tool(prov, key, model, messages, reasoning, tools, route,
             return engine.ollama_local_chat_with_mcp(key, model, messages, reasoning, tools, route)
         if prov == "openai-compat":
             return engine.openai_compat_chat_with_mcp(key_, model, messages, reasoning, tools, route)
+        if prov in nha_api_rieng.NHA:
+            return engine.nha_rieng_ham(prov, True)(key_, model, messages, reasoning, tools, route)
         if prov == "openai-oauth":
             creds = openai_oauth.valid_creds() or {}
             return engine.responses_with_mcp(creds.get("access_token", ""), creds.get("account_id", ""),
@@ -21459,6 +21556,7 @@ _TG_NHAN_NGAN = {
     "meta": "Meta Muse",
     "ollama": "Ollama",
     "openai-compat": "OpenAI Compat",
+    **{pid: nha_api_rieng.ten_ngan(pid) for pid in nha_api_rieng.IDS},
 }
 _TG_MODEL_LISTS = {}   # provider -> list model id ĐÃ render (index nút ổn định khi bấm)
 _TG_PAGE = 8           # model mỗi trang (lưới 2 cột x 4 hàng)
