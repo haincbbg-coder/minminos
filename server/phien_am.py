@@ -96,7 +96,7 @@ TU_DIEN = {
     "zalo": "da lô", "telegram": "te lơ gam", "javis": "gia vít", "jarvis": "gia vít",
     "chatgpt": "chát gi pi ti", "openai": "ô pừn ây ai", "claude": "cờ lốt",
     "gemini": "giem mi nai", "groq": "gờ rốc", "deepseek": "đíp xích", "qwen": "quen",
-    "minimax": "mi ni mác", "glm": "gi eo em", "grok": "gờ rốc", "codex": "cô đéc",
+    "minimax": "mi ni mác", "glm": "gi eo em", "grok": "gờ rốc", "codex": "cô đéc", "copilot": "cô pai lợt",
     "antigravity": "en ti gra vi ti", "hostinger": "hốt tinh gơ",
     "composio": "com pô si ô", "anthropic": "en thờ rô pích", "shopify": "sốp pi phai",
     "webflow": "quép phờ lâu", "watchtower": "oát tao ơ", "openrouter": "ô pừn rao tờ", "ollama": "ô la ma",

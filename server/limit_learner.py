@@ -314,6 +314,16 @@ _SUB_PATTERNS: tuple[tuple[str, str, str, re.Pattern], ...] = (
     ("muse_plan", "", "",
      re.compile(r"(?:plan|subscription)\s+limit\s+(?:reached|exceeded)"
                 r"|quota\s+(?:reached|exceeded)\s+for\s+your\s+(?:plan|subscription)", re.I)),
+    # GitHub Copilot CLI. Câu chữ lấy NGUYÊN VĂN từ runtime của `@github/copilot` 1.0.103 (đo
+    # bằng `strings` trên binary, chưa gặp trên tài khoản thật): "You've reached your weekly
+    # rate limit.", "You've hit the rate limit for this model.", "You've hit your session rate
+    # limit." Cố ý bám chữ "rate limit" đi kèm "your weekly/session" hoặc "for this model" để
+    # không bắt nhầm 429 chung chung của API.
+    ("copilot_weekly", "copilot-cli", "tuần",
+     re.compile(r"reached\s+your\s+weekly\s+rate\s+limit", re.I)),
+    ("copilot_rate", "copilot-cli", "",
+     re.compile(r"hit\s+(?:your\s+session\s+rate\s+limit|the\s+rate\s+limit\s+for\s+this\s+model)",
+                re.I)),
     ("gemini_quota", "gemini-cli", "",
      re.compile(r"quota\s+exceeded\s+for\s+quota\s+metric|resource[_\s]has[_\s]been[_\s]exhausted"
                 r"|RESOURCE_EXHAUSTED", re.I)),
@@ -373,6 +383,7 @@ ENGINE_HINT_BY_PROVIDER = {
     "grok-cli": "grok-cli",
     "muse-cli": "muse-cli",
     "antigravity-cli": "antigravity-cli",
+    "copilot-cli": "copilot-cli",
 }
 
 # Trần chữ của một output được coi là "chỉ có câu báo hết lượt". Dài hơn thế thì bước đã LÀM

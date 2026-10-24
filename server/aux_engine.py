@@ -22,6 +22,9 @@ Ba loại engine, khác nhau ở CÔNG CỤ có được - đây là chỗ phả
 - muse-cli: Meta Muse Code CLI chạy bằng gói thuê bao Muse Code. Cũng agent thật (tool native +
   MCP hub gộp vào ~/.config/muse/settings.json). Mức quyền xuống cờ của `muse exec`:
   suggest -> --disable-write --disable-shell, auto -> --disable-shell, full -> --yolo.
+- copilot-cli: GitHub Copilot CLI chạy bằng gói Copilot. Agent thật (tool native + MCP hub qua
+  `<brain>/.copilot/mcp-config.json` truyền bằng --additional-mcp-config). Mức quyền xuống cờ:
+  suggest -> --deny-tool=shell + write, auto -> --deny-tool=shell, full -> không chặn ở tầng CLI.
 - api (openrouter/openai/gemini/anthropic-api): KHÔNG có tool native. Bù lại hub cấp
   javis_read_file / javis_list_dir / javis_write_file / javis_use_skill + tool MCP, và
   javis_write_file tự chặn khi mode là suggest (mcp_hub._builtin_tools). Không có Bash,
@@ -46,6 +49,7 @@ CLAUDE = "anthropic-cli"
 CODEX = "openai-oauth"
 GROK_CLI = "grok-cli"
 MUSE_CLI = "muse-cli"
+COPILOT_CLI = "copilot-cli"
 ANTIGRAVITY = "antigravity-cli"
 API_PROVIDERS = ("openrouter", "openai", "gemini", "groq", "xai", "meta", "anthropic-api", "ollama",
                  "ollama-local", "openai-compat", *nha_api_rieng.IDS)
@@ -292,6 +296,15 @@ def availability(spec: dict, settings: dict = None) -> tuple:
                 return False, st.get("error") or "Muse Code CLI chưa sẵn sàng."
         except Exception:
             return False, "Không kiểm tra được Muse Code CLI."
+        return True, ""
+    if prov == COPILOT_CLI:
+        try:
+            import copilot_cli as _p
+            st = _p.auth_status()
+            if not st.get("connected"):
+                return False, st.get("error") or "GitHub Copilot CLI chưa sẵn sàng."
+        except Exception:
+            return False, "Không kiểm tra được GitHub Copilot CLI."
         return True, ""
     if prov == ANTIGRAVITY:
         try:
@@ -672,6 +685,33 @@ def _build_muse(spec, claude_cli_obj, mode, tag):
     return uc
 
 
+def _build_copilot(spec, claude_cli_obj, mode, tag):
+    """Engine việc nền/agent chạy bằng GitHub Copilot CLI (`copilot`). Cùng khuôn `_build_grok`;
+    entry MCP dựng bằng `copilot_cli.hub_entry()` và ghi vào `<brain>/.copilot/mcp-config.json`,
+    engine tự truyền `--additional-mcp-config @<file>` cho riêng lượt đó."""
+    import copilot_cli as _p
+    muc = mode or getattr(claude_cli_obj, "javis_mode", None) or "full"
+    pc = _p.CopilotCLI(cwd=getattr(claude_cli_obj, "cwd", None),
+                       tag=tag or getattr(claude_cli_obj, "tag", "aux"),
+                       model=spec.get("model") or None,
+                       instructions=getattr(claude_cli_obj, "system_prompt", None))
+    pc.mode = muc
+    vault = getattr(claude_cli_obj, "javis_vault", None) or getattr(claude_cli_obj, "cwd", None)
+    if vault:
+        try:
+            import mcp_hub
+            hub = None
+            if bool(cfgmod.read_settings().get("mcp", {}).get("hub", True)):
+                hub = _p.hub_entry(mcp_hub.hub_url(),
+                                   {"Authorization": f"Bearer {mcp_hub.hub_token()}",
+                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault)})
+            f = _p.ghi_mcp_settings(vault, hub)
+            pc.mcp_file = f if hub else None
+        except Exception as e:
+            print(f"[aux copilot mcp] {e}", file=sys.stderr)
+    return pc
+
+
 def _build_antigravity(spec, claude_cli_obj, mode, tag):
     """Engine việc nền/agent chạy bằng Antigravity CLI (`agy`).
 
@@ -729,6 +769,8 @@ def dung_rieng(spec: dict, cli, mode: str, tag: str, codex_profile=None, setting
         return _build_grok(sp, cli, mode, tag)
     if prov == MUSE_CLI:
         return _build_muse(sp, cli, mode, tag)
+    if prov == COPILOT_CLI:
+        return _build_copilot(sp, cli, mode, tag)
     if prov == ANTIGRAVITY:
         return _build_antigravity(sp, cli, mode, tag)
     if prov in API_PROVIDERS:
@@ -772,6 +814,8 @@ def _main_fallback_engine(cli, mode, tag, settings, exclude, codex_profile=None)
             return _build_grok(sp, cli, mode, t)
         if prov == MUSE_CLI:
             return _build_muse(sp, cli, mode, t)
+        if prov == COPILOT_CLI:
+            return _build_copilot(sp, cli, mode, t)
         if prov in API_PROVIDERS:
             return _build_api(sp, cli, mode, t)
     except Exception as e:
@@ -842,6 +886,8 @@ def swap(cli, mode: str = None, tag: str = None, spec: dict = None,
                 return _build_grok(sp, cli, mode, tag)
             if prov == MUSE_CLI:
                 return _build_muse(sp, cli, mode, tag)
+            if prov == COPILOT_CLI:
+                return _build_copilot(sp, cli, mode, tag)
             if prov == ANTIGRAVITY:
                 return _build_antigravity(sp, cli, mode, tag)
             if prov in API_PROVIDERS:
@@ -869,6 +915,8 @@ def swap(cli, mode: str = None, tag: str = None, spec: dict = None,
             primary = _build_grok(sp, cli, mode, tag)
         elif prov == MUSE_CLI:
             primary = _build_muse(sp, cli, mode, tag)
+        elif prov == COPILOT_CLI:
+            primary = _build_copilot(sp, cli, mode, tag)
         elif prov == ANTIGRAVITY:
             primary = _build_antigravity(sp, cli, mode, tag)
         elif prov in API_PROVIDERS:

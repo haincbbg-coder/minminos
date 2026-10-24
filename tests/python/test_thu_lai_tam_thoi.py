@@ -229,6 +229,8 @@ main._antigravity_sub_stream = _lam_engine("_antigravity_sub_stream")
 main._grok_sub_stream = _lam_engine("_grok_sub_stream")
 # Meta Muse Code CLI (bộ não thứ 15) cùng cảnh: chạy binary `muse`, không qua engine.*.
 main._muse_sub_stream = _lam_engine("_muse_sub_stream")
+# GitHub Copilot CLI (26.10.213) cùng cảnh: chạy binary `copilot`, không qua engine.*.
+main._copilot_sub_stream = _lam_engine("_copilot_sub_stream")
 
 _bo_sot = []
 for _p in [d["id"] for d in main.PROVIDER_DEFS]:

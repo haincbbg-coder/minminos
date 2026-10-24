@@ -7,7 +7,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.213] - 2026-10-24
 
 ### Thêm mới
-- (đang làm) bộ não GitHub Copilot CLI (gói Copilot).
+- **Bộ não mới: GitHub Copilot.** Có gói Copilot là dùng được, không cần API key. Một gói chọn được model của nhiều hãng: Claude, GPT, Gemini, Grok.
+- Thẻ GitHub Copilot ở trang Models có nút **Cài đặt** và **Đăng nhập GitHub**: thẻ hiện một link và một mã, mở trên điện thoại gõ mã là xong, chạy trên VPS cũng được.
+- Copilot dùng được tool của MinMin (POS, Ads, Zalo, file brain), làm được model chính, model việc nền và model của agent. Nút **Kiểm tra lại** chat thử một lượt và báo luôn tool của MinMin đã vào chưa.
+- Đăng nhập Copilot giữ nguyên qua các lần cập nhật MinMin.
+
 ## [26.10.212] - 2026-10-24
 
 ### Thêm mới

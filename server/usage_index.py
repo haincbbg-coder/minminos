@@ -299,6 +299,8 @@ _EVENT_GROK_CLI = {"grok-cli", "grok_cli", "grok"}
 # Muse Code CLI (goi thue bao Meta): cung ly do, cot rieng, KHONG gom vao 'api' (thẻ Meta Muse
 # API la duong tra tien theo luot goi).
 _EVENT_MUSE_CLI = {"muse-cli", "muse_cli", "muse"}
+# GitHub Copilot CLI (goi Copilot): cot rieng, cung ly do.
+_EVENT_COPILOT_CLI = {"copilot-cli", "copilot_cli", "copilot"}
 
 
 def _ingest_events(conn) -> int:
@@ -368,6 +370,9 @@ def _ingest_events(conn) -> int:
                            "activity": "chat", "project": "(events)"})
         elif prov in _EVENT_MUSE_CLI:
             events.append({**chung, "provider": "muse-cli", "source": "javis",
+                           "activity": "chat", "project": "(events)"})
+        elif prov in _EVENT_COPILOT_CLI:
+            events.append({**chung, "provider": "copilot-cli", "source": "javis",
                            "activity": "chat", "project": "(events)"})
     if events:
         _insert_events(conn, path, events)
