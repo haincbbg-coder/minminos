@@ -1,4 +1,4 @@
-"""Trụ 2 (26.10.217): mười lỗ an toàn người soát độc lập tìm ra trong chế độ chạy thử.
+"""Trụ 6 (26.10.217): mười lỗ an toàn người soát độc lập tìm ra trong chế độ chạy thử.
 
     python3 tests/python/test_tu_hoc_lo_an_toan.py      (KHÔNG mạng, KHÔNG model)
 

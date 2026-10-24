@@ -1,4 +1,4 @@
-/* harness2.js - màn "Cải tiến có đối chứng" (Trụ 2, 26.10.217) cho MỘT trợ lý.
+/* harness2.js - màn "Cải tiến có đối chứng" (Trụ 6, 26.10.217) cho MỘT trợ lý.
 
    Mở từ trang Cộng sự (workspace.js, cột phải Cài đặt của trợ lý). Bốn màn trong cùng một hộp:
      1. Cài đặt: tick đề (việc gần đây), gõ thêm đề, chọn k, chế độ, bộ não cải tiến; xem ước

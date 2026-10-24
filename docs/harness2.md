@@ -1,4 +1,4 @@
-# Cải tiến có đối chứng (Trụ 2: tự học có đối chứng)
+# Cải tiến có đối chứng (Trụ 6: tự học có đối chứng)
 
 Thuật toán theo Harness² của Google Research, arXiv 2610.14224, Apache 2.0; lời dặn chuyển ý từ
 harness2/core/prompts.py. MinMin không gắn gói gốc (gói đó cần OpenCode, Vertex, Docker) mà viết

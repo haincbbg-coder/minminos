@@ -518,7 +518,7 @@ def classify(connector, tool, args=None):
 
 
 def classify_ro(connector, tool, args=None):
-    """'read' | 'write' | 'danger' | 'khong_ro' - phân loại KHÔNG đoán, cho chế độ chạy thử (Trụ 2).
+    """'read' | 'write' | 'danger' | 'khong_ro' - phân loại KHÔNG đoán, cho chế độ chạy thử (Trụ 6).
 
     `classify` rơi về "read" khi tên tool không khớp gì (WRITE_HINTS là denylist): đúng cho lượt
     thật vì mức quyền vẫn là lớp chặn chính, nhưng ở chế độ thử nó để `gmail/forward`,

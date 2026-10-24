@@ -41,7 +41,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import yaml
 import fastyaml
 
-import che_do_thu   # cờ chạy thử của Trụ 2 (26.10.217)
+import che_do_thu   # cờ chạy thử của Trụ 6 (26.10.217)
 import mcp_catalog
 from config import STATE_DIR
 
@@ -356,7 +356,7 @@ class PluginContext:
         min_mode: readonly(mặc định, luôn chạy) | safe(chặn ở chế độ suggest) | full(chỉ chế độ full).
         check_fn(): None nếu sẵn sàng, hoặc str lý do để chặn (vd chưa đăng nhập).
         ton_phi=True: tool đọc nhưng tốn tiền/quota thật hay gửi dữ liệu ra ngoài theo tham số -
-        lượt CHẠY THỬ của Trụ 2 giả lập nó thay vì gọi thật."""
+        lượt CHẠY THỬ của Trụ 6 giả lập nó thay vì gọi thật."""
         if not _TOOL_RE.match(str(name or "")):
             raise ValueError(f"tên tool không hợp lệ (a-z0-9_): {name!r}")
         if min_mode not in VALID_MIN_MODE:
@@ -774,7 +774,7 @@ def _make_call(tool: dict, ctx: PluginContext, mode: str):
             loai = "ghi/hành động" if min_mode == "safe" else "nguy hiểm (chỉ chế độ full)"
             return (f"ERROR: tool '{name}' cần mức quyền cao hơn ({min_mode}) - thao tác {loai} "
                     f"bị chặn ở chế độ hiện tại. Nâng chế độ chạy nếu thật sự cần.")
-        # CHẠY THỬ (Trụ 2, 26.10.217): plugin ghi (safe) và hành động ra ngoài (full) KHÔNG chạy
+        # CHẠY THỬ (Trụ 6, 26.10.217): plugin ghi (safe) và hành động ra ngoài (full) KHÔNG chạy
         # trong lượt thử, kể cả check_fn: không một dòng mã nào của plugin được chạy. Ghi ý định
         # rồi trả câu giả lập để agent làm tiếp như thật. Plugin chỉ đọc (readonly) vẫn chạy.
         if che_do_thu.dang_bat() and (min_mode in ("safe", "full") or tool.get("ton_phi")
@@ -849,7 +849,7 @@ def unload(slug: str) -> dict:
 def quen_vault(vault_root: Optional[str]) -> int:
     """Bỏ bản nạp plugin RIÊNG của một brain (chạy on_unload của từng plugin trong bản đó).
 
-    Dành cho brain TẠM của bộ cải tiến có đối chứng (Trụ 2, 26.10.217): mỗi brain là một khoá
+    Dành cho brain TẠM của bộ cải tiến có đối chứng (Trụ 6, 26.10.217): mỗi brain là một khoá
     cache riêng, nên brain tạm dùng xong mà không bỏ thì mỗi lần cải tiến để lại vài bản nạp mọi
     plugin trong RAM. Chỉ chạm đúng khoá của brain đó, không đụng bản nạp của brain thật nào.
     Trả số plugin đã bỏ. Không bao giờ ném lỗi."""

@@ -1,4 +1,4 @@
-"""Trụ 2 (26.10.217): CHẠY THỬ AN TOÀN - không một hành động thật nào lọt ra ngoài.
+"""Trụ 6 (26.10.217): CHẠY THỬ AN TOÀN - không một hành động thật nào lọt ra ngoài.
 
     python3 tests/python/test_tu_hoc_chay_thu.py      (KHÔNG mạng, KHÔNG model)
 

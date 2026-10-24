@@ -37,7 +37,7 @@ from config import STATE_DIR
 import hanh_dong   # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
 import tiet_kiem   # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
 import tiem_lenh   # quét tiêm lệnh trong dữ liệu vào (26.10.164)
-import che_do_thu  # cờ CHẠY THỬ của Trụ 2 tự học có đối chứng: giả lập mọi việc ghi (26.10.217)
+import che_do_thu  # cờ CHẠY THỬ của Trụ 6 tự học có đối chứng: giả lập mọi việc ghi (26.10.217)
 
 _TOKEN_PATH = STATE_DIR / ".hub_token"
 _AUDIT_PATH = STATE_DIR / "mcp_audit.jsonl"
@@ -259,7 +259,7 @@ def _guard(ent, fn, mode):
         loai = hanh_dong.loai_viec(conn.get("connector_id"), tool, args) if cls != "read" else ""
         if ok and loai:
             ok, why = hanh_dong.cho_phep(_chinh_sach_loai_viec(), loai)
-        # CHẠY THỬ (Trụ 2, 26.10.217): lượt thử của bộ cải tiến có đối chứng KHÔNG BAO GIỜ gọi
+        # CHẠY THỬ (Trụ 6, 26.10.217): lượt thử của bộ cải tiến có đối chứng KHÔNG BAO GIỜ gọi
         # tool ghi thật. Chặn ở đây, trước hàng đợi "hỏi trước", trước sổ làm-một-lần và trước
         # bộ đếm tần suất: lượt thử không được làm phiền chủ bằng yêu cầu duyệt, không được ghi
         # vào sổ hành động thật, và không được ăn hạn mức chống spam của kết nối. Chỉ ghi Ý ĐỊNH
@@ -1391,7 +1391,7 @@ def registry_inventory(mode="full", vault_root=None, include_plugins=True, inclu
 
 
 def quen_cache_vault(vault_root) -> int:
-    """Bỏ các bảng tool đã cache cho MỘT brain (Trụ 2: brain tạm của lượt chạy thử).
+    """Bỏ các bảng tool đã cache cho MỘT brain (Trụ 6: brain tạm của lượt chạy thử).
 
     Lượt thử dùng lại cùng một đường dẫn brain tạm cho nhiều biến thể; mỗi biến thể có thể gán
     skill khác, mà danh sách skill nằm trong mô tả tool javis_use_skill lúc dò. Không bỏ cache
@@ -1647,7 +1647,7 @@ async def handle_http(request):
     # Mã việc nền (cổng từ Javis 0.238.0): máy chủ ghi header này vào cấu hình MCP RIÊNG của lượt
     # Claude Code chạy việc Kanban; model không đặt được header. Không có thì không phải việc nền.
     _tok_job = once_ledger.bind_job(request.headers.get(once_ledger.JOB_HEADER.lower()) or "")
-    # Cờ chạy thử (Trụ 2): bộ cải tiến ghi header này vào cấu hình MCP RIÊNG của lượt thử.
+    # Cờ chạy thử (Trụ 6): bộ cải tiến ghi header này vào cấu hình MCP RIÊNG của lượt thử.
     # Gắn TRƯỚC khi giải brain, vì `resolve_vault` ở chế độ thử không được rơi về brain thật.
     _tok_thu = che_do_thu.bat(request.headers.get(che_do_thu.HEADER.lower()) or "")
     try:

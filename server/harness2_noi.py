@@ -1,4 +1,4 @@
-"""harness2_noi.py - NỐI lõi Trụ 2 (harness2.py) với engine thật của MinMin + các endpoint /harness/*.
+"""harness2_noi.py - NỐI lõi Trụ 6 (harness2.py) với engine thật của MinMin + các endpoint /harness/*.
 
 Lõi thuật toán ở harness2.py là thuần; file này lo phần chạm tới máy thật:
   - brain TẠM cho lượt chạy thử (bản sao chữ của brain thật + cây vỏ ứng viên đè lên), kiểm

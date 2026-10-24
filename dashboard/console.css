@@ -2411,7 +2411,7 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 .ht-botbtns { display: flex; flex-wrap: wrap; gap: 6px; }
 .ht-botbtns .s-btn-ghost { font-size: 13px; padding: 4px 10px; }
 
-/* ---- Cải tiến có đối chứng (Trụ 2, 26.10.217, harness2.js) ----
+/* ---- Cải tiến có đối chứng (Trụ 6, 26.10.217, harness2.js) ----
    Hộp rộng trên máy tính, CHIẾM TRỌN màn hình ở điện thoại: màn so sánh có diff dài, đọc trong
    một hộp nhỏ giữa màn hình hẹp là phải cuộn hai lớp. */
 .h2-modal { width: 780px; max-width: 96vw; max-height: 90vh; background: var(--bg2); border: 1px solid var(--border);

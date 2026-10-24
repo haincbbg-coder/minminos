@@ -1,4 +1,4 @@
-"""Trụ 2 (26.10.217): nối với main THẬT - deps thật, engine Claude thật (KHÔNG gọi model).
+"""Trụ 6 (26.10.217): nối với main THẬT - deps thật, engine Claude thật (KHÔNG gọi model).
 
     python3 tests/python/test_tu_hoc_doi_chung_main.py     (KHÔNG mạng)
 

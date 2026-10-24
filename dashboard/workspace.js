@@ -1059,7 +1059,7 @@
           onSaved: async function () { await sauLuu(item, "agent"); } });
       }
       host.querySelector("#wsExport").onclick = function () { window.JavisStudio && window.JavisStudio.exportItem("agent", item.slug); };
-      // Trụ 2 (26.10.217): cải tiến có đối chứng cho ĐÚNG trợ lý đang mở (harness2.js). Chủ bấm,
+      // Trụ 6 (26.10.217): cải tiến có đối chứng cho ĐÚNG trợ lý đang mở (harness2.js). Chủ bấm,
       // chạy xong thì dừng; không có vòng nền nào tự cải tiến trợ lý.
       host.querySelector("#wsH2").onclick = function () { if (window.JavisHarness2) window.JavisHarness2.mo(item, { brain: brain() }); };
       host.querySelector("#wsDel").onclick = async function () {

@@ -1,4 +1,4 @@
-"""che_do_thu.py - CHẠY THỬ AN TOÀN (shadow) cho Trụ 2 "tự học có đối chứng" (26.10.217).
+"""che_do_thu.py - CHẠY THỬ AN TOÀN (shadow) cho Trụ 6 "tự học có đối chứng" (26.10.217).
 
 Vì sao có module này: Harness² (Google Research) cải tiến một agent bằng cách CHẠY THẬT nhiều
 biến thể của nó trên cùng một việc rồi so trajectory. Bài báo chạy trong container nên chạy bao

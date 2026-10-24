@@ -189,7 +189,7 @@ try:
     check("phase3: chat nạp settings máy (parity CLI)",
           getattr(opts, "setting_sources", None) == ["user", "project", "local"])
     gopts = g._options()
-    # 26.10.217 (người soát Trụ 2): claude-agent-sdk 0.2.x coi None là "CLI tự quyết" = nạp CẢ
+    # 26.10.217 (người soát Trụ 6): claude-agent-sdk 0.2.x coi None là "CLI tự quyết" = nạp CẢ
     # user/project/local (hook ~/.claude chạy thật, permissions.allow xét trước can_use_tool). Nên
     # None KHÔNG còn được coi là "không nạp". Fork gated nạp đúng nguồn project (CLAUDE.md của brain).
     check("phase3: fork gated KHÔNG nạp settings máy (allow-rule không che gate)",
