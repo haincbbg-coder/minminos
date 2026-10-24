@@ -764,6 +764,12 @@ class Harness2Feature:
 
     # ---------- áp dụng / hoàn tác ----------
     def ap_dung(self, run_id: str) -> dict:
+        """Ghi bản được chọn vào brain THẬT. Mọi kiểm tra và mọi lần ghi nằm TRONG BrainLock.
+
+        Người soát chỉ ra hai lỗ (đã vá): phép so "trợ lý có bị sửa sau lần chạy không" từng nằm
+        ngoài khoá (chủ hay tự học sửa đúng lúc đó là lọt), và skill mới trùng tên một skill chủ
+        vừa tạo sau lần chạy thì bị ghi đè. Thêm: bài học đi vào kinh-nghiem.md - nạp vào MỌI lượt
+        thật kể cả mức full - nên được quét bí mật/tiêm lệnh lại ngay trước khi ghi."""
         import git_brain
         rd = self.thu_muc(run_id)
         ket = _doc_json(rd / "ket-qua.json")
@@ -775,25 +781,57 @@ class Harness2Feature:
             return {"ok": False, "error": "Lần này kết luận giữ nguyên, không có gì để áp dụng."}
         root = Path(self.deps.brain_root(ket["brain"]))
         slug = ket["slug"]
-        hien, _info = h2.doc_cay(root, slug, is_system=self.deps.is_system_skill)
-        if hien != ket["cay_goc"]:
-            return {"ok": False, "error": "Trợ lý đã bị sửa sau lần chạy thử này, nên so sánh không còn đúng. "
-                                          "Chạy cải tiến lại để có đề xuất mới."}
+        try:
+            import learn
+            qbm, qtl = learn.secret_hits, learn.injection_in_output
+        except Exception:      # không quét được thì KHÔNG ghi bài học (fail-closed)
+            qbm = qtl = None
         ngay = datetime.now().strftime("%Y-%m-%d")
-        ke = h2.ke_hoach_ghi(root, slug, ket["cay_chon"], ket["cay_goc"], ngay=ngay, run_id=run_id)
-        kn = ket.get("kinh_nghiem") or {}
-        rel_kn = str((h2.duong_memory_agent(root, slug) / "kinh-nghiem.md").relative_to(root)).replace("\\", "/")
-        if h2.co_kinh_nghiem(kn):
-            goc_kn = ke.get(rel_kn)
-            if goc_kn is None:
-                f = root / rel_kn
-                goc_kn = f.read_text(encoding="utf-8") if f.is_file() else ""
-            dk = h2.dong_kinh_nghiem(kn, run_id=run_id, ngay=ngay, de_ids=[d["id"] for d in ket.get("de") or []],
-                                     truoc_sau=_truoc_sau(ket))
-            ke[rel_kn] = (goc_kn.rstrip() + "\n" if goc_kn.strip() else "# Kinh nghiệm đã kiểm chứng\n") + dk
         with git_brain.BrainLock(str(root), timeout=10) as lk:
             if not getattr(lk, "acquired", False):
                 return {"ok": False, "error": "Brain đang bận (tự học hoặc sao lưu đang ghi). Thử lại sau ít giây."}
+            hien, _info = h2.doc_cay(root, slug, is_system=self.deps.is_system_skill)
+            if hien != ket["cay_goc"]:
+                return {"ok": False, "error": "Trợ lý đã bị sửa sau lần chạy thử này, nên so sánh không còn đúng. "
+                                              "Chạy cải tiến lại để có đề xuất mới."}
+            sk_goc = h2.skill_trong_cay(ket["cay_goc"])
+            trung = [s for s in h2.skill_trong_cay(ket["cay_chon"])
+                     if s not in sk_goc and (root / "skills" / s).exists()]
+            if trung:
+                return {"ok": False, "error": f"Skill '{trung[0]}' đã có trong brain (tạo sau lần chạy thử này). "
+                                              f"Không ghi đè skill của chủ; chạy cải tiến lại để có đề xuất mới."}
+            ke = h2.ke_hoach_ghi(root, slug, ket["cay_chon"], ket["cay_goc"], ngay=ngay, run_id=run_id)
+            for rel, txt in ke.items():
+                cu = (root / rel).read_text(encoding="utf-8") if (root / rel).is_file() else ""
+                # Chỉ tính thứ MỚI so với file hiện tại: chữ chủ viết sẵn không được làm hỏng việc áp dụng.
+                lo = sorted(set(qbm(txt or "")) - set(qbm(cu))) if qbm else []
+                if qtl and qtl(txt or "") and not qtl(cu):
+                    lo.append("tiêm lệnh")
+                if lo:
+                    return {"ok": False, "error": f"{rel} chứa thứ giống bí mật hay câu tiêm lệnh ({', '.join(lo)}); "
+                                                  f"không áp dụng."}
+            kn = dict(ket.get("kinh_nghiem") or {})
+            kn_bi_chan = ""
+            if h2.co_kinh_nghiem(kn):
+                if not (qbm and qtl):
+                    kn_bi_chan = "không quét được bí mật/tiêm lệnh nên không ghi bài học"
+                else:
+                    chu = "\n".join(str(kn.get(k) or "") for k in ("cue", "lesson", "evidence", "confidence"))
+                    lo = qbm(chu)
+                    if lo or qtl(chu):
+                        kn_bi_chan = ("bài học chứa " + (", ".join(lo) if lo else "câu kiểu tiêm lệnh")
+                                      + ", đã bỏ, không ghi vào kinh-nghiem.md và thư viện")
+            if kn_bi_chan:
+                kn = {}
+            rel_kn = str((h2.duong_memory_agent(root, slug) / "kinh-nghiem.md").relative_to(root)).replace("\\", "/")
+            if h2.co_kinh_nghiem(kn):
+                goc_kn = ke.get(rel_kn)
+                if goc_kn is None:
+                    f = root / rel_kn
+                    goc_kn = f.read_text(encoding="utf-8") if f.is_file() else ""
+                dk = h2.dong_kinh_nghiem(kn, run_id=run_id, ngay=ngay, de_ids=[d["id"] for d in ket.get("de") or []],
+                                         truoc_sau=_truoc_sau(ket))
+                ke[rel_kn] = (goc_kn.rstrip() + "\n" if goc_kn.strip() else "# Kinh nghiệm đã kiểm chứng\n") + dk
             truoc = rd / "truoc"
             da_ghi = h2.ap_dung_file(root, ke, truoc)
             if h2.co_kinh_nghiem(kn):
@@ -802,11 +840,6 @@ class Harness2Feature:
                 co_idx = idx.is_file()
                 if co_idx:
                     h2._ghi(truoc / idx_rel, idx.read_text(encoding="utf-8"))
-                try:
-                    import learn
-                    qbm, qtl = learn.secret_hits, learn.injection_in_output
-                except Exception:
-                    qbm = qtl = None
                 tv = h2.them_vao_thu_vien(root, nhom=ket.get("nhom") or "Chung", slug=slug, run_id=run_id,
                                           cay=ket["cay_chon"], kinh_nghiem=kn, ly_do=ket.get("ly_do_chon") or "",
                                           edits=ket.get("edits") or "", nhan=ket.get("chon") or "", ngay=ngay,
@@ -822,10 +855,11 @@ class Harness2Feature:
                 commit = git_brain.commit_paths(str(root), [g["file"] for g in da_ghi],
                                                 f"harness: cải tiến có đối chứng {slug} ({run_id})")
         ket["trang_thai"] = "da_ap_dung"
-        ket["ap_dung"] = {"luc": datetime.now().isoformat(timespec="seconds"), "commit": commit, "files": da_ghi}
+        ket["ap_dung"] = {"luc": datetime.now().isoformat(timespec="seconds"), "commit": commit, "files": da_ghi,
+                          "kinh_nghiem_bi_chan": kn_bi_chan}
         _ghi_json(rd / "ket-qua.json", ket)
         self._trang_thai(run_id, trang_thai="da_ap_dung")
-        return {"ok": True, "commit": commit, "files": [g["file"] for g in da_ghi]}
+        return {"ok": True, "commit": commit, "files": [g["file"] for g in da_ghi], "kinh_nghiem_bi_chan": kn_bi_chan}
 
     def hoan_tac(self, run_id: str) -> dict:
         import git_brain
