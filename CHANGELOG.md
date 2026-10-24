@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.215] - 2026-10-24
+
+### Thêm mới
+- **Ba bộ não mới chạy bằng gói bạn đã trả:** Kiro (Amazon), Cursor và Mistral Vibe. Mỗi cái một thẻ trên trang Models, dùng được làm model chính, model phụ và cho agent.
+- **Cài và đăng nhập ngay trên thẻ, kể cả trên VPS.** Bấm Cài đặt, rồi Đăng nhập: thẻ hiện link (Kiro kèm mã) để mở ở máy của bạn. Có API key thì dán thẳng vào thẻ cũng được.
+- Cả ba đều gọi được kết nối của MinMin (POS, Ads, Zalo, file brain). Nút **Kiểm tra lại** chat thử một lượt thật và soát luôn chỗ đó.
+- Thẻ nói rõ giá gói và chỗ điều khoản chạy nền 24/7 của hãng còn chưa rõ. Riêng Cursor trên VPS: dán API key là đường chắc chắn.
+
 ## [26.10.213] - 2026-10-24
 
 ### Thêm mới

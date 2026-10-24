@@ -156,6 +156,9 @@ SUBSCRIPTION_LABEL = {
     "grok-cli": "gói xAI (SuperGrok / X Premium+)",
     "muse-cli": "gói Meta Muse Code",
     "copilot-cli": "gói GitHub Copilot",
+    "kiro-cli": "gói Kiro",
+    "cursor-cli": "gói Cursor",
+    "vibe-cli": "gói Mistral (Le Chat Pro / Team)",
 }
 
 

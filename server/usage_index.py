@@ -301,6 +301,8 @@ _EVENT_GROK_CLI = {"grok-cli", "grok_cli", "grok"}
 _EVENT_MUSE_CLI = {"muse-cli", "muse_cli", "muse"}
 # GitHub Copilot CLI (goi Copilot): cot rieng, cung ly do.
 _EVENT_COPILOT_CLI = {"copilot-cli", "copilot_cli", "copilot"}
+# Kiro / Cursor / Mistral Vibe CLI (26.10.215): moi goi mot cot rieng, cung ly do.
+_EVENT_NAO_CLI_MOI = {"kiro-cli", "cursor-cli", "vibe-cli"}
 
 
 def _ingest_events(conn) -> int:
@@ -373,6 +375,9 @@ def _ingest_events(conn) -> int:
                            "activity": "chat", "project": "(events)"})
         elif prov in _EVENT_COPILOT_CLI:
             events.append({**chung, "provider": "copilot-cli", "source": "javis",
+                           "activity": "chat", "project": "(events)"})
+        elif prov in _EVENT_NAO_CLI_MOI:
+            events.append({**chung, "provider": prov, "source": "javis",
                            "activity": "chat", "project": "(events)"})
     if events:
         _insert_events(conn, path, events)

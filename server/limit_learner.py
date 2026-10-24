@@ -384,6 +384,9 @@ ENGINE_HINT_BY_PROVIDER = {
     "muse-cli": "muse-cli",
     "antigravity-cli": "antigravity-cli",
     "copilot-cli": "copilot-cli",
+    "kiro-cli": "kiro-cli",
+    "cursor-cli": "cursor-cli",
+    "vibe-cli": "vibe-cli",
 }
 
 # Trần chữ của một output được coi là "chỉ có câu báo hết lượt". Dài hơn thế thì bước đã LÀM

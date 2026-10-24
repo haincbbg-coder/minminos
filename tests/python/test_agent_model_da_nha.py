@@ -42,7 +42,7 @@ def check(name: str, condition: bool, extra=None) -> None:
 # engine cho nó thì test này đỏ NGAY, thay vì để người dùng phát hiện bằng một agent chạy
 # sai nhà trong im lặng.
 dung_duoc = {aux_engine.CLAUDE, aux_engine.CODEX, aux_engine.GROK_CLI, aux_engine.MUSE_CLI,
-             aux_engine.ANTIGRAVITY, aux_engine.COPILOT_CLI} | set(aux_engine.API_PROVIDERS)
+             aux_engine.ANTIGRAVITY, aux_engine.COPILOT_CLI} | set(aux_engine.API_PROVIDERS) | set(aux_engine.NAO_CLI_MOI)
 check("mọi nhà trong AGENT_PROVIDERS đều có bộ dựng engine ở aux_engine",
       set(main.AGENT_PROVIDERS) <= dung_duoc,
       sorted(set(main.AGENT_PROVIDERS) - dung_duoc))

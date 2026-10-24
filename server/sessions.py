@@ -343,6 +343,9 @@ _NEN_TANG = (
     (("grok-cli", "grok", "xai"), "Grok"),
     (("muse-cli", "muse"), "Meta"),
     (("copilot-cli", "copilot"), "Copilot"),
+    (("kiro-cli", "kiro"), "Kiro"),
+    (("cursor-cli", "cursor"), "Cursor"),
+    (("vibe-cli", "vibe", "mistral"), "Mistral"),
 )
 
 
@@ -442,6 +445,11 @@ class SessionStore:
                               # Mạch native của GitHub Copilot CLI (`--session-id <uuid>`).
                               # Cột RIÊNG, cùng lý do như ba cột trên.
                               ("copilot_session_id", "TEXT"),
+                              # Mạch native của Kiro / Cursor / Mistral Vibe CLI (26.10.215).
+                              # Mỗi engine một cột RIÊNG, cùng lý do như ba cột trên.
+                              ("kiro_session_id", "TEXT"),
+                              ("cursor_session_id", "TEXT"),
+                              ("vibe_session_id", "TEXT"),
                               # Luồng của engine ChatGPT Web, đã gỡ ở 0.64.20. Cột VẪN khai
                               # báo để DB cũ và DB mới cùng một hình dạng; không ai đọc ghi
                               # nó nữa. Xoá cột SQLite là phải dựng lại cả bảng, không đáng.
@@ -1326,7 +1334,36 @@ class SessionStore:
                     "codex": "codex_thread_id",
                     "grok-cli": "grok_session_id",
                     "muse-cli": "muse_session_id",
-                    "copilot-cli": "copilot_session_id"}
+                    "copilot-cli": "copilot_session_id",
+                    "kiro-cli": "kiro_session_id",
+                    "cursor-cli": "cursor_session_id",
+                    "vibe-cli": "vibe_session_id"}
+
+    def set_mach_native(self, session_id: str, engine: str, gia_tri: str) -> None:
+        """Ghi mạch native cho engine có cột trong `_MACH_NATIVE` (dùng cho các engine mới -
+        engine cũ giữ hàm riêng của chúng). Engine lạ thì bỏ qua, không bịa cột."""
+        cot = self._MACH_NATIVE.get(str(engine or ""))
+        if not cot or not gia_tri:
+            return
+        self._write(lambda c: c.execute(
+            f"UPDATE sessions SET {cot} = ?, updated_at = ? WHERE id = ?",
+            (gia_tri, time.time(), session_id),
+        ))
+
+    def get_mach_native(self, session_id: str, engine: str) -> str:
+        cot = self._MACH_NATIVE.get(str(engine or ""))
+        if not cot:
+            return ""
+        return str((self.get_session(session_id) or {}).get(cot) or "")
+
+    def clear_mach_native(self, session_id: str, engine: str) -> None:
+        cot = self._MACH_NATIVE.get(str(engine or ""))
+        if not cot:
+            return
+        self._write(lambda c: c.execute(
+            f"UPDATE sessions SET {cot} = NULL WHERE id = ? AND {cot} IS NOT NULL",
+            (session_id,),
+        ))
 
     def clear_native_threads(self, session_id: str, keep: str = "") -> List[str]:
         """Vô hiệu mạch native của MỌI engine, TRỪ engine `keep` đang chạy lượt này.

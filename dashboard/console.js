@@ -4214,6 +4214,54 @@
           </details>`}
         </div>`;
       }
+      if (p.nao_cli) {
+        // Kiro / Cursor / Mistral Vibe CLI (26.10.215): MỘT khuôn thẻ cho cả ba, route
+        // /nao-cli/<id>/... Nút: Cài đặt (lệnh chính chủ chạy nền trên máy chủ), Đăng nhập (link
+        // + mã mở ở máy của bạn, chạy được trên VPS), dán API key, Kiểm tra lại, Ngắt.
+        // Khoá i18n viết TĨNH trong bảng (test_i18n quét chuỗi), không ghép theo id.
+        const nc = p.nao_cli, pid = p.id;
+        const NOTE = { "kiro-cli": t("models.kiro_note"), "cursor-cli": t("models.cursor_note"), "vibe-cli": t("models.vibe_note") };
+        const BG = { "kiro-cli": t("models.kiro_bg_warn"), "cursor-cli": t("models.cursor_bg_warn"), "vibe-cli": t("models.vibe_bg_warn") };
+        const KEYN = { "kiro-cli": t("models.kiro_key_note"), "cursor-cli": t("models.cursor_key_note"), "vibe-cli": t("models.vibe_key_note") };
+        const CACH = { "builder-id": t("models.kiro_c_builder"), "google": t("models.kiro_c_google"),
+                       "github": t("models.kiro_c_github"), "identity-center": t("models.kiro_c_idc") };
+        const boiKhoa = nc.duoi_khoa ? " · " + esc(t("models.nao_by_key", { duoi: nc.duoi_khoa })) : "";
+        const st = on
+          ? t("models.st_logged_in") + (p.account ? " · " + esc(p.account) : "")
+            + (p.plan ? " · " + esc(p.plan) : "") + boiKhoa + " · " + p.models.length + " model"
+          : (p.cli_found ? t("models.st_cli_no_login") : t("models.st_no_cli", { ten: nc.ten || p.label }));
+        const chonCach = (!on && p.cli_found && (nc.cach_dang_nhap || []).length)
+          ? `<select class="js-input" data-nao-cach="${pid}" style="max-width:220px">${nc.cach_dang_nhap.map(c =>
+              `<option value="${esc(c)}">${esc(CACH[c] || c)}</option>`).join("")}</select>
+             <span data-nao-idc="${pid}" hidden>
+               <input class="js-input" data-nao-idc-url="${pid}" spellcheck="false" style="flex:1;min-width:200px" placeholder="${esc(t("models.kiro_idc_url_ph"))}">
+               <input class="js-input" data-nao-idc-region="${pid}" spellcheck="false" style="max-width:130px" placeholder="${esc(t("models.kiro_idc_region_ph"))}">
+             </span>`
+          : "";
+        return `<div class="prov-card ${p.is_main ? "main" : ""}">
+          ${provHead(p, on, "MCP/skill", st)}
+          <div class="prov-note">${esc(NOTE[pid] || "")}</div>
+          <div class="prov-note warn">${WARN_ICON} ${esc(BG[pid] || "")}</div>
+          ${cliWarn(nc.bin || pid)}
+          <div id="nao-box-${pid}" class="prov-steps" style="display:none"></div>
+          <div class="prov-action" style="flex-wrap:wrap">
+            ${!p.cli_found
+              ? `<button class="gcard-btn" data-nao-act="install" data-nao="${pid}">${esc(t("models.nao_btn_install"))}</button>`
+              : on
+                ? `<button class="gcard-btn ghost" data-nao-act="check" data-nao="${pid}">${esc(t("qs.recheck"))}</button>
+                   <button class="gcard-btn ghost" data-nao-act="disc" data-nao="${pid}">${esc(t("models.disconnect"))}</button>`
+                : `${chonCach}<button class="gcard-btn" data-nao-act="login" data-nao="${pid}">${esc(t("auth.submit"))}</button>
+                   <button class="gcard-btn ghost" data-nao-act="check" data-nao="${pid}">${esc(t("qs.recheck"))}</button>`}
+            <span id="nao-msg-${pid}" class="gcard-meta" style="margin-left:10px;flex:1;min-width:200px">${on ? "" : esc(p.auth_error || "")}</span>
+          </div>
+          ${p.cli_found ? `<div class="prov-action" style="flex-wrap:wrap;margin-top:6px">
+            <input class="js-input" id="nao-key-${pid}" type="password" autocomplete="off" style="flex:1;min-width:200px"
+              placeholder="${esc(nc.duoi_khoa ? t("models.key_change_ph", { duoi: nc.duoi_khoa }) : t("models.nao_key_ph", { khoa: nc.ten_khoa || "API key" }))}">
+            <button class="gcard-btn ghost" data-nao-act="key" data-nao="${pid}">${esc(t("models.nao_btn_key"))}</button>
+          </div>
+          <div class="gcard-meta">${esc(KEYN[pid] || "")}</div>` : ""}
+        </div>`;
+      }
       if (p.id === "antigravity-cli") {
         // Bộ não thứ 10: gói Google (AI Pro / Ultra) qua Antigravity CLI. Từ 26.10.205 có nút
         // Cài đặt + Đăng nhập Google ngay trên thẻ, khuôn giống Claude: máy chủ chạy `agy`
@@ -4322,6 +4370,7 @@
           <div class="gcard-meta">${esc(mainP.id === "grok-cli" ? t("models.main_grok")
             : mainP.id === "muse-cli" ? t("models.main_muse")
             : mainP.id === "copilot-cli" ? t("models.main_copilot")
+            : mainP.nao_cli ? t("models.main_nao", { ten: mainP.nao_cli.ten || mainP.label })
             : mainP.id === "antigravity-cli" ? t("models.main_agy")
             : mainP.kind === "cli" ? t("models.main_cli")
             : mainP.kind === "oauth" ? t("models.main_codex")
@@ -5007,6 +5056,145 @@
         if (r.mcp && r.mcp.co_javis) setTimeout(() => renderModelsCloudTab(el), 1500);
       } else if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.not_works")) + mcpTxt3;
     };
+    // ---- Kiro / Cursor / Mistral Vibe CLI (26.10.215): một bộ xử lý cho cả ba thẻ ----
+    const naoLog = (box, d) => {
+      if (!box || !d || !d.nhat_ky || !d.nhat_ky.length) return;
+      let h = box.querySelector(".nao-log");
+      if (!h) { h = document.createElement("div"); h.className = "gcard-meta nao-log"; h.style.marginTop = "6px"; box.appendChild(h); }
+      h.innerHTML = `<code style="white-space:pre-wrap">${esc(d.nhat_ky.slice(-8).join("\n"))}</code>`;
+    };
+    el.querySelectorAll("[data-nao-cach]").forEach(sel => {
+      sel.onchange = () => {
+        const o = el.querySelector(`[data-nao-idc="${sel.dataset.naoCach}"]`);
+        if (o) o.hidden = sel.value !== "identity-center";
+      };
+    });
+    const naoAct = async (pid, act, btn) => {
+      const msg = el.querySelector(`#nao-msg-${pid}`), box = el.querySelector(`#nao-box-${pid}`);
+      const cu = btn.textContent;
+      const xong = () => { _daHoiModel.delete(pid); setTimeout(() => renderModelsCloudTab(el), 700); };
+      if (act === "install") {
+        btn.disabled = true; btn.textContent = t("models.agy_installing");
+        if (msg) msg.textContent = t("models.agy_install_wait");
+        let r0 = null;
+        try { r0 = await (await fetch(`/nao-cli/${pid}/install`, { method: "POST" })).json(); } catch (e) {}
+        if (r0 && r0.ok === false) {
+          btn.disabled = false; btn.textContent = cu;
+          if (msg) msg.innerHTML = Icons.warn(r0.error || t("models.agy_install_timeout"));
+          return;
+        }
+        const han = Date.now() + 900000;
+        const quay = async () => {
+          let d = null;
+          try { d = await (await fetch(`/nao-cli/${pid}/install-poll`)).json(); } catch (e) {}
+          if (d && d.cli_path) { if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.agy_installed")); xong(); return; }
+          if (box && d && d.nhat_ky && d.nhat_ky.length) {
+            box.style.display = "";
+            box.innerHTML = `<code style="white-space:pre-wrap">${esc(d.nhat_ky.slice(-6).join("\n"))}</code>`;
+          }
+          if ((d && !d.dang_chay && d.ok === false) || Date.now() > han) {
+            btn.disabled = false; btn.textContent = cu;
+            if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.agy_install_timeout"));
+            return;
+          }
+          setTimeout(quay, 2000);
+        };
+        setTimeout(quay, 1500);
+        return;
+      }
+      if (act === "login") {
+        btn.disabled = true; btn.textContent = t("models.opening");
+        if (msg) msg.textContent = t("models.nao_asking");
+        const f = new FormData();
+        const sel = el.querySelector(`[data-nao-cach="${pid}"]`);
+        if (sel) f.append("cach", sel.value);
+        const iu = el.querySelector(`[data-nao-idc-url="${pid}"]`), ir = el.querySelector(`[data-nao-idc-region="${pid}"]`);
+        if (iu) f.append("idc_url", (iu.value || "").trim());
+        if (ir) f.append("idc_region", (ir.value || "").trim());
+        let r = null;
+        try { r = await (await fetch(`/nao-cli/${pid}/login-start`, { method: "POST", body: f })).json(); }
+        catch (e) { r = { ok: false, error: t("common.net_err") }; }
+        btn.disabled = false; btn.textContent = cu;
+        if (!r || !r.ok) {
+          if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.cant_open"));
+          if (box && r && r.nhat_ky) { box.style.display = ""; box.innerHTML = ""; naoLog(box, r); }
+          return;
+        }
+        if (r.xong) { xong(); return; }
+        if (box) {
+          box.style.display = "";
+          box.innerHTML = `<div>${esc(t("models.grok_open"))}<br><a href="${esc(r.url)}" target="_blank" rel="noopener" style="word-break:break-all">${esc(r.url)}</a></div>`
+            + (r.code ? `<div>${esc(t("models.grok_code"))} <code>${esc(r.code)}</code></div>` : "")
+            + `<div>${esc(t("models.grok_back"))}</div>`;
+        }
+        if (msg) msg.textContent = t("models.wait_browser");
+        const han = Date.now() + 600000;
+        const quay = async () => {
+          let d = null;
+          try { d = await (await fetch(`/nao-cli/${pid}/login-poll`)).json(); } catch (e) {}
+          if (d && d.connected) { if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.agy_ok")); xong(); return; }
+          if (Date.now() > han || (d && !d.dang_cho)) {
+            if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.timeout_login"));
+            naoLog(box, d);
+            return;
+          }
+          setTimeout(quay, 2500);
+        };
+        setTimeout(quay, 2500);
+        return;
+      }
+      if (act === "key") {
+        const o = el.querySelector(`#nao-key-${pid}`);
+        const v = ((o && o.value) || "").trim();
+        if (!v) { if (o) o.focus(); return; }
+        btn.disabled = true;
+        const f = new FormData(); f.append("key", v);
+        let r = null;
+        try { r = await (await fetch(`/nao-cli/${pid}/api-key`, { method: "POST", body: f })).json(); }
+        catch (e) { r = { ok: false, error: t("common.net_err") }; }
+        btn.disabled = false;
+        if (o) o.value = "";
+        if (r && r.ok) { if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.nao_key_saved")); xong(); }
+        else if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.not_works"));
+        return;
+      }
+      if (act === "disc") {
+        btn.disabled = true; btn.textContent = t("models.disconnecting");
+        let r = null;
+        try { r = await (await fetch(`/nao-cli/${pid}/logout`, { method: "POST" })).json(); } catch (e) {}
+        if (r && r.ok === false && msg) { msg.innerHTML = Icons.warn(r.error || ""); btn.disabled = false; btn.textContent = cu; return; }
+        _daHoiModel.delete(pid);
+        renderModelsCloudTab(el);
+        return;
+      }
+      if (act === "check") {
+        btn.disabled = true; btn.textContent = t("models.trying");
+        if (msg) msg.textContent = t("models.testing");
+        const _br = window.currentBrainPath ? currentBrainPath() : "brain";
+        let r = null;
+        try { r = await (await fetch(`/nao-cli/${pid}/check?brain=${encodeURIComponent(_br)}`, { method: "POST" })).json(); }
+        catch (e) { r = { ok: false, error: t("common.net_err") }; }
+        btn.disabled = false; btn.textContent = cu;
+        const mcpTxt = (r && r.mcp)
+          ? (r.mcp.co_javis ? " · " + esc(t("models.mcp_ok"))
+             : (r.mcp.hub_bat === false ? " · " + esc(t("models.mcp_off")) : " · <b>" + esc(t("models.mcp_fail")) + "</b>"))
+          : "";
+        if (r && r.ok) { if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.works")) + mcpTxt; xong(); }
+        else {
+          if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.not_works")) + mcpTxt;
+          const cd = r && r.chan_doan;
+          if (cd && box) {
+            box.style.display = "";
+            box.innerHTML = `<div class="gcard-meta">${esc(t("models.diag_intro"))}<br>`
+              + `binary <code>${esc(cd.cli_path || t("models.diag_missing"))}</code><br>`
+              + `${esc(t("models.diag_dir"))} <code>${esc(cd.home || "")}</code> - ${esc(cd.home_ton_tai ? t("models.diag_yes") : t("models.diag_no_have"))}<br>`
+              + `${esc(t("models.diag_token"))} <b>${esc(cd.co_token ? t("models.diag_yes") : t("models.diag_no"))}</b></div>`;
+            naoLog(box, cd);
+          }
+        }
+      }
+    };
+    el.querySelectorAll("[data-nao-act]").forEach(b => { b.onclick = () => naoAct(b.dataset.nao, b.dataset.naoAct, b); });
     // ---- Grok Build CLI: đăng nhập device code ngay trên trang ----
     const gkl = el.querySelector("[data-groklogin]");
     if (gkl) gkl.onclick = async () => {

@@ -67,6 +67,7 @@ import antigravity_cli   # bộ não thứ 10: Antigravity CLI (`agy`) - bản G
 import grok_cli          # bộ não thứ 11: Grok Build CLI (`grok`) - gói SuperGrok / X Premium+
 import muse_cli          # bộ não thứ 15: Meta Muse Code CLI (`muse`) - gói thuê bao Muse Code
 import copilot_cli       # bộ não GitHub Copilot CLI (`copilot`) - gói Copilot, model của nhiều hãng
+import cli_nao_chung     # 26.10.215: Kiro / Cursor / Mistral Vibe CLI - nạp module lười qua mo_dun()
 import totp            # xác thực 2 lớp (TOTP) cho cổng đăng nhập - thuần toán, không đụng cấu hình
 # 26.10.80: tính năng thành viên được mời đã gỡ bỏ. Xoá dữ liệu cũ (tài khoản, mã 2FA, phiên) nếu còn.
 for _tenFile in ("users.json", ".member_sessions.json"):
@@ -1729,6 +1730,15 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
     # default_models RỖNG: `muse_cli.list_models` giữ bảng tĩnh vì Meta không có lệnh liệt kê.
     {"id": "muse-cli", "label": "Meta Muse Code CLI", "kind": "cli", "key_field": None,
      "catalog_key": "muse-cli", "default_models": []},
+    # Ba bộ não CLI gói thuê bao thêm ở 26.10.215 (module trong `cli_nao_chung.NAO`). Cùng hạng
+    # Grok Build: thẻ có Cài đặt + Đăng nhập + dán API key ngay trên trang Models. default_models
+    # rỗng: danh sách hỏi CLI (`/provider/models`), lưới cuối nằm trong từng module.
+    {"id": "kiro-cli", "label": "Kiro CLI (Amazon)", "kind": "cli", "key_field": None,
+     "catalog_key": "kiro-cli", "default_models": []},
+    {"id": "cursor-cli", "label": "Cursor CLI", "kind": "cli", "key_field": None,
+     "catalog_key": "cursor-cli", "default_models": []},
+    {"id": "vibe-cli", "label": "Mistral Vibe CLI", "kind": "cli", "key_field": None,
+     "catalog_key": "vibe-cli", "default_models": []},
     {"id": "antigravity-cli", "label": "Google Antigravity CLI", "kind": "cli", "key_field": None,
      "catalog_key": "antigravity-cli", "default_models": []},
     # GitHub Copilot CLI (binary `copilot`, 26.10.213) - một GÓI Copilot mở model của nhiều hãng
@@ -1805,6 +1815,36 @@ def _effective_main(cfg):
         return {"provider": "anthropic-api", "model": m.get("claude_model") or ""}
     return {"provider": "anthropic-cli", "model": m.get("claude_model") or "opus"}
 
+# Phần riêng trên thẻ của ba bộ não CLI mới (Kiro / Cursor / Mistral Vibe). Câu chữ mô tả nằm
+# ở i18n (`models.<id>_note`...), ở đây chỉ là DỮ LIỆU: thẻ có nút gì, khoá tên gì, đuôi khoá.
+_NAO_CLI_THE = {
+    "kiro-cli": {"ten": "Kiro CLI", "bin": "kiro-cli", "ten_khoa": "KIRO_API_KEY",
+                 "cach_dang_nhap": ["builder-id", "google", "github", "identity-center"]},
+    "cursor-cli": {"ten": "Cursor CLI", "bin": "agent", "ten_khoa": "CURSOR_API_KEY",
+                   "cach_dang_nhap": []},
+    "vibe-cli": {"ten": "Mistral Vibe CLI", "bin": "vibe", "ten_khoa": "MISTRAL_API_KEY",
+                 "cach_dang_nhap": []},
+}
+
+
+def _nao_cli_the(pid: str) -> dict:
+    """Trường thẻ Models cho Kiro / Cursor / Mistral Vibe. KHÔNG bao giờ có giá trị khoá - chỉ
+    4 ký tự cuối để người dùng nhận ra khoá nào đang dùng."""
+    mod = cli_nao_chung.mo_dun(pid)
+    if mod is None:
+        return {"cli_found": False, "auth_error": "Module bộ não không nạp được."}
+    st = mod.auth_status()
+    the = dict(_NAO_CLI_THE.get(pid) or {})
+    the["id"] = pid
+    the["duoi_khoa"] = st.get("duoi_khoa", "")
+    the["cach"] = st.get("method", "")
+    return {"cli_found": bool(mod.find_cli()),
+            "auth_method": st.get("method", ""), "account": st.get("account", ""),
+            "plan": st.get("plan", ""), "auth_error": st.get("error", ""),
+            "cai_lenh": mod.lenh_cai(), "dang_nhap": mod.login_huong_dan(),
+            "auth_by_javis": False, "nao_cli": the}
+
+
 def _providers_view(cfg):
     m = cfg.get("model", {})
     cat = m.get("catalog", {}) or {}
@@ -1826,6 +1866,11 @@ def _providers_view(cfg):
         elif p["id"] == "copilot-cli":
             # Đọc `~/.copilot/config.json` (JSONC), không đẻ tiến trình - rẻ như nhánh Grok.
             configured = bool(copilot_cli.auth_status().get("connected"))
+        elif cli_nao_chung.la_nao(p["id"]):
+            # Kiro/Cursor phải hỏi CLI: auth_status của chúng trả CACHE ngay và làm mới ở
+            # thread nền (cùng lý do nhánh `agy` dưới đây). Vibe đọc file `~/.vibe/.env`.
+            _nm = cli_nao_chung.mo_dun(p["id"])
+            configured = bool(_nm and _nm.auth_status().get("connected"))
         elif p["id"] == "antigravity-cli":
             # `agy` giữ phiên trong keyring của hệ điều hành nên không có file nào để soi -
             # phải hỏi chính CLI. Nhưng TUYỆT ĐỐI không hỏi trong luồng này: _providers_view
@@ -1902,6 +1947,10 @@ def _providers_view(cfg):
             item["dang_nhap"] = copilot_cli.login_huong_dan()
             # Phiên do CLI giữ (`~/.copilot/config.json`); nút Ngắt gỡ đúng ba khoá đăng nhập.
             item["auth_by_javis"] = False
+        if cli_nao_chung.la_nao(p["id"]):
+            item.update(_nao_cli_the(p["id"]))
+            if not item["models"]:
+                item["models"] = list(getattr(cli_nao_chung.mo_dun(p["id"]), "MODELS_DU_PHONG", []))
         if p["id"] == "antigravity-cli":
             _a = antigravity_cli.auth_status_nen()   # cùng lý do nhánh `configured` ở trên
             item["cli_found"] = bool(antigravity_cli.find_antigravity_cli())
@@ -1977,6 +2026,8 @@ def _set_main_model(cfg, provider, model):
         m["engine"] = "muse-cli"
     elif provider == "copilot-cli":
         m["engine"] = "copilot-cli"
+    elif cli_nao_chung.la_nao(provider):
+        m["engine"] = provider
     elif provider == "groq":
         m["engine"] = "groq"
     elif provider == "xai":
@@ -2086,6 +2137,7 @@ def _chat_provider(mcfg):
 # thêm provider mới ở aux_engine thì thêm tên vào đây là giao diện có ngay.
 AGENT_PROVIDERS = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli",
                    "copilot-cli",
+                   "kiro-cli", "cursor-cli", "vibe-cli",
                    "openrouter", "anthropic-api", "openai", "gemini", "groq", "xai", "meta", "ollama",
                    # Model chạy máy nhà cũng giao được việc nền cho agent. Bỏ nó ra khỏi đây
                    # là tính năng nửa vời: cài model về rồi mà chỉ chat tay được, không giao
@@ -2449,6 +2501,26 @@ def _copilot_sub_stream(model, messages, reasoning="off", *, brain=None, tag="ch
     if brain:
         _apply_copilot_hub(g, _brain_root(brain), mode=mode)
     return _cli_sub_doc(g, _cli_do_sau_khac(g, copilot_cli, reasoning, prompt), model)
+def _nao_cli_sub_stream(pid, model, messages, reasoning="off", *, brain=None, tag="chat",
+                        mode="suggest"):
+    """Kiro / Cursor / Mistral Vibe cho đường CHAT-THUẦN của `_api_stream`. Cùng khuôn
+    `_grok_sub_stream`; KHÔNG phải `async def` (xem chú thích ở `_antigravity_sub_stream`)."""
+    mod = cli_nao_chung.mo_dun(pid)
+    sys_txt, prompt = _claude_sub_tach(messages)
+    g = _nao_cli_engine(mod, cwd=_brain_root(brain) if brain else None, tag=tag,
+                        model=model or None, instructions=sys_txt)
+    g.mode = mode or "suggest"
+    if brain:
+        _apply_nao_hub(pid, g, _brain_root(brain), mode=mode)
+    return _cli_sub_doc(g, _cli_do_sau_khac(g, mod, reasoning, prompt), model)
+
+
+def _nao_cli_engine(mod, **kw):
+    """Lớp engine của module bộ não CLI mới (KiroCLI / CursorCLI / VibeCLI)."""
+    for ten in ("KiroCLI", "CursorCLI", "VibeCLI"):
+        if hasattr(mod, ten):
+            return getattr(mod, ten)(**kw)
+    raise RuntimeError(f"module {getattr(mod, '__name__', mod)} không có lớp engine")
 
 
 async def _cli_sub_doc(g, prompt, model):
@@ -2550,6 +2622,8 @@ def _api_stream_goc(prov, key, model, messages, reasoning="off"):
         return _muse_sub_stream(model, messages, reasoning)
     if prov == "copilot-cli":
         return _copilot_sub_stream(model, messages, reasoning)
+    if cli_nao_chung.la_nao(prov):
+        return _nao_cli_sub_stream(prov, model, messages, reasoning)
     if prov == "anthropic-cli":
         # Gói Claude Code đi qua chính binary `claude`, KHÔNG tự dựng request tới
         # api.anthropic.com bằng token của người dùng nữa (xem claude_auth.py). Vẫn không có
@@ -3675,6 +3749,27 @@ def _apply_grok_hub(cli, vault_root=None, mode="full"):
     return cli
 
 
+def _apply_nao_hub(pid, cli, vault_root=None, mode="full"):
+    """Gắn MCP hub vào Kiro / Cursor / Mistral Vibe. Cả ba đọc cấu hình MCP theo THƯ MỤC LÀM
+    VIỆC (`.kiro/settings/mcp.json`, `.cursor/mcp.json`, `.vibe/config.toml` - MinMin luôn chạy
+    với cwd = gốc brain) nên ghi vào brain là mỗi brain một hub, không đụng cấu hình cá nhân.
+    Header y hệt các engine khác. Hình dạng entry do module dựng (`hub_entry`), không viết tay."""
+    mod = cli_nao_chung.mo_dun(pid)
+    root = vault_root or getattr(cli, "cwd", None)
+    if not root or mod is None:
+        return cli
+    hub = None
+    if _hub_enabled():
+        headers = {"Authorization": f"Bearer {mcp_hub.hub_token()}", "X-Javis-Mode": mode}
+        try:
+            headers["X-Javis-Vault"] = str(Path(root).expanduser().resolve())
+        except Exception:
+            headers["X-Javis-Vault"] = str(root)
+        hub = mod.hub_entry(mcp_hub.hub_url(), headers)
+    mod.ghi_mcp_settings(root, hub)
+    return cli
+
+
 def _apply_muse_hub(cli, vault_root=None, mode="full"):
     """Gắn MCP hub của Javis vào tiến trình `muse`.
 
@@ -4184,6 +4279,97 @@ async def muse_check(brain: str = "brain"):
         d["mcp"] = {"co_javis": False, "loi": f"{type(e).__name__}: {e}"}
     try:
         d["chan_doan"] = muse_cli.chan_doan()
+    except Exception as e:
+        d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
+    return d
+
+
+# ---- Kiro / Cursor / Mistral Vibe CLI (26.10.215): MỘT bộ route cho cả ba, theo `pid` ----
+# Cùng các bước như thẻ Grok/Antigravity: Cài đặt (lệnh chính chủ chạy nền) -> Đăng nhập (link +
+# mã, mở ở máy người dùng) hoặc dán API key -> Kiểm tra lại (chạy thật một lượt + soát hub MCP).
+
+
+def _nao_mod_or_404(pid: str):
+    from fastapi import HTTPException
+    mod = cli_nao_chung.mo_dun(pid)
+    if mod is None:
+        raise HTTPException(404, f"không có bộ não '{pid}'")
+    return mod
+
+
+@app.get("/nao-cli/{pid}/status")
+def nao_cli_status(pid: str):
+    mod = _nao_mod_or_404(pid)
+    d = dict(mod.auth_status())
+    d.update(_nao_cli_the(pid))
+    try:
+        d["chan_doan"] = mod.chan_doan()
+    except Exception as e:
+        d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
+    return d
+
+
+@app.post("/nao-cli/{pid}/install")
+async def nao_cli_install(pid: str):
+    mod = _nao_mod_or_404(pid)
+    return await asyncio.to_thread(mod.cai_dat_start)
+
+
+@app.get("/nao-cli/{pid}/install-poll")
+def nao_cli_install_poll(pid: str):
+    return _nao_mod_or_404(pid).cai_dat_trang_thai()
+
+
+@app.post("/nao-cli/{pid}/login-start")
+async def nao_cli_login_start(pid: str, cach: str = Form(""), idc_url: str = Form(""),
+                              idc_region: str = Form("")):
+    """Mở phiên đăng nhập, trả link (+ mã nếu có). Kiro nhận thêm cách đăng nhập (Builder ID /
+    Google / GitHub / Identity Center). Giao diện hỏi tiếp /login-poll tới khi xong."""
+    mod = _nao_mod_or_404(pid)
+    if pid == "kiro-cli":
+        return await asyncio.to_thread(mod.login_start, cach or "builder-id", idc_url, idc_region)
+    return await asyncio.to_thread(mod.login_start)
+
+
+@app.get("/nao-cli/{pid}/login-poll")
+async def nao_cli_login_poll(pid: str):
+    # Có thể đẻ `whoami`/`status` một lần khi tiến trình đăng nhập vừa thoát: chạy ở worker.
+    return await asyncio.to_thread(_nao_mod_or_404(pid).login_trang_thai)
+
+
+@app.post("/nao-cli/{pid}/logout")
+async def nao_cli_logout(pid: str):
+    mod = _nao_mod_or_404(pid)
+    return await asyncio.to_thread(mod.logout)
+
+
+@app.post("/nao-cli/{pid}/api-key")
+async def nao_cli_api_key(pid: str, key: str = Form("")):
+    """Dán API key của hãng (KIRO_API_KEY / CURSOR_API_KEY / MISTRAL_API_KEY). Khoá ghi vào file
+    0600 trong thư mục cấu hình của CHÍNH CLI đó (Vibe: `~/.vibe/.env`, đúng chỗ vibe tự ghi),
+    không vào settings của MinMin và không bao giờ trả lại giao diện."""
+    return await asyncio.to_thread(_nao_mod_or_404(pid).dat_api_key, key)
+
+
+@app.post("/nao-cli/{pid}/check")
+async def nao_cli_check(pid: str, brain: str = "brain"):
+    """Chạy thử MỘT lượt thật ở mức suggest, rồi ĐỌC LẠI cấu hình MCP trong brain (bài học
+    `agy`: ghi xong không phải bằng chứng, đọc lại mới là)."""
+    mod = _nao_mod_or_404(pid)
+    root = _brain_root(brain)
+    try:
+        _apply_nao_hub(pid, _types.SimpleNamespace(cwd=root), root)
+    except Exception as e:
+        print(f"[{pid} check] ghi cấu hình MCP: {e}", file=__import__('sys').stderr)
+    d = await asyncio.to_thread(mod.kiem_tra_nhanh)
+    try:
+        mcp = mod.trang_thai_mcp(root)
+        mcp["hub_bat"] = _hub_enabled()
+        d["mcp"] = mcp
+    except Exception as e:
+        d["mcp"] = {"co_javis": False, "loi": f"{type(e).__name__}: {e}"}
+    try:
+        d["chan_doan"] = mod.chan_doan()
     except Exception as e:
         d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
     return d
@@ -5481,6 +5667,10 @@ async def _fetch_provider_models(provider, m):
     if provider == "copilot-cli":
         # `copilot help config` (danh mục của bản CLI, không cần mạng) - đẻ tiến trình nên ở worker.
         return await asyncio.to_thread(copilot_cli.list_models)
+    if cli_nao_chung.la_nao(provider):
+        # Kiro/Cursor đẻ tiến trình con để hỏi danh sách: chạy ở worker.
+        _nm = cli_nao_chung.mo_dun(provider)
+        return await asyncio.to_thread(_nm.list_models) if _nm else None
     if provider == "antigravity-cli":
         # `agy models` là NGUỒN CHÂN LÝ, không có bảng chép tay nào để rơi về - chạy ở worker
         # vì nó đẻ tiến trình con và có thể mất vài giây.
@@ -13332,7 +13522,7 @@ async def _dg_resolver(su_that: dict, brain: str):
 
 
 _DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli",
-               "copilot-cli")
+               "copilot-cli", "kiro-cli", "cursor-cli", "vibe-cli")
 _DG_NAO_API = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama",
                "openai-compat", "ollama-local", *nha_api_rieng.IDS)
 
@@ -16384,6 +16574,85 @@ async def websocket_endpoint(ws: WebSocket):
                         "type": "response", "content": final_text, "engine": "muse-cli",
                         "model": actual_model or "", "session_id": conv_sid,
                         **_ctx_frame(runtime_trace, _ctx_in)}))
+            elif cli_nao_chung.la_nao(prov):
+                # ===== Kiro / Cursor / Mistral Vibe CLI (26.10.215) - tool native + MCP hub =====
+                #
+                # Cùng khuôn nhánh Grok/Muse ngay trên. Id mạch do CLI phát (Cursor
+                # `session_id`, Vibe `sessionId`, Kiro nếu có) được đọc lại sau lượt và lưu ở cột
+                # riêng của từng engine (`store.set_mach_native`). Không có id thì mỗi lượt mồi
+                # lại từ transcript - tốn token hơn nhưng không mất ngữ cảnh.
+                _nm = cli_nao_chung.mo_dun(prov)
+                actual_model = api_model or None
+                sysprompt, _sub_plan = await _subscription_system_prompt(
+                    prov, actual_model or "", kind)
+                ncli = _nao_cli_engine(_nm, cwd=_cwd_luot_chat(_row0, brain), model=actual_model,
+                                       tag=turn_tag, instructions=sysprompt)
+                ncli.mode = _muc_quyen_luot_chat(_row0, brain)
+                _apply_nao_hub(prov, ncli, _brain_root(brain), mode=ncli.mode)
+                if not ncli.is_available():
+                    final_text = (f"⚠ Chưa cài {_nm.TEN} trên máy này. Mở trang Models, bấm "
+                                  f"\"Cài đặt\" ở thẻ {_nm.TEN} rồi \"Đăng nhập\" (chạy trên VPS "
+                                  "cũng được: thẻ hiện link để mở ở máy của bạn).")
+                    await ws.send_text(json.dumps({
+                        "type": "response", "content": final_text, "engine": prov,
+                        "model": actual_model or "", "session_id": conv_sid,
+                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                else:
+                    _n_mach = store.get_mach_native(conv_sid, prov).strip()
+                    if _n_mach and compaction.nen_mach_thue_bao(
+                            _row0.get("last_input_tokens"), msg_count=_row0.get("msg_count"),
+                            rotated_at=_row0.get("thread_rotated_msg")):
+                        _n_mach = ""
+                        store.clear_mach_native(conv_sid, prov)
+                        store.mark_thread_rotated(conv_sid)
+                        _CONTEXT_RUNTIME.record_runtime_event(
+                            runtime_trace, "thread.rotated",
+                            {"engine": prov,
+                             "last_input_tokens": int(_row0.get("last_input_tokens") or 0),
+                             "threshold": compaction.SUBSCRIPTION_THREAD_MAX_TOKENS})
+                        await ws.send_text(json.dumps({
+                            "type": "tool_call", "tool": "javis_nen_mach",
+                            "content": "⚙ Mạch hội thoại đã dài, Javis mở mạch mới."}))
+                    ncli.session_id = _n_mach or None
+                    _n_cur = _cli_do_sau_khac(ncli, _nm, reasoning, user_message)
+                    _n_raw = [{"role": _m["role"], "content": _m["content"]}
+                              for _m in store.get_messages(conv_sid)[:-1]
+                              if _m["role"] in ("user", "assistant") and _m.get("content")]
+                    _n_prompt = (_n_cur if _n_mach else compaction.bootstrap_prompt(
+                        _n_raw, _n_cur, summary=_row0.get("compact_summary") or ""))
+                    _CONTEXT_RUNTIME.observe_payload(
+                        runtime_trace,
+                        [{"role": "system", "content": sysprompt},
+                         {"role": "user", "content": _n_prompt}],
+                        provider=prov, model=actual_model or "")
+                    _n_loi = False
+                    async for ev in ncli.query(_n_prompt):
+                        et = ev.get("type")
+                        if et == "tool_call":
+                            await ws.send_text(json.dumps({
+                                "type": "tool_call", "tool": ev.get("name", ""),
+                                "detail": tool_label.chi_tiet(ev),
+                                "content": f"⚙ Đang gọi: {ev.get('name', '')}"}))
+                        elif et == "final":
+                            final_text = ev.get("content") or ""
+                        elif et == "usage":
+                            store.set_last_input_tokens(
+                                conv_sid, int(ev.get("input_tokens") or 0))
+                        elif et == "error":
+                            _n_loi = True
+                            await ws.send_text(_limit_frame(
+                                ev.get("content") or "", prov, actual_model or ""))
+                    if _n_mach and _n_loi and not final_text:
+                        # Mạch cũ chết trên máy: xoá id để lượt sau mồi lại từ lịch sử.
+                        store.clear_mach_native(conv_sid, prov)
+                        ncli.session_id = None
+                    elif ncli.session_id:
+                        store.set_mach_native(conv_sid, prov, ncli.session_id)
+                    final_text = _chuan_hoa_link_file(_brain_root(brain), final_text)
+                    await ws.send_text(json.dumps({
+                        "type": "response", "content": final_text, "engine": prov,
+                        "model": actual_model or "", "session_id": conv_sid,
+                        **_ctx_frame(runtime_trace, _ctx_in)}))
             elif prov == "antigravity-cli":
                 # ===== Gói Google qua ANTIGRAVITY CLI (`agy`) - tool native + MCP hub =====
                 #
@@ -17871,6 +18140,7 @@ async def websocket_endpoint(ws: WebSocket):
                             else "grok-cli" if prov == "grok-cli"
                             else "muse-cli" if prov == "muse-cli"
                             else "copilot-cli" if prov == "copilot-cli"
+                            else prov if cli_nao_chung.la_nao(prov)
                             else "antigravity-cli" if prov == "antigravity-cli"
                             else prov if ((kind == "api" and api_key) or kind == "oauth")
                             else "cli")
@@ -20327,7 +20597,8 @@ def _tg_quen_sid(sess) -> None:
 # `antigravity` thì sót ở cả ba chỗ.
 _TG_ENGINE_MACH = (("cli", "cli"), ("codex", "codex"), ("grok-cli", "grok"),
                    ("muse-cli", "muse"), ("antigravity-cli", "antigravity"),
-                   ("copilot-cli", "copilot"))
+                   ("copilot-cli", "copilot"), ("kiro-cli", "kiro-cli"), ("cursor-cli", "cursor-cli"),
+                   ("vibe-cli", "vibe-cli"))
 
 
 def _tg_ngat_mach(sess, tru=None):
@@ -20666,6 +20937,7 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
                     else "grok-cli" if prov == "grok-cli"
                     else "muse-cli" if prov == "muse-cli"
                     else "copilot-cli" if prov == "copilot-cli"
+                    else prov if cli_nao_chung.la_nao(prov)
                     else "antigravity-cli" if prov == "antigravity-cli"
                     else prov if ((kind == "api" and api_key) or kind == "oauth")
                     else "cli")
@@ -21203,6 +21475,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         # Chỉ đọc, và nói rõ cho chủ biết ở câu trả lời (`canh_bao`) chứ không im lặng hạ mức.
         _doc_roi_ve = _muc == "doc" and prov in ("anthropic-cli", "grok-cli", "muse-cli",
                                                  "copilot-cli",
+                                                 "kiro-cli", "cursor-cli", "vibe-cli",
                                                  "antigravity-cli")
         if _muc == "doc" and not _doc_roi_ve:
             return await _bot_tra_loi_co_tool(
@@ -21439,6 +21712,43 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         if not out and loi:
             _noi = _subscription_limit_message(loi[0], "muse-cli")
             return _noi or ("⚠ Muse Code CLI lỗi: " + loi[0][:400])
+        return out or "(không có nội dung)"
+
+    if cli_nao_chung.la_nao(prov):
+        # Kiro / Cursor / Mistral Vibe: cùng khuôn nhánh Muse ngay trên, object engine giữ ở
+        # `sess[prov]` để mạch nối tiếp qua các tin nhắn.
+        _nm = cli_nao_chung.mo_dun(prov)
+        actual_model = api_model or None
+        ncli = sess.get(prov)
+        if ncli is None:
+            ncli = _nao_cli_engine(_nm, cwd=_brain_root(brain), model=actual_model,
+                                   tag=f"telegram:{chat_id}", instructions=sysprompt)
+            sess[prov] = ncli
+        else:
+            ncli.cwd = _brain_root(brain)
+            ncli.model = actual_model
+            ncli.instructions = sysprompt
+        ncli.mode = "full"
+        _apply_nao_hub(prov, ncli, _brain_root(brain))
+        if not ncli.is_available():
+            return (f"⚠ Chưa cài {_nm.TEN} trên máy chạy MinMin. Mở trang Models, bấm "
+                    f"\"Cài đặt\" rồi \"Đăng nhập\" ở thẻ {_nm.TEN}.")
+        _hoi = text
+        if not getattr(ncli, "session_id", None):
+            _raw_cu, _tom_cu = _tg_lich_su_kho(store, conv_sid, text)
+            _hoi = compaction.bootstrap_prompt(_raw_cu, _hoi, summary=_tom_cu)
+        out, loi = "", []
+        async for ev in ncli.query(_hoi):
+            et = ev.get("type")
+            if et == "tool_call":
+                await _p(f"⚙ Đang gọi: {ev.get('name', '')}")
+            elif et == "final":
+                out = ev.get("content") or ""
+            elif et == "error":
+                loi.append(str(ev.get("content") or ""))
+        if not out and loi:
+            _noi = _subscription_limit_message(loi[0], prov)
+            return _noi or (f"⚠ {_nm.TEN} lỗi: " + loi[0][:400])
         return out or "(không có nội dung)"
 
     if prov == "antigravity-cli":
@@ -21817,6 +22127,9 @@ _TG_NHAN_NGAN = {
     "openai-oauth": "ChatGPT",
     "grok-cli": "Grok Build",
     "muse-cli": "Muse Code",
+    "kiro-cli": "Kiro",
+    "cursor-cli": "Cursor",
+    "vibe-cli": "Mistral Vibe",
     "antigravity-cli": "Antigravity",
     "copilot-cli": "Copilot",
     "openrouter": "OpenRouter",

@@ -25,6 +25,9 @@ Ba loại engine, khác nhau ở CÔNG CỤ có được - đây là chỗ phả
 - copilot-cli: GitHub Copilot CLI chạy bằng gói Copilot. Agent thật (tool native + MCP hub qua
   `<brain>/.copilot/mcp-config.json` truyền bằng --additional-mcp-config). Mức quyền xuống cờ:
   suggest -> --deny-tool=shell + write, auto -> --deny-tool=shell, full -> không chặn ở tầng CLI.
+- kiro-cli / cursor-cli / vibe-cli (26.10.215): Kiro, Cursor, Mistral Vibe CLI chạy bằng gói của
+  từng hãng. Agent thật (tool native + MCP hub ghi vào cấu hình MCP trong brain). Mức quyền
+  xuống cờ của từng CLI - xem `_chuan_bi` trong từng module.
 - api (openrouter/openai/gemini/anthropic-api): KHÔNG có tool native. Bù lại hub cấp
   javis_read_file / javis_list_dir / javis_write_file / javis_use_skill + tool MCP, và
   javis_write_file tự chặn khi mode là suggest (mcp_hub._builtin_tools). Không có Bash,
@@ -51,6 +54,9 @@ GROK_CLI = "grok-cli"
 MUSE_CLI = "muse-cli"
 COPILOT_CLI = "copilot-cli"
 ANTIGRAVITY = "antigravity-cli"
+# Ba bộ não CLI dựng chung một khuôn (cli_nao_chung.NAO). Giữ tên ở đây thay vì import để module
+# này không kéo theo claude_cli lúc nạp.
+NAO_CLI_MOI = ("kiro-cli", "cursor-cli", "vibe-cli")
 API_PROVIDERS = ("openrouter", "openai", "gemini", "groq", "xai", "meta", "anthropic-api", "ollama",
                  "ollama-local", "openai-compat", *nha_api_rieng.IDS)
 
@@ -305,6 +311,16 @@ def availability(spec: dict, settings: dict = None) -> tuple:
                 return False, st.get("error") or "GitHub Copilot CLI chưa sẵn sàng."
         except Exception:
             return False, "Không kiểm tra được GitHub Copilot CLI."
+    if prov in NAO_CLI_MOI:
+        try:
+            import cli_nao_chung
+            _m = cli_nao_chung.mo_dun(prov)
+            st = _m.auth_status() if _m else {"connected": False}
+            # "dang_kiem" = chưa có kết quả hỏi CLI lần nào: cứ cho chạy, lượt thật tự báo lỗi.
+            if not st.get("connected") and not st.get("dang_kiem"):
+                return False, st.get("error") or f"{prov} chưa sẵn sàng."
+        except Exception:
+            return False, f"Không kiểm tra được {prov}."
         return True, ""
     if prov == ANTIGRAVITY:
         try:
@@ -712,6 +728,35 @@ def _build_copilot(spec, claude_cli_obj, mode, tag):
     return pc
 
 
+def _build_nao_cli(spec, claude_cli_obj, mode, tag):
+    """Engine việc nền/agent chạy bằng Kiro / Cursor / Mistral Vibe CLI. Cùng khuôn `_build_grok`:
+    entry MCP do chính module dựng (`hub_entry`) rồi ghi vào cấu hình MCP trong brain."""
+    import cli_nao_chung
+    prov = spec.get("provider")
+    _m = cli_nao_chung.mo_dun(prov)
+    lop = next(getattr(_m, t) for t in ("KiroCLI", "CursorCLI", "VibeCLI") if hasattr(_m, t))
+    muc = mode or getattr(claude_cli_obj, "javis_mode", None) or "full"
+    nc = lop(cwd=getattr(claude_cli_obj, "cwd", None),
+             tag=tag or getattr(claude_cli_obj, "tag", "aux"),
+             model=spec.get("model") or None,
+             instructions=getattr(claude_cli_obj, "system_prompt", None))
+    nc.mode = muc
+    nc.provider = prov
+    vault = getattr(claude_cli_obj, "javis_vault", None) or getattr(claude_cli_obj, "cwd", None)
+    if vault:
+        try:
+            import mcp_hub
+            hub = None
+            if bool(cfgmod.read_settings().get("mcp", {}).get("hub", True)):
+                hub = _m.hub_entry(mcp_hub.hub_url(),
+                                   {"Authorization": f"Bearer {mcp_hub.hub_token()}",
+                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault)})
+            _m.ghi_mcp_settings(vault, hub)
+        except Exception as e:
+            print(f"[aux {prov} mcp] {e}", file=sys.stderr)
+    return nc
+
+
 def _build_antigravity(spec, claude_cli_obj, mode, tag):
     """Engine việc nền/agent chạy bằng Antigravity CLI (`agy`).
 
@@ -771,6 +816,8 @@ def dung_rieng(spec: dict, cli, mode: str, tag: str, codex_profile=None, setting
         return _build_muse(sp, cli, mode, tag)
     if prov == COPILOT_CLI:
         return _build_copilot(sp, cli, mode, tag)
+    if prov in NAO_CLI_MOI:
+        return _build_nao_cli(sp, cli, mode, tag)
     if prov == ANTIGRAVITY:
         return _build_antigravity(sp, cli, mode, tag)
     if prov in API_PROVIDERS:
@@ -816,6 +863,8 @@ def _main_fallback_engine(cli, mode, tag, settings, exclude, codex_profile=None)
             return _build_muse(sp, cli, mode, t)
         if prov == COPILOT_CLI:
             return _build_copilot(sp, cli, mode, t)
+        if prov in NAO_CLI_MOI:
+            return _build_nao_cli(sp, cli, mode, t)
         if prov in API_PROVIDERS:
             return _build_api(sp, cli, mode, t)
     except Exception as e:
@@ -888,6 +937,8 @@ def swap(cli, mode: str = None, tag: str = None, spec: dict = None,
                 return _build_muse(sp, cli, mode, tag)
             if prov == COPILOT_CLI:
                 return _build_copilot(sp, cli, mode, tag)
+            if prov in NAO_CLI_MOI:
+                return _build_nao_cli(sp, cli, mode, tag)
             if prov == ANTIGRAVITY:
                 return _build_antigravity(sp, cli, mode, tag)
             if prov in API_PROVIDERS:
@@ -917,6 +968,8 @@ def swap(cli, mode: str = None, tag: str = None, spec: dict = None,
             primary = _build_muse(sp, cli, mode, tag)
         elif prov == COPILOT_CLI:
             primary = _build_copilot(sp, cli, mode, tag)
+        elif prov in NAO_CLI_MOI:
+            primary = _build_nao_cli(sp, cli, mode, tag)
         elif prov == ANTIGRAVITY:
             primary = _build_antigravity(sp, cli, mode, tag)
         elif prov in API_PROVIDERS:
