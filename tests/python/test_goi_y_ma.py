@@ -69,5 +69,21 @@ kt("tạo mã ghép", len(r2["ma"]) == 6)
 kt("xác nhận thiếu mã = 400", cl.post("/goi-y-ma/may/xac-nhan", headers=h, json={}).status_code == 400)
 kt("xác nhận ok", cl.post("/goi-y-ma/may/xac-nhan", headers=h, json={"ma": "P720", "nguon": "bai_viet", "khoa": "Z1"}).json()["ok"])
 
+# --- tra.js (tiện ích) phải ra cùng kết quả với phan_giai
+import shutil
+import subprocess
+import json as _j
+if shutil.which("node"):
+    js = ("require(%r);const b=%s;const r=mmTra(b,{text:'giá V33',ad_ids:['A1'],post_id:'pg_P9'});"
+          "console.log(JSON.stringify(r.map(x=>[x.ma,x.ton,x.bang_chung.length])))") % (
+        str(ROOT / "apps" / "goi-y-ma" / "tra.js"), _j.dumps(g.xuat_bang()))
+    out = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=30)
+    try:
+        kq_js = _j.loads(out.stdout.strip() or "[]")
+    except ValueError:
+        kq_js = []
+    py = g.phan_giai(text="giá V33", ad_id="A1", post_id="P9")["ung_vien"]
+    kt("tra.js khớp Python", sorted(x[0] for x in kq_js) == sorted(u["ma"] for u in py) and len(kq_js) == 2)
+
 print(f"goi_y_ma: {ok} đạt, {loi} lỗi")
 sys.exit(1 if loi else 0)
