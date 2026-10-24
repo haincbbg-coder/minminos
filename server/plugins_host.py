@@ -41,6 +41,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import yaml
 import fastyaml
 
+import che_do_thu   # cờ chạy thử của Trụ 2 (26.10.217)
 import mcp_catalog
 from config import STATE_DIR
 
@@ -771,6 +772,13 @@ def _make_call(tool: dict, ctx: PluginContext, mode: str):
             loai = "ghi/hành động" if min_mode == "safe" else "nguy hiểm (chỉ chế độ full)"
             return (f"ERROR: tool '{name}' cần mức quyền cao hơn ({min_mode}) - thao tác {loai} "
                     f"bị chặn ở chế độ hiện tại. Nâng chế độ chạy nếu thật sự cần.")
+        # CHẠY THỬ (Trụ 2, 26.10.217): plugin ghi (safe) và hành động ra ngoài (full) KHÔNG chạy
+        # trong lượt thử, kể cả check_fn: không một dòng mã nào của plugin được chạy. Ghi ý định
+        # rồi trả câu giả lập để agent làm tiếp như thật. Plugin chỉ đọc (readonly) vẫn chạy.
+        if che_do_thu.dang_bat() and min_mode in ("safe", "full"):
+            che_do_thu.ghi_y_dinh(name, args or {}, nguon=f"plugin:{getattr(ctx, 'slug', '')}",
+                                  loai=min_mode)
+            return che_do_thu.cau_gia_lap(name)
         if check_fn:
             try:
                 why = check_fn()
