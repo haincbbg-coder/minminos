@@ -1377,6 +1377,21 @@ def registry_inventory(mode="full", vault_root=None, include_plugins=True, inclu
     )
 
 
+def quen_cache_vault(vault_root) -> int:
+    """Bỏ các bảng tool đã cache cho MỘT brain (Trụ 2: brain tạm của lượt chạy thử).
+
+    Lượt thử dùng lại cùng một đường dẫn brain tạm cho nhiều biến thể; mỗi biến thể có thể gán
+    skill khác, mà danh sách skill nằm trong mô tả tool javis_use_skill lúc dò. Không bỏ cache
+    thì biến thể sau thấy danh sách skill của biến thể trước trong tối đa 60 giây."""
+    v = str(vault_root or "")
+    if not v:
+        return 0
+    bo = [k for k in list(_cache) if len(k) > 1 and k[1] == v]
+    for k in bo:
+        _cache.pop(k, None)
+    return len(bo)
+
+
 def invalidate_cache():
     """Gọi sau khi thêm/sửa/xoá connection - làm mới tool list + đóng session cũ."""
     _cache.clear()

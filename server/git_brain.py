@@ -493,6 +493,50 @@ def revert_last_learn(root: str) -> dict:
         return {"ok": False, "error": f"{type(e).__name__}: {e}"}
 
 
+def files_of_commit(root: str, h: str) -> List[str]:
+    """Các file một commit đã đổi (đường dẫn tương đối, dạng posix). Rỗng nếu không đọc được."""
+    try:
+        r = _git(root, "show", "--name-only", "--pretty=format:", h)
+        if r.returncode != 0:
+            return []
+        return [l.strip() for l in (r.stdout or "").splitlines() if l.strip()]
+    except Exception:
+        return []
+
+
+def revert_commit(root: str, h: str, prefix: str = "") -> dict:
+    """git revert MỘT commit chỉ định (tổng quát hoá revert_last_learn). Trả {ok, reverted, error}.
+
+    Dành cho nút Hoàn tác của bộ cải tiến có đối chứng (Trụ 2, 26.10.217). Hai rào giống hệt
+    revert_last_learn: từ chối khi CHÍNH file trong commit đang sửa dở (để không nuốt chỉnh tay
+    của chủ), và revert hỏng thì abort để brain không kẹt ở trạng thái revert dở.
+    `prefix`: khác rỗng thì commit phải có tiêu đề mở đầu bằng đúng tiền tố đó - nút Hoàn tác
+    của một tính năng không bao giờ được revert nhầm commit của tính năng khác."""
+    if not is_git_checkout(root):
+        return {"ok": False, "error": "Brain chưa phải git repo"}
+    h = str(h or "").strip()
+    if not h or not all(c in "0123456789abcdef" for c in h.lower()):
+        return {"ok": False, "error": "Mã commit không hợp lệ"}
+    try:
+        r = _git(root, "log", "-n", "1", "--pretty=format:%s", h)
+        if r.returncode != 0:
+            return {"ok": False, "error": "Không tìm thấy commit này trong brain"}
+        subj = (r.stdout or "").strip()
+        if prefix and not subj.startswith(prefix):
+            return {"ok": False, "error": f"Commit {h} không phải commit '{prefix}'"}
+        target = set(files_of_commit(root, h))
+        overlap = [p for p in changed_paths(root) if p in target]
+        if overlap:
+            return {"ok": False, "error": f"Các file này đang bị sửa dở, hãy tự xử lý trước: {overlap[:3]}"}
+        rv = _git(root, "revert", "--no-edit", h)
+        if rv.returncode != 0:
+            _git(root, "revert", "--abort")
+            return {"ok": False, "error": (rv.stderr or "revert lỗi")[:200]}
+        return {"ok": True, "reverted": h, "subject": subj}
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {e}"}
+
+
 # ============================================================
 # BACKUP lên GitHub (đồng bộ brain lên repo riêng, khôi phục khi mất máy/VPS)
 # ============================================================

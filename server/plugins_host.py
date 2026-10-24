@@ -843,6 +843,30 @@ def unload(slug: str) -> dict:
     return ra
 
 
+def quen_vault(vault_root: Optional[str]) -> int:
+    """Bỏ bản nạp plugin RIÊNG của một brain (chạy on_unload của từng plugin trong bản đó).
+
+    Dành cho brain TẠM của bộ cải tiến có đối chứng (Trụ 2, 26.10.217): mỗi brain là một khoá
+    cache riêng, nên brain tạm dùng xong mà không bỏ thì mỗi lần cải tiến để lại vài bản nạp mọi
+    plugin trong RAM. Chỉ chạm đúng khoá của brain đó, không đụng bản nạp của brain thật nào.
+    Trả số plugin đã bỏ. Không bao giờ ném lỗi."""
+    da_bo = 0
+    if not vault_root:
+        return 0
+    with _lock:
+        for k in (_key(vault_root, True), _key(vault_root, False)):
+            ent = _cache.pop(k, None)
+            for lp in (ent or {}).get("plugins") or []:
+                for fn in reversed(getattr(lp.ctx, "_on_unload", []) or []):
+                    try:
+                        fn()
+                    except Exception as e:
+                        print(f"[plugins] on_unload khi bỏ brain tạm: {type(e).__name__}: {e}",
+                              file=sys.stderr)
+                da_bo += 1
+    return da_bo
+
+
 def set_removed(slug: str, removed: bool) -> dict:
     """Gỡ hoặc cài lại một plugin. Ghi vào `STATE_DIR/plugins.json`, không đụng cây code.
 

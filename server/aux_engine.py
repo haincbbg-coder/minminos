@@ -387,6 +387,13 @@ class _ApiAuxEngine:
         self.tag = tag
         self.reasoning = reasoning
         self.session_id = None      # engine API không có phiên nối tiếp - giữ cho đủ hợp đồng
+        # Trụ 2 (26.10.217), cả hai mặc định TẮT nên mọi chỗ dùng cũ không đổi gì:
+        # - tools_override = (tools, route): bộ tool RIÊNG thay cho discover_all của hub. Phiên
+        #   cải tiến chỉ được đọc thư mục bằng chứng của nó, không được thấy POS/Zalo/plugin.
+        # - phat_ket_qua_tool: phát cả sự kiện tool_result để bộ thu trajectory ghi được kết quả
+        #   tool. Việc nền cũ chỉ đọc final nên trước giờ bỏ sự kiện này đi.
+        self.tools_override = None
+        self.phat_ket_qua_tool = False
 
     def is_available(self) -> bool:
         return bool(api_key_for(self.provider))
@@ -423,7 +430,9 @@ class _ApiAuxEngine:
         tools, route = [], {}
         # `khong_tool` (26.10.97): việc chỉ cần ĐỌC CHỮ được đưa sẵn trong prompt (soi gói chia sẻ
         # của người lạ) thì không cấp tool nào, kể cả tool đọc file của hub.
-        if not getattr(self, "khong_tool", False):
+        if getattr(self, "tools_override", None) is not None:
+            tools, route = self.tools_override
+        elif not getattr(self, "khong_tool", False):
             try:
                 tools, route = await mcp_hub.discover_all(self.javis_mode or "full",
                                                           vault_root=self.vault_root)
@@ -495,7 +504,7 @@ class _ApiAuxEngine:
             t = ev.get("type")
             if t == "text":
                 buf.append(ev.get("content") or "")
-            elif t in ("tool_call", "error", "usage"):
+            elif t in ("tool_call", "error", "usage") or (t == "tool_result" and self.phat_ket_qua_tool):
                 if t == "usage":
                     self._ghi_muc_dung(ev)
                 yield ev

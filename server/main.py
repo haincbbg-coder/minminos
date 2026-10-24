@@ -8085,6 +8085,26 @@ def _agent_memory(brain, slug):
     except Exception:
         return ""
 
+
+# Kinh nghiệm CÓ BẰNG CHỨNG của trợ lý (Trụ 2, 26.10.217): chỉ có khi chủ đã áp dụng một lần
+# "Cải tiến có đối chứng", nên trợ lý chưa từng cải tiến không đổi một chữ nào trong prompt.
+# Khác mục "Bài học (tự học)" của JAVIS_LESSON ở chỗ mỗi mục ở đây mang mã lần chạy, đề đã thử và
+# kết quả trước/sau. Có trần để một file phình không ăn hết ngữ cảnh của vai.
+_KINH_NGHIEM_TRAN = 6000
+
+
+def _agent_kinh_nghiem_block(brain, slug) -> str:
+    f = _brain_memory_dir(brain) / "agents" / slug / "kinh-nghiem.md"
+    try:
+        txt = f.read_text(encoding="utf-8").strip() if f.is_file() else ""
+    except Exception:
+        return ""
+    if not txt:
+        return ""
+    if len(txt) > _KINH_NGHIEM_TRAN:
+        txt = txt[-_KINH_NGHIEM_TRAN:]     # giữ phần MỚI nhất: mục mới nối ở cuối file
+    return f"\n# Kinh nghiệm đã kiểm chứng của vai này (file: {f}):\n{txt}\n"
+
 # ---- Agent tự bồi đắp: "model ĐỀ XUẤT, code GHI" (đúng nguyên tắc docs/22-tu-hoc) ----
 # Bản đầu (0.35.3) cho agent tự Edit MEMORY.md, rào bằng lời "chỉ thêm dòng". Rào bằng
 # lời thì model yếu có ngày Write đè cả file, và luật cấm-xoá làm bài học sai nằm vĩnh
@@ -10834,6 +10854,7 @@ def _workflow_agent_helpers(brain, tools, wf_mode="full"):
             f"Skills khả dụng: {', '.join(ameta.get('skills', []) or []) or '(không)'}. Dùng skill khi cần.\n"
             + _agent_assets_block(brain, ameta)
             + f"\n# Bộ nhớ của bạn (file: {mem_path}):\n{amem or '(chưa có ký ức nào)'}\n"
+            + _agent_kinh_nghiem_block(brain, aslug)
             + "\n# Tự bồi đắp lúc dùng: nếu cuối nhiệm vụ rút ra được bài học TÁI DÙNG cho vai này "
               "(cách làm tốt hơn, lỗi cần tránh, ngữ cảnh riêng đã học được), KẾT THÚC câu trả lời "
               "bằng tối đa 2 dòng riêng, mỗi dòng đúng dạng `JAVIS_LESSON: <bài học một câu>`. "
@@ -11962,6 +11983,32 @@ learn_feature = learn_mod.register(app, learn_mod.LearnDeps(
     sessions_store=get_store(),
     state_dir=cfgmod.STATE_DIR,
     readonly_tools=READONLY_TOOLS,
+))
+
+
+# ============================================================
+# TRỤ 2: TỰ HỌC CÓ ĐỐI CHỨNG (26.10.217) - harness2.py (lõi thuần) + harness2_noi.py (nối engine).
+# Thuật toán theo Harness² của Google Research (arXiv 2610.14224, Apache 2.0). Chủ bấm cho MỘT
+# trợ lý, chạy xong thì dừng: không loop, không quét nền (luật chủ 2026-08-16). Mọi lượt chạy thử
+# ở chế độ shadow (che_do_thu.py), kết quả là đề xuất chủ duyệt, hoàn tác được. Xem docs/harness2.md.
+# ============================================================
+import harness2_noi
+
+harness2_feature = harness2_noi.register(app, harness2_noi.Deps(
+    brain_root=_brain_root,
+    state_dir=cfgmod.STATE_DIR,
+    workflow_agent_helpers=_workflow_agent_helpers,
+    boc_bai_hoc=_boc_bai_hoc,
+    claude_engine=claude_engine,
+    readonly_tools=READONLY_TOOLS,
+    empty_mcp_file=_empty_mcp_file,
+    aux_model=_aux_model,
+    agent_model_provider=_agent_model_provider,
+    bo_vao_hom_thu=lambda *a, **k: _bo_vao_hom_thu(*a, **k),
+    is_system_skill=lambda s: system_sync.is_system_skill(s),
+    ten_tool_that=lambda ev: _dg_tool_that(ev),
+    hub_url=mcp_hub.hub_url,
+    hub_token=mcp_hub.hub_token,
 ))
 
 
