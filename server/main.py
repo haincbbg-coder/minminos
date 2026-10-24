@@ -258,6 +258,8 @@ _DOI_SOCIAL_CONG_KHAI_RE = re.compile(_DOI_SOCIAL_CONG_KHAI[0])
 # Concat (26.10.196): cầu nối ở máy nhà gọi GET/POST dưới tiền tố này, không có cookie. Mỗi
 # endpoint tự kiểm token máy hoặc mã ghép 6 số - xem routes/concat.py. DELETE vẫn phải đăng nhập.
 _CONCAT_MAY = ("/concat/may/", ("GET", "POST"))
+# Gợi ý mã hàng (26.10.220): tiện ích trình duyệt của nhân viên, tự kiểm token máy - routes/goi_y_ma.py.
+_GOI_Y_MA_MAY = ("/goi-y-ma/may/", ("GET", "POST"))
 # Biến động số dư (26.10.119): Casso đẩy giao dịch vào POST /bien-dong/casso/<mã>, không có
 # cookie. Miễn ĐÚNG mẫu này (khớp trọn, một đoạn mã) với POST - xem routes/bien_dong.py.
 _BIEN_DONG_CONG_KHAI = (r"/bien-dong/casso/[A-Za-z0-9_-]{20,80}", "POST")
@@ -336,6 +338,7 @@ async def _auth_guard(request: Request, call_next):
                   or (request.method in _DOI_SOCIAL_CONG_KHAI[1]
                       and _DOI_SOCIAL_CONG_KHAI_RE.fullmatch(path) is not None)
                   or (path.startswith(_CONCAT_MAY[0]) and request.method in _CONCAT_MAY[1])
+                  or (path.startswith(_GOI_Y_MA_MAY[0]) and request.method in _GOI_Y_MA_MAY[1])
                   # Biến động số dư: webhook Casso. Endpoint tự kiểm mã trong đường (404 nếu
                   # sai) và chữ ký HMAC. GET cùng đường, đường có thêm đoạn, dấu "/" cuối
                   # và mọi đường /bien-dong khác vẫn phải đăng nhập.
@@ -24295,6 +24298,13 @@ concat_cau.mo(cfgmod.STATE_DIR / "concat")
 concat_cau.dat_goc_tep([BRAINS_DIR, str(_default_brain_dir())])
 assert concat_routes.TIEN_TO_MAY == _CONCAT_MAY[0]
 concat_routes.register(app, goc_brain=lambda b: _brain_root(b) if b else str(_default_brain_dir()))
+
+# Gợi ý mã hàng (26.10.220): kho server/goi_y_ma.py, đường routes/goi_y_ma.py.
+import goi_y_ma   # noqa: E402
+import routes.goi_y_ma as goi_y_ma_routes   # noqa: E402
+goi_y_ma.mo(cfgmod.STATE_DIR / "goi_y_ma")
+assert goi_y_ma_routes.TIEN_TO_MAY == _GOI_Y_MA_MAY[0]
+goi_y_ma_routes.register(app)
 
 if __name__ == "__main__":
     import uvicorn

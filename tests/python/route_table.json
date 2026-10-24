@@ -8000,5 +8000,85 @@
    "GET"
   ],
   "trong": null
+ },
+ {
+  "order": 803,
+  "type": "APIRoute",
+  "path": "/goi-y-ma/may/ghep",
+  "name": "gy_ghep",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 804,
+  "type": "APIRoute",
+  "path": "/goi-y-ma/may/bang",
+  "name": "gy_bang",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 805,
+  "type": "APIRoute",
+  "path": "/goi-y-ma/may/tra",
+  "name": "gy_tra",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 806,
+  "type": "APIRoute",
+  "path": "/goi-y-ma/may/xac-nhan",
+  "name": "gy_xac_nhan",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 807,
+  "type": "APIRoute",
+  "path": "/goi-y-ma/api/ma-ghep",
+  "name": "gy_ma_ghep",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 808,
+  "type": "APIRoute",
+  "path": "/goi-y-ma/api/thong-ke",
+  "name": "gy_thong_ke",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 809,
+  "type": "APIRoute",
+  "path": "/goi-y-ma/api/may",
+  "name": "gy_ds_may",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 810,
+  "type": "APIRoute",
+  "path": "/goi-y-ma/api/may/{may_id}",
+  "name": "gy_go_may",
+  "methods": [
+   "DELETE"
+  ],
+  "trong": null
  }
 ]
