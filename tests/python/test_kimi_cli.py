@@ -340,8 +340,13 @@ check("Ngắt xoá file phiên -> chưa đăng nhập", r["ok"] and not k.auth_s
 src_main = (SERVER / "main.py").read_text(encoding="utf-8")
 for mau in ('"id": "kimi-cli"', '@app.post("/kimi/login-start")', '@app.post("/kimi/install")',
             '@app.post("/kimi/check")', 'elif prov == "kimi-cli":', 'if prov == "kimi-cli":',
-            '"kimi-cli",\n                   "antigravity-cli"'):
+            ):
     check("main.py có " + mau.split("\n")[0], mau in src_main)
+# Danh sách provider agent: kiểm bằng giá trị thật, không bám cách xuống dòng (các bộ não sau
+# chèn thêm vào cùng tuple).
+import re as _re
+_ap = _re.search(r"AGENT_PROVIDERS = \((.*?)\)", src_main, _re.S)
+check("AGENT_PROVIDERS có kimi-cli", bool(_ap) and '"kimi-cli"' in _ap.group(1))
 src_aux = (SERVER / "aux_engine.py").read_text(encoding="utf-8")
 check("aux_engine dựng được agent Kimi", "_build_kimi" in src_aux and "KIMI_CLI" in src_aux)
 ep = (ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
