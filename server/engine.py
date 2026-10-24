@@ -10,6 +10,7 @@ Mỗi provider có HAI đường vào:
 Stream token-by-token; trả các event {"type":"text"|"error","content":...} giống ClaudeCLI.query.
 """
 import asyncio
+import functools
 import json
 import os
 import random
@@ -22,6 +23,7 @@ from datetime import datetime, timezone
 import httpx
 
 import limit_learner
+import nha_api_rieng
 import tiet_kiem
 
 # Lone surrogate (U+D800–U+DFFF) sanitizer - port từ hermes-agent/agent/message_sanitization.py.
@@ -627,14 +629,18 @@ def _gemini_is_reasoning(model):
     return "2.5" in m or "gemini-3" in m or "thinking" in m
 
 
-async def _openai_compat_stream(url, label, api_key, model, messages, reasoning, send_reasoning):
+async def _openai_compat_stream(url, label, api_key, model, messages, reasoning, send_reasoning,
+                                extra=None):
     """Chat Completions dạng OpenAI (dùng chung cho OpenAI + Gemini qua endpoint tương thích).
-    Stream token-by-token + usage token ở chunk cuối. label chỉ dùng cho thông báo lỗi."""
+    Stream token-by-token + usage token ở chunk cuối. label chỉ dùng cho thông báo lỗi.
+    `extra`: trường payload riêng của hãng (vd `thinking` của DeepSeek), gắn sau cùng."""
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {"model": model, "messages": messages, "stream": True,
                "stream_options": {"include_usage": True}}   # → chunk cuối kèm usage token
     if reasoning not in (None, "", "off") and send_reasoning:
         payload["reasoning_effort"] = api_effort(reasoning)
+    if extra:
+        payload.update(extra)
     try:
         timeout = httpx.Timeout(120.0, connect=15.0)
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -764,6 +770,57 @@ async def openai_compat_chat_with_mcp(api_key, model, messages, reasoning, mcp_t
     async for ev in _cc_tool_loop(url, headers, model, messages,
                                   mcp_tools, mcp_route, {}, "OpenAI Compatible", giu_suy_nghi=True):
         yield ev
+
+
+# ---- Bốn bộ não API key riêng (26.10.212): DeepSeek, Qwen, GLM, MiniMax ----
+# Mô tả hãng (URL theo vùng, model mặc định, cách bật suy nghĩ) nằm MỘT chỗ ở nha_api_rieng.py.
+# URL đọc lại settings MỖI lượt (không hằng số hoá như XAI_URL) vì chủ đổi vùng / dán Base URL
+# trên thẻ là phải có hiệu lực ngay lượt sau, không chờ khởi động lại.
+def nha_rieng_url(pid, api_key=None):
+    import config as cfgmod
+    return nha_api_rieng.chat_url(pid, cfgmod.read_settings().get("model", {}) or {}, api_key)
+
+
+async def nha_rieng_stream(pid, api_key, model, messages, reasoning="off"):
+    """Nhánh KHÔNG tool của bốn hãng riêng. Suy nghĩ điều khiển bằng `payload_suy_nghi`, không
+    qua cờ send_reasoning chung (mỗi hãng một kiểu tham số)."""
+    model = model or nha_api_rieng.model_mac_dinh(pid)
+    async for ev in _openai_compat_stream(nha_rieng_url(pid, api_key), nha_api_rieng.ten_ngan(pid),
+                                          api_key, model, messages, reasoning, False,
+                                          extra=nha_api_rieng.payload_suy_nghi(pid, model, reasoning)):
+        yield ev
+
+
+async def nha_rieng_chat_with_mcp(pid, api_key, model, messages, reasoning, mcp_tools, mcp_route):
+    """Bốn hãng riêng + vòng tool-calling MCP. giu_suy_nghi=True: DeepSeek bản suy nghĩ ĐÒI gửi
+    lại reasoning_content ở vòng sau khi có tools (thiếu là 400), MiniMax/GLM/Kimi trong gói
+    Qwen cũng trả trường này. `lui_khi_400` là lưới cuối cho tin của lượt cũ không còn giữ nó."""
+    model = model or nha_api_rieng.model_mac_dinh(pid)
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    yield {"type": "meta", "model": model}
+    async for ev in _cc_tool_loop(nha_rieng_url(pid, api_key), headers, model, messages, mcp_tools,
+                                  mcp_route, nha_api_rieng.payload_suy_nghi(pid, model, reasoning),
+                                  nha_api_rieng.ten_ngan(pid), giu_suy_nghi=True,
+                                  lui_khi_400=nha_api_rieng.lui_khi_400(pid)):
+        yield ev
+
+
+# Tên riêng từng hãng để các bảng điều phối (main, aux_engine) gọi như mọi provider khác.
+deepseek_stream = functools.partial(nha_rieng_stream, "deepseek")
+qwen_stream = functools.partial(nha_rieng_stream, "qwen")
+glm_stream = functools.partial(nha_rieng_stream, "glm")
+minimax_stream = functools.partial(nha_rieng_stream, "minimax")
+deepseek_chat_with_mcp = functools.partial(nha_rieng_chat_with_mcp, "deepseek")
+qwen_chat_with_mcp = functools.partial(nha_rieng_chat_with_mcp, "qwen")
+glm_chat_with_mcp = functools.partial(nha_rieng_chat_with_mcp, "glm")
+minimax_chat_with_mcp = functools.partial(nha_rieng_chat_with_mcp, "minimax")
+# Nơi điều phối gọi qua `nha_rieng_ham(pid, ...)` chứ không giữ bản sao các hàm này trong một
+# dict: test (và mọi chỗ vá tạm) thay `engine.<pid>_stream` thì lượt chat phải đi theo bản vá.
+
+
+def nha_rieng_ham(pid, co_tool=False):
+    """Hàm stream (co_tool=False) hoặc vòng tool MCP (co_tool=True) của một hãng riêng."""
+    return getattr(sys.modules[__name__], f"{pid}_chat_with_mcp" if co_tool else f"{pid}_stream")
 
 
 async def ollama_local_chat_with_mcp(api_key, model, messages, reasoning, mcp_tools, mcp_route):
@@ -939,6 +996,9 @@ async def single_tool_plan(provider, api_key, model, messages, reasoning, tool_s
         "ollama": (OLLAMA_URL, model),
         "openai-compat": (openai_compat_url(), model),
     }
+    if provider in nha_api_rieng.NHA:
+        endpoints[provider] = (nha_rieng_url(provider, api_key),
+                               model or nha_api_rieng.model_mac_dinh(provider))
     if provider not in endpoints or not endpoints[provider][0]:
         return {"status": "error", "error_code": "provider_not_supported", "input": 0, "output": 0}
     url, actual_model = endpoints[provider]
@@ -957,6 +1017,8 @@ async def single_tool_plan(provider, api_key, model, messages, reasoning, tool_s
               (provider == "groq" and _groq_is_reasoning(model)) or
               (provider == "gemini" and _gemini_is_reasoning(model))):
             payload["reasoning_effort"] = api_effort(reasoning)
+    if provider in nha_api_rieng.NHA:
+        payload.update(nha_api_rieng.payload_suy_nghi(provider, actual_model, reasoning))
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=15)) as client:
             response = await client.post(url, headers=headers, json=payload)
@@ -1602,7 +1664,7 @@ def _tin_goi_tool(msg: dict, tcs: list, giu_suy_nghi: bool = False) -> dict:
 
 
 async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, reasoning_extra, label,
-                        cache_system=False, giu_suy_nghi=False):
+                        cache_system=False, giu_suy_nghi=False, lui_khi_400=None):
     """Vòng Chat Completions + tool (OpenAI/OpenRouter). Non-stream từng vòng; yield tool_call + text cuối.
     cache_system=True (OpenRouter + model Claude): đánh cache_control lên system - OpenAI/Gemini
     tự cache nên không cần."""
@@ -1697,6 +1759,21 @@ async def _cc_tool_loop(url, headers, model, messages, mcp_tools, mcp_route, rea
                 if (r.status_code in (400, 422) and requirement_pending
                         and requirement not in (None, "required")):
                     payload["tool_choice"] = "required"
+                    r = await client.post(url, headers=headers, json=payload)
+                # DeepSeek bản suy nghĩ: 400 vì tin assistant cũ thiếu reasoning_content (xem
+                # nha_api_rieng.lui_khi_400). Tắt suy nghĩ cho PHẦN CÒN LẠI của lượt rồi thử
+                # lại một lần; giá trị None trong bản vá nghĩa là gỡ hẳn trường đó.
+                if (lui_khi_400 and r.status_code == 400
+                        and "reasoning_content" in (r.text or "")):
+                    reasoning_extra = {k: v for k, v in {**(reasoning_extra or {}), **lui_khi_400}.items()
+                                       if v is not None}
+                    for k, v in lui_khi_400.items():
+                        if v is None:
+                            payload.pop(k, None)
+                        else:
+                            payload[k] = v
+                    lui_khi_400 = None
+                    print(f"[{label}] 400 reasoning_content - tắt suy nghĩ, thử lại", file=sys.stderr)
                     r = await client.post(url, headers=headers, json=payload)
             if r.status_code != 200:
                 body_text = r.text or ""

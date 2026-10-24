@@ -58,8 +58,10 @@ _DIMS = {"provider", "source", "activity", "model", "project", "day"}
 # main.py; thieu mot ten la moi dong cua provider do bi VUT IM LANG (chuoi if/elif ben duoi
 # khong co else), va o "tien mat thang nay" bao 0 trong khi vi van voi di. 'groq' va 'gemini'
 # tung thieu dung nhu vay.
+# xai/meta (26.10.167/169) cung tung thieu y het; bon nha rieng (26.10.212) them cung luc.
 _API_PROVIDERS = {"openrouter", "openai", "anthropic", "anthropic-api", "oauth", "ollama",
-                  "groq", "gemini"}
+                  "groq", "gemini", "xai", "meta", "openai-compat", "ollama-local",
+                  "deepseek", "qwen", "glm", "minimax"}
 
 
 def _claude_dir() -> str:

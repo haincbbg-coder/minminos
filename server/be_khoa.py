@@ -24,7 +24,13 @@ import threading
 import time
 from typing import Iterable, Optional
 
-API_CO_BE = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat")
+import nha_api_rieng   # thuần stdlib như module này
+
+# DeepSeek/Qwen/GLM/MiniMax có bể khoá như mọi nhà API. Lưu ý gói Coding Plan: xoay nhiều tài
+# khoản GÓI để lách hạn mức có thể trái điều khoản của hãng y như gói thuê bao - bể khoá dành
+# cho nhiều key trả theo lượng chính chủ.
+API_CO_BE = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat",
+             *nha_api_rieng.IDS)
 
 # Nghỉ bao lâu theo loại lỗi (giây). 429: ít nhất một cửa sổ hạn mức ngắn; sai khoá thì nghỉ
 # lâu để không đập mãi vào tường, nhưng không vĩnh viễn (chủ có thể vừa nạp tiền).

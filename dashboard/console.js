@@ -4063,7 +4063,37 @@
       `<button class="seg-btn ${reasoning === v ? "sel" : ""}" data-reason="${v}" title="${esc(d)}">` +
       `<span class="seg-lb">${esc(l)}</span><span class="seg-d">${esc(d)}</span></button>`).join("");
 
-    const KEYFIELD = { "openrouter": "openrouter_key", "anthropic-api": "anthropic_api_key", "openai": "openai_api_key", "gemini": "gemini_api_key", "groq": "groq_api_key", "xai": "xai_api_key", "meta": "meta_api_key", "ollama": "ollama_key", "openai-compat": "openai_compat_key" };
+    const KEYFIELD = { "openrouter": "openrouter_key", "anthropic-api": "anthropic_api_key", "openai": "openai_api_key", "gemini": "gemini_api_key", "groq": "groq_api_key", "xai": "xai_api_key", "meta": "meta_api_key", "ollama": "ollama_key", "openai-compat": "openai_compat_key",
+      // Bốn thẻ API riêng (26.10.212). Server cũng gửi p.rieng.key_field; giữ tên ở đây cho dễ tra.
+      "deepseek": "deepseek_api_key", "qwen": "qwen_api_key", "glm": "glm_api_key", "minimax": "minimax_api_key" };
+    // Mô tả từng thẻ API riêng. Khoá i18n viết TĨNH (test_i18n quét chuỗi), không ghép chuỗi.
+    const RIENG_NOTE = { "deepseek": t("models.rg_note_deepseek"), "qwen": t("models.rg_note_qwen"),
+                         "glm": t("models.rg_note_glm"), "minimax": t("models.rg_note_minimax") };
+    const riengBox = (p, on) => {
+      const r = p.rieng;
+      if (!r) return "";
+      const tuDong = (r.vung.find(v => v.id === r.vung_tu_dong) || {}).nhan || r.vung_tu_dong;
+      const opts = [`<option value="" ${r.vung_chon ? "" : "selected"}>${esc(t("models.rg_auto", { vung: tuDong }))}</option>`]
+        .concat(r.vung.map(v => `<option value="${esc(v.id)}" ${r.vung_chon === v.id ? "selected" : ""}>${esc(v.nhan)}</option>`)).join("");
+      return `<div class="prov-note">${esc(RIENG_NOTE[p.id] || "")}</div>
+        <div class="prov-note">${esc(t("models.rg_terms"))}</div>
+        ${r.goi_plan ? `<div class="prov-note warn">${WARN_ICON} ${esc(t("models.rg_plan_warn"))}</div>` : ""}
+        <div class="prov-action" style="flex-wrap:wrap">
+          ${r.vung.length > 1 ? `<label class="gcard-meta" style="flex:1 1 100%">${esc(t("models.rg_vung"))}
+            <select class="js-input" data-rg-vung="${p.id}" style="margin-left:6px">${opts}</select></label>` : ""}
+          <span class="gcard-meta" style="flex:1 1 100%">${esc(t("models.rg_url_now"))} <code>${esc(r.base_hieu_luc)}</code></span>
+          ${on ? `<button class="gcard-btn ghost" data-rg-kiem="${p.id}">${esc(t("models.rg_check"))}</button>` : ""}
+          <span class="gcard-meta" id="rg-msg-${p.id}" style="flex:1;min-width:200px"></span>
+        </div>
+        <details class="gcard-meta" style="margin-top:4px"><summary>${esc(t("models.rg_adv"))}</summary>
+          <div class="prov-action" style="flex-wrap:wrap">
+            <input class="js-input" id="rg-base-${p.id}" inputmode="url" spellcheck="false" style="flex:1 1 100%"
+              value="${esc(r.base_tay || "")}" placeholder="${esc(t("models.rg_base_ph"))}">
+            <button class="gcard-btn ghost" data-rg-base="${p.id}">${esc(t("common.save"))}</button>
+            <span class="gcard-meta">${esc(t("models.rg_base_note"))}</span>
+          </div>
+        </details>`;
+    };
     const provHead = (p, on, kindLabel, statusText) => `
         <div class="prov-head">
           <span class="prov-shield ${on ? "on" : ""}">${_shield(on)}</span>
@@ -4251,6 +4281,7 @@
         ${p.needs_key
           ? `<div class="prov-action"><input class="js-input" id="pk-${p.id}" type="password" placeholder="${on ? esc(t("models.key_change_ph", { duoi: masked })) : esc(t("models.key_ph"))}"><button class="gcard-btn" data-pk="${p.id}">${on ? esc(t("models.key_change")) : esc(t("models.connect"))}</button>${on ? `<button class="gcard-btn ghost" data-disc="${p.id}">${esc(t("models.disconnect"))}</button>` : ""}${nutBeKhoa}</div>`
           : `<div class="prov-note">${esc(t("models.no_key_note"))}</div>`}
+        ${riengBox(p, on)}
         ${beKhoa}
       </div>`;
     };
@@ -4658,6 +4689,36 @@
         b.disabled = true; b.textContent = t("settings.saving");
         await saveSetting("model", { [KEYFIELD[pid]]: val });
         renderModelsCloudTab(el);
+      };
+    });
+    // Thẻ API riêng: đổi vùng / Base URL lưu ngay rồi vẽ lại (URL hiệu lực đổi theo);
+    // nút Kiểm tra gọi thử bằng key ĐÃ LƯU trên máy chủ.
+    el.querySelectorAll("select[data-rg-vung]").forEach(sel => {
+      sel.onchange = async () => {
+        await saveSetting("model", { [sel.dataset.rgVung + "_vung"]: sel.value });
+        renderModelsCloudTab(el);
+      };
+    });
+    el.querySelectorAll(".gcard-btn[data-rg-base]").forEach(b => {
+      b.onclick = async () => {
+        const pid = b.dataset.rgBase;
+        const v = (document.getElementById("rg-base-" + pid).value || "").trim();
+        if (v && !/^https?:\/\//i.test(v)) { document.getElementById("rg-msg-" + pid).textContent = t("models.oc_need_base"); return; }
+        b.disabled = true;
+        await saveSetting("model", { [pid + "_base"]: v });
+        renderModelsCloudTab(el);
+      };
+    });
+    el.querySelectorAll(".gcard-btn[data-rg-kiem]").forEach(b => {
+      b.onclick = async () => {
+        const pid = b.dataset.rgKiem;
+        const msg = document.getElementById("rg-msg-" + pid);
+        b.disabled = true; if (msg) msg.textContent = t("settings.checking");
+        let r; try { r = await postJson("/provider/nha-rieng/kiem", { prov: pid }, 40000); } catch (e) { r = { ok: false, error: String(e) }; }
+        b.disabled = false;
+        if (!msg) return;
+        if (r && r.ok) msg.innerHTML = CHECK_ICON + " " + esc(r.so_model ? t("models.rg_ok_n", { n: r.so_model }) : t("models.rg_ok"));
+        else msg.innerHTML = WARN_ICON + " " + esc((r && r.error) || t("common.net_err"));
       };
     });
     const ocSave = document.getElementById("ocSave");
@@ -6250,7 +6311,8 @@
     // native, bốn provider API đi qua vòng gọi tool + hub trong _api_stream_mcp. Gemini từng
     // thiếu trong danh sách này nên khách chạy Gemini bị banner vàng "chưa hỗ trợ gọi công cụ"
     // dù bên dưới đã chạy MCP ngon - nhánh vàng giờ chỉ còn để chặn provider lạ.
-    const MCP_PROVIDERS = ["anthropic-cli", "openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat"];
+    const MCP_PROVIDERS = ["anthropic-cli", "openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat",
+                           "deepseek", "qwen", "glm", "minimax"];
     const mainLabel = (provs.find(p => p.id === main.provider) || {}).label || main.provider || "-";
     let warn = "";
     if (main.provider === "openai-oauth") {

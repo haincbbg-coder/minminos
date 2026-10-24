@@ -40,6 +40,7 @@ import time
 from typing import Optional
 
 import config as cfgmod
+import nha_api_rieng
 
 CLAUDE = "anthropic-cli"
 CODEX = "openai-oauth"
@@ -47,7 +48,7 @@ GROK_CLI = "grok-cli"
 MUSE_CLI = "muse-cli"
 ANTIGRAVITY = "antigravity-cli"
 API_PROVIDERS = ("openrouter", "openai", "gemini", "groq", "xai", "meta", "anthropic-api", "ollama",
-                 "ollama-local", "openai-compat")
+                 "ollama-local", "openai-compat", *nha_api_rieng.IDS)
 
 # provider -> tên trường chứa API key trong settings["model"]
 _KEY_FIELD = {
@@ -67,6 +68,8 @@ _KEY_FIELD = {
     # Endpoint OpenAI-compatible tự khai. Như ollama-local: thứ quyết định dùng được là ĐỊA CHỈ
     # (`openai_compat_base`), khoá có thể rỗng khi endpoint không đòi xác thực.
     "openai-compat": "openai_compat_key",
+    # DeepSeek / Qwen / GLM / MiniMax: khoá key lấy từ bảng một chỗ.
+    **{pid: nha_api_rieng.NHA[pid]["key_field"] for pid in nha_api_rieng.IDS},
 }
 
 # mode của Javis -> sandbox của Codex CLI. Bản đồ thật nằm ở `claude_cli.codex_sandbox_cho_mode`
@@ -425,7 +428,8 @@ class _ApiAuxEngine:
                   "anthropic-api": eng.anthropic_chat_with_mcp,
                   "ollama": eng.ollama_chat_with_mcp,
                   "ollama-local": eng.ollama_local_chat_with_mcp,
-                  "openai-compat": eng.openai_compat_chat_with_mcp}[self.provider]
+                  "openai-compat": eng.openai_compat_chat_with_mcp,
+                  **{p: eng.nha_rieng_ham(p, True) for p in nha_api_rieng.IDS}}[self.provider]
             stream = eng.thu_lai_khi_tam_thoi(
                 lambda: fn(xoay.khoa() if xoay else key, self.model, messages, self.reasoning, tools, route),
                 nhan=f"nền {self.provider}+tool", xoay=xoay) if xoay else \
@@ -437,7 +441,8 @@ class _ApiAuxEngine:
                   "anthropic-api": eng.anthropic_stream,
                   "ollama": eng.ollama_stream,
                   "ollama-local": eng.ollama_local_stream,
-                  "openai-compat": eng.openai_compat_stream}[self.provider]
+                  "openai-compat": eng.openai_compat_stream,
+                  **{p: eng.nha_rieng_ham(p) for p in nha_api_rieng.IDS}}[self.provider]
             stream = eng.thu_lai_khi_tam_thoi(
                 lambda: fn(xoay.khoa() if xoay else key, self.model, messages, self.reasoning),
                 nhan=f"nền {self.provider}", xoay=xoay) if xoay else \

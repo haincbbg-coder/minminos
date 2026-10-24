@@ -9,6 +9,8 @@ import hashlib
 import secrets
 from pathlib import Path
 
+import nha_api_rieng   # bốn bộ não API key riêng: khoá key + model mặc định đọc từ bảng
+
 # Mọi state Javis tự ghi (settings, auth sessions, loop config) nằm ở JAVIS_STATE_DIR.
 # Mặc định = server/ (không đổi trên máy cũ). Docker/VPS đặt = /data/state (volume ghi được,
 # vì code tree /app là read-only trong container).
@@ -127,6 +129,9 @@ _DEFAULT = {
         "groq_api_key": "",                    # provider Groq (endpoint OpenAI-compat, suy luận rất nhanh)
         "xai_api_key": "",                     # provider xAI Grok API (trả theo lượng, khác gói Grok Build)
         "meta_api_key": "",                    # provider Meta Muse API (developer.meta.com/ai, khác gói Muse Code)
+        # DeepSeek / Qwen / GLM / MiniMax (26.10.212): `<id>_api_key`, `<id>_vung` (""=tự động),
+        # `<id>_base` (""=theo vùng). Danh sách sinh từ bảng nha_api_rieng.NHA, không chép tay.
+        **nha_api_rieng.mac_dinh_settings(),
         # Provider 'ollama' = Ollama Cloud (ollama.com). Bản chạy trên máy nhà KHÔNG được đấu,
         # cố ý: nó đòi thêm một ô địa chỉ - ca đặc biệt duy nhất của cả lớp nhà cung cấp -
         # trong khi phần đông người dùng Javis chạy nó trên VPS, nơi "localhost" là chính cái
@@ -176,6 +181,7 @@ _DEFAULT = {
             "groq": ["llama-3.3-70b-versatile", "qwen3-32b", "openai/gpt-oss-120b"],  # Groq (picker load động)
             "xai": ["grok-4", "grok-4-fast", "grok-3-mini"],                           # xAI API (picker load động)
             "meta": ["muse-spark-1.3", "muse-spark-1.2", "muse-wonder-1.0"],           # Meta Muse API (picker load động)
+            **nha_api_rieng.catalog_mac_dinh(),                                         # DeepSeek/Qwen/GLM/MiniMax
             # Không ghim model Codex: /provider/models lấy catalog LIVE bằng
             # codex app-server model/list và nhớ lại lần thành công gần nhất.
             "openai-oauth": [],
@@ -505,6 +511,7 @@ _SECRET_PATHS = (
     "packs.tokens.*",
     "model.openrouter_key", "model.anthropic_api_key", "model.openai_api_key", "model.gemini_api_key",
     "model.groq_api_key", "model.xai_api_key", "model.meta_api_key", "model.ollama_key", "model.ollama_local_key", "model.openai_compat_key",
+    *("model." + kf for kf in nha_api_rieng.KEY_FIELDS),   # deepseek/qwen/glm/minimax_api_key
     "model.openai_oauth.access_token", "model.openai_oauth.refresh_token", "model.openai_oauth.id_token",
     # Gemini CLI (đăng nhập Google ngay trên dashboard). Refresh token ở đây mở được cả gói
     # Code Assist của tài khoản Google, nên nó ngang hàng mọi secret khác trong danh sách.

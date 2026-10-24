@@ -245,7 +245,9 @@ check("rẽ sang đường có tool CHỈ khi mức nằm trong danh sách đã 
 _as = _SRC[_SRC.index("def _api_stream(prov, key, model"):_SRC.index("async def _api_stream_mcp")]
 for pid in [d["id"] for d in main.PROVIDER_DEFS]:
     check(f"_api_stream phục vụ được '{pid}'",
-          f'prov == "{pid}"' in _as or pid == "anthropic-api")   # anthropic-api là nhánh mặc định
+          f'prov == "{pid}"' in _as or pid == "anthropic-api"   # anthropic-api là nhánh mặc định
+          # Bốn hãng API riêng (26.10.212) chung một nhánh tra bảng nha_api_rieng.
+          or (pid in main.nha_api_rieng.NHA and "prov in nha_api_rieng.NHA" in _as))
 check("gói ChatGPT dùng token OAuth, không cần API key", "openai_oauth.valid_creds()" in _as)
 # Gói Claude Code cũng không cần API key, nhưng KHÔNG phải bằng cách mượn token đăng nhập nữa:
 # nó chạy qua binary `claude`. Đây là canary chống hồi quy cho đúng chỗ đã làm khoá tài khoản.
