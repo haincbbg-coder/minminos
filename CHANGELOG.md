@@ -7,7 +7,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.219] - 2026-10-24
 
 ### Bảo mật
-- (đang làm) Mức Ghi nháp chặn đúng mọi hành động ra ngoài.
+- **Mức Ghi nháp giờ chặn thật mọi hành động ra ngoài**: gửi mail, nhắn tin, đăng bài, trả lời bình luận, chuyển tiếp, chia sẻ file, đặt đơn, hoàn tiền, bật tắt hay sửa quảng cáo, xoá. Trước đây các kết nối như Gmail, Google Ads, Shopee, TikTok Shop, Lazada, Haravan, Sapo, KiotViet, Nhanh.vn chưa khai rõ tool nào nguy hiểm, nên một vòng lặp ở mức Ghi nháp vẫn gửi được mail, còn lệnh sửa Google Ads lọt cả ở mức Chỉ đọc.
+- Ghi nháp vẫn tạo và sửa bình thường (thêm sự kiện lịch, sửa bảng tính, tải file lên, viết nháp).
+- Mức Chỉ đọc không còn chặn oan các lệnh xem như xem danh sách bài đăng, xem chỉ số bài, xem đơn hàng.
+- Việc cần bố làm: vòng lặp hay nhắc việc nào phải tự gửi tin hoặc đăng bài thì đặt ở **Toàn quyền**. Kết nối đặt mức "Ghi được" cũng không gửi được nữa, muốn gửi thì nâng kết nối đó lên Toàn quyền.
 
 ## [26.10.218] - 2026-10-24
 

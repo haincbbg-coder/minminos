@@ -199,20 +199,18 @@ for tool, mong in LOAI.items():
     got = mc.classify(KHUON_QUYEN, tool)
     check("phân loại " + tool + " -> " + mong, got == mong, got)
 
-# Tool KHÔNG khai trong tool_meta rơi xuống heuristic tên: có dấu hiệu ghi thì là "write",
-# còn lại là "read". KHÔNG có nhánh nào tự đoán ra "danger" - và đó là điều quan trọng nhất
-# phải biết về tầng này:
-#
-#   Mức NGUY HIỂM chỉ tồn tại khi connector TỰ KHAI nó.
-#
-# Một server bày hàng trăm tool (Hostinger có hơn 330) thì tool xoá, tool tiêu tiền nằm lẫn
-# trong đó, và nếu khuôn quên khai thì chúng tụt xuống nhóm ghi thường - tức mức Ghi nháp tự
-# chạy được. Từ 0.55.36 phần lớn khuôn sống ở repo kho, nên phép kiểm "đã khai đủ chưa" thuộc
-# về `tools/kiem-tra.py` bên đó. Ở đây chốt đúng một điều: hành vi mặc định là gì, để ai đọc
-# cũng biết mình đang dựa vào lời khai chứ không dựa vào phép màu.
-check("tool lạ có dấu hiệu ghi -> write (KHÔNG tự thành danger)",
-      mc.classify(KHUON_QUYEN, "delete_dns_record") == "write",
+# Tool KHÔNG khai trong tool_meta rơi xuống heuristic tên. Từ 26.10.219 heuristic này đoán
+# được cả "danger": tên mang động từ ra ngoài (gửi, đăng, trả lời, xoá, đặt đơn, trả tiền, bật
+# tắt quảng cáo...) thành "danger", để mức Ghi nháp chặn đúng như lời dặn hệ thống. Lời khai
+# của connector (tool_meta) vẫn thắng mọi phỏng đoán, nên khuôn nào đã khai thì không đổi gì.
+# Tên mở đầu bằng động từ đọc (list_, get_, search_...) chỉ bị coi là ra ngoài khi có động từ
+# mạnh (send, delete...), để list_posts hay get_post_insights không bị chặn oan ở Chỉ đọc.
+check("tool lạ mang động từ xoá -> danger (26.10.219)",
+      mc.classify(KHUON_QUYEN, "delete_dns_record") == "danger",
       mc.classify(KHUON_QUYEN, "delete_dns_record"))
+check("tool lạ có dấu hiệu ghi thường -> write",
+      mc.classify(KHUON_QUYEN, "create_dns_record") == "write",
+      mc.classify(KHUON_QUYEN, "create_dns_record"))
 check("tool lạ không dấu hiệu gì -> read", mc.classify(KHUON_QUYEN, "list_domains") == "read")
 
 # Khai theo GLOB là đường duy nhất phủ nổi hàng trăm tool. Hostinger dựa hoàn toàn vào nó
