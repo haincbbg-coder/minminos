@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.212] - 2026-10-24
+
+### Thêm mới
+- (đang làm) 4 thẻ API key riêng DeepSeek, Qwen, GLM, MiniMax.
+
 ## [26.10.211] - 2026-10-23
 ### Thêm mới
 - **VieNeu trong Chợ MinMin.** Nối giọng đọc tiếng Việt VieNeu bằng khoá API (vn_sk_...): MinMin xem được hơn 1.000 giọng ba miền và số dư token.
