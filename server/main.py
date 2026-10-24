@@ -66,6 +66,7 @@ import coding_store    # trang Coding: phiên gắn repo nào, nhánh nào, work
 import antigravity_cli   # bộ não thứ 10: Antigravity CLI (`agy`) - bản Google chỉ định thay Gemini CLI
 import grok_cli          # bộ não thứ 11: Grok Build CLI (`grok`) - gói SuperGrok / X Premium+
 import muse_cli          # bộ não thứ 15: Meta Muse Code CLI (`muse`) - gói thuê bao Muse Code
+import copilot_cli       # bộ não GitHub Copilot CLI (`copilot`) - gói Copilot, model của nhiều hãng
 import totp            # xác thực 2 lớp (TOTP) cho cổng đăng nhập - thuần toán, không đụng cấu hình
 # 26.10.80: tính năng thành viên được mời đã gỡ bỏ. Xoá dữ liệu cũ (tài khoản, mã 2FA, phiên) nếu còn.
 for _tenFile in ("users.json", ".member_sessions.json"):
@@ -1730,6 +1731,12 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
      "catalog_key": "muse-cli", "default_models": []},
     {"id": "antigravity-cli", "label": "Google Antigravity CLI", "kind": "cli", "key_field": None,
      "catalog_key": "antigravity-cli", "default_models": []},
+    # GitHub Copilot CLI (binary `copilot`, 26.10.213) - một GÓI Copilot mở model của nhiều hãng
+    # (Claude, GPT, Gemini, Grok). Đăng nhập device code ngay trên thẻ (link + mã), có nút Cài
+    # đặt vì binary không nằm trong image. default_models RỖNG: `copilot_cli.list_models` đọc
+    # danh mục của chính bản CLI (`copilot help config`), không chép tay.
+    {"id": "copilot-cli", "label": "GitHub Copilot CLI", "kind": "cli", "key_field": None,
+     "catalog_key": "copilot-cli", "default_models": []},
     {"id": "openrouter",    "label": "OpenRouter",              "kind": "api", "key_field": "openrouter_key",    "catalog_key": "openrouter",
      "default_models": ["openai/gpt-4o-mini"]},
     {"id": "anthropic-api", "label": "Anthropic (API)",         "kind": "api", "key_field": "anthropic_api_key", "catalog_key": "anthropic-api",
@@ -1816,6 +1823,9 @@ def _providers_view(cfg):
         elif p["id"] == "muse-cli":
             # Đọc `~/.config/muse/auth.json` (hoặc META_API_KEY), rẻ như nhánh Grok.
             configured = bool(muse_cli.auth_status().get("connected"))
+        elif p["id"] == "copilot-cli":
+            # Đọc `~/.copilot/config.json` (JSONC), không đẻ tiến trình - rẻ như nhánh Grok.
+            configured = bool(copilot_cli.auth_status().get("connected"))
         elif p["id"] == "antigravity-cli":
             # `agy` giữ phiên trong keyring của hệ điều hành nên không có file nào để soi -
             # phải hỏi chính CLI. Nhưng TUYỆT ĐỐI không hỏi trong luồng này: _providers_view
@@ -1881,6 +1891,17 @@ def _providers_view(cfg):
             # Bảng model tĩnh của engine (Meta không có lệnh liệt kê), để thẻ không báo 0 model.
             if not item["models"]:
                 item["models"] = list(muse_cli.MODELS)
+        if p["id"] == "copilot-cli":
+            _c = copilot_cli.auth_status()
+            item["cli_found"] = bool(copilot_cli.find_copilot_cli())
+            item["auth_method"] = _c.get("method", "")
+            item["account"] = _c.get("account", "")
+            item["plan"] = ""
+            item["auth_error"] = _c.get("error", "")
+            item["cai_lenh"] = copilot_cli.lenh_cai()
+            item["dang_nhap"] = copilot_cli.login_huong_dan()
+            # Phiên do CLI giữ (`~/.copilot/config.json`); nút Ngắt gỡ đúng ba khoá đăng nhập.
+            item["auth_by_javis"] = False
         if p["id"] == "antigravity-cli":
             _a = antigravity_cli.auth_status_nen()   # cùng lý do nhánh `configured` ở trên
             item["cli_found"] = bool(antigravity_cli.find_antigravity_cli())
@@ -1954,6 +1975,8 @@ def _set_main_model(cfg, provider, model):
         m["engine"] = "grok-cli"
     elif provider == "muse-cli":
         m["engine"] = "muse-cli"
+    elif provider == "copilot-cli":
+        m["engine"] = "copilot-cli"
     elif provider == "groq":
         m["engine"] = "groq"
     elif provider == "xai":
@@ -2062,6 +2085,7 @@ def _chat_provider(mcfg):
 # chạy bằng Claude mà không ai biết. Trang Studio đọc chính danh sách này để vẽ ô chọn, nên
 # thêm provider mới ở aux_engine thì thêm tên vào đây là giao diện có ngay.
 AGENT_PROVIDERS = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli",
+                   "copilot-cli",
                    "openrouter", "anthropic-api", "openai", "gemini", "groq", "xai", "meta", "ollama",
                    # Model chạy máy nhà cũng giao được việc nền cho agent. Bỏ nó ra khỏi đây
                    # là tính năng nửa vời: cài model về rồi mà chỉ chat tay được, không giao
@@ -2411,6 +2435,22 @@ def _muse_sub_stream(model, messages, reasoning="off", *, brain=None, tag="chat"
     return _cli_sub_doc(g, _cli_do_sau_khac(g, muse_cli, reasoning, prompt), model)
 
 
+def _copilot_sub_stream(model, messages, reasoning="off", *, brain=None, tag="chat",
+                        mode="suggest"):
+    """Gói Copilot (GitHub Copilot CLI) cho đường CHAT-THUẦN của `_api_stream`.
+
+    Cùng lý do tồn tại với `_grok_sub_stream`. KHÔNG phải `async def` - xem chú thích dài ở
+    `_antigravity_sub_stream`.
+    """
+    sys_txt, prompt = _claude_sub_tach(messages)
+    g = copilot_cli.CopilotCLI(cwd=_brain_root(brain) if brain else None, tag=tag,
+                               model=model or None, instructions=sys_txt)
+    g.mode = mode or "suggest"
+    if brain:
+        _apply_copilot_hub(g, _brain_root(brain), mode=mode)
+    return _cli_sub_doc(g, _cli_do_sau_khac(g, copilot_cli, reasoning, prompt), model)
+
+
 async def _cli_sub_doc(g, prompt, model):
     """Một lượt engine CLI (Antigravity hoặc Grok) -> hợp đồng sự kiện của `_api_stream`.
 
@@ -2508,6 +2548,8 @@ def _api_stream_goc(prov, key, model, messages, reasoning="off"):
         return _grok_sub_stream(model, messages, reasoning)
     if prov == "muse-cli":
         return _muse_sub_stream(model, messages, reasoning)
+    if prov == "copilot-cli":
+        return _copilot_sub_stream(model, messages, reasoning)
     if prov == "anthropic-cli":
         # Gói Claude Code đi qua chính binary `claude`, KHÔNG tự dựng request tới
         # api.anthropic.com bằng token của người dùng nữa (xem claude_auth.py). Vẫn không có
@@ -3657,6 +3699,34 @@ def _apply_muse_hub(cli, vault_root=None, mode="full"):
     return cli
 
 
+def _apply_copilot_hub(cli, vault_root=None, mode="full"):
+    """Gắn MCP hub của MinMin vào tiến trình `copilot`.
+
+    Ghi `<brain>/.copilot/mcp-config.json` rồi trỏ engine vào đó (`cli.mcp_file`); engine truyền
+    `--additional-mcp-config @<file>` cho riêng lượt chạy. Không đụng `~/.copilot/mcp-config.json`
+    dùng chung: hai brain chạy cùng lúc sẽ đè header X-Javis-Vault của nhau. Header y hệt các
+    engine kia (`Bearer hub_token` + X-Javis-Mode + X-Javis-Vault). Entry dựng bằng
+    `copilot_cli.hub_entry` (khoá `type: http` + `url`, đúng thứ `copilot mcp add` ghi ra).
+    """
+    root = vault_root or getattr(cli, "cwd", None)
+    if not root:
+        return cli
+    hub = None
+    if _hub_enabled():
+        headers = {"Authorization": f"Bearer {mcp_hub.hub_token()}", "X-Javis-Mode": mode}
+        try:
+            headers["X-Javis-Vault"] = str(Path(root).expanduser().resolve())
+        except Exception:
+            headers["X-Javis-Vault"] = str(root)
+        hub = copilot_cli.hub_entry(mcp_hub.hub_url(), headers)
+    f = copilot_cli.ghi_mcp_settings(root, hub)
+    try:
+        cli.mcp_file = f if hub else None
+    except Exception:
+        pass
+    return cli
+
+
 def _apply_antigravity_hub(cli, vault_root=None, mode="full"):
     """Gắn MCP hub của Javis vào tiến trình `agy`.
 
@@ -3981,6 +4051,83 @@ async def grok_check(brain: str = "brain"):
     # tiết", nên nút đó phải THẬT SỰ có chi tiết, không thì lại là một vòng bấm vô ích nữa.
     try:
         d["chan_doan"] = grok_cli.chan_doan()
+    except Exception as e:
+        d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
+    return d
+
+
+# ---- GitHub Copilot CLI: cài + đăng nhập device code ngay trên trang Models (26.10.213) ----
+@app.get("/copilot/status")
+def copilot_status():
+    """Trạng thái bộ não Copilot kèm chẩn đoán (chỉ TÊN file/khoá, không bao giờ có token)."""
+    d = copilot_cli.auth_status()
+    d["cli_path"] = copilot_cli.find_copilot_cli() or ""
+    d["cai_lenh"] = copilot_cli.lenh_cai()
+    d["huong_dan"] = copilot_cli.login_huong_dan()
+    try:
+        d["chan_doan"] = copilot_cli.chan_doan()
+    except Exception as e:
+        d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
+    return d
+
+
+@app.post("/copilot/install")
+async def copilot_install():
+    """`npm install -g --prefix ~/.local @github/copilot` chạy nền. Giao diện hỏi install-poll."""
+    return await asyncio.to_thread(copilot_cli.cai_dat_start)
+
+
+@app.get("/copilot/install-poll")
+def copilot_install_poll():
+    return copilot_cli.cai_dat_trang_thai()
+
+
+@app.post("/copilot/login-start")
+async def copilot_login_start():
+    """Bước 1: `copilot login --device-code` trong pty, trả link + mã để mở trên máy người dùng.
+    Một bước là đủ (như Grok): CLI tự đứng hỏi GitHub tới khi người dùng nhập mã xong."""
+    return await asyncio.to_thread(copilot_cli.login_start)
+
+
+@app.get("/copilot/login-poll")
+def copilot_login_poll():
+    return copilot_cli.login_trang_thai()
+
+
+@app.post("/copilot/logout")
+async def copilot_logout():
+    """Ngắt tài khoản GitHub khỏi Copilot CLI trên máy này (xem `copilot_cli.logout`)."""
+    return await asyncio.to_thread(copilot_cli.logout)
+
+
+@app.post("/copilot/check")
+async def copilot_check(brain: str = "brain"):
+    """Chạy THẬT một lượt kèm hub MCP của brain, rồi đọc lại file cấu hình MCP.
+
+    Khác `/grok/check` một bậc: lượt chạy thử mang luôn `--additional-mcp-config`, nên biết được
+    cả hub có KẾT NỐI trong lượt đó không và gói/tổ chức có chặn MCP bên thứ ba không - không chỉ
+    "file đã ghi đúng chỗ".
+    """
+    root = _brain_root(brain)
+    eng = _types.SimpleNamespace(cwd=root, mcp_file=None)
+    try:
+        _apply_copilot_hub(eng, root, mode="suggest")
+    except Exception as e:
+        print(f"[copilot check] ghi cấu hình MCP: {e}", file=__import__('sys').stderr)
+    d = await asyncio.to_thread(copilot_cli.kiem_tra_nhanh, 90.0, eng.mcp_file)
+    try:
+        mcp = copilot_cli.trang_thai_mcp(root)
+        mcp["hub_bat"] = _hub_enabled()
+        lan = d.get("mcp_lan_chay") or {}
+        mcp["trang_thai_lan_chay"] = lan.get("status", "")
+        if lan.get("status") == "failed" or d.get("mcp_bi_chan"):
+            mcp["co_javis"] = False
+            mcp["loi"] = d.get("mcp_bi_chan") or lan.get("error") or "Hub MCP không kết nối được."
+        d["mcp"] = mcp
+    except Exception as e:
+        d["mcp"] = {"co_javis": False, "loi": f"{type(e).__name__}: {e}"}
+    try:
+        d["chan_doan"] = copilot_cli.chan_doan()
     except Exception as e:
         d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
     return d
@@ -5331,6 +5478,9 @@ async def _fetch_provider_models(provider, m):
         return await asyncio.to_thread(grok_cli.list_models)
     if provider == "muse-cli":
         return muse_cli.list_models()     # bảng tĩnh, không đẻ tiến trình
+    if provider == "copilot-cli":
+        # `copilot help config` (danh mục của bản CLI, không cần mạng) - đẻ tiến trình nên ở worker.
+        return await asyncio.to_thread(copilot_cli.list_models)
     if provider == "antigravity-cli":
         # `agy models` là NGUỒN CHÂN LÝ, không có bảng chép tay nào để rơi về - chạy ở worker
         # vì nó đẻ tiến trình con và có thể mất vài giây.
@@ -13181,7 +13331,8 @@ async def _dg_resolver(su_that: dict, brain: str):
     return danh_gia.lay_theo_duong(data, su_that.get("lay", ""))
 
 
-_DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli")
+_DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli",
+               "copilot-cli")
 _DG_NAO_API = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama",
                "openai-compat", "ollama-local", *nha_api_rieng.IDS)
 
@@ -16075,6 +16226,85 @@ async def websocket_endpoint(ws: WebSocket):
                         "type": "response", "content": final_text, "engine": "grok-cli",
                         "model": actual_model or "", "session_id": conv_sid,
                         **_ctx_frame(runtime_trace, _ctx_in)}))
+            elif prov == "copilot-cli":
+                # ===== Gói Copilot qua GITHUB COPILOT CLI - tool native + MCP hub =====
+                #
+                # Cùng khuôn nhánh Grok. Khác một chỗ: id mạch do MinMin CẤP (uuid4) qua
+                # `--session-id`, vì Copilot nhận uuid tự cấp cho phiên mới (đo trên help). Chỉ
+                # LƯU id khi lượt ra chữ: lượt hỏng có thể chưa hề tạo phiên, lưu lại là lượt sau
+                # nối vào mạch rỗng mà bỏ qua bước mồi lịch sử.
+                actual_model = api_model or None
+                sysprompt, _sub_plan = await _subscription_system_prompt(
+                    "copilot-cli", actual_model or "", kind)
+                pcli = copilot_cli.CopilotCLI(cwd=_cwd_luot_chat(_row0, brain), model=actual_model,
+                                              tag=turn_tag, instructions=sysprompt)
+                pcli.mode = _muc_quyen_luot_chat(_row0, brain)
+                _apply_copilot_hub(pcli, _brain_root(brain), mode=pcli.mode)
+                if not pcli.is_available():
+                    final_text = ("⚠ Chưa cài GitHub Copilot CLI trên máy này. Mở trang Models, "
+                                  "thẻ GitHub Copilot, bấm \"Cài đặt\" rồi \"Đăng nhập GitHub\" "
+                                  "(chạy trên VPS cũng được, nó hiện một link và một mã).")
+                    await ws.send_text(json.dumps({
+                        "type": "response", "content": final_text, "engine": "copilot-cli",
+                        "model": actual_model or "", "session_id": conv_sid,
+                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                else:
+                    _p_mach = (_row0.get("copilot_session_id") or "").strip()
+                    if _p_mach and compaction.nen_mach_thue_bao(
+                            _row0.get("last_input_tokens"), msg_count=_row0.get("msg_count"),
+                            rotated_at=_row0.get("thread_rotated_msg")):
+                        _p_mach = ""
+                        store.clear_copilot_session_id(conv_sid)
+                        store.mark_thread_rotated(conv_sid)
+                        _CONTEXT_RUNTIME.record_runtime_event(
+                            runtime_trace, "thread.rotated",
+                            {"engine": "copilot-cli",
+                             "last_input_tokens": int(_row0.get("last_input_tokens") or 0),
+                             "threshold": compaction.SUBSCRIPTION_THREAD_MAX_TOKENS})
+                        await ws.send_text(json.dumps({
+                            "type": "tool_call", "tool": "javis_nen_mach",
+                            "content": "⚙ Mạch hội thoại đã dài, MinMin mở mạch mới."}))
+                    pcli.session_id = _p_mach or None
+                    _p_cur = _cli_do_sau_khac(pcli, copilot_cli, reasoning, user_message)
+                    _p_raw = [{"role": _m["role"], "content": _m["content"]}
+                              for _m in store.get_messages(conv_sid)[:-1]
+                              if _m["role"] in ("user", "assistant") and _m.get("content")]
+                    _p_prompt = (_p_cur if _p_mach else compaction.bootstrap_prompt(
+                        _p_raw, _p_cur, summary=_row0.get("compact_summary") or ""))
+                    _CONTEXT_RUNTIME.observe_payload(
+                        runtime_trace,
+                        [{"role": "system", "content": sysprompt},
+                         {"role": "user", "content": _p_prompt}],
+                        provider="copilot-cli", model=actual_model or "")
+                    _p_loi = False
+                    async for ev in pcli.query(_p_prompt):
+                        et = ev.get("type")
+                        if et == "tool_call":
+                            await ws.send_text(json.dumps({
+                                "type": "tool_call", "tool": ev.get("name", ""),
+                                "detail": tool_label.chi_tiet(ev),
+                                "content": f"⚙ Đang gọi: {ev.get('name', '')}"}))
+                        elif et == "final":
+                            final_text = ev.get("content") or ""
+                        elif et == "usage":
+                            store.set_last_input_tokens(
+                                conv_sid, int(ev.get("input_tokens") or 0))
+                        elif et == "error":
+                            _p_loi = True
+                            await ws.send_text(_limit_frame(
+                                ev.get("content") or "", "copilot-cli", actual_model or ""))
+                    if _p_loi and not final_text:
+                        # Mạch cũ hỏng (hoặc lượt đầu chưa tạo được phiên): xoá để lượt sau mồi
+                        # lại từ lịch sử đã lưu, không nối mãi vào một id chết.
+                        store.clear_copilot_session_id(conv_sid)
+                        pcli.session_id = None
+                    elif final_text and pcli.session_id:
+                        store.set_copilot_session_id(conv_sid, pcli.session_id)
+                    final_text = _chuan_hoa_link_file(_brain_root(brain), final_text)
+                    await ws.send_text(json.dumps({
+                        "type": "response", "content": final_text, "engine": "copilot-cli",
+                        "model": actual_model or "", "session_id": conv_sid,
+                        **_ctx_frame(runtime_trace, _ctx_in)}))
             elif prov == "muse-cli":
                 # ===== Gói thuê bao Muse Code qua META MUSE CODE CLI - tool native + MCP hub =====
                 #
@@ -17640,6 +17870,7 @@ async def websocket_endpoint(ws: WebSocket):
             engine_label = ("codex" if prov == "openai-oauth"
                             else "grok-cli" if prov == "grok-cli"
                             else "muse-cli" if prov == "muse-cli"
+                            else "copilot-cli" if prov == "copilot-cli"
                             else "antigravity-cli" if prov == "antigravity-cli"
                             else prov if ((kind == "api" and api_key) or kind == "oauth")
                             else "cli")
@@ -20095,7 +20326,8 @@ def _tg_quen_sid(sess) -> None:
 # chỗ tự liệt kê tay là có ngày sót một cái: nhánh đổi provider đã sót `cli` một thời gian, và
 # `antigravity` thì sót ở cả ba chỗ.
 _TG_ENGINE_MACH = (("cli", "cli"), ("codex", "codex"), ("grok-cli", "grok"),
-                   ("muse-cli", "muse"), ("antigravity-cli", "antigravity"))
+                   ("muse-cli", "muse"), ("antigravity-cli", "antigravity"),
+                   ("copilot-cli", "copilot"))
 
 
 def _tg_ngat_mach(sess, tru=None):
@@ -20433,6 +20665,7 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
     engine_label = ("codex" if prov == "openai-oauth"
                     else "grok-cli" if prov == "grok-cli"
                     else "muse-cli" if prov == "muse-cli"
+                    else "copilot-cli" if prov == "copilot-cli"
                     else "antigravity-cli" if prov == "antigravity-cli"
                     else prov if ((kind == "api" and api_key) or kind == "oauth")
                     else "cli")
@@ -20969,6 +21202,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         # dùng được. Gói Claude Code, Grok Build, Antigravity chạy qua binary riêng: lượt đó rơi về
         # Chỉ đọc, và nói rõ cho chủ biết ở câu trả lời (`canh_bao`) chứ không im lặng hạ mức.
         _doc_roi_ve = _muc == "doc" and prov in ("anthropic-cli", "grok-cli", "muse-cli",
+                                                 "copilot-cli",
                                                  "antigravity-cli")
         if _muc == "doc" and not _doc_roi_ve:
             return await _bot_tra_loi_co_tool(
@@ -21132,6 +21366,43 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         if not out and loi:
             _noi = _subscription_limit_message(loi[0], "grok-cli")
             return _noi or ("⚠ Grok Build CLI lỗi: " + loi[0][:400])
+        return out or "(không có nội dung)"
+
+    if prov == "copilot-cli":
+        # Cùng khuôn nhánh Grok Build: giữ object engine trong `sess["copilot"]`. Id mạch do
+        # engine tự cấp ở lượt đầu; lượt hỏng mà không ra chữ thì bỏ id để lượt sau mồi lại.
+        actual_model = api_model or None
+        pcli = sess.get("copilot")
+        if pcli is None:
+            pcli = copilot_cli.CopilotCLI(cwd=_brain_root(brain), model=actual_model,
+                                          tag=f"telegram:{chat_id}", instructions=sysprompt)
+            sess["copilot"] = pcli
+        else:
+            pcli.cwd = _brain_root(brain)
+            pcli.model = actual_model
+            pcli.instructions = sysprompt
+        pcli.mode = "full"
+        _apply_copilot_hub(pcli, _brain_root(brain))
+        if not pcli.is_available():
+            return ("⚠ Chưa cài GitHub Copilot CLI trên máy chạy MinMin. Mở trang Models, thẻ "
+                    "GitHub Copilot, bấm Cài đặt rồi Đăng nhập GitHub.")
+        _hoi = text
+        if not getattr(pcli, "session_id", None):
+            _raw_cu, _tom_cu = _tg_lich_su_kho(store, conv_sid, text)
+            _hoi = compaction.bootstrap_prompt(_raw_cu, _hoi, summary=_tom_cu)
+        out, loi = "", []
+        async for ev in pcli.query(_hoi):
+            et = ev.get("type")
+            if et == "tool_call":
+                await _p(f"⚙ Đang gọi: {ev.get('name', '')}")
+            elif et == "final":
+                out = ev.get("content") or ""
+            elif et == "error":
+                loi.append(str(ev.get("content") or ""))
+        if not out and loi:
+            pcli.session_id = None
+            _noi = _subscription_limit_message(loi[0], "copilot-cli")
+            return _noi or ("⚠ GitHub Copilot CLI lỗi: " + loi[0][:400])
         return out or "(không có nội dung)"
 
     if prov == "muse-cli":
@@ -21547,6 +21818,7 @@ _TG_NHAN_NGAN = {
     "grok-cli": "Grok Build",
     "muse-cli": "Muse Code",
     "antigravity-cli": "Antigravity",
+    "copilot-cli": "Copilot",
     "openrouter": "OpenRouter",
     "anthropic-api": "Claude API",
     "openai": "OpenAI API",

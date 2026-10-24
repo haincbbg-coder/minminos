@@ -342,6 +342,7 @@ _NEN_TANG = (
     (("gemini", "google", "antigravity-cli", "antigravity"), "Gemini"),
     (("grok-cli", "grok", "xai"), "Grok"),
     (("muse-cli", "muse"), "Meta"),
+    (("copilot-cli", "copilot"), "Copilot"),
 )
 
 
@@ -438,6 +439,9 @@ class SessionStore:
                               # Mạch native của Meta Muse Code CLI (`muse exec --session-id`).
                               # Cột RIÊNG, cùng lý do như hai cột trên.
                               ("muse_session_id", "TEXT"),
+                              # Mạch native của GitHub Copilot CLI (`--session-id <uuid>`).
+                              # Cột RIÊNG, cùng lý do như ba cột trên.
+                              ("copilot_session_id", "TEXT"),
                               # Luồng của engine ChatGPT Web, đã gỡ ở 0.64.20. Cột VẪN khai
                               # báo để DB cũ và DB mới cùng một hình dạng; không ai đọc ghi
                               # nó nữa. Xoá cột SQLite là phải dựng lại cả bảng, không đáng.
@@ -1296,6 +1300,22 @@ class SessionStore:
             (session_id,),
         ))
 
+    def set_copilot_session_id(self, session_id: str, copilot_id: str) -> None:
+        """Gắn mạch native của Copilot CLI vào hội thoại để lượt sau `--session-id` đúng chỗ."""
+        if not copilot_id:
+            return
+        self._write(lambda c: c.execute(
+            "UPDATE sessions SET copilot_session_id = ?, updated_at = ? WHERE id = ?",
+            (copilot_id, time.time(), session_id),
+        ))
+
+    def clear_copilot_session_id(self, session_id: str) -> None:
+        self._write(lambda c: c.execute(
+            "UPDATE sessions SET copilot_session_id = NULL "
+            "WHERE id = ? AND copilot_session_id IS NOT NULL",
+            (session_id,),
+        ))
+
     # ── mạch native của các engine giữ phiên ──
     #
     # Nhãn engine -> cột giữ mạch. Engine KHÔNG có mặt ở bảng này (Antigravity CLI và mọi
@@ -1305,7 +1325,8 @@ class SessionStore:
     _MACH_NATIVE = {"cli": "cli_session_id",
                     "codex": "codex_thread_id",
                     "grok-cli": "grok_session_id",
-                    "muse-cli": "muse_session_id"}
+                    "muse-cli": "muse_session_id",
+                    "copilot-cli": "copilot_session_id"}
 
     def clear_native_threads(self, session_id: str, keep: str = "") -> List[str]:
         """Vô hiệu mạch native của MỌI engine, TRỪ engine `keep` đang chạy lượt này.

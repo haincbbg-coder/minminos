@@ -89,6 +89,9 @@ RUN npm install -g @openai/codex@${CODEX_CLI_VERSION} && npm cache clean --force
 # Engine đó đã GỠ HẲN khỏi repo ở 0.50.0. Đường Google cho tài khoản cá nhân hiện nay là
 # Antigravity CLI (`agy`); đường xAI dùng gói SuperGrok / X Premium+ là Grok Build (`grok`).
 # Cả hai đều là script tải về chạy thẳng, không cài qua npm nên không nằm trong image.
+# GitHub Copilot CLI (`@github/copilot`) cũng KHÔNG nằm trong image dù cài qua npm: gói ~200 MB
+# mà chỉ người có gói Copilot mới cần. Nút Cài đặt trên thẻ chạy `npm install -g --prefix ~/.local`
+# (user javis không ghi được /usr/local), và ~/.local đã sống qua update nhờ entrypoint.sh.
 
 WORKDIR /app
 

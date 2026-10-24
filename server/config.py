@@ -191,6 +191,8 @@ _DEFAULT = {
             "grok-cli": [],
             # Muse Code CLI: bang tinh trong muse_cli.MODELS (Meta khong co lenh liet ke).
             "muse-cli": [],
+            # Copilot CLI: danh muc lay tu `copilot help config` cua chinh ban CLI.
+            "copilot-cli": [],
             "openrouter": ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash-001", "deepseek/deepseek-v4.1-flash", "moonshotai/kimi-k3"],
         },
     },

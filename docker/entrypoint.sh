@@ -8,7 +8,7 @@
 # ~/.codex được persist). Mỗi lần cập nhật image là container mới, HOME mới tinh: bay
 # cả binary lẫn đăng nhập, người dùng phải cài + đăng nhập lại từ đầu, mãi mãi.
 #
-# Cách chữa: mỗi lần boot, link ~/.local, ~/.antigravity, ~/.config, ~/.gemini, ~/.grok vào /data/home/
+# Cách chữa: mỗi lần boot, link ~/.local, ~/.antigravity, ~/.config, ~/.gemini, ~/.grok, ~/.copilot vào /data/home/
 # (volume /data sẵn có nên KHÔNG cần người dùng sửa docker-compose - chỉ cần image mới).
 # Lần đầu sau khi có bản này, nội dung đang có trong HOME được dọn sang volume trước
 # khi link, nên ai đã lỡ cài agy trong container hiện tại cũng không mất gì.
@@ -32,7 +32,13 @@ PERSIST_ROOT="${JAVIS_HOME_PERSIST:-/data/home}"
 # Muse Code CLI (`muse`, 26.10.171) KHÔNG cần thêm gì: binary ở ~/.local/bin, đăng nhập và
 # cấu hình MCP ở ~/.config/muse/ (auth.json, settings.json) - cả hai thư mục đã nằm trong
 # danh sách dưới từ trước.
-for d in .local .antigravity .config .gemini .grok; do
+#
+# ~/.copilot: GitHub Copilot CLI (`copilot`, 26.10.213). Binary nằm ở ~/.local/bin (nút Cài đặt
+# chạy `npm install -g --prefix ~/.local`) nên đã được giữ, nhưng đăng nhập (`config.json`, token
+# lưu plaintext vì container không có keychain), phiên chat (`session-state/`) và nhật ký nằm ở
+# ~/.copilot - bỏ sót là mỗi lần cập nhật lại phải đăng nhập GitHub, đúng bài học ~/.grok.
+# ~/.cache/copilot (gói JS bung ra ~240 MB) KHÔNG cần giữ: CLI tự bung lại ở lượt đầu.
+for d in .local .antigravity .config .gemini .grok .copilot; do
     src="$HOME/$d"
     dst="$PERSIST_ROOT/$d"
     # Đã là symlink (boot thứ hai trở đi) → xong từ lâu.

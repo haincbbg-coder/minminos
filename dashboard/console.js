@@ -4186,6 +4186,34 @@
           </div>
         </div>`;
       }
+      if (p.id === "copilot-cli") {
+        // GitHub Copilot CLI (26.10.213): một gói Copilot mở model của nhiều hãng. Khuôn thẻ
+        // Grok (device code: link + mã, CLI tự đứng hỏi GitHub) cộng nút Cài đặt của thẻ agy vì
+        // binary không nằm trong image. MinMin không giữ token; CLI cất trong ~/.copilot.
+        const st = on
+          ? t("models.st_logged_in") + (p.account ? " · " + esc(p.account) : "")
+            + " · " + p.models.length + " model"
+          : (p.cli_found ? t("models.st_cli_no_login") : t("models.st_no_cli", { ten: "GitHub Copilot CLI" }));
+        return `<div class="prov-card ${p.is_main ? "main" : ""}">
+          ${provHead(p, on, "MCP/skill", st)}
+          <div class="prov-note">${esc(t("models.copilot_note"))}</div>
+          <div class="prov-note warn">${WARN_ICON} ${esc(t("models.copilot_bg_warn"))}</div>
+          <div id="copilotBox" class="prov-steps" style="display:none"></div>
+          <div class="prov-action" style="flex-wrap:wrap">
+            ${on
+              ? `<button class="gcard-btn ghost" data-copilotcheck="1">${esc(t("qs.recheck"))}</button>
+                 <button class="gcard-btn ghost" data-copilotdisc="1">${esc(t("models.disconnect"))}</button>`
+              : (p.cli_found
+                  ? `<button class="gcard-btn" data-copilotlogin="1">${esc(t("models.copilot_btn_login"))}</button>`
+                  : `<button class="gcard-btn" data-copilotinstall="1">${esc(t("models.agy_btn_install"))}</button>`)
+                + `<button class="gcard-btn ghost" data-copilotcheck="1">${esc(t("qs.recheck"))}</button>`}
+            <span id="copilotMsg" class="gcard-meta" style="margin-left:10px;flex:1;min-width:200px">${on ? "" : esc(p.auth_error || "")}</span>
+          </div>
+          ${p.cli_found || on ? "" : `<details class="gcard-meta" style="margin-top:6px"><summary>${esc(t("models.agy_manual"))}</summary>
+            <div>${esc(t("models.cli_install"))}<br><code>${esc(p.cai_lenh || "")}</code></div>
+          </details>`}
+        </div>`;
+      }
       if (p.id === "antigravity-cli") {
         // Bộ não thứ 10: gói Google (AI Pro / Ultra) qua Antigravity CLI. Từ 26.10.205 có nút
         // Cài đặt + Đăng nhập Google ngay trên thẻ, khuôn giống Claude: máy chủ chạy `agy`
@@ -4293,6 +4321,7 @@
           <div class="gcard-top"><span class="gcard-name">${esc(main.model || "-")}</span><span class="gcard-tag">${esc(mainP.label || main.provider || "")}</span></div>
           <div class="gcard-meta">${esc(mainP.id === "grok-cli" ? t("models.main_grok")
             : mainP.id === "muse-cli" ? t("models.main_muse")
+            : mainP.id === "copilot-cli" ? t("models.main_copilot")
             : mainP.id === "antigravity-cli" ? t("models.main_agy")
             : mainP.kind === "cli" ? t("models.main_cli")
             : mainP.kind === "oauth" ? t("models.main_codex")
@@ -4853,6 +4882,130 @@
           setTimeout(() => renderModelsCloudTab(el), 800);
         } else if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.login_incomplete"));
       };
+    };
+    // ---- GitHub Copilot CLI: cài + đăng nhập device code ngay trên trang (26.10.213) ----
+    const cpi = el.querySelector("[data-copilotinstall]");
+    if (cpi) cpi.onclick = async () => {
+      const msg = el.querySelector("#copilotMsg"), box = el.querySelector("#copilotBox");
+      cpi.disabled = true; cpi.textContent = t("models.agy_installing");
+      if (msg) msg.textContent = t("models.copilot_install_wait");
+      let r0 = null;
+      try { r0 = await (await fetch("/copilot/install", { method: "POST" })).json(); } catch (e) {}
+      if (r0 && r0.ok === false) {
+        cpi.disabled = false; cpi.textContent = t("models.agy_btn_install");
+        if (msg) msg.innerHTML = Icons.warn(r0.error || t("models.agy_install_timeout"));
+        return;
+      }
+      const han = Date.now() + 900000;
+      const quay = async () => {
+        let d = null;
+        try { d = await (await fetch("/copilot/install-poll")).json(); } catch (e) {}
+        if (d && d.cli_path) {
+          if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.agy_installed"));
+          _daHoiModel.delete("copilot-cli");
+          setTimeout(() => renderModelsCloudTab(el), 800);
+          return;
+        }
+        const log = (d && d.nhat_ky) || [];
+        if (box && log.length) {
+          box.style.display = "";
+          box.innerHTML = `<code style="white-space:pre-wrap">${esc(log.slice(-6).join("\n"))}</code>`;
+        }
+        if ((d && !d.dang_chay && d.ok === false) || Date.now() > han) {
+          cpi.disabled = false; cpi.textContent = t("models.agy_btn_install");
+          if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.agy_install_timeout"));
+          return;
+        }
+        setTimeout(quay, 2000);
+      };
+      setTimeout(quay, 1500);
+    };
+    const cpl = el.querySelector("[data-copilotlogin]");
+    if (cpl) cpl.onclick = async () => {
+      const msg = el.querySelector("#copilotMsg"), box = el.querySelector("#copilotBox");
+      cpl.disabled = true; const cu = cpl.textContent; cpl.textContent = t("models.opening");
+      if (msg) msg.textContent = t("models.copilot_ask");
+      let r = null;
+      try { r = await (await fetch("/copilot/login-start", { method: "POST" })).json(); }
+      catch (e) { r = { ok: false, error: t("common.net_err") }; }
+      cpl.disabled = false; cpl.textContent = cu;
+      if (!r || !r.ok) {
+        if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.cant_open"));
+        if (box && r && r.nhat_ky && r.nhat_ky.length) {
+          box.style.display = "";
+          box.innerHTML = `<code style="white-space:pre-wrap">${esc(r.nhat_ky.slice(-8).join("\n"))}</code>`;
+        }
+        return;
+      }
+      if (r.xong) { _daHoiModel.delete("copilot-cli"); renderModelsCloudTab(el); return; }
+      if (box) {
+        box.style.display = "";
+        box.innerHTML = `<div><b>1.</b> ${esc(t("models.copilot_step1"))}<br><a href="${esc(r.url)}" target="_blank" rel="noopener" style="word-break:break-all">${esc(r.url)}</a></div>`
+          + (r.code ? `<div><b>2.</b> ${esc(t("models.copilot_step2"))} <code style="font-size:1.15em">${esc(r.code)}</code></div>` : "")
+          + `<div><b>3.</b> ${esc(t("models.copilot_step3"))}</div>`;
+      }
+      if (msg) msg.textContent = t("models.wait_browser");
+      const veLog = (d) => {
+        if (!box || !d || !d.nhat_ky || !d.nhat_ky.length) return;
+        let h = box.querySelector("#copilotLog");
+        if (!h) {
+          h = document.createElement("div");
+          h.id = "copilotLog"; h.className = "gcard-meta"; h.style.marginTop = "6px";
+          box.appendChild(h);
+        }
+        h.innerHTML = `<code style="white-space:pre-wrap">${esc(d.nhat_ky.slice(-8).join("\n"))}</code>`;
+      };
+      // Hỏi lại tới khi CLI báo xong. Mã device code của GitHub sống 15 phút.
+      const han = Date.now() + 900000;
+      const quay = async () => {
+        let d = null;
+        try { d = await (await fetch("/copilot/login-poll")).json(); } catch (e) {}
+        if (d && d.connected) { _daHoiModel.delete("copilot-cli"); renderModelsCloudTab(el); return; }
+        if (Date.now() > han) {
+          if (msg) msg.innerHTML = Icons.warn(t("models.timeout_login"));
+          veLog(d);
+          return;
+        }
+        if (d && !d.dang_cho) {
+          if (msg) msg.innerHTML = Icons.warn(d.error || t("models.login_incomplete"));
+          veLog(d);
+          return;
+        }
+        setTimeout(quay, 2000);
+      };
+      setTimeout(quay, 2000);
+    };
+    const cpd = el.querySelector("[data-copilotdisc]");
+    if (cpd) cpd.onclick = async () => {
+      cpd.disabled = true; cpd.textContent = t("models.disconnecting");
+      try { await fetch("/copilot/logout", { method: "POST" }); } catch (e) {}
+      _daHoiModel.delete("copilot-cli");
+      renderModelsCloudTab(el);
+    };
+    const cpc = el.querySelector("[data-copilotcheck]");
+    if (cpc) cpc.onclick = async () => {
+      const msg = el.querySelector("#copilotMsg");
+      cpc.disabled = true; const cu4 = cpc.textContent; cpc.textContent = t("models.trying");
+      if (msg) msg.textContent = t("models.testing");
+      let r = null;
+      // Gửi kèm brain đang mở: lượt chạy thử mang hub MCP của ĐÚNG brain đó.
+      const _br3 = window.currentBrainPath ? currentBrainPath() : "brain";
+      try { r = await (await fetch(`/copilot/check?brain=${encodeURIComponent(_br3)}`,
+                                   { method: "POST" })).json(); }
+      catch (e) { r = { ok: false, error: t("common.net_err") }; }
+      cpc.disabled = false; cpc.textContent = cu4;
+      // "Chat được" và "gọi được tool của MinMin" là hai chuyện; nói riêng cái thứ hai, kèm câu
+      // chính sách MCP nếu gói/tổ chức chặn.
+      const mcpTxt3 = (r && r.mcp)
+        ? (r.mcp.co_javis ? " · " + esc(t("models.mcp_ok"))
+           : (r.mcp.hub_bat === false ? " · " + esc(t("models.mcp_off"))
+              : " · <b>" + esc(t("models.mcp_fail")) + "</b>" + (r.mcp.loi ? " " + esc(r.mcp.loi) : "")))
+        : "";
+      if (r && r.ok) {
+        if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.works")) + mcpTxt3;
+        _daHoiModel.delete("copilot-cli");
+        if (r.mcp && r.mcp.co_javis) setTimeout(() => renderModelsCloudTab(el), 1500);
+      } else if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.not_works")) + mcpTxt3;
     };
     // ---- Grok Build CLI: đăng nhập device code ngay trên trang ----
     const gkl = el.querySelector("[data-groklogin]");

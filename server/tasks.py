@@ -66,6 +66,7 @@ _TEN_GOI = {
     "codex": "ChatGPT",
     "grok-cli": "SuperGrok / X Premium",
     "muse-cli": "Meta Muse Code",
+    "copilot-cli": "GitHub Copilot",
     "antigravity-cli": "Google Antigravity",
     "gemini-cli": "Google",
 }

@@ -559,7 +559,10 @@ _BACKUP_SKIP_SUBSTR = ("/memory/conversations/", "/Memory/conversations/",
                        # ĐÚNG file mcp_config.json chứ không chặn cả `.agents/`: thư mục đó
                        # còn là một trong các chỗ chứa skill của brain, phải được sao lưu.
                        "/.agents/mcp_config.json/",
-                       "/.antigravity/", "/.antigravitycli/", "/.gemini/")
+                       "/.antigravity/", "/.antigravitycli/", "/.gemini/",
+                       # Cấu hình MCP của GitHub Copilot CLI trong brain (`.copilot/
+                       # mcp-config.json`): cùng chứa Bearer hub token, cùng đuôi .json.
+                       "/.copilot/")
 
 
 def _backup_skip(rel: str, sync_images: bool = False) -> bool:

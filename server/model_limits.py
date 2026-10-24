@@ -155,6 +155,7 @@ SUBSCRIPTION_LABEL = {
     "antigravity-cli": "gói Google (Antigravity CLI)",
     "grok-cli": "gói xAI (SuperGrok / X Premium+)",
     "muse-cli": "gói Meta Muse Code",
+    "copilot-cli": "gói GitHub Copilot",
 }
 
 
