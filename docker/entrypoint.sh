@@ -9,7 +9,7 @@
 # cả binary lẫn đăng nhập, người dùng phải cài + đăng nhập lại từ đầu, mãi mãi.
 #
 # Cách chữa: mỗi lần boot, link ~/.local, ~/.antigravity, ~/.config, ~/.gemini, ~/.grok, ~/.copilot,
-# ~/.kiro, ~/.cursor, ~/.vibe vào /data/home/
+# ~/.kiro, ~/.cursor, ~/.vibe, ~/.kimi-code, ~/.kimi vào /data/home/
 # (volume /data sẵn có nên KHÔNG cần người dùng sửa docker-compose - chỉ cần image mới).
 # Lần đầu sau khi có bản này, nội dung đang có trong HOME được dọn sang volume trước
 # khi link, nên ai đã lỡ cài agy trong container hiện tại cũng không mất gì.
@@ -45,7 +45,11 @@ PERSIST_ROOT="${JAVIS_HOME_PERSIST:-/data/home}"
 # ~/.config/cursor (phiên `agent login` trên Linux - đã nằm trong .config) và ~/.vibe (.env chứa
 # khoá Mistral sau khi đăng nhập, config.toml). Thiếu ba thư mục này là mỗi lần cập nhật image
 # lại phải đăng nhập lại, đúng lỗi Grok 29/08.
-for d in .local .antigravity .config .gemini .grok .copilot .kiro .cursor .vibe; do
+#
+# ~/.kimi-code: Kimi Code CLI (`kimi`, 26.10.214) giữ đăng nhập (credentials/), danh sách model
+# theo gói (config.toml), phiên hội thoại (sessions/) và có thể cả binary do install.sh chính chủ
+# đặt. ~/.kimi là chỗ bản `kimi-cli` cũ dùng (lệnh `kimi migrate` của bản mới đọc từ đó).
+for d in .local .antigravity .config .gemini .grok .copilot .kiro .cursor .vibe .kimi-code .kimi; do
     src="$HOME/$d"
     dst="$PERSIST_ROOT/$d"
     # Đã là symlink (boot thứ hai trở đi) → xong từ lâu.

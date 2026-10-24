@@ -305,7 +305,8 @@ def probe_claude_credentials(path=None) -> tuple[bool, str]:
 _PROVIDER_ENGINE = {"anthropic-cli": "claude", "openai-oauth": "codex",
                     "grok-cli": "grok-cli", "muse-cli": "muse-cli",
                     "copilot-cli": "copilot-cli",
-                    "kiro-cli": "kiro-cli", "cursor-cli": "cursor-cli", "vibe-cli": "vibe-cli"}
+                    "kiro-cli": "kiro-cli", "cursor-cli": "cursor-cli", "vibe-cli": "vibe-cli",
+                    "kimi-cli": "kimi-cli"}
 
 
 def engines_in_use() -> set:

@@ -70,6 +70,7 @@ _TEN_GOI = {
     "kiro-cli": "Kiro",
     "cursor-cli": "Cursor",
     "vibe-cli": "Mistral Vibe",
+    "kimi-cli": "hội viên Kimi (Kimi Code)",
     "antigravity-cli": "Google Antigravity",
     "gemini-cli": "Google",
 }

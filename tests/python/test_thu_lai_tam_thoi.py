@@ -233,6 +233,8 @@ main._muse_sub_stream = _lam_engine("_muse_sub_stream")
 main._copilot_sub_stream = _lam_engine("_copilot_sub_stream")
 # Kiro / Cursor / Mistral Vibe CLI (26.10.215) cùng cảnh: đi chung `_nao_cli_sub_stream`.
 main._nao_cli_sub_stream = _lam_engine("_nao_cli_sub_stream")
+# Kimi Code CLI (bộ não thứ 16) cùng cảnh: chạy binary `kimi`, không qua engine.*.
+main._kimi_sub_stream = _lam_engine("_kimi_sub_stream")
 
 _bo_sot = []
 for _p in [d["id"] for d in main.PROVIDER_DEFS]:

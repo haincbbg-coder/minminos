@@ -197,6 +197,8 @@ _DEFAULT = {
             "kiro-cli": [],
             "cursor-cli": [],
             "vibe-cli": [],
+            # Kimi Code CLI: danh sach do `kimi login` ghi vao ~/.kimi-code/config.toml.
+            "kimi-cli": [],
             "openrouter": ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash-001", "deepseek/deepseek-v4.1-flash", "moonshotai/kimi-k3"],
         },
     },

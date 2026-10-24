@@ -42,13 +42,14 @@ def check(name: str, condition: bool, extra=None) -> None:
 # engine cho nó thì test này đỏ NGAY, thay vì để người dùng phát hiện bằng một agent chạy
 # sai nhà trong im lặng.
 dung_duoc = {aux_engine.CLAUDE, aux_engine.CODEX, aux_engine.GROK_CLI, aux_engine.MUSE_CLI,
-             aux_engine.ANTIGRAVITY, aux_engine.COPILOT_CLI} | set(aux_engine.API_PROVIDERS) | set(aux_engine.NAO_CLI_MOI)
+             aux_engine.ANTIGRAVITY, aux_engine.COPILOT_CLI, aux_engine.KIMI_CLI} | set(aux_engine.API_PROVIDERS) | set(aux_engine.NAO_CLI_MOI)
 check("mọi nhà trong AGENT_PROVIDERS đều có bộ dựng engine ở aux_engine",
       set(main.AGENT_PROVIDERS) <= dung_duoc,
       sorted(set(main.AGENT_PROVIDERS) - dung_duoc))
 check("có đủ cả CLI lẫn API (không còn chỉ Claude + ChatGPT)",
       len(main.AGENT_PROVIDERS) >= 7, len(main.AGENT_PROVIDERS))
-for p in ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli", "openrouter",
+for p in ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "kimi-cli", "antigravity-cli",
+          "openrouter",
           "anthropic-api", "openai", "gemini", "groq", "ollama"):
     check(f"có nhà {p}", p in main.AGENT_PROVIDERS)
 check("đủ mọi nhà ở trang Models",

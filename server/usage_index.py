@@ -303,6 +303,8 @@ _EVENT_MUSE_CLI = {"muse-cli", "muse_cli", "muse"}
 _EVENT_COPILOT_CLI = {"copilot-cli", "copilot_cli", "copilot"}
 # Kiro / Cursor / Mistral Vibe CLI (26.10.215): moi goi mot cot rieng, cung ly do.
 _EVENT_NAO_CLI_MOI = {"kiro-cli", "cursor-cli", "vibe-cli"}
+# Kimi Code CLI (goi hoi vien Kimi): cot rieng, cung ly do.
+_EVENT_KIMI_CLI = {"kimi-cli", "kimi_cli", "kimi"}
 
 
 def _ingest_events(conn) -> int:
@@ -378,6 +380,9 @@ def _ingest_events(conn) -> int:
                            "activity": "chat", "project": "(events)"})
         elif prov in _EVENT_NAO_CLI_MOI:
             events.append({**chung, "provider": prov, "source": "javis",
+                           "activity": "chat", "project": "(events)"})
+        elif prov in _EVENT_KIMI_CLI:
+            events.append({**chung, "provider": "kimi-cli", "source": "javis",
                            "activity": "chat", "project": "(events)"})
     if events:
         _insert_events(conn, path, events)

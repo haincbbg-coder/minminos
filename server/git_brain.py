@@ -189,6 +189,8 @@ _GITIGNORE_BODY = (
        ".antigravity/",
        ".antigravitycli/",
        ".gemini/",
+       "# Cấu hình MCP MinMin ghi cho Kimi Code (`.kimi-code/mcp.json`) - chứa hub token.",
+       ".kimi-code/",
        "*.tmp",
        "# Vùng cache media: ảnh sinh ra + file user gửi lên. Là NGUYÊN LIỆU đi qua, không phải",
        "# tri thức, và media_gc.py tự dọn theo hạn. Bốn dòng attachments vì tên thư mục có thể",
@@ -562,7 +564,9 @@ _BACKUP_SKIP_SUBSTR = ("/memory/conversations/", "/Memory/conversations/",
                        "/.antigravity/", "/.antigravitycli/", "/.gemini/",
                        # Cấu hình MCP của GitHub Copilot CLI trong brain (`.copilot/
                        # mcp-config.json`): cùng chứa Bearer hub token, cùng đuôi .json.
-                       "/.copilot/")
+                       "/.copilot/",
+                       # `.kimi-code/mcp.json` của Kimi Code: cùng lý do (hub token, đuôi .json).
+                       "/.kimi-code/")
 
 
 def _backup_skip(rel: str, sync_images: bool = False) -> bool:

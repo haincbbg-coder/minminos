@@ -346,6 +346,7 @@ _NEN_TANG = (
     (("kiro-cli", "kiro"), "Kiro"),
     (("cursor-cli", "cursor"), "Cursor"),
     (("vibe-cli", "vibe", "mistral"), "Mistral"),
+    (("kimi-cli", "kimi"), "Kimi"),
 )
 
 
@@ -450,6 +451,9 @@ class SessionStore:
                               ("kiro_session_id", "TEXT"),
                               ("cursor_session_id", "TEXT"),
                               ("vibe_session_id", "TEXT"),
+                              # Mạch native của Kimi Code CLI (`kimi -S <id>`). Cột RIÊNG,
+                              # cùng lý do như các cột trên.
+                              ("kimi_session_id", "TEXT"),
                               # Luồng của engine ChatGPT Web, đã gỡ ở 0.64.20. Cột VẪN khai
                               # báo để DB cũ và DB mới cùng một hình dạng; không ai đọc ghi
                               # nó nữa. Xoá cột SQLite là phải dựng lại cả bảng, không đáng.
@@ -1324,6 +1328,26 @@ class SessionStore:
             (session_id,),
         ))
 
+    def set_kimi_session_id(self, session_id: str, kimi_id: str) -> None:
+        """Gắn mạch native của Kimi Code CLI vào hội thoại để lượt sau `-S` đúng chỗ."""
+        if not kimi_id:
+            return
+        self._write(lambda c: c.execute(
+            "UPDATE sessions SET kimi_session_id = ?, updated_at = ? WHERE id = ?",
+            (kimi_id, time.time(), session_id),
+        ))
+
+    def get_kimi_session_id(self, session_id: str) -> str:
+        row = self.get_session(session_id) or {}
+        return str(row.get("kimi_session_id") or "")
+
+    def clear_kimi_session_id(self, session_id: str) -> None:
+        self._write(lambda c: c.execute(
+            "UPDATE sessions SET kimi_session_id = NULL "
+            "WHERE id = ? AND kimi_session_id IS NOT NULL",
+            (session_id,),
+        ))
+
     # ── mạch native của các engine giữ phiên ──
     #
     # Nhãn engine -> cột giữ mạch. Engine KHÔNG có mặt ở bảng này (Antigravity CLI và mọi
@@ -1337,7 +1361,8 @@ class SessionStore:
                     "copilot-cli": "copilot_session_id",
                     "kiro-cli": "kiro_session_id",
                     "cursor-cli": "cursor_session_id",
-                    "vibe-cli": "vibe_session_id"}
+                    "vibe-cli": "vibe_session_id",
+                    "kimi-cli": "kimi_session_id"}
 
     def set_mach_native(self, session_id: str, engine: str, gia_tri: str) -> None:
         """Ghi mạch native cho engine có cột trong `_MACH_NATIVE` (dùng cho các engine mới -
