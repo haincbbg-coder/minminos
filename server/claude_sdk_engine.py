@@ -499,6 +499,15 @@ class ClaudeSDK:
         self._stderr_tail = collections.deque(maxlen=40)
         # `_options` đặt: lượt này có đấu cổng công cụ của Javis không (None = chưa biết).
         self._hub_attached = None
+        # Nguồn settings cho phiên CÓ RÀO (allowed_tools). None = mặc định ["project"]: chỉ nạp
+        # CLAUDE.md/.claude của chính brain (cwd), KHÔNG nạp ~/.claude/settings.json của máy (hook
+        # SessionStart/UserPromptSubmit, enabledPlugins, permissions.allow xét TRƯỚC can_use_tool).
+        # [] = không nạp gì cả: lượt chạy thử và phiên cải tiến của Trụ 2 (26.10.217) đặt giá trị này.
+        self.setting_sources = None
+        # Server MCP in-process THÊM vào (tên -> McpSdkServerConfig), đấu ở CẢ nhánh có rào. Trụ 2
+        # dùng cho phiên cải tiến: một server đọc file khoá trong thư mục bằng chứng, thay cho Read
+        # native (Read native nhận đường dẫn tuyệt đối nên đọc được đáp án và điểm ở chỗ khác).
+        self.sdk_servers = None
 
     def _on_stderr(self, line):
         """Nhận từng dòng stderr của tiến trình `claude`.
@@ -603,6 +612,9 @@ class ClaudeSDK:
             except Exception as e:
                 print(f"[sdk engine] đọc mcp_config lỗi ({e}) - truyền path thô", file=sys.stderr)
                 return str(self.mcp_config), self.mcp_strict
+        if self.sdk_servers:
+            servers = dict(servers or {})
+            servers.update(self.sdk_servers)
         if self.allowed_tools:
             return servers, self.mcp_strict
         try:
@@ -771,6 +783,15 @@ class ClaudeSDK:
             kw["allowed_tools"] = list(self.allowed_tools)
             kw["permission_mode"] = "default"
             kw["can_use_tool"] = self._permission_gate
+            # Chú thích trên nói "KHÔNG nạp settings filesystem" nhưng tới 26.10.216 code không đặt
+            # gì cả, mà claude-agent-sdk 0.2.x coi None là "để CLI tự quyết" = nạp user/project/local.
+            # Người soát Trụ 2 chứng minh với claude 2.1.310: hook SessionStart trong ~/.claude chạy
+            # thật ở phiên có rào. Nay đặt TƯỜNG MINH. Giữ "project" cho phiên nền thường vì brain
+            # nào cũng được seed CLAUDE.md (luật wiki, đường dẫn memory) mà loop/workflow/tự học
+            # đang dựa vào; skill native không bị ảnh hưởng vì allowlist có rào không cho tool Skill.
+            if "setting_sources" in fields:
+                kw["setting_sources"] = (list(self.setting_sources) if self.setting_sources is not None
+                                         else ["project"])
         else:
             kw["permission_mode"] = "bypassPermissions"   # parity --dangerously-skip-permissions
             # Parity CLI: nạp settings máy (ambient MCP, CLAUDE.md, config user) như claude -p vẫn làm

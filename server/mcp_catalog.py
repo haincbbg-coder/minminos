@@ -517,6 +517,47 @@ def classify(connector, tool, args=None):
     return "read"
 
 
+def classify_ro(connector, tool, args=None):
+    """'read' | 'write' | 'danger' | 'khong_ro' - phân loại KHÔNG đoán, cho chế độ chạy thử (Trụ 2).
+
+    `classify` rơi về "read" khi tên tool không khớp gì (WRITE_HINTS là denylist): đúng cho lượt
+    thật vì mức quyền vẫn là lớp chặn chính, nhưng ở chế độ thử nó để `gmail/forward`,
+    `share_file`, `mutate`, `pause_campaign` GỌI THẬT. Hàm này chỉ trả "read" khi connector KHAI
+    RÕ là đọc: khớp `tool_meta.read`, giá trị tham số nằm trong `arg_rules.read_values/read_prefixes`,
+    hoặc mọi hành động con của tool cổng đều đọc theo `call_rules`. Thiếu args cho tool cần args
+    cũng là không rõ. Không đổi hành vi của `classify`."""
+    c = connector or {}
+    meta = c.get("tool_meta") or {}
+    t = (tool or "").lower()
+
+    def _in(patterns):
+        return any(fnmatch(t, str(p).lower()) for p in (patterns or []))
+
+    if _in(meta.get("read")):
+        return "read"
+    cr = call_rule(c, tool)
+    if cr is not None:
+        if not isinstance(args, dict):
+            return "khong_ro"
+        return _loai_theo_call_rule(cr, args)
+    rules = c.get("arg_rules") or {}
+    param = rules.get("param")
+    if param and isinstance(args, dict) and args.get(param) is not None:
+        v = str(args.get(param)).lower()
+        if v in [str(x).lower() for x in rules.get("read_values", [])]:
+            return "read"
+        if any(v == p or v.startswith(p) for p in [str(x).lower() for x in rules.get("read_prefixes", [])]):
+            return "read"
+        return "danger" if _in(meta.get("danger")) else "write"
+    if _in(meta.get("danger")):
+        return "danger"
+    if _in(meta.get("write")):
+        return "write"
+    if any(h in t for h in WRITE_HINTS):
+        return "write"
+    return "khong_ro"
+
+
 def effective_perm(perm, mode):
     """Mức quyền HIỆU LỰC = chặt hơn giữa perm của connection và trần của mode."""
     perm = perm if perm in PERM_RANK else "full"

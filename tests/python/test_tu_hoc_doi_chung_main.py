@@ -8,7 +8,7 @@ Test lõi dùng engine giả; file này chốt rằng phần main tiêm vào đ�
     nghiệm chỉ có khi file kinh-nghiem.md tồn tại;
   - engine chạy thử là ClaudeSDK thật có allowlist (không bao giờ None -> không nạp connector tài
     khoản Claude), cấm Bash/Write/Edit/Web/Task, MCP strict, cấu hình MCP riêng mang cờ chạy thử;
-  - phiên cải tiến Claude chỉ có Read/Glob/Grep/LS.
+  - phiên cải tiến Claude chỉ có server đọc thư mục bằng chứng (`mcp__harness`), không tool native nào.
 """
 from _paths import ROOT, SERVER  # noqa: E402,F401
 import asyncio
@@ -84,14 +84,15 @@ eng = feat.dung_engine_chay(slot, sp, {"provider": "anthropic-cli", "model": ""}
                             feat.thu_muc(rid) / "mcp" / "x.json")
 check("engine chạy thử là ClaudeSDK thật", type(eng).__name__ == "ClaudeSDK", type(eng).__name__)
 check("ClaudeSDK có allowlist (không bao giờ None)", eng.allowed_tools and "mcp__javis" in eng.allowed_tools, eng.allowed_tools)
-check("allowlist không có tool ghi native", not any(x in eng.allowed_tools for x in ("Write", "Edit", "Bash")))
+check("allowlist chỉ có hub, không tool native nào (kể cả Read)", eng.allowed_tools == ["mcp__javis"], eng.allowed_tools)
 check("cấm Bash/Write/Edit/WebFetch/WebSearch/Task", all(x in eng.disallowed_tools for x in
                                                          ("Bash", "Write", "Edit", "WebFetch", "WebSearch", "Task")))
 check("MCP strict", eng.mcp_strict is True)
 opts = eng._options()
 check("tuỳ chọn SDK: permission default + can_use_tool (không bypassPermissions)",
       opts.permission_mode == "default" and opts.can_use_tool is not None, opts.permission_mode)
-check("tuỳ chọn SDK: KHÔNG nạp setting_sources (không ambient Gmail/Drive)", not getattr(opts, "setting_sources", None))
+check("tuỳ chọn SDK: setting_sources == [] (không ambient, không hook/allow-rule của máy)", opts.setting_sources == [],
+      opts.setting_sources)
 srv = opts.mcp_servers if isinstance(opts.mcp_servers, dict) else {}
 check("tuỳ chọn SDK: chỉ server javis, không plugin in-process", set(srv) == {"javis"}, list(srv))
 hd = (srv.get("javis") or {}).get("headers") or {}
@@ -99,7 +100,10 @@ check("header MCP mang cờ chạy thử + brain tạm + mức auto",
       hd.get(che_do_thu.HEADER) == "h2-x-y" and hd.get("X-Javis-Vault") == str(slot) and hd.get("X-Javis-Mode") == "auto", hd)
 
 ect = feat.dung_engine_cai_tien(feat.thu_muc(rid), {"provider": "anthropic-cli"})
-check("phiên cải tiến: chỉ Read/Glob/Grep/LS", sorted(ect.allowed_tools) == sorted(main.READONLY_TOOLS), ect.allowed_tools)
+check("phiên cải tiến: chỉ server harness", ect.allowed_tools == ["mcp__harness"], ect.allowed_tools)
+oct_ = ect._options()
+check("phiên cải tiến: setting_sources == [] và server harness in-process",
+      oct_.setting_sources == [] and set(oct_.mcp_servers or {}) == {"harness"}, (oct_.setting_sources, oct_.mcp_servers))
 don_dep()
 check("dọn brain tạm", not slot.exists())
 

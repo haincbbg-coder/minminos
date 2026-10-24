@@ -103,7 +103,8 @@ async def _call_route(route, fn, args):
     return "THẬT: đã làm"
 
 mcp_client.call_route = _call_route
-mcp_catalog.get = lambda cid: {}
+# Connector giả KHAI get_orders là đọc: ở chế độ thử chỉ tool khai đọc rõ ràng mới chạy thật (classify_ro).
+mcp_catalog.get = lambda cid: {"tool_meta": {"read": ["get_orders"]}}
 mcp_catalog.classify = lambda c, t, a: loai_tool.get(t, "write")
 mcp_catalog.allowed = lambda *a, **k: (True, "")
 mcp_hub._audit_append = lambda rec: None
