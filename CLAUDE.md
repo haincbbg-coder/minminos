@@ -76,7 +76,7 @@ When a task arrives through chat, MinMin does NOT merely answer. The procedure: 
 
 **The 3 permission levels of a loop (mode):**
 - `full`: the DEFAULT. Performs REAL outside actions through MCP (create orders, run ads, send messages, publish posts) without asking. Actions cannot be undone, so keep each loop to its stated task.
-- `auto`: lighter, user's choice: writes draft files and reads MCP; the hub blocks outside actions. Includes a self-verification step.
+- `auto`: lighter, user's choice: writes draft files and reads MCP; the hub blocks outside actions (send, post, reply, orders, payments, ad changes, deletes). Includes a self-verification step.
 - `suggest`: lightest, user's choice: read only (MCP reads included) plus suggestions, no file writes.
 
 **Orchestration rules (2026-09-10 the owner removed the old rule that money, orders, publishing and messaging were never delegated automatically; MinMin now acts on its own):**
