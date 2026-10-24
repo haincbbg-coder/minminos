@@ -68,6 +68,7 @@ import grok_cli          # bộ não thứ 11: Grok Build CLI (`grok`) - gói Su
 import muse_cli          # bộ não thứ 15: Meta Muse Code CLI (`muse`) - gói thuê bao Muse Code
 import copilot_cli       # bộ não GitHub Copilot CLI (`copilot`) - gói Copilot, model của nhiều hãng
 import cli_nao_chung     # 26.10.215: Kiro / Cursor / Mistral Vibe CLI - nạp module lười qua mo_dun()
+import kimi_cli          # bộ não thứ 16: Kimi Code CLI (`kimi`) - gói hội viên Kimi (Moonshot AI)
 import totp            # xác thực 2 lớp (TOTP) cho cổng đăng nhập - thuần toán, không đụng cấu hình
 # 26.10.80: tính năng thành viên được mời đã gỡ bỏ. Xoá dữ liệu cũ (tài khoản, mã 2FA, phiên) nếu còn.
 for _tenFile in ("users.json", ".member_sessions.json"):
@@ -1739,6 +1740,11 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
      "catalog_key": "cursor-cli", "default_models": []},
     {"id": "vibe-cli", "label": "Mistral Vibe CLI", "kind": "cli", "key_field": None,
      "catalog_key": "vibe-cli", "default_models": []},
+    # Kimi Code CLI (binary `kimi`, 26.10.214) - đường Moonshot AI dùng GÓI HỘI VIÊN Kimi sẵn có
+    # (quota lập trình theo gói), không cần API key. Cài + đăng nhập device code ngay trên thẻ.
+    # default_models RỖNG: danh sách thật do `kimi login` ghi vào ~/.kimi-code/config.toml.
+    {"id": "kimi-cli", "label": "Moonshot Kimi Code CLI", "kind": "cli", "key_field": None,
+     "catalog_key": "kimi-cli", "default_models": []},
     {"id": "antigravity-cli", "label": "Google Antigravity CLI", "kind": "cli", "key_field": None,
      "catalog_key": "antigravity-cli", "default_models": []},
     # GitHub Copilot CLI (binary `copilot`, 26.10.213) - một GÓI Copilot mở model của nhiều hãng
@@ -1871,6 +1877,9 @@ def _providers_view(cfg):
             # thread nền (cùng lý do nhánh `agy` dưới đây). Vibe đọc file `~/.vibe/.env`.
             _nm = cli_nao_chung.mo_dun(p["id"])
             configured = bool(_nm and _nm.auth_status().get("connected"))
+        elif p["id"] == "kimi-cli":
+            # Đọc `~/.kimi-code/credentials/*.json` + config.toml, rẻ như nhánh Grok.
+            configured = bool(kimi_cli.auth_status().get("connected"))
         elif p["id"] == "antigravity-cli":
             # `agy` giữ phiên trong keyring của hệ điều hành nên không có file nào để soi -
             # phải hỏi chính CLI. Nhưng TUYỆT ĐỐI không hỏi trong luồng này: _providers_view
@@ -1951,6 +1960,22 @@ def _providers_view(cfg):
             item.update(_nao_cli_the(p["id"]))
             if not item["models"]:
                 item["models"] = list(getattr(cli_nao_chung.mo_dun(p["id"]), "MODELS_DU_PHONG", []))
+        if p["id"] == "kimi-cli":
+            _ki = kimi_cli.auth_status()
+            item["cli_found"] = bool(kimi_cli.find_kimi_cli())
+            item["auth_method"] = _ki.get("method", "")
+            item["account"] = _ki.get("account", "")
+            item["plan"] = _ki.get("plan", "")
+            item["region"] = _ki.get("region", "")
+            item["region_mac_dinh"] = kimi_cli.vung_mac_dinh()
+            item["auth_error"] = _ki.get("error", "")
+            item["cai_lenh"] = kimi_cli.lenh_cai()
+            item["dang_nhap"] = kimi_cli.login_huong_dan()
+            # Phiên nằm trong `~/.kimi-code/credentials/` do chính CLI giữ; nút Ngắt xoá đúng
+            # file đó (CLI không có lệnh `kimi logout`, `/logout` của nó cũng chỉ làm vậy).
+            item["auth_by_javis"] = False
+            if not item["models"] and item["cli_found"]:
+                item["models"] = kimi_cli.list_models() or []
         if p["id"] == "antigravity-cli":
             _a = antigravity_cli.auth_status_nen()   # cùng lý do nhánh `configured` ở trên
             item["cli_found"] = bool(antigravity_cli.find_antigravity_cli())
@@ -2028,6 +2053,8 @@ def _set_main_model(cfg, provider, model):
         m["engine"] = "copilot-cli"
     elif cli_nao_chung.la_nao(provider):
         m["engine"] = provider
+    elif provider == "kimi-cli":
+        m["engine"] = "kimi-cli"
     elif provider == "groq":
         m["engine"] = "groq"
     elif provider == "xai":
@@ -2138,6 +2165,7 @@ def _chat_provider(mcfg):
 AGENT_PROVIDERS = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli",
                    "copilot-cli",
                    "kiro-cli", "cursor-cli", "vibe-cli",
+                   "kimi-cli",
                    "openrouter", "anthropic-api", "openai", "gemini", "groq", "xai", "meta", "ollama",
                    # Model chạy máy nhà cũng giao được việc nền cho agent. Bỏ nó ra khỏi đây
                    # là tính năng nửa vời: cài model về rồi mà chỉ chat tay được, không giao
@@ -2523,6 +2551,22 @@ def _nao_cli_engine(mod, **kw):
     raise RuntimeError(f"module {getattr(mod, '__name__', mod)} không có lớp engine")
 
 
+def _kimi_sub_stream(model, messages, reasoning="off", *, brain=None, tag="chat",
+                     mode="suggest"):
+    """Gói hội viên Kimi (Kimi Code CLI) cho đường CHAT-THUẦN của `_api_stream`.
+
+    Cùng lý do tồn tại với `_grok_sub_stream`. KHÔNG phải `async def` - xem chú thích dài ở
+    `_antigravity_sub_stream`.
+    """
+    sys_txt, prompt = _claude_sub_tach(messages)
+    g = kimi_cli.KimiCLI(cwd=_brain_root(brain) if brain else None, tag=tag,
+                         model=model or None, instructions=sys_txt)
+    g.mode = mode or "suggest"
+    if brain:
+        _apply_kimi_hub(g, _brain_root(brain), mode=mode)
+    return _cli_sub_doc(g, _cli_do_sau_khac(g, kimi_cli, reasoning, prompt), model)
+
+
 async def _cli_sub_doc(g, prompt, model):
     """Một lượt engine CLI (Antigravity hoặc Grok) -> hợp đồng sự kiện của `_api_stream`.
 
@@ -2624,6 +2668,8 @@ def _api_stream_goc(prov, key, model, messages, reasoning="off"):
         return _copilot_sub_stream(model, messages, reasoning)
     if cli_nao_chung.la_nao(prov):
         return _nao_cli_sub_stream(prov, model, messages, reasoning)
+    if prov == "kimi-cli":
+        return _kimi_sub_stream(model, messages, reasoning)
     if prov == "anthropic-cli":
         # Gói Claude Code đi qua chính binary `claude`, KHÔNG tự dựng request tới
         # api.anthropic.com bằng token của người dùng nữa (xem claude_auth.py). Vẫn không có
@@ -3822,6 +3868,30 @@ def _apply_copilot_hub(cli, vault_root=None, mode="full"):
     return cli
 
 
+def _apply_kimi_hub(cli, vault_root=None, mode="full"):
+    """Gắn MCP hub của MinMin vào tiến trình `kimi`, khoá theo đúng brain đang mở.
+
+    Kimi Code đọc `<cwd>/.kimi-code/mcp.json` (cấp dự án) khi thư mục được "trust";
+    `kimi_cli._moi_truong` đặt KIMI_CODE_TRUST_WORKSPACE=1 nên không phải bấm gì. MinMin chạy
+    `kimi` với cwd = gốc brain, nên ghi file trong brain là mỗi brain một hub riêng, không đụng
+    `~/.kimi-code/mcp.json` cá nhân. Header y hệt các engine kia. Entry dựng bằng
+    `kimi_cli.hub_entry` (`transport: http` + `url` + `headers`, đã đo trên binary 2.3.1).
+    """
+    root = vault_root or getattr(cli, "cwd", None)
+    if not root:
+        return cli
+    hub = None
+    if _hub_enabled():
+        headers = {"Authorization": f"Bearer {mcp_hub.hub_token()}", "X-Javis-Mode": mode}
+        try:
+            headers["X-Javis-Vault"] = str(Path(root).expanduser().resolve())
+        except Exception:
+            headers["X-Javis-Vault"] = str(root)
+        hub = kimi_cli.hub_entry(mcp_hub.hub_url(), headers)
+    kimi_cli.ghi_mcp_settings(root, hub)
+    return cli
+
+
 def _apply_antigravity_hub(cli, vault_root=None, mode="full"):
     """Gắn MCP hub của Javis vào tiến trình `agy`.
 
@@ -4223,6 +4293,75 @@ async def copilot_check(brain: str = "brain"):
         d["mcp"] = {"co_javis": False, "loi": f"{type(e).__name__}: {e}"}
     try:
         d["chan_doan"] = copilot_cli.chan_doan()
+    except Exception as e:
+        d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
+    return d
+
+
+@app.get("/kimi/status")
+def kimi_status():
+    """Trạng thái bộ não Kimi Code cho trang Models, kèm chẩn đoán (chỉ TÊN file/khoá)."""
+    d = kimi_cli.auth_status()
+    d["cli_path"] = kimi_cli.find_kimi_cli() or ""
+    d["cai_lenh"] = kimi_cli.lenh_cai()
+    d["huong_dan"] = kimi_cli.login_huong_dan()
+    try:
+        d["chan_doan"] = kimi_cli.chan_doan()
+    except Exception as e:
+        d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
+    return d
+
+
+@app.post("/kimi/install")
+async def kimi_install():
+    """Cài Kimi Code bằng lệnh chính chủ (lùi về npm nếu cần), chạy nền. Hỏi /kimi/install-poll."""
+    return await asyncio.to_thread(kimi_cli.cai_dat_start)
+
+
+@app.get("/kimi/install-poll")
+def kimi_install_poll():
+    return kimi_cli.cai_dat_trang_thai()
+
+
+@app.post("/kimi/login-start")
+async def kimi_login_start(region: str = ""):
+    """Mở `kimi login --region <vùng>` (device code), trả link + mã cho người dùng mở trên máy
+    của họ. Tiến trình tự hỏi máy chủ Kimi tới khi xong; giao diện hỏi tiếp /kimi/login-poll."""
+    return await asyncio.to_thread(kimi_cli.login_start, region or None)
+
+
+@app.get("/kimi/login-poll")
+def kimi_login_poll():
+    return kimi_cli.login_trang_thai()
+
+
+@app.post("/kimi/logout")
+async def kimi_logout():
+    """Ngắt tài khoản Kimi khỏi máy này (xoá file phiên mà CLI giữ)."""
+    return await asyncio.to_thread(kimi_cli.logout)
+
+
+@app.post("/kimi/check")
+async def kimi_check(brain: str = "brain"):
+    """Chạy thật MỘT lượt, rồi ghi + ĐỌC LẠI cấu hình MCP của brain (cùng khuôn /grok/check).
+
+    Quyền dùng gắn vào GÓI hội viên (quota lập trình), không vào binary: file phiên còn đó không
+    chứng minh còn chat được, nên phải chat thật một lượt.
+    """
+    root = _brain_root(brain)
+    try:
+        _apply_kimi_hub(_types.SimpleNamespace(cwd=root), root)
+    except Exception as e:
+        print(f"[kimi check] ghi cấu hình MCP: {e}", file=__import__('sys').stderr)
+    d = await asyncio.to_thread(kimi_cli.kiem_tra_nhanh)
+    try:
+        mcp = kimi_cli.trang_thai_mcp(root)
+        mcp["hub_bat"] = _hub_enabled()
+        d["mcp"] = mcp
+    except Exception as e:
+        d["mcp"] = {"co_javis": False, "loi": f"{type(e).__name__}: {e}"}
+    try:
+        d["chan_doan"] = kimi_cli.chan_doan()
     except Exception as e:
         d["chan_doan"] = {"loi": f"{type(e).__name__}: {e}"}
     return d
@@ -5671,6 +5810,10 @@ async def _fetch_provider_models(provider, m):
         # Kiro/Cursor đẻ tiến trình con để hỏi danh sách: chạy ở worker.
         _nm = cli_nao_chung.mo_dun(provider)
         return await asyncio.to_thread(_nm.list_models) if _nm else None
+    if provider == "kimi-cli":
+        # Đọc `~/.kimi-code/config.toml` (đăng nhập ghi danh sách model theo gói), ở worker vì
+        # lần đầu có thể chạy `kimi --version` để loại bản kimi-cli cũ.
+        return await asyncio.to_thread(kimi_cli.list_models)
     if provider == "antigravity-cli":
         # `agy models` là NGUỒN CHÂN LÝ, không có bảng chép tay nào để rơi về - chạy ở worker
         # vì nó đẻ tiến trình con và có thể mất vài giây.
@@ -13522,7 +13665,7 @@ async def _dg_resolver(su_that: dict, brain: str):
 
 
 _DG_NAO_CLI = ("anthropic-cli", "openai-oauth", "grok-cli", "muse-cli", "antigravity-cli",
-               "copilot-cli", "kiro-cli", "cursor-cli", "vibe-cli")
+               "copilot-cli", "kiro-cli", "cursor-cli", "vibe-cli", "kimi-cli")
 _DG_NAO_API = ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama",
                "openai-compat", "ollama-local", *nha_api_rieng.IDS)
 
@@ -16653,6 +16796,90 @@ async def websocket_endpoint(ws: WebSocket):
                         "type": "response", "content": final_text, "engine": prov,
                         "model": actual_model or "", "session_id": conv_sid,
                         **_ctx_frame(runtime_trace, _ctx_in)}))
+            elif prov == "kimi-cli":
+                # ===== Gói hội viên Kimi qua KIMI CODE CLI - tool native + MCP hub =====
+                #
+                # Cùng khuôn nhánh Grok: `kimi` tự sinh id phiên và phát ra ở dòng
+                # `session.resume_hint`, MinMin đọc lại rồi lưu ở cột riêng `kimi_session_id`.
+                actual_model = api_model or None
+                sysprompt, _sub_plan = await _subscription_system_prompt(
+                    "kimi-cli", actual_model or "", kind)
+                icli = kimi_cli.KimiCLI(cwd=_cwd_luot_chat(_row0, brain), model=actual_model,
+                                        tag=turn_tag, instructions=sysprompt)
+                icli.mode = _muc_quyen_luot_chat(_row0, brain)
+                _apply_kimi_hub(icli, _brain_root(brain), mode=icli.mode)
+                if not icli.is_available():
+                    final_text = ("⚠ Chưa cài Kimi Code CLI trên máy này. Bấm \"Cài đặt\" ở thẻ "
+                                  "Kimi Code trên trang Models (hoặc chạy một lần:\n\n"
+                                  f"`{kimi_cli.lenh_cai()}`)\n\n"
+                                  "rồi bấm \"Đăng nhập Kimi\": thẻ hiện một link và một mã, "
+                                  "chạy trên VPS cũng được.")
+                    await ws.send_text(json.dumps({
+                        "type": "response", "content": final_text, "engine": "kimi-cli",
+                        "model": actual_model or "", "session_id": conv_sid,
+                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                else:
+                    _i_mach = (_row0.get("kimi_session_id") or "").strip()
+                    if _i_mach and compaction.nen_mach_thue_bao(
+                            _row0.get("last_input_tokens"), msg_count=_row0.get("msg_count"),
+                            rotated_at=_row0.get("thread_rotated_msg")):
+                        _i_mach = ""
+                        store.clear_kimi_session_id(conv_sid)
+                        store.mark_thread_rotated(conv_sid)
+                        _CONTEXT_RUNTIME.record_runtime_event(
+                            runtime_trace, "thread.rotated",
+                            {"engine": "kimi-cli",
+                             "last_input_tokens": int(_row0.get("last_input_tokens") or 0),
+                             "threshold": compaction.SUBSCRIPTION_THREAD_MAX_TOKENS})
+                        await ws.send_text(json.dumps({
+                            "type": "tool_call", "tool": "javis_nen_mach",
+                            "content": "⚙ Mạch hội thoại đã dài, MinMin mở mạch mới."}))
+                    # Danh sách tool cấm đóng băng theo phiên Kimi: phiên tạo ở mức quyền rộng
+                    # hơn lượt này thì không nối (KimiCLI cũng tự chặn), và phải mồi lịch sử.
+                    if _i_mach and not kimi_cli.noi_lai_duoc(_i_mach, icli.mode):
+                        _i_mach = ""
+                        store.clear_kimi_session_id(conv_sid)
+                    icli.session_id = _i_mach or None
+                    _i_cur = _cli_do_sau_khac(icli, kimi_cli, reasoning, user_message)
+                    _i_raw = [{"role": _m["role"], "content": _m["content"]}
+                              for _m in store.get_messages(conv_sid)[:-1]
+                              if _m["role"] in ("user", "assistant") and _m.get("content")]
+                    _i_prompt = (_i_cur if _i_mach else compaction.bootstrap_prompt(
+                        _i_raw, _i_cur, summary=_row0.get("compact_summary") or ""))
+                    _CONTEXT_RUNTIME.observe_payload(
+                        runtime_trace,
+                        [{"role": "system", "content": sysprompt},
+                         {"role": "user", "content": _i_prompt}],
+                        provider="kimi-cli", model=actual_model or "")
+                    _i_loi = False
+                    async for ev in icli.query(_i_prompt):
+                        et = ev.get("type")
+                        if et == "tool_call":
+                            await ws.send_text(json.dumps({
+                                "type": "tool_call", "tool": ev.get("name", ""),
+                                "detail": tool_label.chi_tiet(ev),
+                                "content": f"⚙ Đang gọi: {ev.get('name', '')}"}))
+                        elif et == "final":
+                            final_text = ev.get("content") or ""
+                        elif et == "usage":
+                            store.set_last_input_tokens(
+                                conv_sid, int(ev.get("input_tokens") or 0))
+                        elif et == "error":
+                            _i_loi = True
+                            await ws.send_text(_limit_frame(
+                                ev.get("content") or "", "kimi-cli", actual_model or ""))
+                    if _i_mach and _i_loi and not final_text:
+                        # Mạch cũ chết trên máy (`-S` báo không thấy phiên): xoá id để lượt
+                        # sau mồi lại từ lịch sử đã lưu.
+                        store.clear_kimi_session_id(conv_sid)
+                        icli.session_id = None
+                    elif icli.session_id:
+                        store.set_kimi_session_id(conv_sid, icli.session_id)
+                    final_text = _chuan_hoa_link_file(_brain_root(brain), final_text)
+                    await ws.send_text(json.dumps({
+                        "type": "response", "content": final_text, "engine": "kimi-cli",
+                        "model": actual_model or "", "session_id": conv_sid,
+                        **_ctx_frame(runtime_trace, _ctx_in)}))
             elif prov == "antigravity-cli":
                 # ===== Gói Google qua ANTIGRAVITY CLI (`agy`) - tool native + MCP hub =====
                 #
@@ -18141,6 +18368,7 @@ async def websocket_endpoint(ws: WebSocket):
                             else "muse-cli" if prov == "muse-cli"
                             else "copilot-cli" if prov == "copilot-cli"
                             else prov if cli_nao_chung.la_nao(prov)
+                            else "kimi-cli" if prov == "kimi-cli"
                             else "antigravity-cli" if prov == "antigravity-cli"
                             else prov if ((kind == "api" and api_key) or kind == "oauth")
                             else "cli")
@@ -20598,7 +20826,7 @@ def _tg_quen_sid(sess) -> None:
 _TG_ENGINE_MACH = (("cli", "cli"), ("codex", "codex"), ("grok-cli", "grok"),
                    ("muse-cli", "muse"), ("antigravity-cli", "antigravity"),
                    ("copilot-cli", "copilot"), ("kiro-cli", "kiro-cli"), ("cursor-cli", "cursor-cli"),
-                   ("vibe-cli", "vibe-cli"))
+                   ("vibe-cli", "vibe-cli"), ("kimi-cli", "kimi"))
 
 
 def _tg_ngat_mach(sess, tru=None):
@@ -20938,6 +21166,7 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
                     else "muse-cli" if prov == "muse-cli"
                     else "copilot-cli" if prov == "copilot-cli"
                     else prov if cli_nao_chung.la_nao(prov)
+                    else "kimi-cli" if prov == "kimi-cli"
                     else "antigravity-cli" if prov == "antigravity-cli"
                     else prov if ((kind == "api" and api_key) or kind == "oauth")
                     else "cli")
@@ -21476,6 +21705,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         _doc_roi_ve = _muc == "doc" and prov in ("anthropic-cli", "grok-cli", "muse-cli",
                                                  "copilot-cli",
                                                  "kiro-cli", "cursor-cli", "vibe-cli",
+                                                 "kimi-cli",
                                                  "antigravity-cli")
         if _muc == "doc" and not _doc_roi_ve:
             return await _bot_tra_loi_co_tool(
@@ -21749,6 +21979,43 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         if not out and loi:
             _noi = _subscription_limit_message(loi[0], prov)
             return _noi or (f"⚠ {_nm.TEN} lỗi: " + loi[0][:400])
+        return out or "(không có nội dung)"
+    if prov == "kimi-cli":
+        # Cùng khuôn nhánh Grok Build ngay trên: giữ object engine trong `sess["kimi"]`.
+        actual_model = api_model or None
+        icli = sess.get("kimi")
+        if icli is None:
+            icli = kimi_cli.KimiCLI(cwd=_brain_root(brain), model=actual_model,
+                                    tag=f"telegram:{chat_id}", instructions=sysprompt)
+            sess["kimi"] = icli
+        else:
+            icli.cwd = _brain_root(brain)
+            icli.model = actual_model
+            icli.instructions = sysprompt
+        icli.mode = "full"
+        _apply_kimi_hub(icli, _brain_root(brain))
+        if not icli.is_available():
+            return ("⚠ Chưa cài Kimi Code CLI trên máy chạy MinMin. Bấm \"Cài đặt\" ở thẻ "
+                    "Kimi Code trên trang Models, rồi \"Đăng nhập Kimi\".")
+        _hoi = text
+        if not getattr(icli, "session_id", None):
+            _raw_cu, _tom_cu = _tg_lich_su_kho(store, conv_sid, text)
+            _hoi = compaction.bootstrap_prompt(_raw_cu, _hoi, summary=_tom_cu)
+        _i_mach = getattr(icli, "session_id", None)
+        out, loi = "", []
+        async for ev in icli.query(_hoi):
+            et = ev.get("type")
+            if et == "tool_call":
+                await _p(f"⚙ Đang gọi: {ev.get('name', '')}")
+            elif et == "final":
+                out = ev.get("content") or ""
+            elif et == "error":
+                loi.append(str(ev.get("content") or ""))
+        if _i_mach and loi and not out:
+            icli.session_id = None      # mạch cũ chết trên máy: lượt sau mồi lại từ kho phiên
+        if not out and loi:
+            _noi = _subscription_limit_message(loi[0], "kimi-cli")
+            return _noi or ("⚠ Kimi Code lỗi: " + loi[0][:400])
         return out or "(không có nội dung)"
 
     if prov == "antigravity-cli":
@@ -22130,6 +22397,7 @@ _TG_NHAN_NGAN = {
     "kiro-cli": "Kiro",
     "cursor-cli": "Cursor",
     "vibe-cli": "Mistral Vibe",
+    "kimi-cli": "Kimi Code",
     "antigravity-cli": "Antigravity",
     "copilot-cli": "Copilot",
     "openrouter": "OpenRouter",

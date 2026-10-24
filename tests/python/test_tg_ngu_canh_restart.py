@@ -217,9 +217,10 @@ class _GiaEngineCoReset(_GiaEngine):
         self.session_id = None
 
 
-check("bảng engine giữ mạch kể đủ chín cái (Copilot 26.10.213, thêm Kiro / Cursor / Mistral Vibe ở 26.10.215)",
+check("bảng engine giữ mạch kể đủ mười cái (Copilot 26.10.213, thêm Kiro / Cursor / Mistral Vibe ở 26.10.215, Kimi 26.10.216)",
       {k for _, k in main._TG_ENGINE_MACH} == {"cli", "codex", "grok", "muse", "antigravity",
-                                               "copilot", "kiro-cli", "cursor-cli", "vibe-cli"},
+                                               "copilot", "kiro-cli", "cursor-cli", "vibe-cli",
+                                               "kimi"},
       main._TG_ENGINE_MACH)
 
 _s = main._tg_session("777")

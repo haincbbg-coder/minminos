@@ -159,6 +159,7 @@ SUBSCRIPTION_LABEL = {
     "kiro-cli": "gói Kiro",
     "cursor-cli": "gói Cursor",
     "vibe-cli": "gói Mistral (Le Chat Pro / Team)",
+    "kimi-cli": "gói hội viên Kimi (Kimi Code)",
 }
 
 

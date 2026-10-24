@@ -4262,6 +4262,43 @@
           <div class="gcard-meta">${esc(KEYN[pid] || "")}</div>` : ""}
         </div>`;
       }
+      if (p.id === "kimi-cli") {
+        // Bộ não thứ 16: Kimi Code CLI (binary `kimi`, Moonshot AI), chạy gói hội viên Kimi.
+        // Mọi việc làm bằng nút (chủ MinMin ẩn trang Code): Cài đặt chạy lệnh chính chủ ở máy
+        // chủ, Đăng nhập Kimi chạy `kimi login --region <vùng>` rồi đưa link + mã lên đây để
+        // mở trên điện thoại/máy tính. MinMin KHÔNG giữ token; CLI tự cất ở ~/.kimi-code.
+        const st = on
+          ? t("models.st_logged_in") + (p.plan ? " · " + esc(p.plan) : "") + " · " + p.models.length + " model"
+          : (p.cli_found ? t("models.st_cli_no_login") : t("models.st_no_cli", { ten: "Kimi Code CLI" }));
+        const vung = p.region || p.region_mac_dinh || "global";
+        return `<div class="prov-card ${p.is_main ? "main" : ""}">
+          ${provHead(p, on, "MCP/skill", st)}
+          <div class="prov-note">${esc(t("models.kimi_note"))}</div>
+          <div class="prov-note warn">${WARN_ICON} ${esc(t("models.kimi_bg_warn"))}</div>
+          ${cliWarn("kimi")}
+          <div id="kimiBox" class="prov-steps" style="display:none"></div>
+          ${(!on && p.cli_found) ? `<div class="prov-action" style="flex-wrap:wrap">
+            <span class="gcard-meta">${esc(t("models.kimi_region"))}</span>
+            <select class="js-input" id="kimiRegion" style="max-width:260px">
+              <option value="global"${vung === "global" ? " selected" : ""}>${esc(t("models.kimi_region_global"))}</option>
+              <option value="mainland-cn"${vung === "mainland-cn" ? " selected" : ""}>${esc(t("models.kimi_region_cn"))}</option>
+            </select></div>` : ""}
+          <div class="prov-action" style="flex-wrap:wrap">
+            ${on
+              ? `<button class="gcard-btn ghost" data-kimicheck="1">${esc(t("qs.recheck"))}</button>
+                 <button class="gcard-btn ghost" data-kimidisc="1">${esc(t("models.disconnect"))}</button>`
+              : (p.cli_found
+                  ? `<button class="gcard-btn" data-kimilogin="1">${esc(t("models.kimi_btn_login"))}</button>`
+                  : `<button class="gcard-btn" data-kimiinstall="1">${esc(t("models.kimi_btn_install"))}</button>`)
+                + `<button class="gcard-btn ghost" data-kimicheck="1">${esc(t("qs.recheck"))}</button>`}
+            <span id="kimiMsg" class="gcard-meta" style="margin-left:10px;flex:1;min-width:200px">${on ? "" : esc(p.auth_error || "")}</span>
+          </div>
+          ${p.cli_found ? "" : `<details class="gcard-meta" style="margin-top:6px"><summary>${esc(t("models.kimi_manual"))}</summary>
+            <div>${esc(t("models.cli_install"))}<br><code>${esc(p.cai_lenh || "")}</code></div>
+            <div><code>${esc((p.dang_nhap || {}).cai_npm || "")}</code></div>
+          </details>`}
+        </div>`;
+      }
       if (p.id === "antigravity-cli") {
         // Bộ não thứ 10: gói Google (AI Pro / Ultra) qua Antigravity CLI. Từ 26.10.205 có nút
         // Cài đặt + Đăng nhập Google ngay trên thẻ, khuôn giống Claude: máy chủ chạy `agy`
@@ -4371,6 +4408,7 @@
             : mainP.id === "muse-cli" ? t("models.main_muse")
             : mainP.id === "copilot-cli" ? t("models.main_copilot")
             : mainP.nao_cli ? t("models.main_nao", { ten: mainP.nao_cli.ten || mainP.label })
+            : mainP.id === "kimi-cli" ? t("models.main_kimi")
             : mainP.id === "antigravity-cli" ? t("models.main_agy")
             : mainP.kind === "cli" ? t("models.main_cli")
             : mainP.kind === "oauth" ? t("models.main_codex")
@@ -5420,6 +5458,142 @@
             + (cd.nhat_ky && cd.nhat_ky.length
                ? `<br>${esc(t("models.diag_last"))}<br><code style="white-space:pre-wrap">${esc(cd.nhat_ky.slice(-8).join("\n"))}</code>` : "")
             + veTho(cd)
+            + `</div>`;
+        }
+      }
+    };
+    // ---- Kimi Code CLI (gói hội viên Kimi): cài + đăng nhập device code ngay trên trang ----
+    const kmi = el.querySelector("[data-kimiinstall]");
+    if (kmi) kmi.onclick = async () => {
+      const msg = el.querySelector("#kimiMsg"), box = el.querySelector("#kimiBox");
+      kmi.disabled = true; kmi.textContent = t("models.agy_installing");
+      if (msg) msg.textContent = t("models.agy_install_wait");
+      try { await fetch("/kimi/install", { method: "POST" }); } catch (e) {}
+      const han = Date.now() + 900000;
+      const quay = async () => {
+        let d = null;
+        try { d = await (await fetch("/kimi/install-poll")).json(); } catch (e) {}
+        if (d && d.cli_path) {
+          if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.kimi_installed"));
+          setTimeout(() => renderModelsCloudTab(el), 800);
+          return;
+        }
+        const log = (d && d.nhat_ky) || [];
+        if (box && log.length) {
+          box.style.display = "";
+          box.innerHTML = `<code style="white-space:pre-wrap">${esc(log.slice(-6).join("\n"))}</code>`;
+        }
+        if ((d && !d.dang_chay && d.ok === false) || Date.now() > han) {
+          kmi.disabled = false; kmi.textContent = t("models.kimi_btn_install");
+          if (msg) msg.innerHTML = Icons.warn((d && d.error) || t("models.agy_install_timeout"));
+          return;
+        }
+        setTimeout(quay, 2000);
+      };
+      setTimeout(quay, 1500);
+    };
+    const kml = el.querySelector("[data-kimilogin]");
+    if (kml) kml.onclick = async () => {
+      const msg = el.querySelector("#kimiMsg"), box = el.querySelector("#kimiBox");
+      const sel = el.querySelector("#kimiRegion");
+      const vung = sel ? sel.value : "global";
+      kml.disabled = true; const cu = kml.textContent; kml.textContent = t("models.opening");
+      if (msg) msg.textContent = t("models.kimi_ask");
+      let r = null;
+      try { r = await (await fetch(`/kimi/login-start?region=${encodeURIComponent(vung)}`, { method: "POST" })).json(); }
+      catch (e) { r = { ok: false, error: t("common.net_err") }; }
+      kml.disabled = false; kml.textContent = cu;
+      if (!r || !r.ok) {
+        if (msg) msg.innerHTML = Icons.warn((r && r.error) || t("models.cant_open"));
+        if (box && r && r.nhat_ky && r.nhat_ky.length) {
+          box.style.display = "";
+          box.innerHTML = `<code style="white-space:pre-wrap">${esc(r.nhat_ky.slice(-8).join("\n"))}</code>`;
+        }
+        return;
+      }
+      if (r.xong) { _daHoiModel.delete("kimi-cli"); renderModelsCloudTab(el); return; }
+      if (box) {
+        box.style.display = "";
+        box.innerHTML = `<div><b>1.</b> ${esc(t("models.kimi_step1"))}<br><a href="${esc(r.url)}" target="_blank" rel="noopener" style="word-break:break-all">${esc(r.url)}</a></div>`
+          + (r.code ? `<div><b>2.</b> ${esc(t("models.kimi_step2"))} <code>${esc(r.code)}</code></div>` : "")
+          + `<div><b>3.</b> ${esc(t("models.kimi_step3"))}</div>`;
+      }
+      if (msg) msg.textContent = t("models.wait_browser");
+      const veLogK = (d, xong) => {
+        if (!box || !d || !d.nhat_ky || !d.nhat_ky.length) return;
+        const dong = d.nhat_ky.filter(x => !/^\[/.test(x));
+        const cuoi = dong.length ? dong[dong.length - 1] : "";
+        let h = box.querySelector("#kimiLog");
+        if (!h) {
+          h = document.createElement("div");
+          h.id = "kimiLog"; h.className = "gcard-meta"; h.style.marginTop = "6px";
+          box.appendChild(h);
+        }
+        h.innerHTML = xong
+          ? `<code style="white-space:pre-wrap">${esc(d.nhat_ky.slice(-8).join("\n"))}</code>`
+          : (cuoi ? `Kimi: <code>${esc(cuoi.slice(0, 160))}</code>` : "");
+      };
+      // Mã của Kimi sống 10 phút (đo: "Code expires in 600s"); hỏi lặp tới khi xong hoặc hết giờ.
+      const hanK = Date.now() + 600000;
+      const quayK = async () => {
+        let d = null;
+        try { d = await (await fetch("/kimi/login-poll")).json(); } catch (e) {}
+        if (d && d.connected) { _daHoiModel.delete("kimi-cli"); renderModelsCloudTab(el); return; }
+        if (Date.now() > hanK) {
+          if (msg) msg.innerHTML = Icons.warn(t("models.timeout_login"));
+          veLogK(d, true);
+          return;
+        }
+        if (d && !d.dang_cho) {
+          if (msg) msg.innerHTML = Icons.warn(d.error || t("models.login_incomplete"));
+          veLogK(d, true);
+          return;
+        }
+        veLogK(d, false);
+        setTimeout(quayK, 2500);
+      };
+      setTimeout(quayK, 2500);
+    };
+    const kmd = el.querySelector("[data-kimidisc]");
+    if (kmd) kmd.onclick = async () => {
+      kmd.disabled = true; kmd.textContent = t("models.disconnecting");
+      try { await fetch("/kimi/logout", { method: "POST" }); } catch (e) {}
+      _daHoiModel.delete("kimi-cli");
+      renderModelsCloudTab(el);
+    };
+    const kmc = el.querySelector("[data-kimicheck]");
+    if (kmc) kmc.onclick = async () => {
+      const msg = el.querySelector("#kimiMsg"), box4 = el.querySelector("#kimiBox");
+      kmc.disabled = true; const cu4 = kmc.textContent; kmc.textContent = t("models.trying");
+      if (msg) msg.textContent = t("models.testing");
+      let r = null;
+      const _br4 = window.currentBrainPath ? currentBrainPath() : "brain";
+      try { r = await (await fetch(`/kimi/check?brain=${encodeURIComponent(_br4)}`,
+                                   { method: "POST" })).json(); }
+      catch (e) { r = { ok: false, error: t("common.net_err") }; }
+      kmc.disabled = false; kmc.textContent = cu4;
+      const mcpTxt4 = (r && r.mcp)
+        ? (r.mcp.co_javis ? " · " + esc(t("models.mcp_ok"))
+           : (r.mcp.hub_bat === false ? " · " + esc(t("models.mcp_off"))
+              : " · <b>" + esc(t("models.mcp_fail")) + "</b>"))
+        : "";
+      if (r && r.ok) {
+        if (msg) msg.innerHTML = OK_ICON + " " + esc(t("models.works")) + mcpTxt4;
+        _daHoiModel.delete("kimi-cli");
+        setTimeout(() => renderModelsCloudTab(el), 700);
+      } else if (msg) {
+        msg.innerHTML = Icons.warn((r && r.error) || t("models.not_works")) + mcpTxt4;
+        const cd = r && r.chan_doan;
+        if (cd && box4) {
+          box4.style.display = "";
+          const fs = (cd.files || []).map(x => x.ten).join(", ") || t("models.diag_empty");
+          box4.innerHTML = `<div class="gcard-meta">${esc(t("models.diag_intro"))}<br>`
+            + `binary <code>${esc(cd.cli_path || t("models.diag_missing"))}</code><br>`
+            + `${esc(t("models.diag_dir"))} <code>${esc(cd.home || "")}</code> - ${esc(cd.home_ton_tai ? t("models.diag_yes") : t("models.diag_no_have"))}<br>`
+            + `${esc(t("models.diag_files"))} <code>${esc(fs)}</code><br>`
+            + `${esc(t("models.diag_token"))} <b>${esc(cd.co_token ? t("models.diag_yes") : t("models.diag_no"))}</b>`
+            + (cd.nhat_ky && cd.nhat_ky.length
+               ? `<br>${esc(t("models.diag_last"))}<br><code style="white-space:pre-wrap">${esc(cd.nhat_ky.slice(-8).join("\n"))}</code>` : "")
             + `</div>`;
         }
       }

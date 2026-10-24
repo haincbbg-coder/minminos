@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.216] - 2026-10-24
+
+### Thêm mới
+- **Bộ não mới: Kimi Code của Moonshot AI.** Dùng gói hội viên Kimi sẵn có, không cần API key. Chọn được làm model chính, model việc nền hay model cho agent.
+- **Cài và đăng nhập ngay trên thẻ Kimi Code ở trang Models.** Bấm Cài đặt, rồi Đăng nhập Kimi: thẻ hiện một link và một mã để mở trên điện thoại, chạy trên VPS cũng được, không cần Terminal.
+- Thẻ có nút Kiểm tra lại (chat thử một lượt thật và soát kết nối công cụ MinMin), nút Ngắt, và chọn tài khoản kimi.ai (quốc tế) hay kimi.com.
+- Hết quota lập trình của gói thì khung chat báo rõ bằng tiếng Việt. Kimi chưa nói rõ có cho chạy nền 24/7 trên VPS bằng gói hội viên không, thẻ có ghi chú điều này.
+
 ## [26.10.215] - 2026-10-24
 
 ### Thêm mới

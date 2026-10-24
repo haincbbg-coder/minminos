@@ -324,6 +324,11 @@ _SUB_PATTERNS: tuple[tuple[str, str, str, re.Pattern], ...] = (
     ("copilot_rate", "copilot-cli", "",
      re.compile(r"hit\s+(?:your\s+session\s+rate\s+limit|the\s+rate\s+limit\s+for\s+this\s+model)",
                 re.I)),
+    # Kimi Code CLI (gói hội viên Kimi): câu lỗi gốc của máy chủ Kimi CHƯA đo bằng tài khoản thật,
+    # nên khớp câu tiếng Việt mà `kimi_cli.dich_loi` LUÔN in cho lỗi quota (nó đã gom 429/quota/
+    # rate limit). Engine để rỗng, hint quyết.
+    ("kimi_quota", "", "",
+     re.compile(r"hết quota lập trình", re.I)),
     ("gemini_quota", "gemini-cli", "",
      re.compile(r"quota\s+exceeded\s+for\s+quota\s+metric|resource[_\s]has[_\s]been[_\s]exhausted"
                 r"|RESOURCE_EXHAUSTED", re.I)),
@@ -382,6 +387,7 @@ ENGINE_HINT_BY_PROVIDER = {
     "openai-oauth": "codex",
     "grok-cli": "grok-cli",
     "muse-cli": "muse-cli",
+    "kimi-cli": "kimi-cli",
     "antigravity-cli": "antigravity-cli",
     "copilot-cli": "copilot-cli",
     "kiro-cli": "kiro-cli",

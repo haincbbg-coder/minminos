@@ -18,7 +18,7 @@
   var TICK_MS = 20000;         // nhip cap nhat dong "con X phut"
   var ENGINE_LABEL = {
     "claude-code": "Claude Code", "codex": "ChatGPT (Codex)", "grok-cli": "Grok Build",
-    "antigravity-cli": "Antigravity CLI", "muse-cli": "Muse Code", "copilot-cli": "GitHub Copilot", "kiro-cli": "Kiro CLI", "cursor-cli": "Cursor CLI", "vibe-cli": "Mistral Vibe",
+    "antigravity-cli": "Antigravity CLI", "muse-cli": "Muse Code", "copilot-cli": "GitHub Copilot", "kiro-cli": "Kiro CLI", "cursor-cli": "Cursor CLI", "vibe-cli": "Mistral Vibe", "kimi-cli": "Kimi Code",
   };
 
   /* Chu hien ra lay tu tu dien. Trong trinh duyet la window.t (i18n/index.js nap truoc
