@@ -824,13 +824,21 @@ class Harness2Feature:
         self._trang_thai(run_id, trang_thai="da_hoan_tac")
         return {"ok": True, "cach": cach, "bo_qua": bo}
 
+    def _song_sot(self, run_id: str, st: dict) -> dict:
+        """Lượt ghi "đang chạy" mà không phải lượt tiến trình này đang chạy = server đã khởi động lại
+        giữa chừng (task nền chết theo). Báo là đã dừng, kẻo giao diện chờ tiến độ mãi."""
+        if st.get("trang_thai") == "dang_chay" and run_id != self.dang.get("run_id"):
+            st = dict(st, trang_thai="dung", buoc="Máy chủ khởi động lại giữa chừng nên lượt này đã dừng. "
+                                                  "Trợ lý giữ nguyên.")
+        return st
+
     def lich_su(self, brain: str, slug: str) -> List[dict]:
         ra = []
         for d in sorted(self.goc.glob("h2-*"), reverse=True):
             cfg = _doc_json(d / "cau-hinh.json", {}) or {}
             if cfg.get("slug") != slug or (brain and cfg.get("brain") != brain):
                 continue
-            st = _doc_json(d / "trang-thai.json", {}) or {}
+            st = self._song_sot(d.name, _doc_json(d / "trang-thai.json", {}) or {})
             ra.append({"run_id": d.name, "bat_dau": cfg.get("bat_dau"), "k": cfg.get("k"), "che_do": cfg.get("che_do"),
                        "so_de": len(cfg.get("de") or []), "trang_thai": st.get("trang_thai"), "buoc": st.get("buoc"),
                        "giu_nguyen": st.get("giu_nguyen"), "usd": st.get("usd")})
@@ -971,7 +979,7 @@ class Harness2Feature:
             if not rid:
                 return {"ok": True, "trang_thai": "", "dang_chay": ""}
             try:
-                st = _doc_json(self.thu_muc(rid) / "trang-thai.json", {}) or {}
+                st = self._song_sot(rid, _doc_json(self.thu_muc(rid) / "trang-thai.json", {}) or {})
             except h2.LoiH2 as e:
                 return {"ok": False, "error": str(e)}
             return {"ok": True, "run_id": rid, **st, "dang_chay": self.dang.get("run_id") or ""}
