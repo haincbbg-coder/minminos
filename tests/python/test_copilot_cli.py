@@ -286,7 +286,9 @@ js = (ROOT / "dashboard" / "console.js").read_text(encoding="utf-8")
 check("thẻ Models có nút Cài đặt / Đăng nhập GitHub / Ngắt / Kiểm tra lại",
       all(x in js for x in ("data-copilotinstall", "data-copilotlogin", "data-copilotdisc", "data-copilotcheck")))
 ep = (ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
-check("entrypoint giữ ~/.copilot qua cập nhật", " .copilot; do" in ep)
+# Soi đúng dòng vòng lặp, không bám vị trí cuối: các bộ não sau còn nối thêm thư mục vào sau.
+check("entrypoint giữ ~/.copilot qua cập nhật",
+      any(d.startswith("for d in ") and " .copilot " in d + " " for d in ep.splitlines()))
 gb = (SERVER / "git_brain.py").read_text(encoding="utf-8")
 check("file MCP (có hub token) không vào bản sao lưu git", '"/.copilot/"' in gb)
 import aux_engine  # noqa: E402
