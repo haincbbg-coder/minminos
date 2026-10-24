@@ -206,6 +206,10 @@ sau_ht = {k: v for k, v in noi._anh_chup(B).items() if k != ".javis-learn.lock"}
 check("hoàn tác: brain về đúng như trước", sau_ht == anh_that, sorted(set(sau_ht.items()) ^ set(anh_that.items()))[:4])
 r = cli.get("/harness/trang-thai", params={"run_id": run_id}).json()
 check("trạng thái sau hoàn tác", r.get("trang_thai") == "da_hoan_tac", r)
+mo_coi = "h2-20261024-120500-moco"
+noi._ghi_json(feat.thu_muc(mo_coi) / "trang-thai.json", {"trang_thai": "dang_chay", "buoc": "đang chạy"})
+r = cli.get("/harness/trang-thai", params={"run_id": mo_coi}).json()
+check("lượt 'đang chạy' mồ côi sau khi máy chủ khởi động lại báo là đã dừng", r.get("trang_thai") == "dung", r)
 r = cli.get("/harness/ket-qua", params={"run_id": "../../etc"}).json()
 check("mã lần chạy lạ bị từ chối (không đọc ngoài thư mục harness)", not r.get("ok"))
 
