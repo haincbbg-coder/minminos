@@ -55,6 +55,19 @@ _KHOA_NHAY_CAM = ("token", "key", "secret", "password", "pass", "auth", "cookie"
                   "credential", "session")
 
 
+# Tool CHỈ ĐỌC mà vẫn phải giả lập ở chế độ thử, kèm lý do (lỗ 4 và 7 người soát tìm ra). Đọc
+# nhưng tốn tiền/quota thật, hoặc gửi một địa chỉ do model tự chọn ra ngoài (đường rò dữ liệu:
+# model nhét dữ liệu shop vào tham số URL). Plugin mới tự khai bằng register_tool(ton_phi=True).
+GIA_LAP_KHI_THU = {
+    "javis_web_fetch": "gửi request tới địa chỉ model tự chọn",
+    "javis_web_search": "gửi câu tìm kiếm ra ngoài",
+    "fb_monitor": "gọi Apify, tính tiền mỗi lần",
+    "javis_describe_image": "dùng quota ChatGPT của chủ",
+    "google_link_doc": "tải một link tuỳ ý từ internet",
+    "javis_youtube_read": "tải một link tuỳ ý từ internet",
+}
+
+
 def ma_hop_le(ma: str) -> bool:
     return bool(_MA_RE.match(str(ma or "")))
 

@@ -351,10 +351,12 @@ class PluginContext:
     def register_tool(self, name: str, description: str, handler: Callable,
                       schema: Optional[dict] = None, parameters: Optional[dict] = None,
                       min_mode: str = "readonly", check_fn: Optional[Callable] = None,
-                      emoji: str = "") -> None:
+                      emoji: str = "", ton_phi: bool = False) -> None:
         """Thêm 1 tool cho MỌI engine. handler(args: dict, ctx: PluginContext) -> str (sync|async).
         min_mode: readonly(mặc định, luôn chạy) | safe(chặn ở chế độ suggest) | full(chỉ chế độ full).
-        check_fn(): None nếu sẵn sàng, hoặc str lý do để chặn (vd chưa đăng nhập)."""
+        check_fn(): None nếu sẵn sàng, hoặc str lý do để chặn (vd chưa đăng nhập).
+        ton_phi=True: tool đọc nhưng tốn tiền/quota thật hay gửi dữ liệu ra ngoài theo tham số -
+        lượt CHẠY THỬ của Trụ 2 giả lập nó thay vì gọi thật."""
         if not _TOOL_RE.match(str(name or "")):
             raise ValueError(f"tên tool không hợp lệ (a-z0-9_): {name!r}")
         if min_mode not in VALID_MIN_MODE:
@@ -362,7 +364,7 @@ class PluginContext:
         self._tools.append({
             "name": name, "description": description or name, "handler": handler,
             "schema": schema or parameters or {"type": "object", "properties": {}},
-            "min_mode": min_mode, "check_fn": check_fn, "emoji": emoji,
+            "min_mode": min_mode, "check_fn": check_fn, "emoji": emoji, "ton_phi": bool(ton_phi),
         })
 
     def on_unload(self, fn: Callable) -> None:
@@ -775,9 +777,10 @@ def _make_call(tool: dict, ctx: PluginContext, mode: str):
         # CHẠY THỬ (Trụ 2, 26.10.217): plugin ghi (safe) và hành động ra ngoài (full) KHÔNG chạy
         # trong lượt thử, kể cả check_fn: không một dòng mã nào của plugin được chạy. Ghi ý định
         # rồi trả câu giả lập để agent làm tiếp như thật. Plugin chỉ đọc (readonly) vẫn chạy.
-        if che_do_thu.dang_bat() and min_mode in ("safe", "full"):
+        if che_do_thu.dang_bat() and (min_mode in ("safe", "full") or tool.get("ton_phi")
+                                       or name in che_do_thu.GIA_LAP_KHI_THU):
             che_do_thu.ghi_y_dinh(name, args or {}, nguon=f"plugin:{getattr(ctx, 'slug', '')}",
-                                  loai=min_mode)
+                                  loai=min_mode, ly_do=che_do_thu.GIA_LAP_KHI_THU.get(name, ""))
             return che_do_thu.cau_gia_lap(name)
         if check_fn:
             try:
@@ -1015,6 +1018,10 @@ def wrap_with_hooks(fn: str, base_call: Callable, mode: str, vault_root: Optiona
     không: lúc đó tool đã chạy rồi, thứ nó trả về không còn đổi được gì.
     """
     async def _wrapped(args):
+        # CHẠY THỬ: hook là mã người dùng tự cài, chạy quanh một tool ĐÃ bị giả lập thì chỉ còn tác
+        # dụng phụ (ghi log ra ngoài, gọi API...). Lượt thử bỏ qua hook (lỗ 6 người soát tìm ra).
+        if che_do_thu.dang_bat():
+            return await base_call(args)
         quyet = await _fire_pre(vault_root,
                                 {"tool_name": fn, "args": args, "mode": mode,
                                  "vault_root": vault_root})

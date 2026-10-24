@@ -863,12 +863,21 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
 
     # 26.10.204 (cổng từ Javis 0.259.0): tìm và đọc web cho engine API (Claude Code, Codex, Grok có
     # WebSearch/WebFetch riêng trong CLI). Xem web_tools.py. Rào mạng nội bộ ở mọi chặng chuyển hướng.
+    def _web_thu(ten, args):
+        """Chế độ thử: không gửi gì ra internet (đường rò dữ liệu qua URL/câu tìm), chỉ ghi ý định."""
+        che_do_thu.ghi_y_dinh(ten, args or {}, nguon="builtin", ly_do=che_do_thu.GIA_LAP_KHI_THU.get(ten, ""))
+        return che_do_thu.cau_gia_lap(ten)
+
     async def _web_search(args):
+        if che_do_thu.dang_bat():
+            return _web_thu("javis_web_search", args)
         import web_tools
         args = args or {}
         return await web_tools.tim(str(args.get("query") or ""), args.get("limit") or web_tools.TIM_MAC_DINH)
 
     async def _web_fetch(args):
+        if che_do_thu.dang_bat():
+            return _web_thu("javis_web_fetch", args)
         import web_tools
         args = args or {}
         return await web_tools.doc(str(args.get("url") or ""), args.get("offset") or 0,
