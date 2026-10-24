@@ -375,7 +375,7 @@ def build_env(connector, secrets):
 _MUC = {"read": 0, "write": 1, "danger": 2}
 
 
-def _loai_hanh_dong_con(rule, item):
+def _loai_hanh_dong_con(rule, item, nghiem=False):
     """Phân loại MỘT hành động con bên trong tool cổng (xem `call_rules`). Fail-closed: không
     nhận ra là đọc thì trả mức `else` của luật (mặc định danger)."""
     tren_loi = str(rule.get("else") or "danger")
@@ -390,6 +390,11 @@ def _loai_hanh_dong_con(rule, item):
     v = str(v).strip()
     if [x for x in rule.get("read_values", []) if str(x).lower() == v.lower()]:
         return "read"
+    if nghiem:
+        # Chạy thử (Trụ 6): KHÔNG đoán theo động từ. `TWITTER_GET_THEN_RETWEET` có GET mà RETWEET
+        # không nằm trong write_tokens nên cách đoán dưới coi là đọc và cho chạy thật (soát an
+        # toàn 26.10.218). Chỉ khai báo chính xác trong read_values mới là đọc.
+        return tren_loi
     tu = {w for w in re.split(r"[^A-Za-z0-9]+", v.upper()) if w}
     doc = {str(x).upper() for x in rule.get("read_tokens", [])}
     ghi = {str(x).upper() for x in rule.get("write_tokens", [])}
@@ -400,7 +405,7 @@ def _loai_hanh_dong_con(rule, item):
     return tren_loi
 
 
-def _loai_theo_call_rule(rule, args):
+def _loai_theo_call_rule(rule, args, nghiem=False):
     """Mức NẶNG NHẤT trong danh sách hành động con của một lời gọi tool cổng. Danh sách rỗng,
     sai kiểu hoặc vắng hẳn đều fail-closed về mức `else`."""
     tren_loi = str(rule.get("else") or "danger")
@@ -409,7 +414,7 @@ def _loai_theo_call_rule(rule, args):
         return tren_loi
     muc = "read"
     for it in items:
-        loai = _loai_hanh_dong_con(rule, it)
+        loai = _loai_hanh_dong_con(rule, it, nghiem=nghiem)
         if _MUC.get(loai, 2) > _MUC.get(muc, 0):
             muc = loai
     return muc
@@ -539,7 +544,7 @@ def classify_ro(connector, tool, args=None):
     if cr is not None:
         if not isinstance(args, dict):
             return "khong_ro"
-        return _loai_theo_call_rule(cr, args)
+        return _loai_theo_call_rule(cr, args, nghiem=True)
     rules = c.get("arg_rules") or {}
     param = rules.get("param")
     if param and isinstance(args, dict) and args.get(param) is not None:

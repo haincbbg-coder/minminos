@@ -548,6 +548,41 @@ def _safe_path(vault_root, p, workspace_root=None):
     return tv if tv is not None else co_that[0]
 
 
+# Thư mục / file CẤU HÌNH ẩn trong brain mà `javis_write_file` KHÔNG được ghi, ở MỌI mức quyền.
+# Vì sao (soát an toàn 26.10.218): `.claude/settings.json` của brain được nạp cho phiên Claude có
+# rào (`setting_sources=["project"]`), nên một việc mức Ghi nháp (auto, không có lệnh máy) ghi
+# một hook vào đó là tự cấp lệnh máy cho lượt sau. `.git/config` thì `git_brain` chạy lệnh git
+# trên đó (hook, fsmonitor, core.sshCommand...). Cấu hình MCP riêng của từng CLI trong brain
+# (.copilot, .kimi-code, .vibe, .cursor, .kiro...) và `.mcp.json` thì thêm được server MCP lạ.
+# Những file đó do CODE của MinMin ghi, không phải model, nên chặn tool không làm mất chức năng
+# nào. Ngoại lệ duy nhất: `.claude/skills/` là bản gương skill cho Claude Code, ghi vẫn được.
+_THU_MUC_CAM_GHI = (".git", ".claude", ".copilot", ".kimi-code", ".kimi", ".vibe", ".cursor",
+                    ".kiro", ".gemini", ".grok", ".codex", ".antigravity", ".muse")
+_FILE_CAM_GHI = (".mcp.json", ".gitmodules", ".gitattributes")
+
+
+def _cam_ghi(goc_list, p):
+    """Lý do (chuỗi) nếu đường dẫn đã resolve `p` rơi vào vùng cấu hình cấm ghi, "" nếu được ghi.
+
+    Xét so với MỌI gốc được phép (vault + thư mục làm việc), theo các thành phần đường dẫn đã
+    resolve, nên `skills/../.claude/settings.json` hay symlink trỏ vào đó đều bị bắt."""
+    for g in goc_list:
+        try:
+            rel = Path(p).resolve().relative_to(Path(g).resolve())
+        except (OSError, ValueError):
+            continue
+        phan = [x.lower() for x in rel.parts]
+        if not phan:
+            continue
+        if phan[0] == ".claude" and len(phan) >= 2 and phan[1] == "skills":
+            return ""
+        if phan[0] in _THU_MUC_CAM_GHI or any(x == ".git" for x in phan):
+            return f"thư mục cấu hình ẩn '{phan[0]}'"
+        if len(phan) == 1 and phan[0] in _FILE_CAM_GHI:
+            return f"file cấu hình '{phan[0]}'"
+    return ""
+
+
 def _vung_nhan_file():
     """`STATE_DIR/.staging` - vùng NHẬN FILE của khung chat, đã resolve. None nếu không có.
 
@@ -808,6 +843,11 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
                         f"trong số đó.")
             return (f"ERROR: '{(args or {}).get('path')}' nằm ngoài bộ não đang làm việc nên "
                     f"tool này không ghi được. Dùng đường dẫn tương đối trong brain.")
+        ly_do_cam = _cam_ghi([vault_root] + list(_goc_lam_viec(workspace_root)), p)
+        if ly_do_cam:
+            return (f"ERROR: không ghi được '{(args or {}).get('path')}' vì đây là {ly_do_cam} của "
+                    "bộ não. File cấu hình do MinMin tự quản, trợ lý không được sửa (chống tự cấp "
+                    "thêm quyền). Skill thì ghi vào skills/<tên>/SKILL.md.")
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(str((args or {}).get("content") or ""), encoding="utf-8")
         return f"Đã ghi {p.name} ({len(str((args or {}).get('content') or ''))} ký tự)"

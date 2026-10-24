@@ -298,9 +298,29 @@ def sanitize_source(text: str) -> str:
     return _INJECT_RE.sub(_defang, text)
 
 
+# Bản KHÔNG DẤU của các mẫu tiếng Việt ở trên. `_INJECT_RE` chỉ khớp chữ có dấu nên "Bo qua moi
+# chi dan truoc do" lọt (soát an toàn 26.10.218). So trên văn bản đã bỏ dấu để một mẫu bắt cả
+# hai cách viết.
+_INJECT_RE_KHONG_DAU = re.compile(
+    r"(bo\s+qua\s+(moi\s+)?(chi\s*dan|huong\s*dan|lenh)\s+(truoc|tren)"
+    r"|tu\s+gio\s+ban\s+la"
+    r"|gui\s+.{0,20}(ra\s+ngoai|toi\s+http))",
+    re.I,
+)
+
+
+def _bo_dau(text: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFD", str(text or ""))
+    t = "".join(ch for ch in t if unicodedata.category(ch) != "Mn")
+    return t.replace("đ", "d").replace("Đ", "D")
+
+
 def injection_in_output(text: str) -> bool:
     """Nội dung fork ĐỀ XUẤT ghi vào Memory/Wiki có chứa câu injection không (chặn poisoning)."""
-    return bool(text) and bool(_INJECT_RE.search(text))
+    if not text:
+        return False
+    return bool(_INJECT_RE.search(text)) or bool(_INJECT_RE_KHONG_DAU.search(_bo_dau(text)))
 
 
 # ─────────── Cửa gác việc learn tự tạo (chống backlog rác) ───────────
