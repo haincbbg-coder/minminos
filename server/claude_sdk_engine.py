@@ -502,9 +502,9 @@ class ClaudeSDK:
         # Nguồn settings cho phiên CÓ RÀO (allowed_tools). None = mặc định ["project"]: chỉ nạp
         # CLAUDE.md/.claude của chính brain (cwd), KHÔNG nạp ~/.claude/settings.json của máy (hook
         # SessionStart/UserPromptSubmit, enabledPlugins, permissions.allow xét TRƯỚC can_use_tool).
-        # [] = không nạp gì cả: lượt chạy thử và phiên cải tiến của Trụ 2 (26.10.217) đặt giá trị này.
+        # [] = không nạp gì cả: lượt chạy thử và phiên cải tiến của Trụ 6 (26.10.217) đặt giá trị này.
         self.setting_sources = None
-        # Server MCP in-process THÊM vào (tên -> McpSdkServerConfig), đấu ở CẢ nhánh có rào. Trụ 2
+        # Server MCP in-process THÊM vào (tên -> McpSdkServerConfig), đấu ở CẢ nhánh có rào. Trụ 6
         # dùng cho phiên cải tiến: một server đọc file khoá trong thư mục bằng chứng, thay cho Read
         # native (Read native nhận đường dẫn tuyệt đối nên đọc được đáp án và điểm ở chỗ khác).
         self.sdk_servers = None
@@ -785,7 +785,7 @@ class ClaudeSDK:
             kw["can_use_tool"] = self._permission_gate
             # Chú thích trên nói "KHÔNG nạp settings filesystem" nhưng tới 26.10.216 code không đặt
             # gì cả, mà claude-agent-sdk 0.2.x coi None là "để CLI tự quyết" = nạp user/project/local.
-            # Người soát Trụ 2 chứng minh với claude 2.1.310: hook SessionStart trong ~/.claude chạy
+            # Người soát Trụ 6 chứng minh với claude 2.1.310: hook SessionStart trong ~/.claude chạy
             # thật ở phiên có rào. Nay đặt TƯỜNG MINH. Giữ "project" cho phiên nền thường vì brain
             # nào cũng được seed CLAUDE.md (luật wiki, đường dẫn memory) mà loop/workflow/tự học
             # đang dựa vào; skill native không bị ảnh hưởng vì allowlist có rào không cho tool Skill.

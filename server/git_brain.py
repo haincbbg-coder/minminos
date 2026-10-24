@@ -411,7 +411,7 @@ def commit_paths(root: str, paths: List[str], msg: str, chi_paths: bool = True) 
 
     chi_paths=True (mặc định từ 26.10.217): commit kèm pathspec `-- <paths>`, nên file người khác
     (chủ, một phiên khác) đã `git add` sẵn KHÔNG bị cuốn vào commit này mà vẫn nằm nguyên trong
-    index. Bản cũ `git commit -m` commit CẢ index (người soát Trụ 2 tìm ra). chi_paths=False giữ
+    index. Bản cũ `git commit -m` commit CẢ index (người soát Trụ 6 tìm ra). chi_paths=False giữ
     cách cũ cho đúng một chỗ cần: ensure_git_repo phải commit cả phần gỡ media khỏi index."""
     try:
         if not paths:
@@ -512,7 +512,7 @@ def files_of_commit(root: str, h: str) -> List[str]:
 def revert_commit(root: str, h: str, prefix: str = "") -> dict:
     """git revert MỘT commit chỉ định (tổng quát hoá revert_last_learn). Trả {ok, reverted, error}.
 
-    Dành cho nút Hoàn tác của bộ cải tiến có đối chứng (Trụ 2, 26.10.217). Hai rào giống hệt
+    Dành cho nút Hoàn tác của bộ cải tiến có đối chứng (Trụ 6, 26.10.217). Hai rào giống hệt
     revert_last_learn: từ chối khi CHÍNH file trong commit đang sửa dở (để không nuốt chỉnh tay
     của chủ), và revert hỏng thì abort để brain không kẹt ở trạng thái revert dở.
     `prefix`: khác rỗng thì commit phải có tiêu đề mở đầu bằng đúng tiền tố đó - nút Hoàn tác

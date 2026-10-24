@@ -1,4 +1,4 @@
-"""Trụ 2 (26.10.217): đầu-cuối đường chạy nền của "Cải tiến có đối chứng", engine GIẢ.
+"""Trụ 6 (26.10.217): đầu-cuối đường chạy nền của "Cải tiến có đối chứng", engine GIẢ.
 
     python3 tests/python/test_tu_hoc_doi_chung_e2e.py     (KHÔNG mạng, KHÔNG model)
 

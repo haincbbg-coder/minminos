@@ -8086,7 +8086,7 @@ def _agent_memory(brain, slug):
         return ""
 
 
-# Kinh nghiệm CÓ BẰNG CHỨNG của trợ lý (Trụ 2, 26.10.217): chỉ có khi chủ đã áp dụng một lần
+# Kinh nghiệm CÓ BẰNG CHỨNG của trợ lý (Trụ 6, 26.10.217): chỉ có khi chủ đã áp dụng một lần
 # "Cải tiến có đối chứng", nên trợ lý chưa từng cải tiến không đổi một chữ nào trong prompt.
 # Khác mục "Bài học (tự học)" của JAVIS_LESSON ở chỗ mỗi mục ở đây mang mã lần chạy, đề đã thử và
 # kết quả trước/sau. Có trần để một file phình không ăn hết ngữ cảnh của vai.

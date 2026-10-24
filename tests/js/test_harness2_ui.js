@@ -1,4 +1,4 @@
-/* Màn "Cải tiến có đối chứng" (dashboard/harness2.js, Trụ 2, 26.10.217).
+/* Màn "Cải tiến có đối chứng" (dashboard/harness2.js, Trụ 6, 26.10.217).
 
        node tests/js/test_harness2_ui.js
 

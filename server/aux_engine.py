@@ -387,7 +387,7 @@ class _ApiAuxEngine:
         self.tag = tag
         self.reasoning = reasoning
         self.session_id = None      # engine API không có phiên nối tiếp - giữ cho đủ hợp đồng
-        # Trụ 2 (26.10.217), cả hai mặc định TẮT nên mọi chỗ dùng cũ không đổi gì:
+        # Trụ 6 (26.10.217), cả hai mặc định TẮT nên mọi chỗ dùng cũ không đổi gì:
         # - tools_override = (tools, route): bộ tool RIÊNG thay cho discover_all của hub. Phiên
         #   cải tiến chỉ được đọc thư mục bằng chứng của nó, không được thấy POS/Zalo/plugin.
         # - phat_ket_qua_tool: phát cả sự kiện tool_result để bộ thu trajectory ghi được kết quả
@@ -418,7 +418,7 @@ class _ApiAuxEngine:
                 s = cfgmod.read_settings()
                 override = ((s.get("model", {}) or {}).get("fallback_openrouter_model") or "").strip()
                 self.model = override or await pick_openrouter_free(key)
-                # Lượt chạy thử (Trụ 2) không được ghi settings thật của chủ, kể cả để nhớ model.
+                # Lượt chạy thử (Trụ 6) không được ghi settings thật của chủ, kể cả để nhớ model.
                 import che_do_thu
                 if not override and self.model and not che_do_thu.dang_bat():
                     s.setdefault("model", {})["fallback_openrouter_model"] = self.model

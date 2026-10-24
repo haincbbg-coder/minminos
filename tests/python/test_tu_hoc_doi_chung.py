@@ -1,4 +1,4 @@
-"""Trụ 2 (26.10.217): lõi "Tự học có đối chứng" (harness2.py + harness2_noi.py), engine GIẢ tất định.
+"""Trụ 6 (26.10.217): lõi "Tự học có đối chứng" (harness2.py + harness2_noi.py), engine GIẢ tất định.
 
     python3 tests/python/test_tu_hoc_doi_chung.py     (KHÔNG mạng, KHÔNG model)
 
