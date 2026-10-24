@@ -350,7 +350,7 @@ def ensure_git_repo(root: str) -> dict:
             with BrainLock(root, timeout=1.0) as lk:
                 if getattr(lk, "acquired", False):
                     untrack_media(root)
-                    commit_paths(root, [".gitignore"], "chore: cập nhật .gitignore brain")
+                    commit_paths(root, [".gitignore"], "chore: cập nhật .gitignore brain", chi_paths=False)
         return {"ok": True, "created": False}
     try:
         Path(root).mkdir(parents=True, exist_ok=True)
@@ -405,16 +405,21 @@ def paths_within(paths: List[str], allowed_prefixes: List[str]) -> List[str]:
     return bad
 
 
-def commit_paths(root: str, paths: List[str], msg: str) -> Optional[str]:
+def commit_paths(root: str, paths: List[str], msg: str, chi_paths: bool = True) -> Optional[str]:
     """git add ĐÚNG các path (KHÔNG add -A) rồi commit. Trả commit hash ngắn hoặc None.
-    An toàn: chỉ đưa vào index những gì engine chủ động ghi."""
+    An toàn: chỉ đưa vào index những gì engine chủ động ghi.
+
+    chi_paths=True (mặc định từ 26.10.217): commit kèm pathspec `-- <paths>`, nên file người khác
+    (chủ, một phiên khác) đã `git add` sẵn KHÔNG bị cuốn vào commit này mà vẫn nằm nguyên trong
+    index. Bản cũ `git commit -m` commit CẢ index (người soát Trụ 2 tìm ra). chi_paths=False giữ
+    cách cũ cho đúng một chỗ cần: ensure_git_repo phải commit cả phần gỡ media khỏi index."""
     try:
         if not paths:
             return None
         add = _git(root, "add", "--", *paths)
         if add.returncode != 0:
             return None
-        c = _git(root, "commit", "-m", msg)
+        c = _git(root, "commit", "-m", msg, "--", *paths) if chi_paths else _git(root, "commit", "-m", msg)
         if c.returncode != 0:
             return None
         h = _git(root, "rev-parse", "--short", "HEAD")

@@ -418,7 +418,9 @@ class _ApiAuxEngine:
                 s = cfgmod.read_settings()
                 override = ((s.get("model", {}) or {}).get("fallback_openrouter_model") or "").strip()
                 self.model = override or await pick_openrouter_free(key)
-                if not override and self.model:
+                # Lượt chạy thử (Trụ 2) không được ghi settings thật của chủ, kể cả để nhớ model.
+                import che_do_thu
+                if not override and self.model and not che_do_thu.dang_bat():
                     s.setdefault("model", {})["fallback_openrouter_model"] = self.model
                     cfgmod.write_settings(s)
             except Exception as e:
