@@ -6,7 +6,9 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.220] - 2026-10-25
 ### Thêm mới
-- **Gợi ý mã hàng cho nhân viên bán hàng** (đang làm): khách nhắn tới thì tra ra mã từ chính tin nhắn, từ ID quảng cáo, từ bài viết hoặc từ ảnh khách gửi.
+- **Gợi ý mã hàng cho nhân viên bán hàng**: tiện ích mới trên Cốc Cốc/Chrome đọc hội thoại Pancake và hiện ngay mã hàng, độ chắc, vì sao và tồn kho. Tra theo mã khách nhắn, ID quảng cáo (kể cả mã trong tên chiến dịch), rồi ID bài viết. Bấm "Đúng mã này" thì MinMin nhớ cho lần sau.
+- Bộ não nạp dữ liệu bằng công cụ `javis_goi_y_ma_nap` và lấy mã ghép máy bằng `javis_goi_y_ma_ma_ghep`.
+- Tra theo ảnh khách gửi chưa có, sẽ làm ở bản sau.
 
 ## [26.10.219] - 2026-10-24
 

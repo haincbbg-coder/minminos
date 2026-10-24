@@ -32,6 +32,16 @@ def register(ctx):
         return json.dumps(goi_y_ma.phan_giai(a.get("text") or "", a.get("ad_id") or "", a.get("post_id") or ""),
                           ensure_ascii=False)
 
+    async def _ma_ghep(args, cctx):
+        return json.dumps({"ma": goi_y_ma.tao_ma_ghep(), "het_han_sau_phut": goi_y_ma.MA_SONG // 60,
+                           "cach_dung": "Bấm biểu tượng tiện ích MinMin Gợi ý mã hàng trên Cốc Cốc, nhập mã này rồi Ghép máy."},
+                          ensure_ascii=False)
+
+    ctx.register_tool(
+        name="javis_goi_y_ma_ma_ghep",
+        description="Tạo mã ghép 6 số (sống 15 phút) để ghép tiện ích Gợi ý mã hàng trên trình duyệt của nhân viên với MinMin.",
+        handler=_ma_ghep, min_mode="safe", schema={"type": "object", "properties": {}},
+    )
     ctx.register_tool(
         name="javis_goi_y_ma_nap",
         description=("Nạp dữ liệu vào bộ tra mã hàng của tiện ích Pancake. Mọi tham số đều là danh sách, ghi đè theo "

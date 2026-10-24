@@ -8,4 +8,5 @@ min_mode: safe
 tools:
   - javis_goi_y_ma_nap
   - javis_goi_y_ma_tra
+  - javis_goi_y_ma_ma_ghep
 hooks: []
