@@ -959,10 +959,15 @@ class Harness2Feature:
 
         @r.get("/harness/trang-thai")
         async def harness_trang_thai(run_id: str = Query(""), slug: str = Query(""), brain: str = Query("")):
-            rid = run_id or self.dang.get("run_id") or ""
-            if not rid and slug:
+            # Hỏi theo trợ lý thì chỉ trả lần của ĐÚNG trợ lý đó: lượt đang chạy của trợ lý khác
+            # không được hiện nhầm thành tiến độ của trợ lý đang mở.
+            if run_id:
+                rid = run_id
+            elif slug:
                 ls = self.lich_su(brain, slug)
                 rid = ls[0]["run_id"] if ls else ""
+            else:
+                rid = self.dang.get("run_id") or ""
             if not rid:
                 return {"ok": True, "trang_thai": "", "dang_chay": ""}
             try:

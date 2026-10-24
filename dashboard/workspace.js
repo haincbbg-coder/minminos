@@ -1049,7 +1049,8 @@
     if (!item) { host.innerHTML = ""; veLichSu(null); chonTabPhai(tabTheoLoai()); return; }
     if (S.loai === "agent") {
       host.innerHTML = '<div class="ws-rtitle">' + esc(t("ws.agent_settings")) + '</div><div class="ws-form" id="wsAgentForm"></div>' +
-        '<div class="ws-acts"><button type="button" class="ws-btn" id="wsExport">' + esc(t("studio.export")) + '</button>' +
+        '<div class="ws-acts"><button type="button" class="ws-btn" id="wsH2" title="' + esc(t("h2.open_hint")) + '">' + ic("sparkles") + ' ' + esc(t("h2.open")) + '</button>' +
+        '<button type="button" class="ws-btn" id="wsExport">' + esc(t("studio.export")) + '</button>' +
         '<button type="button" class="ws-btn danger" id="wsDel">' + esc(t("common.delete")) + '</button></div>';
       // MƯỢN chính trình sửa agent của Studio (studio.js), không dựng bản thứ hai: chọn model,
       // chọn skill, nhóm... đã nằm ở đó, chép lại là hai bản trôi lệch nhau ngay lần sửa đầu.
@@ -1058,6 +1059,9 @@
           onSaved: async function () { await sauLuu(item, "agent"); } });
       }
       host.querySelector("#wsExport").onclick = function () { window.JavisStudio && window.JavisStudio.exportItem("agent", item.slug); };
+      // Trụ 2 (26.10.217): cải tiến có đối chứng cho ĐÚNG trợ lý đang mở (harness2.js). Chủ bấm,
+      // chạy xong thì dừng; không có vòng nền nào tự cải tiến trợ lý.
+      host.querySelector("#wsH2").onclick = function () { if (window.JavisHarness2) window.JavisHarness2.mo(item, { brain: brain() }); };
       host.querySelector("#wsDel").onclick = async function () {
         if (!confirm(t("studio.del_ag", { ten: item.name }))) return;
         await api("/agents/delete", { method: "POST", body: fd({ slug: item.slug, brain: brain() }) });
