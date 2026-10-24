@@ -120,6 +120,30 @@ check("1. phiên nền có rào khác: KHÔNG nạp settings user/local (hook, a
       og.setting_sources)
 check("1. phiên nền có rào khác: vẫn nạp CLAUDE.md của brain (nguồn project)", og.setting_sources == ["project"],
       og.setting_sources)
+# Bằng CLI THẬT (kịch bản hooktest của người soát): HOME giả có hook SessionStart/UserPromptSubmit.
+# Máy không có `claude` (CI) thì bỏ qua phần này; phần trên đã chốt cờ đi xuống đúng.
+_cli = shutil.which("claude")
+if _cli:
+    H = Path(tempfile.mkdtemp(prefix="h2lo-home-"))
+    (H / ".claude").mkdir()
+    dau = H / "HOOK_RAN"
+    (H / ".claude" / "settings.json").write_text(json.dumps({"hooks": {
+        "SessionStart": [{"hooks": [{"type": "command", "command": f"echo ran >> {dau}"}]}],
+        "UserPromptSubmit": [{"hooks": [{"type": "command", "command": f"echo ups >> {dau}"}]}]}}), encoding="utf-8")
+    cw = Path(tempfile.mkdtemp(prefix="h2lo-cwd-"))
+
+    def _chay_cli(nguon):
+        dau.unlink(missing_ok=True)
+        co = [] if nguon is None else ["--setting-sources=" + ",".join(nguon)]
+        subprocess.run([_cli, "-p", "hi", "--output-format", "json", "--strict-mcp-config", *co], cwd=str(cw),
+                       env={**os.environ, "HOME": str(H)}, capture_output=True, timeout=90)
+        return dau.exists()
+    check("1. CLI thật: KHÔNG truyền cờ thì hook của ~/.claude chạy (lỗ có thật)", _chay_cli(None))
+    check("1. CLI thật: setting_sources của lượt thử -> hook KHÔNG chạy", not _chay_cli(o.setting_sources))
+    check("1. CLI thật: setting_sources của phiên nền có rào -> hook user KHÔNG chạy", not _chay_cli(og.setting_sources))
+    shutil.rmtree(H, ignore_errors=True)
+else:
+    print("     (máy không có claude CLI: bỏ qua phép thử hook bằng CLI thật)")
 u = claude_cli.claude_engine(system_prompt="x", cwd=str(B), tag="chat", allowed_tools=None)
 check("1. mức full không rào giữ nguyên: nạp user/project/local", u._options().setting_sources == ["user", "project", "local"])
 

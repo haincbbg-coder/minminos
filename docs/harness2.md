@@ -31,17 +31,28 @@ nhóm việc cũng giữ: chỉ ghi khi có tương phản thực thi và khi b�
 Trợ lý ở mức Toàn quyền vẫn không gửi tin, tạo đơn, đăng bài, chạy ads, giao việc nền... trong lúc chạy
 thử. Cơ chế ở `server/che_do_thu.py`:
 
-- Tool MCP loại ghi/nguy hiểm: hub không gọi, chỉ ghi "ý định" (tên tool + tham số đã che bí mật) và trả
-  câu "GIẢ LẬP" để trợ lý làm tiếp như thật. Không tạo yêu cầu "hỏi trước", không ghi sổ hành động thật.
+- Tool MCP: chỉ tool connector KHAI RÕ là đọc (`tool_meta.read`, `arg_rules` giá trị đọc, `call_rules`
+  toàn đọc) mới chạy thật. Mọi tool khác, kể cả tên lạ chưa khai (vd `forward`, `share_file`, `mutate`),
+  hub không gọi: chỉ ghi "ý định" (tên tool + tham số đã che bí mật) và trả câu "GIẢ LẬP" để trợ lý làm
+  tiếp như thật. Không tạo yêu cầu "hỏi trước", không ghi sổ hành động thật.
 - Plugin mức safe/full (`javis_task`, `zalo_send_image`, `fb_page_post`...): không chạy dòng mã nào.
-- Ghi file chỉ vào brain TẠM (bản sao chữ của brain trong `STATE_DIR/harness/<lần chạy>/`). Brain tạm
-  biến mất giữa chừng thì lượt cải tiến DỪNG, hub không bao giờ tự rơi về brain thật.
-- Claude Code chạy thử luôn có allowlist chỉ đọc + hub, cấm Bash/Write/Edit/Web/Task, không nạp
-  connector của tài khoản Claude. Bộ não khác (Codex, Grok, Muse, Copilot...) bị từ chối chạy thử vì
-  MinMin chưa chặn được từng lời gọi tool của chúng.
+  Plugin chỉ đọc nhưng tốn tiền/quota hay tải link tuỳ ý (`fb_monitor`, `javis_describe_image`,
+  `google_link_doc`, `javis_youtube_read`, plugin khai `ton_phi=True`) cũng giả lập. Hook
+  pre/post_tool_call của plugin không chạy trong lượt thử.
+- `javis_web_fetch` / `javis_web_search` không gửi gì ra internet trong lượt thử.
+- Đọc/ghi file chỉ trong brain TẠM (bản sao chữ của brain trong `STATE_DIR/harness/<lần chạy>/`, không
+  chép `de-thi.json`). Brain tạm biến mất giữa chừng thì lượt cải tiến DỪNG, hub không bao giờ tự rơi
+  về brain thật.
+- Claude Code chạy thử không có tool native nào (kể cả Read): chỉ hub, cấm Bash/Write/Edit/Web/Task, MCP
+  strict, `setting_sources=[]` (không nạp hook, allow-rule, plugin hay connector của tài khoản Claude).
+  Phiên cải tiến chỉ có hai tool đọc khoá trong thư mục bằng chứng; đáp án của đề lưu riêng, không phiên
+  model nào với tới. Bộ não khác (Codex, Grok, Muse, Copilot...) bị từ chối chạy thử vì MinMin chưa chặn
+  được từng lời gọi tool của chúng.
+- Lượt thử không ghi settings của chủ (ví dụ OpenRouter tự chọn model free).
 
-Tool ĐỌC vẫn chạy thật (cần số thật để so cách làm). Lưu ý: tool đọc trả phí (ví dụ quét Apify) vẫn tốn
-phí như lượt thật.
+Lưu ý: từ 26.10.217 mọi phiên Claude CÓ RÀO khác (loop, workflow, Kanban, tự học ở mức dưới full) nạp
+settings nguồn `project` thôi: vẫn đọc CLAUDE.md của brain, nhưng không còn chạy hook hay xét allow-rule
+trong `~/.claude/settings.json` của máy. Mức full không rào giữ nguyên.
 
 ## Cái gì được sửa, cái gì không
 
