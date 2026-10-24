@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.218] - 2026-10-24
+
+### Bảo mật
+- **Trợ lý không còn tự sửa được file cấu hình ẩn trong bộ não** (thư mục `.claude`, `.git`, cấu hình của các bộ não CLI, `.mcp.json`). Trước đây một việc ở mức Ghi nháp có thể ghi vào đó để tự cấp thêm quyền cho lượt sau. Skill trong `.claude/skills` vẫn ghi được như cũ.
+- Chạy thử của Trụ 6 chặt hơn với công cụ cổng (Composio): chỉ hành động khai rõ là đọc mới chạy thật.
+- Bộ lọc câu lệnh cài cắm nhận ra cả câu tiếng Việt viết không dấu.
+
 ## [26.10.217] - 2026-10-24
 
 ### Thêm mới
