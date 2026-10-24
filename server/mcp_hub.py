@@ -37,6 +37,7 @@ from config import STATE_DIR
 import hanh_dong   # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
 import tiet_kiem   # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
 import tiem_lenh   # quét tiêm lệnh trong dữ liệu vào (26.10.164)
+import che_do_thu  # cờ CHẠY THỬ của Trụ 2 tự học có đối chứng: giả lập mọi việc ghi (26.10.217)
 
 _TOKEN_PATH = STATE_DIR / ".hub_token"
 _AUDIT_PATH = STATE_DIR / "mcp_audit.jsonl"
@@ -258,6 +259,17 @@ def _guard(ent, fn, mode):
         loai = hanh_dong.loai_viec(conn.get("connector_id"), tool, args) if cls != "read" else ""
         if ok and loai:
             ok, why = hanh_dong.cho_phep(_chinh_sach_loai_viec(), loai)
+        # CHẠY THỬ (Trụ 2, 26.10.217): lượt thử của bộ cải tiến có đối chứng KHÔNG BAO GIỜ gọi
+        # tool ghi thật. Chặn ở đây, trước hàng đợi "hỏi trước", trước sổ làm-một-lần và trước
+        # bộ đếm tần suất: lượt thử không được làm phiền chủ bằng yêu cầu duyệt, không được ghi
+        # vào sổ hành động thật, và không được ăn hạn mức chống spam của kết nối. Chỉ ghi Ý ĐỊNH
+        # vào sổ của lượt thử. Tool ĐỌC vẫn đi tiếp như thường vì cần số thật để so cách làm.
+        if che_do_thu.dang_bat() and cls != "read":
+            che_do_thu.ghi_y_dinh(tool, args, nguon=f"mcp:{conn.get('connector_id') or ''}",
+                                  loai=loai, ly_do="" if ok else why)
+            if not ok:
+                return "ERROR: " + why
+            return che_do_thu.cau_gia_lap(tool, loai)
         if ok and not _rate_ok(conn["id"], connector):
             ok, why = False, (f"Kết nối '{conn.get('label')}' vượt giới hạn tần suất "
                               f"(chống spam/khoá tài khoản). Chờ 1 phút rồi thử lại.")
@@ -772,6 +784,13 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
                     "nhân. Muốn ghi thật: mở trang Việc, nâng mức của việc này lên 'Ghi nháp' "
                     "(auto) rồi chạy lại. Ngay bây giờ: ĐỪNG thử ghi lại, hãy đưa TRỌN nội dung "
                     "file vào câu trả lời để người dùng tự lưu.")
+        # CHẠY THỬ: chỉ ghi được vào brain TẠM của lượt thử. Brain nào khác (kể cả khi hub lỡ
+        # suy ra brain thật) thì giả lập, để một lượt thử không bao giờ sửa được file của chủ.
+        if che_do_thu.dang_bat() and not che_do_thu.la_brain_tam(vault_root):
+            che_do_thu.ghi_y_dinh("javis_write_file", {"path": (args or {}).get("path"),
+                                                       "so_ky_tu": len(str((args or {}).get("content") or ""))},
+                                  nguon="builtin", ly_do="brain không phải brain tạm của lượt thử")
+            return che_do_thu.cau_gia_lap("javis_write_file")
         # Trả câu NÓI ĐƯỢC thay vì để ValueError bay ra, y như `_read` đã làm. Engine Web
         # chạy vòng tool bằng chữ: một exception bay ra giữa lô tool là chết cả lượt, còn một
         # câu lỗi thì model đọc rồi tự sửa đường dẫn ở vòng sau.
@@ -1461,6 +1480,14 @@ def resolve_vault(raw_vault):
     """
     raw = (raw_vault or "").strip()
     header_hong = ""
+    # CHẠY THỬ: chỉ nhận đúng brain tạm của lượt thử, KHÔNG bao giờ suy ra brain đang mở. Brain
+    # tạm biến mất giữa chừng mà hub lại tự lấy "brain gần nhất" thì lượt thử chạy trên brain
+    # THẬT của chủ - đúng cái bẫy mà toàn bộ cơ chế chạy thử sinh ra để chặn.
+    if che_do_thu.dang_bat():
+        for thu in dict.fromkeys([raw, unquote(raw)]):
+            if thu and che_do_thu.la_brain_tam(thu) and Path(thu).is_dir():
+                return str(Path(thu).resolve()), "header", ""
+        return None, "", raw
     if raw:
         # Ba cách đọc, nguyên văn trước: đường dẫn ASCII như cũ; dạng mã hoá phần trăm (Codex
         # gửi brain tên có dấu như vậy, xem `ma_hoa_vault`); và UTF-8 thô mà Starlette đã giải
@@ -1592,11 +1619,15 @@ async def handle_http(request):
     # Mã việc nền (cổng từ Javis 0.238.0): máy chủ ghi header này vào cấu hình MCP RIÊNG của lượt
     # Claude Code chạy việc Kanban; model không đặt được header. Không có thì không phải việc nền.
     _tok_job = once_ledger.bind_job(request.headers.get(once_ledger.JOB_HEADER.lower()) or "")
+    # Cờ chạy thử (Trụ 2): bộ cải tiến ghi header này vào cấu hình MCP RIÊNG của lượt thử.
+    # Gắn TRƯỚC khi giải brain, vì `resolve_vault` ở chế độ thử không được rơi về brain thật.
+    _tok_thu = che_do_thu.bat(request.headers.get(che_do_thu.HEADER.lower()) or "")
     try:
         return await tra_loi_jsonrpc(request, mode, include_plugins=include_plugins,
                                      include_ambient=include_ambient,
                                      raw_vault=request.headers.get("x-javis-vault"))
     finally:
+        che_do_thu.tat(_tok_thu)
         once_ledger.reset_job(_tok_job)
 
 
