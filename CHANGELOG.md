@@ -7,7 +7,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.217] - 2026-10-24
 
 ### Thêm mới
-- (đang làm) Trụ 2: tự học có đối chứng theo cơ chế Harness².
+- **Cải tiến trợ lý có đối chứng.** Ở trang Cộng sự, nút mới trong phần Cài đặt của mỗi trợ lý: MinMin chạy thử trợ lý trên vài việc thật gần đây, hai "người sửa" đề xuất cách làm và kiến thức nghề tốt hơn, chạy thử lại rồi so sánh. Cơ chế theo Harness² của Google Research.
+- **Chạy thử không làm gì thật.** Trợ lý Toàn quyền cũng không gửi tin, tạo đơn hay đăng bài trong lúc thử; MinMin chỉ ghi lại việc nó định làm để bạn xem.
+- **Bạn duyệt rồi mới áp dụng, và luôn hoàn tác được.** Màn so sánh hiện khác biệt từng file, lý do, chi phí thật; trước khi chạy có ước lượng số lượt và tiền. Bản mới kém hơn bản cũ thì tự giữ nguyên.
+- Bài học có bằng chứng được ghi vào thư viện riêng của nhóm việc, để lần cải tiến sau của các trợ lý cùng nhóm đọc được.
 
 ## [26.10.216] - 2026-10-24
 
