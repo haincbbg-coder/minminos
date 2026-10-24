@@ -26,6 +26,68 @@ WRITE_HINTS = ("create", "update", "delete", "add", "remove", "edit", "send", "s
                "reply", "accept", "invite", "join", "approve", "deploy", "publish", "upload",
                "execute", "submit", "launch", "react", "block", "kick")
 
+# Động từ TÁC ĐỘNG RA NGOÀI (gửi, đăng, tiền, đơn, quảng cáo, xoá...) cho connector KHÔNG khai
+# tool_meta.danger. Vì sao (26.10.219): 16 connector trong danh mục (gmail, google-ads, shopee,
+# tiktok-shop, lazada, haravan, sapo, kiotviet, nhanh-vn...) không khai danger, nên chỉ còn
+# WRITE_HINTS đoán: `send_email` thành "write" và CHẠY ở mức Ghi nháp (auto), còn `mutate` của
+# Google Ads không khớp chữ nào nên thành "read" và chạy cả ở mức Chỉ đọc. Lời dặn hệ thống thì
+# nói mức Ghi nháp chặn mọi hành động ra ngoài; chủ chốt sửa CODE cho đúng lời dặn.
+#
+# So theo TỪNG TỪ trong tên (tách theo _ - . và chữ hoa), không theo chuỗi con như WRITE_HINTS:
+# so chuỗi con thì `get_post_insights` dính "post" và bị chặn oan ở mọi mức thấp. Tên mở đầu bằng
+# một động từ ĐỌC (get, list, search...) thì không xét, vì đó là tool đọc về thứ được đăng/gửi.
+DANGER_VERBS = frozenset((
+    "send", "post", "publish", "reply", "forward", "share", "invite", "comment", "react", "like",
+    "follow", "unfollow", "broadcast", "notify", "sms",
+    "pay", "payment", "refund", "order", "purchase", "checkout", "transaction", "transfer",
+    "withdraw", "charge", "invoice",
+    "mutate", "activate", "deactivate", "pause", "resume", "enable", "disable", "launch", "boost",
+    "deploy", "submit",
+    "delete", "remove", "trash", "destroy", "purge", "cancel", "archive",
+    "approve", "accept", "reject", "block", "ban", "kick", "mute",
+))
+READ_VERBS_DAU = frozenset((
+    "get", "list", "search", "fetch", "read", "find", "query", "count", "describe", "retrieve",
+    "view", "show", "lookup", "check", "preview", "export", "download", "inspect", "stat",
+    "stats", "insights", "report", "analyze", "analyse", "summarize", "estimate", "validate",
+))
+
+
+def _tu_trong_ten(tool):
+    """Tách tên tool thành các từ thường: `sendEmail` / `send_email` / `gmail.send` -> từ rời."""
+    t = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(tool or ""))
+    return [w for w in re.split(r"[^A-Za-z0-9]+", t.lower()) if w]
+
+
+# Động từ MẠNH: dính một trong số này thì không còn là đọc, kể cả khi tên mở đầu bằng get/fetch
+# (`fetch_and_send`, `get_then_delete`). Cố ý không có post/order/comment vì đó thường là DANH TỪ
+# trong tên tool đọc (`get_post_insights`, `list_orders`).
+DANGER_VERBS_MANH = frozenset((
+    "send", "forward", "share", "publish", "reply", "invite", "pay", "refund", "transfer",
+    "withdraw", "purchase", "checkout", "mutate", "delete", "remove", "trash", "destroy", "purge",
+    "cancel", "activate", "deactivate", "pause", "enable", "disable",
+))
+
+
+def nghi_ra_ngoai(tool):
+    """Tên tool (connector không khai danger) có dấu hiệu TÁC ĐỘNG RA NGOÀI không."""
+    tu = _tu_trong_ten(tool)
+    if not tu:
+        return False
+    if tu[0] in READ_VERBS_DAU:
+        return any(w in DANGER_VERBS_MANH for w in tu[1:])
+    return any(w in DANGER_VERBS for w in tu)
+
+
+def la_ten_doc(tool):
+    """Tên mở đầu bằng động từ ĐỌC và không dính động từ mạnh nào: chắc chắn là tool đọc.
+
+    Sửa luôn lỗi cũ của WRITE_HINTS so chuỗi con: `list_posts`, `list_orders`,
+    `get_post_insights` dính "post"/"order" nên bị coi là ghi và ẩn ở mức Chỉ đọc."""
+    tu = _tu_trong_ten(tool)
+    return bool(tu) and tu[0] in READ_VERBS_DAU and not any(w in DANGER_VERBS_MANH for w in tu[1:])
+
+
 PERM_RANK = {"readonly": 0, "safe": 1, "full": 2}
 _MODE_CAP = {"suggest": "readonly", "auto": "safe", "full": "full"}
 
@@ -517,6 +579,10 @@ def classify(connector, tool, args=None):
         return "write"
     if param and not isinstance(args, dict):
         return "read"   # đa hành động, chưa có args → xem ghi chú docstring
+    if nghi_ra_ngoai(tool):
+        return "danger"
+    if la_ten_doc(tool):
+        return "read"
     if any(h in t for h in WRITE_HINTS):
         return "write"
     return "read"
@@ -558,6 +624,8 @@ def classify_ro(connector, tool, args=None):
         return "danger"
     if _in(meta.get("write")):
         return "write"
+    if nghi_ra_ngoai(tool):
+        return "danger"
     if any(h in t for h in WRITE_HINTS):
         return "write"
     return "khong_ro"
