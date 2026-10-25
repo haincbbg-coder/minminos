@@ -194,11 +194,35 @@ class GPM:
         # dòng lệnh chrome.exe trên máy thật 2026-10-20). Xin GPM thêm cờ cổng ngẫu nhiên; cổng
         # thật đọc từ tệp DevToolsActivePort trong thư mục profile.
         d = self._get_tho(f"/api/v1/profiles/start/{urllib.parse.quote(profile_id)}", **self.THAM_SO_MO)
-        if not d.get("success") and "inuse" in str(d.get("message") or "").lower().replace("_", ""):
+        def _dang_dung(x):
+            return not x.get("success") and "inuse" in str(x.get("message") or "").lower().replace("_", "")
+        if _dang_dung(d):
+            # 26.10.225: GPM đóng profile mất 5-20 giây (Chrome lưu cookie), có khi chrome là do Worker
+            # lần trước tự mở lại nên GPM không quản. Thử lại tới ~40 giây; quá 12 giây thì đóng hẳn
+            # các tiến trình chrome của đúng profile này (đóng êm trước, rồi mới buộc).
             self.nhat_ky("Profile đang mở sẵn: đóng lại rồi mở bằng Worker")
             self.dong(profile_id)
-            time.sleep(4)
-            d = self._get_tho(f"/api/v1/profiles/start/{urllib.parse.quote(profile_id)}", **self.THAM_SO_MO)
+            bat_dau, da_dong_han = time.monotonic(), False
+            while _dang_dung(d) and time.monotonic() - bat_dau < 40:
+                time.sleep(3)
+                if not da_dong_han and time.monotonic() - bat_dau > 12:
+                    da_dong_han = True
+                    pids = sorted({pp for pp, _ in tien_trinh_profile(profile_id)})
+                    if pids:
+                        self.nhat_ky(f"Profile vẫn bận: đóng {len(pids)} tiến trình chrome của profile này")
+                        for pp in pids:
+                            _chay(["taskkill", "/PID", str(pp), "/T"])
+                        time.sleep(3)
+                        for pp in pids:
+                            _chay(["taskkill", "/PID", str(pp), "/T", "/F"])
+                    try:
+                        self._get_tho(f"/api/v1/profiles/stop/{urllib.parse.quote(profile_id)}")
+                    except LoiGPM:
+                        pass
+                d = self._get_tho(f"/api/v1/profiles/start/{urllib.parse.quote(profile_id)}", **self.THAM_SO_MO)
+            if _dang_dung(d):
+                raise LoiGPM("profile đang được mở ở nơi khác (có thể bạn đang dùng nick này trong GPM). "
+                             "Đóng cửa sổ profile đó rồi chạy lại")
         if not d.get("success"):
             raise LoiGPM(f"GPM không mở được profile: {d.get('message') or 'không rõ'}")
         return d.get("data") or {}

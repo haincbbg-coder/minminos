@@ -363,7 +363,7 @@ def fb_dang_nhom_ai(nc) -> str:
             nc.su_kien("dang_nhom", "loi", str(e), nhom=dich.get("ten") or dich["link"])
             continue
         if kq["trang_thai"] == "chay_thu":
-            break
+            return f"Chạy thử: đã soạn bài AI #{bn['id']} trong nhóm tới nút Đăng rồi bỏ nháp, không đăng."
         nc.xong_ban_nhap(bn["id"], True, link=kq.get("link") or "")
         if dich.get("_khoa"):
             nc.ghi_da_lam(dich["_khoa"])
@@ -389,7 +389,7 @@ def fb_dang_tuong_ai(nc) -> str:
             nc.xong_ban_nhap(bn["id"], False, loi=str(e))
             raise
         if kq["trang_thai"] == "chay_thu":
-            break
+            return f"Chạy thử: đã soạn bài AI #{bn['id']} lên tường tới nút Đăng rồi bỏ nháp, không đăng."
         nc.xong_ban_nhap(bn["id"], True, link=kq.get("link") or "")
         if _bao_ket_qua(nc, kq, "dang_tuong"):
             xong += 1
