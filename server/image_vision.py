@@ -216,8 +216,52 @@ async def describe_data_urls(data_urls: List[str], question: str = "", labels: O
     creds = openai_oauth.valid_creds()
     if not creds or not creds.get("access_token"):
         return {"ok": False, "error": not_connected_reason()}
-    payload = build_payload(build_prompt(question, labels if labels else ["" for _ in data_urls]), data_urls)
+    prompt = build_prompt(question, labels if labels else ["" for _ in data_urls])
     headers = image_gen._headers(creds["access_token"], creds.get("account_id") or "")
+    global _MODEL_TOT
+    thu_loi = ""
+    for model in await _model_ung_vien(thu_loi):
+        r = await _nhin_mot_model(prompt, data_urls, model, headers, timeout_s)
+        if r.get("ok"):
+            _MODEL_TOT = model
+            return r
+        thu_loi = r.get("error") or ""
+        if not _la_loi_model(thu_loi):
+            return r
+    return {"ok": False, "error": thu_loi or localefmt.chu("Không có model nào của gói ChatGPT nhìn được ảnh.", "No model on the ChatGPT plan can look at images.")}
+
+
+# Model nhớ lại sau lần nhìn thành công; gói ChatGPT mỗi người một danh sách model nên không ghim cứng gpt-5.5.
+_MODEL_TOT = ""
+_MODEL_DU_PHONG = ["gpt-5.5", "gpt-5.4", "gpt-5.3-codex", "gpt-5-codex", "gpt-5"]
+_ds_codex: Optional[List[str]] = None
+
+
+def _la_loi_model(e: str) -> bool:
+    e = str(e or "").lower()
+    return "model_not_found" in e or "not supported when using codex" in e or "model does not exist" in e or "unsupported model" in e
+
+
+async def _model_ung_vien(_loi: str = "") -> List[str]:
+    """Thứ tự thử: model đã chạy được, model do người dùng ép (env), danh sách LIVE của Codex, rồi danh sách dự phòng."""
+    global _ds_codex
+    if _ds_codex is None:
+        try:
+            import asyncio
+            import codex_models
+            kq = await asyncio.get_running_loop().run_in_executor(None, lambda: codex_models.list_models(timeout=15.0))
+            _ds_codex = [str(m) for m in ((kq or {}).get("models") or [])] if isinstance(kq, dict) else []
+        except Exception:      # noqa: BLE001 - không có danh sách live thì dùng dự phòng
+            _ds_codex = []
+    kq: List[str] = []
+    for m in [_MODEL_TOT, os.getenv("JAVIS_VISION_MODEL", ""), *(_ds_codex or []), *_MODEL_DU_PHONG]:
+        if m and m not in kq:
+            kq.append(m)
+    return kq[:6]
+
+
+async def _nhin_mot_model(prompt: str, data_urls: List[str], model: str, headers: dict, timeout_s: float) -> dict:
+    payload = build_payload(prompt, data_urls, model)
     parts: List[str] = []
     final = ""
     err = ""

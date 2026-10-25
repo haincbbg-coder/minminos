@@ -12,6 +12,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Sửa lỗi
 - Bảng Sale và Marketing gộp các tài khoản trùng người chỉ khác dấu tiếng Việt (ví dụ Khánh Vy và Khanh Vy) thành một dòng.
 
+## [26.10.231] - 2026-10-25
+### Sửa lỗi
+- **So ảnh qua gói ChatGPT**: gói không có model `gpt-5.5` thì báo `model_not_found` và so ảnh hỏng. Nay tự thử model khác (danh sách thật của Codex trước, rồi danh sách dự phòng) và nhớ model chạy được. Lỗi khác như hết hạn đăng nhập vẫn báo ngay, không đổi model.
+
 ## [26.10.230] - 2026-10-25
 ### Thêm mới
 - **Kết nối Thống kê Pancake**: một kết nối gom nhiều page, cho biết khách nhắn, số điện thoại, đơn chốt và tỷ lệ chốt của tất cả page và từng page, cập nhật gần như trực tiếp.

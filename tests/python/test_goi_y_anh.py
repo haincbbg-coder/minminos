@@ -123,6 +123,7 @@ kt("anh sai loại = 400", cl.post("/goi-y-ma/may/anh", headers=h, json={"anh": 
 ga_goc = ga.image_vision if hasattr(ga, "image_vision") else None
 import image_vision
 goc_ai = image_vision.describe_data_urls
+_g_ai_goc = goc_ai
 image_vision.describe_data_urls = ai_gia
 rr = cl.post("/goi-y-ma/may/anh", headers=h, json={"anh": b64, "mime": "image/jpeg"})
 image_vision.describe_data_urls = goc_ai
@@ -130,6 +131,33 @@ kt("HTTP trả ứng viên theo ảnh", rr.status_code == 200 and rr.json()["ung
 hs = rr.json()["hash"]
 rr = cl.post("/goi-y-ma/may/xac-nhan", headers=h, json={"ma": "X8", "nguon": "anh", "khoa": hs})
 kt("HTTP xác nhận ảnh thì học", rr.json().get("da_hoc_anh") is True)
+
+# --- gói ChatGPT không có gpt-5.5 (model_not_found): tự thử model khác, nhớ model chạy được
+import asyncio as _aio
+import openai_oauth
+_goi = []
+async def _nhin_gia(prompt, data_urls, model, headers, timeout_s):
+    _goi.append(model)
+    if model == "gpt-5.5":
+        return {"ok": False, "error": 'ChatGPT 400: {"detail":{"code":"model_not_found"}}'}
+    return {"ok": True, "text": "x", "count": 1, "model": model}
+_g_creds, _g_nhin = openai_oauth.valid_creds, image_vision._nhin_mot_model
+openai_oauth.valid_creds = lambda: {"access_token": "t", "account_id": "a"}
+image_vision._nhin_mot_model = _nhin_gia
+image_vision._ds_codex = []
+image_vision._MODEL_TOT = ""
+r_ = _aio.run(_g_ai_goc(["data:image/jpeg;base64,AAAA"]))
+kt("model_not_found thì thử model khác", r_.get("ok") and r_["model"] != "gpt-5.5" and _goi[0] == "gpt-5.5" and len(_goi) == 2)
+_goi.clear()
+_aio.run(_g_ai_goc(["data:image/jpeg;base64,AAAA"]))
+kt("nhớ model chạy được, lần sau không thử lại gpt-5.5", _goi == [r_["model"]])
+async def _loi_khac(prompt, data_urls, model, headers, timeout_s):
+    _goi.append(model); return {"ok": False, "error": "ChatGPT 401: token_expired"}
+image_vision._nhin_mot_model = _loi_khac
+_goi.clear()
+r2_ = _aio.run(_g_ai_goc(["data:image/jpeg;base64,AAAA"]))
+kt("lỗi khác (hết hạn đăng nhập) thì dừng ngay, không đổi model", (not r2_["ok"]) and len(_goi) == 1)
+openai_oauth.valid_creds, image_vision._nhin_mot_model = _g_creds, _g_nhin
 
 print(f"goi_y_anh: {ok} đạt, {loi} lỗi")
 sys.exit(1 if loi else 0)
