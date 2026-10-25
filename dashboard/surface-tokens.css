@@ -9,6 +9,12 @@
   --mm-primary-shadow:0 4px 12px rgba(255,122,60,.2); --mm-scrim:rgba(3,3,8,.8);
   --mm-ok:#6fe0b1; --mm-bad:#ff8e98; --mm-warn:#e0a04a;
   --mm-font:'Be Vietnam Pro','Segoe UI',Arial,sans-serif;
+  /* Design system 26.10.238 (phương án A "Nổi mềm tinh gọn"), quy chuẩn ở docs/design-system.md.
+     Không thêm cỡ hay mức bo mới: chọn mức gần nhất trong thang. */
+  --mm-fs-badge:10px; --mm-fs-12:12px; --mm-fs-13:13px; --mm-fs-14:14px;
+  --mm-fs-16:16px; --mm-fs-20:20px; --mm-fs-24:24px; --mm-fs-32:32px;
+  --mm-r-chip:8px; --mm-r-btn:12px; --mm-r-field:16px; --mm-r-card:22px; --mm-r-pill:999px;
+  --mm-sp-1:4px; --mm-sp-2:8px; --mm-sp-3:12px; --mm-sp-4:16px; --mm-sp-6:24px; --mm-sp-8:32px; --mm-sp-12:48px;
 }
 :root[data-theme="light"] {
   --mm-bg:#efe9e2; --mm-panel:#efe9e2; --mm-field:#efe9e2; --mm-text:#2a2234; --mm-muted:#564b63; --mm-dim:#675d72;

@@ -7,23 +7,23 @@
   position: absolute; top: 12px; left: 12px; right: 64px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   pointer-events: none; font: 600 13px/1.3 system-ui, "Segoe UI", Roboto, sans-serif; color: var(--brain-ink, #1f2d44);
 }
-.mm-office-bar b { font-size: 14px; letter-spacing: .2px; }
-.mm-office-bar span { font-weight: 500; opacity: .7; font-size: 12px; }
+.mm-office-bar b { font-size: var(--mm-fs-14); letter-spacing: .2px; }
+.mm-office-bar span { font-weight: 500; opacity: .7; font-size: var(--mm-fs-12); }
 .mm-office-bar button {
-  pointer-events: auto; cursor: pointer; border: 1px solid var(--brain-glass-brd, rgba(60, 90, 140, .35)); border-radius: 9px;
+  pointer-events: auto; cursor: pointer; border: 1px solid var(--brain-glass-brd, rgba(60, 90, 140, .35)); border-radius: var(--mm-r-btn);
   padding: 5px 11px; font: 600 12px system-ui, sans-serif; color: var(--brain-ink, #1f2d44);
   background: var(--brain-glass, rgba(255, 255, 255, .85)); backdrop-filter: blur(8px);
 }
 .mm-office-bar button:hover { border-color: #2a6bff; color: #2a6bff; }
 .mm-office-card {
-  position: absolute; left: 12px; bottom: 14px; max-width: min(320px, calc(100% - 24px)); padding: 10px 14px; border-radius: 12px;
+  position: absolute; left: 12px; bottom: 14px; max-width: min(320px, calc(100% - 24px)); padding: 10px 14px; border-radius: var(--mm-r-btn);
   display: grid; gap: 2px; font: 500 13px/1.4 system-ui, sans-serif; color: var(--brain-ink, #1f2d44);
   background: var(--brain-glass, rgba(255, 255, 255, .92)); border: 1px solid var(--brain-glass-brd, rgba(60, 90, 140, .35)); box-shadow: var(--brain-glass-shadow, 0 6px 22px rgba(20, 40, 80, .15));
 }
 .mm-office-card[hidden], .mm-office-toast[hidden] { display: none; }
-.mm-office-card b { font-size: 14px; } .mm-office-card span { opacity: .7; font-size: 12px; } .mm-office-card i { font-style: normal; }
+.mm-office-card b { font-size: var(--mm-fs-14); } .mm-office-card span { opacity: .7; font-size: var(--mm-fs-12); } .mm-office-card i { font-style: normal; }
 .mm-office-toast {
-  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: calc(100% - 28px); padding: 9px 14px; border-radius: 10px;
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: calc(100% - 28px); padding: 9px 14px; border-radius: var(--mm-r-btn);
   font: 500 13px/1.4 system-ui, sans-serif; color: #fff; background: rgba(20, 32, 56, .92); text-align: center;
 }
 .mm-office-btn { top: 102px; }
@@ -38,33 +38,33 @@ html.mm-office-on .mm-office-btn { top: 14px; color: #2a6bff; border-color: #2a6
 .mm-pad-dir .u { grid-area: 1 / 2; } .mm-pad-dir .l { grid-area: 2 / 1; } .mm-pad-dir .r { grid-area: 2 / 3; } .mm-pad-dir .d { grid-area: 3 / 2; }
 .mm-pad-zoom { display: grid; grid-template-columns: repeat(2, 44px); gap: 6px; }
 .mm-office-pad button {
-  width: 100%; height: 100%; min-height: 44px; border-radius: 14px; cursor: pointer; touch-action: none; -webkit-touch-callout: none;
+  width: 100%; height: 100%; min-height: 44px; border-radius: var(--mm-r-field); cursor: pointer; touch-action: none; -webkit-touch-callout: none;
   border: 1px solid var(--brain-glass-brd, rgba(60, 90, 140, .35)); color: var(--brain-ink, #1f2d44); font: 700 17px system-ui, sans-serif;
   background: var(--brain-glass, rgba(255, 255, 255, .9)); backdrop-filter: blur(8px); box-shadow: 0 4px 14px rgba(20, 40, 80, .18);
 }
 .mm-office-pad button.on { background: #2a6bff; color: #fff; border-color: #2a6bff; }
 body.mm-office-solo .mm-office-pad { bottom: 24px; }
-@media (min-width: 900px) { .mm-pad-dir { grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 40px); } .mm-pad-zoom { grid-template-columns: repeat(2, 36px); } .mm-office-pad button { min-height: 36px; font-size: 14px; } }
+@media (min-width: 900px) { .mm-pad-dir { grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 40px); } .mm-pad-zoom { grid-template-columns: repeat(2, 36px); } .mm-office-pad button { min-height: 36px; font-size: var(--mm-fs-14); } }
 
 /* menu chọn kịch bản mô phỏng + ô giao việc (26.10.98) */
-.mm-office-simmenu { position: absolute; top: 52px; left: 12px; z-index: 6; display: grid; gap: 4px; padding: 6px; min-width: 260px; max-width: calc(100% - 24px); border-radius: 12px;
+.mm-office-simmenu { position: absolute; top: 52px; left: 12px; z-index: 6; display: grid; gap: 4px; padding: 6px; min-width: 260px; max-width: calc(100% - 24px); border-radius: var(--mm-r-btn);
   background: var(--brain-glass, rgba(255,255,255,.95)); border: 1px solid var(--brain-glass-brd, rgba(60,90,140,.35)); box-shadow: 0 8px 26px rgba(20,40,80,.22); backdrop-filter: blur(10px); }
 .mm-office-simmenu[hidden] { display: none; }
-.mm-office-simmenu button { display: grid; gap: 1px; text-align: left; cursor: pointer; border: 0; border-radius: 8px; padding: 7px 10px; background: transparent; color: var(--brain-ink, #1f2d44); font: 500 12px/1.35 system-ui, sans-serif; }
+.mm-office-simmenu button { display: grid; gap: 1px; text-align: left; cursor: pointer; border: 0; border-radius: var(--mm-r-chip); padding: 7px 10px; background: transparent; color: var(--brain-ink, #1f2d44); font: 500 12px/1.35 system-ui, sans-serif; }
 .mm-office-simmenu button:hover { background: rgba(42,107,255,.12); }
-.mm-office-simmenu b { font-size: 13px; } .mm-office-simmenu span { opacity: .65; }
+.mm-office-simmenu b { font-size: var(--mm-fs-13); } .mm-office-simmenu span { opacity: .65; }
 .mm-office-dock { position: absolute; left: 12px; right: 190px; bottom: 76px; z-index: 4; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; pointer-events: none; }
 .mm-office-dock > * { pointer-events: auto; }
-.mm-dock-t { cursor: pointer; border: 1px solid #2a6bff; border-radius: 22px; padding: 9px 18px; font: 700 13px system-ui, sans-serif; color: #fff; background: #2a6bff; box-shadow: 0 4px 14px rgba(42,107,255,.4); }
-.mm-dock-b { display: flex; gap: 6px; width: min(560px, 100%); padding: 6px; border-radius: 14px; background: var(--brain-glass, rgba(255,255,255,.95)); border: 1px solid var(--brain-glass-brd, rgba(60,90,140,.35)); box-shadow: 0 6px 22px rgba(20,40,80,.2); backdrop-filter: blur(10px); }
+.mm-dock-t { cursor: pointer; border: 1px solid #2a6bff; border-radius: var(--mm-r-card); padding: 9px 18px; font: 700 13px system-ui, sans-serif; color: #fff; background: #2a6bff; box-shadow: 0 4px 14px rgba(42,107,255,.4); }
+.mm-dock-b { display: flex; gap: 6px; width: min(560px, 100%); padding: 6px; border-radius: var(--mm-r-field); background: var(--brain-glass, rgba(255,255,255,.95)); border: 1px solid var(--brain-glass-brd, rgba(60,90,140,.35)); box-shadow: 0 6px 22px rgba(20,40,80,.2); backdrop-filter: blur(10px); }
 .mm-dock-b[hidden] { display: none; }
-.mm-dock-b input { flex: 1; min-width: 0; border: 0; outline: 0; border-radius: 9px; padding: 9px 11px; font: 500 15px system-ui, sans-serif; color: var(--brain-ink, #1f2d44); background: rgba(120,150,200,.14); }
-.mm-dock-b button { cursor: pointer; border: 0; border-radius: 9px; padding: 0 16px; font: 700 13px system-ui, sans-serif; color: #fff; background: #2a6bff; }
+.mm-dock-b input { flex: 1; min-width: 0; border: 0; outline: 0; border-radius: var(--mm-r-btn); padding: 9px 11px; font: 500 15px system-ui, sans-serif; color: var(--brain-ink, #1f2d44); background: rgba(120,150,200,.14); }
+.mm-dock-b button { cursor: pointer; border: 0; border-radius: var(--mm-r-btn); padding: 0 16px; font: 700 13px system-ui, sans-serif; color: #fff; background: #2a6bff; }
 body.mm-office-solo .mm-office-dock { display: none; }
 #mmOffice:fullscreen .mm-office-dock, #mmOffice:-webkit-full-screen .mm-office-dock { bottom: 18px; }
 .mm-office-card { bottom: 130px; }
 
-/* Điện thoại (26.10.237): văn phòng phủ KÍN màn hình, thanh trên gọn, nút phụ gom vào Menu, bàn điều khiển nhỏ và ẩn được.
+/* Điện thoại (26.10.238): văn phòng phủ KÍN màn hình, thanh trên gọn, nút phụ gom vào Menu, bàn điều khiển nhỏ và ẩn được.
    Nút Menu và nút ẩn/hiện bàn điều khiển chỉ có trên điện thoại. */
 .mm-menu-t, .mm-pad-t { display: none; }
 @media (max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1100px) {
@@ -72,12 +72,12 @@ body.mm-office-solo .mm-office-dock { display: none; }
   html.mm-office-on #mmOffice { position: fixed; inset: 0; z-index: 3000; height: 100vh; height: 100dvh; }
   .mm-office-bar { top: calc(8px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); gap: 6px; }
   .mm-office-bar b, .mm-office-bar span { display: none; }
-  .mm-office-bar button { min-height: 38px; padding: 6px 10px; font-size: 12px; border-radius: 12px; white-space: nowrap; }
+  .mm-office-bar button { min-height: 38px; padding: 6px 10px; font-size: var(--mm-fs-12); border-radius: var(--mm-r-btn); white-space: nowrap; }
   .mm-office-bar .mm-room { order: 1; }
   .mm-office-bar .mm-menu-t { display: inline-block; order: 2; margin-left: auto; color: #fff; background: #2a6bff; border-color: #2a6bff; }
   .mm-office-bar .mm-x { order: 3; }
   .mm-office-bar .mm-sec, .mm-office-bar .mm-pc { display: none; order: 4; }
-  #mmOffice.mm-menu-open .mm-office-bar .mm-sec { display: inline-block; min-height: 44px; font-size: 13px; }
+  #mmOffice.mm-menu-open .mm-office-bar .mm-sec { display: inline-block; min-height: 44px; font-size: var(--mm-fs-13); }
   #mmOffice.mm-menu-open .mm-office-bar .mm-pc { display: none; }
   .mm-office-simmenu { top: calc(56px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); max-height: 60dvh; overflow: auto; }
   /* bàn điều khiển: nhỏ, mờ bớt, nằm góc dưới phải, tránh vùng an toàn của iPhone */
@@ -85,15 +85,15 @@ body.mm-office-solo .mm-office-dock { display: none; }
   .mm-office-pad:active, .mm-office-pad:focus-within { opacity: 1; }
   .mm-pad-dir { grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(3, 42px); gap: 4px; }
   .mm-pad-zoom { grid-template-columns: repeat(2, 38px); gap: 4px; }
-  .mm-office-pad button { min-height: 38px; border-radius: 12px; font-size: 15px; }
+  .mm-office-pad button { min-height: 38px; border-radius: var(--mm-r-btn); font-size: var(--mm-fs-16); }
   #mmOffice.mm-pad-off .mm-office-pad { display: none; }
-  .mm-pad-t { display: block; position: absolute; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px) + 140px); z-index: 4; min-height: 32px; padding: 4px 12px; border-radius: 16px; cursor: pointer;
+  .mm-pad-t { display: block; position: absolute; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px) + 140px); z-index: 4; min-height: 32px; padding: 4px 12px; border-radius: var(--mm-r-field); cursor: pointer;
     border: 1px solid var(--brain-glass-brd, rgba(60, 90, 140, .35)); color: var(--brain-ink, #1f2d44); font: 600 11px system-ui, sans-serif; background: var(--brain-glass, rgba(255, 255, 255, .9)); backdrop-filter: blur(8px); }
   #mmOffice.mm-pad-off .mm-pad-t { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
   /* Giao việc: góc dưới trái, mở ô gõ thì ẩn bàn điều khiển cho khỏi che */
   .mm-office-dock { left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
-  .mm-dock-t { padding: 11px 18px; font-size: 14px; }
+  .mm-dock-t { padding: 11px 18px; font-size: var(--mm-fs-14); }
   #mmOffice:has(.mm-dock-b:not([hidden])) .mm-office-pad, #mmOffice:has(.mm-dock-b:not([hidden])) .mm-pad-t { display: none; }
-  .mm-office-card { left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 16px - 230px); font-size: 12px; padding: 8px 11px; }
+  .mm-office-card { left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 16px - 230px); font-size: var(--mm-fs-12); padding: 8px 11px; }
   .mm-office-toast { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 }

@@ -31,6 +31,7 @@
    khoá đó mang đúng câu. */
 const fs = require("fs");
 const path = require("path");
+const { docCss } = require("./_doc_css");  // token design system -> số px thật
 
 const ROOT = path.join(__dirname, "..", "..");
 const D = (f) => fs.readFileSync(path.join(ROOT, "dashboard", f), "utf8");
@@ -41,7 +42,7 @@ const check = (name, cond) => { console.log((cond ? "ok   " : "FAIL ") + name); 
 const CD = D("coding.js");
 const CON = D("console.js");
 const HTML = D("index.html");
-const CSS = D("console.css");
+const CSS = docCss(D("console.css"));
 const VI = JSON.parse(D("i18n/vi.json"));
 const EN = JSON.parse(D("i18n/en.json"));
 const tu = (k, chu) => String(VI[k] || "").includes(chu);
@@ -186,7 +187,7 @@ check("chip mức quyền giữ màu của nó khi rê chuột, không nhảy v�
 const CD_MA = CD.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const FP = D("folder-picker.js");
 const FP_MA = FP.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-const STYLE = D("style.css");
+const STYLE = docCss(D("style.css"));
 check("KHÔNG gọi window.prompt", !/\bprompt\s*\(/.test(CD_MA));
 check("KHÔNG gọi window.alert", !/\balert\s*\(/.test(CD_MA));
 check("thêm thư mục thì MỞ HỘP DUYỆT", /JavisFolderPicker\.open\(/.test(CD_MA));

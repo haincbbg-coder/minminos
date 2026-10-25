@@ -14,9 +14,10 @@
    phóng to khung chat). CI chỉ có node nên test này khoá phần hợp đồng đọc được từ mã nguồn. */
 const fs = require("fs");
 const path = require("path");
+const { docCss } = require("./_doc_css");  // token design system -> số px thật
 
 const APP = fs.readFileSync(path.join(__dirname, "../../dashboard/app.js"), "utf8");
-const CSS = fs.readFileSync(path.join(__dirname, "../../dashboard/style.css"), "utf8");
+const CSS = docCss(fs.readFileSync(path.join(__dirname, "../../dashboard/style.css"), "utf8"));
 // 0.55.14: chữ tiếng Việt của nút đã dời vào từ điển i18n, nên khẳng định về LỜI LẼ soi
 // hai vế: app.js gọi đúng khoá, và khoá đó trong vi.json mang đúng câu.
 const VI = JSON.parse(fs.readFileSync(path.join(__dirname, "../../dashboard/i18n/vi.json"), "utf8"));
