@@ -104,14 +104,14 @@
   });
 
   // ---------------- khung gợi ý (Shadow DOM để CSS của Pancake không đụng vào)
-  let goc = null, root = null, thu = false;
+  let goc = null, root = null, mo = false;
   function dung() {
     if (goc || !document.body) return;
     goc = document.createElement("div");
-    goc.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:2147483647;";
+    goc.style.cssText = "position:fixed;z-index:2147483647;display:none;left:50%;top:80px;";
     root = goc.attachShadow({ mode: "open" });
     root.innerHTML = `<style>
-      .k{font:13px system-ui,sans-serif;width:290px;background:#fff;color:#222;border:1px solid #d0d5dd;border-radius:10px;box-shadow:0 4px 18px #0003;overflow:hidden}
+      .k{font:13px system-ui,sans-serif;width:330px;background:#fff;color:#222;border:1px solid #d0d5dd;border-radius:10px;box-shadow:0 4px 18px #0003;overflow:hidden}
       .t{background:#0b5fff;color:#fff;padding:6px 10px;display:flex;justify-content:space-between;cursor:pointer;font-weight:600}
       .n{padding:8px 10px;max-height:340px;overflow:auto}.u{border:1px solid #e4e7ec;border-radius:8px;padding:6px 8px;margin-bottom:6px}
       .m{font-weight:700;font-size:15px}.s{color:#555;font-size:12px}.c{height:6px;background:#e4e7ec;border-radius:3px;margin:4px 0}
@@ -119,8 +119,8 @@
       button{border:0;background:#0b5fff;color:#fff;border-radius:6px;padding:3px 8px;margin-top:4px;cursor:pointer}
       input{width:100%;box-sizing:border-box;padding:5px;border:1px solid #ccd;border-radius:6px}.g{color:#888;font-size:11px;margin-top:4px}
       .ton0{color:#b42318;font-weight:600}.anh img{width:46px;height:46px;object-fit:cover;border-radius:6px;margin-right:4px}
-    </style><div class="k"><div class="t" id="t"><span>Gợi ý mã hàng</span><span id="x">–</span></div><div class="n" id="n"></div></div>`;
-    root.getElementById("t").onclick = () => { thu = !thu; root.getElementById("n").style.display = thu ? "none" : ""; root.getElementById("x").textContent = thu ? "+" : "–"; };
+    </style><div class="k"><div class="t" id="t"><span>Gợi ý mã hàng</span><span id="x">▾</span></div><div class="n" id="n"></div></div>`;
+    root.getElementById("t").onclick = () => { mo = false; goc.style.display = "none"; veThanh(maHienTai); };
     document.body.appendChild(goc);
   }
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -165,7 +165,7 @@
       h += `</div>`;
     }
     h += `<div style="margin-top:6px"><input id="q" placeholder="Gõ mã để tra tay, vd V33"></div><div id="kq"></div>${chanDoanHtml()}`;
-    n.innerHTML = h;
+    n.innerHTML = h; datThanh();
     n.querySelectorAll("button[data-ma]").forEach((b) => b.onclick = async () => {
       const khoa = b.dataset.nguon === "anh" ? b.dataset.hash : /quang_cao|noi_dung/.test(b.dataset.nguon) ? (hienTai.ad_ids[0] || "") : b.dataset.nguon === "bai_viet" ? hienTai.post_id : hienTai.id;
       await hoi({ loai: "xac_nhan", du_lieu: { ma: b.dataset.ma, nguon: b.dataset.nguon, khoa } });
@@ -201,42 +201,56 @@
     }
     return true;
   }
+  let maHienTai = [];
   function veThanh(maList) {
-    const khoa = maList.join(",") + "|" + layMau();
-    if (!maList.length) { if (thanh) thanh.style.display = "none"; return; }
+    maHienTai = maList;
+    const khoa = maList.join(",") + "|" + layMau() + "|" + mo;
     if (!thanh && document.body) {
       thanh = document.createElement("div");
-      thanh.style.cssText = "position:fixed;z-index:2147483646;";
+      thanh.style.cssText = "position:fixed;z-index:2147483646;left:50%;top:60%;transform:translateX(-50%);";
       thanhRoot = thanh.attachShadow({ mode: "open" });
       document.body.appendChild(thanh);
-      setInterval(datThanh, 800);
+      setInterval(datThanh, 700);
     }
     if (!thanh) return;
-    thanh.style.display = "";
     if (khoa !== thanhKhoa) {
       thanhKhoa = khoa;
-      thanhRoot.innerHTML = `<style>.t{font:13px system-ui,sans-serif;display:flex;gap:6px;align-items:center;background:#fffbe6;border:1px solid #f0c36d;border-radius:20px;padding:4px 8px;box-shadow:0 2px 8px #0002}
-        button{border:0;border-radius:14px;padding:5px 12px;background:#0b5fff;color:#fff;font-weight:700;cursor:pointer;font-size:13px}button.s{background:#e4e7ec;color:#333;padding:3px 7px;font-weight:400}.l{color:#7a5b00;font-size:12px}</style>
-        <div class="t"><span class="l">Chào nhanh:</span>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(layMau().replace("{ma}", m.toUpperCase()))} vào ô trả lời">${esc(layMau().replace("{ma}", m.toUpperCase()))}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button></div>`;
+      const lenh = (m) => layMau().replace("{ma}", m.toUpperCase());
+      thanhRoot.innerHTML = `<style>.t{font:13px system-ui,sans-serif;display:flex;gap:6px;align-items:center;background:#fffbe6;border:1px solid #f0c36d;border-radius:20px;padding:3px 8px;box-shadow:0 2px 8px #0002;white-space:nowrap}
+        button{border:0;border-radius:14px;padding:4px 11px;background:#0b5fff;color:#fff;font-weight:700;cursor:pointer;font-size:13px}button.s{background:#e4e7ec;color:#333;padding:3px 7px;font-weight:400}button.g{background:#fff;color:#0b5fff;border:1px solid #0b5fff;font-weight:600}</style>
+        <div class="t"><button class="g" id="mo" title="Xem chi tiết gợi ý mã hàng">Gợi ý mã ${mo ? "▾" : "▴"}</button>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(lenh(m))} vào ô trả lời">${esc(lenh(m))}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button></div>`;
       thanhRoot.querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => {
-        const ok = dien(layMau().replace("{ma}", b.dataset.m.toUpperCase()));
-        if (!ok) b.textContent = "Không thấy ô soạn tin";
+        if (!dien(lenh(b.dataset.m))) b.textContent = "Không thấy ô soạn tin";
       });
+      thanhRoot.getElementById("mo").onclick = () => { mo = !mo; if (goc) goc.style.display = mo ? "" : "none"; veThanh(maHienTai); datThanh(); };
       thanhRoot.getElementById("sua").onclick = () => {
         const v = prompt("Mẫu lệnh trả lời nhanh, dùng {ma} thay cho mã (chữ hoa). Ví dụ: /{ma}", layMau());
-        if (v && v.includes("{ma}")) { try { localStorage.setItem(MAU_KEY, v.trim()); } catch (e) {} thanhKhoa = ""; ve(); }
+        if (v && v.includes("{ma}")) { try { localStorage.setItem(MAU_KEY, v.trim()); } catch (e) {} thanhKhoa = ""; veThanh(maHienTai); }
       };
     }
     datThanh();
   }
+  // Dải thẻ màu của Pancake (SALE - TRUNG, MAI GỌI...): tìm để ghim ngay phía trên, chính giữa cột chat
+  function daiThe() {
+    const leaf = [].slice.call(document.querySelectorAll("div,span")).find((e) => e.children.length === 0 && /^\s*MAI GỌI\s*$/i.test(e.textContent || ""));
+    for (let e = leaf; e && e !== document.body; e = e.parentElement) {
+      const r = e.getBoundingClientRect();
+      if (r.width > 400 && /HỦY ĐƠN/i.test(e.textContent || "")) return r;
+    }
+    return null;
+  }
   function datThanh() {
-    if (!thanh || thanh.style.display === "none") return;
-    const o = oSoan();
-    if (o) {
-      const r = o.getBoundingClientRect();
-      thanh.style.left = Math.round(r.left + 12) + "px";
-      thanh.style.top = Math.max(60, Math.round(r.top - 112)) + "px";   // trên dải thẻ màu, dưới tin nhắn
-    } else { thanh.style.left = "30%"; thanh.style.top = (innerHeight - 170) + "px"; }
+    if (!thanh) return;
+    let t = daiThe(), cx, day;
+    if (t) { cx = t.left + t.width / 2; day = t.top; }
+    else {
+      const o = oSoan();
+      if (o) { const r = o.getBoundingClientRect(); cx = r.left + r.width / 2; day = r.top - 58; }
+      else { cx = innerWidth * 0.45; day = innerHeight - 110; }
+    }
+    thanh.style.left = Math.round(cx) + "px";
+    thanh.style.top = Math.round(day - 30) + "px";   // nằm gọn trên dải thẻ, dưới tin nhắn cuối
+    if (goc) { goc.style.left = Math.round(Math.min(Math.max(cx - 165, 8), innerWidth - 340)) + "px"; goc.style.top = Math.max(8, Math.round(day - 36 - goc.offsetHeight)) + "px"; }
   }
   function chonAnh() {
     if (!hienTai || !hienTai.anh.length) return null;
@@ -253,6 +267,6 @@
     return `<div class="g">đọc ${chanDoan.convs} hội thoại, ${chanDoan.tinNhan} tin${hienTai ? `; ad_ids=${ad}${hienTai.ad_text ? "+nội dung" : ""}, post=${hienTai.post_id ? "có" : "không"}, ảnh=${hienTai.anh.length}` : ""}</div>`;
   }
   window.__mmGyTest = { layAnh, layQuangCao, docMessages, hienTai: () => hienTai };
-  document.addEventListener("DOMContentLoaded", () => { dung(); ve(); });
+  document.addEventListener("DOMContentLoaded", () => { dung(); veThanh([]); ve(); });
   setInterval(() => { bang = null; }, 10 * 60 * 1000);
 })();

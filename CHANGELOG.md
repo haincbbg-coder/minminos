@@ -8,6 +8,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Thêm mới
 - **Gợi ý mã hàng**: thanh nút chào nhanh ghim ngay trên ô soạn tin. Khi đã biết mã (vd V1213), hiện nút `/V1213`; sale bấm là lệnh điền vào ô trả lời, Enter hai lần là ra câu chào của mã đó. Bấm ✎ để đổi mẫu lệnh (`{ma}` là mã viết hoa).
 ### Sửa lỗi
+- Khung gợi ý không còn nằm góc phải dưới che thông tin khách của Pancake: gọn thành một thanh ghim chính giữa, ngay trên dải thẻ màu; bấm "Gợi ý mã" để mở chi tiết.
 - Quảng cáo ghi mã ngay ở tên ("V1213 - Xưởng May MD") hoặc nội dung ("#V1213") nay ra đúng mã, kể cả khi mã chưa có trong bảng tồn, không đi so ảnh đoán sang mã khác.
 
 ## [26.10.239] - 2026-10-25
