@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.245] - 2026-10-26
+### Thêm mới
+- **Bảng Hiệu suất Sale** trong Phòng Sale của Văn phòng 3D: xếp hạng sale theo điểm 100 (Mở khách 40, Chốt 45, Tốc độ 15), số lấy thẳng từ Thống kê Pancake, tự xoay Hôm nay, Hôm qua, 7 ngày.
+- Nhãn trên đầu từng sale hiện điểm và hạng, ví dụ "64,2 điểm · #1".
+- Bỏ tài khoản chung hay bot khỏi bảng bằng file `00 - Dashboard/hieu-suat-sale.json` (`bo_qua` hoặc `chi_tinh`), trọng số điểm cũng sửa ở đó.
+
 ## [26.10.243] - 2026-10-26
 ### Thêm mới
 - **Gợi ý mã hàng**: thanh nút chào nhanh ghim ngay trên ô soạn tin. Khi đã biết mã (vd V1213), hiện nút `/V1213`; sale bấm là lệnh điền vào ô trả lời, Enter hai lần là ra câu chào của mã đó. Bấm ✎ để đổi mẫu lệnh (`{ma}` là mã viết hoa).

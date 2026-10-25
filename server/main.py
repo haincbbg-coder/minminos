@@ -24339,6 +24339,9 @@ tong_quan_mod.register(app, tong_quan_mod.TongQuanDeps(
     providers_view=lambda: _providers_view(cfgmod.read_settings()),
     read_settings=cfgmod.read_settings))
 
+# Bảng Hiệu suất Sale của Văn phòng 3D (26.10.245): GET /office/hieu-suat, số thẳng từ Thống kê Pancake.
+hud_routes.register_hieu_suat(app, _hud_deps)
+
 if __name__ == "__main__":
     import uvicorn
     # 127.0.0.1: chỉ máy này truy cập được (an toàn - tránh người khác trong mạng LAN

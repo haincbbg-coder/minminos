@@ -433,3 +433,73 @@ def register_lam_moi(app: FastAPI, deps: HudDeps) -> None:
             return {"ok": False, "error": f"{type(e).__name__}: {e}"}
         _lam_moi_cuoi[brain] = now
         return {"ok": True, "id": rem["id"], "dung_viec_dinh_ky": bool(nguon)}
+
+
+# ---------------------------------------------------------------- bảng Hiệu suất Sale (26.10.245)
+HS_KY = {"nay": ("Hôm nay", 0, 0), "qua": ("Hôm qua", 1, 1), "7ngay": ("7 ngày", 6, 0)}
+HS_CONNECTOR = "pancake-thong-ke"
+
+
+def _hs_pages(conns) -> list:
+    """Gom page của MỌI kết nối Thống kê Pancake (một người có thể tách nhiều kết nối), bỏ trùng."""
+    import pancake_chat_mcp
+    out, thay = [], set()
+    for c in conns or []:
+        if c.get("connector_id") != HS_CONNECTOR:
+            continue
+        for p in pancake_chat_mcp.doc_pages((c.get("secrets") or {}).get("pages")):
+            if p["id"] not in thay:
+                thay.add(p["id"])
+                out.append(p)
+    return out
+
+
+def _hs_ngay(ky: str):
+    import datetime as _dt
+    import ket_noi_api
+    ten, lui_tu, lui_den = HS_KY.get(ky, HS_KY["nay"])
+    hom_nay = _dt.datetime.now(ket_noi_api.mui_gio()).date()
+    return ten, hom_nay - _dt.timedelta(days=lui_tu), hom_nay - _dt.timedelta(days=lui_den)
+
+
+async def hieu_suat_sale(root: Path, ky: str, conns=None) -> dict:
+    """Bảng Hiệu suất Sale: số nhân viên từ Thống kê Pancake + điểm 100 (server/diem_sale.py).
+    Không mạng nào ngoài Pancake; pancake_chat_mcp đã có đệm 60 giây nên mở bảng liên tục không dội API."""
+    import asyncio
+    import diem_sale
+    import mcp_store
+    import pancake_chat_mcp
+    ky = ky if ky in HS_KY else "nay"
+    if conns is None:
+        conns = await asyncio.to_thread(mcp_store.resolved, True)
+    pages = _hs_pages(conns)
+    ten, tu, den = _hs_ngay(ky)
+    base = {"ky": ky, "ten_ky": ten, "tu_ngay": f"{tu:%Y-%m-%d}", "den_ngay": f"{den:%Y-%m-%d}", "so_page": len(pages)}
+    if not pages:
+        return {**base, "source": None, "nhan_vien": [], "tong": {},
+                "error": "Chưa có kết nối Thống kê Pancake. Vào Kết nối, thêm Thống kê Pancake rồi dán token các page."}
+    kq = await pancake_chat_mcp.nhan_vien(pages, {"tu_ngay": base["tu_ngay"], "den_ngay": base["den_ngay"]})
+    ch = diem_sale.doc_cau_hinh(root)
+    ds = diem_sale.cham(diem_sale.loc(kq.get("nhan_vien") or [], ch), ch["trong_so"])
+    rows = [{"ten": r.get("ten"), "hang": r["hang"], "diem": r["diem"], "mo_khach": r["mo_khach"], "chot": r["chot"],
+             "toc_do": r["toc_do"], "vai": r["vai"], "khach": int(r.get("khach_da_tra_loi") or 0),
+             "tin": int(r.get("tin_inbox") or 0), "sdt": int(r.get("so_dien_thoai") or 0),
+             "don": int(r.get("don_chot") or 0), "ty_le": r.get("ty_le_chot") or 0,
+             "phan_hoi": r.get("phan_hoi_tb_giay")} for r in ds][:12]
+    out = {**base, "source": "Thống kê Pancake", "updated": kq.get("cap_nhat_luc"), "nhan_vien": rows,
+           "tong": diem_sale.tong_doi(ds), "trong_so": ch["trong_so"],
+           "loc": {"chi_tinh": len(ch["chi_tinh"]), "bo_qua": len(ch["bo_qua"])}}
+    if kq.get("loi"):
+        out["loi_page"] = len(kq["loi"])
+    return out
+
+
+def register_hieu_suat(app: FastAPI, deps: HudDeps) -> None:
+    """Đăng ký ở ĐUÔI main.py (route_table.json khoá thứ tự)."""
+    @app.get("/office/hieu-suat")
+    async def office_hieu_suat(brain: str = Query("brain"), ky: str = Query("nay")):
+        try:
+            return await hieu_suat_sale(Path(deps.brain_root(brain)), ky)
+        except Exception as e:
+            return JSONResponse({"error": f"{type(e).__name__}: {str(e)[:160]}", "nhan_vien": [], "source": None})
+

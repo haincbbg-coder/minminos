@@ -8110,5 +8110,15 @@
    "GET"
   ],
   "trong": null
+ },
+ {
+  "order": 814,
+  "type": "APIRoute",
+  "path": "/office/hieu-suat",
+  "name": "office_hieu_suat",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]
