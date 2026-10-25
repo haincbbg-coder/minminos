@@ -34,6 +34,9 @@ r = g.phan_giai(text="giá V33", ad_id="A2")
 kt("hai nguồn cùng mã chắc hơn", r["ung_vien"][0]["do_chac"] > 1.0 - 0.06 and len(r["ung_vien"][0]["bang_chung"]) == 2)
 g.nap_bai_viet([{"post_id": "P9", "ma": "p720", "page_id": "pg"}])
 kt("tra theo bài viết", g.phan_giai(post_id="P9")["ung_vien"][0]["ma"] == "P720")
+r = g.phan_giai(ad_id="zz9", ad_text="Set đẹp lắm. Mã: V33 - mua 2 miễn ship")
+kt("mã trong nội dung quảng cáo", r["ung_vien"] and r["ung_vien"][0]["ma"] == "V33" and r["ung_vien"][0]["bang_chung"][0]["nguon"] == "noi_dung")
+kt("nội dung quảng cáo không mã thì rỗng", g.phan_giai(ad_text="Sét bộ thun in chữ phối bèo")["ung_vien"] == [])
 kt("lạ thì rỗng", g.phan_giai(ad_id="zzz", post_id="yyy")["ung_vien"] == [])
 g.xac_nhan("V33", "quang_cao", "A9")
 kt("học từ xác nhận", g.phan_giai(ad_id="A9")["ung_vien"][0]["ma"] == "V33")
@@ -74,7 +77,7 @@ import shutil
 import subprocess
 import json as _j
 if shutil.which("node"):
-    js = ("require(%r);const b=%s;const r=mmTra(b,{text:'giá V33',ad_ids:['A1'],post_id:'pg_P9'});"
+    js = ("require(%r);const b=%s;const r=mmTra(b,{text:'giá V33',ad_ids:['A1'],post_id:'pg_P9',ad_text:'mã V33'});"
           "console.log(JSON.stringify(r.map(x=>[x.ma,x.ton,x.bang_chung.length])))") % (
         str(ROOT / "apps" / "goi-y-ma" / "tra.js"), _j.dumps(g.xuat_bang()))
     out = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=30)
@@ -82,8 +85,36 @@ if shutil.which("node"):
         kq_js = _j.loads(out.stdout.strip() or "[]")
     except ValueError:
         kq_js = []
-    py = g.phan_giai(text="giá V33", ad_id="A1", post_id="P9")["ung_vien"]
+    py = g.phan_giai(text="giá V33", ad_id="A1", post_id="P9", ad_text="mã V33")["ung_vien"]
     kt("tra.js khớp Python", sorted(x[0] for x in kq_js) == sorted(u["ma"] for u in py) and len(kq_js) == 2)
+
+# --- content.js: đọc đúng dữ liệu Pancake thật (ad_click, sticker/nút like không phải ảnh)
+if shutil.which("node"):
+    js = r"""
+const listeners = {};
+global.window = global; global.self = global;
+global.addEventListener = (t, f) => { listeners[t] = f; };
+global.document = { createElement: () => ({ set innerHTML(v) { this.textContent = String(v).replace(/<[^>]*>/g, ""); }, style: {} }), addEventListener() {}, body: null };
+global.chrome = { runtime: { sendMessage: (m, r) => r({ ok: false }) } };
+require(%r);
+const T = window.__mmGyTest;
+const ds = [
+  { from: { id: "P" }, attachments: [{ type: "ad_click", ad_id: "120257403105160399", post_attachments: [{ description: "Sét bộ thun. Mã: V33 nhé", url: "https://content.pancake.vn/x/ad.jpg" }] }] },
+  { from: { id: "K1" }, message: "Xin giá set", attachments: [] },
+  { from: { id: "K1" }, attachments: [{ type: "sticker", id: "369239263222822", url: "https://statics.pancake.vn/cache.pancake.vn/stickers/369239263222822" }] },
+  { from: { id: "K1" }, attachments: [{ type: "photo", url: "https://content.pancake.vn/x/anh.jpg", image_data: { width: 1080, height: 1920 } }] },
+];
+T.docMessages("https://pancake.vn/api/v1/pages/P/conversations/P_K1/messages?x=1", { messages: ds });
+const h = T.hienTai();
+console.log(JSON.stringify({ anh: h.anh, ad: h.ad_ids, txt: h.ad_text, adanh: h.ad_anh })); process.exit(0);
+""" % str(ROOT / "apps" / "goi-y-ma" / "content.js")
+    out = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=30)
+    try:
+        h = _j.loads(out.stdout.strip().splitlines()[-1])
+    except Exception:
+        h = {}
+    kt("content.js bỏ sticker/nút like", h.get("anh") == ["https://content.pancake.vn/x/anh.jpg"])
+    kt("content.js đọc ad_click", h.get("ad") == ["120257403105160399"] and "V33" in h.get("txt", "") and h.get("adanh", "").endswith("ad.jpg"))
 
 # --- nạp dạng gọn và nạp từ file qua plugin
 import asyncio

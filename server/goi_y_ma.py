@@ -28,7 +28,7 @@ from typing import Iterable, Optional
 
 MA_SONG = 15 * 60
 TIEN_TO_TOKEN = "mmg_"
-NGUON_TRONG_SO = {"anh": 0.6, "tin_nhan": 1.0, "quang_cao": 0.95, "chien_dich": 0.9, "bai_viet": 0.8, "bi_danh": 0.7}
+NGUON_TRONG_SO = {"anh": 0.6, "tin_nhan": 1.0, "quang_cao": 0.95, "chien_dich": 0.9, "noi_dung": 0.85, "bai_viet": 0.8, "bi_danh": 0.7}
 
 _goc: Optional[Path] = None
 _khoa = threading.RLock()
@@ -254,7 +254,7 @@ def tim_ma_trong_chu(c, text: str) -> list:
     return ung
 
 
-def phan_giai(text: str = "", ad_id: str = "", post_id: str = "", gioi_han: int = 5) -> dict:
+def phan_giai(text: str = "", ad_id: str = "", post_id: str = "", gioi_han: int = 5, ad_text: str = "") -> dict:
     """Trả {ung_vien:[{ma, ten, ton, do_chac, bang_chung:[...]}], da_thu:[...]} xếp giảm dần theo độ chắc."""
     gom: dict = {}
     da_thu = []
@@ -269,6 +269,10 @@ def phan_giai(text: str = "", ad_id: str = "", post_id: str = "", gioi_han: int 
             da_thu.append("tin_nhan")
             for ma, ng, ly in tim_ma_trong_chu(c, text):
                 them(ma, ng, ly)
+        if str(ad_text or "").strip():
+            da_thu.append("noi_dung")
+            for ma, _ng, _ly in tim_ma_trong_chu(c, ad_text):
+                them(ma, "noi_dung", f"nội dung quảng cáo nhắc mã {ma}")
         if str(ad_id or "").strip():
             da_thu.append("quang_cao")
             r = c.execute("SELECT ma, nguon, ten, tai_khoan FROM ad_sku WHERE ad_id=?", (str(ad_id).strip(),)).fetchone()

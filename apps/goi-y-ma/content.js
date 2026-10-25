@@ -13,9 +13,28 @@
     const kq = [];
     (m.attachments || []).forEach((a) => {
       const u = a.url || a.preview_url || (a.image_data && (a.image_data.url || a.image_data.preview_url)) || a.src;
-      if (u && /^https?:/.test(u) && (!a.type || /photo|image|sticker/i.test(String(a.type)) || /\.(jpe?g|png|webp)/i.test(u))) kq.push(u);
+      const loai = String(a.type || "").toLowerCase();
+      // chỉ ảnh thật: bỏ sticker, nút like, quảng cáo, liên kết, mẫu tin
+      if (/sticker|ad_click|link|template|reaction|address|replied|video/.test(loai)) return;
+      if (/\/stickers\//.test(String(u))) return;
+      if (u && /^https?:/.test(u) && (loai === "photo" || loai === "image" || (!loai && /\.(jpe?g|png|webp)/i.test(u)))) kq.push(u);
     });
     return kq;
+  }
+  // Pancake ghi mã quảng cáo trong tin nhắn loại ad_click: {ad_id, post_attachments:[{description, url ảnh}]}
+  function layQuangCao(ds) {
+    const ids = [], text = [], anh = [];
+    ds.slice().reverse().forEach((m) => (m.attachments || []).forEach((a) => {
+      if (!a || String(a.type).toLowerCase() !== "ad_click") return;
+      if (a.ad_id && !ids.includes(String(a.ad_id))) ids.push(String(a.ad_id));
+      (a.post_attachments || []).forEach((p) => {
+        if (p.description) text.push(chuoiHtml(p.description));
+        if (p.name) text.push(chuoiHtml(p.name));
+        if (p.url && /\.(jpe?g|png|webp)/i.test(p.url)) anh.push(p.url);
+      });
+      if (a.ad_click_photo_url) anh.push(a.ad_click_photo_url);
+    }));
+    return { ids, text: text.join("\n"), anh: anh[0] || "" };
   }
   function docConversations(arr) {
     arr.forEach((c) => {
@@ -40,7 +59,9 @@
     const c = convs[id] || {};
     // hội thoại bình luận: tin nhắn có thể mang post_id riêng
     const post = c.post_id || (ds.find((m) => m.post_id) || {}).post_id || "";
-    hienTai = { id, text, ad_ids: c.ad_ids || [], post_id: post ? String(post) : "", anh: anh.slice(-6) };
+    const qc = layQuangCao(ds);
+    const adIds = qc.ids.length ? qc.ids : (c.ad_ids || []);
+    hienTai = { id, text, ad_ids: adIds, ad_text: qc.text, ad_anh: qc.anh, post_id: post ? String(post) : "", anh: anh.slice(-6) };
   }
   function nhan(url, body) {
     let j; try { j = JSON.parse(body); } catch (e) { return; }
@@ -76,12 +97,12 @@
     document.body.appendChild(goc);
   }
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  function the(u, hash) {
+  function the(u, hash, ep) {
     const ton = u.ton == null ? "" : ` · tồn <span class="${u.ton <= 0 ? "ton0" : ""}">${u.ton}</span>`;
     const bc = u.bang_chung.map((b) => esc(b.ly_do)).join("; ");
     return `<div class="u"><div class="m">${esc(u.ma)} <span class="s">${esc(u.ten)}${ton}</span></div>
       <div class="c"><i style="width:${Math.round(u.do_chac * 100)}%"></i></div><div class="b">${bc}</div>
-      <button data-ma="${esc(u.ma)}" data-nguon="${esc(u.bang_chung[0].nguon)}" data-hash="${esc(hash || "")}">Đúng mã này</button></div>`;
+      <button data-ma="${esc(u.ma)}" data-nguon="${esc(ep || u.bang_chung[0].nguon)}" data-hash="${esc(hash || "")}">Đúng mã này</button></div>`;
   }
   async function ve() {
     dung(); if (!root) return;
@@ -94,6 +115,16 @@
     if (!hienTai) { n.innerHTML = `<div class="s">Mở một hội thoại để xem gợi ý.</div>${chanDoanHtml()}`; return; }
     const ds = self.mmTra(bang, hienTai);
     let h = ds.length ? ds.slice(0, 4).map((u) => the(u)).join("") : `<div class="s">Chưa tra ra mã từ tin nhắn, quảng cáo hay bài viết của hội thoại này.</div>`;
+    const daCoQc = ds.some((u) => u.bang_chung.some((b) => /quang_cao|noi_dung/.test(b.nguon)));
+    if (hienTai.ad_anh && !daCoQc) {
+      const a0 = hienTai.ad_anh;
+      if (!anhKq[a0]) soAnh(a0);
+      const ak = anhKq[a0] || {};
+      h += `<div class="s" style="margin:6px 0 2px">Quảng cáo này chưa có trong bảng. So ảnh quảng cáo:</div>`;
+      if (ak.dang) h += `<div class="g">Đang so ảnh quảng cáo với mẫu...</div>`;
+      else if (ak.loi) h += `<div class="g" style="color:#b42318">So ảnh quảng cáo lỗi: ${esc(ak.loi)}</div>`;
+      else if (ak.kq) h += ak.kq.ung_vien.length ? ak.kq.ung_vien.map((x) => the(x, ak.kq.hash, "quang_cao")).join("") : `<div class="g">Ảnh quảng cáo chưa giống mẫu nào.</div>`;
+    }
     if (hienTai.anh.length) {
       const u0 = chonAnh();
       if (u0 && !anhKq[u0]) soAnh(u0);
@@ -108,7 +139,7 @@
     h += `<div style="margin-top:6px"><input id="q" placeholder="Gõ mã để tra tay, vd V33"></div><div id="kq"></div>${chanDoanHtml()}`;
     n.innerHTML = h;
     n.querySelectorAll("button[data-ma]").forEach((b) => b.onclick = async () => {
-      const khoa = b.dataset.nguon === "anh" ? b.dataset.hash : b.dataset.nguon === "quang_cao" ? (hienTai.ad_ids[0] || "") : b.dataset.nguon === "bai_viet" ? hienTai.post_id : hienTai.id;
+      const khoa = b.dataset.nguon === "anh" ? b.dataset.hash : /quang_cao|noi_dung/.test(b.dataset.nguon) ? (hienTai.ad_ids[0] || "") : b.dataset.nguon === "bai_viet" ? hienTai.post_id : hienTai.id;
       await hoi({ loai: "xac_nhan", du_lieu: { ma: b.dataset.ma, nguon: b.dataset.nguon, khoa } });
       b.textContent = "Đã ghi nhận"; b.disabled = true;
     });
@@ -131,8 +162,9 @@
   }
   function chanDoanHtml() {
     const ad = hienTai ? hienTai.ad_ids.length : 0;
-    return `<div class="g">đọc ${chanDoan.convs} hội thoại, ${chanDoan.tinNhan} tin${hienTai ? `; ad_ids=${ad}, post=${hienTai.post_id ? "có" : "không"}, ảnh=${hienTai.anh.length}` : ""}</div>`;
+    return `<div class="g">đọc ${chanDoan.convs} hội thoại, ${chanDoan.tinNhan} tin${hienTai ? `; ad_ids=${ad}${hienTai.ad_text ? "+nội dung" : ""}, post=${hienTai.post_id ? "có" : "không"}, ảnh=${hienTai.anh.length}` : ""}</div>`;
   }
+  window.__mmGyTest = { layAnh, layQuangCao, docMessages, hienTai: () => hienTai };
   document.addEventListener("DOMContentLoaded", () => { dung(); ve(); });
   setInterval(() => { bang = null; }, 10 * 60 * 1000);
 })();
