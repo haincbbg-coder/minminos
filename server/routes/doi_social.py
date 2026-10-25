@@ -1371,11 +1371,24 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             if lich == "gio" and bat_dau < now - 120:
                 raise ValueError("giờ bắt đầu đã qua, chọn lại giờ")
             media = [str(x) for x in (d.get("media") or []) if str(x or "").strip()][:10]
+            # 26.10.229: nick ở máy nhà đăng TikTok / YouTube / Reels... cần video, nên chế độ nick nhận
+            # đúng MỘT video (kèm hoặc không kèm ảnh thì không trộn). Fanpage qua API vẫn chỉ kèm ảnh.
+            noi_ = str(d.get("noi_dang") or "")
+            so_video = 0
             for m in media:
                 if not fp.duong_media(m):
-                    raise ValueError(f"không thấy ảnh '{m}', tải lên lại")
-                if fp.loai_media(m) != "anh":
-                    raise ValueError("Viết bài AI chỉ kèm ảnh (video thì dùng Tạo bài hàng loạt ở Bài đăng Fanpage)")
+                    raise ValueError(f"không thấy tệp '{m}', tải lên lại")
+                if fp.loai_media(m) == "video":
+                    so_video += 1
+            if so_video:
+                if che_do != "nick":
+                    raise ValueError("Fanpage qua API ở đây chỉ kèm ảnh (video thì dùng Tạo bài hàng loạt ở Bài đăng Fanpage)")
+                if so_video > 1 or len(media) > 1:
+                    raise ValueError("mỗi bài chỉ kèm một video (không trộn với ảnh)")
+            if che_do == "nick" and noi_ == "youtube" and not so_video:
+                raise ValueError("YouTube cần một video: tải video lên ở bước Ảnh/video kèm")
+            if che_do == "nick" and noi_ == "tiktok" and not media:
+                raise ValueError("TikTok cần một video (hoặc ảnh để đăng dạng slide): tải lên ở bước Ảnh/video kèm")
             kieu_anh = str(d.get("kieu_anh") or ("album" if len(media) > 1 else "mot_anh"))
             kt = None
             if not xem_truoc:
@@ -1445,7 +1458,8 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             ten_dich = {"fb_tuong": "Tường của " + (nick_ten or "nick"), "fb_nhom": dich_ten or "nhóm của sản phẩm (Kho group FB)"}
             ke_hoach = [{"kenh": "nick", "noi_dang": noi_dang, "nick_ten": nick_ten or "nick nào rảnh",
                          "dich_ten": ten_dich.get(noi_dang) or dich_ten or (DS_TEN_NOI_DANG.get(noi_dang, noi_dang) + " của " + (nick_ten or "nick")),
-                         "dich_link": dich, "hen_luc": gio_tung_bai[k], "loai": "anh" if media else "chu", "media": media}
+                         "dich_link": dich, "hen_luc": gio_tung_bai[k],
+                         "loai": "video" if so_video else ("anh" if media else "chu"), "media": media}
                         for k in range(so_ban)]
         if xem_truoc:
             return {"ok": True, "xem_truoc": True, "ke_hoach": ke_hoach}
