@@ -22,19 +22,35 @@
     return kq;
   }
   // Pancake ghi mã quảng cáo trong tin nhắn loại ad_click: {ad_id, post_attachments:[{description, url ảnh}]}
+  // gom mọi chuỗi chữ trong một đối tượng (tên/tiêu đề/nội dung quảng cáo), bỏ qua đường dẫn ảnh
+  function gomChu(o, kq, sau) {
+    if (o == null || sau > 4) return;
+    if (typeof o === "string") { if (!/^https?:\/\//i.test(o) && o.length < 2000) kq.push(chuoiHtml(o)); return; }
+    if (Array.isArray(o)) { o.forEach((x) => gomChu(x, kq, sau + 1)); return; }
+    if (typeof o === "object") Object.keys(o).forEach((k) => { if (!/url|image|photo|thumb|id$/i.test(k)) gomChu(o[k], kq, sau + 1); });
+  }
+  // Mã nằm trong tên/nội dung quảng cáo: "#V1213", hoặc "V1213 - Xưởng May MD" ở đầu dòng. Không cần có trong bảng tồn.
+  function maQuangCao(text) {
+    const kq = [];
+    const dung = (c) => { c = self.mmChuanMa(c); if (c && !kq.includes(c)) kq.push(c); };
+    let x;
+    const r1 = /#\s*([A-Za-z]{1,4}\d{1,6}[A-Za-z]{0,2})\b/g; while ((x = r1.exec(text))) dung(x[1]);
+    const r2 = /(?:^|\n)\s*([A-Za-z]{1,4}\d{2,6}[A-Za-z]{0,2})\s*[-–|:]/g; while ((x = r2.exec(text))) dung(x[1]);
+    return kq.slice(0, 3);
+  }
   function layQuangCao(ds) {
     const ids = [], text = [], anh = [];
     ds.slice().reverse().forEach((m) => (m.attachments || []).forEach((a) => {
       if (!a || String(a.type).toLowerCase() !== "ad_click") return;
       if (a.ad_id && !ids.includes(String(a.ad_id))) ids.push(String(a.ad_id));
+      gomChu(a, text, 0);
       (a.post_attachments || []).forEach((p) => {
-        if (p.description) text.push(chuoiHtml(p.description));
-        if (p.name) text.push(chuoiHtml(p.name));
         if (p.url && /\.(jpe?g|png|webp)/i.test(p.url)) anh.push(p.url);
       });
       if (a.ad_click_photo_url) anh.push(a.ad_click_photo_url);
     }));
-    return { ids, text: text.join("\n"), anh: anh[0] || "" };
+    const t = text.join("\n");
+    return { ids, text: t, anh: anh[0] || "", ma: maQuangCao(t) };
   }
   // Tin có ghi rõ "MÃ: T145", "Mã #S26", "BÁO GIÁ MÃ S26" (cả của khách lẫn bot/nhân viên shop): mã này đáng tin
   // hơn mọi suy đoán, và hiện ra kể cả khi mã chưa nằm trong bảng tồn.
@@ -72,7 +88,7 @@
     const post = c.post_id || (ds.find((m) => m.post_id) || {}).post_id || "";
     const qc = layQuangCao(ds);
     const adIds = qc.ids.length ? qc.ids : (c.ad_ids || []);
-    hienTai = { id, text, ad_ids: adIds, ad_text: qc.text, ad_anh: qc.anh, ma_ro: maRo(ds), post_id: post ? String(post) : "", anh: anh.slice(-6) };
+    hienTai = { id, text, ad_ids: adIds, ad_text: qc.text, ma_qc: qc.ma, ad_anh: qc.anh, ma_ro: maRo(ds), post_id: post ? String(post) : "", anh: anh.slice(-6) };
   }
   function nhan(url, body) {
     let j; try { j = JSON.parse(body); } catch (e) { return; }
@@ -123,10 +139,11 @@
       if (!r.ok) { n.innerHTML = `<div class="s">${esc(r.error || "")}. Bấm biểu tượng tiện ích để ghép với MinMin.</div>`; return; }
       bang = r.bang;
     }
-    if (!hienTai) { n.innerHTML = `<div class="s">Mở một hội thoại để xem gợi ý.</div>${chanDoanHtml()}`; return; }
+    if (!hienTai) { veThanh([]); n.innerHTML = `<div class="s">Mở một hội thoại để xem gợi ý.</div>${chanDoanHtml()}`; return; }
     const ds = self.mmTra(bang, hienTai);
     let h = ds.length ? ds.slice(0, 4).map((u) => the(u)).join("") : `<div class="s">Chưa tra ra mã từ tin nhắn, quảng cáo hay bài viết của hội thoại này.</div>`;
     const daCoQc = ds.length > 0;
+    veThanh(ds.filter((u) => u.bang_chung.some((b) => /^(tin_nhan|ma_ro|ma_qc|noi_dung|quang_cao|bai_viet|bi_danh)$/.test(b.nguon))).slice(0, 3).map((u) => u.ma));
     if (hienTai.ad_anh && !daCoQc) {
       const a0 = hienTai.ad_anh;
       if (!anhKq[a0]) soAnh(a0);
@@ -160,6 +177,66 @@
       const m = self.mmChuanMa(q.value); const s = bang.sku[m];
       n.querySelector("#kq").innerHTML = m ? (s ? the({ ma: m, ten: s[0], ton: s[1], do_chac: 1, bang_chung: [{ nguon: "tin_nhan", ly_do: "tra tay" }] }) : `<div class="s">Không có mã ${esc(m)} trong bảng</div>`) : "";
     };
+  }
+
+  // ---------------- thanh nút trả lời nhanh: ghim gần ô soạn tin, bấm là điền "/cv1213" vào ô trả lời
+  let thanh = null, thanhRoot = null, thanhKhoa = "";
+  const MAU_KEY = "mmGyMau";
+  function layMau() { try { return localStorage.getItem(MAU_KEY) || "/c{ma}"; } catch (e) { return "/c{ma}"; } }
+  function oSoan() {
+    const ds = [].slice.call(document.querySelectorAll('textarea,[contenteditable="true"],[contenteditable=""]')).filter((e) => {
+      const r = e.getBoundingClientRect(); return r.width > 150 && r.height > 8 && r.bottom > 0 && r.top < innerHeight && !(goc && goc.contains(e));
+    });
+    return ds.find((e) => /trả lời|nhập tin|reply/i.test((e.getAttribute("placeholder") || "") + (e.getAttribute("data-placeholder") || "") + (e.closest("[class*=reply],[class*=compose],[class*=editor]") ? "trả lời" : ""))) || ds.sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0] || null;
+  }
+  function dien(chu) {
+    const o = oSoan(); if (!o) return false;
+    o.focus();
+    if (o.tagName === "TEXTAREA" || o.tagName === "INPUT") {
+      const set = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(o), "value").set;
+      set.call(o, chu); o.dispatchEvent(new Event("input", { bubbles: true }));
+    } else {
+      document.execCommand("selectAll", false, null);
+      if (!document.execCommand("insertText", false, chu)) { o.textContent = chu; o.dispatchEvent(new Event("input", { bubbles: true })); }
+    }
+    return true;
+  }
+  function veThanh(maList) {
+    const khoa = maList.join(",") + "|" + layMau();
+    if (!maList.length) { if (thanh) thanh.style.display = "none"; return; }
+    if (!thanh && document.body) {
+      thanh = document.createElement("div");
+      thanh.style.cssText = "position:fixed;z-index:2147483646;";
+      thanhRoot = thanh.attachShadow({ mode: "open" });
+      document.body.appendChild(thanh);
+      setInterval(datThanh, 800);
+    }
+    if (!thanh) return;
+    thanh.style.display = "";
+    if (khoa !== thanhKhoa) {
+      thanhKhoa = khoa;
+      thanhRoot.innerHTML = `<style>.t{font:13px system-ui,sans-serif;display:flex;gap:6px;align-items:center;background:#fffbe6;border:1px solid #f0c36d;border-radius:20px;padding:4px 8px;box-shadow:0 2px 8px #0002}
+        button{border:0;border-radius:14px;padding:5px 12px;background:#0b5fff;color:#fff;font-weight:700;cursor:pointer;font-size:13px}button.s{background:#e4e7ec;color:#333;padding:3px 7px;font-weight:400}.l{color:#7a5b00;font-size:12px}</style>
+        <div class="t"><span class="l">Chào nhanh:</span>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(layMau().replace("{ma}", m.toLowerCase()))} vào ô trả lời">${esc(layMau().replace("{ma}", m.toLowerCase()))}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button></div>`;
+      thanhRoot.querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => {
+        const ok = dien(layMau().replace("{ma}", b.dataset.m.toLowerCase()));
+        if (!ok) b.textContent = "Không thấy ô soạn tin";
+      });
+      thanhRoot.getElementById("sua").onclick = () => {
+        const v = prompt("Mẫu lệnh trả lời nhanh, dùng {ma} thay cho mã (chữ thường). Ví dụ: /c{ma}", layMau());
+        if (v && v.includes("{ma}")) { try { localStorage.setItem(MAU_KEY, v.trim()); } catch (e) {} thanhKhoa = ""; ve(); }
+      };
+    }
+    datThanh();
+  }
+  function datThanh() {
+    if (!thanh || thanh.style.display === "none") return;
+    const o = oSoan();
+    if (o) {
+      const r = o.getBoundingClientRect();
+      thanh.style.left = Math.round(r.left + 12) + "px";
+      thanh.style.top = Math.max(60, Math.round(r.top - 112)) + "px";   // trên dải thẻ màu, dưới tin nhắn
+    } else { thanh.style.left = "30%"; thanh.style.top = (innerHeight - 170) + "px"; }
   }
   function chonAnh() {
     if (!hienTai || !hienTai.anh.length) return null;

@@ -28,7 +28,7 @@ from typing import Iterable, Optional
 
 MA_SONG = 15 * 60
 TIEN_TO_TOKEN = "mmg_"
-NGUON_TRONG_SO = {"anh": 0.6, "tin_nhan": 1.0, "quang_cao": 0.95, "chien_dich": 0.9, "noi_dung": 0.85, "ma_ro": 0.95, "bai_viet": 0.8, "bi_danh": 0.7}
+NGUON_TRONG_SO = {"anh": 0.6, "tin_nhan": 1.0, "quang_cao": 0.95, "chien_dich": 0.9, "noi_dung": 0.85, "ma_ro": 0.95, "ma_qc": 0.97, "bai_viet": 0.8, "bi_danh": 0.7}
 
 _goc: Optional[Path] = None
 _khoa = threading.RLock()
@@ -254,7 +254,7 @@ def tim_ma_trong_chu(c, text: str) -> list:
     return ung
 
 
-def phan_giai(text: str = "", ad_id: str = "", post_id: str = "", gioi_han: int = 5, ad_text: str = "", ma_ro=None) -> dict:
+def phan_giai(text: str = "", ad_id: str = "", post_id: str = "", gioi_han: int = 5, ad_text: str = "", ma_ro=None, ma_qc=None) -> dict:
     """Trả {ung_vien:[{ma, ten, ton, do_chac, bang_chung:[...]}], da_thu:[...]} xếp giảm dần theo độ chắc."""
     gom: dict = {}
     da_thu = []
@@ -276,6 +276,14 @@ def phan_giai(text: str = "", ad_id: str = "", post_id: str = "", gioi_han: int 
             b = c.execute("SELECT ma FROM bi_danh WHERE chuoi=?", (m,)).fetchone()
             ma = m if c.execute("SELECT 1 FROM sku WHERE ma=?", (m,)).fetchone() else (b["ma"] if b else m)
             them(ma, "ma_ro", f"tin nhắn ghi rõ mã {ma}")
+            gom[ma]["_diem"][-1] -= 0.01 * i
+        for i, m in enumerate(ma_qc or []):
+            m = chuan_ma(m)
+            if not m:
+                continue
+            b = c.execute("SELECT ma FROM bi_danh WHERE chuoi=?", (m,)).fetchone()
+            ma = m if c.execute("SELECT 1 FROM sku WHERE ma=?", (m,)).fetchone() else (b["ma"] if b else m)
+            them(ma, "ma_qc", f"tên/nội dung quảng cáo ghi mã {ma}")
             gom[ma]["_diem"][-1] -= 0.01 * i
         if str(ad_text or "").strip():
             da_thu.append("noi_dung")

@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.240] - 2026-10-26
+### Thêm mới
+- **Gợi ý mã hàng**: thanh nút chào nhanh ghim ngay trên ô soạn tin. Khi đã biết mã (vd V1213), hiện nút `/cv1213`; sale bấm là lệnh điền vào ô trả lời, Enter hai lần là ra câu chào của mã đó. Bấm ✎ để đổi mẫu lệnh (`{ma}` là mã viết thường).
+### Sửa lỗi
+- Quảng cáo ghi mã ngay ở tên ("V1213 - Xưởng May MD") hoặc nội dung ("#V1213") nay ra đúng mã, kể cả khi mã chưa có trong bảng tồn, không đi so ảnh đoán sang mã khác.
+
 ## [26.10.239] - 2026-10-25
 ### Sửa lỗi
 - **Gợi ý mã hàng**: hội thoại từ quảng cáo vẫn không ra mã dù tin nhắn đã ghi sẵn "MÃ: T145". Tiện ích chỉ đọc tin của khách và bỏ qua tin của bot/nhân viên shop. Nay đọc cả hai, nhận các kiểu "MÃ: T145", "Mã #S26", "BÁO GIÁ MÃ S26", và hiện mã đó kể cả khi chưa có trong bảng tồn.
