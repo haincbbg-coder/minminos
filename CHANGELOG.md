@@ -6,7 +6,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.223] - 2026-10-25
 ### Thêm mới
-- **Gợi ý mã hàng theo ảnh khách gửi** (đang làm): so ảnh khách với ảnh mẫu trên POS và ảnh nhân viên đã xác nhận.
+- **Gợi ý mã hàng theo ảnh khách gửi**: tiện ích tự so ảnh khách mới nhất với ảnh mẫu trên POS. Rút gọn bằng màu rồi nhờ ChatGPT chọn, tối đa 5 mã, mỗi ảnh một lần gọi, có trần mỗi ngày.
+- Nhân viên bấm "Đúng mã này" thì MinMin nhớ ảnh đó, lần sau chính xác hơn. Cần chạy `javis_goi_y_ma_hoc_anh` một lần sau khi nạp mã.
 
 ## [26.10.221] - 2026-10-25
 ### Thêm mới

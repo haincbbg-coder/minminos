@@ -23,6 +23,20 @@ async function taiBang() {
   return j;
 }
 
+// Tải ảnh khách (service worker có quyền host nên không vướng CORS), thu nhỏ còn 768px, trả base64 jpeg.
+async function anhThuNho(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("không tải được ảnh (" + r.status + ")");
+  const bm = await createImageBitmap(await r.blob());
+  const t = Math.min(1, 768 / Math.max(bm.width, bm.height));
+  const c = new OffscreenCanvas(Math.max(1, Math.round(bm.width * t)), Math.max(1, Math.round(bm.height * t)));
+  c.getContext("2d").drawImage(bm, 0, 0, c.width, c.height);
+  const buf = new Uint8Array(await (await c.convertToBlob({ type: "image/jpeg", quality: 0.82 })).arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
 chrome.runtime.onMessage.addListener((m, _s, tra) => {
   (async () => {
     try {
@@ -41,6 +55,10 @@ chrome.runtime.onMessage.addListener((m, _s, tra) => {
         return tra({ ok: true, bang: o.bang });
       }
       if (m.loai === "lam_moi") return tra({ ok: true, bang: await taiBang() });
+      if (m.loai === "anh") {
+        const j = await goi("anh", { body: { anh: await anhThuNho(m.url), mime: "image/jpeg" } });
+        return tra(Object.assign({ ok: true }, j));
+      }
       if (m.loai === "xac_nhan") { await goi("xac-nhan", { body: m.du_lieu }); return tra({ ok: true }); }
       if (m.loai === "trang_thai") {
         const o = await lay(["server", "token", "bang", "bang_luc"]);

@@ -1,17 +1,60 @@
 {
   "manifest_version": 3,
   "name": "MinMin Gợi ý mã hàng",
-  "version": "26.10.220",
+  "version": "26.10.223",
   "description": "Khách nhắn tới Pancake thì gợi ý ngay mã hàng cho nhân viên: từ mã trong tin nhắn, ID quảng cáo, bài viết.",
-  "permissions": ["storage"],
-  "host_permissions": ["https://pancake.vn/*", "https://*.pancake.vn/*", "https://pages.fm/*", "https://*.pages.fm/*", "https://minmin.elaria.cloud/*"],
-  "optional_host_permissions": ["https://*/*", "http://*/*"],
-  "background": { "service_worker": "background.js" },
-  "content_scripts": [
-    { "matches": ["https://pancake.vn/*", "https://*.pancake.vn/*", "https://pages.fm/*", "https://*.pages.fm/*"],
-      "js": ["hook.js"], "run_at": "document_start", "world": "MAIN", "all_frames": false },
-    { "matches": ["https://pancake.vn/*", "https://*.pancake.vn/*", "https://pages.fm/*", "https://*.pages.fm/*"],
-      "js": ["tra.js", "content.js"], "run_at": "document_start", "all_frames": false }
+  "permissions": [
+    "storage"
   ],
-  "action": { "default_popup": "popup.html", "default_title": "MinMin Gợi ý mã hàng" }
+  "host_permissions": [
+    "https://pancake.vn/*",
+    "https://*.pancake.vn/*",
+    "https://pages.fm/*",
+    "https://*.pages.fm/*",
+    "https://minmin.elaria.cloud/*",
+    "https://content.pancake.vn/*",
+    "https://*.fbcdn.net/*",
+    "https://*.fbsbx.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://pancake.vn/*",
+        "https://*.pancake.vn/*",
+        "https://pages.fm/*",
+        "https://*.pages.fm/*"
+      ],
+      "js": [
+        "hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://pancake.vn/*",
+        "https://*.pancake.vn/*",
+        "https://pages.fm/*",
+        "https://*.pages.fm/*"
+      ],
+      "js": [
+        "tra.js",
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MinMin Gợi ý mã hàng"
+  }
 }

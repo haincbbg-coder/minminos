@@ -5,7 +5,8 @@
      POST /goi-y-ma/may/ghep      {ma, ten, phien_ban} -> {may_id, token}
      GET  /goi-y-ma/may/bang      ba bảng gọn (sku, ad, post, bi_danh) để nạp sẵn trên máy
      POST /goi-y-ma/may/tra       {text, ad_id, post_id} -> ứng viên
-     POST /goi-y-ma/may/xac-nhan  {ma, nguon, khoa}: nhân viên chốt mã
+     POST /goi-y-ma/may/anh       {anh: base64, mime} -> ứng viên theo ảnh (ChatGPT, có cache)
+     POST /goi-y-ma/may/xac-nhan  {ma, nguon, khoa}: nhân viên chốt mã (nguon=anh thì khoa là hash ảnh)
 2. `/goi-y-ma/api/...` - cho dashboard, cần đăng nhập.
      POST /goi-y-ma/api/ma-ghep, GET /goi-y-ma/api/thong-ke, GET /goi-y-ma/api/may,
      DELETE /goi-y-ma/api/may/{id}
@@ -19,6 +20,7 @@ from typing import Optional
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+import goi_y_anh
 import goi_y_ma
 
 TIEN_TO_MAY = "/goi-y-ma/may/"
@@ -61,9 +63,9 @@ def register(app: FastAPI) -> None:
                                       status_code=401)
         return m, None
 
-    async def _json(request: Request) -> dict:
+    async def _json(request: Request, toi_da: int = THAN_TOI_DA) -> dict:
         body = await request.body()
-        if len(body) > THAN_TOI_DA:
+        if len(body) > toi_da:
             raise ValueError("thân yêu cầu quá lớn")
         try:
             raw = json.loads(body.decode("utf-8") or "{}")
@@ -105,6 +107,23 @@ def register(app: FastAPI) -> None:
         return {"ok": True, **goi_y_ma.phan_giai(str(d.get("text") or "")[:2000], str(d.get("ad_id") or ""),
                                                   str(d.get("post_id") or ""))}
 
+    @app.post(TIEN_TO_MAY + "anh")
+    async def gy_anh(request: Request):
+        m, err = await _may(request)
+        if err:
+            return err
+        try:
+            d = await _json(request, 9_000_000)
+            import base64
+            raw = base64.b64decode(str(d.get("anh") or "").split(",")[-1], validate=False)
+        except (ValueError, TypeError) as e:
+            return _loi(e)
+        mime = str(d.get("mime") or "image/jpeg")
+        if mime not in ("image/jpeg", "image/png", "image/webp"):
+            return _loi("chỉ nhận ảnh jpeg, png hoặc webp")
+        kq = await goi_y_anh.tra_anh(raw, mime)
+        return kq if kq.get("ok") else JSONResponse(kq, status_code=422 if kq.get("hash") else 400)
+
     @app.post(TIEN_TO_MAY + "xac-nhan")
     async def gy_xac_nhan(request: Request):
         m, err = await _may(request)
@@ -117,7 +136,8 @@ def register(app: FastAPI) -> None:
         if not goi_y_ma.chuan_ma(d.get("ma")):
             return _loi("thiếu mã hàng")
         goi_y_ma.xac_nhan(d.get("ma"), str(d.get("nguon") or ""), str(d.get("khoa") or ""))
-        return {"ok": True}
+        hoc = goi_y_anh.hoc_tu_xac_nhan(d.get("ma"), str(d.get("khoa") or "")) if d.get("nguon") == "anh" else False
+        return {"ok": True, "da_hoc_anh": hoc}
 
     A = "/goi-y-ma/api"
 
@@ -127,7 +147,7 @@ def register(app: FastAPI) -> None:
 
     @app.get(A + "/thong-ke")
     async def gy_thong_ke():
-        return {"ok": True, **goi_y_ma.thong_ke()}
+        return {"ok": True, **goi_y_ma.thong_ke(), **goi_y_anh.thong_ke()}
 
     @app.get(A + "/may")
     async def gy_ds_may():

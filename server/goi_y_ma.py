@@ -28,7 +28,7 @@ from typing import Iterable, Optional
 
 MA_SONG = 15 * 60
 TIEN_TO_TOKEN = "mmg_"
-NGUON_TRONG_SO = {"tin_nhan": 1.0, "quang_cao": 0.95, "chien_dich": 0.9, "bai_viet": 0.8, "bi_danh": 0.7}
+NGUON_TRONG_SO = {"anh": 0.6, "tin_nhan": 1.0, "quang_cao": 0.95, "chien_dich": 0.9, "bai_viet": 0.8, "bi_danh": 0.7}
 
 _goc: Optional[Path] = None
 _khoa = threading.RLock()
