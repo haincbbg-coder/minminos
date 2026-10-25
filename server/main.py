@@ -15418,6 +15418,11 @@ def _voice_brain_models(pid: str, cfg: dict) -> list:
             return _voice_models_items(grok_cli.list_models() or []) if grok_cli.find_grok_cli() else []
         if pid == "muse":
             return _voice_models_items(muse_cli.list_models() or []) if muse_cli.find_muse_cli() else []
+        if pid in voice_brain.CLI_VOICE:
+            import importlib
+            ten_mod, _lop, tim, _ten = voice_brain.CLI_VOICE[pid]
+            mod = importlib.import_module(ten_mod)
+            return _voice_models_items(mod.list_models() or []) if getattr(mod, tim)() else []
     except Exception:
         return []
     return []
@@ -15521,6 +15526,15 @@ async def voice_options(brains: int = 1):
             item["hint"] = ("Mỗi câu một lượt `muse exec` headless, nối lại mạch cũ nên có ký ức. "
                             "Trả lời về một cục." if item["available"]
                             else "Chưa cài Muse Code CLI (muse). Xem trang Models.")
+        elif pid in voice_brain.CLI_VOICE:
+            # Năm bộ não thêm ở 26.10.224: sẵn = đã đăng nhập (đọc file, không hỏi mạng). Danh sách
+            # model lấy riêng qua /voice/brain-models (luồng phụ), không chạy CLI ở đây.
+            item["available"] = voice_brain.plan_brain_available(pid, cfg)
+            item["models"] = []
+            ten = voice_brain.CLI_VOICE[pid][3]
+            item["hint"] = (f"Mỗi câu một lượt {ten} headless, nối lại mạch cũ nên có ký ức. Trả lời về "
+                            "một cục." if item["available"]
+                            else f"Chưa cài hoặc chưa đăng nhập {ten}. Xem trang Models.")
         brain_list.append(item)
     _vb = voice_brain.config_from_settings(cfg).get("provider") or ""
     return {
