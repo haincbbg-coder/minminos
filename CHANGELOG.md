@@ -4,6 +4,15 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.228] - 2026-10-25
+### Sửa lỗi
+- **Gợi ý mã hàng**: tiện ích đọc đúng quảng cáo của khách. Pancake ghi mã quảng cáo trong tin nhắn loại `ad_click`, không phải ở hội thoại, nên trước đây luôn đọc ra 0 quảng cáo.
+- Sticker và nút like của khách không còn bị tính là ảnh.
+
+### Thêm mới
+- Nội dung bài quảng cáo có nhắc mã (ví dụ "Mã: V33") thì tiện ích gợi ý luôn mã đó.
+- Quảng cáo chưa có trong bảng thì tiện ích so ảnh quảng cáo với ảnh mẫu. Nhân viên bấm "Đúng mã này" thì MinMin nhớ quảng cáo đó là mã nào.
+
 ## [26.10.227] - 2026-10-25
 
 ### Sửa lỗi

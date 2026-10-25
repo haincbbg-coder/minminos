@@ -4,7 +4,7 @@
     return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D")
       .replace(/[^A-Za-z0-9]/g, "").toUpperCase();
   }
-  const TRONG_SO = { tin_nhan: 1, quang_cao: 0.95, chien_dich: 0.9, bai_viet: 0.8, bi_danh: 0.7 };
+  const TRONG_SO = { tin_nhan: 1, quang_cao: 0.95, chien_dich: 0.9, noi_dung: 0.85, bai_viet: 0.8, bi_danh: 0.7 };
   function maTrongChu(bang, text) {
     const thay = new Set(), kq = [];
     (String(text || "").normalize("NFC").match(/[A-Za-zĐđ]{0,4}[\s-]?\d{1,6}[A-Za-z]{0,2}/g) || []).forEach((t) => {
@@ -30,6 +30,7 @@
     };
     if (!bang || !bang.sku) return [];
     maTrongChu(bang, ctx.text).forEach(([m, n, l]) => them(m, n, l));
+    if (ctx.ad_text) maTrongChu(bang, ctx.ad_text).forEach(([m]) => them(m, "noi_dung", "nội dung quảng cáo nhắc mã " + m));
     (ctx.ad_ids || []).forEach((a) => { const m = theoKhoa(bang.ad || {}, a); if (m) them(m, "quang_cao", "quảng cáo " + a); });
     const p = theoKhoa(bang.post || {}, ctx.post_id); if (p) them(p, "bai_viet", "bài viết " + ctx.post_id);
     return Object.values(gom).map((d) => {
