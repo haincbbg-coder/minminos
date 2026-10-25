@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import goi_y_anh
 import goi_y_ma
 
 
@@ -47,6 +48,18 @@ def register(ctx):
                            "cach_dung": "Bấm biểu tượng tiện ích MinMin Gợi ý mã hàng trên Cốc Cốc, nhập mã này rồi Ghép máy."},
                           ensure_ascii=False)
 
+    async def _hoc_anh(args, cctx):
+        a = args or {}
+        kq = await goi_y_anh.hoc_anh_mau(a.get("ma") if isinstance(a.get("ma"), list) else None)
+        return json.dumps({**kq, **goi_y_anh.thong_ke()}, ensure_ascii=False)
+
+    ctx.register_tool(
+        name="javis_goi_y_ma_hoc_anh",
+        description=("Tải ảnh mẫu của các mã đã nạp (từ POS), thu nhỏ và tính đặc trưng màu để tiện ích so ảnh khách gửi. "
+                     "Chạy sau khi nạp mã, chạy lại an toàn (chỉ học mã chưa có). Tham số tuỳ chọn: ma (danh sách mã)."),
+        handler=_hoc_anh, min_mode="safe",
+        schema={"type": "object", "properties": {"ma": {"type": "array", "items": {"type": "string"}}}},
+    )
     ctx.register_tool(
         name="javis_goi_y_ma_ma_ghep",
         description="Tạo mã ghép 6 số (sống 15 phút) để ghép tiện ích Gợi ý mã hàng trên trình duyệt của nhân viên với MinMin.",

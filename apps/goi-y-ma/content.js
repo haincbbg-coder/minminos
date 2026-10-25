@@ -5,6 +5,8 @@
   let hienTai = null;          // {id, text, ad_ids, post_id, anh:[url]}
   let bang = null;
   let chanDoan = { convs: 0, tinNhan: 0, luc: 0 };
+  const anhKq = {};            // url ảnh -> {dang} | {kq} | {loi}, giữ qua các hội thoại
+  let anhChon = null;
 
   function chuoiHtml(s) { const d = document.createElement("div"); d.innerHTML = String(s || ""); return d.textContent || ""; }
   function layAnh(m) {
@@ -74,12 +76,12 @@
     document.body.appendChild(goc);
   }
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  function the(u) {
+  function the(u, hash) {
     const ton = u.ton == null ? "" : ` · tồn <span class="${u.ton <= 0 ? "ton0" : ""}">${u.ton}</span>`;
     const bc = u.bang_chung.map((b) => esc(b.ly_do)).join("; ");
     return `<div class="u"><div class="m">${esc(u.ma)} <span class="s">${esc(u.ten)}${ton}</span></div>
       <div class="c"><i style="width:${Math.round(u.do_chac * 100)}%"></i></div><div class="b">${bc}</div>
-      <button data-ma="${esc(u.ma)}" data-nguon="${esc(u.bang_chung[0].nguon)}">Đúng mã này</button></div>`;
+      <button data-ma="${esc(u.ma)}" data-nguon="${esc(u.bang_chung[0].nguon)}" data-hash="${esc(hash || "")}">Đúng mã này</button></div>`;
   }
   async function ve() {
     dung(); if (!root) return;
@@ -91,20 +93,41 @@
     }
     if (!hienTai) { n.innerHTML = `<div class="s">Mở một hội thoại để xem gợi ý.</div>${chanDoanHtml()}`; return; }
     const ds = self.mmTra(bang, hienTai);
-    let h = ds.length ? ds.slice(0, 4).map(the).join("") : `<div class="s">Chưa tra ra mã từ tin nhắn, quảng cáo hay bài viết của hội thoại này.</div>`;
-    if (hienTai.anh.length) h += `<div class="anh">${hienTai.anh.slice(-4).map((u) => `<img src="${esc(u)}">`).join("")}<div class="g">Khách gửi ${hienTai.anh.length} ảnh (so ảnh sẽ có ở bản sau)</div></div>`;
+    let h = ds.length ? ds.slice(0, 4).map((u) => the(u)).join("") : `<div class="s">Chưa tra ra mã từ tin nhắn, quảng cáo hay bài viết của hội thoại này.</div>`;
+    if (hienTai.anh.length) {
+      const u0 = chonAnh();
+      if (u0 && !anhKq[u0]) soAnh(u0);
+      const ak = anhKq[u0] || {};
+      h += `<div class="anh">${hienTai.anh.slice(-4).map((u) => `<img data-u="${esc(u)}" style="${u === u0 ? "outline:2px solid #0b5fff" : "cursor:pointer"}" src="${esc(u)}">`).join("")}`;
+      if (ak.dang) h += `<div class="g">Đang so ảnh với mẫu...</div>`;
+      else if (ak.loi) h += `<div class="g" style="color:#b42318">So ảnh lỗi: ${esc(ak.loi)}</div>`;
+      else if (ak.kq) h += ak.kq.ung_vien.length ? `<div class="s" style="margin:4px 0">Theo ảnh${ak.kq.cache ? " (đã so trước đó)" : ""}:</div>` + ak.kq.ung_vien.map((x) => the(x, ak.kq.hash)).join("")
+        : `<div class="g">Ảnh này chưa giống mẫu nào. Gõ mã tay bên dưới.</div>`;
+      h += `</div>`;
+    }
     h += `<div style="margin-top:6px"><input id="q" placeholder="Gõ mã để tra tay, vd V33"></div><div id="kq"></div>${chanDoanHtml()}`;
     n.innerHTML = h;
     n.querySelectorAll("button[data-ma]").forEach((b) => b.onclick = async () => {
-      const khoa = b.dataset.nguon === "quang_cao" ? (hienTai.ad_ids[0] || "") : b.dataset.nguon === "bai_viet" ? hienTai.post_id : hienTai.id;
+      const khoa = b.dataset.nguon === "anh" ? b.dataset.hash : b.dataset.nguon === "quang_cao" ? (hienTai.ad_ids[0] || "") : b.dataset.nguon === "bai_viet" ? hienTai.post_id : hienTai.id;
       await hoi({ loai: "xac_nhan", du_lieu: { ma: b.dataset.ma, nguon: b.dataset.nguon, khoa } });
       b.textContent = "Đã ghi nhận"; b.disabled = true;
     });
+    n.querySelectorAll("img[data-u]").forEach((im) => im.onclick = () => { anhChon = im.dataset.u; ve(); });
     const q = n.querySelector("#q");
     q.oninput = () => {
       const m = self.mmChuanMa(q.value); const s = bang.sku[m];
       n.querySelector("#kq").innerHTML = m ? (s ? the({ ma: m, ten: s[0], ton: s[1], do_chac: 1, bang_chung: [{ nguon: "tin_nhan", ly_do: "tra tay" }] }) : `<div class="s">Không có mã ${esc(m)} trong bảng</div>`) : "";
     };
+  }
+  function chonAnh() {
+    if (!hienTai || !hienTai.anh.length) return null;
+    return anhChon && hienTai.anh.includes(anhChon) ? anhChon : hienTai.anh[hienTai.anh.length - 1];
+  }
+  async function soAnh(u) {
+    anhKq[u] = { dang: true };
+    const r = await hoi({ loai: "anh", url: u });
+    anhKq[u] = r && r.ok ? { kq: r } : { loi: (r && r.error) || "không rõ" };
+    ve();
   }
   function chanDoanHtml() {
     const ad = hienTai ? hienTai.ad_ids.length : 0;

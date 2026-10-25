@@ -9,4 +9,5 @@ tools:
   - javis_goi_y_ma_nap
   - javis_goi_y_ma_tra
   - javis_goi_y_ma_ma_ghep
+  - javis_goi_y_ma_hoc_anh
 hooks: []

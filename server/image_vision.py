@@ -201,7 +201,22 @@ async def describe_images(paths: List[str], question: str = "", vault_root: Opti
         if not r.get("ok"):
             return {"ok": False, "error": r.get("error") or localefmt.chu(f"Không đọc được ảnh '{p}'.", f"Could not read image '{p}'.")}
         data_urls.append(r["data_url"])
-    payload = build_payload(build_prompt(question, labels if labels else ["" for _ in paths]), data_urls)
+    return await describe_data_urls(data_urls, question, labels if labels else ["" for _ in paths], timeout_s)
+
+
+async def describe_data_urls(data_urls: List[str], question: str = "", labels: Optional[List[str]] = None,
+                             timeout_s: float = 180.0) -> dict:
+    """Same look as `describe_images` but the images are already `data:` URLs (the caller read or built them, e.g. an
+    image sent by a browser extension). No brain-path fence here: the caller is responsible for where the bytes came from."""
+    if not data_urls:
+        return {"ok": False, "error": localefmt.chu("Thiếu ảnh.", "Missing image.")}
+    if len(data_urls) > MAX_IMAGES:
+        return {"ok": False, "error": localefmt.chu(f"Xem tối đa {MAX_IMAGES} ảnh một lượt (đang gửi {len(data_urls)}).",
+                                                f"At most {MAX_IMAGES} images per look (sending {len(data_urls)}).")}
+    creds = openai_oauth.valid_creds()
+    if not creds or not creds.get("access_token"):
+        return {"ok": False, "error": not_connected_reason()}
+    payload = build_payload(build_prompt(question, labels if labels else ["" for _ in data_urls]), data_urls)
     headers = image_gen._headers(creds["access_token"], creds.get("account_id") or "")
     parts: List[str] = []
     final = ""
