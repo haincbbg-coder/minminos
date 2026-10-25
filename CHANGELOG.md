@@ -10,6 +10,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - Quét TikTok: hết báo nhầm mọi video "có giỏ hàng". Chỉ tính khi video thật sự gắn sản phẩm TikTok Shop (soi thật: link shop.tiktok.com/.../pdp). Giá 0 trong dữ liệu neo sản phẩm không còn ghi thành "0".
 - Quét YouTube ra bảng chạy được cả với nick chưa đăng nhập YouTube (chỉ đọc dữ liệu công khai).
 
+## [26.10.235] - 2026-10-25
+
 ### Thêm mới
 - **Nút "Làm mới bảng" trong văn phòng 3D.** Bấm một lần là MinMin chạy ngay việc cập nhật số liệu rồi bảng tự đổi số khi xong, không cần chờ tới giờ chẵn hay nhắn lệnh.
 
