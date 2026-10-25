@@ -63,3 +63,37 @@ body.mm-office-solo .mm-office-pad { bottom: 24px; }
 body.mm-office-solo .mm-office-dock { display: none; }
 #mmOffice:fullscreen .mm-office-dock, #mmOffice:-webkit-full-screen .mm-office-dock { bottom: 18px; }
 .mm-office-card { bottom: 130px; }
+
+/* Điện thoại (26.10.237): văn phòng phủ KÍN màn hình, thanh trên gọn, nút phụ gom vào Menu, bàn điều khiển nhỏ và ẩn được.
+   Nút Menu và nút ẩn/hiện bàn điều khiển chỉ có trên điện thoại. */
+.mm-menu-t, .mm-pad-t { display: none; }
+@media (max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1100px) {
+  html.mm-office-on, html.mm-office-on body { overscroll-behavior: none; }
+  html.mm-office-on #mmOffice { position: fixed; inset: 0; z-index: 3000; height: 100vh; height: 100dvh; }
+  .mm-office-bar { top: calc(8px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); gap: 6px; }
+  .mm-office-bar b, .mm-office-bar span { display: none; }
+  .mm-office-bar button { min-height: 38px; padding: 6px 10px; font-size: 12px; border-radius: 12px; white-space: nowrap; }
+  .mm-office-bar .mm-room { order: 1; }
+  .mm-office-bar .mm-menu-t { display: inline-block; order: 2; margin-left: auto; color: #fff; background: #2a6bff; border-color: #2a6bff; }
+  .mm-office-bar .mm-x { order: 3; }
+  .mm-office-bar .mm-sec, .mm-office-bar .mm-pc { display: none; order: 4; }
+  #mmOffice.mm-menu-open .mm-office-bar .mm-sec { display: inline-block; min-height: 44px; font-size: 13px; }
+  #mmOffice.mm-menu-open .mm-office-bar .mm-pc { display: none; }
+  .mm-office-simmenu { top: calc(56px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); max-height: 60dvh; overflow: auto; }
+  /* bàn điều khiển: nhỏ, mờ bớt, nằm góc dưới phải, tránh vùng an toàn của iPhone */
+  .mm-office-pad { right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); gap: 8px; opacity: .72; }
+  .mm-office-pad:active, .mm-office-pad:focus-within { opacity: 1; }
+  .mm-pad-dir { grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(3, 42px); gap: 4px; }
+  .mm-pad-zoom { grid-template-columns: repeat(2, 38px); gap: 4px; }
+  .mm-office-pad button { min-height: 38px; border-radius: 12px; font-size: 15px; }
+  #mmOffice.mm-pad-off .mm-office-pad { display: none; }
+  .mm-pad-t { display: block; position: absolute; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px) + 140px); z-index: 4; min-height: 32px; padding: 4px 12px; border-radius: 16px; cursor: pointer;
+    border: 1px solid var(--brain-glass-brd, rgba(60, 90, 140, .35)); color: var(--brain-ink, #1f2d44); font: 600 11px system-ui, sans-serif; background: var(--brain-glass, rgba(255, 255, 255, .9)); backdrop-filter: blur(8px); }
+  #mmOffice.mm-pad-off .mm-pad-t { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  /* Giao việc: góc dưới trái, mở ô gõ thì ẩn bàn điều khiển cho khỏi che */
+  .mm-office-dock { left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .mm-dock-t { padding: 11px 18px; font-size: 14px; }
+  #mmOffice:has(.mm-dock-b:not([hidden])) .mm-office-pad, #mmOffice:has(.mm-dock-b:not([hidden])) .mm-pad-t { display: none; }
+  .mm-office-card { left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 16px - 230px); font-size: 12px; padding: 8px 11px; }
+  .mm-office-toast { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+}
