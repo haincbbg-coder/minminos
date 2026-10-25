@@ -281,5 +281,14 @@ for f in ("server/doi_social_ai.py", "system/plugins/doi-social/plugin.py", "sys
     src = (ROOT / f).read_text(encoding="utf-8")
     check(f"không có em dash: {f}", chr(0x2014) not in src)
 
+# YouTube: tiêu đề dòng đầu <= 100, mô tả tới 5000 (vượt trần chung 3000)
+check("YouTube: trần bài 5000, có gợi ý tiêu đề + mô tả",
+      ai.tran_bai("youtube") == 5000 and ai.tran_bai("x") == 280 and "TIÊU ĐỀ" in ai.NOI_DANG_GOI_Y["youtube"]
+      and "youtube" in ai.NOI_DANG_TEN)
+_yt = ai._lam_sach_bai("# Tiêu đề: " + "Kem dưỡng <ẩm> " * 12 + "\nMô tả đầu.\n" + "Chi tiết. " * 450, "youtube", None)
+check("YouTube: làm sạch tiêu đề (bỏ '#', 'Tiêu đề:', '< >', <= 100) và giữ mô tả dài",
+      len(_yt.split("\n")[0]) <= 100 and _yt.startswith("Kem dưỡng ẩm") and "<" not in _yt
+      and _yt.split("\n")[1] == "" and 3000 < len(_yt) <= 5000, (_yt[:120], len(_yt)))
+
 print("ALL PASS" if ok else "SOME FAILED")
 sys.exit(0 if ok else 1)

@@ -89,6 +89,12 @@ BANG_NHAN_BIET: Dict[str, list] = {
     "youtube": [
         ("captcha", "url", r"google\.[a-z.]+/sorry/"),
         ("dang_xuat", "url", r"accounts\.google\.com"),
+        # Chưa đăng nhập (thấy thật 25/10/2026, vi-VN): thanh trên cùng có nút "Đăng nhập" trỏ ServiceLogin,
+        # ngăn kéo bên trái ghi "Hãy đăng nhập để thích video, bình luận và đăng ký kênh."
+        ("dang_xuat", "css", "ytd-masthead a[href*='accounts.google.com/ServiceLogin'], "
+                             "#masthead a[aria-label='Đăng nhập'], #masthead a[aria-label='Sign in'], "
+                             "a[aria-label='Đăng nhập'][href*='ServiceLogin'], a[aria-label='Sign in'][href*='ServiceLogin']"),
+        ("dang_xuat", "chu", r"(Hãy đăng nhập để thích video|Sign in to like videos)"),
     ] + _CAPTCHA_CHUNG,
 }
 THONG_DIEP_MA = {

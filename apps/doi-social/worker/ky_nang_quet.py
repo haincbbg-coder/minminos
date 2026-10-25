@@ -4,6 +4,7 @@
   21/10/2026: mỗi Trang có link `aria-label="Ảnh đại diện của <tên>"` trỏ tới trang, danh sách nạp dần khi cuộn.
 - Instagram / TikTok / Threads: tài khoản đang đăng nhập, đọc từ link "Trang cá nhân"/"Profile" trên thanh điều
   hướng. Chưa đăng nhập thì ghi nhật ký và bỏ qua nền tảng đó (không xoá danh sách cũ của nền tảng đó).
+- YouTube (26.10.229): kênh đang đăng nhập, đọc từ menu ảnh đại diện (ky_nang_youtube.kenh_cua_nick).
 
 Gửi về MinMin qua POST /doi-social/may/dich-den {viec_id, nen_tang: [đã quét được], muc: [...]}.
 """
@@ -138,7 +139,26 @@ def quet_threads(nc):
              "link": f"https://www.threads.com/@{m.group(1)}", "ma": m.group(1)}]
 
 
-_QUET = {"facebook": quet_facebook, "instagram": quet_instagram, "tiktok": quet_tiktok, "threads": quet_threads}
+def quet_youtube(nc):
+    """Kênh YouTube đang đăng nhập: menu ảnh đại diện (#channel-handle, link kênh), dự phòng Studio.
+    Chưa đăng nhập (nút 'Đăng nhập' trên thanh trên cùng) hoặc chưa tạo kênh -> None."""
+    import ky_nang_youtube as yt
+    nc.nhat_ky("YouTube: đọc kênh đang đăng nhập")
+    try:
+        k = yt.kenh_cua_nick(nc)
+    except Exception as e:      # chưa đăng nhập: bỏ qua, không phải lỗi của việc quét
+        nc.nhat_ky(f"YouTube: {e}")
+        return None
+    if not k.get("link"):
+        nc.nhat_ky("YouTube: tài khoản chưa tạo kênh" if k.get("chua_co_kenh") else "YouTube: không đọc được kênh")
+        return None
+    ma = k.get("handle") or k["link"].rstrip("/").split("/")[-1]
+    return [{"nen_tang": "youtube", "loai": "tai_khoan", "ten": k.get("ten") or k.get("handle") or ma,
+             "link": k["link"], "ma": ma}]
+
+
+_QUET = {"facebook": quet_facebook, "instagram": quet_instagram, "tiktok": quet_tiktok, "threads": quet_threads,
+         "youtube": quet_youtube}
 
 
 def quet_tai_khoan(nc) -> str:

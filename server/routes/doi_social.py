@@ -147,7 +147,8 @@ _DEPS = DoiSocialDeps()      # register() thay bằng deps thật; plugin dùng 
 
 _VONG: list = []             # vòng sự kiện của server, nhớ lúc khởi động
 DS_TEN_NOI_DANG = {"fb_nhom": "Nhóm Facebook", "fb_tuong": "Tường Facebook", "fb_trang": "Trang Facebook",
-                   "threads": "Threads", "instagram": "Instagram", "reddit": "Reddit", "x": "X", "tiktok": "TikTok"}
+                   "threads": "Threads", "instagram": "Instagram", "reddit": "Reddit", "x": "X", "tiktok": "TikTok",
+                   "youtube": "YouTube"}
 
 
 def _chay_nen(coro_fn, mo_ta: str) -> None:
@@ -1435,7 +1436,7 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
                         raise ValueError("chọn Trang sẽ đăng (bấm Quét Trang nếu danh sách trống)")
                     if not dich_ten:
                         dich_ten = next((x["ten"] for x in nk.get("dich_den") or [] if x.get("link") == dich), "") or dich
-                elif noi_dang in ("instagram", "tiktok", "threads", "x", "reddit") and not nk:
+                elif noi_dang in ("instagram", "tiktok", "threads", "x", "reddit", "youtube") and not nk:
                     raise ValueError("chọn nick sẽ đăng (mỗi nick một tài khoản trên nền tảng này)")
                 elif noi_dang == "fb_nhom" and dich and not dich_ten:
                     dich_ten = dich
