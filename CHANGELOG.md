@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.239] - 2026-10-25
+### Sửa lỗi
+- **Gợi ý mã hàng**: hội thoại từ quảng cáo vẫn không ra mã dù tin nhắn đã ghi sẵn "MÃ: T145". Tiện ích chỉ đọc tin của khách và bỏ qua tin của bot/nhân viên shop. Nay đọc cả hai, nhận các kiểu "MÃ: T145", "Mã #S26", "BÁO GIÁ MÃ S26", và hiện mã đó kể cả khi chưa có trong bảng tồn.
+- Bước so ảnh quảng cáo quá 45 giây không có trả lời thì báo lỗi rõ, không treo ở "Đang so ảnh".
+
 ## [26.10.238] - 2026-10-25
 ### Cải thiện
 - **Giao diện đồng bộ hơn**: cỡ chữ gom từ 28 kiểu về 7 cỡ chuẩn, bo góc từ 21 kiểu về 5 mức. Chữ nhỏ lẻ (11px, 12.5px) nay đều đọc rõ ở 12-13px.
