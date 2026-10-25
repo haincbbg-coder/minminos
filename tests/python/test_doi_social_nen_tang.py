@@ -65,15 +65,45 @@ for m in kb.MAU:
         tong += 1
         check(f"{m['id']} có trong ky_nang_{m['nen_tang']}.KICH_BAN",
               callable(TEP[m["nen_tang"]].KICH_BAN.get(m["id"])))
-check("đủ 28 mẫu ngoài Facebook", tong == 28, tong)
+check("đủ mẫu ngoài Facebook (>= 34)", tong >= 34, tong)
+so_yt = sum(1 for m in kb.MAU if m["nen_tang"] == "youtube")
+check("YouTube đủ 7 mẫu", so_yt == 7, so_yt)
 for nt, mod in TEP.items():
     k = f"dang_ban_nhap:{nt}"
-    if nt == "youtube":
-        check("YouTube không khai dang_ban_nhap", k not in mod.KICH_BAN)
-    else:
-        check(f"{k} có trong KICH_BAN", callable(mod.KICH_BAN.get(k)))
+    check(f"{k} có trong KICH_BAN", callable(mod.KICH_BAN.get(k)))
     la = [x for x in mod.KICH_BAN if not x.startswith("dang_ban_nhap:") and x not in kb.THEO_ID]
     check(f"ky_nang_{nt} không khai id lạ", not la, la)
+
+# ---------------------------------------------------------------- 1b. YouTube: hàm thuần
+import ky_nang_quet  # noqa: E402
+check("quét tài khoản có YouTube, giữ nền tảng cũ",
+      set(ky_nang_quet._QUET) >= {"facebook", "instagram", "tiktok", "threads", "youtube"})
+yt = ky_nang_youtube
+check("YT: chuẩn link shorts / youtu.be / &pp= về watch?v=",
+      yt.chuan_link("https://www.youtube.com/shorts/AbCdEfGhIjK?feature=share") ==
+      ("https://www.youtube.com/watch?v=AbCdEfGhIjK", "AbCdEfGhIjK")
+      and yt.chuan_link("https://youtu.be/AbCdEfGhIjK")[1] == "AbCdEfGhIjK"
+      and yt.chuan_link("https://www.youtube.com/watch?v=AbCdEfGhIjK&pp=ygUF")[0].endswith("v=AbCdEfGhIjK")
+      and yt.chuan_link("https://www.youtube.com/@kenh")[1] == "")
+td, mt = yt.tach_tieu_de({"noi_dung": "Kem <dưỡng> ẩm " + "x" * 120 + "\nMô tả dòng 1\nDòng 2"})
+check("YT: dòng đầu là tiêu đề <= 100 ký tự, bỏ < >, phần còn lại là mô tả",
+      len(td) <= 100 and "<" not in td and mt == "Mô tả dòng 1\nDòng 2", (td, mt))
+td, mt = yt.tach_tieu_de({"tieu_de": "Tiêu đề", "noi_dung": "Tiêu đề\nMô tả"})
+check("YT: có trường tieu_de thì mô tả bỏ phần trùng", (td, mt) == ("Tiêu đề", "Mô tả"), (td, mt))
+mt = yt.them_link_tiep_thi("Mô tả", "https://s.shopee.vn/abc\nGiảm 10%: https://lazada.vn/x")
+check("YT: link tiếp thị nối cuối mô tả, link trần thêm 'Mua tại:'",
+      mt == "Mô tả\n\nMua tại: https://s.shopee.vn/abc\nGiảm 10%: https://lazada.vn/x", mt)
+check("YT: mô tả kèm link vẫn <= 5000", len(yt.them_link_tiep_thi("a" * 6000, "https://x.y/z")) <= 5000)
+import random as _r
+r = _r.Random(1)
+ra = {yt.spin("{Mua|Đặt} tại {đây|link}: https://x.y", r) for _ in range(40)}
+check("YT: spin {a|b} ra đủ biến thể, giữ link", len(ra) == 4 and all(x.endswith("https://x.y") for x in ra), ra)
+check("YT: spin lồng nhau", yt.spin("{a|{b|c}}", _r.Random(2)) in ("a", "b", "c"))
+check("YT: đọc lượt xem kiểu Việt",
+      yt.so_luot_xem("973 N lượt xem") == 973000 and yt.so_luot_xem("1,2 Tr lượt xem") == 1200000
+      and yt.so_luot_xem("1.234 lượt xem") == 1234 and yt.so_luot_xem("1.2M views") == 1200000
+      and yt.so_luot_xem("2 Tỷ lượt xem") == 2000000000 and yt.so_luot_xem("") == 0)
+check("YT: mẫu nhận diện bỏ link", yt.mau_nhan_dien("https://x.y/z Mua ở đây nhé") == "Mua ở đây nhé")
 
 # ---------------------------------------------------------------- 2. chia chuỗi
 p = w.chia_threads("Phần một\n---\nPhần hai\n  ---  \n\n---\nPhần ba")
@@ -276,6 +306,41 @@ xb = nc.ten_goi("xong_ban_nhap")
 check("ig_dang_ai: nháp không có ảnh -> xong_ban_nhap(ok=False) có lý do", xb and xb[0][1][:2] == (9, False)
       and "ảnh" in xb[0][2]["loi"], xb)
 
+# YouTube: mẫu AI + nháp + ghim link (không cần trình duyệt)
+nc = NguCanhGia("youtube", {"so_bai": 1}, chay_thu=True)
+ky_nang_youtube.yt_dang_ai(nc)
+check("yt_dang_ai chạy thử: không giữ nháp, có báo 'sẽ ...'", not nc.ten_goi("lay_ban_nhap")
+      and any(s["kq"] == "thong_tin" for s in nc.su), nc.goi)
+nc = NguCanhGia("youtube", {"so_bai": 1}, ban_nhap_duyet=[{"id": 11, "noi_dung": "Tiêu đề\nMô tả", "tep_cuc_bo": []}])
+try:
+    ky_nang_youtube.yt_dang_ai(nc)
+except LoiKyNang:
+    pass
+xb = nc.ten_goi("xong_ban_nhap")
+check("yt_dang_ai: nháp không có video -> xong_ban_nhap(ok=False) nêu rõ 'video'",
+      xb and xb[0][1][:2] == (11, False) and "video" in xb[0][2]["loi"], xb)
+nc = NguCanhGia("youtube", {"ban_nhap_id": 12, "loai": "bai_dang", "noi_dung": "T\nM"}, chay_thu=True)
+kq = ky_nang_youtube.dang_ban_nhap(nc)
+check("dang_ban_nhap:youtube chạy thử: không mở trang, không đánh dấu nháp",
+      not nc.ten_goi("mo") and not nc.ten_goi("xong_ban_nhap") and nc.su[-1]["kq"] == "thong_tin", nc.goi)
+nc = NguCanhGia("youtube", {"ban_nhap_id": 13, "loai": "bai_dang", "noi_dung": "T\nM", "tep_cuc_bo": ["/tmp/a.jpg"]})
+try:
+    ky_nang_youtube.dang_ban_nhap(nc)
+    loi = None
+except LoiKyNang as e:
+    loi = e
+check("dang_ban_nhap:youtube bài không có video -> lỗi rõ + xong_ban_nhap(ok=False)",
+      loi is not None and "video" in str(loi) and nc.ten_goi("xong_ban_nhap")[0][1][:2] == (13, False), loi)
+nc = NguCanhGia("youtube", {"noi_dung": "{Mua|Đặt} tại: https://s.shopee.vn/abc",
+                            "links": ["https://www.youtube.com/shorts/AbCdEfGhIjK", "https://youtu.be/ZZZZZZZZZZZ"],
+                            "ghim": True}, chay_thu=True)
+nc._da.add("youtube:ghim_link:ZZZZZZZZZZZ")
+kq = ky_nang_youtube.yt_binh_luan_ghim_link(nc)
+check("yt_binh_luan_ghim_link chạy thử: báo 'sẽ bình luận ... ghim', video đã làm thì bỏ qua, không ghi khoá",
+      [s["kq"] for s in nc.su] == ["thong_tin", "bo_qua"] and "ghim" in nc.su[0]["ct"]
+      and "https://s.shopee.vn/abc" in nc.su[0]["ct"] and not nc.ten_goi("ghi_da_lam")
+      and str(kq).startswith("Chạy thử"), (kq, nc.su))
+
 # dang_ban_nhap chạy thử
 nc = NguCanhGia("x", {"ban_nhap_id": 3, "loai": "tra_loi", "noi_dung": "hay", "link_goc": "https://x.com/a/status/1"},
                 chay_thu=True)
@@ -311,6 +376,49 @@ document.addEventListener('keydown', e => {
 
 def _trang(than):
     return "<!doctype html><html><head><meta charset='utf-8'>" + JS + "</head><body>" + than + "</body></html>"
+
+
+YT_JS = """<script>
+function themLuong(tg, chu, dau, cuaChu) {
+  var t = document.createElement('ytd-comment-thread-renderer');
+  t.innerHTML = '<ytd-comment-view-model id="comment"><a id="author-text" href="/' + tg + '">' + tg + '</a> '
+    + (cuaChu ? '<ytd-author-comment-badge-renderer creator></ytd-author-comment-badge-renderer>' : '')
+    + '<span id="content-text"></span><div id="action-menu"><button aria-label="Menu tác vụ">m</button></div>'
+    + '<div id="reply-button-end"><button aria-label="Phản hồi">Phản hồi</button></div></ytd-comment-view-model>';
+  t.querySelector('#content-text').textContent = chu;
+  t.querySelector('#action-menu button').onclick = function () { moMenu(t); };
+  t.querySelector('#reply-button-end button').onclick = function () { moTraLoi(t); };
+  var ds = document.getElementById('ds');
+  if (dau) ds.insertBefore(t, ds.firstChild); else ds.appendChild(t);
+}
+function moMenu(t) {
+  var p = document.createElement('ytd-menu-popup-renderer');
+  p.innerHTML = '<ytd-menu-service-item-renderer>Báo vi phạm</ytd-menu-service-item-renderer><ytd-menu-service-item-renderer>Ghim</ytd-menu-service-item-renderer>';
+  p.children[1].onclick = function () {
+    p.remove();
+    var d = document.createElement('yt-confirm-dialog-renderer');
+    d.innerHTML = 'Ghim bình luận này? <div id="confirm-button"><button>Ghim</button></div>';
+    d.querySelector('button').onclick = function () {
+      ck('pin'); d.remove();
+      var b = document.createElement('ytd-pinned-comment-badge-renderer'); b.textContent = 'Đã ghim bởi @kenhtoi';
+      t.querySelector('#comment').prepend(b);
+    };
+    document.body.appendChild(d);
+  };
+  document.body.appendChild(p);
+}
+function moTraLoi(t) {
+  ck('reply_open');
+  var d = document.createElement('ytd-comment-reply-dialog-renderer');
+  d.innerHTML = '<div id="contenteditable-root" contenteditable="true" style="min-width:200px;min-height:20px;border:1px solid"></div>'
+    + '<div id="submit-button"><button aria-label="Phản hồi">Phản hồi</button></div>';
+  d.querySelector('button').onclick = function () {
+    ck('reply'); var r = document.createElement('div'); r.id = 'replies';
+    r.textContent = d.querySelector('#contenteditable-root').innerText; d.remove(); t.appendChild(r);
+  };
+  t.appendChild(d);
+}
+</script>"""
 
 
 TRANG = {
@@ -385,6 +493,37 @@ TRANG = {
 <shreddit-join-button subscribed><button>Joined</button></shreddit-join-button>"""),
     # YouTube
     "youtube.com/upload": _trang("""<input type="file"><button id="done-button" onclick="ck('publish')">Publish</button>"""),
+    "youtube.com/watch?v=": _trang(YT_JS + """
+<ytd-watch-metadata><div id="title"><h1>Kem dưỡng ẩm review</h1></div>
+ <div id="owner"><div id="subscribe-button"><button onclick="ck('sub');this.textContent='Đã đăng ký'">Đăng ký</button></div></div>
+ <like-button-view-model><button aria-label="Thích video này cùng với 10 người khác" aria-pressed="false"
+   onclick="ck('like');this.setAttribute('aria-pressed','true')">10</button></like-button-view-model>
+ <like-button-view-model><button aria-label="Không thích video này" aria-pressed="false" onclick="ck('dislike')">x</button></like-button-view-model>
+ <div id="description">Mô tả video kem dưỡng</div></ytd-watch-metadata>
+<ytd-comments id="comments"><ytd-comments-header-renderer>
+ <div id="placeholder-area" onclick="document.getElementById('box').style.display='block'">Viết bình luận...</div>
+ <div id="box" style="display:none"><div id="contenteditable-root" contenteditable="true"
+   style="min-width:300px;min-height:24px;border:1px solid"></div>
+  <div id="submit-button"><button aria-label="Bình luận" onclick="ck('comment');var t=document.getElementById('contenteditable-root');
+    themLuong('@kenhtoi', t.innerText, true);t.innerText=''">Bình luận</button></div></div>
+</ytd-comments-header-renderer><div id="ds"></div></ytd-comments>
+<script>themLuong('@kenhtoi', 'Cảm ơn mọi người đã xem', false, true); themLuong('@khach1', 'Giá bao nhiêu vậy shop?', false);</script>"""),
+    "youtube.com/results": _trang("""
+<ytd-video-renderer><a id="thumbnail" href="/watch?v=BBBBBBBBBBB&amp;pp=ygU">1:13 Đang phát<badge-shape aria-label="1 phút, 13 giây">1:13</badge-shape></a>
+ <h3><a href="/watch?v=BBBBBBBBBBB&amp;pp=ygU" aria-label="Kem dưỡng ẩm tốt nhất 1 phút"><yt-formatted-string>Kem dưỡng ẩm tốt nhất</yt-formatted-string></a></h3>
+ <a href="/@kenhA" aria-label="Chuyển đến kênh Kênh A"></a><a href="/@kenhA">Kênh A</a>
+ <div id="metadata-line"><span class="inline-metadata-item">153 N lượt xem</span><span class="inline-metadata-item">2 ngày trước</span></div>
+ <button aria-label="Menu tác vụ">m</button></ytd-video-renderer>
+<ytd-video-renderer><a aria-label="Quảng cáo: Mua kem" href="https://www.googleadservices.com/pagead/aclk?x">ad</a>
+ <a href="/watch?v=CCCCCCCCCCC">Video quảng cáo</a></ytd-video-renderer>
+<h2>Shorts</h2><div class="ke"><div class="o"><a href="/shorts/DDDDDDDDDDD"><h3>Shorts da khô</h3></a><span>973 N lượt xem</span></div>
+ <div class="o"><a href="/shorts/EEEEEEEEEEE"><h3>Shorts thứ hai</h3></a><span>1,2 Tr lượt xem</span></div></div>"""),
+    "youtube.com/@kenhtoi/videos": _trang("""<ytd-rich-grid-renderer><a href="/watch?v=AAAAAAAAAAA">Video 1</a></ytd-rich-grid-renderer>"""),
+    "youtube.com/@kenhtoi/shorts": _trang("""<ytd-rich-grid-renderer><a href="/shorts/FFFFFFFFFFF">Shorts 1</a></ytd-rich-grid-renderer>"""),
+    "www.youtube.com/": _trang("""<ytd-masthead><button id="avatar-btn" aria-label="Trình đơn tài khoản"
+  onclick="document.getElementById('acc').style.display='block'">A</button></ytd-masthead>
+<div id="acc" style="display:none"><ytd-active-account-header-renderer><span id="account-name">Kênh Tôi</span>
+ <span id="channel-handle">@kenhtoi</span><a href="/@kenhtoi">Xem kênh của bạn</a></ytd-active-account-header-renderer></div>"""),
 }
 
 
@@ -465,6 +604,58 @@ if co_pw:
             nc, kq, ck = chay("youtube", ky_nang_youtube.yt_dang_video_kho, {"kho": "chung", "che_do_hien": "cong_khai"},
                               chay_thu=True, kho=[{"id": 21, "tieu_de": "Video", "tep_cuc_bo": ["/tmp/a.mp4"]}])
             thu("yt_dang_video_kho", nc, kq, ck, lambda nc: nc.ten_goi("xong_kho")[0][1][:3] == (21, False, False))
+
+            # YouTube tương tác theo link (Shorts chuẩn về watch?v=)
+            ts = {"links": ["https://www.youtube.com/shorts/AAAAAAAAAAA"], "thich": True, "dang_ky": True,
+                  "binh_luan": True, "cau_binh_luan": "Video hay quá shop ơi"}
+            nc, kq, ck = chay("youtube", ky_nang_youtube.yt_tuong_tac_link, ts, chay_thu=True)
+            thu("yt_tuong_tac_link", nc, kq, ck, lambda nc: {s["hd"] for s in nc.su} >= {"thich", "binh_luan", "theo_doi"}
+                and any("watch?v=AAAAAAAAAAA" in g[1][0] for g in nc.ten_goi("mo")))
+            nc, kq, ck = chay("youtube", ky_nang_youtube.yt_tuong_tac_link, ts)
+            ok_hd = {s["hd"] for s in nc.su if s["kq"] == "thanh_cong"}
+            check("yt_tuong_tac_link chạy thật: thích + đăng ký + bình luận đều đọc lại thấy, không bấm Không thích",
+                  ok_hd == {"thich", "binh_luan", "theo_doi"} and {"like", "sub", "comment"} <= set(ck)
+                  and "dislike" not in ck, (nc.su, ck, kq))
+            check("yt_tuong_tac_link: khoá chống lặp theo mã video",
+                  [g[1][0] for g in nc.ten_goi("ghi_da_lam")] == ["youtube:binh_luan:AAAAAAAAAAA"], nc.ten_goi("ghi_da_lam"))
+            # Bình luận + ghim link tiếp thị (chạy thật)
+            nc, kq, ck = chay("youtube", ky_nang_youtube.yt_binh_luan_ghim_link,
+                              {"noi_dung": "Mua tại đây nha: https://s.shopee.vn/abc", "ghim": True,
+                               "links": ["https://www.youtube.com/watch?v=AAAAAAAAAAA&pp=x"]})
+            check("yt_binh_luan_ghim_link chạy thật: bình luận hiện rồi ghim (thấy 'Đã ghim bởi')",
+                  ck == ["comment", "pin"] and [(s["hd"], s["kq"]) for s in nc.su] ==
+                  [("binh_luan", "thanh_cong"), ("quan_ly_bai", "thanh_cong")], (nc.su, ck, kq))
+            # Trả lời bình luận AI (chạy thử -> nháp, bỏ bình luận của chính kênh)
+            nc, kq, ck = chay("youtube", ky_nang_youtube.yt_tra_loi_binh_luan,
+                              {"so_video": 2, "nguon_video": "ca_hai", "che_do": "chay_thu", "san_pham": "sp1"},
+                              chay_thu=True, ai={"noi_dung": "Bạn nhắn tin riêng cho shop nhé."})
+            bn = nc.ten_goi("ban_nhap")
+            check("yt_tra_loi_binh_luan chạy thử: kênh đọc từ menu ảnh đại diện, video + Shorts, chỉ nháp cho khách",
+                  ck == [] and len(bn) == 2 and all(b[2]["noi_dang"] == "youtube" and b[2]["loai"] == "tra_loi"
+                                                    and "khach1" in b[2]["link_goc"] for b in bn)
+                  and {b[2]["link_goc"].split("#")[0] for b in bn} ==
+                  {"https://www.youtube.com/watch?v=AAAAAAAAAAA", "https://www.youtube.com/watch?v=FFFFFFFFFFF"},
+                  (bn, nc.su, kq, [g[1][0] for g in nc.ten_goi("nhat_ky")][-20:]))
+            # dang_ban_nhap:youtube trả lời đúng bình luận (chạy thật)
+            nc, kq, ck = chay("youtube", ky_nang_youtube.dang_ban_nhap,
+                              {"ban_nhap_id": 31, "loai": "tra_loi", "noi_dung": "Shop gửi giá qua tin nhắn nhé",
+                               "link_goc": w.gan_muc_tieu("https://www.youtube.com/watch?v=AAAAAAAAAAA", "@khach1",
+                                                          "Giá bao nhiêu vậy shop?")})
+            xb = nc.ten_goi("xong_ban_nhap")
+            check("dang_ban_nhap:youtube tra_loi: bấm Phản hồi đúng bình luận, đọc lại thấy câu trả lời",
+                  ck == ["reply_open", "reply"] and xb and xb[0][1][:2] == (31, True), (ck, xb, kq))
+            # Quét CSV
+            NguCanhGia.gui_tep_ket_qua = lambda self, p: self._g("gui_tep", str(p))
+            nc, kq, ck = chay("youtube", ky_nang_youtube.yt_quet_csv, {"kieu_quet": "tim_kiem", "dau_vao": "kem dưỡng",
+                                                                         "so_dong": 10})
+            del NguCanhGia.gui_tep_ket_qua
+            csvs = list((w.THU_MUC / "quet").glob("youtube_tim_kiem_*.csv"))
+            noi = csvs[0].read_text(encoding="utf-8-sig") if csvs else ""
+            check("yt_quet_csv: video + Shorts, bỏ quảng cáo, chuẩn link, lượt xem số, gửi tệp về MinMin",
+                  ck == [] and len(csvs) == 1 and "https://www.youtube.com/watch?v=BBBBBBBBBBB," in noi
+                  and "Kem dưỡng ẩm tốt nhất" in noi and "Kênh A" in noi and "153000" in noi and "1:13" in noi
+                  and "https://www.youtube.com/shorts/DDDDDDDDDDD" in noi and "1200000" in noi
+                  and "CCCCCCCCCCC" not in noi and nc.ten_goi("gui_tep"), (noi, nc.su))
 
             # Threads
             ts = {"links": ["https://www.threads.com/@ban/post/abc"], "thich": True, "cau_binh_luan": "Hay quá",

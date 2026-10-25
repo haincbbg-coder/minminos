@@ -26,7 +26,7 @@ import doi_social as ds
 import doi_social_kich_ban as kb
 
 LOAI_NHAP = ("binh_luan", "bai_dang", "tra_loi")
-NOI_DANG = ("fb_nhom", "fb_tuong", "fb_trang", "threads", "instagram", "reddit", "x", "tiktok")
+NOI_DANG = ("fb_nhom", "fb_tuong", "fb_trang", "threads", "instagram", "reddit", "x", "tiktok", "youtube")
 TT_NHAP = ("cho_duyet", "da_duyet", "da_dang", "da_bo", "loi", "het_han")
 KET_QUA_SK = ("thanh_cong", "bo_qua", "loi", "thong_tin")
 MA_CANH_BAO = {"dang_xuat": "bị đăng xuất", "checkpoint": "bị checkpoint", "captcha": "gặp captcha",
@@ -2405,7 +2405,7 @@ def boi_canh_tro_ly() -> dict:
 
 
 # ------------------------------------------------------------------ nơi đăng đã quét (Trang, tài khoản)
-NEN_TANG_QUET = ("facebook", "instagram", "tiktok", "threads")
+NEN_TANG_QUET = ("facebook", "instagram", "tiktok", "threads", "youtube")
 LOAI_DICH = ("ca_nhan", "trang", "tai_khoan")
 
 

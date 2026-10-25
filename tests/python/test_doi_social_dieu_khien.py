@@ -95,6 +95,17 @@ v2.ghi_dich_den(g2["id"], MA, ["facebook"], [{"nen_tang": "facebook", "loai": "t
 d = v2.ds_dich_den("n1")
 check("quét lại thay danh sách nền tảng đó (Trang mất quyền biến mất), giữ nền tảng khác",
       sorted(x["ten"] for x in d) == ["@halimi", "Hằng Yên Store"])
+ds.ghi_ket_qua(g2["id"], MA, True, "ok", [])
+q3 = v2.tao_quet_tai_khoan(["n1"], ["youtube"])
+check("quét được cả YouTube", len(q3) == 1 and q3[0]["tham_so"]["tham_so"]["nen_tang"] == ["youtube"], q3)
+g3 = ds.nhan_viec(MA)
+kq3 = v2.ghi_dich_den(g3["id"], MA, ["youtube"], [{"nen_tang": "youtube", "loai": "tai_khoan", "ten": "Kênh Tôi",
+                                                   "link": "https://www.youtube.com/@kenhtoi", "ma": "@kenhtoi"}])
+d = v2.ds_dich_den("n1", "youtube")
+check("kênh YouTube ghi vào nơi đăng của nick + nhãn youtube",
+      kq3["so"] == 1 and "youtube" in kq3["nhan"] and len(d) == 1 and d[0]["link"] == "https://www.youtube.com/@kenhtoi",
+      (kq3, d))
+ds.ghi_ket_qua(g3["id"], MA, True, "ok", [])
 
 # ---- chọn nơi đăng theo từng nick khi tạo đợt
 dot3 = v2.tao_dot(kich_ban="fb_dang_tuong_kho", nick=["n1", "n2"],
@@ -120,7 +131,7 @@ check("dieu-khien sai -> lỗi", cl.post(f"/doi-social/viec/{v_tt}/dieu-khien", 
 r = cl.post(f"/doi-social/dot-chay/{dot3['id']}/dieu-khien", json={"hanh_dong": "tiep_tuc"}).json()
 check("POST dot-chay/{id}/dieu-khien", r["ok"] and ds.lay_viec(v_tt)["trang_thai"] == "cho_chay")
 r = cl.get("/doi-social/dich-den", params={"nick": "n1"}).json()
-check("GET dich-den", r["ok"] and len(r["muc"]) == 2)
+check("GET dich-den (Trang FB + IG + kênh YouTube)", r["ok"] and len(r["muc"]) == 3, r)
 r = cl.post("/doi-social/quet-tai-khoan", json={"nick": ["n2", "n3"]}).json()
 check("POST quet-tai-khoan tạo việc cho từng nick", r["ok"] and r["so"] == 2)
 tok = A["token"]

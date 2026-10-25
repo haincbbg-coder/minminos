@@ -151,8 +151,8 @@
   // Rõ ba câu hỏi: đăng ở đâu (Fanpage qua API, hay nick ở máy nhà + đúng Trang/nhóm/tài khoản),
   // bao nhiêu bài, khi nào đăng. Bên phải là kế hoạch đăng xem trước, cập nhật theo từng lựa chọn.
   var CACH_PHUT = [[0, "cùng lúc"], [15, "15 phút"], [30, "30 phút"], [60, "1 giờ"], [120, "2 giờ"], [180, "3 giờ"], [360, "6 giờ"], [720, "12 giờ"], [1440, "1 ngày"]];
-  var NOI_NICK = ["fb_trang", "fb_nhom", "fb_tuong", "instagram", "tiktok", "threads", "x", "reddit"];
-  var NT_TK = { instagram: "instagram", tiktok: "tiktok", threads: "threads" };
+  var NOI_NICK = ["fb_trang", "fb_nhom", "fb_tuong", "tiktok", "youtube", "instagram", "threads", "x", "reddit"];
+  var NT_TK = { instagram: "instagram", tiktok: "tiktok", threads: "threads", youtube: "youtube" };
 
   function tabViet(el, ctx) {
     var body = el.querySelector("#kho-body");
@@ -192,8 +192,8 @@
         buoc(2, "Đăng ở đâu", seg("vb-cd", [["api", "Fanpage (máy chủ đăng)"], ["nick", "Nick ở máy nhà"]], S.che_do) +
           '<div class="hint" id="vb-cd-g"></div><div id="vb-dich" class="mt-s"></div>') +
         buoc(3, '<span id="vb-so-td">Số bài</span>', seg("vb-so", [[1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"]], S.so) + '<div class="hint" id="vb-so-g"></div>') +
-        buoc(4, "Ảnh kèm <span class=\"muted\" style=\"font-weight:400\">(tuỳ chọn)</span>", '<div class="row"><label class="btn btn-sm">' + ic("upload") +
-          'Chọn ảnh<input type="file" id="vb-anh" accept="image/*" multiple hidden></label><span class="small muted" id="vb-anh-tt">Không kèm ảnh thì đăng bài chữ.</span></div>' +
+        buoc(4, "Ảnh / video kèm <span class=\"muted\" style=\"font-weight:400\" id=\"vb-anh-bb\">(tuỳ chọn)</span>", '<div class="row"><label class="btn btn-sm">' + ic("upload") +
+          'Chọn ảnh / video<input type="file" id="vb-anh" accept="image/*,video/*" multiple hidden></label><span class="small muted" id="vb-anh-tt">Không kèm ảnh thì đăng bài chữ.</span></div>' +
           '<div id="vb-anh-ds" class="mt-s"></div><div id="vb-anh-kieu" class="mt-s" hidden>' + seg("vb-ka", [["mot_anh", "Mỗi bài 1 ảnh (xoay vòng)"], ["album", "Mỗi bài cả bộ ảnh"]], S.kieu_anh) + "</div>") +
         buoc(5, "Khi nào đăng", '<div id="vb-lich-seg"></div><div class="hint" id="vb-lich-g"></div>' +
           '<div class="fgrid mt-s" id="vb-gio" hidden><div class="fld"><label for="vb-bd">Bài đầu tiên lúc</label><input class="inp" type="datetime-local" id="vb-bd"></div>' +
@@ -267,7 +267,7 @@
         } else h += '<div class="hint">Đăng bằng tài khoản ' + esc(DS.NOI_DANG[S.noi]) + " mà profile của nick đang đăng nhập.</div>";
         box.innerHTML = h;
         if (S.noi !== "fb_trang" && S.noi !== "fb_nhom") { S.dich = ""; S.dich_ten = ""; }
-        capNhat();
+        veAnh();
       }
       function napNhomFb() {
         S.nhomFb = null;
@@ -319,6 +319,10 @@
         if (S.che_do === "nick" && S.noi === "fb_trang" && !S.dich) return "Chọn Trang sẽ đăng ở bước 2.";
         if (S.che_do === "nick" && NOI_NICK.indexOf(S.noi) >= 3 && !S.nick) return "Chọn nick sẽ đăng ở bước 2.";
         if (S.lich === "gio" && !q("#vb-bd").value) return "Chọn giờ đăng bài đầu tiên ở bước 5.";
+        var coVd = S.anh.some(function (x) { return x.loai === "video"; });
+        if (S.che_do === "api" && coVd) return "Fanpage qua API ở đây chỉ kèm ảnh. Bỏ video, hoặc dùng Tạo bài hàng loạt ở Bài đăng Fanpage.";
+        if (S.che_do === "nick" && S.noi === "youtube" && !coVd) return "YouTube cần một video ở bước 4.";
+        if (S.che_do === "nick" && S.noi === "tiktok" && !S.anh.length) return "TikTok cần một video (hoặc ảnh để đăng dạng slide) ở bước 4.";
         return "";
       }
       function capNhat() {
@@ -359,10 +363,11 @@
       // ---------------------------------------------------------------- ảnh
       function veAnh() {
         q("#vb-anh-ds").innerHTML = S.anh.length ? '<div class="row">' + S.anh.map(function (x, i) {
-          return '<span class="vb-anh"><img src="' + esc(FP.tepUrl(x.tep)) + '" alt=""><button type="button" class="vb-anh-x" data-act="bo-anh" data-i="' + i + '" aria-label="Bỏ ảnh">' + ic("x") + "</button></span>";
+          return '<span class="vb-anh">' + (x.loai === "video" ? '<video src="' + esc(FP.tepUrl(x.tep)) + '" muted preload="metadata"></video>' : '<img src="' + esc(FP.tepUrl(x.tep)) + '" alt="">') + '<button type="button" class="vb-anh-x" data-act="bo-anh" data-i="' + i + '" aria-label="Bỏ ảnh">' + ic("x") + "</button></span>";
         }).join("") + "</div>" : "";
-        q("#vb-anh-tt").textContent = S.anh.length ? S.anh.length + " ảnh" : "Không kèm ảnh thì đăng bài chữ.";
-        q("#vb-anh-kieu").hidden = S.anh.length < 2;
+        var laVd = S.anh.some(function (x) { return x.loai === "video"; });
+        q("#vb-anh-tt").textContent = laVd ? "1 video" : S.anh.length ? S.anh.length + " ảnh" : (S.che_do === "nick" && (S.noi === "tiktok" || S.noi === "youtube") ? "Cần một video cho " + DS.NOI_DANG[S.noi] + "." : "Không kèm ảnh thì đăng bài chữ.");
+        q("#vb-anh-kieu").hidden = S.anh.length < 2 || laVd;
         capNhat();
       }
       q("#vb-anh").addEventListener("change", function () {
@@ -370,7 +375,12 @@
         var fd = new FormData(); Array.prototype.forEach.call(f, function (x) { fd.append("tep", x); });
         q("#vb-anh-tt").textContent = "Đang tải ảnh lên...";
         DS.api("POST", "/doi-social/fp/media", fd).then(function (d) {
-          if (d.ok !== false) S.anh = S.anh.concat(DS.list(d).filter(function (x) { return x.loai === "anh"; })).slice(0, 10);
+          if (d.ok !== false) {
+            var moi = DS.list(d).filter(function (x) { return x.loai === "anh" || x.loai === "video"; });
+            // một video thì thay hết (mỗi bài một video, không trộn ảnh); ảnh thì cộng dồn tối đa 10
+            var vd = moi.filter(function (x) { return x.loai === "video"; });
+            S.anh = vd.length ? [vd[vd.length - 1]] : S.anh.filter(function (x) { return x.loai !== "video"; }).concat(moi).slice(0, 10);
+          }
           veAnh();
         });
         this.value = "";

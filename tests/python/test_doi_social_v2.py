@@ -439,7 +439,7 @@ with TestClient(app) as tc:
           all(x["den"].startswith("#/") for x in tq["can_xu_ly"]) and any(x["den"] == "#/kien-thuc" for x in tq["can_xu_ly"]))
     kbj = tc.get("/doi-social/kich-ban").json()
     ssm = {m["id"]: m["san_sang"] for m in kbj["mau"]}
-    check("danh mục kèm san_sang theo máy", len(kbj["mau"]) == 41 and ssm["fb_nuoi_nick"] and not ssm["tt_nuoi_nick"])
+    check("danh mục kèm san_sang theo máy", len(kbj["mau"]) == len(v2.kb.MAU) >= 41 and ssm["fb_nuoi_nick"] and not ssm["tt_nuoi_nick"])
     r = tc.post("/doi-social/viet-bai", json={"san_pham_id": sp["id"], "noi_dang": "fb_tuong", "so_ban": 2}).json()
     check("viết bài AI -> 2 nháp bài đăng", r["ok"] and len(r["muc"]) == 2 and r["muc"][0]["loai"] == "bai_dang")
     r = tc.post("/doi-social/tro-ly", json={"tin": "nuôi nick B giúp"}).json()
