@@ -25,4 +25,6 @@ Lookup runs on the staff machine from preloaded tables, so it takes milliseconds
 
 The brain pulls codes, stock and photos from the POS, ads from Meta and posts from Pancake through the connections already set up, then calls `javis_goi_y_ma_nap` in batches. Use `javis_goi_y_ma_tra` to test one message, ad ID or post ID.
 
+You can load hundreds of codes at once from a `.json` file in the brain: `javis_goi_y_ma_nap` with `tep: "attachments/file-name.json"`. A compact code list like `"P664:508"` (code:stock) works too.
+
 Each time staff press "Đúng mã này", MinMin remembers that ad or post ID as that code for next time.

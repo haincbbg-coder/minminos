@@ -85,5 +85,43 @@ if shutil.which("node"):
     py = g.phan_giai(text="giá V33", ad_id="A1", post_id="P9")["ung_vien"]
     kt("tra.js khớp Python", sorted(x[0] for x in kq_js) == sorted(u["ma"] for u in py) and len(kq_js) == 2)
 
+# --- nạp dạng gọn và nạp từ file qua plugin
+import asyncio
+import importlib.util
+from pathlib import Path
+g.nap_sku([{"ma": "K1", "ten": "Áo K1", "ton": 5, "anh": ["http://a/k1.jpg"]}])
+g.nap_sku(["K1:77", "Q9:61"])
+bb = g.xuat_bang()
+kt("dạng gọn ghi tồn", bb["sku"]["K1"][1] == 77 and bb["sku"]["Q9"][1] == 61)
+kt("dạng gọn giữ tên cũ", bb["sku"]["K1"][0] == "Áo K1")
+
+spec = importlib.util.spec_from_file_location("gym_plugin", str(ROOT / "system" / "plugins" / "goi-y-ma" / "plugin.py"))
+pl = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(pl)
+
+
+class _Ctx:
+    def __init__(self):
+        self.tools = {}
+
+    def register_tool(self, name, handler=None, **kw):
+        self.tools[name] = handler
+
+
+class _C:
+    vault_root = tempfile.mkdtemp()
+
+
+ctx = _Ctx()
+pl.register(ctx)
+kt("plugin có 4 tool", set(ctx.tools) == {"javis_goi_y_ma_nap", "javis_goi_y_ma_tra", "javis_goi_y_ma_ma_ghep"} or len(ctx.tools) == 4)
+(Path(_C.vault_root) / "attachments").mkdir()
+(Path(_C.vault_root) / "attachments" / "d.json").write_text(_j.dumps({"sku": ["Z7:99"], "bai_viet": [{"post_id": "PP1", "ma": "Z7"}]}), encoding="utf-8")
+out = asyncio.run(ctx.tools["javis_goi_y_ma_nap"]({"tep": "attachments/d.json"}, _C()))
+kt("nạp từ file", '"sku": 1' in out and g.phan_giai(post_id="PP1")["ung_vien"][0]["ma"] == "Z7")
+kt("chặn đường ra ngoài brain", asyncio.run(ctx.tools["javis_goi_y_ma_nap"]({"tep": "../../etc/passwd.json"}, _C())).startswith("ERROR"))
+kt("chặn file không phải json", asyncio.run(ctx.tools["javis_goi_y_ma_nap"]({"tep": "attachments/d.txt"}, _C())).startswith("ERROR"))
+kt("không dữ liệu = lỗi", asyncio.run(ctx.tools["javis_goi_y_ma_nap"]({}, _C())).startswith("ERROR"))
+
 print(f"goi_y_ma: {ok} đạt, {loi} lỗi")
 sys.exit(1 if loi else 0)
