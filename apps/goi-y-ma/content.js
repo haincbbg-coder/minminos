@@ -256,8 +256,8 @@
     day = Math.min(Math.max(day, 140), innerHeight - 70);   // không bao giờ trôi lên đè thanh menu hay tụt khỏi màn hình
     thanh.style.display = "";
     thanh.style.left = Math.round(cx) + "px";
-    thanh.style.top = Math.round(day - 30) + "px";
-    if (goc) { goc.style.left = Math.round(Math.min(Math.max(cx - 165, 8), innerWidth - 340)) + "px"; goc.style.top = Math.max(8, Math.round(day - 36 - goc.offsetHeight)) + "px"; }
+    thanh.style.top = Math.round(day - 46) + "px";
+    if (goc) { goc.style.left = Math.round(Math.min(Math.max(cx - 165, 8), innerWidth - 340)) + "px"; goc.style.top = Math.max(8, Math.round(day - 52 - goc.offsetHeight)) + "px"; }
   }
   function chonAnh() {
     if (!hienTai || !hienTai.anh.length) return null;
