@@ -21,11 +21,13 @@ function storage(seed = {}) {
   return {
     getItem: k => Object.hasOwn(data, k) ? data[k] : null,
     setItem: (k, v) => { data[k] = String(v); },
+    removeItem: k => { delete data[k]; },
     data,
   };
 }
 
-// First launch opens the graph. Only chat/workspace can become the next launch target.
+// First launch opens Tổng quan (26.10.239). Only chat/workspace can become the next launch target;
+// visiting Tổng quan clears it again.
 function navCase(seed, expected) {
   const localStorage = storage(seed);
   const route = { active: "home", openGroup: "" };
@@ -34,7 +36,7 @@ function navCase(seed, expected) {
   const ctx = {
     localStorage,
     Alpine: { store: () => route },
-    RAIL_BY_ID: { home: {}, chat: {}, workspace: {}, settings: {} },
+    RAIL_BY_ID: { tongquan: {}, home: {}, chat: {}, workspace: {}, settings: {} },
     TRANG_GOP: { agents: "workspace" },
     TRANG_CUOI_KEY: "javis_last_page",
     groupLabelOf: id => "group:" + id,
@@ -65,14 +67,20 @@ function navCase(seed, expected) {
   assert.equal(localStorage.data.javis_last_page, "workspace");
   ctx.khoiPhucTrang();
   assert.equal(route.active, "workspace", "graph/settings must not replace last assistant");
+  ctx.navigateTo("tongquan");
+  assert.equal(localStorage.data.javis_last_page, undefined, "visiting Tổng quan clears the resume target");
+  ctx.navigateTo("chat");
+  ctx.navigateTo("home");
+  ctx.khoiPhucTrang();
+  assert.equal(route.active, "chat");
 }
-navCase({}, "home");
+navCase({}, "tongquan");
 navCase({ javis_last_page: "chat" }, "chat");
 navCase({ javis_last_page: "workspace" }, "workspace");
 navCase({ javis_last_page: "agents" }, "workspace");
-navCase({ javis_last_page: "settings" }, "home");
-navCase({ javis_last_page: "home" }, "home");
-navCase({ javis_last_page: "not-a-page" }, "home");
+navCase({ javis_last_page: "settings" }, "tongquan");
+navCase({ javis_last_page: "home" }, "tongquan");
+navCase({ javis_last_page: "not-a-page" }, "tongquan");
 
 // An assistant's selected conversation can be older than the latest one. Reopening the
 // workspace must use its exact id, while keeping the main chat id for the return path.

@@ -24329,6 +24329,16 @@ goi_y_ma_routes.register(app)
 # Nút "Làm mới bảng" của văn phòng 3D (26.10.226): POST /office/lam-moi, đăng ký ở đuôi cho bảng route.
 hud_routes.register_lam_moi(app, _hud_deps)
 
+# Trang Tổng quan (26.10.242): GET /tong-quan gom số liệu trong tiến trình - server/tong_quan.py.
+# Đăng ký ở đuôi cho bảng route; phụ thuộc vào main đi qua deps để module không import main.
+import tong_quan as tong_quan_mod   # noqa: E402
+tong_quan_mod.register(app, tong_quan_mod.TongQuanDeps(
+    brain_root=lambda b: _brain_root(b), brain_key=lambda b: _brain_key(b),
+    nhac_hen=lambda: reminders_feature, loop=lambda: loop_feature,
+    ket_noi_hien_co=_ket_noi_hien_co,
+    providers_view=lambda: _providers_view(cfgmod.read_settings()),
+    read_settings=cfgmod.read_settings))
+
 if __name__ == "__main__":
     import uvicorn
     # 127.0.0.1: chỉ máy này truy cập được (an toàn - tránh người khác trong mạng LAN

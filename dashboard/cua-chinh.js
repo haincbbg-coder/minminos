@@ -98,7 +98,8 @@
         var host = document.getElementById("ccHayDung");
         var muc = tatCaMuc();
         var ds = ((d && d.hay_dung) || []).filter(function (x) {
-          return x.so_lan >= 2 && x.id !== "home" && muc[x.id];
+          // Tổng quan là trang mở đầu nên luôn đứng top, không cần chip "Hay dùng" (26.10.242).
+          return x.so_lan >= 2 && x.id !== "home" && x.id !== "tongquan" && muc[x.id];
         }).slice(0, 4);
         if (!ds.length) { if (host) host.remove(); return; }
         if (!host) {

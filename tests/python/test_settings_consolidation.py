@@ -38,8 +38,13 @@ boot_block = CONSOLE.split("function boot()", 1)[1]
 # Hợp đồng (chủ chốt, 0.9.260): MỞ APP LÀ VÀO MÀN JAVIS, mọi khổ màn hình. 0.9.182 từng cho
 # lite-mode/mobile tự nhảy sang Trò chuyện; dùng thật thì rối hơn (mỗi lần tải lại rơi vào một
 # trang khác) nên bỏ. Trang Tổng quan cũ cũng không còn chỗ nào trỏ tới.
-check("mở app là vào màn Javis, không tự nhảy trang khác",
+# 26.10.239: chủ repo chốt trang mở đầu là Tổng quan (id "tongquan", KHÔNG phải trang
+# "overview" cũ đã bỏ). Store vẫn khởi tạo active "home" để navigateTo("tongquan") lúc boot
+# chạy swap() thật; điểm mở đầu nằm ở khoiPhucTrang. Boot vẫn không tự nhảy sang Trò chuyện.
+_khoi_phuc = CONSOLE.split("function khoiPhucTrang()", 1)[1].split("function navigateTo", 1)[0]
+check("mở app là vào Tổng quan, không tự nhảy trang khác",
       'active: "home"' in CONSOLE
+      and 'let id = "tongquan";' in _khoi_phuc
       and 'navigateTo("chat")' not in boot_block
       and 'navigateTo("overview")' not in CONSOLE)
 # Điều cần canh là deep-link CÒN ĐƯỢC XỬ sau khi vào màn Javis, chứ không phải nó gọi đúng
