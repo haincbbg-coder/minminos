@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.230] - 2026-10-25
+### Thêm mới
+- **Kết nối Thống kê Pancake**: một kết nối gom nhiều page, cho biết khách nhắn, số điện thoại, đơn chốt và tỷ lệ chốt của tất cả page và từng page, cập nhật gần như trực tiếp.
+- **Xếp hạng nhân viên sale**: khách đã trả lời, số điện thoại lấy được, đơn chốt, tỷ lệ chốt và thời gian phản hồi, cộng dồn khi một người trực nhiều page.
+- **Báo cáo dùng luôn số này**: báo cáo ngày, tuần, tháng và báo cáo ghi ra Google Sheet tự lấy phần hội thoại từ kết nối mới, không đếm tay.
+
 ## [26.10.228] - 2026-10-25
 ### Sửa lỗi
 - **Gợi ý mã hàng**: tiện ích đọc đúng quảng cáo của khách. Pancake ghi mã quảng cáo trong tin nhắn loại `ad_click`, không phải ở hội thoại, nên trước đây luôn đọc ra 0 quảng cáo.

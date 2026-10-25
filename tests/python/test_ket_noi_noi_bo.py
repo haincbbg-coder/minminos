@@ -185,6 +185,11 @@ for cid, con in sorted(noi_bo.items()):
     canh.update({"access_token": "BIMAT-access-77aa", "refresh_token": "BIMAT-refresh-88bb",
                  "token_het_han": "9999999999", "moi_truong": "live", "redirect_url": "https://minmin.vi.du/cb"})
     bi_mat_that = [v for v in canh.values() if str(v).startswith("BIMAT-")]
+    # Ô `pages` (Thống kê Pancake): nhiều dòng "page_id | token | tên". Bí mật là token bên trong.
+    if "pages" in canh:
+        bi_mat_that.remove(canh["pages"])
+        canh["pages"] = "598364820025920 | BIMAT-pagetok1-9f8e7d6c | Page A\n120769791116649 | BIMAT-pagetok2-9f8e7d6c | Page B"
+        bi_mat_that += ["BIMAT-pagetok1-9f8e7d6c", "BIMAT-pagetok2-9f8e7d6c"]
     tieng_vong = " ".join(bi_mat_that)
 
     class _NhaiLai(_CamMang):

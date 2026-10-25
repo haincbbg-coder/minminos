@@ -24,7 +24,10 @@ from soi_rui_ro import bo_dau
 
 # id -> (tên hiện, mẫu tìm trong GÓI, mẫu tìm trong tên KẾT NỐI của máy nhận)
 DICH_VU = {
-    "pancake": ("Pancake POS", r"pancake|poscake|pos\.pancake|mcp__pos", r"pancake|poscake|\bpos\b"),
+    "pancake": ("Pancake POS", r"pancake|poscake|pos\.pancake|mcp__pos",
+                r"^(?!.*thong.?ke|.*pancake_chat).*(pancake|poscake|\bpos\b)"),
+    "pancake-thong-ke": ("Thống kê Pancake", r"pancake_tk|thong ke pancake|pancake thong ke|thong ke hoi thoai",
+                         r"thong ke pancake|pancake.?thong.?ke|pancake_chat"),
     "facebook-ads": ("Facebook Ads", r"facebook ads|\bfb ads\b|ads ?manager|meta ads|quang cao facebook|camp(aign)? facebook|mcp__(fb|facebook|meta)[a-z_]*ads",
                      r"facebook.?ads|fb.?ads|meta.?ads|ads.?manager|facebook|\bmeta\b"),
     "facebook-page": ("Fanpage Facebook", r"fanpage|dang bai (len )?(facebook|fb|page)|page facebook", r"facebook|fanpage|\bpage\b|\bmeta\b"),

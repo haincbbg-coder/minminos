@@ -66,6 +66,29 @@ Bố cần biết còn lại bao nhiêu, nên báo cáo nào cũng phải có m�
   số chênh, đừng để hai con số gần nhau mà không ai nói vì sao.
 - Từ chối "chưa tính được lãi vì thiếu giá vốn" là lỗi: bộ chấm điểm (`bao_cao`) sẽ trượt câu đó.
 
+## Số liệu hội thoại: kết nối Thống kê Pancake
+
+Có kết nối **Thống kê Pancake** (tool `pancake_tk_*`) thì MỌI báo cáo kinh doanh, kể cả báo
+cáo ghi vào Google Sheet (ví dụ sheet MARKETING), lấy phần hội thoại từ đây, không đếm tay
+trong hộp thư và không ước lượng:
+
+- **Tổng và từng page**: `pancake_tk_tong_quan(tu_ngay, den_ngay)`. Trả `tong_tat_ca_page` và
+  `tung_page`: khách nhắn tin, khách mới, số điện thoại, đơn chốt, đơn khách cũ, tỷ lệ chốt.
+  Thêm `theo_ngay=true` khi cần cột từng ngày (báo cáo tuần, tháng).
+- **Theo nhân viên sale**: `pancake_tk_nhan_vien(tu_ngay, den_ngay)`. Trả xếp hạng theo đơn
+  chốt, kèm khách đã trả lời, số điện thoại, tỷ lệ chốt, thời gian phản hồi và chi tiết từng page.
+- **Một page lẻ**: thêm `page` (page_id hoặc một phần tên) vào cả hai tool.
+- Gọi hai tool này CÙNG LƯỢT với POS và ads ở Bước 1. Số đã có bộ nhớ đệm 60 giây nên gọi lại
+  không tốn.
+- **Tỷ lệ chốt** lấy đúng trường `ty_le_chot` tool trả về (đơn chốt chia khách nhắn tin), đừng
+  tự chia theo mẫu khác. Muốn tỷ lệ trên số điện thoại thì dùng `ty_le_chot_tren_sdt`.
+- **Đơn chốt ở đây là đơn tạo từ hội thoại, chưa trừ đơn huỷ.** Doanh thu và đơn thật vẫn lấy
+  từ POS. Hai số lệch nhau thì ghi một dòng giải thích, đừng thay số này bằng số kia.
+- **Ghi vào Google Sheet**: mỗi page một dòng (hoặc một cột) theo đúng tên cột sheet đang có;
+  thêm một dòng TỔNG bằng `tong_tat_ca_page`. Sheet chưa có cột cho các số này thì thêm cột
+  Khách nhắn, SĐT, Đơn chốt, Tỷ lệ chốt ở cuối, không xoá hay đổi chỗ cột cũ. Ghi công thức
+  đã chọn (tên sheet, tab, cột nào lấy trường nào) vào `cong-thuc-bao-cao.md`.
+
 ## Lần đầu chưa có công thức
 
 Chỉ lần này được phép mò, và mò xong phải GHI LẠI để không bao giờ mò lại:
@@ -87,10 +110,13 @@ updated: YYYY-MM-DD
 ## Kết nối
 - <tên kết nối POS>: shop_id=<...>, bảng trạng thái: <mã>=<nghĩa>, ...
 - <tên kết nối ads>: tài khoản act_<...>
+- <kết nối Thống kê Pancake>: page <page_id> = <tên>, ...
 ## Từng con số
 - Đơn mới hôm nay (shop A): <tool>(<tham số>)
 - Đơn đã giao (shop A): <tool>(<tham số>)
 - Chi tiêu ads hôm nay: <tool>(<tham số>, fields=spend,...)
+- Khách nhắn, SĐT, đơn chốt, tỷ lệ chốt (tổng + từng page): pancake_tk_tong_quan(tu_ngay=..., den_ngay=...)
+- Xếp hạng sale: pancake_tk_nhan_vien(tu_ngay=..., den_ngay=...)
 ## Phép cộng được phép
 - Tổng đơn = shop A + shop B
 ```

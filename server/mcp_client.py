@@ -37,6 +37,7 @@ PROTOCOL = "2025-06-18"
 # 15/08: 100 tiến trình mcp-google-sheets, ăn 6,9 GB RAM.
 _IDLE_TTL = 900          # đóng session không dùng > 15 phút
 _INTERNAL = {"botcake": "botcake_mcp", "substack": "substack_mcp",
+             "pancake_chat": "pancake_chat_mcp",   # Thống kê hội thoại Pancake (26.10.230)
              # Cầu nối API tự bọc trên khung chung ket_noi_api (26.10.115). Mỗi kết nối = 1 tài khoản.
              "shopee": "shopee_mcp", "tiktokshop": "tiktokshop_mcp", "lazada": "lazada_mcp",
              "ghn": "ghn_mcp", "ghtk": "ghtk_mcp",
