@@ -88,6 +88,10 @@ if shutil.which("node"):
     except ValueError:
         kq_js = []
     py = g.phan_giai(text="giá V33", ad_id="A1", post_id="P9", ad_text="mã V33", ma_ro=["S26"])["ung_vien"]
+    js2 = ("require(%r);const r=mmTra({sku:{}},{ma_qc:['V1213']});console.log(JSON.stringify(r.map(x=>[x.ma,x.ton])))") % str(ROOT / "apps" / "goi-y-ma" / "tra.js")
+    o2 = subprocess.run(["node", "-e", js2], capture_output=True, text=True, timeout=30).stdout.strip()
+    kt("tra.js: mã trong tên quảng cáo hiện kể cả khi ngoài bảng tồn", o2 == '[["V1213",null]]')
+    kt("phan_giai ma_qc ngoài bảng", g.phan_giai(ma_qc=["V1213"])["ung_vien"][0]["ma"] == "V1213")
     kt("tra.js khớp Python", sorted(x[0] for x in kq_js) == sorted(u["ma"] for u in py) and len(kq_js) == 3)
 
 # --- content.js: đọc đúng dữ liệu Pancake thật (ad_click, sticker/nút like không phải ảnh)
@@ -103,6 +107,7 @@ require(%r);
 const T = window.__mmGyTest;
 const ds = [
   { from: { id: "P" }, attachments: [{ type: "ad_click", ad_id: "120257403105160399", post_attachments: [{ description: "Sét bộ thun. Mã: V33 nhé", url: "https://content.pancake.vn/x/ad.jpg" }] }] },
+  { from: { id: "P" }, attachments: [{ type: "ad_click", ad_id: "120242857302730153", title: "V1213 - Xưởng May MD", post_attachments: [{ description: "Bộ lụa mango cổ tim\n#V1213 Size tới 85Kg", url: "https://content.pancake.vn/x/ad2.jpg" }] }] },
   { from: { id: "K1" }, message: "Xin giá set", attachments: [] },
   { from: { id: "P" }, message: "MÃ : T145", attachments: [] },
   { from: { id: "K1" }, message: "BÁO GIÁ MÃ #S26", attachments: [] },
@@ -112,7 +117,7 @@ const ds = [
 ];
 T.docMessages("https://pancake.vn/api/v1/pages/P/conversations/P_K1/messages?x=1", { messages: ds });
 const h = T.hienTai();
-console.log(JSON.stringify({ anh: h.anh, ad: h.ad_ids, txt: h.ad_text, adanh: h.ad_anh, ro: h.ma_ro })); process.exit(0);
+console.log(JSON.stringify({ anh: h.anh, ad: h.ad_ids, txt: h.ad_text, adanh: h.ad_anh, ro: h.ma_ro, qc: h.ma_qc })); process.exit(0);
 """ % (str(ROOT / "apps" / "goi-y-ma" / "tra.js"), str(ROOT / "apps" / "goi-y-ma" / "content.js"))
     out = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=30)
     try:
@@ -121,7 +126,8 @@ console.log(JSON.stringify({ anh: h.anh, ad: h.ad_ids, txt: h.ad_text, adanh: h.
         h = {}
     kt("content.js bỏ sticker/nút like", h.get("anh") == ["https://content.pancake.vn/x/anh.jpg"])
     kt("content.js lấy mã ghi rõ trong tin (kể cả tin của shop), không bắt nhầm 'mã giảm giá'", sorted(h.get("ro", [])) == ["S26", "T145"])
-    kt("content.js đọc ad_click", h.get("ad") == ["120257403105160399"] and "V33" in h.get("txt", "") and h.get("adanh", "").endswith("ad.jpg"))
+    kt("content.js lấy mã V1213 từ tên/nội dung quảng cáo dù chưa có trong bảng", h.get("qc") == ["V1213"])
+    kt("content.js đọc ad_click", sorted(h.get("ad")) == ["120242857302730153", "120257403105160399"] and "V33" in h.get("txt", "") and h.get("adanh", "").endswith("ad2.jpg"))
 
 # --- nạp dạng gọn và nạp từ file qua plugin
 import asyncio
