@@ -316,6 +316,9 @@ check("nhận biết đăng xuất/checkpoint/captcha theo nền tảng",
       and dt("facebook", "https://www.facebook.com/", lambda s: "name='pass'" in s, khong) == "dang_xuat"
       and dt("facebook", "https://www.facebook.com/", khong, lambda m: "quá nhanh" in m) == "qua_nhanh"
       and dt("youtube", "https://accounts.google.com/v3/signin", khong, khong) == "dang_xuat"
+      and dt("youtube", "https://www.youtube.com/", lambda s: "ServiceLogin" in s, khong) == "dang_xuat"
+      and dt("youtube", "https://www.youtube.com/", khong, lambda m: "Hãy đăng nhập để thích video" in m) == "dang_xuat"
+      and dt("youtube", "https://www.youtube.com/watch?v=x", khong, khong) is None
       and dt("tiktok", "https://www.tiktok.com/foryou", lambda s: "captcha-verify" in s, khong) == "captcha"
       and dt("instagram", "https://www.instagram.com/challenge/abc", khong, khong) == "checkpoint"
       and dt("x", "https://x.com/i/flow/login", khong, khong) == "dang_xuat"

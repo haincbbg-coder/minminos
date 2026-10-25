@@ -34,7 +34,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PHIEN_BAN = "26.10.232"
+PHIEN_BAN = "26.10.235"
 THU_MUC = Path(__file__).resolve().parent
 CAU_HINH = THU_MUC / "worker.json"
 NHAT_KY = THU_MUC / "worker.log"
@@ -338,7 +338,20 @@ def lam_viec(may_chu, tao_gpm, viec: dict, kb: dict = None, day_buoc=None, toc_d
             return {"ok": False, "thong_diep": str(e), "dem": dem0}
         try:
             with sync_playwright() as pw:
-                trinh = connect(pw, cdp) if connect else pw.chromium.connect_over_cdp(cdp, timeout=60000)
+                try:
+                    trinh = connect(pw, cdp) if connect else pw.chromium.connect_over_cdp(cdp, timeout=60000)
+                except Exception as e1:
+                    # 26.10.229: trình duyệt còn sót từ lượt trước (đang tắt dần) trả lời /json rồi chết ngay
+                    # -> ECONNREFUSED. Đóng hẳn profile, mở lại một lần.
+                    nhat_ky(f"Kết nối trình duyệt lỗi ({str(e1)[:80]}): đóng profile rồi mở lại")
+                    try:
+                        gpm.dong(viec["nick_id"])
+                    except Exception:
+                        pass
+                    time.sleep(5)
+                    cdp = gpm.mo(viec["nick_id"])
+                    nhat_ky(f"Mở lại xong ({cdp})")
+                    trinh = connect(pw, cdp) if connect else pw.chromium.connect_over_cdp(cdp, timeout=60000)
                 ctx = trinh.contexts[0] if trinh.contexts else trinh.new_context()
                 page = ctx.new_page()
                 nc = NguCanh(may_chu, viec, page, ctx, nhat_ky, thu_muc_tam=td, toc_do=toc_do)

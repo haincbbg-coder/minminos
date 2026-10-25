@@ -132,5 +132,29 @@ if dot:
     vid = dot["viec"][0]["id"]
     check("nháp hẹn giờ chưa tới thì mẫu đăng AI chưa lấy", v2.lay_ban_nhap_cho_viec(vid, MA, "fb_tuong") is None)
 
+# ---- 26.10.229: video cho TikTok / YouTube qua nick
+_tam = Path(tempfile.mkdtemp())
+(_tam / "vay.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42" + b"0" * 2000)
+(_tam / "anh.jpg").write_bytes(b"\xff\xd8\xff" + b"0" * 500)
+VD = fp.luu_media("vay.mp4", _tam / "vay.mp4")["tep"]
+AN = fp.luu_media("anh.jpg", _tam / "anh.jpg")["tep"]
+r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "noi_dang": "tiktok", "nick_id": "n1", "so_ban": 1,
+                                          "xem_truoc": True}).json()
+check("TikTok qua nick thiếu video bị chặn", r["ok"] is False and "video" in r["error"])
+r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "noi_dang": "tiktok", "nick_id": "n1", "so_ban": 1,
+                                          "media": [VD, AN], "xem_truoc": True}).json()
+check("không trộn video với ảnh", r["ok"] is False)
+r = cl.post("/doi-social/viet-bai", json={"che_do": "api", "trang_ids": ["111111"], "so_ban": 1, "media": [VD],
+                                          "xem_truoc": True}).json()
+check("Fanpage API không nhận video ở Viết bài AI", r["ok"] is False)
+r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "san_pham_id": k["id"], "noi_dang": "tiktok",
+                                          "nick_id": "n1", "so_ban": 1, "media": [VD]}).json()
+check("TikTok qua nick kèm video: nháp có tệp video", r["ok"] and r["muc"][0]["tep"]
+      and r["muc"][0]["tep"][0]["ten"].endswith(".mp4") and r["ke_hoach"][0]["loai"] == "video", r)
+if "youtube" in v2.NOI_DANG:
+    r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "noi_dang": "youtube", "nick_id": "n1", "so_ban": 1,
+                                              "media": [AN], "xem_truoc": True}).json()
+    check("YouTube cần video (ảnh không đủ)", r["ok"] is False and "video" in r["error"])
+
 print("ALL PASS" if ok else "CÓ LỖI")
 raise SystemExit(0 if ok else 1)

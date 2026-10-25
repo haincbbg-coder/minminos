@@ -658,7 +658,7 @@ svg.fp-spark .ar { fill: var(--brand-soft); opacity: .8; }
 .vb-trang { border: 1px solid var(--line); border-radius: 12px; max-height: 240px; overflow: auto; }
 .vb-trang .av { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
 .vb-anh { position: relative; display: inline-block; }
-.vb-anh img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; }
+.vb-anh img, .vb-anh video { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; }
 .vb-anh-x { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: var(--err); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
 .vb-anh-x svg { width: 12px; height: 12px; }
 .vb-chot { display: flex; align-items: center; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line2); flex-wrap: wrap; }

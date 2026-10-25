@@ -4,13 +4,31 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
-## [26.10.232] - 2026-10-25
+## [26.10.235] - 2026-10-25
 
 ### Thêm mới
 - **Nút "Làm mới bảng" trong văn phòng 3D.** Bấm một lần là MinMin chạy ngay việc cập nhật số liệu rồi bảng tự đổi số khi xong, không cần chờ tới giờ chẵn hay nhắn lệnh.
 
 ### Sửa lỗi
 - Bảng Sale và Marketing gộp các tài khoản trùng người chỉ khác dấu tiếng Việt (ví dụ Khánh Vy và Khanh Vy) thành một dòng.
+
+## [26.10.234] - 2026-10-25
+
+### Thêm mới
+- **TikTok, 7 mẫu mới:** đăng video kèm caption AI đã duyệt, đăng ảnh dạng slide, tìm video theo từ khoá rồi bình luận bằng AI (mặc định chạy thử), theo dõi người xem của kênh đối thủ (có giới hạn mỗi ngày), quét TikTok ra bảng CSV.
+- **Giỏ hàng TikTok Shop:** đăng video gắn sản phẩm giỏ hàng (tìm sản phẩm theo tên/ID, đặt tên hiển thị), và quét video đối thủ có giỏ hàng theo từ khoá ra bảng (tên sản phẩm, giá, link).
+- **YouTube, 6 mẫu mới:** nuôi nick, đăng video/Shorts kèm tiêu đề và mô tả AI đã duyệt, tự trả lời bình luận bằng AI, tương tác video theo link (thích, bình luận, đăng ký), quét YouTube ra bảng CSV.
+- **Tiếp thị liên kết YouTube:** bình luận rồi ghim link tiếp thị dưới video của kênh; đăng video có link tiếp thị cuối mô tả, gắn sản phẩm YouTube Shopping khi kênh đã bật, tuỳ chọn "quảng cáo trả phí".
+- Quét tài khoản đọc được kênh YouTube của từng nick. Viết bài AI có thêm nơi đăng YouTube và kèm được video cho TikTok, YouTube.
+- Bảng CSV của các mẫu quét tải về được ngay trong MinMin.
+
+### Sửa lỗi
+- Worker: trình duyệt cũ chưa tắt hẳn làm việc báo "không điều khiển được trình duyệt". Giờ Worker đóng hẳn profile rồi mở lại một lần, và dọn sạch trình duyệt của profile sau mỗi việc.
+
+## [26.10.232] - 2026-10-25
+
+### Sửa lỗi
+- **Tạo ảnh qua gói ChatGPT** (`javis_generate_image`): gói không có model `gpt-5.5` thì báo `model_not_found` và không tạo được ảnh. Nay tự thử model khác như bước so ảnh, nhớ model chạy được, còn lỗi đăng nhập vẫn báo ngay.
 
 ## [26.10.231] - 2026-10-25
 ### Sửa lỗi
