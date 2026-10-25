@@ -785,6 +785,70 @@
     }
     return c;
   }
+  // ---------- bảng HIỆU SUẤT SALE (26.10.245): điểm 100 từ Thống kê Pancake, tường bên Phòng Sale ----------
+  // Số lấy thẳng /office/hieu-suat (máy chủ gọi Pancake, đệm 60 giây), không chờ MinMin ghi file.
+  // Bảng tự xoay Hôm nay -> Hôm qua -> 7 ngày mỗi HS_XOAY ms. Nhãn trên đầu nhân viên Sale thêm điểm + hạng.
+  var HS_KY = ["nay", "qua", "7ngay"], HS_TEN = { nay: "Hôm nay", qua: "Hôm qua", "7ngay": "7 ngày" }, HS_XOAY = 15000;
+  var hsDL = {}, hsLuc = {}, hsKy = "nay", hsId = 0;
+  function khoaTen(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/\s+/g, " ").trim(); }
+  function soVN(v, n) { v = Number(v) || 0; return v.toFixed(n == null ? 1 : n).replace(".", ","); }
+  function veBangHieuSuat() {
+    var c = document.createElement("canvas"), W = 1120, H = 560; c.width = W; c.height = H; var g = c.getContext("2d"), light = sang(), F = "system-ui,Segoe UI,Roboto,sans-serif";
+    var ink = light ? "#12233f" : "#e8f0ff", mute = light ? "#5a6b86" : "#9fb4d8", card = light ? "#ffffff" : "#13264a", ray = light ? "#e6ecf7" : "#22365c";
+    var acc = "#f5a623", xanh = "#1fb86a", lam = "#4c8dff", do_ = "#e5534b", d = hsDL[hsKy];
+    g.fillStyle = light ? "#f3f7ff" : "#0c1830"; rr(g, 4, 4, W - 8, H - 8, 28); g.fill(); g.strokeStyle = acc; g.lineWidth = 6; rr(g, 4, 4, W - 8, H - 8, 28); g.stroke();
+    g.textBaseline = "middle"; g.textAlign = "left"; g.fillStyle = ink; g.font = "800 40px " + F; g.fillText("HIỆU SUẤT SALE", 40, 48);
+    var song = hsKy === "nay"; g.fillStyle = song ? xanh : "#8a97ad"; g.font = "800 22px " + F;
+    if (song) { g.beginPath(); g.arc(48, 92, 8, 0, 6.3); g.fill(); }
+    g.fillText((HS_TEN[hsKy] || "").toUpperCase() + " · Thống kê Pancake", song ? 66 : 40, 92);
+    HS_KY.forEach(function (k, i) { var x = 700 + i * 130, on = k === hsKy; g.fillStyle = on ? acc : ray; rr(g, x, 30, 118, 38, 19); g.fill(); g.fillStyle = on ? "#fff" : mute; g.font = "700 18px " + F; g.textAlign = "center"; g.fillText(HS_TEN[k], x + 59, 49); g.textAlign = "left"; });
+    var ts = (d && d.trong_so) || {}, tmo = (ts.so_dien_thoai || 20) + (ts.khach_da_tra_loi || 15) + (ts.tin_inbox || 5), tch = (ts.don_chot || 35) + (ts.ty_le_chot || 10), ttd = ts.phan_hoi || 15;
+    g.fillStyle = mute; g.font = "500 16px " + F; g.textAlign = "right";
+    g.fillText(cat((d && d.updated ? "Cập nhật " + String(d.updated).slice(11, 16) + " · " : "") + "100 điểm = Mở khách " + Math.round(tmo) + " + Chốt " + Math.round(tch) + " + Tốc độ " + Math.round(ttd), 70), W - 40, 92); g.textAlign = "left";
+    var rows = (d && d.nhan_vien) || [];
+    if (!d || !d.source || !rows.length) {
+      g.fillStyle = mute; g.font = "600 28px " + F; g.fillText(!d ? "Đang lấy số liệu…" : (d.error ? "Chưa có số liệu hiệu suất" : "Chưa có sale nào có số trong kỳ này."), 40, 220);
+      g.font = "500 20px " + F; var e = String((d && d.error) || ""), cau = e.split(/(?<=\.)\s+/); cau.slice(0, 3).forEach(function (t2, i2) { g.fillText(cat(t2, 95), 40, 266 + i2 * 32); });
+      return c;
+    }
+    var cols = [["HẠNG", 40], ["NHÂN VIÊN", 100], ["ĐIỂM", 290], ["MỞ · CHỐT · TỐC ĐỘ", 510], ["SĐT", 735], ["ĐƠN", 800], ["TỶ LỆ", 865], ["P.HỒI", 945], ["VAI", 1030]];
+    g.font = "600 16px " + F; g.fillStyle = mute; cols.forEach(function (k) { g.fillText(k[0], k[1], 135); });
+    var n = Math.min(rows.length, 6), rowH = n > 5 ? 62 : 70;
+    rows.slice(0, n).forEach(function (r, i) {
+      var y = 152 + i * rowH, cy = y + (rowH - 8) / 2; g.fillStyle = card; rr(g, 40, y, W - 80, rowH - 8, 12); g.fill();
+      g.fillStyle = i < 3 ? acc : mute; g.font = "800 24px " + F; g.fillText("#" + r.hang, 52, cy);
+      g.fillStyle = ink; g.font = "700 23px " + F; g.fillText(cat(r.ten, 14), 100, cy);
+      var dm = Number(r.diem) || 0; g.fillStyle = ray; rr(g, 290, cy - 11, 140, 22, 11); g.fill();
+      g.fillStyle = dm >= 60 ? xanh : dm >= 40 ? acc : do_; rr(g, 290, cy - 11, Math.max(10, 140 * Math.min(100, dm) / 100), 22, 11); g.fill();
+      g.fillStyle = ink; g.font = "800 22px " + F; g.fillText(soVN(dm), 440, cy);
+      var x = 510; [[r.mo_khach, tmo, lam], [r.chot, tch, acc], [r.toc_do, ttd, xanh]].forEach(function (s2) {
+        var w = 200 * s2[1] / 100; g.fillStyle = ray; rr(g, x, cy - 8, w, 16, 6); g.fill(); g.fillStyle = s2[2]; rr(g, x, cy - 8, Math.max(4, w * (Number(s2[0]) || 0) / (s2[1] || 1)), 16, 6); g.fill(); x += w + 5; });
+      g.font = "600 20px " + F; g.fillStyle = ink; g.fillText(String(r.sdt || 0), 735, cy); g.fillText(String(r.don || 0), 800, cy);
+      g.fillText(soVN(r.ty_le) + "%", 865, cy); g.fillText(r.phan_hoi ? Math.round(r.phan_hoi) + "s" : "-", 945, cy);
+      var vc = r.vai === "Chốt" ? acc : r.vai === "Mở khách" ? lam : r.vai === "Xem lại" ? do_ : xanh;
+      g.fillStyle = vc; g.globalAlpha = 0.15; rr(g, 1008, cy - 15, 76, 30, 15); g.fill(); g.globalAlpha = 1; g.fillStyle = vc; g.font = "700 14px " + F; g.textAlign = "center"; g.fillText(r.vai || "", 1046, cy); g.textAlign = "left";
+    });
+    var t = d.tong || {}; g.fillStyle = mute; g.font = "500 16px " + F;
+    g.fillText(cat("Cả phòng: " + (t.khach_da_tra_loi || 0) + " khách · " + (t.so_dien_thoai || 0) + " SĐT · " + (t.don_chot || 0) + " đơn · tỷ lệ " + soVN(t.ty_le_chot) + "%   ·   ■ Mở khách  ■ Chốt  ■ Tốc độ", 120), 40, H - 24);
+    return c;
+  }
+  function veLaiHieuSuat() { if (bangPhong.sale_hs) capNhatSprite2(bangPhong.sale_hs, veBangHieuSuat()); }
+  function napHieuSuat(ky, ep) {
+    ky = ky || hsKy; var tuoi = ky === "nay" ? 55000 : 600000;
+    if (!ep && hsLuc[ky] && Date.now() - hsLuc[ky] < tuoi) { if (ky === hsKy) veLaiHieuSuat(); return; }
+    hsLuc[ky] = Date.now();
+    fetch("/office/hieu-suat?brain=" + encodeURIComponent(brain()) + "&ky=" + ky).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d || !scene) return; hsDL[ky] = d;
+      if (ky === hsKy) veLaiHieuSuat();
+      if (ky === "nay") { pancakeSig = ""; if (pancakeDL) xepNhanVien(); }
+    }).catch(function () { hsLuc[ky] = 0; });
+  }
+  function xoayHieuSuat() { hsKy = HS_KY[(HS_KY.indexOf(hsKy) + 1) % HS_KY.length]; napHieuSuat(hsKy); veLaiHieuSuat(); }
+  function diemCua(ten) {
+    var d = hsDL.nay; if (!d || !d.nhan_vien) return null; var k = khoaTen(ten);
+    for (var i = 0; i < d.nhan_vien.length; i++) if (khoaTen(d.nhan_vien[i].ten) === k) return d.nhan_vien[i];
+    return null;
+  }
   function dungPhongBan() {
     var light = sang(); nvPhong = []; vatPhong = []; bangPhong = {};
     var dat = new T.Mesh(new T.PlaneGeometry(240, 140), mat(light ? 0xd6e6d8 : 0x0f1b2c, { roughness: 1 })); dat.rotation.x = -Math.PI / 2; dat.position.y = -0.32; scene.add(dat); canhSan.push(dat);
@@ -800,6 +864,12 @@
         var b = new T.Mesh(new T.PlaneGeometry(8.2, 4.1), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangPhong(ph, kk[0])), toneMapped: false })); b.material.map.colorSpace = T.SRGBColorSpace;
         b.position.set(ph.cx + kk[1], 3.5, -HZ + 0.08); scene.add(b); giuBang.push(b); bangPhong[ph.id + "_" + kk[0]] = b; khungTV(8.2, 4.1, ph.cx + kk[1], 3.5, -HZ + 0.0, 0);
       });
+      if (ph.id === "sale") {   // bảng Hiệu suất: tường chung với văn phòng, đoạn giữa góc trong và cửa (nhìn rõ từ nút "Phòng Sale")
+        var xs = dir * (HX + 0.3), zs = -(HZ + DOOR) / 2;   // mặt tường chung phía phòng Sale (tường dày 0,3 ở x = ±(HX + 0,15))
+        var hs = new T.Mesh(new T.PlaneGeometry(7.2, 3.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangHieuSuat()), toneMapped: false })); hs.material.map.colorSpace = T.SRGBColorSpace;
+        hs.position.set(xs + dir * 0.09, 3.2, zs); hs.rotation.y = dir * Math.PI / 2; scene.add(hs); giuBang.push(hs); bangPhong.sale_hs = hs;
+        khungTV(7.2, 3.6, xs + dir * 0.02, 3.2, zs, dir * Math.PI / 2);
+      }
       chanTuong(RW + 0.6, light, ph.cx, -HZ + 0.03, 0); chanTuong(HZ * 2, light, xo - dir * 0.15, 0, Math.PI / 2);
       caySan(ph.cx - RW / 2 + 1.2, -HZ + 1.3, 1); caySan(ph.cx + RW / 2 - 1.2, -HZ + 1.3, 1.2); caySan(ph.cx - dir * (RW / 2 - 1.2), HZ - 1.2, 0.9);
       var nh = spriteTu(veNhan(ph.ten, "Phòng ban", ph.acc, nenNhan()), 3.4); nh.position.set(ph.cx, 6.4, -HZ + 0.4); scene.add(nh); canhTuong.push(nh);
@@ -809,6 +879,8 @@
     });
   }
   function chuHang(r) {
+    var hs = r.dept === "sale" ? diemCua(r.name) : null;
+    if (hs) return soVN(hs.diem) + " điểm · #" + hs.hang + " · " + (r.orders || 0) + " đơn POS";
     return (r.dept === "marketing" ? (r.month_orders != null ? r.month_orders + " đơn tháng" : tien(r.spend) + " ads") + (r.roas ? " · ROAS " + String(r.roas).replace(".", ",") + "x" : "") : r.dept === "kho" ? (r.packed || r.orders || 0) + " đơn đóng gói" : (r.orders || 0) + " đơn · " + tien(r.revenue)) + (r.rank ? " · #" + r.rank : "");
   }
   function xepNhanVien() {
@@ -1646,7 +1718,7 @@
     cv = document.createElement("canvas"); cv.className = "mm-office-cv"; host.insertBefore(cv, host.firstChild);
     renderer = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3, Math.max(1, Math.sqrt(9e6 / Math.max(1, host.clientWidth * host.clientHeight)))));
-    dungCanh(); dungNguoi(list); nhapTay(); lanCuoi = now(); tNow = 0; khung(); napKpi(); pancakeDL = null; pancakeSig = ""; napPancake();
+    dungCanh(); dungNguoi(list); nhapTay(); lanCuoi = now(); tNow = 0; khung(); napKpi(); pancakeDL = null; pancakeSig = ""; napPancake(); hsLuc = {}; napHieuSuat("nay", true);
   }
   function mon() {
     var b = brain();
@@ -1666,12 +1738,12 @@
       if (!r[0]) { toast("Máy này không dựng được cảnh 3D"); dong(); return; }
       try { dung(r[1]); } catch (e) { console.warn("[office]", e); toast("Không dựng được văn phòng 3D"); dong(); return; }
       if (camLuu) { cam.az = camLuu.az; cam.pol = camLuu.pol; cam.dist = camLuu.dist; cam.tx = camLuu.tx; cam.ty = camLuu.ty; cam.tz = camLuu.tz; camLuu = null; }
-      seq = 0; hoi(); pollId = setInterval(hoi, 1500); kpiId = setInterval(function () { napKpi(); napPancake(); }, 60000);
+      seq = 0; hoi(); pollId = setInterval(hoi, 1500); kpiId = setInterval(function () { napKpi(); napPancake(); napHieuSuat("nay"); }, 60000); clearInterval(hsId); hsId = setInterval(xoayHieuSuat, HS_XOAY);
       if (!r[1].length) toast("Brain này chưa có agent nào. Tạo agent ở trang Cộng sự để họ xuất hiện ở đây.");
     });
   }
   function dong() {
-    if (!mo) return; mo = false; clearInterval(pollId); clearInterval(kpiId);
+    if (!mo) return; mo = false; clearInterval(pollId); clearInterval(kpiId); clearInterval(hsId);
     host.hidden = true; host.classList.remove("mm-menu-open"); document.documentElement.classList.remove("mm-office-on");
     var nut = $("officeToggleBtn"); if (nut) nut.setAttribute("aria-pressed", "false");
     xoaCanh();
@@ -1764,7 +1836,7 @@
       if (nutLM.disabled) return;
       var moc = mocBang(), t = 0;
       function xong(m) { if (t) clearInterval(t); nutLM.disabled = false; nutLM.textContent = "Làm mới bảng"; if (m) toast(m); }
-      nutLM.disabled = true; nutLM.textContent = "Đang gọi MinMin…";
+      nutLM.disabled = true; nutLM.textContent = "Đang gọi MinMin…"; napHieuSuat(hsKy, true);
       fetch("/office/lam-moi?brain=" + encodeURIComponent(brain()), { method: "POST" }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d || !d.ok) { xong((d && d.error) || "Không làm mới được."); return; }
         toast(d.dung_viec_dinh_ky ? "MinMin đang lấy số mới, bảng tự đổi khi xong (thường 1 đến 3 phút)." : "MinMin đang lấy số mới. Chưa thấy việc định kỳ nên dùng lệnh mặc định.");
