@@ -51,8 +51,17 @@ check("đủ 3 tool", [t["name"] for t in chay(m.list_tools({}))] ==
       ["pancake_tk_ds_page", "pancake_tk_tong_quan", "pancake_tk_nhan_vien"])
 
 
-def khach(rows):
-    return {"success": True, "data": rows}
+def gio(rows):
+    """statistics/pages: mỗi dòng một giờ, đúng dạng chạy thật 26/10/2026."""
+    return {"data": rows}
+
+
+def h(ngay_gio, **kw):
+    r = {"hour": ngay_gio, "new_customer_count": 0, "customer_inbox_count": 0, "customer_comment_count": 0,
+         "page_inbox_count": 0, "page_comment_count": 0, "phone_number_count": 0, "inbox_interactive_count": 0,
+         "new_inbox_count": 0, "uniq_phone_number_count": 0, "today_uniq_website_referral": 0}
+    r.update(kw)
+    return r
 
 
 def tuong_tac(cats, series, users=None):
@@ -64,13 +73,15 @@ def tuong_tac(cats, series, users=None):
 # ---- tổng quan ----
 m._DEM.clear()
 gia = GiaHttp().lap()
-gia.tra("/pages/598364820025920/statistics/page_customers",
-        khach([{"date": "24/10/2026", "new_customer_count": 3, "new_page_inbox_count": 4, "new_phone_number_count": 2, "phone_number_count": 2},
-               {"date": "25/10/2026", "new_customer_count": 5, "new_page_inbox_count": 6, "new_phone_number_count": 3, "phone_number_count": 4}]))
+gia.tra("/pages/598364820025920/statistics/pages",
+        gio([h("2026-10-24T09:00:00", new_customer_count=3, new_inbox_count=4, phone_number_count=2, uniq_phone_number_count=2),
+             h("2026-10-25T10:00:00", new_customer_count=2, new_inbox_count=3, phone_number_count=1, uniq_phone_number_count=1),
+             h("2026-10-25T21:00:00", new_customer_count=3, new_inbox_count=3, phone_number_count=3, uniq_phone_number_count=2),
+             h("2026-10-26T00:00:00", new_customer_count=99, phone_number_count=99)]))   # lấn sang ngày sau: phải bỏ
 gia.tra("/pages/598364820025920/statistics/customer_engagements",
         tuong_tac(["25/10/2026", "24/10/2026"], {"inbox": [10, 10], "comment": [1, 0], "total": [11, 10], "order_count": [3, 2], "old_order_count": [1, 0]}))
-gia.tra("/pages/120769791116649/statistics/page_customers",
-        khach([{"date": "25/10/2026", "new_customer_count": 1, "new_page_inbox_count": 1, "new_phone_number_count": 1, "phone_number_count": 1}]))
+gia.tra("/pages/120769791116649/statistics/pages",
+        gio([h("2026-10-25T08:00:00", new_customer_count=1, new_inbox_count=1, phone_number_count=1, uniq_phone_number_count=1)]))
 # page 2 trả dạng bảng như màn web
 gia.tra("/pages/120769791116649/statistics/customer_engagements",
         {"success": True, "engagement_statistics": [{"time": "25/10/2026", "inbox": 5, "comment": 0, "total": 5, "order_count": 1, "old_order_count": 0}]})
@@ -79,7 +90,10 @@ d = json.loads(ra)
 t = d["tong_tat_ca_page"]
 check("tổng khách nhắn = 20 + 5", t["khach_nhan_tin"] == 25, t)
 check("tổng đơn chốt = 5 + 1", t["don_chot"] == 6, t)
-check("tổng số điện thoại = 6 + 1", t["so_dien_thoai"] == 7, t)
+check("tổng số điện thoại = 6 + 1, bỏ giờ lấn sang 26/10", t["so_dien_thoai"] == 7, t)
+check("SĐT không trùng", t["so_dien_thoai_khong_trung"] == 6, t)
+check("khách mới = 8 + 1", t["khach_moi"] == 9, t)
+check("hội thoại mới = 10 + 1", t["hoi_thoai_inbox_moi"] == 11, t)
 check("tỷ lệ chốt = 6/25 = 24%", t["ty_le_chot"] == 24.0, t)
 check("tỷ lệ chốt trên SĐT = 6/7", t["ty_le_chot_tren_sdt"] == 85.7, t)
 p1 = [r for r in d["tung_page"] if r["page_id"] == "598364820025920"][0]
@@ -88,11 +102,16 @@ check("xếp page nhiều đơn lên đầu", d["tung_page"][0]["page_id"] == "5
 ngay = {r["ngay"]: r for r in d["theo_ngay"]}
 check("theo ngày: 25/10 = 10 + 5 khách nhắn", ngay["2026-10-25"]["khach_nhan_tin"] == 15, ngay)
 check("theo ngày: 24/10 = 2 đơn", ngay["2026-10-24"]["don_chot"] == 2, ngay)
-g = [x for x in gia.goi if "page_customers" in x["url"]][0]
-check("URL Public API v1", g["url"] == "https://pages.fm/api/public_api/v1/pages/598364820025920/statistics/page_customers", g["url"])
+check("theo ngày: 25/10 SĐT = 1 + 3 + 1", ngay["2026-10-25"]["so_dien_thoai"] == 5, ngay)
+check("theo ngày: không có ngày 26/10", "2026-10-26" not in ngay, list(ngay))
+g = [x for x in gia.goi if x["url"].endswith("/598364820025920/statistics/pages")][0]
+check("URL Public API v1", g["url"] == "https://pages.fm/api/public_api/v1/pages/598364820025920/statistics/pages", g["url"])
 check("gửi page_access_token đúng page", g["params"]["page_access_token"] == T1, g["params"])
-check("date_range giờ VN đủ ngày", g["params"]["date_range"] == "24/10/2026 00:00:00 - 25/10/2026 23:59:59", g["params"])
-check("group_by=day", g["params"]["group_by"] == "day", g["params"])
+dau = int(datetime(2026, 10, 24, tzinfo=k.mui_gio()).timestamp())
+cuoi = int(datetime(2026, 10, 25, 23, 59, 59, tzinfo=k.mui_gio()).timestamp())
+check("since/until = đầu 24/10 đến cuối 25/10 giờ VN", g["params"]["since"] == dau and g["params"]["until"] == cuoi, g["params"])
+e = [x for x in gia.goi if "customer_engagements" in x["url"]][0]
+check("engagements: date_range giờ VN đủ ngày", e["params"]["date_range"] == "24/10/2026 00:00:00 - 25/10/2026 23:59:59", e["params"])
 check("kết quả không lộ token", T1 not in ra and T2 not in ra, ra[:200])
 
 # ---- bộ nhớ đệm ----
@@ -105,7 +124,8 @@ m._DEM.clear()
 gia.goi.clear()
 chay(m.call("pancake_tk_tong_quan", {"page": "vân trinh"}, spec()))
 check("lọc theo tên không dấu chỉ gọi page 2", gia.goi and all("120769791116649" in x["url"] for x in gia.goi), [x["url"] for x in gia.goi])
-check("mặc định hôm nay", gia.goi[0]["params"]["date_range"] == dr_hom_nay, gia.goi[0]["params"])
+e0 = [x for x in gia.goi if "customer_engagements" in x["url"]][0]
+check("mặc định hôm nay", e0["params"]["date_range"] == dr_hom_nay, e0["params"])
 ra = chay(m.call("pancake_tk_tong_quan", {"page": "không có"}, spec()))
 check("page không khớp -> ERROR", ra.startswith("ERROR"), ra)
 
@@ -138,9 +158,9 @@ check("tổng nhân viên", d["tong"]["don_chot"] == 6 and d["tong"]["khach_da_t
 # ---- lỗi ----
 m._DEM.clear()
 gia = GiaHttp().lap()
-gia.tra("/pages/598364820025920/statistics/page_customers", {"success": False, "message": f"invalid token {T1}"}, code=200)
+gia.tra("/pages/598364820025920/statistics/pages", {"success": False, "message": f"invalid token {T1}"}, code=200)
 gia.tra("/pages/598364820025920/statistics/customer_engagements", {"message": f"bad {T1}"}, code=401)
-gia.tra("/pages/120769791116649/statistics/page_customers", khach([{"date": "25/10/2026", "new_customer_count": 1}]))
+gia.tra("/pages/120769791116649/statistics/pages", gio([h(f"{hom_nay:%Y-%m-%d}T08:00:00", new_customer_count=1)]))
 gia.tra("/pages/120769791116649/statistics/customer_engagements", tuong_tac(["25/10/2026"], {"inbox": [2], "order_count": [1]}))
 ra = chay(m.call("pancake_tk_tong_quan", {}, spec()))
 d = json.loads(ra)
@@ -155,5 +175,19 @@ check("mọi page lỗi -> ERROR", ra.startswith("ERROR"), ra)
 check("ERROR không lộ token", T1 not in ra and T2 not in ra, ra)
 ra = chay(m.call("pancake_tk_xyz", {}, spec()))
 check("tool lạ -> ERROR", ra.startswith("ERROR"), ra)
+
+
+# ---- API trả trang HTML (lỗi thật gặp ở page_customers 26/10/2026): phải báo, không đếm 0 âm thầm ----
+m._DEM.clear()
+gia = GiaHttp().lap()
+gia.tra("/statistics/pages", "<!DOCTYPE html><html><title>PancakeV2</title></html>")
+gia.tra("/statistics/customer_engagements", tuong_tac([], {"inbox": [3], "order_count": [1]}))
+d = json.loads(chay(m.call("pancake_tk_tong_quan", {"page": "598364820025920"}, spec())))
+check("API trả HTML -> báo lỗi, không coi là 0", d.get("loi") and "không phải dữ liệu" in d["loi"][0], d.get("loi"))
+check("phần còn lại vẫn có số", d["tong_tat_ca_page"]["don_chot"] == 1, d["tong_tat_ca_page"])
+
+# ---- kỳ dài chia khúc 31 ngày ----
+k2 = m.khuc_gio(datetime(2026, 8, 1).date(), datetime(2026, 10, 25).date())
+check("86 ngày -> 3 khúc liền nhau", len(k2) == 3 and all(k2[i][1] + 1 == k2[i + 1][0] for i in range(2)), k2)
 
 check.ket_thuc()

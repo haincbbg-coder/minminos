@@ -78,6 +78,9 @@ trong hộp thư và không ước lượng:
 - **Theo nhân viên sale**: `pancake_tk_nhan_vien(tu_ngay, den_ngay)`. Trả xếp hạng theo đơn
   chốt, kèm khách đã trả lời, số điện thoại, tỷ lệ chốt, thời gian phản hồi và chi tiết từng page.
 - **Một page lẻ**: thêm `page` (page_id hoặc một phần tên) vào cả hai tool.
+- **Không thấy tool `pancake_tk_*` trong danh sách thì nó đang nằm sau lớp tìm tool**, không
+  phải chưa kết nối: gọi `javis_search_tools(query="pancake_tk thống kê pancake")` rồi chạy bằng
+  `javis_run_tool`. Đừng đọc mã nguồn hay giải mã token để gọi thẳng API.
 - Gọi hai tool này CÙNG LƯỢT với POS và ads ở Bước 1. Số đã có bộ nhớ đệm 60 giây nên gọi lại
   không tốn.
 - **Tỷ lệ chốt** lấy đúng trường `ty_le_chot` tool trả về (đơn chốt chia khách nhắn tin), đừng

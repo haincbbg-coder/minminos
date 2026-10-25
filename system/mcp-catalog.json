@@ -120,7 +120,7 @@
       "name": "Thống kê Pancake",
       "icon": "📊",
       "category": "Nhắn tin",
-      "description": "Số liệu hội thoại Pancake theo thời gian thực: khách nhắn, số điện thoại, đơn chốt, tỷ lệ chốt, của tất cả page và từng page, xếp hạng nhân viên sale. Một kết nối gom nhiều page (MinMin tự dựng cầu nối).",
+      "description": "Thống kê Pancake (tool pancake_tk_*). Số liệu hội thoại Pancake theo thời gian thực: khách nhắn, số điện thoại, đơn chốt, tỷ lệ chốt, của tất cả page và từng page, xếp hạng nhân viên sale. Một kết nối gom nhiều page (MinMin tự dựng cầu nối).",
       "status": "beta",
       "transport": "internal",
       "internal": "pancake_chat",
