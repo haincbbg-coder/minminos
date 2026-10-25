@@ -4,8 +4,11 @@ Pancake (pancake.vn, hộp thư hội thoại) có Public API v1 riêng cho số
   base   https://pages.fm/api/public_api/v1
   auth   query `page_access_token` (mỗi page một token, tạo ở Cài đặt page > Công cụ > Public API
          access token; token không hết hạn trừ khi bị xoá hoặc tạo lại)
-  GET /pages/{page_id}/statistics/page_customers   date_range, group_by=day|hour|page_id
-        -> new_customer_count, new_page_inbox_count, new_phone_number_count, phone_number_count
+  GET /pages/{page_id}/statistics/pages   since, until (unix giây)
+        -> {"data": [{"hour": "2026-10-19T00:00:00" (giờ VN), new_customer_count, new_inbox_count,
+           customer_inbox_count, customer_comment_count, phone_number_count, uniq_phone_number_count,
+           page_inbox_count, ...}]} - mỗi dòng một giờ, giờ không có gì thì vắng.
+        (page_customers trong đặc tả KHÔNG dùng được: chạy thật 26/10/2026 trả trang HTML, mã 200.)
   GET /pages/{page_id}/statistics/customer_engagements   date_range, by_hour
         -> data.categories[] + data.series[{name, data[]}] (inbox, comment, total,
            new_customer_replied, customer_engagement_new_inbox, order_count, old_order_count)
@@ -15,8 +18,8 @@ Pancake (pancake.vn, hộp thư hội thoại) có Public API v1 riêng cho số
            phone_number_count, average_response_time, ...}}
   date_range = "DD/MM/YYYY HH:MM:SS - DD/MM/YYYY HH:MM:SS" theo giờ CỦA PAGE (UTC+7 với page VN).
 Nguồn: https://developer.pancake.biz/openapi/openapi.yaml (đọc 2026-10-25). Màn Thống kê trên web
-pancake.vn đã đối chiếu với tài khoản thật cùng ngày; phần Public API dựng theo đặc tả, chưa gọi
-bằng token thật nên mọi trường đọc theo kiểu "có thì lấy, thiếu thì 0".
+pancake.vn đã đối chiếu với tài khoản thật cùng ngày. Chạy thật bằng token 34 page ngày 26/10/2026:
+customer_engagements, users, statistics/pages trả JSON đúng dạng ở trên.
 
 Ô đăng nhập `pages`: mỗi dòng một page, dạng `page_id | page_access_token | tên hiển thị` (tên tuỳ
 chọn). Dấu phân cách nhận `|`, `,`, `;`, tab hoặc dấu cách.
@@ -46,6 +49,7 @@ TEN = "Pancake"
 TTL = 60                 # giây giữ kết quả trong bộ nhớ đệm
 SONG_SONG = 4            # số page gọi cùng lúc
 TOI_DA_NGAY = 92         # khoảng ngày dài nhất một lần hỏi
+CUA_SO_GIO = 31          # statistics/pages trả theo giờ: hỏi từng khúc tối đa 31 ngày cho nhẹ
 _DEM: dict = {}          # (page_id, loại, date_range) -> (thời điểm, dữ liệu)
 
 _PAGE_PROP = {"page": {"type": "string",
@@ -144,6 +148,8 @@ async def _get(page, path, params):
     sec = {"token": page["token"]}
     ok, d = await k.goi(TEN, "GET", f"{HOST}/pages/{page['id']}{path}", secrets=sec,
                         params={**params, "page_access_token": page["token"]})
+    if ok and not isinstance(d, dict):
+        ok, d = False, f"ERROR: Pancake trả về không phải dữ liệu ({path}) - API này không dùng được với token page"
     if ok and isinstance(d, dict) and d.get("success") is False:
         ok, d = False, k.giau(f"ERROR: Pancake từ chối: {d.get('message') or d.get('error') or d}", sec)
     if ok:
@@ -162,27 +168,43 @@ def _ty_le(tu_so, mau):
     return round(tu_so * 100.0 / mau, 1) if mau else None
 
 
-def doc_khach(d):
-    """page_customers group_by=day -> {ngày 'YYYY-MM-DD': {...}} và tổng."""
-    rows = d.get("data") if isinstance(d, dict) else None
-    ngay, tong = {}, {"khach_moi": 0, "hoi_thoai_inbox_moi": 0, "so_dien_thoai_moi": 0, "so_dien_thoai": 0}
-    if isinstance(rows, dict):          # group_by=page_id
-        rows = list(rows.values())
-    for r in rows or []:
-        if not isinstance(r, dict):
-            continue
-        x = {"khach_moi": _n(r.get("new_customer_count")),
-             "hoi_thoai_inbox_moi": _n(r.get("new_page_inbox_count")),
-             "so_dien_thoai_moi": _n(r.get("new_phone_number_count")),
-             "so_dien_thoai": _n(r.get("phone_number_count"))}
-        for kk, v in x.items():
-            tong[kk] += v
-        nk = _ngay_iso(r.get("date") or r.get("time"))
-        if nk:
-            cu = ngay.setdefault(nk, dict.fromkeys(x, 0))
+_GIO = {"khach_moi": "new_customer_count", "hoi_thoai_inbox_moi": "new_inbox_count",
+        "so_dien_thoai": "phone_number_count", "so_dien_thoai_khong_trung": "uniq_phone_number_count",
+        "tin_nhan_khach": "customer_inbox_count", "binh_luan_khach": "customer_comment_count"}
+
+
+def doc_gio(ds_d, tu=None, den=None):
+    """statistics/pages (theo giờ) -> (tổng, {ngày 'YYYY-MM-DD': {...}}). Bỏ giờ nằm ngoài kỳ:
+    Pancake trả lấn sang 00:00 của ngày sau kỳ."""
+    tong, ngay = dict.fromkeys(_GIO, 0), {}
+    for d in (ds_d if isinstance(ds_d, list) else [ds_d]):
+        rows = d.get("data") if isinstance(d, dict) else None
+        for r in rows or []:
+            if not isinstance(r, dict):
+                continue
+            nk = _ngay_iso(str(r.get("hour") or r.get("date") or "")[:10])
+            if nk and tu and den and not (f"{tu:%Y-%m-%d}" <= nk <= f"{den:%Y-%m-%d}"):
+                continue
+            x = {kk: _n(r.get(goc)) for kk, goc in _GIO.items()}
             for kk, v in x.items():
-                cu[kk] += v
+                tong[kk] += v
+            if nk:
+                cu = ngay.setdefault(nk, dict.fromkeys(_GIO, 0))
+                for kk, v in x.items():
+                    cu[kk] += v
     return tong, ngay
+
+
+def khuc_gio(tu, den):
+    """Chia kỳ thành các khúc <= CUA_SO_GIO ngày -> [(since, until)] unix giây theo giờ người dùng."""
+    out, d = [], tu
+    while d <= den:
+        cuoi = min(den, d + timedelta(days=CUA_SO_GIO - 1))
+        a = datetime(d.year, d.month, d.day, tzinfo=k.mui_gio())
+        b = datetime(cuoi.year, cuoi.month, cuoi.day, 23, 59, 59, tzinfo=k.mui_gio())
+        out.append((int(a.timestamp()), int(b.timestamp())))
+        d = cuoi + timedelta(days=1)
+    return out
 
 
 _SERIES = {"inbox": "khach_nhan_tin", "comment": "khach_binh_luan", "total": "tong_tuong_tac",
@@ -272,21 +294,30 @@ async def tong_quan(pages, a):
     tu, den = _ky(a)
     dr = date_range(tu, den)
 
+    khuc = khuc_gio(tu, den)
+
+    async def gio(p):
+        kq = []
+        for since, until in khuc:
+            ok, d = await _get(p, "/statistics/pages", {"since": since, "until": until})
+            if not ok:
+                return False, d
+            kq.append(d)
+        return True, kq
+
     async def viec(p):
         (ok1, d1), (ok2, d2) = await asyncio.gather(
-            _get(p, "/statistics/page_customers", {"date_range": dr, "group_by": "day"}),
-            _get(p, "/statistics/customer_engagements", {"date_range": dr}))
+            gio(p), _get(p, "/statistics/customer_engagements", {"date_range": dr}))
         return ok1, d1, ok2, d2
 
     ket = await _moi_page(pages, viec)
-    khoa_khach = ("khach_moi", "hoi_thoai_inbox_moi", "so_dien_thoai_moi", "so_dien_thoai")
-    tong = dict.fromkeys(khoa_khach + tuple(_SERIES.values()), 0)
+    tong = dict.fromkeys(tuple(_GIO) + tuple(_SERIES.values()), 0)
     tung_page, loi, theo_ngay = [], [], {}
     for p, (ok1, d1, ok2, d2) in ket:
         if not ok1 and not ok2:
             loi.append(f"{p['ten']}: {d1}")
             continue
-        kh, ngay_kh = doc_khach(d1) if ok1 else (dict.fromkeys(khoa_khach, 0), {})
+        kh, ngay_kh = doc_gio(d1, tu, den) if ok1 else (dict.fromkeys(_GIO, 0), {})
         tt, ngay_tt, _nv = doc_tuong_tac(d2) if ok2 else (dict.fromkeys(_SERIES.values(), 0), {}, [])
         if not ok1 or not ok2:
             loi.append(f"{p['ten']}: thiếu một phần số ({d1 if not ok1 else d2})")
@@ -307,7 +338,9 @@ async def tong_quan(pages, a):
     kq = {"ky": {"tu_ngay": f"{tu:%Y-%m-%d}", "den_ngay": f"{den:%Y-%m-%d}"},
           "cap_nhat_luc": datetime.now(k.mui_gio()).strftime("%Y-%m-%d %H:%M"),
           "so_page": len(pages), "tong_tat_ca_page": tong, "tung_page": tung_page,
-          "dinh_nghia": "ty_le_chot = don_chot / khach_nhan_tin (%); ty_le_chot_tren_sdt = don_chot / so_dien_thoai (%). "
+          "dinh_nghia": "khach_nhan_tin = khách tương tác qua inbox; hoi_thoai_inbox_moi = hội thoại mới; "
+                        "so_dien_thoai = số điện thoại thu được (so_dien_thoai_khong_trung đã bỏ trùng); "
+                        "ty_le_chot = don_chot / khach_nhan_tin (%); ty_le_chot_tren_sdt = don_chot / so_dien_thoai (%). "
                         "Số đơn là đơn tạo từ hội thoại Pancake, chưa trừ đơn huỷ (đối chiếu POS nếu cần)."}
     if a.get("theo_ngay"):
         kq["theo_ngay"] = [{"ngay": nk, **v} for nk, v in sorted(theo_ngay.items())]
