@@ -135,9 +135,9 @@
 
   DS.NOI_DANG = {
     fb_nhom: "Nhóm Facebook", fb_tuong: "Tường Facebook", fb_trang: "Trang Facebook", threads: "Threads",
-    instagram: "Instagram", reddit: "Reddit", x: "X", tiktok: "TikTok"
+    instagram: "Instagram", reddit: "Reddit", x: "X", tiktok: "TikTok", youtube: "YouTube"
   };
-  DS.NOI_DANG_NT = { fb_nhom: "facebook", fb_tuong: "facebook", fb_trang: "facebook", threads: "threads", instagram: "instagram", reddit: "reddit", x: "x", tiktok: "tiktok" };
+  DS.NOI_DANG_NT = { fb_nhom: "facebook", fb_tuong: "facebook", fb_trang: "facebook", threads: "threads", instagram: "instagram", reddit: "reddit", x: "x", tiktok: "tiktok", youtube: "youtube" };
   DS.KET_QUA = { thanh_cong: ["Thành công", "ok"], bo_qua: ["Bỏ qua", "mu"], loi: ["Lỗi", "err"], thong_tin: ["Thông tin", "info"], het_bai: ["Hết bài", "warn"] };
   DS.TT_VIEC = { cho_duyet: ["Chờ duyệt", "warn"], cho_chay: ["Chờ máy nhận", "info"], tam_dung: ["Tạm dừng", "warn"], dang_chay: ["Đang chạy", "brand"], xong: ["Thành công", "ok"],
     loi: ["Thất bại", "err"], bo: ["Đã huỷ", "mu"], bo_qua: ["Bỏ qua", "mu"] };

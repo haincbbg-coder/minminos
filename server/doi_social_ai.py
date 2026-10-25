@@ -25,7 +25,9 @@ GoiAI = Callable[[str, list], Awaitable[str]]
 GIOI_HAN = {"binh_luan": 500, "live": 150, "bai": 3000, "tin_nhan": 800, "tro_ly": 3000,
             "ly_do": 300, "cau_hoi_nhom": 300}
 # Trần riêng theo nơi đăng (nhỏ hơn trần chung thì dùng trần này).
-TRAN_NOI_DANG = {"threads": 500, "x": 280, "tiktok": 2200, "instagram": 2200, "reddit": 3000}
+TRAN_NOI_DANG = {"threads": 500, "x": 280, "tiktok": 2200, "instagram": 2200, "reddit": 3000, "youtube": 5000}
+# Nơi đăng được phép dài hơn trần chung GIOI_HAN["bai"] (mô tả YouTube tới 5000 ký tự).
+VUOT_TRAN_CHUNG = ("youtube",)
 
 MUC_DICH = ("cham_bai", "viet_binh_luan", "tra_loi_binh_luan", "tra_loi_tin_nhan",
             "tra_loi_cau_hoi_nhom", "viet_bai", "chon_nhom")
@@ -39,6 +41,7 @@ NOI_DANG_TEN = {
     "fb_trang": "bài trên Trang (fanpage) Facebook", "threads": "bài Threads",
     "instagram": "chú thích bài Instagram", "reddit": "bài Reddit", "x": "bài X (Twitter)",
     "tiktok": "mô tả video TikTok",
+    "youtube": "tiêu đề và mô tả video YouTube",
 }
 NOI_DANG_GOI_Y = {
     "fb_nhom": "Viết như thành viên chia sẻ trải nghiệm thật hoặc hỏi ý kiến mọi người, không quảng cáo lộ liễu, "
@@ -52,6 +55,9 @@ NOI_DANG_GOI_Y = {
               "hữu ích, không quảng cáo.",
     "x": "Tối đa 280 ký tự, một ý rõ, không hashtag tràn lan (tối đa 1).",
     "tiktok": "Mô tả ngắn 1-2 câu kèm tối đa 4 hashtag.",
+    "youtube": "Dòng đầu tiên là TIÊU ĐỀ video (tối đa 100 ký tự, có từ khoá chính, không ký tự < >), sau đó một "
+               "dòng trống rồi MÔ TẢ: 2-3 câu đầu tóm ý chính (YouTube chỉ hiện đoạn đầu), rồi chi tiết, lời mời "
+               "đăng ký kênh, tối đa 3 hashtag ở cuối. Mô tả tối đa khoảng 5000 ký tự.",
 }
 
 LUAT_VIET = (
@@ -678,7 +684,10 @@ async def xu_ly_may(muc_dich: str, du_lieu: dict, anh: list, *, goi_ai: GoiAI,
 # ------------------------------------------------------------------ viết bài / viết lại
 
 def tran_bai(noi_dang: str) -> int:
-    return min(GIOI_HAN["bai"], TRAN_NOI_DANG.get(str(noi_dang or ""), GIOI_HAN["bai"]))
+    nd = str(noi_dang or "")
+    if nd in VUOT_TRAN_CHUNG:
+        return TRAN_NOI_DANG[nd]
+    return min(GIOI_HAN["bai"], TRAN_NOI_DANG.get(nd, GIOI_HAN["bai"]))
 
 
 def _lam_sach_bai(s: str, noi_dang: str, kt: Optional[dict]) -> str:
@@ -690,7 +699,20 @@ def _lam_sach_bai(s: str, noi_dang: str, kt: Optional[dict]) -> str:
         s = _bo_cau_co_gia(s) if "\n" not in s else "\n".join(_bo_cau_co_gia(x) if gia_trong(x) else x
                                                                for x in s.split("\n"))
     s = _gioi_han_emoji(_gon(s), 4)
+    if noi_dang == "youtube":
+        s = _tieu_de_youtube(s)
     return _cat(s, tran_bai(noi_dang))
+
+
+def _tieu_de_youtube(s: str) -> str:
+    """Dòng đầu = tiêu đề YouTube: bỏ '<' '>' (YouTube không nhận), bỏ dấu '#'/'Tiêu đề:' AI hay thêm,
+    tối đa 100 ký tự; phần còn lại là mô tả, cách tiêu đề một dòng trống."""
+    s = str(s or "").replace("<", "").replace(">", "")
+    dong = s.split("\n")
+    td = re.sub(r"^\s*(?:#+\s*)?(?:\*+\s*)?(?:(?:tiêu đề|title)\s*:\s*)?", "", dong[0], flags=re.I).strip().strip("*").strip()
+    mo_ta = "\n".join(dong[1:]).strip()
+    td = _cat(td, 100) if len(td) > 100 else td
+    return td + ("\n\n" + mo_ta if mo_ta else "")
 
 
 async def viet_bai(kien_thuc: dict, noi_dang: str, so_ban: int, yeu_cau: str, *, goi_ai: GoiAI) -> list:
