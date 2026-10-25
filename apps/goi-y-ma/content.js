@@ -185,7 +185,7 @@
   function layMau() { try { return localStorage.getItem(MAU_KEY) || "/{ma}"; } catch (e) { return "/{ma}"; } }
   function oSoan() {
     const ds = [].slice.call(document.querySelectorAll('textarea,[contenteditable="true"],[contenteditable=""]')).filter((e) => {
-      const r = e.getBoundingClientRect(); return r.width > 150 && r.height > 8 && r.bottom > 0 && r.top < innerHeight && !(goc && goc.contains(e));
+      const r = e.getBoundingClientRect(); return r.width > 150 && r.height > 8 && r.top > innerHeight * 0.6 && r.top < innerHeight && !(goc && goc.contains(e));
     });
     return ds.find((e) => /trả lời|nhập tin|reply/i.test((e.getAttribute("placeholder") || "") + (e.getAttribute("data-placeholder") || "") + (e.closest("[class*=reply],[class*=compose],[class*=editor]") ? "trả lời" : ""))) || ds.sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0] || null;
   }
@@ -232,24 +232,31 @@
   }
   // Dải thẻ màu của Pancake (SALE - TRUNG, MAI GỌI...): tìm để ghim ngay phía trên, chính giữa cột chat
   function daiThe() {
-    const leaf = [].slice.call(document.querySelectorAll("div,span")).find((e) => e.children.length === 0 && /^\s*MAI GỌI\s*$/i.test(e.textContent || ""));
-    for (let e = leaf; e && e !== document.body; e = e.parentElement) {
-      const r = e.getBoundingClientRect();
-      if (r.width > 400 && /HỦY ĐƠN/i.test(e.textContent || "")) return r;
-    }
-    return null;
+    // "MAI GỌI" cũng là thẻ ở danh sách bên trái, nên duyệt mọi chỗ khớp, lấy dải rộng chứa cả "HỦY ĐƠN" ở nửa dưới màn hình
+    const leaves = [].slice.call(document.querySelectorAll("body *")).filter((e) => e.children.length === 0 && /^\s*MAI GỌI\s*$/i.test(e.textContent || ""));
+    let tot = null;
+    leaves.forEach((leaf) => {
+      for (let e = leaf; e && e !== document.body; e = e.parentElement) {
+        const r = e.getBoundingClientRect();
+        if (r.width > 400 && /HỦY ĐƠN/i.test(e.textContent || "")) { if (r.top > innerHeight * 0.4 && (!tot || r.top > tot.top)) tot = r; return; }
+      }
+    });
+    return tot;
   }
   function datThanh() {
     if (!thanh) return;
+    if (document.body && !document.body.contains(thanh)) { document.body.appendChild(thanh); if (goc) document.body.appendChild(goc); }
     let t = daiThe(), cx, day;
     if (t) { cx = t.left + t.width / 2; day = t.top; }
     else {
       const o = oSoan();
       if (o) { const r = o.getBoundingClientRect(); cx = r.left + r.width / 2; day = r.top - 58; }
-      else { cx = innerWidth * 0.45; day = innerHeight - 110; }
+      else { cx = innerWidth * 0.45; day = innerHeight - 100; }
     }
+    day = Math.min(Math.max(day, 140), innerHeight - 70);   // không bao giờ trôi lên đè thanh menu hay tụt khỏi màn hình
+    thanh.style.display = "";
     thanh.style.left = Math.round(cx) + "px";
-    thanh.style.top = Math.round(day - 30) + "px";   // nằm gọn trên dải thẻ, dưới tin nhắn cuối
+    thanh.style.top = Math.round(day - 30) + "px";
     if (goc) { goc.style.left = Math.round(Math.min(Math.max(cx - 165, 8), innerWidth - 340)) + "px"; goc.style.top = Math.max(8, Math.round(day - 36 - goc.offsetHeight)) + "px"; }
   }
   function chonAnh() {
