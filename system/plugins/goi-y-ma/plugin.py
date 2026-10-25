@@ -7,24 +7,34 @@ MCP đã nối, rồi gọi `javis_goi_y_ma_nap` để đổ vào kho. Tiện í
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import goi_y_ma
 
 
 def register(ctx):
     async def _nap(args, cctx):
-        a = args or {}
-        kq = {}
-        if a.get("sku"):
-            kq["sku"] = goi_y_ma.nap_sku(a["sku"])
-        if a.get("quang_cao"):
-            kq["quang_cao"] = goi_y_ma.nap_quang_cao(a["quang_cao"])
-        if a.get("bai_viet"):
-            kq["bai_viet"] = goi_y_ma.nap_bai_viet(a["bai_viet"])
-        if a.get("bi_danh"):
-            kq["bi_danh"] = goi_y_ma.nap_bi_danh(a["bi_danh"])
+        a = dict(args or {})
+        tep = str(a.pop("tep", "") or "").strip()
+        if tep:
+            goc = Path(cctx.vault_root).resolve()
+            p = (goc / tep).resolve()
+            if goc not in p.parents or p.suffix.lower() != ".json" or not p.is_file():
+                return "ERROR: 'tep' phải là file .json nằm trong bộ não (đường dẫn tương đối)"
+            if p.stat().st_size > 8_000_000:
+                return "ERROR: file quá lớn (trên 8 MB), chia nhỏ ra"
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+            except ValueError as e:
+                return f"ERROR: file không phải JSON hợp lệ: {e}"
+            if not isinstance(d, dict):
+                return "ERROR: JSON phải là object có khoá sku, quang_cao, bai_viet hoặc bi_danh"
+            for k in ("sku", "quang_cao", "bai_viet", "bi_danh"):
+                if d.get(k) and not a.get(k):
+                    a[k] = d[k]
+        kq = goi_y_ma.nap_tu_dict(a)
         if not kq:
-            return "ERROR: không có dữ liệu để nạp (cần ít nhất một trong sku, quang_cao, bai_viet, bi_danh)"
+            return "ERROR: không có dữ liệu để nạp (cần sku, quang_cao, bai_viet, bi_danh hoặc tep)"
         return json.dumps({"da_nap": kq, "kho_hien_co": goi_y_ma.thong_ke()}, ensure_ascii=False)
 
     async def _tra(args, cctx):
@@ -47,13 +57,15 @@ def register(ctx):
         description=("Nạp dữ liệu vào bộ tra mã hàng của tiện ích Pancake. Mọi tham số đều là danh sách, ghi đè theo "
                      "khoá: sku [{ma, ten, ton, anh:[url]}], quang_cao [{ad_id, ma? hoặc ten_chien_dich, tai_khoan}] "
                      "(thiếu ma thì tách từ tên chiến dịch dạng 'CÔNG TY ... - TÊN PAGE - P720'), bai_viet "
-                     "[{post_id, ma, page_id}], bi_danh [{chuoi, ma}]. Nạp theo lô vài trăm dòng mỗi lần."),
+                     "[{post_id, ma, page_id}], bi_danh [{chuoi, ma}]. sku cũng nhận dạng gọn \"P664:508\" (mã:tồn). "
+                     "Hoặc đưa tep: đường dẫn file .json trong bộ não chứa các khoá trên."),
         handler=_nap, min_mode="safe",
         schema={"type": "object", "properties": {
-            "sku": {"type": "array", "items": {"type": "object"}},
+            "sku": {"type": "array", "items": {}},
             "quang_cao": {"type": "array", "items": {"type": "object"}},
             "bai_viet": {"type": "array", "items": {"type": "object"}},
-            "bi_danh": {"type": "array", "items": {"type": "object"}}}},
+            "bi_danh": {"type": "array", "items": {"type": "object"}},
+            "tep": {"type": "string", "description": "File .json trong bộ não, vd attachments/goi-y-ma-sku.json"}}},
     )
     ctx.register_tool(
         name="javis_goi_y_ma_tra",

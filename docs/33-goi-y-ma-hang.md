@@ -25,4 +25,6 @@ Tra ngay trên máy nhân viên bằng bảng nạp sẵn nên chỉ mất vài 
 
 Bộ não tự lấy mã, tồn và ảnh từ POS, quảng cáo từ Meta, bài viết từ Pancake bằng các kết nối đã nối, rồi gọi `javis_goi_y_ma_nap` theo lô. Dùng `javis_goi_y_ma_tra` để thử tra một tin nhắn, một ID quảng cáo hoặc một ID bài viết.
 
+Có thể nạp cả trăm mã một lần từ một file `.json` trong bộ não: `javis_goi_y_ma_nap` với `tep: "attachments/ten-file.json"`. Danh sách mã dạng gọn `"P664:508"` (mã:tồn) cũng được.
+
 Mỗi lần nhân viên bấm "Đúng mã này", MinMin nhớ ID quảng cáo hoặc bài viết đó là mã nào cho lần sau.

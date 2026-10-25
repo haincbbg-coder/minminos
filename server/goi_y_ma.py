@@ -140,6 +140,15 @@ def nap_sku(ds: Iterable[dict]) -> int:
     n = 0
     with _khoa, _db() as c:
         for d in ds or []:
+            if isinstance(d, str):                       # dạng gọn "P664:508"
+                ma_, _, ton_ = d.partition(":")
+                try:
+                    d = {"ma": ma_, "ton": float(ton_ or 0)}
+                except ValueError:
+                    continue
+                cu = c.execute("SELECT ten, anh FROM sku WHERE ma=?", (chuan_ma(ma_),)).fetchone()
+                if cu:                                   # nạp tồn không được xoá tên và ảnh đã có
+                    d["ten"], d["anh"] = cu["ten"], json.loads(cu["anh"] or "[]")
             ma = chuan_ma((d or {}).get("ma"))
             if not ma:
                 continue
@@ -149,6 +158,20 @@ def nap_sku(ds: Iterable[dict]) -> int:
                        json.dumps(anh, ensure_ascii=False), _now()))
             n += 1
     return n
+
+
+def nap_tu_dict(a: dict) -> dict:
+    """Nạp một lần mọi loại dữ liệu từ dict {sku, quang_cao, bai_viet, bi_danh}. Dùng chung cho plugin."""
+    kq = {}
+    if a.get("sku"):
+        kq["sku"] = nap_sku(a["sku"])
+    if a.get("quang_cao"):
+        kq["quang_cao"] = nap_quang_cao(a["quang_cao"])
+    if a.get("bai_viet"):
+        kq["bai_viet"] = nap_bai_viet(a["bai_viet"])
+    if a.get("bi_danh"):
+        kq["bi_danh"] = nap_bi_danh(a["bi_danh"])
+    return kq
 
 
 def ma_tu_ten_chien_dich(ten: str) -> str:
