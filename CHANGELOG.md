@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.237] - 2026-10-25
+
+### Cải thiện
+- **Văn phòng 3D trên điện thoại xem trọn màn hình và dễ điều khiển.** Mở ra là phủ kín cả màn hình, thanh trên chỉ còn ba nút chọn phòng, nút Menu và Đóng; các nút còn lại gom vào Menu. Nút mũi tên và phóng to nhỏ gọn ở góc dưới, có nút ẩn/hiện.
+
 ## [26.10.236] - 2026-10-25
 
 ### Sửa lỗi
