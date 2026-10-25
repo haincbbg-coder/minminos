@@ -17,6 +17,8 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Sửa lỗi
 - Worker: trình duyệt cũ chưa tắt hẳn làm việc báo "không điều khiển được trình duyệt". Giờ Worker đóng hẳn profile rồi mở lại một lần, và dọn sạch trình duyệt của profile sau mỗi việc.
 
+## [26.10.232] - 2026-10-25
+
 ### Sửa lỗi
 - **Tạo ảnh qua gói ChatGPT** (`javis_generate_image`): gói không có model `gpt-5.5` thì báo `model_not_found` và không tạo được ảnh. Nay tự thử model khác như bước so ảnh, nhớ model chạy được, còn lỗi đăng nhập vẫn báo ngay.
 
