@@ -289,3 +289,16 @@ class GPM:
             self._get_tho(f"/api/v1/profiles/stop/{urllib.parse.quote(profile_id)}")
         except LoiGPM:
             pass
+        # 26.10.229: chrome do Worker tự mở lại (không qua GPM) có thể còn sống sau lệnh stop của GPM
+        # -> lượt sau GPM báo cổng cũ / ProfileInUse. Dọn nốt các tiến trình của đúng profile này.
+        try:
+            time.sleep(2)
+            con = sorted({pp for pp, _ in tien_trinh_profile(profile_id)})
+            if con:
+                for pp in con:
+                    _chay(["taskkill", "/PID", str(pp), "/T"])
+                time.sleep(3)
+                for pp in sorted({pp for pp, _ in tien_trinh_profile(profile_id)}):
+                    _chay(["taskkill", "/PID", str(pp), "/T", "/F"])
+        except Exception:
+            pass
