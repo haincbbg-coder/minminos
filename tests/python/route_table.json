@@ -8090,5 +8090,15 @@
    "DELETE"
   ],
   "trong": null
+ },
+ {
+  "order": 812,
+  "type": "APIRoute",
+  "path": "/office/lam-moi",
+  "name": "office_lam_moi",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
  }
 ]

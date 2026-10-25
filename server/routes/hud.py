@@ -11,6 +11,7 @@ bảng đi, không báo lỗi.
 """
 import json
 import time
+import unicodedata
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
@@ -33,6 +34,7 @@ MAX_KPI = 8
 class HudDeps:
     dashboard_dir: Path                 # thư mục dashboard/ (chứa hud/index.html)
     brain_root: Callable[[str], str]    # tên/đường dẫn brain -> thư mục gốc
+    nhac_hen: Callable[[], object] = lambda: None   # reminders_feature, lấy trễ (tạo sau ở main)
 
 
 def _so_vn(x: float, le: int = 1) -> str:
@@ -161,6 +163,29 @@ def _num(v):
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0
 
 
+def _khoa_ten(name: str) -> str:
+    """'Khánh Vy' và 'Khanh  vy' ra cùng một khoá: bỏ dấu tiếng Việt, đ -> d, hạ chữ, gộp khoảng trắng."""
+    t = unicodedata.normalize("NFD", str(name or "").replace("đ", "d").replace("Đ", "D"))
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    return " ".join(t.lower().split())
+
+
+def _gop_trung(r: dict, cu: dict) -> None:
+    """Gộp dòng `r` (cùng người, khác cách viết tên) vào dòng `cu`: cộng đơn, doanh thu, chi phí; giữ tên có dấu."""
+    if any(ord(c) > 127 for c in r["name"]) and not any(ord(c) > 127 for c in cu["name"]):
+        cu["name"] = r["name"]
+    for k in ("orders", "revenue", "spend", "packed"):
+        cu[k] = cu.get(k, 0) + r.get(k, 0)
+    for k in ("target", "roas"):
+        cu[k] = cu.get(k) or r.get(k, 0)
+    if r.get("month_orders") is not None:
+        cu["month_orders"] = (cu.get("month_orders") or 0) + r["month_orders"]
+    if isinstance(r.get("y"), dict):
+        y = cu.setdefault("y", {})
+        for k, v in r["y"].items():
+            y[k] = (y.get(k) or 0) + v if k != "roas" else (y.get(k) or v)
+
+
 def pancake_office(raw) -> dict:
     """Nhân viên theo phòng ban + xếp hạng, từ file do kết nối Pancake POS (và Facebook Ads) ghi vào brain.
 
@@ -168,6 +193,7 @@ def pancake_office(raw) -> dict:
     doanh thu quy cho chiến dịch, hoặc ROAS nếu không có). Số liệu để nguyên dạng số; client tự định dạng."""
     rows = (raw.get("staff") or raw.get("nhan_vien") or []) if isinstance(raw, dict) else []
     out = {"sale": [], "kho": [], "marketing": []}
+    gop: dict = {}
     for it in rows[:80] if isinstance(rows, list) else []:
         if not isinstance(it, dict):
             continue
@@ -187,6 +213,11 @@ def pancake_office(raw) -> dict:
                       "spend": _num(y.get("spend") or y.get("chi_phi")), "roas": _num(y.get("roas")), "packed": _num(y.get("packed") or y.get("dong_goi"))}
             if y.get("month_orders") is not None:
                 r["y"]["month_orders"] = _num(y.get("month_orders"))
+        cu = gop.get((r["dept"], _khoa_ten(name)))
+        if cu is not None:
+            _gop_trung(r, cu)          # cùng một người nhưng Pancake có hai tài khoản khác dấu
+            continue
+        gop[(r["dept"], _khoa_ten(name))] = r
         out[r["dept"]].append(r)
     for k, lst in out.items():
         if k == "marketing":
@@ -304,6 +335,26 @@ def _marketing_rows(root: Path) -> list:
     return pancake_office({"staff": [{"name": n, "dept": "marketing"} for n in MKT_MAC_DINH]})["marketing"]
 
 
+LAM_MOI_CHO = 180          # giây: bấm "Làm mới bảng" liên tiếp trong khoảng này bị chặn, tránh chạy chồng
+LAM_MOI_TU_KHOA = "bang so lieu van phong"   # tên việc định kỳ làm mới bảng (so sánh đã bỏ dấu)
+LAM_MOI_MAC_DINH = (
+    "Làm mới ngay các bảng số liệu văn phòng 3D. Ghi đè 3 file trong '00 - Dashboard', mục nào thiếu nguồn thì "
+    "để trống, không bịa số: (1) minmin-dashboard.json từ Pancake POS và Meta Ads; (2) pancake-office.json: "
+    "nhân viên, đơn và doanh thu hôm nay và hôm qua, bỏ đơn huỷ; (3) marketing-office.json: Phúc và Tiến, chi phí ads "
+    "và đơn tính lương tháng này từ báo cáo tính lương marketing (không có thì để null). Xong báo lại số đã ghi.")
+_lam_moi_cuoi: dict = {}
+
+
+def tim_viec_lam_moi(rems: list) -> dict | None:
+    """Việc định kỳ đang chờ có tên chứa 'bảng số liệu văn phòng' (người dùng đã dặn MinMin tạo)."""
+    for r in rems:
+        if r.get("status") != "pending" or not (r.get("cron") or r.get("repeat_min")):
+            continue
+        if LAM_MOI_TU_KHOA in _khoa_ten(f"{r.get('label') or ''} {r.get('text') or ''}"):
+            return r
+    return None
+
+
 def register(app: FastAPI, deps: HudDeps) -> None:
     index = deps.dashboard_dir / "hud" / "index.html"
 
@@ -355,3 +406,30 @@ def register(app: FastAPI, deps: HudDeps) -> None:
                     "proposals": _lines(info.get("proposals") or info.get("de_xuat") or info.get("suggestions")),
                     "updated": upd or time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(f.stat().st_mtime))}
         return {"kpis": [], "source": None}
+
+
+def register_lam_moi(app: FastAPI, deps: HudDeps) -> None:
+    """Đăng ký riêng ở ĐUÔI main.py để không đẩy thứ tự các route có sẵn (route_table.json khoá thứ tự)."""
+    @app.post("/office/lam-moi")
+    async def office_lam_moi(brain: str = Query("brain")):
+        """Nút "Làm mới bảng": chạy NGAY một bản của việc định kỳ làm mới số liệu (cùng nội dung, cùng mức quyền)."""
+        feat = deps.nhac_hen()
+        if feat is None:
+            return {"ok": False, "error": "Chưa có bộ hẹn giờ để chạy việc làm mới."}
+        now = time.time()
+        con_lai = int(LAM_MOI_CHO - (now - _lam_moi_cuoi.get(brain, 0)))
+        if con_lai > 0:
+            return {"ok": False, "cho": con_lai, "error": f"Vừa làm mới xong, chờ {con_lai} giây rồi bấm lại."}
+        try:
+            from reminders import muc_quyen_cua
+            nguon = tim_viec_lam_moi(feat._load(brain).get("reminders", []))
+            text = (nguon or {}).get("text") or LAM_MOI_MAC_DINH
+            async with feat._io:
+                rem = feat._create(brain, text, delay_min=0, mode="task",
+                                   muc_quyen=muc_quyen_cua(nguon) if nguon else None,
+                                   chat_id=(nguon or {}).get("chat_id", ""), allow_no_channel=True,
+                                   label="Làm mới bảng văn phòng (bấm tay)", created_by="office")
+        except Exception as e:
+            return {"ok": False, "error": f"{type(e).__name__}: {e}"}
+        _lam_moi_cuoi[brain] = now
+        return {"ok": True, "id": rem["id"], "dung_viec_dinh_ky": bool(nguon)}

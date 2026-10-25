@@ -1684,7 +1684,7 @@
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
     host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
-      '<button type="button" id="mmOfficeSim" aria-haspopup="true">Mô phỏng</button><button type="button" id="mmOfficeKG">Ẩn tường</button><button type="button" data-room="-24">Phòng Sale</button><button type="button" data-room="0">Văn phòng</button><button type="button" data-room="24">Phòng Marketing</button><button type="button" id="mmOfficeTheme">Chế độ tối</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
+      '<button type="button" id="mmOfficeSim" aria-haspopup="true">Mô phỏng</button><button type="button" id="mmOfficeKG">Ẩn tường</button><button type="button" data-room="-24">Phòng Sale</button><button type="button" data-room="0">Văn phòng</button><button type="button" data-room="24">Phòng Marketing</button><button type="button" id="mmOfficeTheme">Chế độ tối</button><button type="button" id="mmOfficeRefresh" title="MinMin lấy số mới từ Pancake và Meta Ads rồi ghi vào các bảng">Làm mới bảng</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
       '<div class="mm-office-simmenu" id="mmOfficeSimMenu" hidden></div><div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
     var nut = document.createElement("button");
@@ -1746,6 +1746,26 @@
     function veNutTag() { nutTag.textContent = anChu ? "Hiện chữ" : "Ẩn chữ"; nutTag.setAttribute("aria-pressed", anChu ? "true" : "false"); }
     veNutTag();
     nutTag.addEventListener("click", function () { anChu = !anChu; try { localStorage.setItem("mmOfficeAnChu", anChu ? "1" : "0"); } catch (e) {} veNutTag(); });
+    // Nút "Làm mới bảng": báo server chạy NGAY việc định kỳ làm mới số liệu, rồi hỏi lại bảng mỗi 12 giây tới khi có số mới.
+    var nutLM = $("mmOfficeRefresh");
+    function mocBang() { return ((kpiDuLieu && kpiDuLieu.updated) || "") + "|" + ((pancakeDL && pancakeDL.updated) || ""); }
+    nutLM.addEventListener("click", function () {
+      if (nutLM.disabled) return;
+      var moc = mocBang(), t = 0;
+      function xong(m) { if (t) clearInterval(t); nutLM.disabled = false; nutLM.textContent = "Làm mới bảng"; if (m) toast(m); }
+      nutLM.disabled = true; nutLM.textContent = "Đang gọi MinMin…";
+      fetch("/office/lam-moi?brain=" + encodeURIComponent(brain()), { method: "POST" }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d || !d.ok) { xong((d && d.error) || "Không làm mới được."); return; }
+        toast(d.dung_viec_dinh_ky ? "MinMin đang lấy số mới, bảng tự đổi khi xong (thường 1 đến 3 phút)." : "MinMin đang lấy số mới. Chưa thấy việc định kỳ nên dùng lệnh mặc định.");
+        nutLM.textContent = "Đang lấy số…";
+        var lan = 0;
+        t = setInterval(function () {
+          lan++; napKpi(); napPancake();
+          if (lan > 1 && mocBang() !== moc) xong("Bảng đã có số mới.");
+          else if (lan >= 20) xong("Chưa thấy số mới sau 4 phút. Xem kết quả ở trang Việc định kỳ.");
+        }, 12000);
+      }).catch(function () { xong("Không gọi được máy chủ, thử lại sau."); });
+    });
     $("mmOfficeFs").addEventListener("click", function () {
       try { if (document.fullscreenElement) document.exitFullscreen(); else if (host.requestFullscreen) host.requestFullscreen(); else if (host.webkitRequestFullscreen) host.webkitRequestFullscreen(); } catch (e) {}
     });

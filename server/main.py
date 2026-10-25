@@ -23886,10 +23886,12 @@ async def _warm_mcp_hub():
 # HUD màn phụ MinMin (GET /hud + GET /hud/kpi) - routes/hud.py. Đăng ký ở cuối để không đẩy
 # thứ tự các route có sẵn (tests/python/route_table.json khoá thứ tự).
 import routes.hud as hud_routes   # noqa: E402
-hud_routes.register(app, hud_routes.HudDeps(
+_hud_deps = hud_routes.HudDeps(
     dashboard_dir=Path(DASHBOARD_PATH),
     brain_root=lambda b: _brain_root(b),
-))
+    nhac_hen=lambda: reminders_feature,
+)
+hud_routes.register(app, _hud_deps)
 
 # Văn phòng AI 3D (GET /office/events) - routes/office.py. Đăng ký ở cuối vì cùng lý do với HUD.
 import routes.office as office_routes   # noqa: E402
@@ -24323,6 +24325,9 @@ import routes.goi_y_ma as goi_y_ma_routes   # noqa: E402
 goi_y_ma.mo(cfgmod.STATE_DIR / "goi_y_ma")
 assert goi_y_ma_routes.TIEN_TO_MAY == _GOI_Y_MA_MAY[0]
 goi_y_ma_routes.register(app)
+
+# Nút "Làm mới bảng" của văn phòng 3D (26.10.226): POST /office/lam-moi, đăng ký ở đuôi cho bảng route.
+hud_routes.register_lam_moi(app, _hud_deps)
 
 if __name__ == "__main__":
     import uvicorn
