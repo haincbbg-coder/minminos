@@ -64,6 +64,13 @@ BRAIN_PROVIDERS = {
     "claude": {"label": "Claude Code (gói Claude)", "key_field": "", "default_model": "haiku"},
     "grok": {"label": "Grok Build (gói SuperGrok / X Premium+)", "key_field": "", "default_model": ""},
     "muse": {"label": "Muse Code (gói thuê bao Meta)", "key_field": "", "default_model": ""},
+    # Năm bộ não trên gói thêm ở 26.10.224. id trùng id engine ở trang Models để hai nơi gọi
+    # cùng một tên; cách chạy chung một khuôn (CliVoiceBrain, xem CLI_VOICE).
+    "copilot-cli": {"label": "GitHub Copilot (gói Copilot)", "key_field": "", "default_model": ""},
+    "kimi-cli": {"label": "Kimi Code (gói Kimi)", "key_field": "", "default_model": ""},
+    "kiro-cli": {"label": "Kiro (gói Kiro)", "key_field": "", "default_model": ""},
+    "cursor-cli": {"label": "Cursor (gói Cursor)", "key_field": "", "default_model": ""},
+    "vibe-cli": {"label": "Mistral Vibe (gói Mistral)", "key_field": "", "default_model": ""},
     "groq": {"label": "Groq (API)", "key_field": "groq_api_key", "default_model": "llama-3.3-70b-versatile"},
     "gemini": {"label": "Google Gemini (API)", "key_field": "gemini_api_key", "default_model": "gemini-2.5-flash"},
     "openai": {"label": "OpenAI (API)", "key_field": "openai_api_key", "default_model": "gpt-4o-mini"},
@@ -77,6 +84,17 @@ STT_PROVIDERS = {
 
 # Bộ não chạy bằng API key (antigravity chạy bằng gói nên không nằm trong đây).
 PROVIDERS = tuple(k for k, p in BRAIN_PROVIDERS.items() if p["key_field"])
+
+# id bộ não giọng -> (module, lớp CLI, hàm tìm binary, tên gọi). Cả năm lớp cùng hợp đồng với
+# GrokCLI: dựng bằng (cwd, tag, model, instructions), có mode/timeout/session_id, query() sinh
+# sự kiện text/final/error. Thêm bộ não CLI mới cho giọng nói = thêm một dòng ở đây.
+CLI_VOICE = {
+    "copilot-cli": ("copilot_cli", "CopilotCLI", "find_copilot_cli", "GitHub Copilot CLI"),
+    "kimi-cli": ("kimi_cli", "KimiCLI", "find_kimi_cli", "Kimi Code"),
+    "kiro-cli": ("kiro_cli", "KiroCLI", "find_kiro_cli", "Kiro CLI"),
+    "cursor-cli": ("cursor_cli", "CursorCLI", "find_cursor_cli", "Cursor CLI"),
+    "vibe-cli": ("vibe_cli", "VibeCLI", "find_vibe_cli", "Mistral Vibe"),
+}
 
 SYSTEM_PROMPT = (
     "Bạn là Min Min, trợ lý cá nhân, đang NÓI CHUYỆN BẰNG GIỌNG với người dùng. Trả lời như người "
@@ -911,6 +929,59 @@ class MuseVoiceBrain(VoiceBrain):
         self.cli = None
 
 
+class CliVoiceBrain(VoiceBrain):
+    """Năm bộ não CLI trên gói (26.10.224): Copilot, Kimi, Kiro, Cursor, Mistral Vibe. Cùng khuôn
+    GrokVoiceBrain: một lượt headless mỗi câu, giữ cùng một đối tượng CLI để nối mạch cũ, mức
+    Chỉ đọc, không gắn MCP hub (làn nhanh chỉ trả lời ngắn; việc thật giao bộ não chính)."""
+
+    def __init__(self, provider: str, model: str = "", cli_factory: Optional[Callable] = None):
+        super().__init__()
+        if provider not in CLI_VOICE:
+            raise RuntimeError(f"Bộ não giọng {provider} không chạy được bằng CLI.")
+        self.provider = provider
+        self.model = model
+        self._factory = cli_factory
+        self.cli = None
+
+    def _ensure(self):
+        if self.cli is not None:
+            return
+        if self._factory:
+            self.cli = self._factory()
+        else:
+            import importlib
+            import tempfile
+            mod_ten, lop, tim, ten = CLI_VOICE[self.provider]
+            mod = importlib.import_module(mod_ten)
+            if not getattr(mod, tim)():
+                raise RuntimeError(f"Chưa cài {ten}. Cài rồi đăng nhập ở trang Models.")
+            self.cli = getattr(mod, lop)(cwd=tempfile.gettempdir(), tag="voice", model=self.model or None,
+                                         instructions=SYSTEM_PROMPT)
+            self.cli.mode = "suggest"
+            self.cli.max_turns = 1
+            self.cli.timeout = TURN_TIMEOUT_S
+
+    async def stream(self, text: str, history: List[dict]) -> AsyncIterator[str]:
+        self.last_used = time.time()
+        async with self._lock:
+            self._ensure()
+            content = text if getattr(self.cli, "session_id", None) else seed_text(history, text, with_prompt=False)
+            got = False
+            async for ev in self.cli.query(content):
+                t = ev.get("type")
+                if t == "text" and ev.get("content"):
+                    got = True
+                    yield ev["content"]
+                elif t == "final":
+                    if not got and ev.get("content"):
+                        yield str(ev["content"])
+                elif t == "error":
+                    raise RuntimeError(str(ev.get("content") or f"{ten_bo_nao(self.provider)} báo lỗi."))
+
+    async def close(self) -> None:
+        self.cli = None
+
+
 # ============================================================
 # Việc nền đang chạy của mỗi phiên nói (Voice V3, spec mục 14: tách NÓI khỏi LÀM)
 # ============================================================
@@ -1104,7 +1175,7 @@ _REAPER: Optional[asyncio.Task] = None
 # ô "bộ não giọng". Làn nhanh mà khoá brain_provider rỗng thì dùng bộ não đầu tiên đang sẵn trên GÓI
 # người dùng đã có, theo đúng thứ tự này. Không có cái nào thì tin từ mic đi bộ não chính như cũ.
 # Khoá đã lưu (chọn tay từ bản cũ) vẫn thắng: giá trị cũ được đọc và dùng tiếp.
-PLAN_BRAINS = ("antigravity", "codex", "claude", "grok", "muse")
+PLAN_BRAINS = ("antigravity", "codex", "claude", "grok", "muse") + tuple(CLI_VOICE)
 _AUTO_TTL = 60.0
 _AUTO_CACHE: Dict[str, object] = {"at": 0.0, "key": None, "value": ""}
 
@@ -1128,6 +1199,13 @@ def plan_brain_available(pid: str, cfg: dict) -> bool:
         if pid == "muse":
             import muse_cli
             return bool(muse_cli.find_muse_cli())
+        if pid in CLI_VOICE:
+            # Năm bộ não mới: soi ĐÃ ĐĂNG NHẬP chứ không chỉ có binary, để máy tự chọn không chọn
+            # nhầm cái đã cài mà chưa đăng nhập. auth_status() của cả năm chỉ đọc file hoặc bộ
+            # nhớ đệm nền, không chặn chờ CLI.
+            import importlib
+            mod = importlib.import_module(CLI_VOICE[pid][0])
+            return bool((mod.auth_status() or {}).get("connected"))
     except Exception:
         return False
     return False
@@ -1207,6 +1285,8 @@ def _make(conf: dict) -> VoiceBrain:
         return GrokVoiceBrain(model=conf.get("model") or "")
     if prov == "muse":
         return MuseVoiceBrain(model=conf.get("model") or "")
+    if prov in CLI_VOICE:
+        return CliVoiceBrain(prov, model=conf.get("model") or "")
     if prov in PROVIDERS:
         if not conf.get("api_key"):
             raise RuntimeError(f"Bộ não giọng nói {prov} chưa có API key ở trang Models.")

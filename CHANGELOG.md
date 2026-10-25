@@ -6,7 +6,9 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.224] - 2026-10-25
 ### Thêm mới
-- (đang làm) Năm bộ não mới dùng được cho giọng nói.
+- **Giọng nói dùng được năm bộ não mới**: GitHub Copilot, Kimi Code, Kiro, Cursor và Mistral Vibe. Chọn ở **Cài đặt, Giọng nói, Nâng cao, Bộ não trả lời nhanh**, mỗi bộ não chọn được model riêng.
+- Để **Tự động** thì máy chỉ chọn bộ não đã đăng nhập, không chọn nhầm cái mới cài. Năm bộ não cũ (Antigravity, ChatGPT, Claude, Grok, Muse) vẫn được ưu tiên như trước.
+- Bộ não giọng nói chỉ trả lời ngắn và không tự làm việc gì. Việc thật vẫn giao cho bộ não chính như cũ.
 
 ## [26.10.222] - 2026-10-25
 ### Sửa lỗi
