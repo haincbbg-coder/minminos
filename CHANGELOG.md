@@ -9,6 +9,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - **Gợi ý mã hàng theo ảnh khách gửi**: tiện ích tự so ảnh khách mới nhất với ảnh mẫu trên POS. Rút gọn bằng màu rồi nhờ ChatGPT chọn, tối đa 5 mã, mỗi ảnh một lần gọi, có trần mỗi ngày.
 - Nhân viên bấm "Đúng mã này" thì MinMin nhớ ảnh đó, lần sau chính xác hơn. Cần chạy `javis_goi_y_ma_hoc_anh` một lần sau khi nạp mã.
 
+## [26.10.222] - 2026-10-25
+### Sửa lỗi
+- **Gợi ý mã hàng**: tiện ích trên Cốc Cốc ghép máy không được, báo "cross-origin request bị chặn". Nay đường dành cho tiện ích (`/goi-y-ma/may/`) được nhận từ tiện ích; các đường quản lý vẫn chặn nguồn lạ.
+
 ## [26.10.221] - 2026-10-25
 ### Thêm mới
 - **Gợi ý mã hàng**: nạp dữ liệu từ một file trong bộ não (`javis_goi_y_ma_nap` nhận thêm `tep`), để đổ cả trăm mã một lần.
@@ -17,7 +21,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Thêm mới
 - **Gợi ý mã hàng cho nhân viên bán hàng**: tiện ích mới trên Cốc Cốc/Chrome đọc hội thoại Pancake và hiện ngay mã hàng, độ chắc, vì sao và tồn kho. Tra theo mã khách nhắn, ID quảng cáo (kể cả mã trong tên chiến dịch), rồi ID bài viết. Bấm "Đúng mã này" thì MinMin nhớ cho lần sau.
 - Bộ não nạp dữ liệu bằng công cụ `javis_goi_y_ma_nap` và lấy mã ghép máy bằng `javis_goi_y_ma_ma_ghep`.
-- Tra theo ảnh khách gửi chưa có, sẽ làm ở bản sau.
+- Tra theo ảnh khách gửi: xem bản 26.10.223.
 
 ## [26.10.219] - 2026-10-24
 

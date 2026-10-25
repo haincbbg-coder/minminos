@@ -303,6 +303,10 @@ async def _csrf_guard(request: Request, call_next):
     if ((_dr.startswith("/ext/") or _dr.startswith("/.well-known/"))
             and plugins_host.http_khong_cookie(_dr, request.method)):
         return await call_next(request)
+    # Gợi ý mã hàng (26.10.222): tiện ích trình duyệt gọi từ nguồn chrome-extension://. Đường này tự xác
+    # thực bằng header token, không dùng cookie nên không có gì để CSRF mượn. Chỉ miễn đúng tiền tố này.
+    if _dr.startswith(_GOI_Y_MA_MAY[0]):
+        return await call_next(request)
     d = web_security.csrf_decision(request.method, request.headers.get("host", ""),
                                    request.headers.get("origin"), cfgmod.gate_active())
     if d:
