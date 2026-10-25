@@ -182,7 +182,7 @@
   // ---------------- thanh nút trả lời nhanh: ghim gần ô soạn tin, bấm là điền "/cv1213" vào ô trả lời
   let thanh = null, thanhRoot = null, thanhKhoa = "";
   const MAU_KEY = "mmGyMau";
-  function layMau() { try { return localStorage.getItem(MAU_KEY) || "/c{ma}"; } catch (e) { return "/c{ma}"; } }
+  function layMau() { try { return localStorage.getItem(MAU_KEY) || "/{ma}"; } catch (e) { return "/{ma}"; } }
   function oSoan() {
     const ds = [].slice.call(document.querySelectorAll('textarea,[contenteditable="true"],[contenteditable=""]')).filter((e) => {
       const r = e.getBoundingClientRect(); return r.width > 150 && r.height > 8 && r.bottom > 0 && r.top < innerHeight && !(goc && goc.contains(e));
@@ -217,13 +217,13 @@
       thanhKhoa = khoa;
       thanhRoot.innerHTML = `<style>.t{font:13px system-ui,sans-serif;display:flex;gap:6px;align-items:center;background:#fffbe6;border:1px solid #f0c36d;border-radius:20px;padding:4px 8px;box-shadow:0 2px 8px #0002}
         button{border:0;border-radius:14px;padding:5px 12px;background:#0b5fff;color:#fff;font-weight:700;cursor:pointer;font-size:13px}button.s{background:#e4e7ec;color:#333;padding:3px 7px;font-weight:400}.l{color:#7a5b00;font-size:12px}</style>
-        <div class="t"><span class="l">Chào nhanh:</span>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(layMau().replace("{ma}", m.toLowerCase()))} vào ô trả lời">${esc(layMau().replace("{ma}", m.toLowerCase()))}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button></div>`;
+        <div class="t"><span class="l">Chào nhanh:</span>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(layMau().replace("{ma}", m.toUpperCase()))} vào ô trả lời">${esc(layMau().replace("{ma}", m.toUpperCase()))}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button></div>`;
       thanhRoot.querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => {
-        const ok = dien(layMau().replace("{ma}", b.dataset.m.toLowerCase()));
+        const ok = dien(layMau().replace("{ma}", b.dataset.m.toUpperCase()));
         if (!ok) b.textContent = "Không thấy ô soạn tin";
       });
       thanhRoot.getElementById("sua").onclick = () => {
-        const v = prompt("Mẫu lệnh trả lời nhanh, dùng {ma} thay cho mã (chữ thường). Ví dụ: /c{ma}", layMau());
+        const v = prompt("Mẫu lệnh trả lời nhanh, dùng {ma} thay cho mã (chữ hoa). Ví dụ: /{ma}", layMau());
         if (v && v.includes("{ma}")) { try { localStorage.setItem(MAU_KEY, v.trim()); } catch (e) {} thanhKhoa = ""; ve(); }
       };
     }

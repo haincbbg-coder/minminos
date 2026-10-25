@@ -6,7 +6,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [26.10.240] - 2026-10-26
 ### Thêm mới
-- **Gợi ý mã hàng**: thanh nút chào nhanh ghim ngay trên ô soạn tin. Khi đã biết mã (vd V1213), hiện nút `/cv1213`; sale bấm là lệnh điền vào ô trả lời, Enter hai lần là ra câu chào của mã đó. Bấm ✎ để đổi mẫu lệnh (`{ma}` là mã viết thường).
+- **Gợi ý mã hàng**: thanh nút chào nhanh ghim ngay trên ô soạn tin. Khi đã biết mã (vd V1213), hiện nút `/V1213`; sale bấm là lệnh điền vào ô trả lời, Enter hai lần là ra câu chào của mã đó. Bấm ✎ để đổi mẫu lệnh (`{ma}` là mã viết hoa).
 ### Sửa lỗi
 - Quảng cáo ghi mã ngay ở tên ("V1213 - Xưởng May MD") hoặc nội dung ("#V1213") nay ra đúng mã, kể cả khi mã chưa có trong bảng tồn, không đi so ảnh đoán sang mã khác.
 
