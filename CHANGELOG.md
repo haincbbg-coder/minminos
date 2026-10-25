@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.229] - 2026-10-25
+
+### Thêm mới
+- Đang làm: thêm automation TikTok (giỏ hàng TikTok Shop) và YouTube (tiếp thị liên kết).
+
 ## [26.10.227] - 2026-10-25
 
 ### Sửa lỗi
