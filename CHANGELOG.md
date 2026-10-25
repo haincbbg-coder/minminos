@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.227] - 2026-10-25
+
+### Sửa lỗi
+- Đội Social: nick đang mở sẵn trong GPM không còn làm việc báo lỗi "ProfileInUse". Worker chờ GPM đóng profile (tới 40 giây), quá lâu thì đóng hẳn trình duyệt của đúng profile đó rồi mở lại. Nếu bạn đang dùng nick đó thì báo rõ để bạn đóng cửa sổ.
+- Chạy thử "Đăng bài AI" và "Nhắn tin theo danh sách" báo đúng kết quả ("đã soạn tới nút Đăng/Gửi, không đăng") thay vì "Đăng 0 bài", "Đã nhắn 0 người".
+
 ## [26.10.225] - 2026-10-25
 ### Thêm mới
 - **Gợi ý mã hàng theo ảnh khách gửi**: tiện ích tự so ảnh khách mới nhất với ảnh mẫu trên POS. Rút gọn bằng màu rồi nhờ ChatGPT chọn, tối đa 5 mã, mỗi ảnh một lần gọi, có trần mỗi ngày.
