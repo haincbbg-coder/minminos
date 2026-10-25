@@ -1672,7 +1672,7 @@
   }
   function dong() {
     if (!mo) return; mo = false; clearInterval(pollId); clearInterval(kpiId);
-    host.hidden = true; document.documentElement.classList.remove("mm-office-on");
+    host.hidden = true; host.classList.remove("mm-menu-open"); document.documentElement.classList.remove("mm-office-on");
     var nut = $("officeToggleBtn"); if (nut) nut.setAttribute("aria-pressed", "false");
     xoaCanh();
   }
@@ -1684,7 +1684,7 @@
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
     host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
-      '<button type="button" id="mmOfficeSim" aria-haspopup="true">Mô phỏng</button><button type="button" id="mmOfficeKG">Ẩn tường</button><button type="button" data-room="-24">Phòng Sale</button><button type="button" data-room="0">Văn phòng</button><button type="button" data-room="24">Phòng Marketing</button><button type="button" id="mmOfficeTheme">Chế độ tối</button><button type="button" id="mmOfficeRefresh" title="MinMin lấy số mới từ Pancake và Meta Ads rồi ghi vào các bảng">Làm mới bảng</button><button type="button" id="mmOfficeTag" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs">Toàn màn hình</button><button type="button" id="mmOfficeWin">Cửa sổ riêng</button><button type="button" id="mmOfficeX" aria-label="Đóng văn phòng">Đóng</button></div>' +
+      '<button type="button" id="mmOfficeSim" class="mm-sec" aria-haspopup="true">Mô phỏng</button><button type="button" id="mmOfficeKG" class="mm-sec">Ẩn tường</button><button type="button" class="mm-room" data-room="-24">Phòng Sale</button><button type="button" class="mm-room" data-room="0">Văn phòng</button><button type="button" class="mm-room" data-room="24">Phòng Marketing</button><button type="button" id="mmOfficeTheme" class="mm-sec">Chế độ tối</button><button type="button" id="mmOfficeRefresh" class="mm-sec" title="MinMin lấy số mới từ Pancake và Meta Ads rồi ghi vào các bảng">Làm mới bảng</button><button type="button" id="mmOfficeTag" class="mm-sec" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs" class="mm-sec mm-pc">Toàn màn hình</button><button type="button" id="mmOfficeWin" class="mm-sec mm-pc">Cửa sổ riêng</button><button type="button" id="mmOfficeMenu" class="mm-menu-t" aria-expanded="false">Menu</button><button type="button" id="mmOfficeX" class="mm-x" aria-label="Đóng văn phòng">Đóng</button></div>' +
       '<div class="mm-office-simmenu" id="mmOfficeSimMenu" hidden></div><div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
     var nut = document.createElement("button");
@@ -1742,6 +1742,17 @@
     var zp = document.createElement("div"); zp.className = "mm-pad-zoom";
     zp.appendChild(nutPad("", "+", "+", "Phóng to")); zp.appendChild(nutPad("", "-", "\u2212", "Thu nhỏ")); zp.appendChild(nutPad("", "q", "\u21BA", "Xoay trái")); zp.appendChild(nutPad("", "e", "\u21BB", "Xoay phải"));
     pad.appendChild(zp); pad.appendChild(dp); host.appendChild(pad);
+    // Điện thoại: nút phụ gom vào Menu (mở/đóng), bàn điều khiển ẩn/hiện và nhớ lựa chọn.
+    var nutMenu = $("mmOfficeMenu");
+    function veMenu(m) { host.classList.toggle("mm-menu-open", m); nutMenu.setAttribute("aria-expanded", m ? "true" : "false"); nutMenu.textContent = m ? "Thu gọn" : "Menu"; }
+    nutMenu.addEventListener("click", function () { veMenu(!host.classList.contains("mm-menu-open")); });
+    host.querySelectorAll(".mm-sec").forEach(function (b) { b.addEventListener("click", function () { if (b.id !== "mmOfficeSim") veMenu(false); }); });
+    host.querySelectorAll(".mm-room").forEach(function (b) { b.addEventListener("click", function () { veMenu(false); }); });
+    var padTat = false; try { padTat = localStorage.getItem("mmOfficePadTat") === "1"; } catch (e) {}
+    var nutPadT = document.createElement("button"); nutPadT.type = "button"; nutPadT.className = "mm-pad-t"; nutPadT.setAttribute("aria-label", "Ẩn hoặc hiện nút điều khiển");
+    function vePadT() { host.classList.toggle("mm-pad-off", padTat); nutPadT.textContent = padTat ? "Hiện nút" : "Ẩn nút"; }
+    nutPadT.addEventListener("click", function () { padTat = !padTat; try { localStorage.setItem("mmOfficePadTat", padTat ? "1" : "0"); } catch (e) {} vePadT(); });
+    host.appendChild(nutPadT); vePadT();
     var nutTag = $("mmOfficeTag");
     function veNutTag() { nutTag.textContent = anChu ? "Hiện chữ" : "Ẩn chữ"; nutTag.setAttribute("aria-pressed", anChu ? "true" : "false"); }
     veNutTag();
