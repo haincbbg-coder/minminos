@@ -116,6 +116,44 @@
       "default_perm": "readonly"
     },
     {
+      "id": "pancake-thong-ke",
+      "name": "Thống kê Pancake",
+      "icon": "📊",
+      "category": "Nhắn tin",
+      "description": "Số liệu hội thoại Pancake theo thời gian thực: khách nhắn, số điện thoại, đơn chốt, tỷ lệ chốt, của tất cả page và từng page, xếp hạng nhân viên sale. Một kết nối gom nhiều page (MinMin tự dựng cầu nối).",
+      "status": "beta",
+      "transport": "internal",
+      "internal": "pancake_chat",
+      "auth": {
+        "type": "apikey",
+        "fields": [
+          {
+            "key": "pages",
+            "label": "Danh sách page: mỗi dòng page_id | token | tên page",
+            "placeholder": "Ví dụ: 598364820025920 | eyJhbGciOi... | Hoa Trà Boutique",
+            "multiline": true
+          }
+        ],
+        "guide": "Làm cho từng page:\n1. Vào pancake.vn, chọn page, mở Cài đặt > Công cụ.\n2. Ở mục Public API access token bấm Tạo Token, rồi Sao chép.\n3. Dán vào ô bên dưới thành một dòng: page_id | token | tên page.\n\nPage ID là dãy số trong địa chỉ trang Pancake của page đó.\nToken không hết hạn. Bấm Xoá token hoặc Tạo lại trên Pancake thì phải dán token mới vào đây.\nKhông cần bật Webhook.",
+        "guide_url": "https://developer.pancake.biz/"
+      },
+      "validate": {
+        "tool": "pancake_tk_ds_page",
+        "args": {}
+      },
+      "tool_meta": {
+        "read": [
+          "pancake_tk_ds_page",
+          "pancake_tk_tong_quan",
+          "pancake_tk_nhan_vien"
+        ],
+        "write": [],
+        "danger": []
+      },
+      "risk": "Bản này CHỈ ĐỌC số liệu thống kê, không đọc nội dung tin nhắn và không gửi gì.\n\nToken được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "default_perm": "readonly"
+    },
+    {
       "id": "google-sheets",
       "name": "Google Sheets",
       "group": "google",

@@ -676,8 +676,8 @@ class LoopFeature:
             base = (
                 "VÒNG TỰ CẢI THIỆN - MỤC TIÊU: CẢI THIỆN CHỈ SỐ KINH DOANH.\n"
                 "BƯỚC 1 - lấy số thật: xem các MCP đang kết nối rồi lấy 3-6 chỉ số kinh doanh quan trọng nhất "
-                "của kỳ hiện tại, có so kỳ trước nếu lấy được. Ưu tiên nguồn theo thứ tự: Pancake POS (tool pos_*) "
-                "→ kênh bán / mạng xã hội → quảng cáo → bất kỳ nguồn kinh doanh nào khác. Dùng số THẬT, KHÔNG bịa. "
+                "của kỳ hiện tại, có so kỳ trước nếu lấy được. Ưu tiên nguồn theo thứ tự: Pancake POS (tool pos_*), Thống kê Pancake (tool pancake_tk_*: khách nhắn, "
+                "SĐT, đơn chốt, tỷ lệ chốt theo page và nhân viên) → kênh bán / mạng xã hội → quảng cáo → bất kỳ nguồn kinh doanh nào khác. Dùng số THẬT, KHÔNG bịa. "
                 "Nếu KHÔNG có nguồn kinh doanh nào đang đấu thì dừng vòng và báo đúng một câu là chưa có nguồn dữ liệu.\n"
                 "BƯỚC 2 - phân tích: "
                 "Đọc thêm context trong vault (Wiki marketing/sales/funnel/content, data cache, projects) để hiểu bối cảnh. "
