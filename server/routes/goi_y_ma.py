@@ -106,7 +106,8 @@ def register(app: FastAPI) -> None:
             return _loi(e)
         return {"ok": True, **goi_y_ma.phan_giai(str(d.get("text") or "")[:2000], str(d.get("ad_id") or ""),
                                                   str(d.get("post_id") or ""),
-                                                  ad_text=str(d.get("ad_text") or "")[:2000])}
+                                                  ad_text=str(d.get("ad_text") or "")[:2000],
+                                                  ma_ro=[str(x)[:20] for x in (d.get("ma_ro") or [])[:5]])}
 
     @app.post(TIEN_TO_MAY + "anh")
     async def gy_anh(request: Request):

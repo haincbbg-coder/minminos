@@ -36,6 +36,17 @@
     }));
     return { ids, text: text.join("\n"), anh: anh[0] || "" };
   }
+  // Tin có ghi rõ "MÃ: T145", "Mã #S26", "BÁO GIÁ MÃ S26" (cả của khách lẫn bot/nhân viên shop): mã này đáng tin
+  // hơn mọi suy đoán, và hiện ra kể cả khi mã chưa nằm trong bảng tồn.
+  function maRo(ds) {
+    const kq = [];
+    ds.slice(-40).reverse().forEach((m) => {
+      const t = chuoiHtml(m.original_message || m.message || m.text || "").normalize("NFC");
+      const re = /(?:^|[^A-Za-zÀ-ỹ])m[ãa]\s*(?:s[ốo]|hàng|sp)?\s*[:#.\-]?\s*#?\s*([A-Za-z]{1,4}\s?-?\d{1,6}[A-Za-z]{0,2})/gi;
+      let x; while ((x = re.exec(t))) { const c = self.mmChuanMa(x[1]); if (c && !kq.includes(c)) kq.push(c); }
+    });
+    return kq.slice(0, 3);
+  }
   function docConversations(arr) {
     arr.forEach((c) => {
       if (!c || !c.id) return;
@@ -61,7 +72,7 @@
     const post = c.post_id || (ds.find((m) => m.post_id) || {}).post_id || "";
     const qc = layQuangCao(ds);
     const adIds = qc.ids.length ? qc.ids : (c.ad_ids || []);
-    hienTai = { id, text, ad_ids: adIds, ad_text: qc.text, ad_anh: qc.anh, post_id: post ? String(post) : "", anh: anh.slice(-6) };
+    hienTai = { id, text, ad_ids: adIds, ad_text: qc.text, ad_anh: qc.anh, ma_ro: maRo(ds), post_id: post ? String(post) : "", anh: anh.slice(-6) };
   }
   function nhan(url, body) {
     let j; try { j = JSON.parse(body); } catch (e) { return; }
@@ -115,7 +126,7 @@
     if (!hienTai) { n.innerHTML = `<div class="s">Mở một hội thoại để xem gợi ý.</div>${chanDoanHtml()}`; return; }
     const ds = self.mmTra(bang, hienTai);
     let h = ds.length ? ds.slice(0, 4).map((u) => the(u)).join("") : `<div class="s">Chưa tra ra mã từ tin nhắn, quảng cáo hay bài viết của hội thoại này.</div>`;
-    const daCoQc = ds.some((u) => u.bang_chung.some((b) => /quang_cao|noi_dung/.test(b.nguon)));
+    const daCoQc = ds.length > 0;
     if (hienTai.ad_anh && !daCoQc) {
       const a0 = hienTai.ad_anh;
       if (!anhKq[a0]) soAnh(a0);
@@ -156,7 +167,7 @@
   }
   async function soAnh(u) {
     anhKq[u] = { dang: true };
-    const r = await hoi({ loai: "anh", url: u });
+    const r = await Promise.race([hoi({ loai: "anh", url: u }), new Promise((ok) => setTimeout(() => ok({ ok: false, error: "quá 45 giây không có trả lời (server MinMin chậm hoặc ChatGPT chưa sẵn sàng)" }), 45000))]);
     anhKq[u] = r && r.ok ? { kq: r } : { loi: (r && r.error) || "không rõ" };
     ve();
   }
