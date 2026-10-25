@@ -1171,9 +1171,14 @@ def yt_quet_csv(nc) -> str:
     else:
         url = f"{GOC}/results?search_query={urllib.parse.quote(vao)}"
     nc.mo(url)
-    nc.kiem_dang_nhap()
+    try:          # 26.10.235: quét chỉ đọc dữ liệu công khai, nick chưa đăng nhập YouTube vẫn quét được
+        nc.kiem_dang_nhap()
+    except LoiKyNang as e:
+        if getattr(e, "ma", "") != "dang_xuat":
+            raise
+        nc.nhat_ky("Nick chưa đăng nhập YouTube: chỉ đọc dữ liệu công khai")
     nc.tay.nghi(2.5, 4.5)
-    w.kiem_chan(nc)
+    w.kiem_chan(nc, cho_phep_trang_dang_nhap=True)
     if not w.con_luot(nc, dem, "quet"):
         return "Đã đủ giới hạn quét hôm nay"
     page = nc.page

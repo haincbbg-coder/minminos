@@ -728,7 +728,7 @@ _JS_DOC_VIDEO = r"""() => {
   r.binh_luan = r.binh_luan || txt("[data-e2e='comment-count']") || txt("[data-e2e='browse-comment-count']");
   if (!r.ngay) { const n = txt("[data-e2e='browser-nickname']"); const p = n.split('·'); if (p.length > 1) r.ngay = p[p.length - 1].trim(); }
   const SP = "a[href*='/view/product/'], a[href*='shop.tiktok.com'], a[href*='/shop/pdp'], a[href*='tiktok.com/shop'], "
-    + "[data-e2e*='product'], [data-e2e*='anchor'], [data-e2e*='ecom']";
+    + "[data-e2e*='product'], [data-e2e*='anchor'], [data-e2e*='ecommerce']";
   document.querySelectorAll(SP).forEach(e => {
     const a = e.tagName === 'A' ? e : (e.closest('a') || e.querySelector('a'));
     r.sp_dom.push({ten: (e.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 200), link: a ? a.href : '',
@@ -755,12 +755,18 @@ def _doc_video(nc) -> dict:
         k = (x.get("id") or x.get("ten") or "").lower()
         if k and k not in da:
             da.add(k)
-            sp.append({"ten": x.get("ten", ""), "gia": x.get("gia") or tach_gia(x.get("ten")), "link": link})
+            g = str(x.get("gia") or "").strip()
+            if g in ("0", "0.0", "0.00"):      # JSON neo sản phẩm thường để price 0 (soi thật 25/10)
+                g = ""
+            sp.append({"ten": x.get("ten", ""), "gia": g or tach_gia(x.get("ten")), "link": link})
     tho = r.get("sp_dom") or []
     for x in tho:
         de = str(x.get("de") or "")
-        la_sp = bool(_RE_LINK_SP.search(x.get("link") or "")) or bool(re.search(r"product|ecom", de, re.I)) or \
-            ("anchor" in de.lower() and bool(_RE_CHU_SP.search(x.get("ten") or "")))
+        # 26.10.235: "recommend-list-item-container" chứa chuỗi "ecom" (r-ECOM-mend) làm mọi video bị báo có giỏ
+        # hàng (soi thật 25/10). Chỉ nhận link sản phẩm, hoặc data-e2e có từ product/ecommerce/anchor đứng riêng.
+        la_sp = bool(_RE_LINK_SP.search(x.get("link") or "")) or \
+            bool(re.search(r"(^|[-_])(product|ecommerce)([-_]|$)", de, re.I)) or \
+            (bool(re.search(r"(^|[-_])anchor([-_]|$)", de, re.I)) and bool(_RE_CHU_SP.search(x.get("ten") or "")))
         if not la_sp:
             continue
         m = re.search(r"/view/product/(\d+)", x.get("link") or "")
