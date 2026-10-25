@@ -23,6 +23,7 @@
   // Giá trị là TÊN icon Lucide. Tra tên tại https://lucide.dev/icons/, thêm vào
   // dashboard/icons.manifest.json rồi chạy python tools/gen_icons.py.
   const VIEW_ICON = {
+    tongquan: "house",
     home: "hexagon",
     chat: "message-circle",
     settings: "settings",
@@ -98,7 +99,7 @@
   // Nhãn rail lấy từ TỪ ĐIỂN (thư mục dashboard/i18n) chứ không viết cứng. `t()` suy biến về
   // tiếng Việt khi thiếu key, nên một bản dịch làm dở không bao giờ để lại key trần trên rail.
   const RAIL_ITEMS = [
-    "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
+    "tongquan", "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
     "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong",
   ].map(id => ({ id, icon: ICON[id], get label() { return t(`page.${id}.label`); } }));
@@ -118,7 +119,7 @@
     // `id` nhóm giữ nguyên để lệnh bằng lời và bookmark cũ vẫn chạy; chỉ đổi nhãn và chỗ đứng.
     // Hộp thư khách về nhóm Kết nối & khách, đứng cạnh Kênh nhắn (cùng là chuyện khách nhắn tới).
     // Chợ MinMin vẫn cạnh Nguồn dữ liệu vì phần lớn gói trong chợ là kết nối (xem 0.55.37).
-    { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON["Bộ não"],   ids: ["home", "chat", "files", "learn"] },
+    { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON["Bộ não"],   ids: ["tongquan", "home", "chat", "files", "learn"] },
     { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["kanban", "selfimprove"] },
     { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON["Năng lực"], ids: ["workspace", "skills", "plugins"] },
     { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["mcp", "packs", "ketnoingoai", "channels", "conversations", "models", "matnha", "biendong"] },
@@ -214,7 +215,7 @@
   //
   // `page.<id>.title` cho phép tiêu đề trang KHÁC nhãn trên rail khi cần (rail chật nên
   // "Việc", trang rộng nên "Việc (Kanban)"); thiếu key đó thì tự rơi về `page.<id>.label`.
-  const VIEW_META = Object.fromEntries(["home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong"].map(id => [id, {
+  const VIEW_META = Object.fromEntries(["tongquan", "home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong"].map(id => [id, {
     icon: VIEW_ICON[id],
     get label() {
       const rieng = t(`page.${id}.title`);
@@ -345,7 +346,9 @@
   const TRANG_GOP = { runtime: "usage", agents: "workspace", workflows: "workspace" };
   const TRANG_CUOI_KEY = "javis_last_page";
   function khoiPhucTrang() {
-    let id = "home";
+    // 26.10.242: chủ repo chốt Tổng quan là trang mở đầu (trước đó là Quả cầu tri thức "home").
+    // Đang làm dở ở Trò chuyện hoặc Cộng sự rồi tải lại thì vẫn về đúng chỗ đó.
+    let id = "tongquan";
     try {
       const saved = localStorage.getItem(TRANG_CUOI_KEY);
       const resolved = TRANG_GOP[saved] || saved;
@@ -376,9 +379,12 @@
       store.active = id;
       if (tab) store.settingsTab = tab;
       // Chỉ nhớ hai khung hội thoại. Ghé Cài đặt, Cập nhật hay Đồ thị không làm mất
-      // nơi đang nói chuyện; chưa từng mở hội thoại thì lần đầu vẫn vào Đồ thị.
+      // nơi đang nói chuyện; chưa từng mở hội thoại thì lần đầu vào Tổng quan (26.10.242).
+      // Về Tổng quan hoặc Quả cầu nghĩa là đã rời hội thoại: xoá dấu để lần sau mở vào Tổng quan.
       if (id === "chat" || id === "workspace") {
         try { localStorage.setItem(TRANG_CUOI_KEY, id); } catch (e) {}
+      } else if (id === "tongquan") {
+        try { localStorage.removeItem(TRANG_CUOI_KEY); } catch (e) {}
       }
       // Về nơi có hiển thị model thì làm mới, phòng khi model bị đổi bằng đường khác
       // (trang Models, Cài đặt nhanh, hoặc chỉnh tay settings).
@@ -549,6 +555,11 @@
     if (id === "pet") return renderPetPage(el);
     if (id === "share") return renderSharePage(el);
     if (id === "matnha") return renderMatNha(el);
+    if (id === "tongquan") {
+      if (window.MinMinTongQuan) return window.MinMinTongQuan.render(el);
+      el.innerHTML = placeholder("tongquan", window.t("cs.mod_not_ready", { ten: "tong-quan.js" }));
+      return;
+    }
     if (id === "biendong") return renderBienDong(el);
     if (id === "ketnoingoai") {
       if (window.MinMinKetNoiNgoai) return window.MinMinKetNoiNgoai.render(el);

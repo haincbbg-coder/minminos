@@ -121,7 +121,7 @@ SYSTEM_PROMPT = (
     "NGOẠI LỆ, làm NGAY không nhờ bộ não chính: khi người dùng chỉ bảo ĐIỀU KHIỂN MÀN HÌNH, hãy "
     "trả lời một câu ngắn xác nhận rồi xuống dòng ghi " + UI_MARKER + " kèm lệnh:\n"
     "  " + UI_MARKER + " open_page <id trang>   (mở một tab. Viết ID tiếng Anh; trong ngoặc là nhãn "
-    "người dùng nhìn thấy và hay đọc lên: home (Min Min), chat (trò chuyện), files (tệp tin), "
+    "người dùng nhìn thấy và hay đọc lên: tongquan (tổng quan), home (Min Min), chat (trò chuyện), files (tệp tin), "
     "learn (tự học), terminal, workspace (cộng sự, trợ lý, quy trình), chatbots (chatbot), "
     "skills (kỹ năng), plugins (công cụ), kanban (việc), selfimprove (việc định kỳ), "
     "mcp (kết nối), packs (MinMin Store), channels (kênh), models, usage (mức dùng), "

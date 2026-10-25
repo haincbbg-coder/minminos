@@ -18,7 +18,7 @@ import unicodedata
 # Trang hợp lệ = RAIL_ITEMS trong dashboard/console.js và PAGES trong dashboard/ui-actions.js.
 # Thêm trang mới thì thêm ở cả ba chỗ.
 PAGES = (
-    "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
+    "tongquan", "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
     "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai",
     "biendong",
@@ -27,6 +27,8 @@ PAGES = (
 # Bí danh người dùng hay nói, ánh xạ về id trang. Thường hoá không dấu trước khi tra, nên viết
 # khoá ở đây KHÔNG DẤU. Nhãn tiếng Việt đang hiện trên thanh bên phải có mặt trong bảng này.
 ALIASES = {
+    "tong quan": "tongquan", "overview": "tongquan", "bang dieu khien": "tongquan",
+    "trang tong quan": "tongquan",
     "viec": "kanban", "cong viec": "kanban", "bang viec": "kanban", "task": "kanban", "tasks": "kanban",
     "tep": "files", "tep tin": "files", "file": "files", "thu muc": "files", "brain": "files",
     "cai dat": "settings", "setting": "settings", "thiet lap": "settings",
