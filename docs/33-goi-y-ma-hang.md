@@ -15,7 +15,7 @@ Tra theo thứ tự từ chắc nhất:
 
 Ba nguồn trên tra ngay trên máy nhân viên bằng bảng nạp sẵn nên chỉ mất vài mili giây, không tốn token AI.
 
-**Ảnh khách gửi** (từ 26.10.223): tiện ích tự gửi ảnh mới nhất lên MinMin. MinMin rút gọn bằng màu (không tốn token), rồi nhờ ChatGPT trên gói đã đăng nhập nhìn ảnh khách cạnh một bảng ảnh mẫu của khoảng 36 mã giống nhất và chọn tối đa 5 mã. Mất vài giây, chỉ một lần gọi cho mỗi ảnh, ảnh đã so rồi thì không tốn gì. Có trần số lần so mỗi ngày (mặc định 500, đổi bằng biến `JAVIS_GOI_Y_ANH_TRAN_NGAY`). Bấm vào ảnh nhỏ để so ảnh khác. Bấm "Đúng mã này" thì MinMin nhớ ảnh khách đó là mã nào, lần sau rút gọn chính xác hơn. Cần đã đăng nhập ChatGPT ở trang Model.
+**Ảnh khách gửi** (từ 26.10.225): tiện ích tự gửi ảnh mới nhất lên MinMin. MinMin rút gọn bằng màu (không tốn token), rồi nhờ ChatGPT trên gói đã đăng nhập nhìn ảnh khách cạnh một bảng ảnh mẫu của khoảng 36 mã giống nhất và chọn tối đa 5 mã. Mất vài giây, chỉ một lần gọi cho mỗi ảnh, ảnh đã so rồi thì không tốn gì. Có trần số lần so mỗi ngày (mặc định 500, đổi bằng biến `JAVIS_GOI_Y_ANH_TRAN_NGAY`). Bấm vào ảnh nhỏ để so ảnh khác. Bấm "Đúng mã này" thì MinMin nhớ ảnh khách đó là mã nào, lần sau rút gọn chính xác hơn. Cần đã đăng nhập ChatGPT ở trang Model.
 
 ## Cài tiện ích
 

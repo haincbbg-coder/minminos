@@ -4,10 +4,16 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
-## [26.10.223] - 2026-10-25
+## [26.10.225] - 2026-10-25
 ### Thêm mới
 - **Gợi ý mã hàng theo ảnh khách gửi**: tiện ích tự so ảnh khách mới nhất với ảnh mẫu trên POS. Rút gọn bằng màu rồi nhờ ChatGPT chọn, tối đa 5 mã, mỗi ảnh một lần gọi, có trần mỗi ngày.
 - Nhân viên bấm "Đúng mã này" thì MinMin nhớ ảnh đó, lần sau chính xác hơn. Cần chạy `javis_goi_y_ma_hoc_anh` một lần sau khi nạp mã.
+
+## [26.10.224] - 2026-10-25
+### Thêm mới
+- **Giọng nói dùng được năm bộ não mới**: GitHub Copilot, Kimi Code, Kiro, Cursor và Mistral Vibe. Chọn ở **Cài đặt, Giọng nói, Nâng cao, Bộ não trả lời nhanh**, mỗi bộ não chọn được model riêng.
+- Để **Tự động** thì máy chỉ chọn bộ não đã đăng nhập, không chọn nhầm cái mới cài. Năm bộ não cũ (Antigravity, ChatGPT, Claude, Grok, Muse) vẫn được ưu tiên như trước.
+- Bộ não giọng nói chỉ trả lời ngắn và không tự làm việc gì. Việc thật vẫn giao cho bộ não chính như cũ.
 
 ## [26.10.222] - 2026-10-25
 ### Sửa lỗi
@@ -21,7 +27,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ### Thêm mới
 - **Gợi ý mã hàng cho nhân viên bán hàng**: tiện ích mới trên Cốc Cốc/Chrome đọc hội thoại Pancake và hiện ngay mã hàng, độ chắc, vì sao và tồn kho. Tra theo mã khách nhắn, ID quảng cáo (kể cả mã trong tên chiến dịch), rồi ID bài viết. Bấm "Đúng mã này" thì MinMin nhớ cho lần sau.
 - Bộ não nạp dữ liệu bằng công cụ `javis_goi_y_ma_nap` và lấy mã ghép máy bằng `javis_goi_y_ma_ma_ghep`.
-- Tra theo ảnh khách gửi: xem bản 26.10.223.
+- Tra theo ảnh khách gửi: xem bản 26.10.225.
 
 ## [26.10.219] - 2026-10-24
 

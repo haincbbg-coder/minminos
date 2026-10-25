@@ -1,4 +1,4 @@
-"""goi_y_anh.py - gợi ý mã hàng từ ẢNH khách gửi (26.10.223).
+"""goi_y_anh.py - gợi ý mã hàng từ ẢNH khách gửi (26.10.225).
 
 Hai bước để vừa nhanh vừa rẻ:
   1. Rút gọn bằng màu, chạy trên máy chủ, không tốn token: so biểu đồ màu của ảnh khách với ảnh mẫu trên POS

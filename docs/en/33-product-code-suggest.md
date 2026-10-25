@@ -15,7 +15,7 @@ Lookup runs from the surest source down:
 
 The first three sources run on the staff machine from preloaded tables, so they take milliseconds and cost no AI tokens.
 
-**Customer photos** (since 26.10.223): the extension sends the latest photo to MinMin. MinMin shortlists by colour (no tokens), then asks ChatGPT on the signed-in plan to look at the customer photo next to a sheet of sample photos of the ~36 closest codes and pick up to 5. It takes a few seconds, one call per photo, and a photo already compared costs nothing. There is a daily cap (default 500, set with the `JAVIS_GOI_Y_ANH_TRAN_NGAY` variable). Click a thumbnail to compare another photo. Pressing "Đúng mã này" makes MinMin remember that photo as that code, so the shortlist gets sharper. ChatGPT must be signed in on the Models page.
+**Customer photos** (since 26.10.225): the extension sends the latest photo to MinMin. MinMin shortlists by colour (no tokens), then asks ChatGPT on the signed-in plan to look at the customer photo next to a sheet of sample photos of the ~36 closest codes and pick up to 5. It takes a few seconds, one call per photo, and a photo already compared costs nothing. There is a daily cap (default 500, set with the `JAVIS_GOI_Y_ANH_TRAN_NGAY` variable). Click a thumbnail to compare another photo. Pressing "Đúng mã này" makes MinMin remember that photo as that code, so the shortlist gets sharper. ChatGPT must be signed in on the Models page.
 
 ## Install the extension
 
