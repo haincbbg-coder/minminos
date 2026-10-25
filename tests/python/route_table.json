@@ -8100,5 +8100,15 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 813,
+  "type": "APIRoute",
+  "path": "/tong-quan",
+  "name": "tong_quan_trang",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]

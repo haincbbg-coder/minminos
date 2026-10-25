@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.242] - 2026-10-26
+### Thêm mới
+- **Trang Tổng quan, mở MinMin là vào đây**: việc đang chờ bạn duyệt (Bảng việc, Đội Social, kết nối hỏng, nhắc hẹn hỏng), tiền vào Techcombank, chi phí AI và số chính hôm nay so với hôm qua.
+- Việc chờ duyệt ở Bảng việc bấm **Duyệt** ngay trên trang; việc khác có nút **Mở** tới đúng chỗ xử lý.
+- Nguồn nào chưa nối thì ô đó ghi "Chưa nối" kèm nút đi nối, không hiện số 0 giả. Thanh **Hoàn tất cài đặt** tự ẩn khi đủ.
+- Đang làm dở ở Trò chuyện hoặc Cộng sự rồi tải lại trang thì vẫn về đúng chỗ đó.
+
 ## [26.10.241] - 2026-10-26
 ### Sửa lỗi
 - **Thống kê Pancake** đếm đúng số điện thoại và khách mới của từng page. Bản trước luôn ra 0 ở hai cột này.
