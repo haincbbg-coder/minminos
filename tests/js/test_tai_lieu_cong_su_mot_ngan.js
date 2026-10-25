@@ -8,13 +8,14 @@
    ở chỗ kia. Nay cả hai nút mở chung một ngăn, phạm vi chọn bằng công tắc có số lượng. */
 const fs = require("fs");
 const path = require("path");
+const { docCss } = require("./_doc_css");  // token design system -> số px thật
 
 const ROOT = path.join(__dirname, "..", "..");
 const rd = (f) => fs.readFileSync(path.join(ROOT, f), "utf8");
 const SU = rd("dashboard/sessions-ui.js");
 const WS = rd("dashboard/workspace.js");
 const ST = rd("dashboard/studio.js");
-const CSS = rd("dashboard/style.css");
+const CSS = docCss(rd("dashboard/style.css"));
 const VI = JSON.parse(rd("dashboard/i18n/vi.json"));
 const EN = JSON.parse(rd("dashboard/i18n/en.json"));
 

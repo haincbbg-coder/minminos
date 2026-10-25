@@ -68,3 +68,7 @@ THOẠI, không phải cho lập trình viên đọc diff:
   thân commit và phần mô tả PR.
 - Dùng `**` và dấu nháy ngược vừa phải. Trang có render markdown, nhưng một dòng dày đặc ký
   hiệu thì đọc trên màn hẹp rất mệt.
+
+## Giao diện
+
+Trước khi làm trang hoặc thành phần giao diện mới, đọc `docs/design-system.md` (phương án A "Nổi mềm tinh gọn"). Chỉ dùng token `--mm-*` trong `dashboard/surface-tokens.css`, không gõ mã màu, không thêm cỡ chữ hay mức bo mới.

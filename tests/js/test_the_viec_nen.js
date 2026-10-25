@@ -8,11 +8,12 @@
    và F5 là mất. Nay server gắn khối ẩn JAVIS_VIEC, dashboard vẽ thành thẻ. */
 const fs = require("fs");
 const path = require("path");
+const { docCss } = require("./_doc_css");  // token design system -> số px thật
 
 const ROOT = path.join(__dirname, "..", "..");
 const D = (f) => fs.readFileSync(path.join(ROOT, "dashboard", f), "utf8");
 const APP = D("app.js");
-const CSS = D("style.css");
+const CSS = docCss(D("style.css"));
 const HTML = D("index.html");
 const VI = JSON.parse(D(path.join("i18n", "vi.json")));
 const EN = JSON.parse(D(path.join("i18n", "en.json")));

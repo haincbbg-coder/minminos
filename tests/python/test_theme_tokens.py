@@ -22,6 +22,8 @@ from _paths import ROOT, SERVER  # noqa: E402,F401  - nạp server/ vào sys.pat
 CONSOLE_JS = (ROOT / "dashboard" / "console.js").read_text(encoding="utf-8")
 CONSOLE_CSS = (ROOT / "dashboard" / "console.css").read_text(encoding="utf-8")
 STYLE = (ROOT / "dashboard" / "style.css").read_text(encoding="utf-8")
+# Token design system (cỡ chữ, bo góc, khoảng cách) khai ở surface-tokens.css (26.10.238).
+SURFACE = (ROOT / "dashboard" / "surface-tokens.css").read_text(encoding="utf-8")
 
 fails = []
 
@@ -48,14 +50,14 @@ check(f"cp-css không gõ cứng màu (còn: {_hard})", not _hard)
 
 check("khung nhập ở tab Trò chuyện dùng đúng nền của thanh nhập màn Javis",
       ".chatpage-slot .hud-voice{ background:var(--bg2);" in CP_CSS)
-check("khung nhập ở tab Trò chuyện bo góc bằng bản gốc (18px)",
-      re.search(r"\.chatpage-slot \.hud-voice\{[^}]*border-radius:18px", CP_CSS) is not None)
+check("khung nhập ở tab Trò chuyện bo góc bằng bản gốc (token --mm-r-card)",
+      re.search(r"\.chatpage-slot \.hud-voice\{[^}]*border-radius:var\(--mm-r-card\)", CP_CSS) is not None)
 
 # HAI chỗ đặt chat phải cùng một bộ mặt, nếu không lật tông là thấy ngay chỗ vênh.
 # (Trước 0.12.4 có ba: cockpit, tab Trò chuyện, và lớp nổi "phóng to". Lớp nổi đã bỏ - phóng
 # to nay là chuyển hẳn sang tab Trò chuyện, xem tests/js/test_chat_zoom_sang_trang.js.)
-check("thanh nhập gốc ở cockpit vẫn là --bg2 + bo 18px",
-      re.search(r"\.hud-voice \{[^}]*border-radius: 18px;[^}]*background: var\(--bg2\)", STYLE) is not None)
+check("thanh nhập gốc ở cockpit vẫn là --bg2 + bo --mm-r-card",
+      re.search(r"\.hud-voice \{[^}]*border-radius: var\(--mm-r-card\);[^}]*background: var\(--bg2\)", STYLE) is not None)
 check("không còn bộ mặt thứ ba đi lạc (lớp nổi đã bỏ)",
       ".chat-stage-body" not in STYLE)
 
@@ -95,7 +97,7 @@ check("nút disabled giữ nguyên bộ mặt khi rê chuột", ".gcard-btn:disa
 # Quét phần giao diện của trang Coding và hộp chọn thư mục (mã của chính nhóm lỗi này). Cả kho
 # CSS còn vài token chưa khai nữa, nhưng phần lớn có giá trị lui `var(--x, #abc)` nên vẫn ra
 # màu; dọn hết là một việc riêng, không gộp vào đây.
-_KHAI = set(re.findall(r"(--[a-zA-Z0-9_-]+)\s*:", STYLE + CONSOLE_CSS))
+_KHAI = set(re.findall(r"(--[a-zA-Z0-9_-]+)\s*:", STYLE + CONSOLE_CSS + SURFACE))
 _KHOI = re.sub(r"/\*[\s\S]*?\*/", "", CONSOLE_CSS + STYLE)
 for _ten, _mau in (("chip trang Coding", r"\.cd-[a-z-]+[^{}]*\{[^}]*\}"),
                    ("hộp chọn thư mục", r"\.(?:fm|fp)-[a-z-]+[^{}]*\{[^}]*\}")):

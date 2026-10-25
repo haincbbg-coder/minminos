@@ -19,10 +19,10 @@ html.mm-galaxy #graph2d { cursor: crosshair; }
 /* Nhãn thư mục quanh não: chữ sáng trên nền tối, bất kể tông */
 html.mm-galaxy .concept-label .cl-name {
   color: #ece8ff; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
-  font-size: 11px; letter-spacing: 3px; font-weight: 500;
+  font-size: var(--mm-fs-12); letter-spacing: 3px; font-weight: 500;
   text-shadow: 0 0 10px rgba(0, 0, 0, 0.95), 0 0 2px #000;
 }
-html.mm-galaxy .concept-label .cl-meta { color: #8f86b8; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; }
+html.mm-galaxy .concept-label .cl-meta { color: #8f86b8; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: var(--mm-fs-badge); }
 html.mm-galaxy .concept-label.show { opacity: 0.85; }
 
 /* Nút nổi + số liệu Agents/Skills trên nền tối */
@@ -40,7 +40,7 @@ html.mm-galaxy .hud-center .bstat-sep { background: rgba(185, 160, 255, 0.2); }
 html.mm-galaxy .orb-state { color: #b9b0e6; font-family: 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 6px; }
 html.mm-galaxy .orb-interim { color: #ece8ff; }
 
-.mm-galaxy-off { top: 14px !important; right: 58px !important; font-size: 15px; line-height: 1; }
+.mm-galaxy-off { top: 14px !important; right: 58px !important; font-size: var(--mm-fs-16); line-height: 1; }
 
 /* HUD chữ kiểu ODIN */
 html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none; }
@@ -49,13 +49,13 @@ html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none;
   font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
   text-transform: uppercase; line-height: 1.9;
 }
-.mm-hud-l1 { font-size: 10.5px; letter-spacing: 2.6px; color: #9b95b8; }
-.mm-hud-l2 { font-size: 12px; letter-spacing: 3px; color: #cfc9ea; margin-top: 4px; }
+.mm-hud-l1 { font-size: var(--mm-fs-badge); letter-spacing: 2.6px; color: #9b95b8; }
+.mm-hud-l2 { font-size: var(--mm-fs-12); letter-spacing: 3px; color: #cfc9ea; margin-top: 4px; }
 .mm-hud-l2 b { font-weight: 500; color: #fff; margin-left: 10px; }
-.mm-hud-l3 { font-size: 10.5px; letter-spacing: 2.4px; color: #34e0b0; text-shadow: 0 0 8px rgba(52, 224, 176, 0.5); }
+.mm-hud-l3 { font-size: var(--mm-fs-badge); letter-spacing: 2.4px; color: #34e0b0; text-shadow: 0 0 8px rgba(52, 224, 176, 0.5); }
 .mm-hud-foot {
   position: absolute; left: 22px; bottom: 16px; z-index: 4; pointer-events: none;
-  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: var(--mm-fs-badge);
   letter-spacing: 2px; color: #6f6a8e; text-transform: uppercase;
 }
 @media (max-width: 860px) { .mm-hud { display: none; } .mm-hud-foot { display: none; } }
@@ -63,10 +63,10 @@ html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none;
 /* ---------- Cột trái: tab Điều hành / Vault ---------- */
 .mm-tabs {
   display: flex; gap: 4px; padding: 3px; margin-bottom: 12px; flex: none;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--bg2, transparent);
+  border: 1px solid var(--border); border-radius: var(--mm-r-btn); background: var(--bg2, transparent);
 }
 .mm-tabs button {
-  flex: 1; border: 0; background: none; cursor: pointer; padding: 6px 0; border-radius: 7px;
+  flex: 1; border: 0; background: none; cursor: pointer; padding: 6px 0; border-radius: var(--mm-r-chip);
   font: 600 12px var(--font); letter-spacing: 1px; color: var(--text2);
 }
 .mm-tabs button.active { background: var(--accent, #ff6a1a); color: #fff; }
@@ -83,7 +83,7 @@ html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none;
   --mm-t1: #f3f1fa; --mm-t2: #c3c2b7; --mm-t3: #8a87a0;
   display: flex; flex-direction: column; gap: 14px; flex: none;
   color: var(--mm-t1); font-family: var(--font);
-  margin: 0 -8px; padding: 12px 10px 14px; border-radius: 14px;
+  margin: 0 -8px; padding: 12px 10px 14px; border-radius: var(--mm-r-field);
   background: linear-gradient(180deg, #121019 0%, #0b0a11 100%);
   border: 1px solid var(--mm-brd);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -91,24 +91,24 @@ html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none;
 .mm-head { display: flex; align-items: center; justify-content: space-between; }
 .mm-title { font: 600 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 3px; color: #cfc9ea; }
 .mm-dash .mini-btn { color: var(--mm-t2); border-color: var(--mm-brd); }
-.mm-upd { font-size: 11px; color: var(--mm-t3); margin-top: -8px; }
+.mm-upd { font-size: var(--mm-fs-12); color: var(--mm-t3); margin-top: -8px; }
 .mm-sec-t {
   font: 600 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 2px;
   text-transform: uppercase; color: var(--mm-t3); margin: 12px 0 8px;
 }
 .mm-dash section > .mm-sec-t:first-child { margin-top: 0; }
-.mm-empty { font-size: 12px; line-height: 1.55; color: var(--mm-t2); padding: 10px; border: 1px dashed var(--mm-brd); border-radius: 10px; }
-.mm-empty code { font-size: 11px; color: #d9d2ff; word-break: break-all; }
+.mm-empty { font-size: var(--mm-fs-12); line-height: 1.55; color: var(--mm-t2); padding: 10px; border: 1px dashed var(--mm-brd); border-radius: var(--mm-r-btn); }
+.mm-empty code { font-size: var(--mm-fs-12); color: #d9d2ff; word-break: break-all; }
 .mm-demo {
   font: 700 10.5px var(--font); letter-spacing: 1px; color: #1a1a19;
-  background: #fab219; border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; text-align: center;
+  background: #fab219; border-radius: var(--mm-r-chip); padding: 4px 8px; margin-bottom: 8px; text-align: center;
 }
 
 .mm-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.mm-kpi { background: var(--mm-card); border: 1px solid var(--mm-brd); border-radius: 10px; padding: 8px 9px; min-width: 0; }
-.mm-kpi-l { font-size: 10.5px; color: var(--mm-t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mm-kpi-v { font-size: 17px; font-weight: 700; color: var(--mm-t1); margin-top: 2px; font-variant-numeric: tabular-nums; }
-.mm-kpi-d { font-size: 10.5px; margin-top: 1px; color: var(--mm-t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-kpi { background: var(--mm-card); border: 1px solid var(--mm-brd); border-radius: var(--mm-r-btn); padding: 8px 9px; min-width: 0; }
+.mm-kpi-l { font-size: var(--mm-fs-badge); color: var(--mm-t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-kpi-v { font-size: var(--mm-fs-16); font-weight: 700; color: var(--mm-t1); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.mm-kpi-d { font-size: var(--mm-fs-badge); margin-top: 1px; color: var(--mm-t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mm-kpi-d.up { color: #3fd13f; }
 .mm-kpi-d.down { color: #ff7a7a; }
 .mm-kpi-d span { color: var(--mm-t3); }
@@ -121,19 +121,19 @@ html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none;
 .mm-dot { stroke: #15141c; stroke-width: 2; }
 .mm-tip {
   position: absolute; top: -6px; width: 120px; pointer-events: none; z-index: 2;
-  font-size: 11px; color: var(--mm-t1); background: #26242f; border: 1px solid var(--mm-brd);
-  border-radius: 7px; padding: 4px 7px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); text-align: center;
+  font-size: var(--mm-fs-12); color: var(--mm-t1); background: #26242f; border: 1px solid var(--mm-brd);
+  border-radius: var(--mm-r-chip); padding: 4px 7px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); text-align: center;
 }
 .mm-tip em { color: var(--mm-t3); font-style: normal; }
-.mm-legend { display: flex; gap: 12px; font-size: 10.5px; color: var(--mm-t2); margin-top: 4px; }
+.mm-legend { display: flex; gap: 12px; font-size: var(--mm-fs-badge); color: var(--mm-t2); margin-top: 4px; }
 .mm-sw { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
 .mm-sw-dash { height: 0; border-top: 2px dashed; background: none !important; }
 
-.mm-fc { margin-top: 10px; padding: 10px; border-radius: 10px; background: var(--mm-card); border: 1px solid var(--mm-brd); }
-.mm-fc-l { font-size: 10.5px; color: var(--mm-t3); }
-.mm-fc-v { font-size: 22px; font-weight: 700; margin: 2px 0; font-variant-numeric: tabular-nums; }
-.mm-fc-s { font-size: 11px; color: var(--mm-t2); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
-.mm-fc-n { font-size: 10px; color: var(--mm-t3); margin-top: 6px; font-style: italic; }
+.mm-fc { margin-top: 10px; padding: 10px; border-radius: var(--mm-r-btn); background: var(--mm-card); border: 1px solid var(--mm-brd); }
+.mm-fc-l { font-size: var(--mm-fs-badge); color: var(--mm-t3); }
+.mm-fc-v { font-size: var(--mm-fs-20); font-weight: 700; margin: 2px 0; font-variant-numeric: tabular-nums; }
+.mm-fc-s { font-size: var(--mm-fs-12); color: var(--mm-t2); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+.mm-fc-n { font-size: var(--mm-fs-badge); color: var(--mm-t3); margin-top: 6px; font-style: italic; }
 
 .mm-bar { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin-top: 6px; }
 .mm-bar i { display: block; height: 100%; border-radius: 4px; background: #9085e9; }
@@ -149,34 +149,34 @@ html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none;
 .mm-st-info { background: #5b5870; color: #fff; }
 
 .mm-alerts, .mm-tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.mm-alerts li, .mm-tasks li { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.45; color: var(--mm-t2); }
+.mm-alerts li, .mm-tasks li { display: flex; gap: 8px; align-items: flex-start; font-size: var(--mm-fs-12); line-height: 1.45; color: var(--mm-t2); }
 .mm-tasks .mm-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
 .mm-proj { padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 .mm-proj:last-child { border-bottom: 0; }
 .mm-proj-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.mm-proj-n { font-size: 12.5px; font-weight: 600; color: var(--mm-t1); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mm-pill { flex: none; font-size: 10px; padding: 1px 7px; border-radius: 20px; border: 1px solid; }
+.mm-proj-n { font-size: var(--mm-fs-13); font-weight: 600; color: var(--mm-t1); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mm-pill { flex: none; font-size: var(--mm-fs-badge); padding: 1px 7px; border-radius: var(--mm-r-card); border: 1px solid; }
 .mm-pill-good { color: #3fd13f; border-color: rgba(12, 163, 12, 0.5); }
 .mm-pill-warning { color: #fab219; border-color: rgba(250, 178, 25, 0.5); }
 .mm-pill-serious { color: #ec835a; border-color: rgba(236, 131, 90, 0.5); }
 .mm-pill-critical { color: #ff7a7a; border-color: rgba(208, 59, 59, 0.6); }
 .mm-pill-info { color: var(--mm-t2); border-color: var(--mm-brd); }
-.mm-proj-m { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--mm-t3); margin-top: 4px; }
-.mm-proj-x { font-size: 11px; color: var(--mm-t2); margin-top: 3px; }
+.mm-proj-m { display: flex; justify-content: space-between; font-size: var(--mm-fs-badge); color: var(--mm-t3); margin-top: 4px; }
+.mm-proj-x { font-size: var(--mm-fs-12); color: var(--mm-t2); margin-top: 3px; }
 
 .mm-ops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.mm-ops div { text-align: center; background: var(--mm-card); border: 1px solid var(--mm-brd); border-radius: 8px; padding: 6px 2px; }
-.mm-ops b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+.mm-ops div { text-align: center; background: var(--mm-card); border: 1px solid var(--mm-brd); border-radius: var(--mm-r-chip); padding: 6px 2px; }
+.mm-ops b { display: block; font-size: var(--mm-fs-16); font-variant-numeric: tabular-nums; }
 .mm-ops span { font-size: 9.5px; color: var(--mm-t3); }
-.mm-note { display: flex; gap: 8px; font-size: 11px; color: var(--mm-t2); margin: 8px 0; line-height: 1.45; }
+.mm-note { display: flex; gap: 8px; font-size: var(--mm-fs-12); color: var(--mm-t2); margin: 8px 0; line-height: 1.45; }
 .mm-tasks { margin-top: 8px; }
-.mm-loops { font-size: 11px; color: var(--mm-t3); margin-top: 8px; }
+.mm-loops { font-size: var(--mm-fs-12); color: var(--mm-t3); margin-top: 8px; }
 .mm-loops b { color: var(--mm-t1); }
 .mm-bad { color: #ff7a7a; }
 
 .mm-foot { display: flex; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 10px; }
-.mm-link { background: none; border: 0; padding: 0; cursor: pointer; font-size: 11px; color: #a99bff; }
+.mm-link { background: none; border: 0; padding: 0; cursor: pointer; font-size: var(--mm-fs-12); color: #a99bff; }
 .mm-link:hover { text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) { .mm-tabs button { transition: none; } }
@@ -189,20 +189,20 @@ html:not(.mm-galaxy) .mm-hud, html:not(.mm-galaxy) .mm-hud-foot { display: none;
   box-shadow: none !important; z-index: 20;
 }
 .mm-ntip {
-  width: 280px; padding: 12px 14px 10px; border-radius: 12px;
+  width: 280px; padding: 12px 14px 10px; border-radius: var(--mm-r-btn);
   background: rgba(10, 8, 24, 0.92); border: 1px solid rgba(190, 170, 255, 0.28);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(140, 110, 255, 0.18);
   color: #ece9ff; font: 13px/1.45 var(--font, 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif);
   backdrop-filter: blur(6px); white-space: normal; text-align: left;
 }
-.mm-ntip-h { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #fff; }
+.mm-ntip-h { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: var(--mm-fs-14); color: #fff; }
 .mm-ntip-h i { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; }
-.mm-ntip-m { margin-top: 3px; font-size: 11.5px; color: #a9a3c8; }
+.mm-ntip-m { margin-top: 3px; font-size: var(--mm-fs-12); color: #a9a3c8; }
 .mm-ntip-m span { font-weight: 600; }
-.mm-ntip-tx { margin-top: 8px; color: #d8d4ef; font-size: 12.5px; }
+.mm-ntip-tx { margin-top: 8px; color: #d8d4ef; font-size: var(--mm-fs-13); }
 .mm-ntip-tx.cho { color: #7f79a3; font-style: italic; }
 .mm-ntip-f { margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(190, 170, 255, 0.14);
-  font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #7f79a3; }
+  font-size: var(--mm-fs-badge); letter-spacing: 1.4px; text-transform: uppercase; color: #7f79a3; }
 
 /* ==========================================================================
    TÔNG SÁNG - khớp giao diện sáng của app (nền --bg ấm, nhấn cam --accent).

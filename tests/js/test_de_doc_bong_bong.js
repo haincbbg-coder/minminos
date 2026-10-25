@@ -17,8 +17,9 @@
    trở lại, hoặc giãn dòng tụt về mức chật). */
 const fs = require("fs");
 const path = require("path");
+const { docCss } = require("./_doc_css");  // token design system -> số px thật
 
-const CSS = fs.readFileSync(path.join(__dirname, "../../dashboard/style.css"), "utf8");
+const CSS = docCss(fs.readFileSync(path.join(__dirname, "../../dashboard/style.css"), "utf8"));
 
 let fails = [];
 function check(name, cond) {

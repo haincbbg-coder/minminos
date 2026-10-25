@@ -10,11 +10,12 @@
 // khong test nao khac thay. Chua co DOM gia cho ca trang, nen test nay soi ma nguon.
 const fs = require("fs");
 const path = require("path");
+const { docCss } = require("./_doc_css");  // token design system -> số px thật
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const SRC = fs.readFileSync(path.join(ROOT, "dashboard", "conversations.js"), "utf8");
-const CSS = fs.readFileSync(path.join(ROOT, "dashboard", "console.css"), "utf8");
-const SCSS = fs.readFileSync(path.join(ROOT, "dashboard", "style.css"), "utf8");
+const CSS = docCss(fs.readFileSync(path.join(ROOT, "dashboard", "console.css"), "utf8"));
+const SCSS = docCss(fs.readFileSync(path.join(ROOT, "dashboard", "style.css"), "utf8"));
 const CB = fs.readFileSync(path.join(ROOT, "dashboard", "chatbots.js"), "utf8");
 // Phia may chu: hai dau kia (ten brain cua bot, va viec go tai khoan khoi bot) phai co that o
 // day chu khong chi la mot chuoi trong giao dien.

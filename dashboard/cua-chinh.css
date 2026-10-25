@@ -36,17 +36,17 @@
 /* Nút chuyển Gọn/Đầy đủ ở đáy ngăn kéo. */
 .cc-switch {
   display: flex; align-items: center; gap: 8px; width: calc(100% - 12px); margin: 6px;
-  padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--border);
-  background: none; color: var(--text2); font-size: 12px; cursor: pointer; text-align: left;
+  padding: 8px 10px; border-radius: var(--mm-r-btn); border: 1px dashed var(--border);
+  background: none; color: var(--text2); font-size: var(--mm-fs-12); cursor: pointer; text-align: left;
 }
 .cc-switch:hover { color: var(--accent); border-color: var(--accent); }
-.cc-switch .cc-sub { display: block; font-size: 11px; color: var(--text3); }
+.cc-switch .cc-sub { display: block; font-size: var(--mm-fs-12); color: var(--text3); }
 
 /* Chip "Hay dùng" đầu ngăn kéo. */
 .cc-hay-dung { padding: 4px 6px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-.cc-hd-lbl { flex: 1 0 100%; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); }
+.cc-hd-lbl { flex: 1 0 100%; font-size: var(--mm-fs-12); letter-spacing: 1px; text-transform: uppercase; color: var(--text3); }
 .cc-hd-chip {
-  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); background: none;
-  color: var(--text2); font-size: 12px; cursor: pointer;
+  padding: 5px 10px; border-radius: var(--mm-r-pill); border: 1px solid var(--border); background: none;
+  color: var(--text2); font-size: var(--mm-fs-12); cursor: pointer;
 }
 .cc-hd-chip:hover { color: var(--accent); border-color: var(--accent); }

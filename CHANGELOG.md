@@ -4,8 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
-## [26.10.237] - 2026-10-25
+## [26.10.238] - 2026-10-25
+### Cải thiện
+- **Giao diện đồng bộ hơn**: cỡ chữ gom từ 28 kiểu về 7 cỡ chuẩn, bo góc từ 21 kiểu về 5 mức. Chữ nhỏ lẻ (11px, 12.5px) nay đều đọc rõ ở 12-13px.
+- Giữ nguyên phong cách nổi mềm kem tím và tông tối hổ phách, chỉ dọn cho các trang trông cùng một nhà.
+- Có bộ quy chuẩn giao diện chung: trang và tính năng mới từ nay bám cùng một thang chữ, bo góc, khoảng cách.
 
+## [26.10.237] - 2026-10-25
 ### Cải thiện
 - **Văn phòng 3D trên điện thoại xem trọn màn hình và dễ điều khiển.** Mở ra là phủ kín cả màn hình, thanh trên chỉ còn ba nút chọn phòng, nút Menu và Đóng; các nút còn lại gom vào Menu. Nút mũi tên và phóng to nhỏ gọn ở góc dưới, có nút ẩn/hiện.
 
