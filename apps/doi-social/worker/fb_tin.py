@@ -472,7 +472,7 @@ def fb_nhan_tin_ds(nc) -> str:
     # Mỗi nick đi danh sách theo một thứ tự riêng (theo id nick) để các nick chạy song song ít đụng nhau.
     import random as _r
     _r.Random(str(nc.viec.get("nick_id"))).shuffle(ds)
-    gui, da_dung = 0, []
+    gui, thu, da_dung = 0, 0, []
     for nguoi in ds:
         if gui >= moi_nick or phai_dung(nc) or nc.con_lai("nhan_tin") <= 0:
             break
@@ -497,6 +497,7 @@ def fb_nhan_tin_ds(nc) -> str:
                 raise
             r = "loi:" + str(e)
         if r == "chay_thu":
+            thu += 1
             continue
         if r == "thanh_cong":
             nc.ghi_da_lam(khoa)
@@ -508,6 +509,8 @@ def fb_nhan_tin_ds(nc) -> str:
                        + ("không thấy ô nhập tin" if r == "khong_thay" else "chưa thấy tin hiện" if r == "khong_hien" else r[4:]),
                        link=link)
         nc.nghi_thao_tac()
+    if thu and not gui:
+        return f"Chạy thử: đã mở hộp tin và soạn sẵn cho {thu} người, không bấm Gửi."
     return f"Đã nhắn {gui} người."
 
 
