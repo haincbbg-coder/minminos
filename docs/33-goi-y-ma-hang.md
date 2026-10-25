@@ -32,3 +32,5 @@ Có thể nạp cả trăm mã một lần từ một file `.json` trong bộ n�
 Sau khi nạp mã, nhờ MinMin chạy `javis_goi_y_ma_hoc_anh` một lần để học ảnh mẫu (tải từ POS, chạy lại an toàn, chỉ học mã chưa có).
 
 Mỗi lần nhân viên bấm "Đúng mã này", MinMin nhớ ID quảng cáo hoặc bài viết đó là mã nào cho lần sau.
+
+**Quảng cáo**: Pancake ghi mã quảng cáo trong tin nhắn loại `ad_click`. Tiện ích đọc mã đó, đọc cả nội dung bài quảng cáo (có nhắc mã thì gợi ý luôn), và nếu quảng cáo chưa có trong bảng thì so ảnh quảng cáo với ảnh mẫu. Sticker và nút like không tính là ảnh.

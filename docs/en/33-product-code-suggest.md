@@ -32,3 +32,5 @@ You can load hundreds of codes at once from a `.json` file in the brain: `javis_
 After loading codes, ask MinMin to run `javis_goi_y_ma_hoc_anh` once to learn the sample photos (downloaded from the POS, safe to rerun, only learns codes it has not seen).
 
 Each time staff press "Đúng mã này", MinMin remembers that ad or post ID as that code for next time.
+
+**Ads**: Pancake records the ad id in a message of type `ad_click`. The extension reads that id and the ad text (a code mentioned there is suggested directly). If the ad is not in the table yet, it compares the ad image with the sample photos. Stickers and the like button are not treated as photos.
