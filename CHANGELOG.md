@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.241] - 2026-10-26
+### Sửa lỗi
+- **Thống kê Pancake** đếm đúng số điện thoại và khách mới của từng page. Bản trước luôn ra 0 ở hai cột này.
+
 ## [26.10.239] - 2026-10-25
 ### Sửa lỗi
 - **Gợi ý mã hàng**: hội thoại từ quảng cáo vẫn không ra mã dù tin nhắn đã ghi sẵn "MÃ: T145". Tiện ích chỉ đọc tin của khách và bỏ qua tin của bot/nhân viên shop. Nay đọc cả hai, nhận các kiểu "MÃ: T145", "Mã #S26", "BÁO GIÁ MÃ S26", và hiện mã đó kể cả khi chưa có trong bảng tồn.
