@@ -316,6 +316,39 @@ _install_fake(["data: " + json.dumps(_preview)])
 result = asyncio.run(image_gen.generate_chatgpt("test", vault_root=vault))
 check("EOF chỉ có ảnh nháp: không báo thành công", result.get("ok") is False)
 
+# ---- gói ChatGPT không có gpt-5.5: tự thử model khác khi tạo ảnh ----
+import image_vision
+_dung = []
+_png = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"0" * 40).decode()
+
+
+async def _luot_gia(payload, headers, timeout_s):
+    _dung.append(payload["model"])
+    if payload["model"] == "gpt-5.5":
+        return {"fatal": 'ChatGPT 400: {"detail":{"code":"model_not_found"}}'}
+    return {"b64": _png, "err": None}
+
+
+_goc_luot = image_gen._mot_luot
+image_gen._mot_luot = _luot_gia
+image_vision._ds_codex = []
+image_vision._MODEL_TOT = ""
+result = asyncio.run(image_gen.generate_chatgpt("test", vault_root=vault))
+check("tạo ảnh: model_not_found thì thử model khác", result.get("ok") is True and _dung[0] == "gpt-5.5" and len(_dung) == 2)
+check("tạo ảnh: nhớ model chạy được", image_vision._MODEL_TOT == _dung[-1])
+
+
+async def _luot_401(payload, headers, timeout_s):
+    _dung.append("x")
+    return {"fatal": "ChatGPT 401: token_expired"}
+
+
+image_gen._mot_luot = _luot_401
+_dung.clear()
+result = asyncio.run(image_gen.generate_chatgpt("test", vault_root=vault))
+check("tạo ảnh: lỗi đăng nhập thì dừng, không đổi model", result.get("ok") is False and len(_dung) == 1)
+image_gen._mot_luot = _goc_luot
+
 print()
 if _fails:
     print(f"THẤT BẠI {len(_fails)}: {_fails}")

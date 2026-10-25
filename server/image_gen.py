@@ -88,7 +88,7 @@ def read_reference_image(path: str, vault_root: Optional[str] = None) -> dict:
             "name": p.name}
 
 
-def build_payload(prompt: str, size: str, quality: str, images: Optional[list] = None) -> dict:
+def build_payload(prompt: str, size: str, quality: str, images: Optional[list] = None, model: str = "") -> dict:
     """Body Responses cho 1 lời gọi image_generation (mirror hermes openai-codex).
 
     `images` = danh sách data URL của ảnh MẪU. Có ảnh thì đây là lượt SỬA/DỰNG THEO ẢNH chứ
@@ -98,7 +98,7 @@ def build_payload(prompt: str, size: str, quality: str, images: Optional[list] =
     for u in (images or []):
         noi_dung.append({"type": "input_image", "image_url": u})
     return {
-        "model": HOST_MODEL,
+        "model": model or HOST_MODEL,
         "store": False,
         "instructions": INSTRUCTIONS,
         "input": [{"type": "message", "role": "user", "content": noi_dung}],
@@ -282,6 +282,51 @@ def _headers(token: str, account_id: str) -> dict:
 # ---------------------------------------------------------------------------
 # Gọi thật
 # ---------------------------------------------------------------------------
+async def _mot_luot(payload: dict, headers: dict, timeout_s: float) -> dict:
+    """Một lượt gọi Codex Responses. Trả {b64, err} hoặc {fatal: lỗi HTTP/mạng}."""
+    b64: Optional[str] = None
+    err: Optional[str] = None
+    try:
+        timeout = httpx.Timeout(timeout_s, connect=20)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream("POST", CODEX_RESPONSES_URL, headers=headers, json=payload) as r:
+                if r.status_code != 200:
+                    body = await r.aread()
+                    return {"fatal": f"ChatGPT {r.status_code}: {body.decode('utf-8', 'replace')[:300]}"}
+                async for line in r.aiter_lines():
+                    line = (line or "").strip()
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    if not data:
+                        continue
+                    try:
+                        obj = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(obj, dict):
+                        continue
+                    kind = obj.get("type")
+                    if kind in ("response.failed", "error", "response.error", "response.incomplete"):
+                        e = (obj.get("response") or {}).get("error") or obj.get("error") or {}
+                        err = e.get("message") if isinstance(e, dict) else str(e)
+                        err = err or f"ChatGPT không hoàn tất tạo ảnh ({kind})."
+                        break
+                    # Ảnh nháp không phải kết quả cuối. Chỉ giữ result của image_generation_call.
+                    got = extract_image_b64(obj, include_partial=False)
+                    if got:
+                        b64 = got
+                    # Hoàn tất ở tầng SSE, không đợi EOF của kết nối HTTP (có thể còn mở
+                    # nhiều phút, thậm chí có heartbeat nên read timeout không bao giờ hết).
+                    if kind == "response.completed":
+                        break
+    except Exception as e:
+        return {"fatal": f"Gọi ChatGPT lỗi: {type(e).__name__}: {e}"}
+    return {"b64": b64, "err": err}
+
+
 async def generate_chatgpt(prompt: str, aspect_ratio: str = "square", quality: str = "medium",
                            vault_root: Optional[str] = None, timeout_s: float = 300.0,
                            images: Optional[list] = None) -> dict:
@@ -319,49 +364,26 @@ async def generate_chatgpt(prompt: str, aspect_ratio: str = "square", quality: s
         data_urls.append(r["data_url"])
 
     size = resolve_size(aspect)
-    payload = build_payload(prompt, size, quality, data_urls)
     headers = _headers(creds["access_token"], creds.get("account_id") or "")
 
+    # Gói ChatGPT mỗi người một danh sách model: không có gpt-5.5 thì tự thử model khác (cùng luật với image_vision).
+    import image_vision as _iv
     b64: Optional[str] = None
     err: Optional[str] = None
-    try:
-        timeout = httpx.Timeout(timeout_s, connect=20)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            async with client.stream("POST", CODEX_RESPONSES_URL, headers=headers, json=payload) as r:
-                if r.status_code != 200:
-                    body = await r.aread()
-                    return {"ok": False, "error": f"ChatGPT {r.status_code}: {body.decode('utf-8', 'replace')[:300]}"}
-                async for line in r.aiter_lines():
-                    line = (line or "").strip()
-                    if not line.startswith("data:"):
-                        continue
-                    data = line[5:].strip()
-                    if data == "[DONE]":
-                        break
-                    if not data:
-                        continue
-                    try:
-                        obj = json.loads(data)
-                    except json.JSONDecodeError:
-                        continue
-                    if not isinstance(obj, dict):
-                        continue
-                    kind = obj.get("type")
-                    if kind in ("response.failed", "error", "response.error", "response.incomplete"):
-                        e = (obj.get("response") or {}).get("error") or obj.get("error") or {}
-                        err = e.get("message") if isinstance(e, dict) else str(e)
-                        err = err or f"ChatGPT không hoàn tất tạo ảnh ({kind})."
-                        break
-                    # Ảnh nháp không phải kết quả cuối. Chỉ giữ result của image_generation_call.
-                    got = extract_image_b64(obj, include_partial=False)
-                    if got:
-                        b64 = got
-                    # Hoàn tất ở tầng SSE, không đợi EOF của kết nối HTTP (có thể còn mở
-                    # nhiều phút, thậm chí có heartbeat nên read timeout không bao giờ hết).
-                    if kind == "response.completed":
-                        break
-    except Exception as e:
-        return {"ok": False, "error": f"Gọi ChatGPT lỗi: {type(e).__name__}: {e}"}
+    for model in await _iv._model_ung_vien():
+        payload = build_payload(prompt, size, quality, data_urls, model)
+        kq = await _mot_luot(payload, headers, timeout_s)
+        if kq.get("fatal"):
+            if _iv._la_loi_model(kq["fatal"]):
+                err = kq["fatal"]
+                continue
+            return {"ok": False, "error": kq["fatal"]}
+        b64, err = kq.get("b64"), kq.get("err")
+        if err and _iv._la_loi_model(err):
+            continue
+        if b64:
+            _iv._MODEL_TOT = model
+        break
 
     if err or not b64:
         return {"ok": False, "error": err or "ChatGPT không trả ảnh (gói ChatGPT có thể chưa hỗ trợ tạo ảnh qua Codex)."}
