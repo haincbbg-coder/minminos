@@ -4,6 +4,15 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.246] - 2026-10-26
+### Thêm mới
+- **Đội AI trên Bảng việc**: giao một job nhiều bước cho Đội Social, Đội Ads hoặc tự kê bước. Mỗi job là một hàng bước, thấy ngay đội đang ở đâu.
+- **Bước GATE**: tới bước tiêu tiền hoặc đăng công khai thì job dừng, hiện "Bạn sắp cho phép" với nút **Duyệt**, **Sửa lại** (gửi ghi chú cho đội), **Từ chối**. Duyệt chỉ cho đúng bước sau chạy thật, một lần.
+- **Duyệt bằng Telegram**: tin GATE có nút Duyệt / Từ chối / Xem chi tiết, bấm một chạm là xong.
+
+### Bảo mật
+- Bước trước GATE không còn đường tự thao tác ra ngoài hay tự nâng quyền (lệnh máy, tự giao việc toàn quyền, sửa file cấu hình quyền trong brain). Việc nền mức thấp nào cũng không tự tạo được việc toàn quyền nữa.
+
 ## [26.10.245] - 2026-10-26
 ### Thêm mới
 - **Bảng Hiệu suất Sale** trong Phòng Sale của Văn phòng 3D: xếp hạng sale theo điểm 100 (Mở khách 40, Chốt 45, Tốc độ 15), số lấy thẳng từ Thống kê Pancake, tự xoay Hôm nay, Hôm qua, 7 ngày.

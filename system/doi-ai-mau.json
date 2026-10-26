@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "ghi_chu": "Mẫu job của Đội AI (Bảng việc có GATE). {muc_tieu} được thay bằng mục tiêu người dùng nhập. Bước ngay sau một GATE luôn chạy ở loại external-write và chỉ được chạy thật khi chủ bấm Duyệt.",
+  "mau": [
+    {
+      "id": "social-bai-fanpage",
+      "ten": "Đội Social: bài fanpage",
+      "doi": "social",
+      "mo_ta": "Soạn bài và chọn ảnh theo mục tiêu, chủ duyệt mẫu, rồi đăng theo lịch qua công cụ Đội Social.",
+      "buoc": [
+        {
+          "title": "Soạn bài và chọn ảnh",
+          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nSoạn các bài đăng fanpage theo mục tiêu trên (số bài theo mục tiêu, không nói thì 3 bài). Mỗi bài gồm: nội dung hoàn chỉnh, ảnh chọn từ thư viện ảnh trong brain (ghi đường dẫn), và giờ đăng đề xuất. CHỈ VIẾT BẢN NHÁP: lưu vào brain và liệt kê lại trong kết quả. TUYỆT ĐỐI KHÔNG đăng, không hẹn lịch, không gọi bất kỳ công cụ đăng bài nào ở bước này.",
+          "capability": "files"
+        },
+        {
+          "title": "Duyệt mẫu trước khi đăng",
+          "gate": true,
+          "gate_mo_ta": "Duyệt mẫu trước khi đăng: bấm Duyệt là cho phép đăng ĐÚNG các bài nháp ở bước trước lên fanpage theo lịch đề xuất."
+        },
+        {
+          "title": "Đăng bài theo lịch",
+          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nĐăng ĐÚNG các bài nháp chủ vừa duyệt ở bước soạn bài (xem bối cảnh job), theo giờ đã đề xuất, qua công cụ Đội Social (social_tao_bai_fb, social_ke_hoach, up_bai_chay). Không sửa nội dung, không thêm bài ngoài danh sách đã duyệt. Nếu không có công cụ Đội Social nào gọi được thì DỪNG và báo rõ cần bật plugin Đội Social, KHÔNG được giả vờ đã đăng. Kết quả: liệt kê từng bài đã đăng hoặc đã hẹn kèm mã bài/giờ."
+        }
+      ]
+    },
+    {
+      "id": "ads-len-camp",
+      "ten": "Đội Ads: lên camp",
+      "doi": "ads",
+      "mo_ta": "Nghiên cứu mẫu và đối thủ, viết 3 mẫu content, dựng camp ở trạng thái TẮT, chủ duyệt trước khi chi tiền, rồi bật camp.",
+      "buoc": [
+        {
+          "title": "Nghiên cứu mẫu và đối thủ",
+          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nNghiên cứu quảng cáo mẫu và đối thủ liên quan tới mục tiêu trên (thư viện quảng cáo, số liệu ads đang có nếu đọc được). Kết quả: tóm tắt góc tiếp cận, hook, ưu đãi đang chạy và đề xuất hướng cho camp. Chỉ đọc, không thay đổi gì ở tài khoản quảng cáo.",
+          "capability": "research"
+        },
+        {
+          "title": "Viết 3 mẫu content",
+          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nDựa trên kết quả nghiên cứu ở bước trước, viết 3 mẫu content quảng cáo khác góc (tiêu đề, nội dung chính, lời kêu gọi, gợi ý hình ảnh). Lưu vào brain và liệt kê lại trong kết quả. Không tạo hay sửa gì trên Facebook Ads.",
+          "capability": "files"
+        },
+        {
+          "title": "Dựng camp ở trạng thái TẮT",
+          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nDựng chiến dịch quảng cáo theo 3 mẫu content đã viết, ĐỂ Ở TRẠNG THÁI TẮT (PAUSED), chưa chi đồng nào. Ghi rõ trong kết quả: tài khoản quảng cáo, ngân sách ngày, đối tượng, vị trí, mã camp/nhóm/quảng cáo. Nếu MinMin không có công cụ GHI Facebook Ads (kết nối hiện có chỉ đọc) thì DỪNG và báo rõ: cần nối công cụ ghi Facebook Ads. KHÔNG được giả vờ đã dựng camp, không bịa mã camp.",
+          "capability": "mcp-read"
+        },
+        {
+          "title": "Bạn duyệt trước khi chi tiền",
+          "gate": true,
+          "gate_mo_ta": "Bạn duyệt trước khi chi tiền: bấm Duyệt là cho phép BẬT camp vừa dựng ở bước trước và bắt đầu tiêu ngân sách đã ghi."
+        },
+        {
+          "title": "Bật camp",
+          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nBật ĐÚNG camp đã dựng ở bước trước (xem mã camp trong bối cảnh job) với ngân sách đã ghi, không đổi ngân sách hay đối tượng. Nếu không có công cụ GHI Facebook Ads, hoặc bước dựng camp chưa thật sự tạo ra mã camp, thì DỪNG và báo rõ: cần nối công cụ ghi Facebook Ads. KHÔNG được giả vờ đã bật. Kết quả: mã camp đã bật và trạng thái đọc lại từ Facebook Ads."
+        }
+      ]
+    },
+    {
+      "id": "tu-ke-buoc",
+      "ten": "Tự kê bước",
+      "doi": "khac",
+      "mo_ta": "Job trống: tự kê từng bước và đặt GATE ở chỗ cần duyệt.",
+      "buoc": []
+    }
+  ]
+}

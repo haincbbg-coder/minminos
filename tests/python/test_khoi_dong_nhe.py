@@ -147,7 +147,11 @@ for lop, ten in _BA_HAM:
 # Đo trên bản 26.10.186 chưa đổi gì đã 4,19-4,35 ở máy dev và CI đỏ chập chờn, tức trần cũ hết biên
 # đúng như dự báo ở trên. Ca phải bắt vẫn tách sạch: edge_tts + aiohttp ở mức module cộng ~1.150ms,
 # tức thêm khoảng +3,5 vào tỉ lệ, vượt xa 4,6.
-TRAN_TI_LE = 4.6
+# NÂNG LÊN 5,0 ngày 26/10/2026 (26.10.246): đo trên chính origin/main 26.10.242 chưa đổi gì đã
+# 4,22-4,73 (đỏ chập chờn như lần trước), bản Đội AI có GATE (thêm 4 route + khối thông báo) đo
+# 4,72-4,85. -X importtime cho thấy `import main` của hai bản ngang nhau trong nhiễu (~1,24s), không
+# thư viện nặng mới nào. Ca phải bắt vẫn tách sạch: edge_tts + aiohttp ở mức module cộng ~+3,5.
+TRAN_TI_LE = 5.0
 
 
 def do_nap_xen_ke(codes, n=5):

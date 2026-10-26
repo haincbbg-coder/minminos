@@ -877,7 +877,12 @@ class TelegramBot(HangLuot):
             print(f"[telegram answerCallback] {e}", file=sys.stderr)
         if not res or "text" not in res:
             return
-        payload = {"chat_id": chat, "message_id": mid, "text": res["text"]}
+        text = res["text"]
+        # `them_vao_goc`: giữ nguyên chữ tin gốc, chỉ nối thêm một dòng (vd "Đã duyệt lúc 09:12"
+        # của nút GATE). Callback không nhận tin gốc nên bot ghép ở đây; thiếu chữ gốc thì dùng `text`.
+        if res.get("them_vao_goc") and (msg.get("text") or "").strip():
+            text = f"{msg['text'].rstrip()}\n\n{res['them_vao_goc']}"
+        payload = {"chat_id": chat, "message_id": mid, "text": text}
         rm = res.get("reply_markup")
         if rm is not None:
             payload["reply_markup"] = rm   # bỏ trống → gỡ bàn phím nút (khi chọn xong/đóng)

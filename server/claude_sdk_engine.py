@@ -504,6 +504,11 @@ class ClaudeSDK:
         # SessionStart/UserPromptSubmit, enabledPlugins, permissions.allow xét TRƯỚC can_use_tool).
         # [] = không nạp gì cả: lượt chạy thử và phiên cải tiến của Trụ 6 (26.10.217) đặt giá trị này.
         self.setting_sources = None
+        # Đường (tương đối với cwd) phiên có rào KHÔNG được ghi bằng tool ghi native. None = không
+        # rào đường. Bước job Đội AI chưa qua GATE đặt danh sách này (tasks._siet_buoc_job, 26.10.246):
+        # tool trong allowed_tools được SDK tự duyệt, nên khi có danh sách thì các tool ghi bị rút
+        # khỏi danh sách tự duyệt và đi qua _permission_gate để soi đường dẫn.
+        self.duong_cam_ghi = None
         # Server MCP in-process THÊM vào (tên -> McpSdkServerConfig), đấu ở CẢ nhánh có rào. Trụ 6
         # dùng cho phiên cải tiến: một server đọc file khoá trong thư mục bằng chứng, thay cho Read
         # native (Read native nhận đường dẫn tuyệt đối nên đọc được đáp án và điểm ở chỗ khác).
@@ -540,6 +545,31 @@ class ClaudeSDK:
     def reset_session(self):
         self.session_id = None
 
+    _TOOL_GHI = ("Write", "Edit", "MultiEdit", "NotebookEdit")
+
+    def _ghi_vao_duong_cam(self, input_data) -> str:
+        """Đường bị cấm mà lệnh ghi này nhắm tới ("" = được ghi). Soi cả đường tuyệt đối lẫn
+        tương đối, chuẩn hoá ".." trước khi so để không lách bằng "a/../.claude/settings.json"."""
+        cam = self.duong_cam_ghi or []
+        if not cam:
+            return ""
+        raw = str((input_data or {}).get("file_path") or (input_data or {}).get("notebook_path") or "")
+        if not raw:
+            return ""
+        goc = os.path.realpath(self.cwd or ".")
+        dich = os.path.realpath(raw if os.path.isabs(raw) else os.path.join(goc, raw))
+        try:
+            rel = os.path.relpath(dich, goc).replace("\\", "/")
+        except ValueError:
+            return raw
+        if rel == ".." or rel.startswith("../"):
+            return raw          # ra ngoài brain: phiên có rào không có việc gì ở đó
+        for c in cam:
+            c = c.strip("/")
+            if rel == c or rel.startswith(c + "/"):
+                return c
+        return ""
+
     async def _permission_gate(self, tool_name, input_data, context):
         """can_use_tool: whitelist THẬT per-call khi chạy chế độ nền an toàn (allowed_tools).
         Hỗ trợ pattern fnmatch (vd 'mcp__javis__pos_*') VÀ prefix kiểu --allowedTools của
@@ -548,6 +578,13 @@ class ClaudeSDK:
         tool nào → lane nền (kanban/loop) bị chặn sạch MCP dù connector sống."""
         from claude_agent_sdk import PermissionResultAllow, PermissionResultDeny
         allowed = self.allowed_tools or []
+        if tool_name in self._TOOL_GHI and self.duong_cam_ghi:
+            bi_cam = self._ghi_vao_duong_cam(input_data)
+            if bi_cam:
+                _audit(self.tag, tool_name, False, f"ghi vào đường cấm: {bi_cam}")
+                return PermissionResultDeny(
+                    message=f"Không được ghi vào '{bi_cam}' ở bước này: đó là cấu hình, quyền hoặc việc "
+                            f"tự chạy của MinMin, chỉ chủ mới đổi được. Ghi bản nháp ở chỗ khác trong brain.")
         ok = any(tool_name == p or fnmatch.fnmatch(tool_name, p)
                  or (p.startswith("mcp__") and "*" not in p
                      and tool_name.startswith(p + "__"))
@@ -781,6 +818,9 @@ class ClaudeSDK:
             # Chế độ nền an toàn: whitelist auto-allow, MỌI tool khác rơi vào _permission_gate → DENY.
             # KHÔNG nạp settings filesystem: allow-rule trong settings user có thể che gate.
             kw["allowed_tools"] = list(self.allowed_tools)
+            if self.duong_cam_ghi:
+                # Rút tool ghi khỏi danh sách TỰ DUYỆT để chúng đi qua _permission_gate soi đường dẫn.
+                kw["allowed_tools"] = [t for t in kw["allowed_tools"] if t not in self._TOOL_GHI]
             kw["permission_mode"] = "default"
             kw["can_use_tool"] = self._permission_gate
             # Chú thích trên nói "KHÔNG nạp settings filesystem" nhưng tới 26.10.216 code không đặt

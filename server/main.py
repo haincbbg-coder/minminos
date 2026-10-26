@@ -11884,13 +11884,17 @@ def _cat_cho_tg(text: str) -> str:
     return t[:_TRAN_TIN_TG].rstrip() + "\n\n… (còn nữa - xem đầy đủ trong hòm thư của Javis)"
 
 
-async def _gui_qua_kenh(owner_chat, text, *, ngan="", viec=None, web="") -> tuple:
+async def _gui_qua_kenh(owner_chat, text, *, ngan="", viec=None, web="",
+                        reply_markup=None) -> tuple:
     """Gửi qua ĐÚNG kênh đã giao việc. Tách khỏi `_notify_owner` để chỗ đó chỉ còn lo việc
     ghép hai đường (hòm thư + kênh), không lẫn với chi tiết của từng nhà.
 
     Đây cũng là nơi DUY NHẤT biết mỗi kênh chịu được gì, nên bản rút gọn `ngan` được chọn ở
     đây chứ không ở nơi sinh việc: khung chat web không có trần và người dùng đang ngồi đó -
     trả về đủ; Telegram/Zalo là một cái liếc trên điện thoại và có trần thật - trả bản gọn.
+
+    `reply_markup` (26.10, Đội AI GATE): bàn phím nút inline, CHỈ gắn khi tin đi Telegram.
+    Web và Zalo không có nút nên bỏ qua nó. Mặc định None: mọi chỗ gọi cũ gửi y như trước.
     """
     cid = str(owner_chat or "").strip()
     if cid.startswith(WEB_CHAT_PREFIX):
@@ -11913,16 +11917,234 @@ async def _gui_qua_kenh(owner_chat, text, *, ngan="", viec=None, web="") -> tupl
         return False, "Bot Telegram chưa bật hoặc chưa có chat_id"
     target = cid if (cid and cid in ids) else ids[0]
     import httpx
+    payload = {"chat_id": target, "text": _cat_cho_tg(text)}
+    if reply_markup is not None:
+        payload["reply_markup"] = reply_markup
     try:
         async with httpx.AsyncClient(timeout=15) as c:
             r = await c.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                             json={"chat_id": target, "text": _cat_cho_tg(text)})
+                             json=payload)
             d = r.json() if r.content else {}
             if d.get("ok"):
                 return True, ""
             return False, str(d.get("description") or f"HTTP {r.status_code}")[:200]
     except Exception as e:
         return False, f"{type(e).__name__}: {e}"
+
+
+# ============================================================
+# ĐỘI AI - GATE (26.10, plans/doi-ai-gate): báo chủ khi một job dừng ở bước GATE, kèm nút
+# Duyệt / Từ chối / Xem chi tiết trên Telegram. Hàng đợi (tasks.py) gọi `deps.notify_gate`
+# đúng một lần cho mỗi GATE; nút bấm quay về `_tg_callback` nhánh "gv:".
+# ============================================================
+_DOI_TEN = {"social": "Social", "ads": "Ads", "khac": "AI"}
+_JOB_TT_TEN = {"dang_chay": "đang chạy", "cho_duyet": "chờ bạn duyệt", "ket": "kẹt",
+               "xong": "xong", "dung": "đã dừng"}
+_BUOC_TT_TEN = {"done": "xong", "running": "đang chạy", "blocked": "chặn", "review": "chờ xem",
+                "cancelled": "huỷ", "archived": "lưu trữ", "todo": "chờ", "ready": "sẵn sàng",
+                "triage": "chờ", "failed": "lỗi"}
+_TG_CB_TRAN = 64          # Telegram giới hạn callback_data 64 BYTE
+# Mã rút gọn cho job_id quá dài (callback 64 byte) -> {"job_id", "brain"}. Chỉ sống trong RAM:
+# server khởi động lại thì nút của tin cũ báo "hết hạn" và chủ duyệt trên dashboard.
+_GATE_MA: dict = {}
+# job_id -> brain đã thấy lúc báo GATE, để nút bấm tìm đúng bộ não không cần đoán.
+_GATE_BRAIN: dict = {}
+
+
+def _gate_feature():
+    """Hàng đợi Kanban đang chạy (tasks.current()), None nếu chưa có."""
+    try:
+        return tasks_mod.current()
+    except Exception:
+        return None
+
+
+def _gate_cb(job_id: str, hanh_dong: str) -> str:
+    """callback_data cho nút GATE, luôn <= 64 byte. job_id dài quá thì thay bằng mã rút gọn."""
+    jid = str(job_id or "")
+    data = f"gv:{jid}:{hanh_dong}"
+    if len(data.encode("utf-8")) <= _TG_CB_TRAN:
+        return data
+    ma = "~" + hashlib.sha1(jid.encode("utf-8")).hexdigest()[:12]
+    _GATE_MA.setdefault(ma, {"job_id": jid, "brain": _GATE_BRAIN.get(jid, "")})
+    return f"gv:{ma}:{hanh_dong}"
+
+
+def _gate_link_chi_tiet() -> str:
+    """Địa chỉ công khai để mở Bảng việc, rỗng nếu máy chưa có tên miền riêng (Cài đặt > Tên miền,
+    `settings.domain.custom`, cùng nguồn routes/domain.py dùng). Có SSL thì https."""
+    try:
+        dom = (cfgmod.read_settings().get("domain", {}) or {})
+        custom = str(dom.get("custom") or "").strip().lower().rstrip("/")
+    except Exception:
+        return ""
+    if not custom or not re.fullmatch(r"[a-z0-9.-]+(:\d{1,5})?", custom):
+        return ""
+    scheme = "https" if dom.get("ssl_enabled") else "http"
+    return f"{scheme}://{custom}/#kanban"
+
+
+def _gate_cat(s, n: int) -> str:
+    s = " ".join(str(s or "").split())
+    return s if len(s) <= n else s[:n - 1].rstrip() + "…"
+
+
+def _gate_soan_tin(job_view: dict, gate_task=None) -> str:
+    """Tin GATE ngắn, xưng "bạn". Dòng 1 đội, dòng 2 job + bước đã xong, dòng 3 mô tả GATE,
+    thêm tối đa 2 dòng xem trước."""
+    jv = job_view if isinstance(job_view, dict) else {}
+    gc = jv.get("gate_cho") if isinstance(jv.get("gate_cho"), dict) else {}
+    doi = _DOI_TEN.get(str(jv.get("doi") or "").strip().lower(), "AI")
+    title = _gate_cat(jv.get("title") or "Job chưa đặt tên", 80)
+    xong = [_gate_cat(b.get("title"), 40) for b in (jv.get("buoc") or [])
+            if isinstance(b, dict) and b.get("loai") != "gate" and b.get("status") == "done"]
+    dong2 = f"{title} · Đã xong: " + (", ".join(xong) if xong else "chưa có bước nào")
+    mo_ta = gc.get("mo_ta")
+    if not mo_ta and isinstance(gate_task, dict):
+        mo_ta = gate_task.get("title")
+    dong = [f"GATE · Đội {doi} chờ bạn duyệt", dong2,
+            _gate_cat(mo_ta or "Bước tiếp theo cần bạn cho phép trước khi chạy thật.", 300)]
+    xt = str(gc.get("xem_truoc") or "").strip()
+    if xt:
+        dong_xt = [l.strip() for l in xt.splitlines() if l.strip()][:2]
+        for i, l in enumerate(dong_xt):
+            dong.append(("Xem trước: " if i == 0 else "") + _gate_cat(l, 160))
+    return "\n".join(dong)
+
+
+def _gate_ban_phim(job_id: str) -> dict:
+    hang2 = ({"text": "Xem chi tiết", "url": _gate_link_chi_tiet()} if _gate_link_chi_tiet()
+             else {"text": "Xem chi tiết", "callback_data": _gate_cb(job_id, "x")})
+    return {"inline_keyboard": [
+        [{"text": "Duyệt", "callback_data": _gate_cb(job_id, "d")},
+         {"text": "Từ chối", "callback_data": _gate_cb(job_id, "t")}],
+        [hang2]]}
+
+
+async def _notify_gate(job_view, gate_task=None) -> tuple:
+    """`deps.notify_gate` của hàng đợi: một job vừa tới bước GATE.
+
+    Luôn bỏ hòm thư (chưa đọc - đây đúng là loại tin CẦN chủ ra tay), rồi gửi theo `chat_id`
+    của job như `_notify_owner`: web:<sid> vào khung chat, zalo:<id> qua Zalo (chữ, không nút),
+    còn lại Telegram kèm nút Duyệt / Từ chối / Xem chi tiết. Không bao giờ ném lỗi ra hàng đợi.
+    """
+    try:
+        jv = job_view if isinstance(job_view, dict) else {}
+        job_id = str(jv.get("id") or "")
+        chat = str(jv.get("chat_id") or "").strip()
+        brain = str(jv.get("brain") or jv.get("brain_root") or "")
+        if job_id and brain:
+            _GATE_BRAIN[job_id] = brain
+        text = _gate_soan_tin(jv, gate_task)
+        await _bo_vao_hom_thu(chat, text, kind="report", label="Đội AI · GATE", source="gate")
+        if chat.startswith(WEB_CHAT_PREFIX) or chat.startswith(ZALO_CHAT_PREFIX):
+            # Không có nút: chỉ đường về chỗ bấm được.
+            return await _gui_qua_kenh(chat, text + "\n\nMở Bảng việc để Duyệt, Sửa lại hoặc Từ chối.")
+        if not job_id:
+            return await _gui_qua_kenh(chat, text)
+        return await _gui_qua_kenh(chat, text, reply_markup=_gate_ban_phim(job_id))
+    except Exception as e:
+        print(f"[gate] báo GATE lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+        return False, f"{type(e).__name__}: {e}"
+
+
+def _gate_tim_job(job_id: str, chat_key: str):
+    """(brain, job_view|None) cho job_id. Thử brain đã nhớ lúc báo, brain phiên Telegram của
+    người bấm, rồi mọi brain dispatcher quét - CHỈ đọc (jobs_view), không đổi gì."""
+    f = _gate_feature()
+    ung_vien = []
+    if _GATE_BRAIN.get(job_id):
+        ung_vien.append(_GATE_BRAIN[job_id])
+    try:
+        ung_vien.append(_tg_brain(chat_key))
+    except Exception:
+        pass
+    try:
+        ung_vien.extend(_kanban_brains())
+    except Exception:
+        pass
+    ung_vien = [b for b in dict.fromkeys(ung_vien) if b]
+    if f is not None and hasattr(f, "jobs_view"):
+        for b in ung_vien:
+            try:
+                for j in (f.jobs_view(b) or {}).get("jobs") or []:
+                    if str(j.get("id")) == job_id:
+                        return b, j
+            except Exception:
+                continue
+    return (ung_vien[0] if ung_vien else ""), None
+
+
+def _gate_tom_tat(jv: dict) -> str:
+    doi = _DOI_TEN.get(str(jv.get("doi") or "").lower(), "AI")
+    tt = _JOB_TT_TEN.get(str(jv.get("status") or ""), str(jv.get("status") or "?"))
+    dong = [f"Đội {doi} · {_gate_cat(jv.get('title'), 80)}", f"Trạng thái: {tt}"]
+    for i, b in enumerate(jv.get("buoc") or [], 1):
+        if not isinstance(b, dict):
+            continue
+        loai = "GATE " if b.get("loai") == "gate" else ""
+        st = _BUOC_TT_TEN.get(str(b.get("status") or ""), str(b.get("status") or ""))
+        d = f"{i}. {loai}{_gate_cat(b.get('title'), 60)} - {st}"
+        kq = b.get("ket_qua_ngan") or b.get("block_reason")
+        if kq:
+            d += f": {_gate_cat(kq, 120)}"
+        dong.append(d)
+    gc = jv.get("gate_cho") if isinstance(jv.get("gate_cho"), dict) else {}
+    if gc.get("mo_ta"):
+        dong.append("Đang chờ: " + _gate_cat(gc["mo_ta"], 200))
+    if gc.get("xem_truoc"):
+        dong.append("Xem trước: " + _gate_cat(gc["xem_truoc"], 600))
+    return "\n".join(dong)
+
+
+async def _gate_callback(data: str, chat_key: str):
+    """Nhánh "gv:<job_id>:<d|t|x>" của `_tg_callback`. Không bao giờ ném lỗi."""
+    try:
+        than = data[3:]
+        ma, hd = than.rsplit(":", 1)
+    except Exception:
+        return {"alert": "Dữ liệu nút lỗi"}
+    if not ma or hd not in ("d", "t", "x"):
+        return {"alert": "Dữ liệu nút lỗi"}
+    job_id = ma
+    if ma.startswith("~"):
+        m = _GATE_MA.get(ma)
+        if not m:
+            return {"alert": "Nút đã hết hạn (server vừa khởi động lại). Duyệt trên Bảng việc."}
+        job_id = m["job_id"]
+        if m.get("brain"):
+            _GATE_BRAIN.setdefault(job_id, m["brain"])
+    f = _gate_feature()
+    if f is None:
+        return {"alert": "Bảng việc chưa chạy, thử lại sau"}
+    brain, jv = _gate_tim_job(job_id, chat_key)
+    if hd == "x":
+        if not jv:
+            return {"alert": "Không tìm thấy job này nữa"}
+        ok, err = await _gui_qua_kenh(chat_key, _gate_tom_tat(jv))
+        return {"alert": "Đã gửi tóm tắt" if ok else f"Không gửi được: {err}"[:190]}
+    gate_action = getattr(f, "gate_action", None)
+    if not callable(gate_action):
+        return {"alert": "Bản này chưa hỗ trợ duyệt GATE, hãy duyệt trên Bảng việc"}
+    action = "duyet" if hd == "d" else "tu_choi"
+    try:
+        kq = gate_action(brain, job_id, action, note="", source="telegram")
+        if asyncio.iscoroutine(kq):
+            kq = await kq
+    except Exception as e:
+        print(f"[gate] gate_action lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+        return {"alert": f"Không xử lý được: {e}"[:190]}
+    kq = kq if isinstance(kq, dict) else {}
+    if not kq.get("ok"):
+        return {"alert": ("Không xử lý được: " + str(kq.get("loi") or kq.get("status") or "lỗi"))[:190]}
+    gio = localefmt.now().strftime("%H:%M")
+    nhan = "Đã duyệt" if hd == "d" else "Đã từ chối"
+    dong_moi = f"{nhan} lúc {gio}"
+    # `text` là bản dựng lại phòng khi tin gốc không đọc được; `them_vao_goc` bảo telegram_bot
+    # giữ NGUYÊN chữ tin gốc và chỉ nối thêm dòng này. Không trả reply_markup:
+    # editMessageText không kèm bàn phím = gỡ nút, khỏi bấm lần hai.
+    noi_dung = _gate_soan_tin(jv) if jv else f"GATE · job {job_id}"
+    return {"text": f"{noi_dung}\n\n{dong_moi}", "them_vao_goc": dong_moi, "alert": nhan}
 
 
 def _loop_mcp_allow():
@@ -12069,6 +12291,11 @@ learn_feature.deps.enqueue_task = tasks_feature.enqueue
 # Không có nhánh này thì Javis chỉ học được từ những gì NÓI trong chat, còn những gì nó TỰ LÀM
 # trong nền - phần kinh nghiệm thực chiến - trôi qua không để lại bài học nào.
 tasks_feature.deps.learn_hook = learn_feature.enqueue_job
+
+# Đội AI - GATE (plans/doi-ai-gate): job tới bước GATE thì hàng đợi gọi `deps.notify_gate`.
+# Gán sau khi tạo (giống learn_hook) chứ không truyền vào TasksDeps(...): trường đó do Phase 01
+# thêm vào dataclass, truyền kwarg khi nó chưa có là server không khởi động được.
+tasks_feature.deps.notify_gate = _notify_gate
 
 
 # ============================================================
@@ -22664,6 +22891,9 @@ async def _tg_callback(data, chat=None):
     chat = chat_id người bấm → nút brain chỉ đổi cho PHIÊN của họ (model vẫn đổi toàn cục)."""
     data = data or ""
     chat_key = str(chat or "default")
+    if data.startswith("gv:"):
+        # Đội AI - GATE: Duyệt (d) / Từ chối (t) / Xem chi tiết (x) một job đang chờ duyệt
+        return await _gate_callback(data, chat_key)
     if data.startswith("dy:"):
         # nút Đồng ý/Từ chối của cổng hỏi trước (26.10.165)
         try:

@@ -762,6 +762,26 @@ async def _maybe_await(v):
     return v
 
 
+# Tool TẠO VIỆC MỚI kèm mức quyền (26.10.246). Việc tạo ra không được có quyền cao hơn lượt đang
+# gọi: một bước auto (ví dụ bước trước GATE của job Đội AI) gọi javis_task(mode="full") là tự cấp
+# toàn quyền cho chính nó, lách đúng cái cổng chủ phải duyệt. Lượt full giữ nguyên hành vi cũ.
+TRAN_QUYEN_THEO_NGUOI_GOI = {"javis_task": "mode", "javis_schedule": "muc_quyen"}
+_HANG_MUC = {"suggest": 0, "readonly": 0, "auto": 1, "safe": 1, "full": 2}
+
+
+def kep_quyen_viec_moi(name: str, args: dict, mode: str) -> dict:
+    """Trả args đã kẹp mức quyền của việc mới về mức của lượt đang gọi (không đổi args gốc)."""
+    khoa = TRAN_QUYEN_THEO_NGUOI_GOI.get(name)
+    hang_goi = _HANG_MUC.get(str(mode or "full").strip().lower(), 2)
+    if not khoa or hang_goi >= 2:
+        return args or {}
+    a = dict(args or {})
+    xin = str(a.get(khoa) or "full").strip().lower()      # hai tool này mặc định full
+    if _HANG_MUC.get(xin, 2) > hang_goi:
+        a[khoa] = "auto" if hang_goi == 1 else "suggest"
+    return a
+
+
 def _make_call(tool: dict, ctx: PluginContext, mode: str):
     """Bọc 1 handler plugin thành async call(args) có gate min_mode + check_fn + chống crash."""
     handler = tool["handler"]
@@ -770,6 +790,7 @@ def _make_call(tool: dict, ctx: PluginContext, mode: str):
     name = tool["name"]
 
     async def _call(args):
+        args = kep_quyen_viec_moi(name, args, mode)
         if not _min_mode_ok(min_mode, mode):
             loai = "ghi/hành động" if min_mode == "safe" else "nguy hiểm (chỉ chế độ full)"
             return (f"ERROR: tool '{name}' cần mức quyền cao hơn ({min_mode}) - thao tác {loai} "
