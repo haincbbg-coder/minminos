@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import json
 import os
 import re
@@ -115,6 +116,30 @@ class TasksDeps:
     # Nối Kanban → tự học: việc nền chạy xong/vướng thì xếp vào hàng đợi học (learn.enqueue_job).
     # Tiêm sau khi learn_feature sẵn sàng (main gán). None = chưa nối → bỏ qua, worker chạy như cũ.
     learn_hook: Optional[Callable] = None
+    # Đội AI (26.10): báo chủ khi một GATE tới lượt chờ duyệt - hòm thư + Telegram có nút.
+    # Gọi `notify_gate(job_view, gate_task)`, sync hay async đều được. None = chưa nối: GATE vẫn
+    # chuyển sang chờ duyệt và hiện trên trang Việc, chỉ là không ai bị rung chuông.
+    notify_gate: Optional[Callable] = None
+
+
+# ----------------------------------------------------------------------
+# Đội AI: job = chuỗi bước chạy lần lượt trên Kanban, có bước GATE chờ chủ duyệt
+# ----------------------------------------------------------------------
+JOB_MAX_STEPS = 12
+JOB_DOI = ("social", "ads", "khac")
+JOB_STATUS = ("dang_chay", "cho_duyet", "ket", "xong", "dung")
+GATE_ACTIONS = ("duyet", "sua", "tu_choi")
+KET_QUA_NGAN = 200
+XEM_TRUOC = 600
+# Kết quả các bước trước đưa vào prompt của bước sau, để "đăng bài" biết bản nháp nào đã được
+# duyệt. Cắt mỗi bước để prompt không phình theo độ dài job.
+NGU_CANH_BUOC_MAX = 3000
+MAU_JOB_PATH = Path(__file__).resolve().parent.parent / "system" / "doi-ai-mau.json"
+
+
+def _cat(text: Any, n: int) -> str:
+    value = str(text or "").strip()
+    return value if len(value) <= n else value[:n].rstrip() + "…"
 
 
 class TasksFeature:
@@ -135,6 +160,9 @@ class TasksFeature:
         # Rổ gom thông báo việc KẸT, theo TỪNG người nhận (xem `_gom_bao`).
         self._ro_bao: dict[str, list[dict]] = {}
         self._hen_bao: dict[str, asyncio.Task] = {}
+        # Giữ tham chiếu tới các lần báo GATE chạy nền: task asyncio không ai giữ có thể bị gom
+        # rác giữa chừng.
+        self._bao_gate_nen: set = set()
         self.router = self._make_router()
 
     # ------------------------------------------------------------------
@@ -338,6 +366,11 @@ class TasksFeature:
         # Việc một-lần đã xong/huỷ quá hạn tự rời bảng (archived) - bảng Việc chỉ giữ
         # việc còn sống và việc mới kết thúc gần đây, lịch sử vẫn tra được khi cần.
         changed += self.store.archive_old_terminal(root, ARCHIVE_TERMINAL_AFTER_DAYS)
+        # GATE của Đội AI: chuyển sang chờ duyệt + báo chủ. Ở ĐÂY chứ không ở nhánh nhận việc,
+        # vì housekeep chạy cho MỌI bảng kể cả bảng đang off/manual (dispatcher gọi nó trước khi
+        # xét chế độ, tick của scheduler cũng gọi), nên bước trước GATE xong bằng tay thì GATE
+        # vẫn tới lượt chờ duyệt.
+        changed += self._mo_gate(root)
         if changed:
             self._snapshot(root)
 
@@ -345,6 +378,14 @@ class TasksFeature:
         self._prune_workers()
         slots = self.max_workers - len(self._workers)
         if slots <= 0:
+            # Hết chỗ chạy vẫn phải mở GATE: chờ chủ duyệt không tốn worker nào, không có lý do
+            # để chủ đợi tới khi một việc khác chạy xong mới được báo.
+            for root in self._brain_roots():
+                try:
+                    if self._mo_gate(root):
+                        self._snapshot(root)
+                except Exception as exc:
+                    print(f"[kanban gate] {type(exc).__name__}: {exc}", file=sys.stderr)
             return
 
         candidates: list[dict] = []
@@ -457,6 +498,12 @@ class TasksFeature:
                     tid, worker_id, "capability", LY_DO_CAN_QUYEN,
                 )
                 return
+
+            if task.get("job_id") and task.get("execution_mode") != "full":
+                ly_do = self._engine_khong_rao()
+                if ly_do:
+                    final_task = self.store.block(tid, worker_id, "engine", ly_do)
+                    return
 
             # 0.238.0: thao tác ra ngoài của việc ghi sổ theo mã việc (once_ledger.py), nên lần chạy lại không
             # gửi, đăng hay tạo đơn lần hai. Còn thao tác chưa rõ đã tới nơi chưa thì hỏi chủ TRƯỚC khi chạy.
@@ -582,6 +629,50 @@ class TasksFeature:
         except Exception as e:
             print(f"[kanban] không gắn được mã việc vào cấu hình MCP: {type(e).__name__}: {e}", file=sys.stderr)
 
+    # Đường trong brain mà bước job chưa qua GATE KHÔNG được ghi (26.10.246). Mỗi chỗ là một cách
+    # tự nâng quyền cho lượt sau: settings dự án (permissions.allow được xét TRƯỚC can_use_tool),
+    # cấu hình MCP, loop/agent/workflow/skill/plugin (chạy được ở mức full khi bật).
+    DUONG_CAM_GHI_BUOC_JOB = (".claude", ".mcp.json", "CLAUDE.md", "Javis/loops", "Javis/agents",
+                              "Javis/workflows", "agents", "workflows", "skills", "plugins", ".agents")
+
+    @classmethod
+    def _siet_buoc_job(cls, cli) -> None:
+        """Siết phiên Claude của một bước job dưới mức full (26.10.246, Phase 03 kiểm quyền).
+
+        - Chỉ MCP do MinMin đưa vào (hub Javis): bỏ MCP nạp từ ~/.claude.json, .mcp.json của brain.
+        - Không nạp settings filesystem nào, kể cả của dự án: một bước trước đó có thể đã ghi
+          permissions.allow vào .claude/settings.json của brain để lượt này tự được duyệt.
+        - Chặn ghi vào các đường tự nâng quyền (DUONG_CAM_GHI_BUOC_JOB).
+        Engine không phải Claude bỏ qua các thuộc tính này; rào của chúng nằm ở aux_engine và ở
+        kiểm tra engine trước khi chạy (`_engine_khong_rao`)."""
+        if getattr(cli, "mcp_config", None):
+            cli.mcp_strict = True
+        cli.setting_sources = []
+        cli.duong_cam_ghi = list(cls.DUONG_CAM_GHI_BUOC_JOB)
+
+    @staticmethod
+    def _engine_khong_rao() -> str:
+        """Lý do (rỗng = ổn) khi engine việc nền KHÔNG rào được thao tác ra ngoài dưới mức full.
+
+        Antigravity chạy mức auto bằng --dangerously-skip-permissions, không sandbox. Codex khi
+        JAVIS_CODEX_SANDBOX=off (bản Docker đặt sẵn) chạy không rào ở MỌI mức. Với hai trường hợp
+        này bước trước GATE sẽ có shell đầy đủ, nên dừng lại và nói rõ thay vì chạy mà hứa suông."""
+        try:
+            spec = aux_engine.read_spec()
+        except Exception:
+            return ""
+        prov = str(spec.get("provider") or "")
+        if prov == aux_engine.ANTIGRAVITY:
+            return ("Bộ não việc nền đang là Antigravity: engine này không chặn được thao tác ra ngoài "
+                    "ở mức thấp, nên bước trước GATE không chạy an toàn được. Đổi bộ não việc nền "
+                    "sang Claude Code hoặc một model API ở trang Bộ não AI rồi bấm Thử lại.")
+        if prov == aux_engine.CODEX and str(os.getenv("JAVIS_CODEX_SANDBOX", "auto")).strip().lower() in (
+                "off", "0", "false", "none"):
+            return ("Bộ não việc nền đang là Codex chạy không rào (JAVIS_CODEX_SANDBOX=off, bản Docker): "
+                    "bước trước GATE sẽ có shell đầy đủ. Đổi bộ não việc nền sang Claude Code hoặc một "
+                    "model API ở trang Bộ não AI rồi bấm Thử lại.")
+        return ""
+
     def _base_cli(
         self,
         task: dict,
@@ -608,6 +699,8 @@ class TasksFeature:
             if mcp_file:
                 cli.mcp_config = mcp_file
                 cli.mcp_strict = True
+        if task.get("job_id") and mode != "full":
+            self._siet_buoc_job(cli)
         if mode in ("auto", "full"):
             self._gan_ma_viec(cli, task)
         cli = aux_engine.apply(self.deps, cli, mode=mode, tag=cli.tag)
@@ -800,7 +893,12 @@ nói rõ đã được phép tự hành động; nếu không thì để auto đ
             return None, mode, []
         tools = list(self.deps.safe_tools)
         disallowed = ["Task"]
-        if capability == "code":
+        # Bước của job Đội AI chưa qua GATE (26.10.246): KHÔNG có Bash ở bất kỳ capability nào.
+        # Lệnh shell không đi qua mcp_hub._guard, nên một bước "code" ở mức auto vẫn curl/chạy
+        # script thao tác ra ngoài được - đúng thứ GATE hứa là chặn. Việc lẻ ngoài job giữ nguyên.
+        if capability == "code" and task.get("job_id"):
+            disallowed.extend(["Bash", "WebFetch", "WebSearch"])
+        elif capability == "code":
             tools.append("Bash")
             disallowed.extend(["WebFetch", "WebSearch"])
         elif capability == "research":
@@ -894,6 +992,7 @@ nói rõ đã được phép tự hành động; nếu không thì để auto đ
         except Exception:
             pass
         acceptance = task.get("metadata", {}).get("acceptance") or []
+        ngu_canh_job = self._ngu_canh_job(task)
         prompt = f"""
 Bạn là autonomous worker của Javis. Hãy hoàn thành đúng task được giao trong brain đã
 ghim. Tự kiểm tra kết quả trước khi kết thúc. Không mở rộng phạm vi và không hỏi trong
@@ -907,7 +1006,7 @@ MỤC TIÊU:
 
 ĐIỀU KIỆN HOÀN THÀNH:
 {json.dumps(acceptance, ensure_ascii=False)}
-{chr(10) + hoi_dap + chr(10) if hoi_dap else ""}
+{chr(10) + ngu_canh_job + chr(10) if ngu_canh_job else ""}{chr(10) + hoi_dap + chr(10) if hoi_dap else ""}
 Nếu thiếu một quyết định hoặc dữ liệu mà không thể suy ra an toàn, kết quả phải bắt đầu
 bằng [[NEEDS_INPUT]] và nêu đúng MỘT câu hỏi cụ thể, trả lời được trong một câu; chủ sẽ
 trả lời và việc chạy tiếp với câu trả lời đó. Nếu hoàn thành, báo cáo ngắn: đã làm
@@ -1225,6 +1324,10 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
         if not self.deps.report:
             return
         status = str(task.get("status") or "")
+        if str(task.get("capability") or "") == "gate" or str(task.get("block_kind") or "") == "gate":
+            # GATE chỉ báo qua notify_gate (có nút Duyệt/Từ chối). Báo thêm ở đây là hai tin cho
+            # cùng một lần chờ, mà tin này lại bảo "xem trang Việc" thay vì cho bấm duyệt.
+            return
         if status == "blocked" and self._cau_hoi_dang_cho(task):
             await self._bao_cau_hoi(task)
             return
@@ -1293,6 +1396,368 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             # để chấm dứt. Vẫn không ném lên (một cái báo hỏng không được kéo theo cả worker).
             print(f"[kanban] báo kết quả việc {task.get('id', '')} lỗi: "
                   f"{type(e).__name__}: {e}", file=sys.stderr)
+
+    # ------------------------------------------------------------------
+    # Đội AI: job + GATE
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _buoc_so(task: dict) -> int:
+        try:
+            return int((task.get("metadata") or {}).get("job_step") or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _cac_buoc(self, job_id: str) -> list[dict]:
+        return sorted(self.store.job_tasks(job_id), key=lambda t: (self._buoc_so(t),
+                                                                  float(t.get("created_at") or 0)))
+
+    @staticmethod
+    def _la_gate(task: dict) -> bool:
+        return str(task.get("capability") or "") == "gate"
+
+    @staticmethod
+    def _gate_da_duyet(task: dict) -> bool:
+        gate = (task.get("metadata") or {}).get("gate")
+        return bool(isinstance(gate, dict) and gate.get("duyet"))
+
+    def _kiem_buoc(self, steps: Any) -> list[dict]:
+        """Chuẩn hoá + kiểm danh sách bước. Ném ValueError kèm câu cho người đọc."""
+        if isinstance(steps, str):
+            try:
+                steps = json.loads(steps or "[]")
+            except Exception:
+                raise ValueError("Danh sách bước không phải JSON hợp lệ")
+        if not isinstance(steps, list) or not steps:
+            raise ValueError("Job cần ít nhất một bước")
+        if len(steps) > JOB_MAX_STEPS:
+            raise ValueError(f"Job tối đa {JOB_MAX_STEPS} bước")
+        out: list[dict] = []
+        for i, raw in enumerate(steps, 1):
+            if not isinstance(raw, dict):
+                raise ValueError(f"Bước {i} không hợp lệ")
+            title = str(raw.get("title") or "").strip()
+            if not re.search(r"\w", title):
+                raise ValueError(f"Bước {i} chưa có tiêu đề")
+            gate = raw.get("gate") in (True, 1, "1", "true", "True", "on")
+            cap = str(raw.get("capability") or "auto").strip()
+            if cap not in CAPABILITIES:
+                cap = "auto"
+            out.append({
+                "title": title[:160],
+                "intent": str(raw.get("intent") or "").strip(),
+                "capability": cap,
+                "gate": gate,
+                "gate_mo_ta": str(raw.get("gate_mo_ta") or "").strip(),
+            })
+        if out[0]["gate"]:
+            raise ValueError("GATE không được là bước đầu tiên: chưa có gì để duyệt")
+        if out[-1]["gate"]:
+            raise ValueError("GATE không được là bước cuối cùng: duyệt xong không có gì để chạy")
+        for a, b in zip(out, out[1:]):
+            if a["gate"] and b["gate"]:
+                raise ValueError("Hai GATE không được đứng liền nhau")
+        return out
+
+    def create_job(self, brain: str, title: str, doi: str, steps: Any, chat_id: str = "") -> str:
+        """Tạo một job của Đội AI: mỗi bước một việc Kanban, bước i phụ thuộc bước i-1.
+
+        Bước GATE là việc `capability="gate"` không bao giờ được giao cho worker. Bước ngay sau
+        GATE là `external-write` ở mức `auto`: tới lượt mà chưa có ai duyệt thì kernel chặn nó,
+        và chỉ `gate_action(... "duyet")` cấp `full` cho đúng bước đó."""
+        title = str(title or "").strip()
+        if not re.search(r"\w", title):
+            raise ValueError("Job chưa có tiêu đề")
+        doi = str(doi or "khac").strip().lower()
+        if doi not in JOB_DOI:
+            doi = "khac"
+        buoc = self._kiem_buoc(steps)
+        root = self._ensure(brain)
+        job_id = "j_" + uuid.uuid4().hex[:12]
+        ids = ["t_" + uuid.uuid4().hex[:12] for _ in buoc]
+        self.store.create_job(root, job_id, title, doi, chat_id)
+        for i, b in enumerate(buoc):
+            meta: dict = {"job_step": i + 1}
+            if b["gate"]:
+                mo_ta = b["gate_mo_ta"] or b["intent"] or b["title"]
+                # Bước ngay sau GATE (đã kiểm: luôn có, và không phải GATE).
+                meta["gate"] = {"mo_ta": mo_ta, "mo_khoa": [ids[i + 1]]}
+                cap, mode, intent = "gate", "auto", mo_ta
+            elif i > 0 and buoc[i - 1]["gate"]:
+                cap, mode, intent = "external-write", "auto", b["intent"] or b["title"]
+            else:
+                cap, mode, intent = b["capability"], "auto", b["intent"] or b["title"]
+            status = "todo" if i else ("triage" if cap == "auto" else "ready")
+            self.store.enqueue(
+                root, b["title"], intent, deps=[ids[i - 1]] if i else None,
+                created_by="doi-ai", chat_id=chat_id, capability=cap, execution_mode=mode,
+                status=status, task_id=ids[i], job_id=job_id, metadata=meta,
+                dedup_title=False,
+            )
+        self.store.promote_dependencies(root)
+        self._snapshot(root)
+        self.wake()
+        return job_id
+
+    def _tinh_trang_job(self, job: dict, buoc: list[dict]) -> str:
+        if (job.get("metadata") or {}).get("tu_choi") or job.get("status") == "dung":
+            return "dung"
+        if any(self._la_gate(t) and t.get("status") == "blocked"
+               and t.get("block_kind") == "gate" for t in buoc):
+            return "cho_duyet"
+        for t in buoc:
+            st = str(t.get("status") or "")
+            if st == "cancelled" or (st == "blocked" and not self._la_gate(t)):
+                return "ket"
+            # GATE bị dọn/kéo tay sang done/archived mà chưa ai duyệt: bước sau sẽ không bao giờ
+            # được mở, nói thẳng là kẹt chứ đừng để job "đang chạy" im lặng mãi.
+            if self._la_gate(t) and st in ("done", "archived") and not self._gate_da_duyet(t):
+                return "ket"
+        if buoc and all(str(t.get("status")) in ("done", "archived") for t in buoc):
+            return "xong"
+        return "dang_chay"
+
+    def _job_view(self, job: dict, buoc: Optional[list[dict]] = None) -> dict:
+        buoc = self._cac_buoc(job["id"]) if buoc is None else buoc
+        status = self._tinh_trang_job(job, buoc)
+        if status != job.get("status"):
+            self.store.set_job_status(job["id"], status)
+        gate_cho = None
+        for i, t in enumerate(buoc):
+            if self._la_gate(t) and t.get("status") == "blocked" and t.get("block_kind") == "gate":
+                gate = (t.get("metadata") or {}).get("gate") or {}
+                truoc = buoc[i - 1] if i > 0 else {}
+                gate_cho = {
+                    "task_id": t["id"],
+                    "mo_ta": str(gate.get("mo_ta") or t.get("block_reason") or ""),
+                    "xem_truoc": _cat(truoc.get("result"), XEM_TRUOC),
+                    "mo_khoa": list(gate.get("mo_khoa") or []),
+                }
+                break
+        return {
+            "id": job["id"],
+            "title": job.get("title") or "",
+            "doi": job.get("doi") or "khac",
+            "status": status,
+            "created_at": job.get("created_at"),
+            "chat_id": job.get("chat_id") or "",
+            "buoc": [
+                {
+                    "task_id": t["id"],
+                    "title": t.get("title") or "",
+                    "loai": "gate" if self._la_gate(t) else "buoc",
+                    "status": t.get("status") or "",
+                    "ket_qua_ngan": _cat(t.get("result"), KET_QUA_NGAN),
+                    "block_reason": str(t.get("block_reason") or ""),
+                }
+                for t in buoc
+            ],
+            "gate_cho": gate_cho,
+        }
+
+    def jobs_view(self, brain: str) -> dict:
+        root = self._ensure(brain)
+        # Mở GATE ngay lúc đọc: bảng off/manual vẫn thấy GATE chờ duyệt dù dispatcher chưa
+        # quét vòng nào kể từ khi bước trước xong.
+        if self._mo_gate(root):
+            self._snapshot(root)
+        return {"jobs": [self._job_view(j) for j in self.store.list_jobs(root)]}
+
+    def _mo_gate(self, root: str) -> int:
+        """Chuyển GATE tới lượt sang chờ duyệt và báo chủ ĐÚNG MỘT LẦN mỗi lần chờ. Trả số GATE
+        vừa chuyển (để housekeep biết có cần ghi snapshot)."""
+        moi = self.store.open_gates(root)
+        notify = getattr(self.deps, "notify_gate", None)
+        for gate in self.store.gates_waiting(root):
+            job_id = str(gate.get("job_id") or "")
+            job = self.store.get_job(job_id) if job_id else None
+            if job and job.get("status") not in ("dung", "cho_duyet"):
+                self.store.set_job_status(job_id, "cho_duyet")
+                job = self.store.get_job(job_id)
+            if not notify or not job:
+                # Chưa nối kênh báo: KHÔNG bật cờ, để lúc main.py nối xong GATE vẫn được báo.
+                continue
+            if not self.store.mark_gate_notified(gate["id"]):
+                continue
+            self._goi_bao_gate(notify, self._job_view(job), self.store.get_task(gate["id"]) or gate)
+        return len(moi)
+
+    def _goi_bao_gate(self, notify: Callable, view: dict, gate: dict) -> None:
+        try:
+            out = notify(view, gate)
+        except Exception as e:
+            print(f"[kanban gate] báo GATE {gate.get('id')} lỗi: {type(e).__name__}: {e}",
+                  file=sys.stderr)
+            return
+        if not inspect.isawaitable(out):
+            return
+
+        async def _cho():
+            try:
+                await out
+            except Exception as e:
+                print(f"[kanban gate] báo GATE {gate.get('id')} lỗi: {type(e).__name__}: {e}",
+                      file=sys.stderr)
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop is not None:
+            t = loop.create_task(_cho())
+            self._bao_gate_nen.add(t)
+            t.add_done_callback(self._bao_gate_nen.discard)
+        else:
+            asyncio.run(_cho())
+
+    def _ngu_canh_job(self, task: dict) -> str:
+        """Kết quả các bước trước của cùng job, cho worker của bước sau (vd. bước đăng bài cần
+        biết bản nháp nào vừa được duyệt). Rỗng với việc lẻ."""
+        job_id = str(task.get("job_id") or "")
+        if not job_id:
+            return ""
+        try:
+            job = self.store.get_job(job_id)
+            so = self._buoc_so(task)
+            dong = []
+            for t in self._cac_buoc(job_id):
+                if self._buoc_so(t) >= so:
+                    break
+                if self._la_gate(t):
+                    if self._gate_da_duyet(t):
+                        dong.append(f"- GATE '{t.get('title')}': CHỦ ĐÃ DUYỆT.")
+                    continue
+                kq = _cat(t.get("result"), NGU_CANH_BUOC_MAX)
+                if kq:
+                    dong.append(f"- Bước {self._buoc_so(t)} '{t.get('title')}':\n{kq}")
+            if not dong:
+                return ""
+            return (f"BỐI CẢNH JOB '{(job or {}).get('title') or job_id}' (bước {so}). "
+                    "Kết quả các bước trước, dùng làm đầu vào, KHÔNG làm lại:\n" + "\n".join(dong))
+        except Exception as e:
+            print(f"[kanban] dựng bối cảnh job lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+            return ""
+
+    def gate_action(self, brain: str, job_id: str, action: str, note: str = "",
+                    source: str = "dashboard", gate_id: str = "") -> dict:
+        """Chủ xử lý GATE của một job: `duyet` | `sua` | `tu_choi`. Một cửa cho dashboard lẫn
+        Telegram. Idempotent: bấm Duyệt lần hai không cấp quyền lần nữa.
+
+        `gate_id` (tuỳ chọn, ngoài hợp đồng): nút của một tin GATE CŨ không được duyệt nhầm
+        GATE MỚI hơn của cùng job; truyền vào thì chỉ tác động đúng GATE đó."""
+        action = str(action or "").strip().lower()
+        note = str(note or "").strip()
+        job = self.store.get_job(str(job_id or ""))
+        if not job or (brain and job.get("brain_root") != self._ensure(brain)):
+            return {"ok": False, "status": "", "loi": "Không tìm thấy job"}
+        if action not in GATE_ACTIONS:
+            return {"ok": False, "status": job.get("status") or "",
+                    "loi": "Hành động phải là duyet, sua hoặc tu_choi"}
+        root = str(job["brain_root"])
+        self._mo_gate(root)
+        job = self.store.get_job(job["id"]) or job
+        buoc = self._cac_buoc(job["id"])
+        cho = [t for t in buoc if self._la_gate(t) and t.get("status") == "blocked"
+               and t.get("block_kind") == "gate"]
+        if gate_id:
+            cho = [t for t in cho if t["id"] == gate_id]
+        gate = cho[0] if cho else None
+
+        def _xong(status_ok: bool = True, loi: str = "") -> dict:
+            j = self.store.get_job(job["id"]) or job
+            view = self._job_view(j)
+            out = {"ok": status_ok, "status": view["status"]}
+            if loi:
+                out["loi"] = loi
+            self._snapshot(root)
+            self.wake()
+            return out
+
+        if job.get("status") == "dung" or (job.get("metadata") or {}).get("tu_choi"):
+            if action == "tu_choi":
+                return _xong()
+            return _xong(False, "Job đã bị từ chối")
+
+        if action == "duyet":
+            if not gate:
+                da = [t for t in buoc if self._la_gate(t) and self._gate_da_duyet(t)
+                      and (not gate_id or t["id"] == gate_id)]
+                if da:
+                    return _xong()       # đã duyệt từ trước: không cấp quyền lần nữa
+                return _xong(False, "Không có GATE nào đang chờ duyệt")
+            mo_khoa = list(((gate.get("metadata") or {}).get("gate") or {}).get("mo_khoa") or [])
+            granted = self.store.approve_gate(gate["id"], mo_khoa, source=source, note=note)
+            if granted is None:
+                return _xong()
+            self.store.set_job_status(job["id"], "dang_chay")
+            return _xong()
+
+        if action == "sua":
+            if not note:
+                return _xong(False, "Cần ghi chú: muốn sửa gì")
+            if not gate:
+                return _xong(False, "Không có GATE nào đang chờ duyệt")
+            i = next(k for k, t in enumerate(buoc) if t["id"] == gate["id"])
+            truoc = buoc[i - 1] if i > 0 else None
+            if not truoc:
+                return _xong(False, "GATE không có bước nào phía trước để sửa")
+            err = self.store.revise_gate(gate["id"], truoc["id"], note, source=source)
+            if err:
+                return _xong(False, {
+                    "prev_running": "Bước trước GATE đang chạy, thử lại sau",
+                    "not_waiting": "GATE không còn chờ duyệt",
+                }.get(err, "Không sửa được"))
+            self.store.set_job_status(job["id"], "dang_chay")
+            return _xong()
+
+        # tu_choi
+        ref = gate or next((t for t in buoc if self._la_gate(t)
+                            and t.get("status") not in ("done", "archived", "cancelled")), None)
+        if not ref and all(str(t.get("status")) in ("done", "archived") for t in buoc):
+            return _xong(False, "Job đã xong, không còn gì để từ chối")
+        running = self.store.reject_job(job["id"], (ref or buoc[0])["id"] if buoc else "",
+                                        source=source, note=note)
+        for tid in running:
+            worker = self._workers.get(tid)
+            cancel_all(f"dispatch:{tid}")
+            if worker and not worker.done():
+                worker.cancel()
+            else:
+                self.store.cancel_running(tid, "Chủ từ chối ở GATE")
+        self.store.set_job_status(job["id"], "dung", {"tu_choi": True, "tu_choi_qua": source,
+                                                      "ghi_chu": note})
+        return _xong()
+
+    @staticmethod
+    def job_templates() -> list[dict]:
+        try:
+            data = json.loads(MAU_JOB_PATH.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"[kanban] đọc mẫu job lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+            return []
+        mau = data.get("mau") if isinstance(data, dict) else data
+        return [m for m in (mau or []) if isinstance(m, dict) and m.get("id")]
+
+    @staticmethod
+    def _dien_muc_tieu(text: Any, muc_tieu: str) -> str:
+        # replace chứ không format(): mục tiêu do người gõ, có thể chứa ngoặc nhọn.
+        return str(text or "").replace("{muc_tieu}", muc_tieu)
+
+    def steps_from_template(self, mau_id: str, muc_tieu: str) -> tuple[dict, list[dict]]:
+        mau = next((m for m in self.job_templates() if m.get("id") == mau_id), None)
+        if not mau:
+            raise ValueError("Không có mẫu job này")
+        steps = []
+        for b in mau.get("buoc") or []:
+            if not isinstance(b, dict):
+                continue
+            steps.append({
+                "title": self._dien_muc_tieu(b.get("title"), muc_tieu),
+                "intent": self._dien_muc_tieu(b.get("intent"), muc_tieu),
+                "capability": b.get("capability") or "auto",
+                "gate": bool(b.get("gate")),
+                "gate_mo_ta": self._dien_muc_tieu(b.get("gate_mo_ta"), muc_tieu),
+            })
+        return mau, steps
 
     # ------------------------------------------------------------------
     # Views and operator API
@@ -1501,6 +1966,55 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             await self._asnapshot(root)
             self.wake()
             return {"ok": True, "execution_mode": "full"}
+
+        @router.get("/kanban/jobs")
+        async def kanban_jobs(brain: str = Query("brain")):
+            return self.jobs_view(brain)
+
+        @router.get("/kanban/job-templates")
+        async def kanban_job_templates():
+            return {"mau": self.job_templates()}
+
+        @router.post("/kanban/job")
+        async def kanban_job_add(
+            brain: str = Form("brain"),
+            title: str = Form(""),
+            doi: str = Form(""),
+            steps: str = Form(""),
+            chat_id: str = Form(""),
+            mau: str = Form(""),
+            muc_tieu: str = Form(""),
+        ):
+            """Giao một job cho Đội AI: `steps` (JSON) do người tự kê, hoặc `mau` + `muc_tieu`."""
+            try:
+                buoc: Any = steps
+                ten, doi_ = title.strip(), doi.strip()
+                if mau and not (steps or "").strip():
+                    muc = (muc_tieu or "").strip()
+                    if not re.search(r"\w", muc):
+                        return {"ok": False, "loi": "Cần ghi mục tiêu cho mẫu job"}
+                    m, buoc = self.steps_from_template(mau.strip(), muc)
+                    if not buoc:
+                        return {"ok": False, "loi": "Mẫu này để trống, hãy tự kê các bước"}
+                    # Tên job là chính mục tiêu chủ gõ: badge đội đã hiện tên đội, ghép thêm tên mẫu
+                    # thì thành "Đội Social: bài fanpage: 6 bài..." lặp hai lần (thấy khi chụp màn).
+                    ten = ten or _cat(muc.splitlines()[0], 80)
+                    doi_ = doi_ or str(m.get("doi") or "khac")
+                job_id = self.create_job(brain, ten, doi_ or "khac", buoc, chat_id)
+            except ValueError as e:
+                return {"ok": False, "loi": str(e)}
+            return {"ok": True, "job_id": job_id}
+
+        @router.post("/kanban/job/gate")
+        async def kanban_job_gate(
+            brain: str = Form("brain"),
+            job_id: str = Form(...),
+            action: str = Form(...),
+            note: str = Form(""),
+            gate_id: str = Form(""),
+        ):
+            return self.gate_action(brain, job_id, action, note=note, source="dashboard",
+                                    gate_id=gate_id)
 
         @router.post("/kanban/panel/clear")
         async def kanban_panel_clear(panel: str = Form(...), brain: str = Form("brain")):

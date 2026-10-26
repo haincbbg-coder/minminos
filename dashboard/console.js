@@ -2993,7 +2993,9 @@
     const routeOpts = `<option value="auto">${esc(t("kanban.route_auto"))}</option>` +
       wfs.map(w => `<option value="wf:${esc(w.slug)}">Workflow: ${esc(w.name || w.slug)}</option>`).join("");
 
-    el.innerHTML = `<div class="cview-section">
+    // 26.10.246: khu "Đội AI" (job nhiều bước có GATE) đứng đầu trang Bảng việc. Khối tự chứa,
+    // tự làm mới; dashboard/doi-ai.js vẽ vào #knDoiAi sau khi trang dựng xong.
+    el.innerHTML = `<div id="knDoiAi" class="kn-doi-ai"></div><div class="cview-section">
       <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
         <div>
           <div style="font-size:16px;color:var(--text);font-weight:650"><span class="kn-dot off" id="knLiveDot"></span><span id="knLiveText">Dispatcher</span></div>
@@ -3034,6 +3036,10 @@
           <button class="kn-wipe" id="knWipeHistory" data-panel="history">${esc(t("kanban.wipe"))}</button></span></div><div class="kn-list" id="knHistory"></div></section>
       </div>
     </div>`;
+    try {
+      const hop = el.querySelector("#knDoiAi");
+      if (hop && window.MinMinDoiAi) window.MinMinDoiAi.render(hop);
+    } catch (e) { console.warn("[doi-ai]", e); }
 
     // Portal lên document.body để drawer không bị cắt bởi vùng content có
     // transform/overflow. Đây cũng bảo đảm nút đóng luôn nằm trong viewport.
@@ -3155,6 +3161,9 @@
 
     function taskActions(t) {
       const acts = [];
+      // Bước GATE của job Đội AI (26.10.246): duyệt, sửa, từ chối ở khu Đội AI đầu trang. Thử lại
+      // hay Xoá ở đây thì lách mất cổng chủ duyệt, nên không bày nút nào cả.
+      if (t.capability === "gate") return [`<span class="kn-gate-note">${esc(window.t("kanban.gate_o_doi_ai"))}</span>`];
       // Việc dừng lại vì CHƯA ĐƯỢC CẤP QUYỀN thao tác ra ngoài: nút đầu tiên phải là nút cấp
       // quyền, và "Thử lại" thì BỎ ĐI. Thử lại ở đây chạy lại đúng nhánh chặn rồi chặn lại y
       // hệt, kèm một tiếng chuông nữa - bày ra một cái nút không bao giờ dẫn tới đâu.

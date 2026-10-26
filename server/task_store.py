@@ -28,6 +28,14 @@ QA_KEEP = 8
 QA_TEXT_MAX = 1000
 QA_PROGRESS_MAX = 1500
 TERMINAL_STATUS = {"done", "cancelled", "archived"}
+# Điều kiện SQL "bước cha CHƯA cho qua" (alias cha = p). Bước thường qua khi done/archived như cũ.
+# GATE chỉ qua khi chủ THẬT SỰ duyệt (`metadata.gate.duyet = 1`, do approve_gate ghi): nút cũ
+# "Xoá khỏi bảng"/"Xoá tất cả" đẩy GATE sang archived, và nếu archived cũng tính là qua thì một
+# cú dọn bảng lặng lẽ mở khoá bước chi tiền phía sau.
+DEP_UNMET_SQL = (
+    "(p.id IS NULL OR p.status NOT IN ('done','archived') OR "
+    "(p.capability='gate' AND COALESCE(json_extract(p.metadata_json,'$.gate.duyet'),0) <> 1))"
+)
 ACTIVE_STATUS = {"triage", "todo", "ready", "running", "review", "blocked"}
 
 
@@ -51,6 +59,22 @@ def _loads(value: Any, fallback: Any) -> Any:
         return parsed
     except Exception:
         return fallback
+
+
+# Khoá metadata của bước job (Đội AI) phải sống qua mọi lần ghi đè: `prepared` và `_finish`
+# ghi CẢ cột metadata bằng thứ worker trả về, nên không giữ lại là thứ tự bước và ghi chú
+# "Chủ yêu cầu sửa" biến mất ngay lần chạy đầu tiên.
+JOB_META_KEYS = ("job_step", "gate", "sua")
+
+
+def _giu_meta_job(cu: Any, moi: Optional[dict]) -> dict:
+    out = dict(moi or {})
+    old = _loads(cu, {}) if not isinstance(cu, dict) else cu
+    if isinstance(old, dict):
+        for k in JOB_META_KEYS:
+            if k in old and k not in out:
+                out[k] = old[k]
+    return out
 
 
 class TaskStore:
@@ -177,6 +201,30 @@ class TaskStore:
                 self._db.execute(
                     "ALTER TABLE tasks ADD COLUMN not_before REAL NOT NULL DEFAULT 0"
                 )
+            # `job_id` (26.10, Đội AI có GATE): việc thuộc một chuỗi bước của một đội. NULL với
+            # mọi việc cũ, nên việc lẻ chạy y như trước.
+            if "job_id" not in cot:
+                self._db.execute("ALTER TABLE tasks ADD COLUMN job_id TEXT")
+            self._db.executescript(
+                """
+                CREATE INDEX IF NOT EXISTS idx_tasks_job ON tasks(job_id);
+
+                CREATE TABLE IF NOT EXISTS jobs (
+                    id TEXT PRIMARY KEY,
+                    brain_root TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    doi TEXT NOT NULL DEFAULT 'khac',
+                    status TEXT NOT NULL DEFAULT 'dang_chay',
+                    chat_id TEXT NOT NULL DEFAULT '',
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL,
+                    metadata_json TEXT NOT NULL DEFAULT '{}'
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_jobs_board
+                    ON jobs(brain_root, created_at DESC);
+                """
+            )
             self._db.commit()
 
     def _tx(self) -> None:
@@ -249,7 +297,13 @@ class TaskStore:
         status: str = "triage",
         max_attempts: int = 3,
         task_id: str = "",
+        job_id: str = "",
+        metadata: Optional[dict] = None,
+        dedup_title: bool = True,
     ) -> str:
+        """`job_id`/`metadata`/`dedup_title` dành cho bước của một job (Đội AI): bước job mang
+        tiêu đề như "Viết content" rất dễ trùng một việc lẻ đang mở, mà gộp vào việc lẻ đó là
+        nối nhầm chuỗi bước. Mặc định giữ nguyên hành vi cũ."""
         root = str(brain_root)
         self.ensure_board(root)
         title = (title or intent or "Task")[:160]
@@ -267,7 +321,7 @@ class TaskStore:
                     if row:
                         self._db.commit()
                         return str(row["id"])
-                if normalized:
+                if normalized and dedup_title:
                     row = self._db.execute(
                         f"""SELECT id FROM tasks
                             WHERE brain_root=? AND normalized_title=?
@@ -286,14 +340,15 @@ class TaskStore:
                         id, brain_root, title, normalized_title, intent, route,
                         capability, execution_mode, priority, status, needs_approval,
                         created_by, chat_id, idempotency_key, max_attempts,
-                        created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        created_at, updated_at, job_id, metadata_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         tid, root, title, normalized, intent or title, route or "auto",
                         capability or "auto", execution_mode or "auto",
                         max(1, min(3, int(priority or 2))), safe_status,
                         int(bool(needs_approval)), created_by or "user", str(chat_id or ""),
                         idempotency_key or "", max(1, int(max_attempts or 3)), ts, ts,
+                        (str(job_id) if job_id else None), _json(metadata or {}),
                     ),
                 )
                 for dep in dict.fromkeys(str(d) for d in (deps or []) if str(d)):
@@ -417,6 +472,7 @@ class TaskStore:
                         SELECT t.id
                         FROM tasks t
                         WHERE t.brain_root=? AND t.status='todo'
+                          AND t.capability <> 'gate'
                           AND EXISTS (
                               SELECT 1 FROM task_dependencies d WHERE d.task_id=t.id
                           )
@@ -425,7 +481,7 @@ class TaskStore:
                               FROM task_dependencies d
                               LEFT JOIN tasks p ON p.id=d.depends_on_id
                               WHERE d.task_id=t.id
-                                AND (p.id IS NULL OR p.status NOT IN ('done','archived'))
+                                AND """ + DEP_UNMET_SQL + """
                           )
                         """,
                         (brain_root,),
@@ -659,7 +715,7 @@ class TaskStore:
             row = self._db.execute(
                 """SELECT * FROM tasks
                    WHERE brain_root=? AND status IN ('triage','ready')
-                     AND not_before <= ?
+                     AND not_before <= ? AND capability <> 'gate'
                    ORDER BY CASE status WHEN 'triage' THEN 0 ELSE 1 END,
                             priority, created_at
                    LIMIT 1""",
@@ -686,6 +742,11 @@ class TaskStore:
                 if not row or row["status"] not in ("triage", "ready"):
                     self._db.rollback()
                     return None
+                if str(row["capability"] or "") == "gate":
+                    # GATE là chỗ CHỜ NGƯỜI, không phải việc để chạy. Chặn ở đây (chứ không chỉ ở
+                    # next_candidate) vì /kanban/run và /kanban/nudge gọi claim thẳng theo mã.
+                    self._db.rollback()
+                    return None
                 if row["status"] == "ready":
                     unfinished = self._db.execute(
                         """
@@ -693,7 +754,7 @@ class TaskStore:
                         FROM task_dependencies d
                         LEFT JOIN tasks p ON p.id=d.depends_on_id
                         WHERE d.task_id=?
-                          AND (p.id IS NULL OR p.status NOT IN ('done','archived'))
+                          AND """ + DEP_UNMET_SQL + """
                         """,
                         (task_id,),
                     ).fetchone()["n"]
@@ -786,7 +847,7 @@ class TaskStore:
             self._tx()
             try:
                 row = self._db.execute(
-                    """SELECT current_run_id FROM tasks
+                    """SELECT current_run_id, metadata_json FROM tasks
                        WHERE id=? AND status='running' AND claimed_by=?""",
                     (task_id, worker_id),
                 ).fetchone()
@@ -794,6 +855,7 @@ class TaskStore:
                     self._db.rollback()
                     return None
                 run_id = str(row["current_run_id"] or "")
+                metadata = _giu_meta_job(row["metadata_json"], metadata)
                 self._db.execute(
                     """UPDATE tasks
                        SET status=?, result=?, block_kind=?, block_reason=?,
@@ -864,7 +926,7 @@ class TaskStore:
             self._tx()
             try:
                 row = self._db.execute(
-                    """SELECT current_run_id FROM tasks
+                    """SELECT current_run_id, metadata_json FROM tasks
                        WHERE id=? AND status='running' AND claimed_by=?""",
                     (task_id, worker_id),
                 ).fetchone()
@@ -872,6 +934,7 @@ class TaskStore:
                     self._db.rollback()
                     return None
                 run_id = str(row["current_run_id"] or "")
+                metadata = _giu_meta_job(row["metadata_json"], metadata)
                 self._db.execute(
                     """UPDATE tasks
                        SET status='ready', attempts=CASE WHEN attempts > 0 THEN attempts - 1 ELSE 0 END,
@@ -1117,6 +1180,300 @@ class TaskStore:
             except Exception:
                 self._db.rollback()
                 raise
+
+    # ------------------------------------------------------------------
+    # Job của Đội AI: chuỗi bước chạy lần lượt, có bước GATE chờ chủ duyệt
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _job_from_row(row: sqlite3.Row) -> dict:
+        job = dict(row)
+        job["metadata"] = _loads(job.pop("metadata_json", "{}"), {})
+        return job
+
+    def create_job(
+        self, brain_root: str, job_id: str, title: str, doi: str, chat_id: str = "",
+        metadata: Optional[dict] = None,
+    ) -> str:
+        ts = now()
+        self.ensure_board(str(brain_root))
+        with self._lock:
+            self._db.execute(
+                """INSERT INTO jobs (id, brain_root, title, doi, status, chat_id,
+                   created_at, updated_at, metadata_json)
+                   VALUES (?, ?, ?, ?, 'dang_chay', ?, ?, ?, ?)""",
+                (job_id, str(brain_root), (title or "Job")[:160], doi or "khac",
+                 str(chat_id or ""), ts, ts, _json(metadata or {})),
+            )
+            self._db.commit()
+        return job_id
+
+    def get_job(self, job_id: str) -> Optional[dict]:
+        with self._lock:
+            row = self._db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+        return self._job_from_row(row) if row else None
+
+    def list_jobs(self, brain_root: str, limit: int = 50) -> list[dict]:
+        with self._lock:
+            rows = self._db.execute(
+                """SELECT * FROM jobs WHERE brain_root=?
+                   ORDER BY created_at DESC LIMIT ?""",
+                (brain_root, max(1, min(500, int(limit)))),
+            ).fetchall()
+        return [self._job_from_row(r) for r in rows]
+
+    def job_tasks(self, job_id: str) -> list[dict]:
+        """Mọi bước của job, KỂ CẢ đã archived (housekeep tự archive việc xong quá 3 ngày)."""
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT * FROM tasks WHERE job_id=? ORDER BY created_at", (job_id,)
+            ).fetchall()
+        return [self._task_from_row(r) for r in rows]
+
+    def set_job_status(self, job_id: str, status: str, meta_patch: Optional[dict] = None) -> None:
+        with self._lock:
+            row = self._db.execute(
+                "SELECT status, metadata_json FROM jobs WHERE id=?", (job_id,)
+            ).fetchone()
+            if not row:
+                return
+            meta = _loads(row["metadata_json"], {})
+            if meta_patch:
+                meta.update(meta_patch)
+            if row["status"] == status and not meta_patch:
+                return
+            self._db.execute(
+                "UPDATE jobs SET status=?, metadata_json=?, updated_at=? WHERE id=?",
+                (status, _json(meta), now(), job_id),
+            )
+            self._db.commit()
+
+    def open_gates(self, brain_root: str) -> list[str]:
+        """GATE đủ điều kiện (mọi bước nó phụ thuộc đã xong) -> `blocked` / `block_kind=gate`.
+
+        Trả mã các GATE VỪA chuyển. Idempotent: GATE đã chờ thì không đụng lại."""
+        with self._lock:
+            self._tx()
+            try:
+                rows = self._db.execute(
+                    """
+                    SELECT t.id, t.intent, t.metadata_json FROM tasks t
+                    WHERE t.brain_root=? AND t.capability='gate'
+                      AND t.status IN ('triage','todo','ready')
+                      AND NOT EXISTS (
+                          SELECT 1 FROM task_dependencies d
+                          LEFT JOIN tasks p ON p.id=d.depends_on_id
+                          WHERE d.task_id=t.id
+                            AND """ + DEP_UNMET_SQL + """
+                      )
+                    """,
+                    (brain_root,),
+                ).fetchall()
+                ts = now()
+                out = []
+                for row in rows:
+                    meta = _loads(row["metadata_json"], {})
+                    gate = meta.get("gate") if isinstance(meta.get("gate"), dict) else {}
+                    mo_ta = str(gate.get("mo_ta") or row["intent"] or "Chờ chủ duyệt")[:2000]
+                    self._db.execute(
+                        """UPDATE tasks SET status='blocked', block_kind='gate', block_reason=?,
+                           claimed_by='', claim_expires_at=0, current_run_id='', updated_at=?
+                           WHERE id=? AND status IN ('triage','todo','ready')""",
+                        (mo_ta, ts, row["id"]),
+                    )
+                    self._event(str(row["id"]), "gate_cho", "GATE tới lượt, chờ chủ duyệt")
+                    out.append(str(row["id"]))
+                self._db.commit()
+                return out
+            except Exception:
+                self._db.rollback()
+                raise
+
+    def gates_waiting(self, brain_root: str) -> list[dict]:
+        with self._lock:
+            rows = self._db.execute(
+                """SELECT * FROM tasks WHERE brain_root=? AND capability='gate'
+                   AND status='blocked' AND block_kind='gate'""",
+                (brain_root,),
+            ).fetchall()
+        return [self._task_from_row(r) for r in rows]
+
+    def mark_gate_notified(self, task_id: str) -> bool:
+        """Đặt cờ "đã báo" cho LẦN CHỜ hiện tại của GATE. True = lời gọi này giành được quyền
+        báo (cờ vừa bật), False = đã có người báo rồi. Compare-and-set trong một giao dịch nên
+        dispatcher, tick và một lần đọc trang cùng lúc cũng chỉ báo một lần."""
+        with self._lock:
+            self._tx()
+            try:
+                row = self._db.execute(
+                    "SELECT status, block_kind, metadata_json FROM tasks WHERE id=?", (task_id,)
+                ).fetchone()
+                if not row or row["status"] != "blocked" or row["block_kind"] != "gate":
+                    self._db.rollback()
+                    return False
+                meta = _loads(row["metadata_json"], {})
+                gate = dict(meta.get("gate") or {}) if isinstance(meta.get("gate"), dict) else {}
+                if gate.get("da_bao"):
+                    self._db.rollback()
+                    return False
+                gate["da_bao"] = True
+                gate["bao_luc"] = now()
+                meta["gate"] = gate
+                self._db.execute(
+                    "UPDATE tasks SET metadata_json=? WHERE id=?", (_json(meta), task_id)
+                )
+                self._db.commit()
+                return True
+            except Exception:
+                self._db.rollback()
+                raise
+
+    def approve_gate(self, gate_id: str, unlock_ids: Iterable[str], source: str = "dashboard",
+                     note: str = "") -> Optional[list[str]]:
+        """Duyệt: GATE -> done và cấp `execution_mode=full` cho ĐÚNG các bước GATE mở khoá, trong
+        MỘT giao dịch. Tách hai bước ra thì giữa chúng dispatcher kịp thăng bước sau lên ready ở
+        mức auto, nhặt chạy, rồi chặn vì thiếu quyền. Trả mã các bước đã cấp quyền, None khi GATE
+        không ở trạng thái chờ (đã duyệt/huỷ rồi: lời gọi lặp không cấp quyền lần nữa)."""
+        with self._lock:
+            self._tx()
+            try:
+                row = self._db.execute(
+                    "SELECT status, block_kind, metadata_json FROM tasks WHERE id=?", (gate_id,)
+                ).fetchone()
+                if not row or row["status"] != "blocked" or row["block_kind"] != "gate":
+                    self._db.rollback()
+                    return None
+                ts = now()
+                gmeta = _loads(row["metadata_json"], {})
+                gate = dict(gmeta.get("gate") or {}) if isinstance(gmeta.get("gate"), dict) else {}
+                gate.update({"duyet": True, "duyet_luc": ts, "duyet_qua": source})
+                gmeta["gate"] = gate
+                self._db.execute(
+                    """UPDATE tasks SET status='done', block_kind='', block_reason='',
+                       result=?, metadata_json=?, updated_at=? WHERE id=?""",
+                    ("Chủ đã duyệt" + (f": {note}" if note else ""), _json(gmeta), ts, gate_id),
+                )
+                self._event(gate_id, "gate_duyet", f"duyệt qua {source}",
+                            metadata={"source": source, "note": note})
+                granted = []
+                for tid in dict.fromkeys(str(x) for x in unlock_ids if str(x)):
+                    r = self._db.execute(
+                        "SELECT status FROM tasks WHERE id=?", (tid,)
+                    ).fetchone()
+                    if not r or r["status"] in ("running",) or r["status"] in TERMINAL_STATUS:
+                        continue
+                    self._db.execute(
+                        """UPDATE tasks SET status='ready', execution_mode='full',
+                           block_kind='', block_reason='', attempts=0, not_before=0,
+                           claimed_by='', claim_expires_at=0, current_run_id='', updated_at=?
+                           WHERE id=?""",
+                        (ts, tid),
+                    )
+                    self._event(tid, "operator_grant",
+                                f"{r['status']} -> ready, mức quyền = full: GATE {gate_id} "
+                                f"được duyệt qua {source}",
+                                metadata={"source": source, "gate": gate_id})
+                    granted.append(tid)
+                self._db.commit()
+                return granted
+            except Exception:
+                self._db.rollback()
+                raise
+
+    def revise_gate(self, gate_id: str, prev_id: str, note: str,
+                    source: str = "dashboard") -> str:
+        """Sửa lại: bước ngay trước GATE chạy lại với ghi chú của chủ, GATE về chờ (todo) và
+        xoá cờ đã báo để lần chờ sau được báo lại. Trả "" khi xong, mã lỗi khi không."""
+        with self._lock:
+            self._tx()
+            try:
+                g = self._db.execute(
+                    "SELECT status, block_kind, metadata_json FROM tasks WHERE id=?", (gate_id,)
+                ).fetchone()
+                if not g or g["status"] != "blocked" or g["block_kind"] != "gate":
+                    self._db.rollback()
+                    return "not_waiting"
+                p = self._db.execute(
+                    "SELECT status, intent, metadata_json FROM tasks WHERE id=?", (prev_id,)
+                ).fetchone()
+                if not p:
+                    self._db.rollback()
+                    return "no_prev"
+                if p["status"] == "running":
+                    self._db.rollback()
+                    return "prev_running"
+                ts = now()
+                cau = f"Chủ yêu cầu sửa: {note}"
+                pmeta = _loads(p["metadata_json"], {})
+                sua = [x for x in (pmeta.get("sua") or []) if isinstance(x, dict)]
+                sua.append({"note": note[:QA_TEXT_MAX], "luc": ts, "source": source})
+                pmeta["sua"] = sua[-QA_KEEP:]
+                intent = (str(p["intent"] or "").rstrip() + "\n\n" + cau)[:20000]
+                self._db.execute(
+                    """UPDATE tasks SET status='ready', intent=?, metadata_json=?, attempts=0,
+                       block_kind='', block_reason='', not_before=0, claimed_by='',
+                       claim_expires_at=0, current_run_id='', updated_at=? WHERE id=?""",
+                    (intent, _json(pmeta), ts, prev_id),
+                )
+                self._event(prev_id, "rerun_with_note", cau[:500],
+                            metadata={"source": source, "gate": gate_id})
+                gmeta = _loads(g["metadata_json"], {})
+                gate = dict(gmeta.get("gate") or {}) if isinstance(gmeta.get("gate"), dict) else {}
+                gate["da_bao"] = False
+                gate.pop("bao_luc", None)
+                gmeta["gate"] = gate
+                self._db.execute(
+                    """UPDATE tasks SET status='todo', block_kind='', block_reason='',
+                       metadata_json=?, updated_at=? WHERE id=?""",
+                    (_json(gmeta), ts, gate_id),
+                )
+                self._event(gate_id, "gate_sua", cau[:500],
+                            metadata={"source": source, "note": note[:QA_TEXT_MAX]})
+                self._db.commit()
+                return ""
+            except Exception:
+                self._db.rollback()
+                raise
+
+    def reject_job(self, job_id: str, gate_id: str, source: str = "dashboard",
+                   note: str = "") -> list[str]:
+        """Từ chối: GATE và mọi bước chưa xong của job -> cancelled. Bước đang chạy KHÔNG bị
+        đụng ở đây (worker còn cầm); trả mã của chúng để tầng trên huỷ worker."""
+        with self._lock:
+            self._tx()
+            try:
+                rows = self._db.execute(
+                    "SELECT id, status FROM tasks WHERE job_id=?", (job_id,)
+                ).fetchall()
+                ts = now()
+                running = []
+                for r in rows:
+                    tid, st = str(r["id"]), str(r["status"])
+                    if st in TERMINAL_STATUS:
+                        continue
+                    if st == "running":
+                        running.append(tid)
+                        continue
+                    self._db.execute(
+                        """UPDATE tasks SET status='cancelled', block_kind='cancelled',
+                           block_reason=?, claimed_by='', claim_expires_at=0,
+                           current_run_id='', updated_at=? WHERE id=?""",
+                        ("Chủ từ chối ở GATE", ts, tid),
+                    )
+                    self._event(tid, "cancelled", f"job bị từ chối qua {source}")
+                if gate_id:
+                    self._event(gate_id, "gate_tu_choi", f"từ chối qua {source}",
+                                metadata={"source": source, "note": note})
+                self._db.commit()
+                return running
+            except Exception:
+                self._db.rollback()
+                raise
+
+    def add_event(self, task_id: str, event_type: str, message: str = "",
+                  metadata: Optional[dict] = None) -> None:
+        with self._lock:
+            self._event(task_id, event_type, message, metadata=metadata)
+            self._db.commit()
 
     def health(self, brain_root: Optional[str] = None) -> dict:
         where = " WHERE brain_root=?" if brain_root else ""
