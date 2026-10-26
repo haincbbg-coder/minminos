@@ -65,6 +65,7 @@
     ketnoi: "plug",
     khach: "messages-square",
     congviec: "square-kanban",
+    doingu: "bot",
   };
   // Cỡ icon rail do CSS lo (.rail-ico svg { width: 19px }), độ ưu tiên chọn tử
   // cao hơn .ic nên không cần truyền cỡ ở đây.
@@ -105,7 +106,7 @@
   const RAIL_ITEMS = [
     "tongquan", "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
-    "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach", "congviec",
+    "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach", "congviec", "doingu",
   ].map(id => ({ id, icon: ICON[id], get label() { return t(`page.${id}.label`); } }));
 
   // ---- Gom rail thành nhóm theo chức năng (dễ tìm hơn danh sách phẳng 18 mục) ----
@@ -125,7 +126,7 @@
     // Chợ MinMin vẫn cạnh Nguồn dữ liệu vì phần lớn gói trong chợ là kết nối (xem 0.55.37).
     { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON["Bộ não"],   ids: ["tongquan", "home", "chat", "files", "learn"] },
     { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["congviec"] },
-    { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON["Năng lực"], ids: ["workspace", "skills", "plugins"] },
+    { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON["Năng lực"], ids: ["doingu"] },
     { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["ketnoi", "khach", "models"] },
     { id: "code", get label() { return t("nav.group.code"); },        icon: GICON["Code"],     ids: ["terminal", "coding"] },
     { id: "he_thong", get label() { return t("nav.group.he_thong"); },    icon: GICON["Hệ thống"], ids: ["settings", "share", "account"], foot: true },
@@ -149,7 +150,9 @@
     // 26.10.258: đã gộp vào trang Kết nối và trang Khách (thẻ tab), id cũ vẫn mở được qua TAB_GOP.
     "mcp", "packs", "ketnoingoai", "matnha", "biendong", "channels", "conversations",
     // 26.10.262: Bảng việc và Lịch tự chạy là hai tab của trang Công việc.
-    "kanban", "selfimprove"]);
+    "kanban", "selfimprove",
+    // 26.10.263: Nhân sự AI, Bí kíp, Đồ nghề là ba tab của trang Đội ngũ AI.
+    "workspace", "skills", "plugins"]);
   // 0.64.99: chủ repo không dùng Xưởng code (Dòng lệnh, Lập trình cùng AI), nên cả nhóm ẩn khỏi
   // thanh bên (nhóm hết mục thì railGroups tự bỏ). Trang vẫn sống: lệnh nói, đường dẫn cũ vẫn mở
   // được. Muốn hiện lại: đặt localStorage "mm.hien_xuong_code" = "1" rồi tải lại trang.
@@ -224,7 +227,7 @@
   //
   // `page.<id>.title` cho phép tiêu đề trang KHÁC nhãn trên rail khi cần (rail chật nên
   // "Việc", trang rộng nên "Việc (Kanban)"); thiếu key đó thì tự rơi về `page.<id>.label`.
-  const VIEW_META = Object.fromEntries(["tongquan", "home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach", "congviec"].map(id => [id, {
+  const VIEW_META = Object.fromEntries(["tongquan", "home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach", "congviec", "doingu"].map(id => [id, {
     icon: VIEW_ICON[id],
     get label() {
       const rieng = t(`page.${id}.title`);
@@ -360,6 +363,7 @@
     matnha: ["ketnoi", "matnha"], biendong: ["ketnoi", "biendong"],
     channels: ["khach", "channels"], conversations: ["khach", "conversations"],
     kanban: ["congviec", "kanban"], selfimprove: ["congviec", "selfimprove"],
+    workspace: ["doingu", "workspace"], skills: ["doingu", "skills"], plugins: ["doingu", "plugins"],
   };
   const _gopTab = {};   // trang gộp -> tab đang xem (nhớ trong phiên)
   const TRANG_CUOI_KEY = "javis_last_page";
@@ -401,8 +405,8 @@
       // Chỉ nhớ hai khung hội thoại. Ghé Cài đặt, Cập nhật hay Đồ thị không làm mất
       // nơi đang nói chuyện; chưa từng mở hội thoại thì lần đầu vào Tổng quan (26.10.242).
       // Về Tổng quan hoặc Quả cầu nghĩa là đã rời hội thoại: xoá dấu để lần sau mở vào Tổng quan.
-      if (id === "chat" || id === "workspace") {
-        try { localStorage.setItem(TRANG_CUOI_KEY, id); } catch (e) {}
+      if (id === "chat" || id === "workspace" || (id === "doingu" && _gopTab.doingu === "workspace")) {
+        try { localStorage.setItem(TRANG_CUOI_KEY, id === "doingu" ? "workspace" : id); } catch (e) {}
       } else if (id === "tongquan") {
         try { localStorage.removeItem(TRANG_CUOI_KEY); } catch (e) {}
       }
@@ -572,7 +576,7 @@
   }
   // Vẽ trang `id` vào một node bất kỳ (renderPage dùng cviewBody, trang gộp dùng ruột của thẻ tab).
   async function renderVao(el, id) {
-    if (id === "ketnoi" || id === "khach" || id === "congviec") return renderGop(el, id);
+    if (id === "ketnoi" || id === "khach" || id === "congviec" || id === "doingu") return renderGop(el, id);
     if (id === "chat")     return renderChat(el);
     if (id === "workspace") return renderWorkspace(el);
     if (STUDIO_PAGES.includes(id)) return renderStudioPage(el, id);
@@ -623,12 +627,13 @@
     ketnoi: { tabs: ["mcp", "ketnoingoai", "packs"], con: ["matnha", "biendong"] },
     khach: { tabs: ["channels", "conversations"], con: [] },
     congviec: { tabs: ["kanban", "selfimprove"], con: [] },
+    doingu: { tabs: ["workspace", "skills", "plugins"], con: [] },
   };
   function renderGop(el, id) {
     const cfg = GOP[id];
     const dang = _gopTab[id] && (cfg.tabs.includes(_gopTab[id]) || cfg.con.includes(_gopTab[id])) ? _gopTab[id] : cfg.tabs[0];
     const laCon = cfg.con.includes(dang);
-    const nhan = (k) => esc((VIEW_META[k] || {}).label || k);
+    const nhan = (k) => esc((RAIL_BY_ID[k] || VIEW_META[k] || {}).label || k);   // nhãn NGẮN của rail, không phải tiêu đề dài của trang
     const phu = (k) => esc((VIEW_META[k] || {}).sub || "");
     const conHien = cfg.con.filter(k => !window.JavisApps || window.JavisApps.daCai(k));
     el.innerHTML = `<div class="gop">
@@ -640,6 +645,9 @@
         <div class="gop-con-grid">${conHien.map(k => `<div class="gop-con-card"><b>${nhan(k)}</b><small>${phu(k)}</small><button class="s-btn-ghost" type="button" data-gop="${k}">${esc(window.t("gop.mo"))}</button></div>`).join("")}</div></div>` : ""}
     </div>`;
     el.querySelectorAll("[data-gop]").forEach(b => b.addEventListener("click", () => {
+      // Rời tab cũ như rời trang: tab Agent MƯỢN khung chat của app, phải trả về trước khi vẽ tab khác.
+      const roi = _pageLeave; _pageLeave = null;
+      if (roi) { try { roi(); } catch (e) {} }
       _gopTab[id] = b.dataset.gop; renderPage(id);
     }));
     const ruot = el.querySelector(".gop-body");
@@ -1953,6 +1961,19 @@
     if (dangCai) _ctTimer = setTimeout(() => veCongCuTuyChon(host), 2000);
   }
 
+  // Khung "Xem chi tiết" dưới một thẻ (dùng cho thẻ công cụ; thẻ việc có bản riêng trong renderSelfImprove).
+  function ganChiTiet(div, rows) {
+    const btn = div.querySelector(".ctBtn");
+    if (!btn) return;
+    const det = document.createElement("div");
+    det.className = "ct-det"; det.hidden = true;
+    det.innerHTML = "<dl>" + rows.filter(r => r && r[1]).map(r => `<dt>${esc(r[0])}</dt><dd>${esc(String(r[1]))}</dd>`).join("") + "</dl>";
+    div.appendChild(det);
+    btn.onclick = () => {
+      det.hidden = !det.hidden;
+      btn.textContent = det.hidden ? window.t("cs.ct_btn") : window.t("cs.ct_close");
+    };
+  }
   async function renderPlugins(el) {
     _injectExtraCss();
     const myGen = _renderGen;   // chống race: đổi trang → load dở tự bỏ
@@ -1986,12 +2007,22 @@
         </div>
         <div class="wf-desc">${esc(p.description || "")}</div>
         <div class="wf-steps">${meta}${chips ? `<div style="margin-top:8px">${chips}</div>` : ""}${p.error ? `<div style="margin-top:6px;color:var(--red)">${esc(p.error)}</div>` : ""}</div>
-        <div class="wf-actions">${p.page ? `<a class="s-btn-ghost" href="${esc(safeHref(p.page))}" target="_blank" rel="noopener">${esc(window.t("cs.pl_open_page"))} ↗</a>` : ""}${p.source === "pack"
+        <div class="wf-actions"><button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>${p.page ? `<a class="s-btn-ghost" href="${esc(safeHref(p.page))}" target="_blank" rel="noopener">${esc(window.t("cs.pl_open_page"))} ↗</a>` : ""}${p.source === "pack"
             ? `<button class="s-btn-ghost" data-goto-packs="1">${esc(window.t("cs.pl_manage_store"))}</button>`
             : p.removed
               ? `<button class="s-btn-ghost undel">${esc(window.t("store.reinstall"))}</button>`
               : `<button class="s-btn-ghost tgl">${esc(window.t(p.enabled ? "usage.loop.btn_tat" : "usage.loop.btn_bat"))}</button>
                  <button class="s-btn-ghost del" style="color:var(--red)">${esc(window.t("proj.remove_short"))}</button>`}</div>`;
+      ganChiTiet(div, [
+        [window.t("cs.ct_what"), p.description || ""],
+        [window.t("cs.ct_tools"), (p.tools || []).join(", ")],
+        [window.t("cs.ct_hooks"), (p.hooks || []).join(", ")],
+        [window.t("cs.ct_perm"), MM[p.min_mode] || ""],
+        [window.t("cs.ct_source"), (SRC[p.source] || [p.source || ""])[0]],
+        [window.t("cs.ct_version"), [p.version ? "v" + p.version : "", p.author || ""].filter(Boolean).join(" · ")],
+        [window.t("cs.ct_state"), p.error ? window.t("app.err_low") : p.gated ? window.t("cs.pl_st_gated") : p.loaded ? window.t("usage.loop.on") : p.enabled ? window.t("cs.pl_st_idle") : window.t("cs.st_off_low")],
+        [window.t("cs.ct_error"), p.error || ""],
+      ]);
       // Plugin đến từ gói thì bật/tắt và gỡ đều làm ở Kho cài đặt - nó đi theo cả gói, và có
       // đúng MỘT chỗ gỡ thì người dùng không phải đoán gỡ ở đâu mới là gỡ thật.
       const nutGoto = div.querySelector("[data-goto-packs]");
@@ -9248,7 +9279,7 @@
       // Trang đang mở có đang GIỮ khung chat và tự mở phiên của nó không. Cộng sự mở phiên
       // agent:<slug>/workflow:<slug>, Coding mở phiên của repo - cả hai đều KHÔNG phải cuộc
       // chính của brain, nên lúc đổi brain app.js không được nhớ hay khôi phục phiên vào đây.
-      giuKhungChat() { return _chatSlots.length > 0 && TRANG_GIU_CHAT.includes(this.active()); },
+      giuKhungChat() { return _chatSlots.length > 0 && (TRANG_GIU_CHAT.includes(this.active()) || (this.active() === "doingu" && _gopTab.doingu === "workspace")); },
     };
   }
 

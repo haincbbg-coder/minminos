@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.263] - 2026-10-26
+### Cải thiện
+- **Menu gọn hơn, đợt 3**: Nhân sự AI, Bí kíp, Đồ nghề gom thành trang "Đội ngũ AI" có ba tab là "Agent", "Skill" và "Công cụ khác".
+- Thẻ công cụ có nút **Xem chi tiết**: làm gì, cung cấp công cụ nào, quyền tối thiểu, nguồn, phiên bản, trạng thái.
+
 ## [26.10.262] - 2026-10-26
 ### Cải thiện
 - **Menu gọn hơn, đợt 2**: Bảng việc và Lịch tự chạy gom thành trang "Công việc" có hai tab là "Việc 1 lần" và "Việc hàng ngày".
