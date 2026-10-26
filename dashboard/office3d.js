@@ -1078,29 +1078,56 @@
     apKhongGian(); apAnhSang();
     camera = new T.PerspectiveCamera(38, 1, 0.1, 250); raycaster = new T.Raycaster();
   }
-  function datCamera() {
+  // cam = vị trí ĐÍCH (chuột, phím, nút phòng ghi vào đây); camHien = vị trí đang hiển thị, trượt mượt về cam.
+  var camHien = null, CAM_K = ["az", "pol", "dist", "tx", "ty", "tz"];
+  function datCamera(dt) {
     if (!cam.dist) { cam.dist = 37 * Math.max(1, 1.6 / camera.aspect); camMacDinh = { az: cam.az, pol: cam.pol, dist: cam.dist, tx: cam.tx, ty: cam.ty, tz: cam.tz }; }
-    var cp = Math.cos(cam.pol), sp = Math.sin(cam.pol), d = cam.dist;
-    var cy = cam.ty + cp * d;
+    var a = dt ? 1 - Math.exp(-dt * 13) : 1;   // trượt theo thời gian thật, máy chậm hay nhanh đều mượt như nhau
+    if (!camHien) { camHien = {}; CAM_K.forEach(function (k) { camHien[k] = cam[k]; }); }
+    else CAM_K.forEach(function (k) { var d = cam[k] - camHien[k]; camHien[k] = Math.abs(d) < 1e-4 ? cam[k] : camHien[k] + d * a; });
+    var cp = Math.cos(camHien.pol), sp = Math.sin(camHien.pol), d = camHien.dist;
+    var cy = camHien.ty + cp * d;
     if (cy < 0.35) { cy = 0.35; }
-    camera.position.set(cam.tx + Math.sin(cam.az) * sp * d, cy, cam.tz + Math.cos(cam.az) * sp * d);
-    camera.lookAt(cam.tx, cam.ty, cam.tz);
+    camera.position.set(camHien.tx + Math.sin(camHien.az) * sp * d, cy, camHien.tz + Math.cos(camHien.az) * sp * d);
+    camera.lookAt(camHien.tx, camHien.ty, camHien.tz);
   }
   function giuCam() {
-    if (cam.dist) cam.dist = Math.max(2, Math.min(75, cam.dist)); cam.pol = Math.max(0.05, Math.min(1.62, cam.pol));
-    cam.tx = Math.max(-HX - 30, Math.min(HX + 30, cam.tx)); cam.tz = Math.max(-HZ - 3, Math.min(HZ + 3, cam.tz)); cam.ty = Math.max(0, Math.min(9, cam.ty));
+    if (cam.dist) cam.dist = Math.max(1.5, Math.min(95, cam.dist)); cam.pol = Math.max(0.05, Math.min(1.62, cam.pol));
+    cam.tx = Math.max(-HX - 45, Math.min(HX + 45, cam.tx)); cam.tz = Math.max(-HZ - 15, Math.min(HZ + 15, cam.tz)); cam.ty = Math.max(0, Math.min(25, cam.ty));
   }
-  // dịch điểm nhìn trên mặt sàn theo hướng camera (dx sang phải, dz tiến lên)
+  // dịch điểm nhìn trên mặt phẳng ngang theo hướng camera (dx sang phải, dz tiến lên)
   function panCam(dx, dz) {
     var fx = -Math.sin(cam.az), fz = -Math.cos(cam.az), rx = Math.cos(cam.az), rz = -Math.sin(cam.az);
     cam.tx += rx * dx + fx * dz; cam.tz += rz * dx + fz * dz; giuCam();
   }
+  // dời điểm nhìn theo mặt phẳng màn hình (kéo chuột phải): kéo lên là lên cao thật, không trượt trên sàn
+  function panManHinh(px, py, h) {
+    var k = cam.dist * 2 * Math.tan(camera.fov * Math.PI / 360) / Math.max(1, h), e = camera.matrixWorld.elements;
+    cam.tx += (-e[0] * px + e[4] * py) * k; cam.ty += (-e[1] * px + e[5] * py) * k; cam.tz += (-e[2] * px + e[6] * py) * k; giuCam();
+  }
+  // điểm 3D dưới con trỏ (sàn, tường, bàn, bảng...); không trúng gì thì lấy điểm trên tia cách camera bằng khoảng nhìn
+  function diemDuoiChuot(e) {
+    var rc = renderer.domElement.getBoundingClientRect();
+    raycaster.setFromCamera({ x: ((e.clientX - rc.left) / rc.width) * 2 - 1, y: -((e.clientY - rc.top) / rc.height) * 2 + 1 }, camera);
+    // chỉ dò sàn, tường và bảng (vật tĩnh, ít lưới): dò cả người có khung xương thì mỗi nấc cuộn rất nặng
+    var hit = raycaster.intersectObjects(canhSan.concat(canhTuong, giuBang), true).filter(function (h) {
+      for (var o = h.object; o; o = o.parent) if (!o.visible) return false;
+      return h.object.isMesh && (!h.object.material.transparent || h.object.renderOrder === 20);
+    })[0];
+    return hit ? hit.point.clone() : raycaster.ray.at(camHien ? camHien.dist : cam.dist, new T.Vector3());
+  }
+  // phóng quanh một điểm: điểm đó đứng yên dưới con trỏ (giống bản đồ)
+  function phongQuanh(P, f) {
+    var d0 = cam.dist, d1 = Math.max(1.5, Math.min(95, d0 * f)); f = d1 / d0;
+    cam.tx = P.x + (cam.tx - P.x) * f; cam.ty = P.y + (cam.ty - P.y) * f; cam.tz = P.z + (cam.tz - P.z) * f; cam.dist = d1; giuCam();
+  }
   function veCamMacDinh() { if (camMacDinh) { for (var k in camMacDinh) cam[k] = camMacDinh[k]; } }
   function phimCam(dt) {
-    var v = cam.dist * 0.9 * dt, k = phim;
+    var k = phim, nhanh = k.shift ? 2.6 : 1, v = Math.max(3, cam.dist * 0.75) * dt * nhanh;
     if (k.arrowleft || k.a) panCam(-v, 0); if (k.arrowright || k.d) panCam(v, 0); if (k.arrowup || k.w) panCam(0, v); if (k.arrowdown || k.s) panCam(0, -v);
-    if (k.q) cam.az += 1.4 * dt; if (k.e) cam.az -= 1.4 * dt;
-    if (k["+"] || k["="] || k.pageup) cam.dist *= 1 - 1.4 * dt; if (k["-"] || k["_"] || k.pagedown) cam.dist *= 1 + 1.4 * dt;
+    if (k[" "] || k.pageup) cam.ty += v * 0.8; if (k.c || k.pagedown) cam.ty -= v * 0.8;
+    if (k.q) cam.az += 1.4 * dt * nhanh; if (k.e) cam.az -= 1.4 * dt * nhanh;
+    if (k["+"] || k["="]) cam.dist *= 1 - 1.4 * dt * nhanh; if (k["-"] || k["_"]) cam.dist *= 1 + 1.4 * dt * nhanh;
     giuCam();
   }
 
@@ -1647,7 +1674,7 @@
     capNhatCua(dt); capNhatGhe(dt); quayDoi(dt); if (n - lastAnh > 8000) { lastAnh = n; apAnhSang(); }
     tram.forEach(function (s) { s.den.emissiveIntensity = (s.sang && n < s.sang) ? 1.4 : 0.35; });
     if (ban) ban.holo.material.opacity = n < (ban.sangDen || 0) ? 0.22 + Math.sin(t * 4) * 0.06 : 0;
-    datCamera(); renderer.render(scene, camera);
+    datCamera(dt); renderer.render(scene, camera);
   }
 
   function nhapTay() {
@@ -1661,7 +1688,7 @@
         var o = ptr[ids.filter(function (i) { return +i !== e.pointerId; })[0]]; var d = Math.hypot(e.clientX - o.x, e.clientY - o.y), mx = (e.clientX + o.x) / 2, my = (e.clientY + o.y) / 2;
         if (lastD) cam.dist *= lastD / d; if (lastM) panCam(-(mx - lastM.x) * k, (my - lastM.y) * k); lastD = d; lastM = { x: mx, y: my };
       } else if (p.b === 2 || p.b === 1 || p.sh) {
-        panCam(-px * k, py * k);
+        panManHinh(px, py, el.clientHeight);
       } else {
         cam.az -= px * 0.006; cam.pol -= py * 0.005;
       }
@@ -1672,16 +1699,18 @@
       if (moved < 6 && e.button === 0) chamRobot(e);
     }
     el.addEventListener("pointerup", len); el.addEventListener("pointercancel", function (e) { delete ptr[e.pointerId]; lastD = 0; lastM = null; });
-    el.addEventListener("dblclick", veCamMacDinh);
+    el.addEventListener("dblclick", function (e) {   // nháy đúp: bay tới đúng chỗ vừa bấm và nhìn cận
+      var P = diemDuoiChuot(e); cam.tx = P.x; cam.ty = P.y; cam.tz = P.z; cam.dist = Math.min(cam.dist, 9); giuCam();
+    });
     el.addEventListener("wheel", function (e) {
       e.preventDefault();
-      // phóng tới con trỏ: dời điểm nhìn một chút về phía chuột
-      var rc = el.getBoundingClientRect(), nx = ((e.clientX - rc.left) / rc.width) * 2 - 1, f = Math.exp(Math.max(-200, Math.min(200, e.deltaY)) * 0.0012), dn = cam.dist * (f - 1);
-      if (f < 1) panCam(nx * -dn * 0.35, 0);
-      cam.dist *= f; giuCam();
+      // phóng vào ĐÚNG điểm dưới con trỏ: điểm đó đứng yên, mọi thứ quanh nó to dần ra
+      var dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY, f = Math.exp(Math.max(-240, Math.min(240, dy)) * 0.0013);
+      phongQuanh(diemDuoiChuot(e), f);
     }, { passive: false });
-    kd = function (e) { if (!anBat() || /input|textarea/i.test((e.target && e.target.tagName) || "")) return; var key = (e.key || "").toLowerCase(); if (key === "r" || key === "home") { veCamMacDinh(); return; } phim[key] = true; };
-    ku = function (e) { delete phim[(e.key || "").toLowerCase()]; };
+    kd = function (e) { if (!anBat() || /input|textarea/i.test((e.target && e.target.tagName) || "")) return; var key = (e.key || "").toLowerCase(); if (key === "r" || key === "home") { veCamMacDinh(); return; } if (e.ctrlKey || e.metaKey || e.altKey) return; if (/^(arrow|page)|^ $/.test(key)) e.preventDefault(); phim[key] = true; };
+    ku = function (e) { var key = (e.key || "").toLowerCase(); delete phim[key]; if (key === "shift") { for (var q in phim) if (q.length === 1) delete phim[q]; } };   // nhả Shift: chữ hoa/thường khác nhau, xoá cho khỏi kẹt phím
+    window.addEventListener("blur", function () { phim = {}; });
     window.addEventListener("keydown", kd); window.addEventListener("keyup", ku);
   }
   function chamRobot(e) {
@@ -1716,7 +1745,7 @@
     if (kd) { window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku); kd = ku = null; } phim = {};
     cam.az = -0.4; cam.pol = 1.08; cam.dist = 0; cam.tx = 0.4; cam.ty = 4.5; cam.tz = 1.0;
     if (renderer) { renderer.dispose(); if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
-    renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; nvPhong = []; vatPhong = []; bangPhong = {}; phien = {}; bang = null; manHinh = []; nguoiNoi = null; cheDo = null; cuaDoi = [];
+    renderer = scene = camera = null; camHien = null; agents = {}; ds = []; lead = null; tram = []; ban = null; nvPhong = []; vatPhong = []; bangPhong = {}; phien = {}; bang = null; manHinh = []; nguoiNoi = null; cheDo = null; cuaDoi = [];
   }
   function dung(list) {
     xoaCanh();
@@ -1760,7 +1789,7 @@
     try { gl = testGL.getContext("webgl2") || testGL.getContext("webgl"); } catch (e) {}
     if (!gl) return;
     host = document.createElement("div"); host.id = "mmOffice"; host.hidden = true;
-    host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span>Kéo xoay · kéo phải/WASD đi quanh · cuộn phóng · R về góc đầu</span>' +
+    host.innerHTML = '<div class="mm-office-bar"><b>Văn phòng AI 3D</b><span title="Kéo chuột trái: xoay · Kéo chuột phải (hoặc Shift + kéo): dời khung nhìn, kéo lên là lên cao · Cuộn: phóng vào đúng chỗ con trỏ · Nháy đúp: bay tới chỗ đó · W A S D hoặc mũi tên: đi · Space / C: lên / xuống · Q / E: xoay · Giữ Shift: đi nhanh · R: về góc đầu">Kéo trái xoay · kéo phải dời · cuộn phóng tại con trỏ · nháy đúp bay tới · WASD đi · Space/C lên xuống · R về đầu</span>' +
       '<button type="button" id="mmOfficeSim" class="mm-sec" aria-haspopup="true">Mô phỏng</button><button type="button" id="mmOfficeKG" class="mm-sec">Ẩn tường</button><button type="button" class="mm-room" data-room="-24">Phòng Sale</button><button type="button" class="mm-room" data-room="0">Văn phòng</button><button type="button" class="mm-room" data-room="24">Phòng Marketing</button><button type="button" id="mmOfficeTheme" class="mm-sec">Chế độ tối</button><button type="button" id="mmOfficeRefresh" class="mm-sec" title="MinMin lấy số mới từ Pancake và Meta Ads rồi ghi vào các bảng">Làm mới bảng</button><button type="button" id="mmOfficeTag" class="mm-sec" aria-pressed="false">Ẩn chữ</button><button type="button" id="mmOfficeFs" class="mm-sec mm-pc">Toàn màn hình</button><button type="button" id="mmOfficeWin" class="mm-sec mm-pc">Cửa sổ riêng</button><button type="button" id="mmOfficeMenu" class="mm-menu-t" aria-expanded="false">Menu</button><button type="button" id="mmOfficeX" class="mm-x" aria-label="Đóng văn phòng">Đóng</button></div>' +
       '<div class="mm-office-simmenu" id="mmOfficeSimMenu" hidden></div><div class="mm-office-card" id="mmOfficeCard" hidden></div><div class="mm-office-toast" id="mmOfficeToast" hidden></div>';
     root.appendChild(host);
@@ -1817,7 +1846,7 @@
     var dp = document.createElement("div"); dp.className = "mm-pad-dir";
     dp.appendChild(nutPad("u", "arrowup", "\u25B2", "Đi tới")); dp.appendChild(nutPad("l", "arrowleft", "\u25C0", "Sang trái")); dp.appendChild(nutPad("r", "arrowright", "\u25B6", "Sang phải")); dp.appendChild(nutPad("d", "arrowdown", "\u25BC", "Lùi lại"));
     var zp = document.createElement("div"); zp.className = "mm-pad-zoom";
-    zp.appendChild(nutPad("", "+", "+", "Phóng to")); zp.appendChild(nutPad("", "-", "\u2212", "Thu nhỏ")); zp.appendChild(nutPad("", "q", "\u21BA", "Xoay trái")); zp.appendChild(nutPad("", "e", "\u21BB", "Xoay phải"));
+    zp.appendChild(nutPad("", "+", "+", "Phóng to")); zp.appendChild(nutPad("", "-", "\u2212", "Thu nhỏ")); zp.appendChild(nutPad("", "q", "\u21BA", "Xoay trái")); zp.appendChild(nutPad("", "e", "\u21BB", "Xoay phải")); zp.appendChild(nutPad("", " ", "\u2912", "Lên cao")); zp.appendChild(nutPad("", "c", "\u2913", "Xuống thấp"));
     pad.appendChild(zp); pad.appendChild(dp); host.appendChild(pad);
     // Điện thoại: nút phụ gom vào Menu (mở/đóng), bàn điều khiển ẩn/hiện và nhớ lựa chọn.
     var nutMenu = $("mmOfficeMenu");
