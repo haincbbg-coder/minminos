@@ -4278,5 +4278,12 @@
   "dads.hoan_tac": "Hoàn tác",
   "dads.dang_gui": "Đang gửi...",
   "dads.loi_gui": "Chưa gửi được: {loi}",
-  "dads.sua_mau": "Sửa lại đề xuất đổi chiến dịch #{id}: "
+  "dads.sua_mau": "Sửa lại đề xuất đổi chiến dịch #{id}: ",
+  "page.ketnoi.label": "Kết nối",
+  "page.ketnoi.sub": "Nguồn dữ liệu, kết nối ngoài và chợ MinMin",
+  "page.khach.label": "Khách",
+  "page.khach.sub": "Kênh nhắn tin và hộp thư khách",
+  "gop.con": "Module con",
+  "gop.con_sub": "Ứng dụng cài thêm từ Chợ MinMin",
+  "gop.mo": "Mở"
 }

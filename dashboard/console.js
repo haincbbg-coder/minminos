@@ -61,6 +61,9 @@
     ketnoingoai: "rocket",
     // Biến động số dư (26.10.119): tiền vào tài khoản qua Casso.
     biendong: "wallet",
+    // Trang gộp (26.10.258): Kết nối gom Nguồn dữ liệu, Kết nối ngoài, Chợ; Khách gom Kênh nhắn, Hộp thư khách.
+    ketnoi: "plug",
+    khach: "messages-square",
   };
   // Cỡ icon rail do CSS lo (.rail-ico svg { width: 19px }), độ ưu tiên chọn tử
   // cao hơn .ic nên không cần truyền cỡ ở đây.
@@ -101,7 +104,7 @@
   const RAIL_ITEMS = [
     "tongquan", "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
-    "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong",
+    "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach",
   ].map(id => ({ id, icon: ICON[id], get label() { return t(`page.${id}.label`); } }));
 
   // ---- Gom rail thành nhóm theo chức năng (dễ tìm hơn danh sách phẳng 18 mục) ----
@@ -122,7 +125,7 @@
     { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON["Bộ não"],   ids: ["tongquan", "home", "chat", "files", "learn"] },
     { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["kanban", "selfimprove"] },
     { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON["Năng lực"], ids: ["workspace", "skills", "plugins"] },
-    { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["mcp", "packs", "ketnoingoai", "channels", "conversations", "models", "matnha", "biendong"] },
+    { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["ketnoi", "khach", "models"] },
     { id: "code", get label() { return t("nav.group.code"); },        icon: GICON["Code"],     ids: ["terminal", "coding"] },
     { id: "he_thong", get label() { return t("nav.group.he_thong"); },    icon: GICON["Hệ thống"], ids: ["settings", "share", "account"], foot: true },
   ];
@@ -141,7 +144,9 @@
   // "chatbots" (0.61.0): trang Chatbot gộp vào trang Hội thoại làm tab thứ ba. Id còn đó để
   // lệnh nói / bookmark cũ đi tới đúng tab, nhưng không còn là một mục trên thanh bên.
   // Các id cũ vẫn dùng được qua lệnh UI và lối tắt, nhưng mở tab trong Cài đặt.
-  const RAIL_AN = new Set(["chatbots", "usage", "pet", "logs"]);
+  const RAIL_AN = new Set(["chatbots", "usage", "pet", "logs",
+    // 26.10.258: đã gộp vào trang Kết nối và trang Khách (thẻ tab), id cũ vẫn mở được qua TAB_GOP.
+    "mcp", "packs", "ketnoingoai", "matnha", "biendong", "channels", "conversations"]);
   // 0.64.99: chủ repo không dùng Xưởng code (Dòng lệnh, Lập trình cùng AI), nên cả nhóm ẩn khỏi
   // thanh bên (nhóm hết mục thì railGroups tự bỏ). Trang vẫn sống: lệnh nói, đường dẫn cũ vẫn mở
   // được. Muốn hiện lại: đặt localStorage "mm.hien_xuong_code" = "1" rồi tải lại trang.
@@ -203,6 +208,7 @@
   }
   // Nhãn nhóm chứa một mục id (cho accordion: mở đúng nhóm của trang đang xem).
   function groupLabelOf(id) {
+    if (TAB_GOP[id]) id = TAB_GOP[id][0];
     if (["pet", "usage", "logs", "runtime"].includes(id)) id = "settings";
     const g = RAIL_GROUPS.find(gr => (gr.ids || []).includes(id));
     return g ? g.label : (RAIL_GROUPS[0] && RAIL_GROUPS[0].label) || "";
@@ -215,7 +221,7 @@
   //
   // `page.<id>.title` cho phép tiêu đề trang KHÁC nhãn trên rail khi cần (rail chật nên
   // "Việc", trang rộng nên "Việc (Kanban)"); thiếu key đó thì tự rơi về `page.<id>.label`.
-  const VIEW_META = Object.fromEntries(["tongquan", "home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong"].map(id => [id, {
+  const VIEW_META = Object.fromEntries(["tongquan", "home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach"].map(id => [id, {
     icon: VIEW_ICON[id],
     get label() {
       const rieng = t(`page.${id}.title`);
@@ -344,6 +350,14 @@
   // Trang Trợ lý và Quy trình gộp thành Cộng sự ở 0.59.0; ai bấm nút cũ trong chat hay
   // bookmark vẫn tới nơi.
   const TRANG_GOP = { runtime: "usage", agents: "workspace", workflows: "workspace" };
+  // Trang con -> [trang gộp, tab] (26.10.258). Bấm id cũ (bookmark, nút trong chat, lệnh nói) vẫn tới
+  // đúng tab của trang gộp.
+  var TAB_GOP = {
+    mcp: ["ketnoi", "mcp"], ketnoingoai: ["ketnoi", "ketnoingoai"], packs: ["ketnoi", "packs"],
+    matnha: ["ketnoi", "matnha"], biendong: ["ketnoi", "biendong"],
+    channels: ["khach", "channels"], conversations: ["khach", "conversations"],
+  };
+  const _gopTab = {};   // trang gộp -> tab đang xem (nhớ trong phiên)
   const TRANG_CUOI_KEY = "javis_last_page";
   function khoiPhucTrang() {
     // 26.10.242: chủ repo chốt Tổng quan là trang mở đầu (trước đó là Quả cầu tri thức "home").
@@ -365,11 +379,13 @@
       id = "conversations";
     }
     id = TRANG_GOP[id] || id;
+    if (TAB_GOP[id]) { _gopTab[TAB_GOP[id][0]] = TAB_GOP[id][1]; id = TAB_GOP[id][0]; var _doiTab = true; }
     const store = Alpine.store("nav");
     const oldTab = { pet: "pet", usage: "usage", logs: "updates" }[id];
     let tab = oldTab || (id === "settings" ? arguments[2] || "general" : null);
     if (tab && !["general", "voice", "pet", "usage", "updates"].includes(tab)) tab = "general";
     if (oldTab) id = "settings";
+    if (store.active === id && _doiTab && !tab) { renderPage(id); return; }   // đã ở trang gộp: chỉ đổi tab
     if (store.active === id && (!tab || store.settingsTab === tab)) return;
     const swap = () => {
       const leave = _pageLeave; _pageLeave = null;
@@ -548,6 +564,11 @@
     // cviewBody (trước đây bị 1 render async trễ xoá mất → chat vỡ). Cũng hết nháy nội dung cũ.
     const fresh = el.cloneNode(false); el.parentNode.replaceChild(fresh, el); el = fresh;
     _renderGen++;   // đổi trang → vô hiệu mọi render async đang dở (guard bổ sung cho renderer đã có)
+    return renderVao(el, id);
+  }
+  // Vẽ trang `id` vào một node bất kỳ (renderPage dùng cviewBody, trang gộp dùng ruột của thẻ tab).
+  async function renderVao(el, id) {
+    if (id === "ketnoi" || id === "khach") return renderGop(el, id);
     if (id === "chat")     return renderChat(el);
     if (id === "workspace") return renderWorkspace(el);
     if (STUDIO_PAGES.includes(id)) return renderStudioPage(el, id);
@@ -589,6 +610,34 @@
     if (id === "logs")     return renderLogs(el);
     if (id === "usage")    return renderUsage(el);
     el.innerHTML = placeholder(id);
+  }
+
+  // ---- Trang gộp bằng thẻ tab (26.10.258) ----
+  // Mỗi tab vẽ đúng trang cũ vào ruột thẻ, nên không đổi chức năng nào. `con` là module con: ứng dụng cài
+  // từ Chợ MinMin (Mắt Nhà, Biến động số dư), nằm bên dưới chứ không ngang hàng với các tab.
+  const GOP = {
+    ketnoi: { tabs: ["mcp", "ketnoingoai", "packs"], con: ["matnha", "biendong"] },
+    khach: { tabs: ["channels", "conversations"], con: [] },
+  };
+  function renderGop(el, id) {
+    const cfg = GOP[id];
+    const dang = _gopTab[id] && (cfg.tabs.includes(_gopTab[id]) || cfg.con.includes(_gopTab[id])) ? _gopTab[id] : cfg.tabs[0];
+    const laCon = cfg.con.includes(dang);
+    const nhan = (k) => esc(window.t("page." + k + ".label"));
+    const conHien = cfg.con.filter(k => !window.JavisApps || window.JavisApps.daCai(k));
+    el.innerHTML = `<div class="gop">
+      <div class="gop-tabs" role="tablist">${cfg.tabs.map(k =>
+        `<button class="gop-tab" role="tab" data-gop="${k}" aria-selected="${k === dang}">${nhan(k)}</button>`).join("")}</div>
+      ${laCon ? `<button class="gop-back" type="button" data-gop="${cfg.tabs[0]}">← ${esc(window.t("page." + id + ".label"))}</button>` : ""}
+      <div class="gop-body"></div>
+      ${conHien.length && !laCon ? `<div class="gop-con"><div class="gop-con-h"><b>${esc(window.t("gop.con"))}</b><span>${esc(window.t("gop.con_sub"))}</span></div>
+        <div class="gop-con-grid">${conHien.map(k => `<div class="gop-con-card"><b>${nhan(k)}</b><small>${esc(window.t("page." + k + ".sub"))}</small><button class="s-btn-ghost" type="button" data-gop="${k}">${esc(window.t("gop.mo"))}</button></div>`).join("")}</div></div>` : ""}
+    </div>`;
+    el.querySelectorAll("[data-gop]").forEach(b => b.addEventListener("click", () => {
+      _gopTab[id] = b.dataset.gop; renderPage(id);
+    }));
+    const ruot = el.querySelector(".gop-body");
+    return renderVao(ruot, dang);
   }
 
   // Mắt Nhà: trang /mat-nha nhúng nguyên vào khung trang (cùng máy chủ, cùng phiên đăng nhập),

@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.258] - 2026-10-26
+### Cải thiện
+- **Menu gọn hơn, đợt 1**: Nguồn dữ liệu, Kết nối ngoài và Chợ MinMin gom thành một trang "Kết nối" có ba thẻ tab.
+- Mắt Nhà và Biến động số dư thành "Module con" nằm bên dưới trang Kết nối, bấm Mở để vào.
+- Kênh nhắn và Hộp thư khách gom thành trang "Khách". Mọi chức năng giữ nguyên, đường dẫn cũ vẫn mở đúng.
+
 ## [26.10.256] - 2026-10-26
 ### Cải thiện
 - **Bảng Hiệu suất Sale** (Văn phòng 3D) không tự chuyển kỳ nữa. Bấm chuột vào nút **Hôm nay**, **Hôm qua** hoặc **7 ngày** ngay trên bảng để chọn; bảng giữ kỳ đã chọn, lần sau mở lại vẫn nhớ.
