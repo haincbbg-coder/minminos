@@ -201,6 +201,8 @@
     }
     return true;
   }
+  // câu gõ nhanh cố định của shop (ký tự tắt trong Cài đặt > Hỗ trợ trả lời của Pancake)
+  const LENH_CO_DINH = [["Địa chỉ", "/dc"], ["Cao cân", "/cc"], ["Inbox", "/ib"], ["Lên đơn", "/ld"]];
   let maHienTai = [];
   function veThanh(maList) {
     maHienTai = maList;
@@ -217,8 +219,11 @@
       thanhKhoa = khoa;
       const lenh = (m) => layMau().replace("{ma}", m.toUpperCase());
       thanhRoot.innerHTML = `<style>.t{font:13px system-ui,sans-serif;display:flex;gap:6px;align-items:center;background:#fffbe6;border:1px solid #f0c36d;border-radius:20px;padding:3px 8px;box-shadow:0 2px 8px #0002;white-space:nowrap}
-        button{border:0;border-radius:14px;padding:4px 11px;background:#0b5fff;color:#fff;font-weight:700;cursor:pointer;font-size:13px}button.s{background:#e4e7ec;color:#333;padding:3px 7px;font-weight:400}button.g{background:#fff;color:#0b5fff;border:1px solid #0b5fff;font-weight:600}</style>
-        <div class="t"><button class="g" id="mo" title="Xem chi tiết gợi ý mã hàng">Gợi ý mã ${mo ? "▾" : "▴"}</button>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(lenh(m))} vào ô trả lời">${esc(lenh(m))}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button></div>`;
+        button{border:0;border-radius:14px;padding:4px 11px;background:#0b5fff;color:#fff;font-weight:700;cursor:pointer;font-size:13px}button.s{background:#e4e7ec;color:#333;padding:3px 7px;font-weight:400}button.g{background:#fff;color:#0b5fff;border:1px solid #0b5fff;font-weight:600}button.f{background:#12b76a;padding:4px 9px;font-weight:600}</style>
+        <div class="t"><button class="g" id="mo" title="Xem chi tiết gợi ý mã hàng">Gợi ý mã ${mo ? "▾" : "▴"}</button>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(lenh(m))} vào ô trả lời">${esc(lenh(m))}</button>`).join("")}${LENH_CO_DINH.map(([ten, l]) => `<button class="f" data-l="${esc(l)}" title="Điền ${esc(l)} vào ô trả lời">${esc(ten)}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button></div>`;
+      thanhRoot.querySelectorAll("button[data-l]").forEach((b) => b.onclick = () => {
+        if (!dien(b.dataset.l)) b.textContent = "Không thấy ô soạn tin";
+      });
       thanhRoot.querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => {
         if (!dien(lenh(b.dataset.m))) b.textContent = "Không thấy ô soạn tin";
       });
@@ -256,8 +261,8 @@
     day = Math.min(Math.max(day, 140), innerHeight - 70);   // không bao giờ trôi lên đè thanh menu hay tụt khỏi màn hình
     thanh.style.display = "";
     thanh.style.left = Math.round(cx) + "px";
-    thanh.style.top = Math.round(day - 46) + "px";
-    if (goc) { goc.style.left = Math.round(Math.min(Math.max(cx - 165, 8), innerWidth - 340)) + "px"; goc.style.top = Math.max(8, Math.round(day - 52 - goc.offsetHeight)) + "px"; }
+    thanh.style.top = Math.round(day - 62) + "px";
+    if (goc) { goc.style.left = Math.round(Math.min(Math.max(cx - 165, 8), innerWidth - 340)) + "px"; goc.style.top = Math.max(8, Math.round(day - 68 - goc.offsetHeight)) + "px"; }
   }
   function chonAnh() {
     if (!hienTai || !hienTai.anh.length) return null;
