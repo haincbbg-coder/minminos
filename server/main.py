@@ -11822,6 +11822,15 @@ async def _bo_vao_hom_thu(owner_chat, text, *, kind="answer", label="", source="
     return True
 
 
+import viec_hang_ngay
+
+# Hộp tin "Việc Hàng Ngày" (26.10.259): tin của Bảng việc và Lịch tự chạy không chèn vào hội thoại
+# đang dùng nữa, mà dồn vào hai hội thoại cố định trong mục Việc Hàng Ngày. Xem viec_hang_ngay.py.
+_HOP_VIEC = viec_hang_ngay.HopViec(
+    get_store, cfgmod.STATE_DIR / "viec-hang-ngay.json",
+    bat=lambda: bool((cfgmod.read_settings().get("viec_hang_ngay") or {}).get("enabled", True)))
+
+
 async def _notify_owner(owner_chat, text, *, kind="answer", label="", source="",
                         quiet=False, ngan="", viec=None, web="") -> tuple:
     """Báo cáo cho NGƯỜI YÊU CẦU loop/task (mặc định của Javis). Quy tắc:
@@ -11853,7 +11862,12 @@ async def _notify_owner(owner_chat, text, *, kind="answer", label="", source="",
 
     Trả (ok, error). `ok` là ĐÃ TỚI ĐƯỢC NGƯỜI DÙNG, và hòm thư tính là tới: nó nằm ở
     server, còn sau F5, thấy được từ máy khác. Nhờ vậy một cái nhắc hẹn trên máy chưa đấu
-    Telegram không còn bị ghi là "failed" trong khi nội dung đang nằm sẵn trong hòm."""
+    Telegram không còn bị ghi là "failed" trong khi nội dung đang nằm sẵn trong hòm.
+
+    Từ 26.10.259, tin việc nền (Bảng việc, loop, nhắc hẹn, theo dõi web) đang về khung chat web
+    được chuyển sang hội thoại của mục Việc Hàng Ngày TRƯỚC khi bỏ hòm thư, để bấm mẩu thư cũng
+    mở đúng hội thoại đó."""
+    owner_chat = await asyncio.to_thread(_HOP_VIEC.doi_dich, owner_chat, viec)
     vao_hom = await _bo_vao_hom_thu(owner_chat, text, kind=kind, label=label, source=source,
                                     quiet=quiet)
     ok, err = await _gui_qua_kenh(owner_chat, text, ngan=ngan, viec=viec, web=web)
@@ -12036,6 +12050,8 @@ async def _notify_gate(job_view, gate_task=None) -> tuple:
         if job_id and brain:
             _GATE_BRAIN[job_id] = brain
         text = _gate_soan_tin(jv, gate_task)
+        # GATE là tin của Bảng việc: về hội thoại "Bảng Việc" trong mục Việc Hàng Ngày (26.10.259).
+        chat = await asyncio.to_thread(_HOP_VIEC.doi_dich, chat, None, "bang")
         await _bo_vao_hom_thu(chat, text, kind="report", label="Đội AI · GATE", source="gate")
         if chat.startswith(WEB_CHAT_PREFIX) or chat.startswith(ZALO_CHAT_PREFIX):
             # Không có nút: chỉ đường về chỗ bấm được.
