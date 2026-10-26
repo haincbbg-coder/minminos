@@ -172,9 +172,15 @@ _NHAN_VAI = {"quan_tri": "Quản trị viên", "bien_tap": "Biên tập viên", 
              "quang_cao": "Quảng cáo", "phan_tich": "Phân tích", "khac": "Khác"}
 
 
+def ten_bm(b) -> str:
+    """'BM Halimi' giữ nguyên, 'Halimi' thành 'BM Halimi' - tránh 'BM BM Halimi'."""
+    s = str(b or "").strip()
+    return s if re.match(r"(?i)(bm|business)\b", s) else ("BM " + s if s else "BM")
+
+
 def _nguon_chu(vt, qua, bm):
     s = _NHAN_VAI.get(vt, "")
-    return (s + " · " if s else "") + ("qua BM " + bm if qua == "bm" and bm else "cá nhân")
+    return (s + " · " if s else "") + ("qua " + ten_bm(bm) if qua == "bm" and bm else "cá nhân")
 
 
 # ---------------------------------------------------------------- một tài khoản
@@ -386,7 +392,7 @@ async def soi_quyen(fb_id: str, lam_moi: bool = True) -> dict:
         if n and not n["giao"]:
             chua.append({"loai": "trang", "id": p["id"], "ten": p["ten"], "vai_tro": "", "qua": "bm",
                          "bm_ten": n["bm_ten"], "ly_do_ma": "chua_giao_bm",
-                         "ly_do": f"Trang thuộc BM {n['bm_ten']} nhưng Facebook chưa giao cho MinMin.",
+                         "ly_do": f"Trang thuộc {ten_bm(n['bm_ten'])} nhưng Facebook chưa giao cho MinMin.",
                          "cach_sua": "Nếu bạn được gán Trang này trong BM: Đăng nhập lại và tick Trang này. "
                                      "Nếu chưa được gán: vào BM gán quyền Trang cho tài khoản này trước.",
                          "nut": "dang_nhap_lai"})
@@ -403,7 +409,7 @@ async def soi_quyen(fb_id: str, lam_moi: bool = True) -> dict:
         if not n["giao"]:
             chua.append({"loai": "tkqc", "id": a["id"], "ten": a["ten"], "vai_tro": "", "qua": "bm",
                          "bm_ten": n["bm_ten"], "ly_do_ma": "chua_giao_bm",
-                         "ly_do": f"Tài khoản quảng cáo thuộc BM {n['bm_ten']} nhưng Facebook chưa giao cho MinMin.",
+                         "ly_do": f"Tài khoản quảng cáo thuộc {ten_bm(n['bm_ten'])} nhưng Facebook chưa giao cho MinMin.",
                          "cach_sua": "Đăng nhập lại và chọn tài khoản này ở màn chọn tài khoản quảng cáo.",
                          "nut": "dang_nhap_lai"})
         elif "ads_management" in thieu:
@@ -517,7 +523,7 @@ async def hoi_trang(fb_id: str, q: str) -> dict:
     bm = tk["bm_trang"].get(pid)
     if bm:
         return {"ok": True, "ket_qua": "chua_giao_bm", "id": pid, "ten": ten, "nguyen_van": "",
-                "ly_do": f"Trang thuộc BM {bm['bm']} nhưng chưa giao cho MinMin.",
+                "ly_do": f"Trang thuộc {ten_bm(bm['bm'])} nhưng chưa giao cho MinMin.",
                 "cach_sua": "Nếu bạn được gán Trang trong BM: Đăng nhập lại và tick Trang này. Nếu chưa: gán quyền "
                             "Trang cho tài khoản này trong BM trước."}
     return {"ok": True, "ket_qua": "khong_thay_quyen", "id": pid, "ten": ten, "nguyen_van": "",

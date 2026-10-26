@@ -33,7 +33,8 @@ const XSS = '<img src=x onerror="alert(1)">';
 check("vai trò quan_tri -> Quản trị viên", FB.nhanVaiTro("quan_tri") === "Quản trị viên");
 check("vai trò bien_tap/kiem_duyet/quang_cao/phan_tich", FB.nhanVaiTro("bien_tap") === "Biên tập viên" &&
   FB.nhanVaiTro("kiem_duyet") === "Kiểm duyệt viên" && FB.nhanVaiTro("quang_cao") === "Quảng cáo" && FB.nhanVaiTro("phan_tich") === "Phân tích");
-check("vai trò lạ -> Khác", FB.nhanVaiTro("xyz") === "Khác" && FB.nhanVaiTro(undefined) === "Khác");
+check("vai trò lạ -> Khác; chưa có vai trò (chỉ thấy trong BM) -> Chưa có vai trò",
+  FB.nhanVaiTro("xyz") === "Khác" && FB.nhanVaiTro(undefined) === "Chưa có vai trò" && FB.nhanVaiTro("") === "Chưa có vai trò");
 check("nguồn cá nhân", FB.nhanNguon({ qua: "ca_nhan" }) === "cá nhân");
 check("nguồn qua BM có tên", FB.nhanNguon({ qua: "bm", bm_ten: "HALIMI BM" }) === "qua BM HALIMI BM");
 
@@ -99,7 +100,7 @@ check("tablist + tab đang chọn aria-selected", h.includes('role="tablist"') &
 check("ô tìm", h.includes('data-fbts-o="q"') && h.includes('placeholder="Tìm theo tên hoặc ID"'));
 check("bảng nằm trong hộp cuộn ngang", h.includes('<div class="fbts-bang-hop"><table class="fbts-bang">'));
 check("cột mỗi tài khoản + cột MinMin đăng bằng", h.includes("<th scope=\"col\">Hải</th>") && h.includes("MinMin đăng bằng"));
-check("ô: vai trò + nguồn", h.includes("Quản trị viên") && h.includes("cá nhân") && h.includes("qua BM BM Halimi"));
+check("ô: vai trò + nguồn", h.includes("Quản trị viên") && h.includes("cá nhân") && h.includes("qua BM Halimi") && !h.includes("BM BM"));
 check("ô chưa giao có chip warn", h.includes('fbts-chip warn fbts-chip-o">Facebook chưa giao cho MinMin'));
 check("ô không có quyền là -", h.includes('<span class="fbts-mo">-</span>'));
 check("dòng van_de nền warn + nút Cách sửa", h.includes('class="fbts-van-de"') && h.includes('data-fb="20">Cách sửa'));
@@ -137,7 +138,7 @@ check("4 ô số, chưa giao > 0 tô warn", s.includes("Trang đã giao") && s.i
 check("dải quyền: ok/bad + de_lam cho quyền thiếu", s.includes('fbts-chip ok">') && s.includes("Quản lý quảng cáo - bật/tắt chiến dịch"));
 check("dòng Ứng dụng", s.includes("Ứng dụng: MinMin App"));
 check("chưa giao: nút theo `nut`", s.includes('data-nut="dang_nhap_lai">Đăng nhập lại và tick') && s.includes('data-nut="cap_quyen">Cấp quyền'));
-check("chưa giao: dòng phụ Trang · vai trò · nguồn", s.includes("Trang · Quản trị viên · qua BM BM X"));
+check("chưa giao: dòng phụ Trang · vai trò · nguồn", s.includes("Trang · Quản trị viên · qua BM X") && !s.includes("BM BM"));
 check("ghi chú trung thực về Trang chưa tick", s.includes("Facebook không cho MinMin biết nó tồn tại"));
 check("form Hỏi Facebook có label + placeholder", s.includes('<label class="fbts-nhan" for="fbts-hoi-q">') &&
   s.includes('placeholder="Tên, ID hoặc link Trang"') && s.includes(">Hỏi Facebook</button>"));

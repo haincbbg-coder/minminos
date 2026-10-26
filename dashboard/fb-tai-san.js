@@ -46,12 +46,18 @@
   // ================================================================ HÀM THUẦN
   // Khoá viết tường minh (không ghép chuỗi) để test i18n quét được từng khoá.
   function nhanVaiTro(vt) {
+    if (!vt) return t("fbts.vt_chua_co");   // thấy Trang trong BM nhưng chưa được gán vai trò / chưa giao
     return { quan_tri: t("fbts.vt_quan_tri"), bien_tap: t("fbts.vt_bien_tap"), kiem_duyet: t("fbts.vt_kiem_duyet"),
       quang_cao: t("fbts.vt_quang_cao"), phan_tich: t("fbts.vt_phan_tich") }[vt] || t("fbts.vt_khac");
   }
+  function tenBm(b) {
+    var s = String(b || "").trim();
+    return /^(BM|Business)\b/i.test(s) ? s : "BM " + s;
+  }
   function nhanNguon(n) {
     if (!n) return "";
-    if (n.qua === "bm") return n.bm_ten ? t("fbts.qua_bm", { bm: n.bm_ten }) : t("fbts.qua_bm_trong");
+    // Tên BM thường đã có chữ "BM" ở đầu ("BM Halimi") - đừng thành "qua BM BM Halimi".
+    if (n.qua === "bm") return n.bm_ten ? t("fbts.qua_bm", { bm: tenBm(n.bm_ten) }) : t("fbts.qua_bm_trong");
     return t("fbts.ca_nhan");
   }
   function thieuAds(tk) {
