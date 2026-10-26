@@ -4,9 +4,16 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
-## [26.10.249] - 2026-10-26
+## [26.10.250] - 2026-10-26
 ### Thêm mới
 - **Gợi ý mã hàng**: nút "–" thu nhỏ thanh ghim thành một nút tròn nhỏ để không che dữ liệu của Pancake. Bấm nút tròn để mở lại; trạng thái được nhớ qua các lần mở Pancake.
+
+## [26.10.249] - 2026-10-26
+### Cải thiện
+- **Văn phòng 3D, cuộn chuột**: phóng to đúng vào chỗ con trỏ đang chỉ, ví dụ trỏ vào bảng Hiệu suất Sale rồi cuộn là bảng to dần ra mà không trôi đi chỗ khác.
+- **Kéo chuột phải** (hoặc Shift + kéo trái) để dời khung nhìn, kéo lên là lên cao thật, xem được bảng phía trên tường. **Nháy đúp** vào chỗ nào thì bay tới nhìn cận chỗ đó.
+- **Bàn phím**: W A S D hoặc mũi tên để đi, Space / C để lên cao / xuống thấp, Q / E để xoay, giữ Shift để đi nhanh, R về góc ban đầu. Bàn nút trên màn hình có thêm nút lên / xuống.
+- Chuyển cảnh, phóng và bấm nút phòng giờ trượt mượt thay vì giật.
 
 ## [26.10.248] - 2026-10-26
 ### Thêm mới
