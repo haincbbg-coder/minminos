@@ -11828,7 +11828,8 @@ import viec_hang_ngay
 # đang dùng nữa, mà dồn vào hai hội thoại cố định trong mục Việc Hàng Ngày. Xem viec_hang_ngay.py.
 _HOP_VIEC = viec_hang_ngay.HopViec(
     get_store, cfgmod.STATE_DIR / "viec-hang-ngay.json",
-    bat=lambda: bool((cfgmod.read_settings().get("viec_hang_ngay") or {}).get("enabled", True)))
+    bat=lambda: bool((cfgmod.read_settings().get("viec_hang_ngay") or {}).get("enabled", True)),
+    brain_keys=lambda b: _brain_keys(b))
 
 
 async def _notify_owner(owner_chat, text, *, kind="answer", label="", source="",

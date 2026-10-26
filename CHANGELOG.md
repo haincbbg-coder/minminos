@@ -10,6 +10,10 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - Mắt Nhà và Biến động số dư thành "Module con" nằm bên dưới trang Kết nối, bấm Mở để vào.
 - Kênh nhắn và Hộp thư khách gom thành trang "Khách". Mọi chức năng giữ nguyên, đường dẫn cũ vẫn mở đúng.
 
+## [26.10.260] - 2026-10-26
+### Sửa lỗi
+- **Việc Hàng Ngày** giờ nhận đúng mục bố đã tự tạo. Bản trước so tên bộ não không khớp nên không thấy mục, tin việc nền chưa dồn vào đó.
+
 ## [26.10.259] - 2026-10-26
 ### Cải thiện
 - **Việc Hàng Ngày**: kết quả của Bảng việc và Lịch tự chạy (xong, lỗi, bị chặn, cần trả lời) không còn chèn vào hội thoại bố đang dùng. Tất cả dồn vào mục **Việc Hàng Ngày** trong danh sách hội thoại.
