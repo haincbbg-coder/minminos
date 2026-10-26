@@ -7411,38 +7411,72 @@
     const s = await freshSettings();
     const tg = s.telegram || {};
     const zl = s.zalo_bot || {};
+    const tabAct = (() => { try { return localStorage.getItem("mmKenhTab") || "tg"; } catch (e) { return "tg"; } })();
+    const khung = (id, ten, ico, bat, noiDung) => `
+      <section class="kn-pane" data-pane="${id}" ${tabAct === id ? "" : "hidden"}>
+        <header class="kn-head">
+          <span class="kn-ico">${ico}</span><h3>${ten}</h3>
+          <span class="kn-pill kn-pill-off" id="${id}Pill">${esc(window.t("cs.ch2_pill_off"))}</span>
+          <label class="kn-switch" title="${esc(window.t("cs.ch2_on"))}"><input type="checkbox" id="${id}Enabled" ${bat ? "checked" : ""}><i></i><span>${esc(window.t("cs.ch2_on"))}</span></label>
+        </header>
+        <div class="kn-status" id="${id}Status"></div>
+        ${noiDung}
+      </section>`;
+    const buoc = (n, tieuDe, thanDom) => `<div class="kn-step"><div class="kn-step-h"><b>${n}</b><span>${esc(tieuDe)}</span></div>${thanDom}</div>`;
+    const hanhDong = (id) => `<div class="kn-actions"><button class="gcard-btn ghost" id="${id}Test">${esc(window.t("cs.ch_send_test"))}</button><button class="gcard-btn" id="${id}Save">${esc(window.t("cs.ch2_save"))}</button></div>`;
     el.innerHTML = `
-      <div class="cview-section">
-        <h3>Telegram</h3>
-        <div class="gcard" style="max-width:560px">
-          <label class="js-row"><span>${esc(window.t("cs.ch_tg_enable"))}</span><input type="checkbox" id="tgEnabled" ${tg.enabled ? "checked" : ""}></label>
-          <label class="js-lbl">Bot token ${tg.token_set ? '<span class="dim">' + esc(window.t("cs.ch_token_set")) + '</span>' : ""}</label>
-          <input class="js-input" id="tgToken" type="password" placeholder="${esc(window.t(tg.token_set ? "cs.ch_token_keep" : "cs.ch_tg_token_ph"))}">
-          <label class="js-lbl">${esc(window.t("cs.ch_allowed_ids"))} <span class="dim">${esc(window.t("cs.ch_tg_ids_hint"))}</span></label>
-          <input class="js-input" id="tgChat" value="${esc(tg.chat_id || "")}" placeholder="${esc(window.t("cs.ch_tg_ids_ph"))}">
-          <div class="js-actions"><button class="gcard-btn" id="tgSave">${esc(window.t("cs.ch_save_enable"))}</button><button class="gcard-btn ghost" id="tgTest">${esc(window.t("cs.ch_send_test"))}</button></div>
-          <div class="gcard-meta" id="tgStatus"></div>
+      <div class="kn-wrap">
+        <div class="kn-tabs" role="tablist">
+          <button class="kn-tab" role="tab" data-tab="tg">${Icons.kenh("telegram", { size: "18px" })}<span>Telegram</span><i class="kn-dot" id="tgDot"></i></button>
+          <button class="kn-tab" role="tab" data-tab="zl">${Icons.kenh("zalo", { size: "18px" })}<span>Zalo</span><i class="kn-dot" id="zlDot"></i></button>
+          <span class="kn-soon">${esc(window.t("cs.ch2_soon"))}: Lark · Discord · Slack · WhatsApp</span>
         </div>
-      </div>
-      <div class="cview-section">
-        <h3>${Icons.kenh("zalo", { size: "18px" })} Zalo</h3>
-        <div class="gcard" style="max-width:560px">
-          <div class="gcard-meta" style="margin-bottom:8px">${esc(window.t("cs.ch_zl_intro_a"))} <b>${esc(window.t("cs.ch_zl_intro_b"))}</b> ${esc(window.t("cs.ch_zl_intro_c"))} <b>Zalo Agent MCP</b> ${esc(window.t("cs.ch_zl_intro_d"))}</div>
-          <label class="js-row"><span>${esc(window.t("cs.ch_zl_enable"))}</span><input type="checkbox" id="zlEnabled" ${zl.enabled ? "checked" : ""}></label>
-          <label class="js-lbl">Bot token ${zl.token_set ? '<span class="dim">' + esc(window.t("cs.ch_token_set")) + '</span>' : ""}</label>
-          <input class="js-input" id="zlToken" type="password" placeholder="${esc(window.t(zl.token_set ? "cs.ch_token_keep" : "cs.ch_zl_token_ph"))}">
-          <div class="gcard-meta">${esc(window.t("cs.ch_zl_guide_a"))} <b>Zalo Bot Manager</b>, ${esc(window.t("cs.ch_zl_guide_b"))} <b>${esc(window.t("cs.ch_zl_guide_btn"))}</b>. ${esc(window.t("cs.ch_zl_guide_c"))}</div>
-          <label class="js-lbl">${esc(window.t("cs.ch_allowed_ids"))} <span class="dim">${esc(window.t("cs.ch_zl_ids_hint"))}</span></label>
-          <input class="js-input" id="zlChat" value="${esc(zl.chat_id || "")}" placeholder="${esc(window.t("cs.ch_zl_ids_ph"))}">
-          <div class="js-actions"><button class="gcard-btn" id="zlSave">${esc(window.t("cs.ch_save_enable"))}</button><button class="gcard-btn ghost" id="zlTest">${esc(window.t("cs.ch_send_test"))}</button></div>
-          <div class="gcard-meta" id="zlStatus"></div>
-          <div id="zlCho"></div>
-        </div>
-      </div>
-      ${placeholder("channels", window.t("cs.ch_soon"))}`;
+        ${khung("tg", "Telegram", Icons.kenh("telegram", { size: "22px" }), tg.enabled,
+          buoc(1, window.t("cs.ch2_sec_conn"),
+            `<label class="js-lbl">Bot token ${tg.token_set ? '<span class="dim">' + esc(window.t("cs.ch_token_set")) + '</span>' : ""}</label>
+             <input class="js-input" id="tgToken" type="password" placeholder="${esc(window.t(tg.token_set ? "cs.ch_token_keep" : "cs.ch_tg_token_ph"))}">`) +
+          buoc(2, window.t("cs.ch2_sec_who"),
+            `<label class="js-lbl">${esc(window.t("cs.ch_allowed_ids"))}</label>
+             <input class="js-input" id="tgChat" value="${esc(tg.chat_id || "")}" placeholder="${esc(window.t("cs.ch_tg_ids_ph"))}">
+             <div class="gcard-meta">${esc(window.t("cs.ch_tg_ids_hint"))}</div>`) +
+          hanhDong("tg"))}
+        ${khung("zl", "Zalo", Icons.kenh("zalo", { size: "22px" }), zl.enabled,
+          `<div class="gcard-meta kn-intro">${esc(window.t("cs.ch_zl_intro_a"))} <b>${esc(window.t("cs.ch_zl_intro_b"))}</b> ${esc(window.t("cs.ch_zl_intro_c"))} <b>Zalo Agent MCP</b> ${esc(window.t("cs.ch_zl_intro_d"))}</div>` +
+          buoc(1, window.t("cs.ch2_sec_conn"),
+            `<label class="js-lbl">Bot token ${zl.token_set ? '<span class="dim">' + esc(window.t("cs.ch_token_set")) + '</span>' : ""}</label>
+             <input class="js-input" id="zlToken" type="password" placeholder="${esc(window.t(zl.token_set ? "cs.ch_token_keep" : "cs.ch_zl_token_ph"))}">
+             <details class="kn-help"><summary>${esc(window.t("cs.ch2_how_token"))}</summary><div class="gcard-meta">${esc(window.t("cs.ch_zl_guide_a"))} <b>Zalo Bot Manager</b>, ${esc(window.t("cs.ch_zl_guide_b"))} <b>${esc(window.t("cs.ch_zl_guide_btn"))}</b>. ${esc(window.t("cs.ch_zl_guide_c"))}</div></details>`) +
+          buoc(2, window.t("cs.ch2_sec_who"),
+            `<label class="js-lbl">${esc(window.t("cs.ch_allowed_ids"))}</label>
+             <input class="js-input" id="zlChat" value="${esc(zl.chat_id || "")}" placeholder="${esc(window.t("cs.ch_zl_ids_ph"))}">
+             <div class="gcard-meta">${esc(window.t("cs.ch_zl_ids_hint"))}</div>
+             <div id="zlCho"></div>`) +
+          hanhDong("zl"))}
+      </div>`;
+    // Chuyển tab + nhớ tab đang xem; chấm màu và nhãn trạng thái cập nhật theo trạng thái thật của bot.
+    const chonTab = (id) => {
+      el.querySelectorAll(".kn-tab").forEach(b => b.classList.toggle("on", b.dataset.tab === id));
+      el.querySelectorAll(".kn-pane").forEach(p => { p.hidden = p.dataset.pane !== id; });
+      try { localStorage.setItem("mmKenhTab", id); } catch (e) {}
+    };
+    el.querySelectorAll(".kn-tab").forEach(b => { b.onclick = () => chonTab(b.dataset.tab); });
+    chonTab(tabAct === "zl" ? "zl" : "tg");
+    function veTrangThai(id, d) {
+      let k = "off", nhan = window.t("cs.ch2_pill_off");
+      if (d && d.enabled) {
+        if (!d.token_set) { k = "wait"; nhan = window.t("cs.ch2_pill_wait"); }
+        else if (d.status === "polling") { k = "ok"; nhan = window.t("cs.ch2_pill_ok"); }
+        else if (d.status === "starting") { k = "wait"; nhan = window.t("cs.ch2_pill_wait2"); }
+        else if (d.status === "conflict" || d.status === "error") { k = "err"; nhan = window.t("cs.ch2_pill_err"); }
+      }
+      const pill = document.getElementById(id + "Pill"), dot = document.getElementById(id + "Dot");
+      if (pill) { pill.className = "kn-pill kn-pill-" + k; pill.textContent = nhan; }
+      if (dot) dot.className = "kn-dot kn-dot-" + k;
+    }
     const st = document.getElementById("tgStatus");
     async function refreshTgStatus() {
       let d; try { d = await (await fetch("/telegram/status")).json(); } catch (e) { return; }
+      veTrangThai("tg", d);
       let line;
       if (!d.enabled) line = ic("circle", { cls: "ic-dim" }) + " " + esc(window.t("cs.ch_tg_st_off"));
       else if (!d.token_set) line = ic("circle", { cls: "ic-dim" }) + " " + esc(window.t("cs.ch_st_notoken"));
@@ -7482,6 +7516,7 @@
     const zcho = document.getElementById("zlCho");
     async function refreshZalo() {
       let d; try { d = await (await fetch("/zalo-bot/status")).json(); } catch (e) { return; }
+      veTrangThai("zl", d);
       let line;
       if (!d.enabled) line = ic("circle", { cls: "ic-dim" }) + " " + esc(window.t("cs.ch_zl_st_off"));
       else if (!d.token_set) line = ic("circle", { cls: "ic-dim" }) + " " + esc(window.t("cs.ch_st_notoken"));
