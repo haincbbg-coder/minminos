@@ -110,3 +110,7 @@ Kho đề xuất (JSON trong STATE_DIR), hết hạn 30 phút. Chèn được: `
 | 06 | Changelog, merge, phát hành | `CHANGELOG.md` | GATE | CI xanh | - |
 
 ## Kết quả
+- 01 ✅ `server/meta_tai_san.py`: gom theo fb_id (hai kết nối cùng một người thành một tài khoản), vai trò từ tasks, nguồn cá nhân/BM, Trang/TKQC thấy trong BM mà chưa giao, quyền token qua me/permissions, hạn token qua debug_token, đệm 120 giây, hỏi Trang theo tên/ID/link (tên lạ thì xin ID, không đoán). 40 kiểm tra.
+- 02 ✅ `meta-pages-graph`: lật trang theo `after`; ID không có trong danh sách thì hỏi thẳng từng tài khoản, dùng tài khoản nhận được token Trang; không ai được giao thì trỏ sang Soi quyền. 8 kiểm tra mới, test cũ xanh.
+- 03 ✅ `server/meta_ads_duyet.py` + `meta_ads_tim` / `meta_ads_de_xuat_trang_thai`: đề xuất không đổi gì; chọn tài khoản Facebook có quyền ghi với TKQC; khoá theo id nên bấm Duyệt hai lần cùng lúc vẫn chạy một lần; đọc lại trạng thái; lỗi quyền gợi ý Soi quyền; hết hạn 30 phút; hoàn tác 30 phút; chính sách "tiền" = chặn thì không chạy; ghi sổ hành động; nút Telegram. Mã đối tượng chỉ nhận chữ số (chặn chèn đường dẫn). 32 kiểm tra.
+- 03b ✅ route ở đuôi main.py qua `routes/meta_fb.py`, nhánh `fa:` của `_tg_callback` (giữ chữ tin gốc, nối kết quả, gỡ nút), gửi Telegram chỉ tới chat trong danh sách cho phép. Bảng route chụp lại.
