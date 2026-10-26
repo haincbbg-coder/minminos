@@ -2504,3 +2504,11 @@ details.h2-sec[open] > summary.h2-h { margin-bottom: 6px; }
 .gop-con-card { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--glass-brd); border-radius: var(--mm-r-btn); background: var(--surface-2); }
 .gop-con-card small { color: var(--text3); font-size: var(--mm-fs-12); }
 .gop-con-card .s-btn-ghost { justify-self: start; }
+
+/* Khung "Xem chi tiết" dưới mỗi thẻ việc (26.10.262). */
+.ct-det { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--glass-brd); border-radius: var(--mm-r-btn); background: var(--surface-2); }
+.ct-det[hidden] { display: none; }
+.ct-det dl { margin: 0; display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr); gap: 6px 14px; font-size: var(--mm-fs-13); }
+.ct-det dt { color: var(--text3); }
+.ct-det dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .ct-det dl { grid-template-columns: minmax(0, 1fr); } .ct-det dt { margin-top: 6px; font-weight: 700; } }

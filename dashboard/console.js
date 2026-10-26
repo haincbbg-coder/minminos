@@ -64,6 +64,7 @@
     // Trang gộp (26.10.258): Kết nối gom Nguồn dữ liệu, Kết nối ngoài, Chợ; Khách gom Kênh nhắn, Hộp thư khách.
     ketnoi: "plug",
     khach: "messages-square",
+    congviec: "square-kanban",
   };
   // Cỡ icon rail do CSS lo (.rail-ico svg { width: 19px }), độ ưu tiên chọn tử
   // cao hơn .ic nên không cần truyền cỡ ở đây.
@@ -104,7 +105,7 @@
   const RAIL_ITEMS = [
     "tongquan", "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
-    "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach",
+    "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach", "congviec",
   ].map(id => ({ id, icon: ICON[id], get label() { return t(`page.${id}.label`); } }));
 
   // ---- Gom rail thành nhóm theo chức năng (dễ tìm hơn danh sách phẳng 18 mục) ----
@@ -123,7 +124,7 @@
     // Hộp thư khách về nhóm Kết nối & khách, đứng cạnh Kênh nhắn (cùng là chuyện khách nhắn tới).
     // Chợ MinMin vẫn cạnh Nguồn dữ liệu vì phần lớn gói trong chợ là kết nối (xem 0.55.37).
     { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON["Bộ não"],   ids: ["tongquan", "home", "chat", "files", "learn"] },
-    { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["kanban", "selfimprove"] },
+    { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON["Việc"],     ids: ["congviec"] },
     { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON["Năng lực"], ids: ["workspace", "skills", "plugins"] },
     { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON["Kết nối"],  ids: ["ketnoi", "khach", "models"] },
     { id: "code", get label() { return t("nav.group.code"); },        icon: GICON["Code"],     ids: ["terminal", "coding"] },
@@ -146,7 +147,9 @@
   // Các id cũ vẫn dùng được qua lệnh UI và lối tắt, nhưng mở tab trong Cài đặt.
   const RAIL_AN = new Set(["chatbots", "usage", "pet", "logs",
     // 26.10.258: đã gộp vào trang Kết nối và trang Khách (thẻ tab), id cũ vẫn mở được qua TAB_GOP.
-    "mcp", "packs", "ketnoingoai", "matnha", "biendong", "channels", "conversations"]);
+    "mcp", "packs", "ketnoingoai", "matnha", "biendong", "channels", "conversations",
+    // 26.10.262: Bảng việc và Lịch tự chạy là hai tab của trang Công việc.
+    "kanban", "selfimprove"]);
   // 0.64.99: chủ repo không dùng Xưởng code (Dòng lệnh, Lập trình cùng AI), nên cả nhóm ẩn khỏi
   // thanh bên (nhóm hết mục thì railGroups tự bỏ). Trang vẫn sống: lệnh nói, đường dẫn cũ vẫn mở
   // được. Muốn hiện lại: đặt localStorage "mm.hien_xuong_code" = "1" rồi tải lại trang.
@@ -221,7 +224,7 @@
   //
   // `page.<id>.title` cho phép tiêu đề trang KHÁC nhãn trên rail khi cần (rail chật nên
   // "Việc", trang rộng nên "Việc (Kanban)"); thiếu key đó thì tự rơi về `page.<id>.label`.
-  const VIEW_META = Object.fromEntries(["tongquan", "home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach"].map(id => [id, {
+  const VIEW_META = Object.fromEntries(["tongquan", "home", "chat", "settings", "workspace", "skills", "files", "terminal", "coding", "selfimprove", "chatbots", "conversations", "learn", "kanban", "models", "channels", "mcp", "plugins", "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai", "biendong", "ketnoi", "khach", "congviec"].map(id => [id, {
     icon: VIEW_ICON[id],
     get label() {
       const rieng = t(`page.${id}.title`);
@@ -356,6 +359,7 @@
     mcp: ["ketnoi", "mcp"], ketnoingoai: ["ketnoi", "ketnoingoai"], packs: ["ketnoi", "packs"],
     matnha: ["ketnoi", "matnha"], biendong: ["ketnoi", "biendong"],
     channels: ["khach", "channels"], conversations: ["khach", "conversations"],
+    kanban: ["congviec", "kanban"], selfimprove: ["congviec", "selfimprove"],
   };
   const _gopTab = {};   // trang gộp -> tab đang xem (nhớ trong phiên)
   const TRANG_CUOI_KEY = "javis_last_page";
@@ -568,7 +572,7 @@
   }
   // Vẽ trang `id` vào một node bất kỳ (renderPage dùng cviewBody, trang gộp dùng ruột của thẻ tab).
   async function renderVao(el, id) {
-    if (id === "ketnoi" || id === "khach") return renderGop(el, id);
+    if (id === "ketnoi" || id === "khach" || id === "congviec") return renderGop(el, id);
     if (id === "chat")     return renderChat(el);
     if (id === "workspace") return renderWorkspace(el);
     if (STUDIO_PAGES.includes(id)) return renderStudioPage(el, id);
@@ -618,6 +622,7 @@
   const GOP = {
     ketnoi: { tabs: ["mcp", "ketnoingoai", "packs"], con: ["matnha", "biendong"] },
     khach: { tabs: ["channels", "conversations"], con: [] },
+    congviec: { tabs: ["kanban", "selfimprove"], con: [] },
   };
   function renderGop(el, id) {
     const cfg = GOP[id];
@@ -2419,6 +2424,31 @@
       }
     }
 
+    // "Xem chi tiết" (26.10.262): mở ngay dưới thẻ, cho biết việc được thiết lập thế nào.
+    // Mỗi dòng là [nhãn, nội dung]; nội dung dài (lời dặn cho AI) giữ xuống dòng.
+    function reportTo(chat, tat) {
+      if (tat) return window.t("cs.ct_rep_quiet");
+      const c = String(chat || "");
+      if (c.indexOf("web:") === 0) return window.t("cs.ct_rep_web");
+      if (c) return window.t("cs.ct_rep_tg", { id: c });
+      return window.t("cs.ct_rep_default");
+    }
+    function detBlock(rows) {
+      const box = document.createElement("div");
+      box.className = "ct-det"; box.hidden = true;
+      box.innerHTML = "<dl>" + rows.filter(r => r && r[1]).map(r =>
+        `<dt>${esc(r[0])}</dt><dd>${esc(String(r[1]))}</dd>`).join("") + "</dl>";
+      return box;
+    }
+    function wireDet(div, rows) {
+      const btn = div.querySelector(".ctBtn");
+      const det = detBlock(rows);
+      div.appendChild(det);
+      btn.onclick = () => {
+        det.hidden = !det.hidden;
+        btn.textContent = det.hidden ? window.t("cs.ct_btn") : window.t("cs.ct_close");
+      };
+    }
     function loopCard(lp) {
       const paused = !!lp.auto_paused_reason;
       const dot = lp.running ? `<span style="color:var(--green)">${ic("loader", { cls: "ic-spin" })} ${window.t("usage.loop.on")}</span>`
@@ -2450,10 +2480,23 @@
         <div class="wf-actions">
           <button class="s-btn-ghost tgl">${lp.enabled ? window.t("cb.tat") : window.t("cb.bat")}</button>
           <button class="s-btn-ghost run">▶ ${esc(window.t("cs.si_run_now"))}</button>
+          <button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>
           <button class="s-btn-ghost edit">${esc(window.t("common.edit"))}</button>
           <button class="s-btn-ghost del" style="color:var(--red)">${esc(window.t("common.delete"))}</button>
           <select class="mv loop-sel" style="font-size:12px"><option value="">${esc(window.t("cs.si_move_brain"))}</option>${moveOptions(lp.brain_path)}</select>
         </div>`;
+      wireDet(div, [
+        [window.t("cs.ct_when"), [window.t("cs.si_every", { so: lp.interval_min }),
+          lp.quiet_hours ? window.t("cs.si_quiet", { gio: lp.quiet_hours }) : "",
+          lp.max_runs_per_day ? window.t("cs.si_maxruns", { so: lp.max_runs_per_day, da: lp.runs_today }) : ""].filter(Boolean).join(" · ")],
+        [window.t("cs.ct_what"), String(lp.body || "").trim()],
+        [window.t("cs.ct_perm"), modeLbl],
+        [window.t("cs.ct_report"), reportTo(lp.owner_chat, lp.notify === false)],
+        [window.t("cs.ct_last"), (lp.last_run ? fmtWhen(lp.last_run) : window.t("cs.si_never")) + (lp.last_status ? " · " + lp.last_status.slice(0, 160) : "")],
+        [window.t("cs.ct_result"), String(lp.last_summary || "").slice(0, 600)],
+        [window.t("cs.ct_next"), (lp.enabled && !paused && lp.next_run) ? fmtWhen(lp.next_run) + " · " + fmtLeft(lp.next_run) : ""],
+        [window.t("cs.ct_brain"), lp.brain_name || ""],
+      ]);
       // MỌI thao tác gửi brain của CHÍNH item (lp.brain_path), KHÔNG phải fbrain() - trang này gộp
       // nhiều brain nên bám sidebar sẽ nhắm nhầm brain.
       div.querySelector(".tgl").onclick = async () => {
@@ -2515,11 +2558,22 @@
         <div class="dim" style="font-size:12px;color:var(--text3)">${esc(when)} · ${esc(kind)}${mq ? ` · <span class="rm-mq${r.muc_quyen === "full" ? " on" : ""}">${esc(mq)}</span>` : ""}${r.cron ? ` · <code>${esc(r.cron)}</code>` : ""}</div>
         ${r.error ? `<div style="font-size:12px;color:var(--warn-ink);margin-top:4px">${WARN_ICON} ${esc(window.t("cs.si_prev_err"))} ${esc(r.error.slice(0, 160))}</div>` : ""}
         <div class="wf-actions" style="margin-top:8px">
+          <button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>
           <button class="s-btn-ghost rmEdit">${esc(window.t("common.edit"))}</button>
           <button class="s-btn-ghost rmCancel">${esc(window.t("common.cancel"))}</button>
           <button class="s-btn-ghost rmDel" style="color:var(--red)">${esc(window.t("common.delete"))}</button>
           <select class="mv loop-sel" style="font-size:12px"><option value="">${esc(window.t("cs.si_move_brain"))}</option>${moveOptions(r.brain_path)}</select>
         </div>`;
+      wireDet(div, [
+        [window.t("cs.ct_when"), when],
+        [window.t("cs.ct_kind"), kind],
+        [window.t("cs.ct_what"), String(r.text || "").trim()],
+        [window.t("cs.ct_perm"), mq],
+        [window.t("cs.ct_report"), reportTo(r.chat_id, false)],
+        [window.t("cs.ct_result"), String(r.result || "").slice(0, 600)],
+        [window.t("cs.ct_error"), r.error ? String(r.error).slice(0, 300) : ""],
+        [window.t("cs.ct_brain"), r.brain_name || ""],
+      ]);
       div.querySelector(".rmEdit").onclick = () => openForm(null, r);
       div.querySelector(".rmCancel").onclick = async () => {
         if (!confirm(window.t("cs.si_rem_cancel_confirm", { ten: title }))) return;
