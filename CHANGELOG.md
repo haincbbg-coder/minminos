@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.247] - 2026-10-26
+### Cải thiện
+- **Văn phòng 3D**: bảng số liệu của cả 3 phòng (Phòng Sale, Văn phòng, Phòng Marketing) đưa lên lơ lửng phía trên tường sau, to hơn và nhìn rõ từ xa.
+- Nhãn tên người ở phòng bên cạnh không còn đè lên số liệu của bảng.
+- Bấm nút Phòng Sale, Văn phòng, Phòng Marketing là nhìn chính diện, thấy cả phòng lẫn cụm bảng phía trên.
+
 ## [26.10.246] - 2026-10-26
 ### Thêm mới
 - **Đội AI trên Bảng việc**: giao một job nhiều bước cho Đội Social, Đội Ads hoặc tự kê bước. Mỗi job là một hàng bước, thấy ngay đội đang ở đâu.
