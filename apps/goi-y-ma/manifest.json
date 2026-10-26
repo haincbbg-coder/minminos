@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MinMin Gợi ý mã hàng",
-  "version": "26.10.248",
+  "version": "26.10.249",
   "description": "Khách nhắn tới Pancake thì gợi ý ngay mã hàng cho nhân viên: từ mã trong tin nhắn, ID quảng cáo, bài viết.",
   "permissions": [
     "storage"

@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.249] - 2026-10-26
+### Thêm mới
+- **Gợi ý mã hàng**: nút "–" thu nhỏ thanh ghim thành một nút tròn nhỏ để không che dữ liệu của Pancake. Bấm nút tròn để mở lại; trạng thái được nhớ qua các lần mở Pancake.
+
 ## [26.10.248] - 2026-10-26
 ### Thêm mới
 - **Gợi ý mã hàng**: thêm 4 nút gõ nhanh cố định trên thanh ghim: Địa chỉ `/dc`, Cao cân `/cc`, Inbox `/ib`, Lên đơn `/ld`. Bấm là điền lệnh vào ô trả lời, Enter hai lần là gửi.
