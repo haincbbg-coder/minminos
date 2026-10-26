@@ -133,10 +133,11 @@
     }
     var ghiChu = tt === "cho" ? '<p class="dads-ghi-chu">' + esc(t("dads.ghi_chu")) + '</p>' : "";
     return '<div class="dads-dau"><b class="dads-tieu-de">' + esc(tieuDe(rec)) + '</b>' + chip(chipTrangThai(tt)) + '</div>' +
-      (rec.ly_do ? '<p class="dads-ly-do">' + esc(rec.ly_do) + '</p>' : "") +
+      (rec.ly_do ? '<p class="dads-ly-do">' + esc(t("dads.ly_do_minmin", { ly_do: rec.ly_do })) + '</p>' : "") +
       '<ul class="dads-ds">' + (muc.length ? muc.map(function (m) { return dongMuc(m, kq[String(m.id)]); }).join("")
         : '<li class="dads-muc dads-phu">' + esc(t("dads.rong")) + '</li>') + '</ul>' +
       ghiChu +
+      (rec.thong_bao && tt !== "cho" ? '<p class="dads-ghi-chu" role="status">' + esc(rec.thong_bao) + '</p>' : "") +
       (nut ? '<div class="dads-nut">' + nut + '</div>' : "") +
       '<div class="dads-loi" role="alert">' + esc(st.loi || "") + '</div>';
   }

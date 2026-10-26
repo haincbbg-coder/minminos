@@ -12,6 +12,7 @@ chủ (dashboard hoặc Telegram, server/meta_ads_duyet.py) mới đổi trạng
 from __future__ import annotations
 
 import json
+import re
 
 GRAPH = "https://graph.facebook.com/v26.0"
 CONNECTOR_ID = "meta-ads-graph"
@@ -95,7 +96,7 @@ async def _get(path, params, token):
         except Exception:
             return {"error": {"message": f"HTTP {r.status_code}: {r.text[:200]}"}}
     except Exception as e:
-        return {"error": {"message": f"{type(e).__name__}: {e}"}}
+        return {"error": {"message": re.sub(r"access_token=[^&\s'\"]+", "access_token=***", f"{type(e).__name__}: {e}")}}
 
 
 def _fmt(d):
@@ -234,11 +235,25 @@ async def _raw_get(args, ctx):
             params = {}
     if not isinstance(params, dict):
         params = {}
+    # 26.10.252 (soát độc lập): Graph nhận `method=post` gửi kèm GET, nên một "lệnh đọc" thô có thể
+    # bật camp lách qua bước duyệt. Chỉ cho đường dẫn sạch và đúng các tham số ĐỌC dưới đây.
+    if not re.fullmatch(r"[A-Za-z0-9_./-]{1,200}", path) or ".." in path:
+        return "ERROR: 'path' chỉ được gồm chữ, số, '_', '.', '-', '/' (không kèm ?, &, #)."
+    la = sorted(k for k in params if str(k) not in _THAM_SO_DOC)
+    if la:
+        return ("ERROR: meta_ads_get chỉ để ĐỌC; không nhận tham số " + ", ".join(map(str, la)) +
+                ". Muốn bật/tắt dùng meta_ads_de_xuat_trang_thai (chờ chủ duyệt).")
     accts, aerr = await _acct_tokens(args.get("tai_khoan"))
     if aerr:
         return aerr
-    d = await _get(path, params, accts[0][1] if accts else token)
+    d = await _get(path, {str(k): v for k, v in params.items()}, accts[0][1] if accts else token)
     return _fmt(d)
+
+
+_THAM_SO_DOC = {"fields", "limit", "after", "before", "date_preset", "time_range", "time_ranges", "level",
+                "filtering", "breakdowns", "action_breakdowns", "time_increment", "sort", "since", "until",
+                "summary", "effective_status", "action_attribution_windows", "use_account_attribution_setting",
+                "metadata", "locale", "date_format"}
 
 
 # ---------------------------------------------------------------- bật/tắt có duyệt (26.10.252)

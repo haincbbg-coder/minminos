@@ -115,6 +115,14 @@ async def _http(path, params, token) -> dict:
         return {"error": {"message": f"{type(e).__name__}: {e}"}}
 
 
+_RE_TOKEN = re.compile(r"(access_token|input_token)=[^&\s'\"]+")
+
+
+def sach(s) -> str:
+    """Bỏ token khỏi câu lỗi (lỗi của httpx có thể kèm URL mang access_token)."""
+    return _RE_TOKEN.sub(r"\1=***", str(s or ""))
+
+
 def _loi(d) -> Optional[dict]:
     if isinstance(d, dict) and d.get("error"):
         e = d["error"]
@@ -440,7 +448,7 @@ def tach_q(q: str) -> tuple:
             return ("id", num) if num else ("", "")
         if seg.isdigit():
             return "id", seg
-        return ("slug", seg) if seg else ("", "")
+        return ("slug", seg) if re.fullmatch(r"[A-Za-z0-9._-]{1,100}", seg or "") else ("", "")
     if re.fullmatch(r"\d{5,25}", s):
         return "id", s
     return "ten", s

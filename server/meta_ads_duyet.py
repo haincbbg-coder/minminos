@@ -8,7 +8,10 @@ Luồng:
      Nội dung thẻ lấy từ ĐỀ XUẤT ĐÃ LƯU, không từ chữ model.
   3. Chủ bấm Duyệt -> `quyet(id, "duyet")`: chạy đúng một lần (khoá theo id, bấm hai lần không chạy
      lại), đọc lại trạng thái thật, ghi sổ hành động, báo kết quả. Có Hoàn tác trong 30 phút.
-Model không có đường nào tự duyệt: không tool nào gọi `quyet`, chỉ route HTTP và nút Telegram.
+Không tool nào của model gọi `quyet`: chỉ route HTTP (đòi header Sec-Fetch-Site: same-origin mà trình duyệt tự
+gửi) và nút Telegram. NÓI THẬT (soát độc lập 26.10.252): não CLI chạy ở mức Toàn quyền có shell, về lý thuyết vẫn
+giả được request hoặc đọc token trong STATE_DIR rồi gọi thẳng Facebook. Năng lực đó có từ trước tính năng này;
+bước duyệt chặn được model ở mọi mức thấp hơn và mọi não API, không thay được việc giới hạn shell.
 
 Tôn trọng Quyền theo loại việc: loại "tien" (tiền & quảng cáo) bị chủ CHẶN thì không chạy.
 Không bao giờ trả token ra ngoài (`xem()` bỏ conn_id).
@@ -108,7 +111,7 @@ async def _post(path, data, token) -> dict:
         except Exception:
             return {"error": {"message": f"HTTP {r.status_code}: {r.text[:200]}"}}
     except Exception as e:
-        return {"error": {"message": f"{type(e).__name__}: {e}"}}
+        return {"error": {"message": mts.sach(f"{type(e).__name__}: {e}")}}
 
 
 def _msg(d) -> str:
@@ -183,13 +186,19 @@ async def tao(muc, chat: str = "", ly_do: str = "") -> dict:
         return {"ok": False, "loi": "Chưa có đối tượng nào để đổi. Dùng meta_ads_tim để tìm mã chiến dịch trước."}
     if len(ds) > MAX_MUC:
         return {"ok": False, "loi": f"Mỗi lần duyệt tối đa {MAX_MUC} đối tượng."}
+    chan = _bi_chan()
+    if chan:
+        return {"ok": False, "loi": "Không tạo đề xuất: " + chan}
     conns = mts._ket_noi()
     if not conns:
         return {"ok": False, "loi": "Chưa nối tài khoản Facebook nào (Meta Ads hoặc Facebook Trang)."}
     conn_fb, dung, ten_tk = await _ban_do_tk()
     out, loi = [], []
     for m in ds:
-        oid = re.sub(r"[^0-9]", "", str(m.get("id")))
+        oid = str(m.get("id") or "").strip()
+        if not re.fullmatch(r"\d{5,25}", oid):
+            loi.append(f"{oid[:40]}: mã phải là dãy số của chiến dịch / nhóm / quảng cáo")
+            continue
         tt = str(m.get("trang_thai") or "").strip().lower()
         if tt not in ("bat", "tat"):
             loi.append(f"{oid}: trang_thai phải là 'bat' hoặc 'tat'")
@@ -199,7 +208,13 @@ async def tao(muc, chat: str = "", ly_do: str = "") -> dict:
             loi.append(f"{oid}: {e}")
             continue
         tok = await mts._token(cid)
-        cap = _cap(d) or str(m.get("cap") or "")
+        cap = _cap(d)
+        if not cap:
+            loi.append(f"{oid}: không phải chiến dịch, nhóm quảng cáo hay quảng cáo")
+            continue
+        if str(d.get("effective_status") or "") in ("DELETED", "ARCHIVED"):
+            loi.append(f"{oid}: đã xoá hoặc lưu trữ, không bật tắt được")
+            continue
         aid = str(d.get("account_id") or "")
         ngan_sach = None
         if cap in ("campaign", "adset"):
@@ -220,7 +235,7 @@ async def tao(muc, chat: str = "", ly_do: str = "") -> dict:
             fb_ten = next((c["label"] for c in conns if c["id"] == cid), "")
         sang = "ACTIVE" if tt == "bat" else "PAUSED"
         tu = str(d.get("status") or "")
-        out.append({"id": oid, "cap": cap or "campaign", "ten": str(d.get("name") or oid), "tk_id": aid,
+        out.append({"id": oid, "cap": cap, "ten": str(d.get("name") or oid), "tk_id": aid,
                     "tk_ten": tk_ten or (f"act_{aid}" if aid else ""), "fb_id": fb_id, "fb_ten": fb_ten,
                     "conn_id": cid, "tu": tu, "hieu_luc": str(d.get("effective_status") or ""), "sang": sang,
                     "khong_doi": tu == sang, "chi_hom_nay": chi, "ngan_sach_ngay": ngan_sach})
@@ -243,15 +258,27 @@ async def tao(muc, chat: str = "", ly_do: str = "") -> dict:
 
 
 # ---------------------------------------------------------------- xem
+KET_GIAY = 600   # "dang_chay" quá 10 phút = máy chủ khởi động lại giữa chừng
+
+
 def _het_han_neu_can(rec: dict) -> dict:
     if rec.get("trang_thai") == "cho" and time.time() > float(rec.get("het_han_ts") or 0):
         rec["trang_thai"] = "het_han"
+    if rec.get("trang_thai") == "dang_chay" and time.time() - float(rec.get("dang_chay_ts") or 0) > KET_GIAY:
+        rec["trang_thai"] = "loi"
+        rec["xong_ts"] = float(rec.get("dang_chay_ts") or time.time())
+        rec["thong_bao"] = ("Máy chủ dừng giữa lúc đang đổi. Mục nào đã ghi kết quả vẫn hoàn tác được; "
+                            "kiểm tra lại các mục còn lại trên Trình quản lý quảng cáo.")
     return rec
 
 
+def _con_hoan_tac(k: dict) -> bool:
+    return bool(k.get("ok") and k.get("da_doi") and not k.get("da_hoan_tac"))
+
+
 def _co_the_hoan_tac(rec: dict) -> bool:
-    return (rec.get("trang_thai") == "xong" and not rec.get("da_hoan_tac")
-            and any(k.get("ok") and k.get("da_doi") for k in rec.get("ket_qua") or [])
+    return (rec.get("trang_thai") in ("xong", "loi")
+            and any(_con_hoan_tac(k) for k in rec.get("ket_qua") or [])
             and time.time() - float(rec.get("xong_ts") or 0) < HOAN_TAC_GIAY)
 
 
@@ -261,8 +288,10 @@ def _gon(rec: dict) -> dict:
     caps = {m["cap"] for m in muc}
     return {"ok": True, "id": rec["id"], "trang_thai": rec["trang_thai"], "tao_luc": rec.get("tao_luc"),
             "cap": caps.pop() if len(caps) == 1 else "khac", "muc": muc, "ket_qua": rec.get("ket_qua") or [],
+            "hoan_tac": rec.get("hoan_tac") or [],
             "bo_qua": rec.get("bo_qua") or [], "ly_do": rec.get("ly_do") or "",
             "co_the_hoan_tac": _co_the_hoan_tac(rec), "da_hoan_tac": bool(rec.get("da_hoan_tac")),
+            "da_chay": False,   # True chỉ trên câu trả lời của lần bấm Duyệt đã thật sự chạy
             "nguoi_quyet": rec.get("nguoi_quyet") or "", "nguon_quyet": rec.get("nguon_quyet") or "",
             "thong_bao": rec.get("thong_bao") or ""}
 
@@ -279,8 +308,9 @@ def _bi_chan() -> str:
         cs = _chinh_sach_fn() if _chinh_sach_fn else _chinh_sach_that()
         ok, why = hanh_dong.cho_phep(cs or {}, "tien")
         return "" if ok else why
-    except Exception:
-        return ""
+    except Exception as e:
+        # Fail-closed: không đọc được chính sách thì KHÔNG chạy (đúng lúc sự cố là lúc dễ sai nhất).
+        return f"không đọc được chính sách Quyền theo loại việc ({type(e).__name__}), không chạy"
 
 
 def _chinh_sach_that() -> dict:
@@ -300,20 +330,40 @@ def _ghi_so(m: dict, ok: bool, err: str, ai: str, nguon: str, hanh: str) -> None
         pass
 
 
-async def _doi(m: dict, dich: str) -> dict:
+async def _doi(m: dict, dich: str, phai_dang=None) -> dict:
+    """Đổi một đối tượng. Trước khi ghi, ĐỌC LẠI và so với đề xuất đã lưu (tên, tài khoản quảng cáo, kiểu):
+    lệch thì không đổi - phòng trường hợp file đề xuất bị sửa sau khi chủ đã xem thẻ (soát độc lập N3).
+    `phai_dang`: trạng thái hiện tại bắt buộc (hoàn tác chỉ khi vẫn đúng trạng thái MinMin đã đặt)."""
     tok = await mts._token(m["conn_id"])
     if not tok:
         return {"id": m["id"], "ten": m["ten"], "ok": False, "loi": "tài khoản Facebook mất token, đăng nhập lại"}
+    if not re.fullmatch(r"\d{5,25}", str(m.get("id") or "")):
+        return {"id": m.get("id"), "ten": m.get("ten"), "ok": False, "loi": "mã đối tượng không hợp lệ"}
+    hien = await mts._http(m["id"], {"fields": "id,name,status,account_id", "metadata": "1"}, tok)
+    if mts._loi(hien):
+        return {"id": m["id"], "ten": m["ten"], "ok": False, "loi": "không đọc lại được trước khi đổi: " + _msg(hien)[:150]}
+    if (str(hien.get("name") or "") != m["ten"] or str(hien.get("account_id") or "") != m["tk_id"]
+            or _cap(hien) != m["cap"]):
+        return {"id": m["id"], "ten": m["ten"], "ok": False,
+                "loi": "đối tượng trên Facebook không khớp đề xuất (tên, tài khoản hoặc loại đã khác), không đổi"}
+    if phai_dang and str(hien.get("status") or "") != phai_dang:
+        return {"id": m["id"], "ten": m["ten"], "ok": False,
+                "loi": f"trạng thái đã bị đổi tay thành {hien.get('status')}, không hoàn tác để khỏi đè"}
     d = await _post(m["id"], {"status": dich}, tok)
     if mts._loi(d):
         msg = _msg(d)
         goi_y = (" Tài khoản Facebook này chưa có quyền quản lý quảng cáo: Kết nối > Facebook > Soi quyền."
                  if ("permission" in msg.lower() or "(#200)" in msg or "(#10)" in msg) else "")
         return {"id": m["id"], "ten": m["ten"], "ok": False, "loi": msg[:200] + goi_y}
+    if isinstance(d, dict) and d.get("success") is False:
+        return {"id": m["id"], "ten": m["ten"], "ok": False, "loi": "Facebook trả success=false"}
     lai = await mts._http(m["id"], {"fields": "status,effective_status"}, tok)
     st = "" if mts._loi(lai) else str(lai.get("status") or "")
     hl = "" if mts._loi(lai) else str(lai.get("effective_status") or "")
-    if st and st != dich:
+    if not st:
+        return {"id": m["id"], "ten": m["ten"], "ok": True, "da_doi": True, "chua_xac_minh": True,
+                "trang_thai_moi": dich, "hieu_luc": "", "ghi_chu": "Facebook nhận lệnh nhưng chưa đọc lại được để xác minh"}
+    if st != dich:
         return {"id": m["id"], "ten": m["ten"], "ok": False, "trang_thai_moi": st, "hieu_luc": hl,
                 "loi": f"Facebook báo đã nhận nhưng đọc lại vẫn là {st}"}
     return {"id": m["id"], "ten": m["ten"], "ok": True, "da_doi": True, "trang_thai_moi": st or dich, "hieu_luc": hl}
@@ -324,12 +374,16 @@ def _tra(rec: dict, tb: str) -> dict:
     _luu(rec)
     v = _gon(rec)
     v["thong_bao"] = tb
+    v["da_chay"] = False
     return v
 
 
 async def quyet(rid: str, hanh_dong: str, ai: str = "", nguon: str = "dashboard") -> dict:
     rid = str(rid or "")
     hd = str(hanh_dong or "").strip().lower()
+    if len(_KHOA) > 500:
+        for k in [k for k, v in _KHOA.items() if not v.locked()]:
+            _KHOA.pop(k, None)
     khoa = _KHOA.setdefault(rid, asyncio.Lock())
     async with khoa:
         kho = _doc_kho()
@@ -358,9 +412,11 @@ async def quyet(rid: str, hanh_dong: str, ai: str = "", nguon: str = "dashboard"
             if chan:
                 return _tra(rec, "Không chạy: " + chan)
             rec["trang_thai"] = "dang_chay"
+            rec["dang_chay_ts"] = time.time()
             rec["nguoi_quyet"], rec["nguon_quyet"] = ai, nguon
+            rec["ket_qua"] = []
             _luu(rec)
-            kq = []
+            kq = rec["ket_qua"]
             for m in rec["muc"]:
                 if m.get("khong_doi"):
                     kq.append({"id": m["id"], "ten": m["ten"], "ok": True, "da_doi": False,
@@ -369,13 +425,17 @@ async def quyet(rid: str, hanh_dong: str, ai: str = "", nguon: str = "dashboard"
                 r = await _doi(m, m["sang"])
                 _ghi_so(m, r["ok"], r.get("loi", ""), ai, nguon, m["sang"])
                 kq.append(r)
-            rec["ket_qua"] = kq
+                _luu(rec)          # lưu sau từng mục: máy chủ dừng giữa chừng vẫn biết mục nào đã đổi
             so_ok = sum(1 for k in kq if k["ok"])
             rec["trang_thai"] = "xong" if so_ok else "loi"
             rec["xong_ts"] = time.time()
             rec["thong_bao"] = f"Đã đổi {so_ok}/{len(kq)}."
+            if any(k.get("chua_xac_minh") for k in kq):
+                rec["thong_bao"] += " Có mục chưa xác minh được, xem lại trên Trình quản lý quảng cáo."
             _luu(rec)
-            return _gon(rec)
+            v = _gon(rec)
+            v["da_chay"] = True
+            return v
         if hd == "hoan_tac":
             if not _co_the_hoan_tac(rec):
                 return _tra(rec, "Không hoàn tác được nữa (quá 30 phút hoặc chưa đổi gì).")
@@ -385,14 +445,17 @@ async def quyet(rid: str, hanh_dong: str, ai: str = "", nguon: str = "dashboard"
             theo_id = {m["id"]: m for m in rec["muc"]}
             ht = []
             for k in rec["ket_qua"]:
-                if not (k.get("ok") and k.get("da_doi")):
+                if not _con_hoan_tac(k):
                     continue
                 m = theo_id[k["id"]]
-                r = await _doi(m, m["tu"])
+                r = await _doi(m, m["tu"], phai_dang=m["sang"])
                 _ghi_so(m, r["ok"], r.get("loi", ""), ai, nguon, m["tu"] + " (hoàn tác)")
+                if r["ok"]:
+                    k["da_hoan_tac"] = True       # chỉ đánh dấu mục hoàn tác được; mục lỗi còn thử lại được
                 ht.append(r)
+                _luu(rec)
             rec["hoan_tac"] = ht
-            rec["da_hoan_tac"] = True
+            rec["da_hoan_tac"] = not any(_con_hoan_tac(k) for k in rec["ket_qua"])
             rec["thong_bao"] = f"Đã hoàn tác {sum(1 for x in ht if x['ok'])}/{len(ht)}."
             _luu(rec)
             return _gon(rec)

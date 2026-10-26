@@ -33,13 +33,13 @@ CONNS = [{"id": "c_tk", "connector_id": "meta-ads-graph", "label": "Trung - Tố
          {"id": "c_hb", "connector_id": "meta-ads-graph", "label": "Khang - HB Vũ", "is_default": False}]
 TOK = {"c_tk": "U_TK", "c_hb": "U_HB"}
 # Chiến dịch C1 thuộc TKQC 111 (chỉ Trung thấy); C2 thuộc 222 (cả hai thấy, chỉ Khang có quyền ghi).
-OBJ = {"1201": {"id": "1201", "name": "Melya Lady - Đầm lụa", "status": "ACTIVE", "effective_status": "ACTIVE",
+OBJ = {"12010001": {"id": "12010001", "name": "Melya Lady - Đầm lụa", "status": "ACTIVE", "effective_status": "ACTIVE",
               "account_id": "111", "metadata": {"type": "campaign"}, "daily_budget": "300000"},
-       "1202": {"id": "1202", "name": "Nguyễn Phạm - Bộ đồ ngủ", "status": "PAUSED", "effective_status": "PAUSED",
+       "12020002": {"id": "12020002", "name": "Nguyễn Phạm - Bộ đồ ngủ", "status": "PAUSED", "effective_status": "PAUSED",
               "account_id": "222", "metadata": {"type": "campaign"}, "daily_budget": "800000"},
-       "1203": {"id": "1203", "name": "Đã tắt sẵn", "status": "PAUSED", "effective_status": "PAUSED",
+       "12030003": {"id": "12030003", "name": "Đã tắt sẵn", "status": "PAUSED", "effective_status": "PAUSED",
               "account_id": "111", "metadata": {"type": "campaign"}}}
-THAY = {"U_TK": {"1201", "1203", "1202"}, "U_HB": {"1202"}}
+THAY = {"U_TK": {"12010001", "12030003", "12020002"}, "U_HB": {"12020002"}}
 posts = []
 TU_CHOI_GHI = set()
 
@@ -99,22 +99,22 @@ async def chay():
         return True
     mad.dat_gui_telegram(ftg)
 
-    v = await mad.tao([{"id": "1201", "trang_thai": "tat"}, {"id": "1202", "trang_thai": "bat"}], chat="web:abc")
+    v = await mad.tao([{"id": "12010001", "trang_thai": "tat"}, {"id": "12020002", "trang_thai": "bat"}], chat="web:abc")
     check("tạo đề xuất ok, trạng thái cho", v["ok"] and v["trang_thai"] == "cho", v)
     check("đề xuất KHÔNG đổi gì trên Facebook", posts == [])
     m = {x["id"]: x for x in v["muc"]}
-    check("C1 (TKQC 111) dùng Trung", m["1201"]["fb_id"] == "100" and m["1201"]["fb_ten"] == "Trung - Tố Khuyên", m["1201"])
+    check("C1 (TKQC 111) dùng Trung", m["12010001"]["fb_id"] == "100" and m["12010001"]["fb_ten"] == "Trung - Tố Khuyên", m["12010001"])
     check("C2 (TKQC 222) dùng Khang, người có quyền ghi, dù Trung là mặc định",
-          m["1202"]["fb_id"] == "200", m["1202"])
-    check("đọc chi hôm nay + ngân sách ngày", m["1201"]["chi_hom_nay"] == 1250000 and m["1201"]["ngan_sach_ngay"] == 300000)
-    check("trước -> sau đúng", m["1201"]["tu"] == "ACTIVE" and m["1201"]["sang"] == "PAUSED" and m["1202"]["sang"] == "ACTIVE")
+          m["12020002"]["fb_id"] == "200", m["12020002"])
+    check("đọc chi hôm nay + ngân sách ngày", m["12010001"]["chi_hom_nay"] == 1250000 and m["12010001"]["ngan_sach_ngay"] == 300000)
+    check("trước -> sau đúng", m["12010001"]["tu"] == "ACTIVE" and m["12010001"]["sang"] == "PAUSED" and m["12020002"]["sang"] == "ACTIVE")
     check("thẻ không lộ token / conn_id", "U_TK" not in json.dumps(v) and "conn_id" not in json.dumps(v))
     check("chat web: không gửi Telegram", tg == [] and v["da_gui_telegram"] is False)
 
     a, b = await asyncio.gather(mad.quyet(v["id"], "duyet", ai="chủ"), mad.quyet(v["id"], "duyet", ai="chủ"))
     check("bấm Duyệt hai lần cùng lúc: chỉ chạy MỘT lần", len(posts) == 2, posts)
     check("C1 tắt bằng token Trung, C2 bật bằng token Khang",
-          ("1201", "PAUSED", "U_TK") in posts and ("1202", "ACTIVE", "U_HB") in posts, posts)
+          ("12010001", "PAUSED", "U_TK") in posts and ("12020002", "ACTIVE", "U_HB") in posts, posts)
     x = mad.xem(v["id"])
     check("sau duyệt: xong, đổi 2/2", x["trang_thai"] == "xong" and x["thong_bao"] == "Đã đổi 2/2.", x)
     check("có thể hoàn tác", x["co_the_hoan_tac"] is True)
@@ -123,43 +123,74 @@ async def chay():
 
     ht = await mad.quyet(v["id"], "hoan_tac", ai="chủ")
     check("hoàn tác: đưa C1 về ACTIVE, C2 về PAUSED",
-          posts[-2:] in ([("1201", "ACTIVE", "U_TK"), ("1202", "PAUSED", "U_HB")],
-                         [("1202", "PAUSED", "U_HB"), ("1201", "ACTIVE", "U_TK")]) and ht["da_hoan_tac"], posts[-2:])
+          posts[-2:] in ([("12010001", "ACTIVE", "U_TK"), ("12020002", "PAUSED", "U_HB")],
+                         [("12020002", "PAUSED", "U_HB"), ("12010001", "ACTIVE", "U_TK")]) and ht["da_hoan_tac"], posts[-2:])
     check("hoàn tác lần hai: không được", (await mad.quyet(v["id"], "hoan_tac"))["thong_bao"].startswith("Không hoàn tác"))
+    vh = await mad.tao([{"id": "12010001", "trang_thai": "tat"}])
+    await mad.quyet(vh["id"], "duyet")
+    OBJ["12010001"]["status"] = "ACTIVE"          # chủ bật lại tay trong Ads Manager
+    nn = len(posts)
+    r = await mad.quyet(vh["id"], "hoan_tac")
+    check("hoàn tác khi trạng thái đã bị đổi tay: không đè", len(posts) == nn and "đổi tay" in (r.get("hoan_tac") or [{}])[0].get("loi", ""), r)
+    OBJ["12010001"]["status"] = "ACTIVE"
 
-    v2 = await mad.tao([{"id": "1201", "trang_thai": "tat"}])
+    v2 = await mad.tao([{"id": "12010001", "trang_thai": "tat"}])
     n = len(posts)
     r = await mad.quyet(v2["id"], "tu_choi")
     check("từ chối: không đổi gì", len(posts) == n and r["trang_thai"] == "tu_choi")
     r = await mad.quyet(v2["id"], "duyet")
     check("duyệt sau khi đã từ chối: không chạy", len(posts) == n and "từ chối" in r["thong_bao"])
 
-    v3 = await mad.tao([{"id": "1201", "trang_thai": "tat"}])
+    v3 = await mad.tao([{"id": "12010001", "trang_thai": "tat"}])
     kho = mad._doc_kho()
     kho[v3["id"]]["het_han_ts"] = time.time() - 1
     mad._ghi_kho(kho)
     r = await mad.quyet(v3["id"], "duyet")
     check("đề xuất quá 30 phút: hết hạn, không chạy", len(posts) == n and r["trang_thai"] == "het_han", r)
 
-    v4 = await mad.tao([{"id": "1203", "trang_thai": "tat"}])
+    v4 = await mad.tao([{"id": "12030003", "trang_thai": "tat"}])
     check("đối tượng đã đúng trạng thái: đánh dấu không đổi", v4["muc"][0]["khong_doi"] is True)
     await mad.quyet(v4["id"], "duyet")
     check("duyệt mục không đổi: không gọi Facebook", len(posts) == n)
 
+    v5 = await mad.tao([{"id": "12010001", "trang_thai": "tat"}])
     mad.dat_chinh_sach(lambda: {"tien": "chan"})
-    v5 = await mad.tao([{"id": "1201", "trang_thai": "tat"}])
     r = await mad.quyet(v5["id"], "duyet")
-    check("chính sách tiền = chặn: không chạy, báo lý do", len(posts) == n and r["thong_bao"].startswith("Không chạy"), r)
+    check("chính sách tiền = chặn lúc duyệt: không chạy, báo lý do, da_chay False",
+          len(posts) == n and r["thong_bao"].startswith("Không chạy") and r["da_chay"] is False, r)
+    r = await mad.tao([{"id": "12010001", "trang_thai": "tat"}])
+    check("chính sách tiền = chặn: báo ngay lúc tạo đề xuất", r["ok"] is False and "Không tạo" in r["loi"], r)
+
+    def hong():
+        raise RuntimeError("settings hỏng")
+    mad.dat_chinh_sach(hong)
+    r = await mad.quyet(v5["id"], "duyet")
+    check("không đọc được chính sách: KHÔNG chạy (fail-closed)", len(posts) == n and "không đọc được" in r["thong_bao"], r)
     mad.dat_chinh_sach(lambda: {})
 
-    TU_CHOI_GHI.add(("1201", "U_TK"))
-    v6 = await mad.tao([{"id": "1201", "trang_thai": "tat"}])
+    # File đề xuất bị sửa sau khi chủ đã xem thẻ: tên giữ "Đầm lụa" nhưng id đổi sang camp khác -> không đổi
+    v8 = await mad.tao([{"id": "12010001", "trang_thai": "tat"}])
+    kho = mad._doc_kho()
+    kho[v8["id"]]["muc"][0]["id"] = "12020002"
+    mad._ghi_kho(kho)
+    r = await mad.quyet(v8["id"], "duyet")
+    check("đề xuất bị sửa trong file: đọc lại thấy lệch, KHÔNG đổi", len(posts) == n and "không khớp" in r["ket_qua"][0]["loi"], r)
+
+    # Máy chủ dừng giữa lúc đang chạy: quá 10 phút thì về 'loi' thay vì kẹt mãi
+    v9 = await mad.tao([{"id": "12010001", "trang_thai": "tat"}])
+    kho = mad._doc_kho()
+    kho[v9["id"]].update(trang_thai="dang_chay", dang_chay_ts=time.time() - 3600)
+    mad._ghi_kho(kho)
+    check("dang_chay kẹt quá 10 phút -> loi kèm hướng dẫn", mad.xem(v9["id"])["trang_thai"] == "loi")
+
+    TU_CHOI_GHI.add(("12010001", "U_TK"))
+    v6 = await mad.tao([{"id": "12010001", "trang_thai": "tat"}])
     r = await mad.quyet(v6["id"], "duyet")
     check("Facebook từ chối vì thiếu quyền: trạng thái loi, gợi ý Soi quyền",
           r["trang_thai"] == "loi" and "Soi quyền" in r["ket_qua"][0]["loi"], r)
     TU_CHOI_GHI.clear()
 
-    v7 = await mad.tao([{"id": "1201", "trang_thai": "tat"}], chat="123456789")
+    v7 = await mad.tao([{"id": "12010001", "trang_thai": "tat"}], chat="123456789")
     check("chat Telegram: gửi tin có nút fa:<id>:d / fa:<id>:t",
           tg and tg[-1][0] == "123456789" and tg[-1][2]["inline_keyboard"][0][0]["callback_data"] == f"fa:{v7['id']}:d", tg[-1:])
     check("tin Telegram ghi rõ tên, tài khoản Facebook, 'Chưa đổi gì'",
@@ -170,9 +201,9 @@ async def chay():
           and mad.xem(v7["id"])["nguon_quyet"] == "telegram", r)
     check("callback lạ -> None", await mad.tg_callback("gv:abc:d") is None)
 
-    r = await mad.tao([{"id": "1999", "trang_thai": "tat"}])
+    r = await mad.tao([{"id": "19990009", "trang_thai": "tat"}])
     check("mã không ai đọc được: ok False", r["ok"] is False)
-    r = await mad.tao([{"id": "1201", "trang_thai": "chay"}])
+    r = await mad.tao([{"id": "12010001", "trang_thai": "chay"}])
     check("trang_thai sai: ok False", r["ok"] is False)
     r = await mad.quyet("khongco", "duyet")
     check("đề xuất không tồn tại: ok False", r["ok"] is False)
@@ -193,7 +224,7 @@ async def chay():
     check("plugin: meta_ads_tim readonly, meta_ads_de_xuat_trang_thai safe",
           ctx.t["meta_ads_tim"]["min_mode"] == "readonly" and ctx.t["meta_ads_de_xuat_trang_thai"]["min_mode"] == "safe")
     n = len(posts)
-    out = json.loads(await pl._de_xuat({"muc": [{"id": "1202", "trang_thai": "tat"}]}, None))
+    out = json.loads(await pl._de_xuat({"muc": [{"id": "12020002", "trang_thai": "tat"}]}, None))
     check("plugin đề xuất: trả dòng thẻ JAVIS_CARD duyet_ads, không đổi gì",
           out["THE_DUYET"].startswith("<!-- JAVIS_CARD:") and '"duyet_ads"' in out["THE_DUYET"] and len(posts) == n, out)
     out = await pl._de_xuat({"muc": "không phải json"}, None)
@@ -217,8 +248,14 @@ async def chay():
         return {"data": []}
     pl._get = pget
     r = json.loads(await pl._tim({"q": "melya"}, None))
-    check("meta_ads_tim: tìm trên mọi TKQC, mỗi TKQC quét một lần", r["so"] == 1 and r["data"][0]["id"] == "1201"
+    check("meta_ads_tim: tìm trên mọi TKQC, mỗi TKQC quét một lần", r["so"] == 1 and r["data"][0]["id"] == "12010001"
           and r["da_quet_tkqc"] == 2, r)
+    r = await pl._raw_get({"path": "12010001", "params": {"method": "post", "status": "ACTIVE"}}, None)
+    check("meta_ads_get: chặn tham số ghi trá hình (method/status)", r.startswith("ERROR") and "method" in r, r)
+    r = await pl._raw_get({"path": "12010001?method=post&status=ACTIVE"}, None)
+    check("meta_ads_get: chặn ? & trong path", r.startswith("ERROR"), r)
+    r = await pl._raw_get({"path": "act_111/insights", "params": {"fields": "spend", "date_preset": "today"}}, None)
+    check("meta_ads_get: lệnh đọc thường vẫn chạy", not r.startswith("ERROR"), r)
     check("meta_ads_tim: lọc ngay ở Facebook bằng CONTAIN",
           any('"CONTAIN"' in str(p[1].get("filtering", "")) for p in seen))
 

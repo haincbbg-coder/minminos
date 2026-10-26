@@ -6,7 +6,9 @@ Cần đăng nhập dashboard như mọi đường khác (không có lối vào 
     POST /meta/hoi-trang  (form fb_id, q)  hỏi thẳng Facebook về một Trang
     GET  /meta-ads/duyet/{id}              đề xuất bật/tắt (không token)
     POST /meta-ads/duyet/{id} (form hanh_dong=duyet|tu_choi|sua|hoan_tac)
-Nút Duyệt là đường DUY NHẤT làm MinMin đổi trạng thái quảng cáo thật: không tool nào của model gọi tới đây.
+Không tool nào của model gọi tới đây. POST duyệt còn đòi header `Sec-Fetch-Site: same-origin` mà trình duyệt tự gửi:
+đây là vạch giảm tốc cho lệnh curl chứ không phải tường bảo mật - não CLI ở mức Toàn quyền có shell vẫn giả được
+(xem docstring server/meta_ads_duyet.py).
 """
 from __future__ import annotations
 
@@ -64,6 +66,8 @@ def register(app: FastAPI, ai_dang_dung=lambda request: "chủ") -> None:
     async def meta_ads_duyet_post(rid: str, request: Request):
         if not _RE_ID.match(rid or ""):
             return _loi("mã đề xuất không hợp lệ")
+        if str(request.headers.get("sec-fetch-site") or "") != "same-origin":
+            return _loi("Chỉ duyệt được bằng nút trên dashboard hoặc trên Telegram.", 403)
         f = await request.form()
         hd = str(f.get("hanh_dong") or "")
         if hd not in ("duyet", "tu_choi", "sua", "hoan_tac"):
