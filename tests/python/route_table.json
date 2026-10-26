@@ -8180,5 +8180,55 @@
    "GET"
   ],
   "trong": null
+ },
+ {
+  "order": 819,
+  "type": "APIRoute",
+  "path": "/meta/tai-san",
+  "name": "meta_tai_san_get",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 820,
+  "type": "APIRoute",
+  "path": "/meta/soi-quyen",
+  "name": "meta_soi_quyen_get",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 821,
+  "type": "APIRoute",
+  "path": "/meta/hoi-trang",
+  "name": "meta_hoi_trang_post",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 822,
+  "type": "APIRoute",
+  "path": "/meta-ads/duyet/{rid}",
+  "name": "meta_ads_duyet_get",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 823,
+  "type": "APIRoute",
+  "path": "/meta-ads/duyet/{rid}",
+  "name": "meta_ads_duyet_post",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
  }
 ]
