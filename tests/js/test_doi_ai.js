@@ -222,6 +222,27 @@ check("nút cao tối thiểu 44px trên điện thoại", /@media \(max-width: 
 check("Từ chối chữ màu bad", /\.da-nut-bo \{[^}]*color: var\(--mm-bad\)/.test(css));
 check("bước done nền ok, đang chạy nền tím (brand)", /\.da-buoc\.xong \.da-vong \{[^}]*background: var\(--mm-ok\)/.test(css) && /\.da-buoc\.chay \.da-vong \{[^}]*background: var\(--mm-brand\)/.test(css));
 
+// ---------------------------------------------------------------- Đội Ads: thẻ camp + giới hạn (26.10.248)
+const CAMP = { tai_khoan: "1372588536646337", campaign_id: "120001", adset_ids: ["s1"], ad_ids: ["a1", "a2"],
+  ten: "CÔNG TY TNHH MTV HALIMI - <b>HALIMI 07</b> - P720", ngan_sach_ngay_vnd: 300000, trang_thai: "NHAP" };
+const JOB_CAMP = Object.assign({}, JOB_CHO, { id: "job-ads-2", gate_cho: Object.assign({}, JOB_CHO.gate_cho, { ads: CAMP }) });
+const hCamp = DA._html({ jobs: [JOB_CAMP] }, S());
+check("GATE có ads: thẻ Camp sẽ bật", hCamp.includes(VI["doiai.camp_tieu_de"]) && hCamp.includes("da-camp"));
+check("thẻ camp: tài khoản act_ + ngân sách đồng/ngày", hCamp.includes("act_1372588536646337") && hCamp.includes("300.000đ/ngày"));
+check("thẻ camp: đếm nhóm và quảng cáo", hCamp.includes("1 nhóm quảng cáo, 2 quảng cáo"));
+check("thẻ camp: trạng thái nháp chưa chi tiền", hCamp.includes(VI["doiai.camp_nhap"]));
+check("thẻ camp: tên camp bị escape", hCamp.includes("&lt;b&gt;HALIMI 07&lt;/b&gt;") && !hCamp.includes("<b>HALIMI 07</b>"));
+check("GATE không có ads: không có thẻ camp", !DA._html({ jobs: [JOB_CHO] }, S()).includes("da-camp\""));
+check("định dạng tiền", DA._dongTien(700000) === "700.000đ" && DA._dongTien(0) === "0đ");
+const hGh = DA._html({ jobs: [] }, S());
+check("nút Giới hạn Đội Ads luôn có, mặc định gập", hGh.includes(VI["doiai.gh_tieu_de"]) && hGh.includes('data-da="gioi_han" aria-expanded="false"') && !hGh.includes("da-gh-tk"));
+const hGh2 = DA._html({ jobs: [] }, S({ moGioiHan: true, gioiHan: { tai: true, tai_khoan: "act_1\nact_2", tran: "700000", loi: "", dangLuu: false, daLuu: true } }));
+check("mở Giới hạn: ô tài khoản, ô trần, nút Lưu", hGh2.includes('id="da-gh-tk"') && hGh2.includes('value="700000"') && hGh2.includes('data-da="luu_gioi_han"'));
+check("mở Giới hạn: nhãn gắn đúng ô", hGh2.includes('for="da-gh-tk"') && hGh2.includes('for="da-gh-tran"'));
+check("mở Giới hạn: báo đã lưu", hGh2.includes(VI["doiai.gh_da_luu"]));
+check("mở Giới hạn: giải thích VND", hGh2.includes("VND"));
+check("JS gọi đúng /meta-ads/luat", SRC.includes('"/meta-ads/luat"'));
+
 console.log("");
 if (fails.length) { console.log("FAIL " + fails.length + " mục"); process.exit(1); }
 console.log("Tất cả xanh.");

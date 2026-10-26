@@ -7,6 +7,9 @@
  *   - mỗi job đang mở một thẻ: badge đội, tên, thời gian, nhãn trạng thái, hàng bước;
  *   - job có `gate_cho` mở sẵn khung "Bạn sắp cho phép" + ghi chú + 3 nút (POST /kanban/job/gate);
  *   - job xong / đã dừng gom vào một dòng "Xong hôm nay" + "Xem lịch sử".
+ *   - GATE của Đội Ads có `gate_cho.ads` (26.10.248): thẻ "Camp sẽ bật" (tài khoản, tên camp,
+ *     ngân sách/ngày) để chủ thấy đúng thứ mình cho phép tiêu tiền;
+ *   - ô gập "Giới hạn Đội Ads" (GET/POST /meta-ads/luat): tài khoản được ghi + trần/camp/ngày.
  *
  * Luật của khu:
  *   - Khối tự chứa: người khác chèn nó vào đầu renderKanban, nên không vẽ tiêu đề trang lớn.
@@ -144,6 +147,8 @@
       form: { mau: "", muc_tieu: "", buoc: "", loi: "", dangGui: false },
       mau: null, mauLoi: "",
       ghiChu: {}, loiGate: {}, guiGate: {}, moRong: {},
+      moGioiHan: false,
+      gioiHan: { tai: false, loi: "", dangLuu: false, daLuu: false, tai_khoan: "", tran: "" },
     };
   }
 
@@ -223,6 +228,32 @@
       o.join('<li class="da-noi" aria-hidden="true"></li>') + '</ol>';
   }
 
+  function dongTien(n) {
+    var v = Math.round(Number(n) || 0);
+    return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "đ";
+  }
+
+  // Thẻ "Camp sẽ bật": trị số thật bước dựng camp đã lưu vào job, không phải chữ model tự kể.
+  function theCamp(ads) {
+    if (!ads || typeof ads !== "object" || !ads.campaign_id) return "";
+    var nhom = Array.isArray(ads.adset_ids) ? ads.adset_ids.length : 0;
+    var qc = Array.isArray(ads.ad_ids) ? ads.ad_ids.length : 0;
+    var tt = ads.trang_thai === "NHAP" ? t("doiai.camp_nhap") : t("doiai.camp_tat");
+    function dong(nhan, gt, dam) {
+      return '<div class="da-camp-dong"><span class="da-nhan">' + esc(nhan) + '</span>' +
+        (dam ? '<b>' + esc(gt) + '</b>' : '<span>' + esc(gt) + '</span>') + '</div>';
+    }
+    return '<div class="da-camp" role="group" aria-label="' + esc(t("doiai.camp_tieu_de")) + '">' +
+      '<b class="da-h4">' + esc(t("doiai.camp_tieu_de")) + '</b>' +
+      dong(t("doiai.camp_ten"), ads.ten || "") +
+      dong(t("doiai.camp_tai_khoan"), "act_" + String(ads.tai_khoan || "")) +
+      dong(t("doiai.camp_ngan_sach"), t("doiai.camp_ngan_sach_gt", { tien: dongTien(ads.ngan_sach_ngay_vnd) }), true) +
+      dong(t("doiai.camp_cau_truc"), t("doiai.camp_cau_truc_gt", { nhom: nhom, qc: qc })) +
+      dong(t("doiai.camp_trang_thai"), tt) +
+      '<span class="da-phu">' + esc(t("doiai.camp_ma", { ma: String(ads.campaign_id) })) + '</span>' +
+    '</div>';
+  }
+
   function khungChoPhep(job, st) {
     var g = job.gate_cho;
     if (!g || typeof g !== "object") return "";
@@ -239,6 +270,7 @@
       '<div class="da-cho-phep-chu">' +
         '<b class="da-h4">' + esc(t("doiai.cho_phep")) + '</b>' +
         (g.mo_ta ? '<p class="da-gate-mo-ta">' + esc(g.mo_ta) + '</p>' : "") +
+        theCamp(g.ads) +
         '<span class="da-nhan">' + esc(t("doiai.xem_truoc")) + '</span>' +
         (xt ? '<div class="da-xem-truoc">' + esc(hien) + '</div>' +
           (dai ? '<button type="button" class="da-link" data-da="xem_them" data-job="' + esc(id) + '" aria-expanded="' + (moRong ? "true" : "false") + '">' +
@@ -305,6 +337,28 @@
         esc(st.moLichSu ? t("doiai.an_lich_su") : t("doiai.xem_lich_su")) + '</button></div>' + lichSu + '</section>';
   }
 
+  function gioiHan(st) {
+    var g = st.gioiHan || {};
+    var nut = '<button type="button" class="da-link" data-da="gioi_han" aria-expanded="' + (st.moGioiHan ? "true" : "false") +
+      '" aria-controls="da-gioi-han">' + esc(t("doiai.gh_tieu_de")) + '</button>';
+    if (!st.moGioiHan) return '<section class="da-gh">' + nut + '</section>';
+    var than;
+    if (!g.tai && !g.loi) than = '<div class="da-phu">' + esc(t("doiai.dang_tai")) + '</div>';
+    else than =
+      '<p class="da-phu">' + esc(t("doiai.gh_giai_thich")) + '</p>' +
+      '<label class="da-nhan" for="da-gh-tk">' + esc(t("doiai.gh_tai_khoan")) + '</label>' +
+      '<textarea id="da-gh-tk" class="da-o" rows="2" data-da-gh="tai_khoan" aria-describedby="da-gh-tk-gy" placeholder="' + esc(t("doiai.gh_tai_khoan_ph")) + '">' +
+        esc(g.tai_khoan || "") + '</textarea>' +
+      '<span id="da-gh-tk-gy" class="da-phu">' + esc(t("doiai.gh_tai_khoan_gy")) + '</span>' +
+      '<label class="da-nhan" for="da-gh-tran">' + esc(t("doiai.gh_tran")) + '</label>' +
+      '<input id="da-gh-tran" class="da-o" inputmode="numeric" data-da-gh="tran" value="' + esc(g.tran || "") + '">' +
+      '<div class="da-form-nut"><button type="button" class="da-nut-chinh" data-da="luu_gioi_han"' + (g.dangLuu ? " disabled" : "") + '>' +
+        esc(g.dangLuu ? t("doiai.dang_gui") : t("doiai.gh_luu")) + '</button>' +
+        (g.daLuu ? '<span class="da-phu" role="status">' + esc(t("doiai.gh_da_luu")) + '</span>' : "") + '</div>' +
+      '<div class="da-loi" role="alert">' + esc(g.loi || "") + '</div>';
+    return '<section class="da-gh">' + nut + '<div id="da-gioi-han" class="da-gh-than">' + than + '</div></section>';
+  }
+
   // Hàm THUẦN: dữ liệu jobs_view + state giao diện -> chuỗi HTML của cả khu.
   // st.now (Date) cho test cố định "hôm nay"; bỏ trống thì lấy giờ máy.
   function html(d, st) {
@@ -327,7 +381,7 @@
       than = (mo.length ? mo.map(function (j) { return theJob(j, st, now); }).join("")
         : '<div class="da-rong"><span>' + esc(t("doiai.rong_loc")) + '</span></div>') + dongXong(loc, st, now);
     }
-    return '<div class="da">' + phanDau(jobs, st) + formGiao(st) + than + '</div>';
+    return '<div class="da">' + phanDau(jobs, st) + formGiao(st) + than + gioiHan(st) + '</div>';
   }
 
   // Đang gõ trong khu? (tiêu điểm nằm trong ô nhập/vùng chữ/hộp chọn của el). Khi đúng thì
@@ -369,6 +423,45 @@
     } finally {
       st.dangTai = false;
     }
+  }
+
+  function nhanLuat(st, d) {
+    var g = st.gioiHan;
+    g.tai = true; g.loi = "";
+    g.tai_khoan = (Array.isArray(d.tai_khoan) ? d.tai_khoan : []).map(function (x) { return "act_" + x; }).join("\n");
+    g.tran = String(d.tran_ngay_vnd || "");
+  }
+
+  async function moGioiHan(el) {
+    var st = el._daState;
+    st.moGioiHan = !st.moGioiHan;
+    st.gioiHan.daLuu = false;
+    ve(el);
+    if (!st.moGioiHan || st.gioiHan.tai) return;
+    try {
+      nhanLuat(st, await api("/meta-ads/luat"));
+    } catch (e) {
+      st.gioiHan.loi = t("doiai.gh_loi_tai", { loi: e.message || "" });
+    }
+    if (el.isConnected) ve(el);
+  }
+
+  async function luuGioiHan(el) {
+    var st = el._daState, g = st.gioiHan;
+    if (g.dangLuu) return;
+    g.dangLuu = true; g.loi = ""; g.daLuu = false; ve(el);
+    try {
+      var d = await api("/meta-ads/luat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tai_khoan: String(g.tai_khoan || ""), tran_ngay_vnd: String(g.tran || "") }),
+      });
+      nhanLuat(st, d);
+      g.daLuu = true;
+    } catch (e) {
+      g.loi = t("doiai.gh_loi_luu", { loi: e.message || "" });
+    }
+    g.dangLuu = false;
+    if (el.isConnected) ve(el);
   }
 
   async function moForm(el) {
@@ -467,6 +560,7 @@
       var o = ev.target, st = el._daState;
       if (!o || !o.dataset) return;
       if (o.dataset.daGhi != null) { st.ghiChu[o.dataset.daGhi] = o.value; return; }
+      if (o.dataset.daGh) { st.gioiHan[o.dataset.daGh] = o.value; st.gioiHan.daLuu = false; return; }
       if (o.dataset.daO) st.form[o.dataset.daO] = o.value;
     };
     el.onchange = function (ev) {
@@ -485,6 +579,8 @@
       else if (loai === "xem_them") { var j = nut.dataset.job || ""; st.moRong[j] = !st.moRong[j]; ve(el); }
       else if (loai === "lich_su") { st.moLichSu = !st.moLichSu; ve(el); }
       else if (loai === "thu_lai") taiVaVe(el, true);
+      else if (loai === "gioi_han") moGioiHan(el);
+      else if (loai === "luu_gioi_han") luuGioiHan(el);
     };
   }
 
@@ -500,7 +596,7 @@
       if (document.hidden) return;
       if (dangGo(el, document.activeElement)) return;
       var s = el._daState;
-      if (s.form.dangGui || Object.keys(s.guiGate).length) return;
+      if (s.form.dangGui || s.gioiHan.dangLuu || Object.keys(s.guiGate).length) return;
       taiVaVe(el, false);
     }, CHU_KY_MS);
     await taiVaVe(el, true);
@@ -513,5 +609,7 @@
     _dangGo: dangGo,
     _tachBuoc: tachBuoc,
     _dsMau: dsMau,
+    _theCamp: theCamp,
+    _dongTien: dongTien,
   };
 })();

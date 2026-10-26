@@ -26,6 +26,7 @@ import os
 import sys
 import threading
 import time
+from pathlib import Path
 
 try:
     import claude_agent_sdk as _sdk   # noqa: F401
@@ -470,6 +471,38 @@ class _CompletionWatch:
                     self._arm(text, tools_running, now)
 
 
+_META_CLAUDE_AI = ("mcp__claude_ai_Facebook_Ads", "mcp__claude_ai_Meta_Ads",
+                   "mcp__claude_ai_Facebook", "mcp__claude_ai_Meta", "mcp__claude_ai_Meta_Ads_Manager")
+
+
+def cam_meta_native() -> list:
+    """Tên server MCP NATIVE trỏ vào Facebook Ads, dạng luật chặn `mcp__<server>` của Claude Code.
+
+    Gồm tên connector claude.ai hay gặp và mọi server trong ~/.claude.json (cấp máy lẫn theo dự án)
+    có địa chỉ tới facebook.com. Đọc lỗi thì chỉ trả phần tên cố định."""
+    out = list(_META_CLAUDE_AI)
+    try:
+        import meta_ads_luat
+        p = Path.home() / ".claude.json"
+        if p.is_file():
+            data = json.loads(p.read_text(encoding="utf-8") or "{}")
+            nhom = [data.get("mcpServers") or {}]
+            for prj in (data.get("projects") or {}).values():
+                if isinstance(prj, dict):
+                    nhom.append(prj.get("mcpServers") or {})
+            for servers in nhom:
+                if not isinstance(servers, dict):
+                    continue
+                for ten, ent in servers.items():
+                    url = (ent or {}).get("url") if isinstance(ent, dict) else ""
+                    if url and ("facebook.com" in str(url).lower()
+                                or meta_ads_luat.la_ket_noi_meta_ads(url)):
+                        out.append(f"mcp__{ten}")
+    except Exception:
+        pass
+    return list(dict.fromkeys(out))
+
+
 class ClaudeSDK:
     """Engine Claude qua Agent SDK - engine Claude duy nhất (tạo qua claude_cli.claude_engine)."""
 
@@ -483,6 +516,9 @@ class ClaudeSDK:
         self.mcp_config = None
         self.mcp_strict = False
         self.disallowed_tools = None
+        # Biến môi trường thêm cho tiến trình `claude` của lượt này (vd tắt connector claude.ai ở
+        # bước job Đội AI, 26.10.248). Gộp SAU os.environ và env của chế độ auth.
+        self.env_them = None
         self.max_wall_s = None
         # Độ sâu suy nghĩ (low|medium|high|xhigh|max) - `main._cli_do_sau` đặt. None = không
         # truyền gì, để Claude Code dùng mặc định của chính nó.
@@ -787,6 +823,8 @@ class ClaudeSDK:
         except Exception as e:   # noqa: BLE001 - đọc cấu hình hỏng không được phá lượt chat
             print(f"[sdk engine] không đọc được chế độ auth: {type(e).__name__}: {e}", file=sys.stderr)
             _env = {}
+        if self.env_them:
+            _env = {**(_env or {}), **{str(k): str(v) for k, v in self.env_them.items()}}
         if _env and "env" in fields:
             kw["env"] = {**os.environ, **_env}
         if self.model:
@@ -812,8 +850,13 @@ class ClaudeSDK:
             kw["mcp_servers"] = servers
             if strict:
                 kw["strict_mcp_config"] = True
-        if self.disallowed_tools:
-            kw["disallowed_tools"] = list(self.disallowed_tools)
+        # Connector Facebook Ads NATIVE (của tài khoản claude.ai hay ~/.claude.json) đi thẳng tới
+        # Meta, bỏ qua luật Đội Ads ở hub (tài khoản cho phép, trần ngân sách). Chặn ở MỌI phiên
+        # (26.10.248); Facebook Ads chỉ được dùng qua hub Javis.
+        cam = list(self.disallowed_tools or []) + [x for x in cam_meta_native()
+                                                    if x not in (self.disallowed_tools or [])]
+        if cam:
+            kw["disallowed_tools"] = cam
         if self.allowed_tools:
             # Chế độ nền an toàn: whitelist auto-allow, MỌI tool khác rơi vào _permission_gate → DENY.
             # KHÔNG nạp settings filesystem: allow-rule trong settings user có thể che gate.

@@ -4,6 +4,15 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.254] - 2026-10-26
+### Thêm mới
+- **Đội Ads lên camp Facebook tới bước bật**: qua MCP Meta Ads chính chủ, đội dựng camp ở trạng thái TẮT (tên HALIMI, nữ 23-54, 23:59, 300.000đ/ngày), dừng ở GATE. Bấm Duyệt là bật đúng camp đó, rồi đọc lại trạng thái thật từ Meta.
+- **Khung GATE hiện "Camp sẽ bật"**: tài khoản, tên camp, ngân sách/ngày lấy từ mã camp thật, không phải lời AI tự kể.
+- **Giới hạn Đội Ads** trên Bảng việc: chọn tài khoản quảng cáo được ghi và trần ngân sách mỗi camp (mặc định ĐẠT 3, 700.000đ/ngày).
+
+### Bảo mật
+- Mọi lệnh ghi Facebook Ads, từ bất kỳ bộ não nào, bị chặn nếu sai tài khoản hoặc vượt trần, kể cả khi đã duyệt. Bước bật camp chỉ bật được đúng mã đã duyệt, và không đi đường vòng qua connector ngoài MinMin.
+
 ## [26.10.253] - 2026-10-26
 ### Cải thiện
 - **Kênh nhắn tin gọn hơn**: Telegram và Zalo thành hai thẻ tab, mỗi tab có chấm xanh, vàng, đỏ cho biết bot đang chạy hay lỗi.
