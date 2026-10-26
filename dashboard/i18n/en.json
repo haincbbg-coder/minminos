@@ -4279,6 +4279,13 @@
   "dads.dang_gui": "Sending...",
   "dads.loi_gui": "Could not send: {loi}",
   "dads.sua_mau": "Revise campaign change proposal #{id}: ",
+  "page.ketnoi.label": "Connections",
+  "page.ketnoi.sub": "Data sources, external connections and the MinMin store",
+  "page.khach.label": "Customers",
+  "page.khach.sub": "Messaging channels and the customer inbox",
+  "gop.con": "Sub-modules",
+  "gop.con_sub": "Apps added from the MinMin store",
+  "gop.mo": "Open",
   "cc.ghim": "Pin menu",
   "cc.bo_ghim": "Unpin menu"
 }

@@ -2488,3 +2488,19 @@ details.h2-sec[open] > summary.h2-h { margin-bottom: 6px; }
   .kn-pane { padding: 14px; border-radius: var(--mm-r-btn); }
   .kn-actions .gcard-btn { flex: 1; }
 }
+
+/* Trang gộp bằng thẻ tab (26.10.258): Kết nối, Khách. Ruột mỗi tab là trang cũ nguyên vẹn. */
+.gop-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--glass-brd); }
+.gop-tab { min-height: 40px; padding: 8px 16px; border-radius: var(--mm-r-btn); border: 1px solid transparent; background: transparent; color: var(--text2); font: 600 var(--mm-fs-14) inherit; cursor: pointer; }
+.gop-tab:hover { background: var(--surface-2); color: var(--text); }
+.gop-tab[aria-selected="true"] { background: var(--surface-2); border-color: var(--accent); color: var(--text); }
+.gop-back { margin-bottom: 12px; padding: 6px 12px; border-radius: var(--mm-r-btn); border: 1px solid var(--glass-brd); background: none; color: var(--text2); font-size: var(--mm-fs-13); cursor: pointer; }
+.gop-back:hover { color: var(--accent); border-color: var(--accent); }
+.gop-body { min-width: 0; }
+.gop-con { margin-top: 22px; padding: 14px; border: 1px dashed var(--glass-brd); border-radius: var(--mm-r-btn); display: grid; gap: 10px; }
+.gop-con-h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.gop-con-h span { font-size: var(--mm-fs-13); color: var(--text3); }
+.gop-con-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.gop-con-card { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--glass-brd); border-radius: var(--mm-r-btn); background: var(--surface-2); }
+.gop-con-card small { color: var(--text3); font-size: var(--mm-fs-12); }
+.gop-con-card .s-btn-ghost { justify-self: start; }
