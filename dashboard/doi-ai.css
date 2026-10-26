@@ -175,6 +175,28 @@ textarea.da-o { resize: vertical; min-height: 64px; }
   max-height: 320px; overflow-y: auto;
 }
 
+/* ---------- Thẻ "Camp sẽ bật" (Đội Ads, 26.10.248) ---------- */
+.da-camp {
+  display: flex; flex-direction: column; gap: var(--mm-sp-1);
+  padding: var(--mm-sp-3) var(--mm-sp-4); border-radius: var(--mm-r-btn);
+  background: var(--mm-field); box-shadow: var(--mm-in-sm);
+}
+.da-camp-dong {
+  display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr); gap: var(--mm-sp-3);
+  font-size: var(--mm-fs-14); overflow-wrap: anywhere;
+}
+.da-camp-dong b { color: var(--mm-text); }
+
+/* ---------- Giới hạn Đội Ads ---------- */
+.da-gh { display: flex; flex-direction: column; gap: var(--mm-sp-2); }
+.da-gh > .da-link { align-self: flex-start; }
+.da-gh-than {
+  display: flex; flex-direction: column; gap: var(--mm-sp-2); max-width: 560px;
+  padding: var(--mm-sp-4); border-radius: var(--mm-r-card);
+  background: var(--mm-panel); box-shadow: var(--mm-in-sm);
+}
+.da-gh-than p { margin: 0; }
+
 /* ---------- Rỗng / Xong / Lịch sử ---------- */
 .da-rong {
   display: flex; flex-direction: column; align-items: center; gap: var(--mm-sp-3);
@@ -198,6 +220,7 @@ textarea.da-o { resize: vertical; min-height: 64px; }
 /* ---------- Đáp ứng ---------- */
 @media (max-width: 900px) {
   .da { gap: var(--mm-sp-3); }
+  .da-camp-dong { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .da-dau { align-items: flex-start; }
   .da-dau-nut { width: 100%; }
   .da-dau-nut .da-nut-chinh { flex: 1 1 auto; }

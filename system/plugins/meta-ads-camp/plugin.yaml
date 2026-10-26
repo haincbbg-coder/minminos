@@ -1,0 +1,11 @@
+name: Đội Ads - dựng và bật camp Facebook
+slug: meta-ads-camp
+version: 1.0.0
+description: Hai công cụ hẹp cho Đội Ads qua MCP Meta Ads chính chủ. Dựng camp TẮT/NHÁP theo luật của chủ (tài khoản cho phép, trần ngân sách, tên HALIMI, nữ 23-54 Việt Nam, 23:59). Bật camp chỉ ở bước sau GATE và chỉ bật đúng mã đã lưu trong job.
+author: Javis (bundled)
+enabled: true
+min_mode: safe
+tools:
+  - meta_ads_dung_camp
+  - meta_ads_bat_camp
+hooks: []

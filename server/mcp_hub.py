@@ -38,6 +38,7 @@ import hanh_dong   # sổ hành động ra ngoài + quyền theo loại việc (
 import tiet_kiem   # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
 import tiem_lenh   # quét tiêm lệnh trong dữ liệu vào (26.10.164)
 import che_do_thu  # cờ CHẠY THỬ của Trụ 6 tự học có đối chứng: giả lập mọi việc ghi (26.10.217)
+import meta_ads_luat  # luật Đội Ads: tài khoản cho phép, trần ngân sách, chỉ full mới bật (26.10.248)
 
 _TOKEN_PATH = STATE_DIR / ".hub_token"
 _AUDIT_PATH = STATE_DIR / "mcp_audit.jsonl"
@@ -233,6 +234,15 @@ def _hoi_truoc_giay() -> float:
         return float(hanh_dong.HOI_TRUOC_GIAY_MAC_DINH)
 
 
+def _la_meta_ads(ent, conn) -> bool:
+    """Route này có trỏ vào MCP Meta Ads chính chủ không (nối bằng địa chỉ tự nhập)."""
+    try:
+        return meta_ads_luat.la_ket_noi_meta_ads((ent.get("spec") or {}).get("url"),
+                                                 conn.get("connector_id"))
+    except Exception:
+        return False
+
+
 def _chinh_sach_loai_viec() -> dict:
     """settings.quyen.loai_viec = {xoa|tien|don_hang|nhan_tin|dang_bai|khac: cho_phep|chan}."""
     try:
@@ -259,6 +269,13 @@ def _guard(ent, fn, mode):
         loai = hanh_dong.loai_viec(conn.get("connector_id"), tool, args) if cls != "read" else ""
         if ok and loai:
             ok, why = hanh_dong.cho_phep(_chinh_sach_loai_viec(), loai)
+        # LUẬT ĐỘI ADS (26.10.248): lệnh ghi vào MCP Meta Ads chính chủ còn bị soi theo TRỊ SỐ -
+        # tài khoản trong danh sách chủ cho phép, ngân sách không vượt trần, dưới full không bật.
+        if ok and _la_meta_ads(ent, conn):
+            why_ads = meta_ads_luat.kiem_lenh(tool, args, mode, job=meta_ads_luat.ngu_canh_job())
+            if why_ads:
+                ok, why = False, why_ads
+                cls = "danger" if cls == "read" else cls
         # CHẠY THỬ (Trụ 6, 26.10.217): lượt thử của bộ cải tiến có đối chứng KHÔNG BAO GIỜ gọi
         # tool ghi thật. Chặn ở đây, trước hàng đợi "hỏi trước", trước sổ làm-một-lần và trước
         # bộ đếm tần suất: lượt thử không được làm phiền chủ bằng yêu cầu duyệt, không được ghi
@@ -1927,6 +1944,18 @@ def dat_codex_mode(extra_config, mode):
     extra_config[:] = [x for x in extra_config if not str(x).startswith(CODEX_MODE_KEY + "=")]
     if m != "full":
         extra_config.append(f"{CODEX_MODE_KEY}={_toml_str(m)}")
+    return extra_config
+
+
+CODEX_JOB_KEY = "mcp_servers.javis.http_headers.X-Javis-Job"
+
+
+def dat_codex_job(extra_config, job):
+    """Ghi header mã việc Kanban cho MỘT tiến trình Codex (26.10.248). Rỗng = gỡ override cũ."""
+    extra_config[:] = [x for x in extra_config if not str(x).startswith(CODEX_JOB_KEY + "=")]
+    job = str(job or "").strip()
+    if job:
+        extra_config.append(f"{CODEX_JOB_KEY}={_toml_str(job)}")
     return extra_config
 
 

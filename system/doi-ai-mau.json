@@ -28,7 +28,7 @@
       "id": "ads-len-camp",
       "ten": "Đội Ads: lên camp",
       "doi": "ads",
-      "mo_ta": "Nghiên cứu mẫu và đối thủ, viết 3 mẫu content, dựng camp ở trạng thái TẮT, chủ duyệt trước khi chi tiền, rồi bật camp.",
+      "mo_ta": "Nghiên cứu mẫu và đối thủ, viết 3 mẫu content, dựng camp TẮT qua MCP Meta Ads chính chủ (đúng tài khoản và trần ngân sách chủ cho phép), chủ duyệt trước khi chi tiền, rồi bật đúng camp đó.",
       "buoc": [
         {
           "title": "Nghiên cứu mẫu và đối thủ",
@@ -42,17 +42,17 @@
         },
         {
           "title": "Dựng camp ở trạng thái TẮT",
-          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nDựng chiến dịch quảng cáo theo 3 mẫu content đã viết, ĐỂ Ở TRẠNG THÁI TẮT (PAUSED), chưa chi đồng nào. Ghi rõ trong kết quả: tài khoản quảng cáo, ngân sách ngày, đối tượng, vị trí, mã camp/nhóm/quảng cáo. Nếu MinMin không có công cụ GHI Facebook Ads (kết nối hiện có chỉ đọc) thì DỪNG và báo rõ: cần nối công cụ ghi Facebook Ads. KHÔNG được giả vờ đã dựng camp, không bịa mã camp.",
+          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nDựng camp ở trạng thái TẮT/NHÁP bằng công cụ meta_ads_dung_camp (KHÔNG dùng các lệnh ads_create_* thô). Lấy page, mã sản phẩm, bài viết hoặc landing page từ mục tiêu và các bước trước; công cụ tự đặt tên, đối tượng nữ 23-54 Việt Nam, giờ 23:59, ngân sách và tài khoản theo giới hạn của chủ. Thiếu page_id, mã sản phẩm hay bài viết thì đọc bằng công cụ đọc của Meta Ads; vẫn thiếu thì DỪNG và hỏi chủ. Công cụ báo lỗi (chưa nối MCP Meta Ads, landing page lỗi, vượt trần, tài khoản không được phép) thì DỪNG và báo nguyên văn. KHÔNG được giả vờ đã dựng camp, không bịa mã camp. Kết quả: tài khoản, tên camp, ngân sách ngày, đối tượng, mã camp/nhóm/quảng cáo đúng như công cụ trả về.",
           "capability": "mcp-read"
         },
         {
           "title": "Bạn duyệt trước khi chi tiền",
           "gate": true,
-          "gate_mo_ta": "Bạn duyệt trước khi chi tiền: bấm Duyệt là cho phép BẬT camp vừa dựng ở bước trước và bắt đầu tiêu ngân sách đã ghi."
+          "gate_mo_ta": "Bạn duyệt trước khi chi tiền: bấm Duyệt là cho phép BẬT đúng camp vừa dựng ở bước trước (tài khoản, tên và ngân sách/ngày hiện trong khung bên dưới) và bắt đầu tiêu tiền."
         },
         {
           "title": "Bật camp",
-          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nBật ĐÚNG camp đã dựng ở bước trước (xem mã camp trong bối cảnh job) với ngân sách đã ghi, không đổi ngân sách hay đối tượng. Nếu không có công cụ GHI Facebook Ads, hoặc bước dựng camp chưa thật sự tạo ra mã camp, thì DỪNG và báo rõ: cần nối công cụ ghi Facebook Ads. KHÔNG được giả vờ đã bật. Kết quả: mã camp đã bật và trạng thái đọc lại từ Facebook Ads."
+          "intent": "Mục tiêu của chủ: {muc_tieu}\n\nChủ đã duyệt ở GATE. Gọi DUY NHẤT công cụ meta_ads_bat_camp một lần: công cụ tự bật đúng các mã camp đã lưu trong job và đọc lại trạng thái từ Meta. KHÔNG dùng ads_activate_entity hay ads_update_entity thô, không đổi ngân sách hay đối tượng, không tạo camp mới. Báo đúng kết luận công cụ trả về: chỉ nói camp đang chạy khi Meta xác nhận ACTIVE. Công cụ báo lỗi thì DỪNG và báo nguyên văn."
         }
       ]
     },

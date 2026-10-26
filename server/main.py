@@ -14404,6 +14404,32 @@ async def hanh_dong_chinh_sach_luu(request: Request):
     return {"ok": True, "chinh_sach": cs}
 
 
+@app.get("/meta-ads/luat")
+async def meta_ads_luat_doc():
+    """Giới hạn Đội Ads: tài khoản quảng cáo được ghi + trần ngân sách/camp/ngày (26.10.248)."""
+    import meta_ads_luat
+    return {"ok": True, **meta_ads_luat.doc_luat()}
+
+
+@app.post("/meta-ads/luat")
+async def meta_ads_luat_luu(request: Request):
+    """Lưu Giới hạn Đội Ads: {"tai_khoan": [...] | "a, b", "tran_ngay_vnd": số}."""
+    import meta_ads_luat
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    luat, loi = meta_ads_luat.kiem_luat_moi(data)
+    if loi:
+        return JSONResponse({"ok": False, "error": loi}, status_code=400)
+    cfg = cfgmod.read_settings()
+    q = cfg.get("quyen") if isinstance(cfg.get("quyen"), dict) else {}
+    q["meta_ads"] = luat
+    cfg["quyen"] = q
+    cfgmod.write_settings(cfg)
+    return {"ok": True, **meta_ads_luat.doc_luat(cfg)}
+
+
 @app.get("/be-khoa")
 async def be_khoa_thong_ke():
     """Bể khoá xoay vòng: mỗi nhà API có mấy khoá, khoá nào đang nghỉ vì 429/401 (nhãn 4 ký tự

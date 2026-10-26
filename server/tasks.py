@@ -603,6 +603,8 @@ class TasksFeature:
         engine vào đó. Cấu hình dùng chung không bao giờ bị sửa, nên việc khác chạy song song không
         mang nhầm mã. Engine khác (Codex, Grok Build, Antigravity, Muse) chưa có đường này: việc của
         chúng không có mã nên không được sổ bảo vệ, và `once_ledger.run` gọi thẳng như cũ."""
+        # Engine phụ (Codex, Grok...) đọc mã này khi dựng cấu hình hub của riêng nó (aux_engine).
+        cli.javis_job = f"kanban:{task['id']}"
         src = str(getattr(cli, "mcp_config", "") or "")
         if not src or not Path(src).name.startswith(".mcp_hub_"):
             return
@@ -649,6 +651,27 @@ class TasksFeature:
             cli.mcp_strict = True
         cli.setting_sources = []
         cli.duong_cam_ghi = list(cls.DUONG_CAM_GHI_BUOC_JOB)
+        env = dict(getattr(cli, "env_them", None) or {})
+        env["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
+        cli.env_them = env
+
+    @staticmethod
+    def _siet_buoc_job_full(cli) -> None:
+        """Bước job đã qua GATE (mức full) vẫn chỉ gọi MCP qua hub Javis (26.10.248).
+
+        Mức full không có allowlist, nên phiên Claude nạp cả connector của tài khoản claude.ai và
+        MCP trong ~/.claude.json. Một connector Facebook Ads native ở đó đi THẲNG tới Meta, không qua
+        `mcp_hub._guard`: không có kiểm danh sách tài khoản, trần ngân sách, hay "chỉ bật đúng mã đã
+        duyệt". Ép strict + tắt connector claude.ai để mọi lệnh ra ngoài của bước job đi qua hub."""
+        if not getattr(cli, "mcp_config", None):
+            # Không dựng được cấu hình hub (apply_mcp lỗi): khoá về 0 MCP thay vì để phiên toàn
+            # quyền nạp MCP của máy (fail-closed).
+            cli.mcp_config = _empty_mcp_file()
+        if getattr(cli, "mcp_config", None):
+            cli.mcp_strict = True
+        env = dict(getattr(cli, "env_them", None) or {})
+        env["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
+        cli.env_them = env
 
     @staticmethod
     def _engine_khong_rao() -> str:
@@ -701,6 +724,8 @@ class TasksFeature:
                 cli.mcp_strict = True
         if task.get("job_id") and mode != "full":
             self._siet_buoc_job(cli)
+        elif task.get("job_id"):
+            self._siet_buoc_job_full(cli)
         if mode in ("auto", "full"):
             self._gan_ma_viec(cli, task)
         cli = aux_engine.apply(self.deps, cli, mode=mode, tag=cli.tag)
@@ -1420,6 +1445,51 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
         gate = (task.get("metadata") or {}).get("gate")
         return bool(isinstance(gate, dict) and gate.get("duyet"))
 
+    # ------------------------------------------------------------------
+    # Camp Facebook của Đội Ads gắn vào job (26.10.248)
+    # ------------------------------------------------------------------
+    def la_buoc_job(self, task_id: str) -> bool:
+        t = self.store.get_task(str(task_id or ""))
+        return bool(t and t.get("job_id"))
+
+    def job_ads_luu(self, task_id: str, ads: dict) -> bool:
+        """Bước dựng camp lưu mã camp/nhóm/quảng cáo vào job, để GATE hiện ra và bước bật camp
+        chỉ bật ĐÚNG các mã này. Chỉ bước đứng TRƯỚC một GATE chưa duyệt mới được lưu: bước sau
+        GATE (đã có toàn quyền) không được thay mã chủ vừa duyệt."""
+        t = self.store.get_task(str(task_id or ""))
+        if not t or not t.get("job_id") or self._la_gate(t) or not isinstance(ads, dict):
+            return False
+        so = self._buoc_so(t)
+        # Chỉ bước ĐỨNG NGAY TRƯỚC một GATE chưa duyệt. Lỏng hơn ("trước một GATE nào đó") thì ở job
+        # hai GATE, bước toàn quyền nằm giữa GATE 1 và GATE 2 tráo được mã trước khi chủ xem GATE 2.
+        gate = next((g for g in self._cac_buoc(t["job_id"])
+                     if self._la_gate(g) and self._buoc_so(g) == so + 1), None)
+        if gate is None or self._gate_da_duyet(gate) or str(gate.get("status")) in ("done", "archived", "cancelled"):
+            return False
+        sach = {
+            "tai_khoan": str(ads.get("tai_khoan") or ""),
+            "campaign_id": str(ads.get("campaign_id") or ""),
+            "adset_ids": [str(x) for x in (ads.get("adset_ids") or []) if str(x or "").strip()],
+            "ad_ids": [str(x) for x in (ads.get("ad_ids") or []) if str(x or "").strip()],
+            "ten": str(ads.get("ten") or "")[:200],
+            "ngan_sach_ngay_vnd": int(ads.get("ngan_sach_ngay_vnd") or 0),
+            "trang_thai": str(ads.get("trang_thai") or ""),
+            "tu_buoc": t["id"],
+            "luc": time.time(),
+        }
+        if not sach["campaign_id"]:
+            return False
+        job = self.store.get_job(t["job_id"]) or {}
+        self.store.set_job_status(t["job_id"], str(job.get("status") or "dang_chay"), {"ads": sach})
+        return True
+
+    def job_ads_doc(self, task_id: str) -> Optional[dict]:
+        t = self.store.get_task(str(task_id or ""))
+        if not t or not t.get("job_id"):
+            return None
+        ads = ((self.store.get_job(t["job_id"]) or {}).get("metadata") or {}).get("ads")
+        return dict(ads) if isinstance(ads, dict) else None
+
     def _kiem_buoc(self, steps: Any) -> list[dict]:
         """Chuẩn hoá + kiểm danh sách bước. Ném ValueError kèm câu cho người đọc."""
         if isinstance(steps, str):
@@ -1532,6 +1602,11 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
                     "xem_truoc": _cat(truoc.get("result"), XEM_TRUOC),
                     "mo_khoa": list(gate.get("mo_khoa") or []),
                 }
+                ads = (job.get("metadata") or {}).get("ads")
+                if isinstance(ads, dict) and ads.get("campaign_id"):
+                    gate_cho["ads"] = {k: ads.get(k) for k in (
+                        "tai_khoan", "campaign_id", "adset_ids", "ad_ids", "ten",
+                        "ngan_sach_ngay_vnd", "trang_thai")}
                 break
         return {
             "id": job["id"],

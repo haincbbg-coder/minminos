@@ -660,6 +660,7 @@ def _build_codex(spec, claude_cli_obj, mode, tag, codex_profile=None):
         # Mode đi theo việc nền (26.10.96): profile chung luôn full, nên phải ghi đè từng tiến trình,
         # không thì loop mức suggest chạy Codex vẫn gọi được tool MCP ra ngoài.
         mcp_hub.dat_codex_mode(cc.extra_config, mode or getattr(claude_cli_obj, "javis_mode", None) or "full")
+        mcp_hub.dat_codex_job(cc.extra_config, getattr(claude_cli_obj, "javis_job", "") or "")
     except Exception as e:
         print(f"[aux codex vault] {e}", file=sys.stderr)
     return cc
@@ -691,7 +692,8 @@ def _build_grok(spec, claude_cli_obj, mode, tag):
             if bool(cfgmod.read_settings().get("mcp", {}).get("hub", True)):
                 hub = _g.hub_entry(mcp_hub.hub_url(),
                                    {"Authorization": f"Bearer {mcp_hub.hub_token()}",
-                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault)})
+                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault),
+                                    **_hub_job(claude_cli_obj)})
             _g.ghi_mcp_settings(vault, hub)
         except Exception as e:
             print(f"[aux grok mcp] {e}", file=sys.stderr)
@@ -717,7 +719,8 @@ def _build_muse(spec, claude_cli_obj, mode, tag):
             if bool(cfgmod.read_settings().get("mcp", {}).get("hub", True)):
                 hub = _u.hub_entry(mcp_hub.hub_url(),
                                    {"Authorization": f"Bearer {mcp_hub.hub_token()}",
-                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault)})
+                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault),
+                                    **_hub_job(claude_cli_obj)})
             _u.ghi_mcp_settings(vault, hub)
         except Exception as e:
             print(f"[aux muse mcp] {e}", file=sys.stderr)
@@ -743,7 +746,8 @@ def _build_copilot(spec, claude_cli_obj, mode, tag):
             if bool(cfgmod.read_settings().get("mcp", {}).get("hub", True)):
                 hub = _p.hub_entry(mcp_hub.hub_url(),
                                    {"Authorization": f"Bearer {mcp_hub.hub_token()}",
-                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault)})
+                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault),
+                                    **_hub_job(claude_cli_obj)})
             f = _p.ghi_mcp_settings(vault, hub)
             pc.mcp_file = f if hub else None
         except Exception as e:
@@ -773,7 +777,8 @@ def _build_nao_cli(spec, claude_cli_obj, mode, tag):
             if bool(cfgmod.read_settings().get("mcp", {}).get("hub", True)):
                 hub = _m.hub_entry(mcp_hub.hub_url(),
                                    {"Authorization": f"Bearer {mcp_hub.hub_token()}",
-                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault)})
+                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault),
+                                    **_hub_job(claude_cli_obj)})
             _m.ghi_mcp_settings(vault, hub)
         except Exception as e:
             print(f"[aux {prov} mcp] {e}", file=sys.stderr)
@@ -798,7 +803,8 @@ def _build_kimi(spec, claude_cli_obj, mode, tag):
             if bool(cfgmod.read_settings().get("mcp", {}).get("hub", True)):
                 hub = _k.hub_entry(mcp_hub.hub_url(),
                                    {"Authorization": f"Bearer {mcp_hub.hub_token()}",
-                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault)})
+                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault),
+                                    **_hub_job(claude_cli_obj)})
             _k.ghi_mcp_settings(vault, hub)
         except Exception as e:
             print(f"[aux kimi mcp] {e}", file=sys.stderr)
@@ -834,7 +840,8 @@ def _build_antigravity(spec, claude_cli_obj, mode, tag):
             if bool(cfgmod.read_settings().get("mcp", {}).get("hub", True)):
                 hub = _a.hub_entry(mcp_hub.hub_url(),
                                    {"Authorization": f"Bearer {mcp_hub.hub_token()}",
-                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault)})
+                                    "X-Javis-Mode": muc, "X-Javis-Vault": str(vault),
+                                    **_hub_job(claude_cli_obj)})
             _a.ghi_mcp_settings(vault, hub)
         except Exception as e:
             print(f"[aux antigravity mcp] {e}", file=sys.stderr)
@@ -873,6 +880,19 @@ def dung_rieng(spec: dict, cli, mode: str, tag: str, codex_profile=None, setting
     if prov in API_PROVIDERS:
         return _build_api(sp, cli, mode, tag)
     raise ValueError(f"Không dựng được engine cho nhà '{prov}'.")
+
+
+def _hub_job(claude_cli_obj) -> dict:
+    """Header mã việc Kanban cho cấu hình hub của engine CLI không phải Claude (26.10.248).
+
+    `tasks._gan_ma_viec` đặt `javis_job` lên engine Claude trước khi đổi sang engine phụ. Thiếu
+    header này thì hub không biết lượt đang là bước job nào: sổ làm-một-lần không bảo vệ, và luật
+    Đội Ads "bước bật camp chỉ bật đúng mã đã duyệt" không áp được cho Codex, Grok, Muse..."""
+    job = str(getattr(claude_cli_obj, "javis_job", "") or "")
+    if not job:
+        return {}
+    import once_ledger
+    return {once_ledger.JOB_HEADER: job}
 
 
 def apply(deps, cli, mode: str = None, tag: str = None):
