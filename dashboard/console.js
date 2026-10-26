@@ -208,7 +208,7 @@
   }
   // Nhãn nhóm chứa một mục id (cho accordion: mở đúng nhóm của trang đang xem).
   function groupLabelOf(id) {
-    if (TAB_GOP[id]) id = TAB_GOP[id][0];
+    if (typeof TAB_GOP !== "undefined" && TAB_GOP[id]) id = TAB_GOP[id][0];
     if (["pet", "usage", "logs", "runtime"].includes(id)) id = "settings";
     const g = RAIL_GROUPS.find(gr => (gr.ids || []).includes(id));
     return g ? g.label : (RAIL_GROUPS[0] && RAIL_GROUPS[0].label) || "";
@@ -623,15 +623,16 @@
     const cfg = GOP[id];
     const dang = _gopTab[id] && (cfg.tabs.includes(_gopTab[id]) || cfg.con.includes(_gopTab[id])) ? _gopTab[id] : cfg.tabs[0];
     const laCon = cfg.con.includes(dang);
-    const nhan = (k) => esc(window.t("page." + k + ".label"));
+    const nhan = (k) => esc((VIEW_META[k] || {}).label || k);
+    const phu = (k) => esc((VIEW_META[k] || {}).sub || "");
     const conHien = cfg.con.filter(k => !window.JavisApps || window.JavisApps.daCai(k));
     el.innerHTML = `<div class="gop">
       <div class="gop-tabs" role="tablist">${cfg.tabs.map(k =>
         `<button class="gop-tab" role="tab" data-gop="${k}" aria-selected="${k === dang}">${nhan(k)}</button>`).join("")}</div>
-      ${laCon ? `<button class="gop-back" type="button" data-gop="${cfg.tabs[0]}">← ${esc(window.t("page." + id + ".label"))}</button>` : ""}
+      ${laCon ? `<button class="gop-back" type="button" data-gop="${cfg.tabs[0]}">← ${nhan(id)}</button>` : ""}
       <div class="gop-body"></div>
       ${conHien.length && !laCon ? `<div class="gop-con"><div class="gop-con-h"><b>${esc(window.t("gop.con"))}</b><span>${esc(window.t("gop.con_sub"))}</span></div>
-        <div class="gop-con-grid">${conHien.map(k => `<div class="gop-con-card"><b>${nhan(k)}</b><small>${esc(window.t("page." + k + ".sub"))}</small><button class="s-btn-ghost" type="button" data-gop="${k}">${esc(window.t("gop.mo"))}</button></div>`).join("")}</div></div>` : ""}
+        <div class="gop-con-grid">${conHien.map(k => `<div class="gop-con-card"><b>${nhan(k)}</b><small>${phu(k)}</small><button class="s-btn-ghost" type="button" data-gop="${k}">${esc(window.t("gop.mo"))}</button></div>`).join("")}</div></div>` : ""}
     </div>`;
     el.querySelectorAll("[data-gop]").forEach(b => b.addEventListener("click", () => {
       _gopTab[id] = b.dataset.gop; renderPage(id);

@@ -37,7 +37,7 @@ function navCase(seed, expected) {
     localStorage,
     Alpine: { store: () => route },
     RAIL_BY_ID: { tongquan: {}, home: {}, chat: {}, workspace: {}, settings: {} },
-    TRANG_GOP: { agents: "workspace" },
+    TRANG_GOP: { agents: "workspace" }, TAB_GOP: {}, _gopTab: {},
     TRANG_CUOI_KEY: "javis_last_page",
     groupLabelOf: id => "group:" + id,
     document: { body: { classList: {

@@ -20,7 +20,7 @@ function fn(name) {
 const nav = { active: "home", settingsTab: "general" };
 const rendered = [];
 const ctx = {
-  Alpine: { store: () => nav }, TRANG_GOP: { runtime: "usage" },
+  Alpine: { store: () => nav }, TRANG_GOP: { runtime: "usage" }, TAB_GOP: {}, _gopTab: {},
   TRANG_CUOI_KEY: "javis_last_page", localStorage: { setItem() {} },
   window: {}, document: { body: { classList: { toggle() {} } } },
   _pageLeave: null, renderPage: id => rendered.push([id, nav.settingsTab]),
@@ -65,7 +65,7 @@ const renderCtx = {
   renderSettingsPage() {}, renderSettings() {},
 };
 vm.createContext(renderCtx);
-vm.runInContext(fn("parkQuickSet") + "\n" + fn("renderPage"), renderCtx);
+vm.runInContext(fn("parkQuickSet") + "\n" + fn("renderPage") + "\n" + fn("renderVao"), renderCtx);
 (async () => {
   await renderCtx.renderPage("settings");
   assert.equal(controls.value, "unchanged");
