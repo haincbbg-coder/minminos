@@ -23,7 +23,7 @@
   var host = null, cv = null, renderer = null, scene = null, camera = null;
   var rafId = 0, pollId = 0, kpiId = 0, seq = 0, mo = false, daDung = false, lanCuoi = 0;
   var agents = {}, ds = [], lead = null, tram = [], ban = null, phien = {};
-  var cam = { az: -0.62, pol: 0.95, dist: 0, tx: 0.4, ty: 0.6, tz: 1.0 }, camMacDinh = null, phim = {}, kd = null, ku = null;
+  var cam = { az: -0.4, pol: 1.08, dist: 0, tx: 0.4, ty: 4.5, tz: 1.0 }, camMacDinh = null, phim = {}, kd = null, ku = null;
   function anBat() { return mo; }
   var raycaster = null, bang = null, kpiDuLieu = null, nguoiNoi = null, tNow = 0;
   var manHinh = [], matManOff = null, matManOn = [];
@@ -860,19 +860,18 @@
       var ngoai = new T.Mesh(new T.BoxGeometry(0.3, 5.8, HZ * 2), tuongM); ngoai.position.set(xo, 2.9, 0); scene.add(ngoai);
       var tt = new T.Mesh(new T.BoxGeometry(RW + 0.6, 0.05, 0.12), mat(parseInt(ph.acc.slice(1), 16), { emissive: parseInt(ph.acc.slice(1), 16), emissiveIntensity: 0.6 })); tt.position.set(ph.cx, 5.8, -HZ - 0.15); scene.add(tt);
       canhTuong.push(sau, ngoai, tt);
-      [["qua", -4.45], ["nay", 4.45]].forEach(function (kk) {
-        var b = new T.Mesh(new T.PlaneGeometry(8.2, 4.1), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangPhong(ph, kk[0])), toneMapped: false })); b.material.map.colorSpace = T.SRGBColorSpace;
-        b.position.set(ph.cx + kk[1], 3.5, -HZ + 0.08); scene.add(b); giuBang.push(b); bangPhong[ph.id + "_" + kk[0]] = b; khungTV(8.2, 4.1, ph.cx + kk[1], 3.5, -HZ + 0.0, 0);
+      // bảng số liệu lơ lửng TRÊN tường sau (26.10.247): to, không bị tường hay nhãn phòng bên che
+      var cum = cumBang(ph.cx), w2 = 9, h2 = 4.5, top = h2 + 0.3;
+      [["qua", -(w2 / 2 + 0.25)], ["nay", w2 / 2 + 0.25]].forEach(function (kk) {
+        bangPhong[ph.id + "_" + kk[0]] = bangNoi(cum, veBangPhong(ph, kk[0]), w2, h2, kk[1], h2 / 2 + 0.3);
       });
-      if (ph.id === "sale") {   // bảng Hiệu suất: tường chung với văn phòng, đoạn giữa góc trong và cửa (nhìn rõ từ nút "Phòng Sale")
-        var xs = dir * (HX + 0.3), zs = -(HZ + DOOR) / 2;   // mặt tường chung phía phòng Sale (tường dày 0,3 ở x = ±(HX + 0,15))
-        var hs = new T.Mesh(new T.PlaneGeometry(7.2, 3.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangHieuSuat()), toneMapped: false })); hs.material.map.colorSpace = T.SRGBColorSpace;
-        hs.position.set(xs + dir * 0.09, 3.2, zs); hs.rotation.y = dir * Math.PI / 2; scene.add(hs); giuBang.push(hs); bangPhong.sale_hs = hs;
-        khungTV(7.2, 3.6, xs + dir * 0.02, 3.2, zs, dir * Math.PI / 2);
+      if (ph.id === "sale") {   // bảng Hiệu suất: hàng trên, to nhất
+        var wh = 13, hh = 6.5;
+        bangPhong.sale_hs = bangNoi(cum, veBangHieuSuat(), wh, hh, 0, top + 0.6 + hh / 2); top += 0.6 + hh;
       }
       chanTuong(RW + 0.6, light, ph.cx, -HZ + 0.03, 0); chanTuong(HZ * 2, light, xo - dir * 0.15, 0, Math.PI / 2);
       caySan(ph.cx - RW / 2 + 1.2, -HZ + 1.3, 1); caySan(ph.cx + RW / 2 - 1.2, -HZ + 1.3, 1.2); caySan(ph.cx - dir * (RW / 2 - 1.2), HZ - 1.2, 0.9);
-      var nh = spriteTu(veNhan(ph.ten, "Phòng ban", ph.acc, nenNhan()), 3.4); nh.position.set(ph.cx, 6.4, -HZ + 0.4); scene.add(nh); canhTuong.push(nh);
+      var nh = spriteTu(veNhan(ph.ten, "Phòng ban", ph.acc, nenNhan()), 3.4); nh.position.set(0, top + 1.1, 0.2); cum.add(nh);
       [[-5.5, -4.05], [5.5, -4.05], [-5.5, 5.35], [5.5, 5.35], [0, 0.65]].forEach(function (p) { dungDenTran(ph.cx + p[0], p[1]); });
       dungDieuHoa(ph.cx + dir * (RW / 2 - 0.45), 4.65, -3.5, -dir * Math.PI / 2); dungDieuHoa(ph.cx + dir * (RW / 2 - 0.45), 4.65, 5.5, -dir * Math.PI / 2);
       [-3.5, 4.5].forEach(function (zz) { var pd = new T.PointLight(0xfff0d8, 1.2, 26, 1.3); pd.position.set(ph.cx, 4.8, zz); scene.add(pd); anh.lamps.push({ l: pd, b: 1.2 }); canhTuong.push(pd); });
@@ -932,12 +931,19 @@
   function chanTuong(w, light, cx, z, rot, d) {
     var m = new T.Mesh(new T.BoxGeometry(w, 0.28, 0.06), mat(light ? 0xfdfbf7 : 0x2c3d5e, { roughness: 0.4 })); m.position.set(cx, 0.14, z); m.rotation.y = rot || 0; scene.add(m); canhTuong.push(m);
   }
-  function khungTV(w, h, x, y, z, ry, man) {
-    var f = new T.Mesh(new T.BoxGeometry(w + 0.34, h + 0.34, 0.12), new T.MeshStandardMaterial({ color: 0x0a0c11, roughness: 0.3, metalness: 0.6 }));
-    f.position.set(x, y, z); f.rotation.y = ry; scene.add(f); giuBang.push(f);
-    var c = new T.Mesh(new T.BoxGeometry(w * 0.16, 0.06, 0.05), new T.MeshBasicMaterial({ color: 0x3a4152 })); c.position.set(0, -(h / 2 + 0.1), 0.07); f.add(c);
-    var led = new T.Mesh(new T.CircleGeometry(0.035, 10), new T.MeshBasicMaterial({ color: 0x2a6bff })); led.position.set(w * 0.46, -(h / 2 + 0.1), 0.07); f.add(led);
-    return f;
+  // Cụm bảng lơ lửng trên đỉnh tường sau của một phòng, ngả nhẹ về phía camera, không mờ theo sương xa.
+  // Bảng vẽ SAU nhãn chữ (renderOrder 20, nhãn là 10) nên nhãn người ở phòng bên không đè lên số;
+  // vẫn kiểm độ sâu nên tường, cột che đúng như vật thật.
+  var BANG_Y = 6.0, BANG_NGA = -0.16;
+  function cumBang(cx) {
+    var g = new T.Group(); g.position.set(cx, BANG_Y, -HZ - 0.15); g.rotation.x = BANG_NGA; scene.add(g); giuBang.push(g); return g;
+  }
+  function bangNoi(cum, canvas, w, h, x, y) {
+    var f = new T.Mesh(new T.BoxGeometry(w + 0.34, h + 0.34, 0.12), new T.MeshStandardMaterial({ color: 0x0a0c11, roughness: 0.3, metalness: 0.6, fog: false }));
+    f.position.set(x, y, 0); cum.add(f);
+    var b = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: new T.CanvasTexture(canvas), toneMapped: false, transparent: true, opacity: 1, fog: false }));
+    b.material.map.colorSpace = T.SRGBColorSpace; b.material.map.anisotropy = 8; b.renderOrder = 20; b.position.set(x, y, 0.07); cum.add(b);
+    return b;
   }
 
   // ---------- cửa đôi giữa văn phòng và hai phòng bên: tự mở khi có người tới gần ----------
@@ -1062,8 +1068,7 @@
     chanTuong(HX * 2, light, 0, -HZ + 0.03, 0);
     khoiTaoLuoi(); taoManHinh();
     // bảng điều hành (số liệu thật) giữa tường sau; khẩu hiệu hai bên và trên tường trái
-    bang = new T.Mesh(new T.PlaneGeometry(9, 3.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veBangDieuHanh()), toneMapped: false })); bang.material.map.colorSpace = T.SRGBColorSpace;
-    bang.position.set(HX - 0.14, 3.95, -5.7); bang.rotation.y = -Math.PI / 2; scene.add(bang); giuBang.push(bang); khungTV(9, 3.6, HX - 0.06, 3.95, -5.7, -Math.PI / 2);   // sau lưng giám đốc
+    bang = bangNoi(cumBang(0), veBangDieuHanh(), 18, 7.2, 0, 3.9);   // bảng điều hành: lơ lửng trên tường sau văn phòng
     function kh(i, x, y, z, ry, w) { var m = new T.Mesh(new T.PlaneGeometry(w, w * 260 / 900), new T.MeshBasicMaterial({ map: new T.CanvasTexture(veKhauHieu(i)), toneMapped: false })); m.material.map.colorSpace = T.SRGBColorSpace; m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); canhTuong.push(m); }
     kh(0, -8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(1, 8.0, 3.5, -HZ + 0.02, 0, 5.0); kh(6, 0, 3.5, -HZ + 0.02, 0, 5.0);
     kh(2, -HX + 0.02, 3.5, -6.2, Math.PI / 2, 5.0); kh(3, -HX + 0.02, 4.6, 0, Math.PI / 2, 5.0); kh(4, -HX + 0.02, 3.5, 6.2, Math.PI / 2, 5.0);
@@ -1083,7 +1088,7 @@
   }
   function giuCam() {
     if (cam.dist) cam.dist = Math.max(2, Math.min(75, cam.dist)); cam.pol = Math.max(0.05, Math.min(1.62, cam.pol));
-    cam.tx = Math.max(-HX - 30, Math.min(HX + 30, cam.tx)); cam.tz = Math.max(-HZ - 3, Math.min(HZ + 3, cam.tz)); cam.ty = Math.max(0, Math.min(4, cam.ty));
+    cam.tx = Math.max(-HX - 30, Math.min(HX + 30, cam.tx)); cam.tz = Math.max(-HZ - 3, Math.min(HZ + 3, cam.tz)); cam.ty = Math.max(0, Math.min(9, cam.ty));
   }
   // dịch điểm nhìn trên mặt sàn theo hướng camera (dx sang phải, dz tiến lên)
   function panCam(dx, dz) {
@@ -1709,7 +1714,7 @@
   function xoaCanh() {
     if (rafId) cancelAnimationFrame(rafId); rafId = 0;
     if (kd) { window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku); kd = ku = null; } phim = {};
-    cam.az = -0.62; cam.pol = 0.95; cam.dist = 0; cam.tx = 0.4; cam.ty = 0.6; cam.tz = 1.0;
+    cam.az = -0.4; cam.pol = 1.08; cam.dist = 0; cam.tx = 0.4; cam.ty = 4.5; cam.tz = 1.0;
     if (renderer) { renderer.dispose(); if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
     renderer = scene = camera = null; agents = {}; ds = []; lead = null; tram = []; ban = null; nvPhong = []; vatPhong = []; bangPhong = {}; phien = {}; bang = null; manHinh = []; nguoiNoi = null; cheDo = null; cuaDoi = [];
   }
@@ -1773,7 +1778,7 @@
     });
     $("mmOfficeSim").addEventListener("click", function () { menuSim.hidden = !menuSim.hidden; });
     Array.prototype.forEach.call(host.querySelectorAll("[data-room]"), function (b) {
-      b.addEventListener("click", function () { var x = parseFloat(b.getAttribute("data-room")); cam.tx = x; cam.tz = x ? 1.5 : 1.0; cam.ty = 0.6; cam.az = x ? (x < 0 ? -0.35 : 0.35) : -0.62; cam.pol = 0.95; cam.dist = (x ? 27 : 37) * Math.max(1, 1.6 / (camera ? camera.aspect : 1.6)); giuCam(); });
+      b.addEventListener("click", function () { var x = parseFloat(b.getAttribute("data-room")); cam.tx = x; cam.tz = 0.5; cam.ty = x ? 7.2 : 5.6; cam.az = x ? (x < 0 ? -0.2 : 0.2) : 0; cam.pol = 1.16; cam.dist = (x ? 40 : 42) * Math.max(1, 1.6 / (camera ? camera.aspect : 1.6)); giuCam(); });   // nhìn chính diện: thấy cả phòng lẫn cụm bảng trên tường
     });
     var nutKG = $("mmOfficeKG"), TEN_KG = ["Ẩn tường", "Ẩn cả nhà", "Hiện nhà"];
     function veNutKG() { nutKG.textContent = TEN_KG[khongGian]; nutKG.title = ["Đang hiện đủ nhà. Bấm để ẩn tường và bảng", "Đang ẩn tường. Bấm để ẩn cả sàn, chỉ còn người và đồ", "Đang chỉ hiện người và đồ. Bấm để hiện lại nhà"][khongGian]; }
