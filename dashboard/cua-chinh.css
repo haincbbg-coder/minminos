@@ -19,6 +19,11 @@
     transform: translateX(0); visibility: visible; box-shadow: 8px 0 40px var(--shadow-veil);
   }
   body.cua-chinh.has-rail .hud { margin-left: 0; width: 100%; }
+  /* Menu ĐƯỢC GHIM: thanh bên đứng yên bên trái như chế độ đầy đủ, nhưng vẫn giữ bố cục gọn (không bảng tổng quan). */
+  body.cua-chinh.menu-ghim, body.cua-chinh.menu-ghim.rail-collapsed { --rail-w: 260px; }
+  body.cua-chinh.menu-ghim .rail { transform: none; visibility: visible; box-shadow: none; }
+  body.cua-chinh.menu-ghim.has-rail .hud { margin-left: 260px; width: calc(100% - 260px); }
+  body.cua-chinh.menu-ghim .nav-toggle-btn, body.cua-chinh.menu-ghim .nav-backdrop { display: none; }
   body.cua-chinh .nav-backdrop { position: fixed; inset: 0; background: var(--scrim); z-index: 55; }
   body.cua-chinh .nav-backdrop[hidden] { display: none; }
   body.cua-chinh.nav-open .nav-backdrop { display: block; }
@@ -50,3 +55,10 @@
   color: var(--text2); font-size: var(--mm-fs-12); cursor: pointer;
 }
 .cc-hd-chip:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Nút ghim menu ở đầu thanh bên (chỉ có ở chế độ gọn, màn rộng). */
+.cc-ghim { display: none; margin-left: auto; width: 34px; height: 34px; align-items: center; justify-content: center;
+  border-radius: var(--mm-r-btn); border: 1px solid var(--border); background: none; color: var(--text2); cursor: pointer; }
+.cc-ghim:hover { color: var(--accent); border-color: var(--accent); }
+.cc-ghim.on { color: #fff; background: var(--accent); border-color: var(--accent); }
+@media (min-width: 861px) { body.cua-chinh .cc-ghim { display: inline-flex; } body.cua-chinh .rail-top { display: flex; align-items: center; } }

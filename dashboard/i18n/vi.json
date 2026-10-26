@@ -4285,5 +4285,7 @@
   "page.khach.sub": "Kênh nhắn tin và hộp thư khách",
   "gop.con": "Module con",
   "gop.con_sub": "Ứng dụng cài thêm từ Chợ MinMin",
-  "gop.mo": "Mở"
+  "gop.mo": "Mở",
+  "cc.ghim": "Ghim menu",
+  "cc.bo_ghim": "Bỏ ghim menu"
 }

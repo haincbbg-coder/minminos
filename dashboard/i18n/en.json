@@ -4285,5 +4285,7 @@
   "page.khach.sub": "Messaging channels and the customer inbox",
   "gop.con": "Sub-modules",
   "gop.con_sub": "Apps added from the MinMin store",
-  "gop.mo": "Open"
+  "gop.mo": "Open",
+  "cc.ghim": "Pin menu",
+  "cc.bo_ghim": "Unpin menu"
 }

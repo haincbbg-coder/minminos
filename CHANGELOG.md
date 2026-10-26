@@ -10,6 +10,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - Mắt Nhà và Biến động số dư thành "Module con" nằm bên dưới trang Kết nối, bấm Mở để vào.
 - Kênh nhắn và Hộp thư khách gom thành trang "Khách". Mọi chức năng giữ nguyên, đường dẫn cũ vẫn mở đúng.
 
+## [26.10.257] - 2026-10-26
+### Thêm mới
+- **Nút ghim menu**: ở đầu thanh bên có hình cái ghim. Bấm vào thì menu đứng yên bên trái, không tự đóng khi chọn mục. Bấm lần nữa để bỏ ghim.
+- Nhớ lựa chọn trên máy này, mở lại vẫn còn ghim. Chỉ dùng trên màn rộng.
+
 ## [26.10.256] - 2026-10-26
 ### Cải thiện
 - **Bảng Hiệu suất Sale** (Văn phòng 3D) không tự chuyển kỳ nữa. Bấm chuột vào nút **Hôm nay**, **Hôm qua** hoặc **7 ngày** ngay trên bảng để chọn; bảng giữ kỳ đã chọn, lần sau mở lại vẫn nhớ.
