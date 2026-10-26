@@ -9,6 +9,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - **Nút ghim menu**: ở đầu thanh bên có hình cái ghim. Bấm vào thì menu đứng yên bên trái, không tự đóng khi chọn mục. Bấm lần nữa để bỏ ghim.
 - Nhớ lựa chọn trên máy này, mở lại vẫn còn ghim. Chỉ dùng trên màn rộng.
 
+## [26.10.256] - 2026-10-26
+### Cải thiện
+- **Bảng Hiệu suất Sale** (Văn phòng 3D) không tự chuyển kỳ nữa. Bấm chuột vào nút **Hôm nay**, **Hôm qua** hoặc **7 ngày** ngay trên bảng để chọn; bảng giữ kỳ đã chọn, lần sau mở lại vẫn nhớ.
+- Rê chuột lên các nút kỳ trên bảng thì con trỏ đổi thành bàn tay để biết bấm được.
+
 ## [26.10.255] - 2026-10-26
 ### Thêm mới
 - **Facebook nhiều tài khoản** ở trang Kết nối: một bảng gộp mọi Trang và tài khoản quảng cáo của tất cả tài khoản Facebook đã nối, ghi rõ ai cầm, vai trò gì, MinMin sẽ đăng bằng ai.
