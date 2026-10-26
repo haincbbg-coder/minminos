@@ -4113,5 +4113,16 @@
   "doiai.dang_tai": "Loading AI Teams...",
   "doiai.loi_tai": "Could not load the job list: {loi}",
   "doiai.thu_lai": "Try again",
-  "kanban.gate_o_doi_ai": "GATE step: review it in the AI teams section above"
+  "kanban.gate_o_doi_ai": "GATE step: review it in the AI teams section above",
+  "cs.ch2_pill_off": "Off",
+  "cs.ch2_pill_ok": "Running",
+  "cs.ch2_pill_wait": "No token",
+  "cs.ch2_pill_wait2": "Starting",
+  "cs.ch2_pill_err": "Error",
+  "cs.ch2_on": "Enable channel",
+  "cs.ch2_save": "Save changes",
+  "cs.ch2_sec_conn": "Connect the bot",
+  "cs.ch2_sec_who": "Who can use it",
+  "cs.ch2_soon": "Coming soon",
+  "cs.ch2_how_token": "Where do I get the token?"
 }

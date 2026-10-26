@@ -4113,5 +4113,16 @@
   "doiai.dang_tai": "Đang tải Đội AI...",
   "doiai.loi_tai": "Chưa tải được danh sách job: {loi}",
   "doiai.thu_lai": "Thử lại",
-  "kanban.gate_o_doi_ai": "Bước GATE: duyệt ở khu Đội AI phía trên"
+  "kanban.gate_o_doi_ai": "Bước GATE: duyệt ở khu Đội AI phía trên",
+  "cs.ch2_pill_off": "Tắt",
+  "cs.ch2_pill_ok": "Đang chạy",
+  "cs.ch2_pill_wait": "Thiếu token",
+  "cs.ch2_pill_wait2": "Đang khởi động",
+  "cs.ch2_pill_err": "Lỗi",
+  "cs.ch2_on": "Bật kênh",
+  "cs.ch2_save": "Lưu thay đổi",
+  "cs.ch2_sec_conn": "Kết nối bot",
+  "cs.ch2_sec_who": "Ai được dùng",
+  "cs.ch2_soon": "Sắp có",
+  "cs.ch2_how_token": "Lấy token ở đâu?"
 }
