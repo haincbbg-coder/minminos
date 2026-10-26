@@ -19,8 +19,48 @@
 
   var RE = /<!--\s*JAVIS_VIEC:\s*([\s\S]*?)\s*-->\s*/;
 
+  /* Chữ dự phòng (26.10.259). Khung chat có thể vẽ thẻ việc TRƯỚC khi từ điển i18n nạp xong
+     (mở app, hội thoại cũ hiện ngay), lúc đó window.t trả về chính cái khoá và thẻ hiện chữ trần
+     "viec.st_done" (chủ repo chụp màn hình 2026-10-26). Bản sao nhỏ này của vi.json lấp chỗ đó;
+     test_the_viec_nen.js giữ nó khớp với vi.json. */
+  var DU_PHONG = {
+    "viec.st_done": "Việc nền xong",
+    "viec.st_review": "Việc nền xong, chờ duyệt",
+    "viec.st_blocked": "Việc nền bị chặn",
+    "viec.st_failed": "Việc nền lỗi",
+    "viec.st_timeout": "Việc nền quá giờ",
+    "viec.st_cancelled": "Việc nền đã dừng",
+    "viec.st_giao": "Đang làm nền",
+    "viec.da_giao": "Đang làm nền:",
+    "viec.mo_dinh_ky": "Việc định kỳ",
+    "viec.loop_done": "Vòng lặp vừa chạy",
+    "viec.loop_failed": "Vòng lặp chạy lỗi",
+    "viec.loop_blocked": "Vòng lặp tự tạm dừng",
+    "viec.reminder_done": "Nhắc hẹn",
+    "viec.reminder_failed": "Nhắc hẹn chưa chạy được",
+    "viec.job_done": "Việc chạy nền đã xong",
+    "viec.job_cancelled": "Đã dừng việc chạy nền",
+    "viec.job_timeout": "Việc chạy nền quá lâu",
+    "viec.mo_trang": "Trang Việc",
+    "viec.st_hoi": "Việc nền cần bạn trả lời",
+    "viec.hoi_ph": "Gõ câu trả lời...",
+    "viec.hoi_gui": "Gửi",
+    "viec.hoi_da_gui": "Đã gửi, việc đang chạy tiếp.",
+    "viec.hoi_loi": "Chưa gửi được, thử lại hoặc trả lời ở trang Việc."
+  };
+
+  function thay(s, bien) {
+    return String(s).replace(/\{(\w+)\}/g, function (m, ten) {
+      return (bien && bien[ten] != null) ? String(bien[ten]) : m;
+    });
+  }
+
   function tw(khoa, bien) {
-    if (typeof window !== "undefined" && window.t) return window.t(khoa, bien);
+    if (typeof window !== "undefined" && window.t) {
+      var r = window.t(khoa, bien);
+      if (r !== khoa || !DU_PHONG[khoa]) return r;
+      return thay(DU_PHONG[khoa], bien);
+    }
     try {
       var s = require("./i18n/vi.json")[khoa] || khoa;
       return String(s).replace(/\{(\w+)\}/g, function (m, ten) {
@@ -178,7 +218,7 @@
     return msgEl;
   }
 
-  var API = { tach: tach, ve: ve, dauThe: dauThe, dongGiao: dongGiao, oTraLoi: oTraLoi, TRANG_THAI: TRANG_THAI };
+  var API = { DU_PHONG: DU_PHONG, tw: tw, tach: tach, ve: ve, dauThe: dauThe, dongGiao: dongGiao, oTraLoi: oTraLoi, TRANG_THAI: TRANG_THAI };
   if (typeof window !== "undefined") window.JavisViec = API;
   if (typeof module !== "undefined" && module.exports) module.exports = API;
 })();
