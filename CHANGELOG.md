@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.257] - 2026-10-26
+### Thêm mới
+- **Nút ghim menu**: ở đầu thanh bên có hình cái ghim. Bấm vào thì menu đứng yên bên trái, không tự đóng khi chọn mục. Bấm lần nữa để bỏ ghim.
+- Nhớ lựa chọn trên máy này, mở lại vẫn còn ghim. Chỉ dùng trên màn rộng.
+
 ## [26.10.255] - 2026-10-26
 ### Thêm mới
 - **Facebook nhiều tài khoản** ở trang Kết nối: một bảng gộp mọi Trang và tài khoản quảng cáo của tất cả tài khoản Facebook đã nối, ghi rõ ai cầm, vai trò gì, MinMin sẽ đăng bằng ai.

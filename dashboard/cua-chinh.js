@@ -17,6 +17,9 @@
     try { var v = localStorage.getItem(KEY); return v === null ? true : v === "1"; }
     catch (e) { return true; }
   }
+  var KEY_GHIM = "minmin.menughim";
+  function docGhim() { try { return localStorage.getItem(KEY_GHIM) === "1"; } catch (e) { return false; } }
+  function luuGhim(b) { try { localStorage.setItem(KEY_GHIM, b ? "1" : "0"); } catch (e) {} }
   function luuCheDo(b) { try { localStorage.setItem(KEY, b ? "1" : "0"); } catch (e) {} }
 
   function tw(khoa, mac) {
@@ -44,6 +47,7 @@
   }
 
   function dongMenu() {
+    if (document.body.classList.contains("menu-ghim")) return;   // đang ghim thì menu ở yên
     document.body.classList.remove("nav-open");
     var bd = document.getElementById("navBackdrop");
     if (bd) bd.hidden = true;
@@ -77,6 +81,33 @@
     var chan = rail.querySelector(".rail-foot");
     rail.insertBefore(nutDoi, chan || null);
     veNutDoi();
+  }
+
+  // ---- Nút ghim menu (26.10.257): ghim thì thanh bên đứng yên bên trái, không tự đóng khi chọn mục ----
+  var nutGhim = null;
+  function veNutGhim() {
+    if (!nutGhim) return;
+    var g = document.body.classList.contains("menu-ghim");
+    nutGhim.classList.toggle("on", g);
+    nutGhim.setAttribute("aria-pressed", g ? "true" : "false");
+    var nhan = g ? tw("cc.bo_ghim", "Bỏ ghim menu") : tw("cc.ghim", "Ghim menu");
+    nutGhim.title = nhan; nutGhim.setAttribute("aria-label", nhan);
+  }
+  function apDungGhim(g, tuNguoiDung) {
+    document.body.classList.toggle("menu-ghim", !!g);
+    if (g) { document.body.classList.remove("nav-open"); var bd = document.getElementById("navBackdrop"); if (bd) bd.hidden = true; }
+    veNutGhim();
+    if (tuNguoiDung) { luuGhim(g); bao("ghim_menu", g ? "bat" : "tat"); }
+  }
+  function dungNutGhim() {
+    var top = document.querySelector(".rail-top");
+    if (!top || nutGhim) return;
+    nutGhim = document.createElement("button");
+    nutGhim.type = "button"; nutGhim.className = "cc-ghim";
+    nutGhim.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg>';
+    nutGhim.addEventListener("click", function () { apDungGhim(!document.body.classList.contains("menu-ghim"), true); });
+    top.appendChild(nutGhim);
+    veNutGhim();
   }
 
   // ---- "Hay dùng": vài trang người dùng hay mở nhất, lên đầu ngăn kéo ----
@@ -155,15 +186,17 @@
         truoc = a;
       });
       dungNutDoi();
+      dungNutGhim();
       veHayDung();
     }, 250);
   }
 
   function khoiDong() {
     apDung(docCheDo(), false);
+    apDungGhim(docGhim(), false);
     ganSuKien();
     theoDoiTrang();
-    document.addEventListener("javis:i18n", veNutDoi);
+    document.addEventListener("javis:i18n", function () { veNutDoi(); veNutGhim(); });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", khoiDong);
   else khoiDong();

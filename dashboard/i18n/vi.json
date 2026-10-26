@@ -4278,5 +4278,7 @@
   "dads.hoan_tac": "Hoàn tác",
   "dads.dang_gui": "Đang gửi...",
   "dads.loi_gui": "Chưa gửi được: {loi}",
-  "dads.sua_mau": "Sửa lại đề xuất đổi chiến dịch #{id}: "
+  "dads.sua_mau": "Sửa lại đề xuất đổi chiến dịch #{id}: ",
+  "cc.ghim": "Ghim menu",
+  "cc.bo_ghim": "Bỏ ghim menu"
 }
