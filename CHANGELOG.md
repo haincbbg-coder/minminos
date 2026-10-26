@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.262] - 2026-10-26
+### Cải thiện
+- **Menu gọn hơn, đợt 2**: Bảng việc và Lịch tự chạy gom thành trang "Công việc" có hai tab là "Việc 1 lần" và "Việc hàng ngày".
+- Mỗi việc có nút **Xem chi tiết**: chạy khi nào, làm gì, quyền tới mức nào, báo kết quả về đâu, lần chạy gần nhất và kết quả.
+
 ## [26.10.261] - 2026-10-26
 ### Cải thiện
 - **Menu gọn hơn, đợt 1**: Nguồn dữ liệu, Kết nối ngoài và Chợ MinMin gom thành một trang "Kết nối" có ba thẻ tab.
