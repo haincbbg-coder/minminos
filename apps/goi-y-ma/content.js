@@ -203,10 +203,13 @@
   }
   // câu gõ nhanh cố định của shop (ký tự tắt trong Cài đặt > Hỗ trợ trả lời của Pancake)
   const LENH_CO_DINH = [["Địa chỉ", "/dc"], ["Cao cân", "/cc"], ["Inbox", "/ib"], ["Lên đơn", "/ld"]];
+  let thuNho = false;   // thu nhỏ thanh thành một nút tròn nhỏ, nhớ qua các lần mở Pancake
+  try { thuNho = localStorage.getItem("mmGyThu") === "1"; } catch (e) {}
+  const datThu = (v) => { thuNho = v; if (v) { mo = false; if (goc) goc.style.display = "none"; } try { localStorage.setItem("mmGyThu", v ? "1" : "0"); } catch (e) {} thanhKhoa = ""; veThanh(maHienTai); datThanh(); };
   let maHienTai = [];
   function veThanh(maList) {
     maHienTai = maList;
-    const khoa = maList.join(",") + "|" + layMau() + "|" + mo;
+    const khoa = maList.join(",") + "|" + layMau() + "|" + mo + "|" + thuNho;
     if (!thanh && document.body) {
       thanh = document.createElement("div");
       thanh.style.cssText = "position:fixed;z-index:2147483646;left:50%;top:60%;transform:translateX(-50%);";
@@ -218,9 +221,14 @@
     if (khoa !== thanhKhoa) {
       thanhKhoa = khoa;
       const lenh = (m) => layMau().replace("{ma}", m.toUpperCase());
+      if (thuNho) {
+        thanhRoot.innerHTML = `<style>button{border:1px solid #f0c36d;background:#fffbe6;color:#0b5fff;border-radius:50%;width:26px;height:26px;padding:0;font:700 12px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 6px #0003}</style><button id="mr" title="Mở lại thanh Gợi ý mã">▴</button>`;
+        thanhRoot.getElementById("mr").onclick = () => datThu(false);
+        return datThanh();
+      }
       thanhRoot.innerHTML = `<style>.t{font:13px system-ui,sans-serif;display:flex;gap:6px;align-items:center;background:#fffbe6;border:1px solid #f0c36d;border-radius:20px;padding:3px 8px;box-shadow:0 2px 8px #0002;white-space:nowrap}
         button{border:0;border-radius:14px;padding:4px 11px;background:#0b5fff;color:#fff;font-weight:700;cursor:pointer;font-size:13px}button.s{background:#e4e7ec;color:#333;padding:3px 7px;font-weight:400}button.g{background:#fff;color:#0b5fff;border:1px solid #0b5fff;font-weight:600}button.f{background:#12b76a;padding:4px 9px;font-weight:600}</style>
-        <div class="t"><button class="g" id="mo" title="Xem chi tiết gợi ý mã hàng">Gợi ý mã ${mo ? "▾" : "▴"}</button>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(lenh(m))} vào ô trả lời">${esc(lenh(m))}</button>`).join("")}${LENH_CO_DINH.map(([ten, l]) => `<button class="f" data-l="${esc(l)}" title="Điền ${esc(l)} vào ô trả lời">${esc(ten)}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button></div>`;
+        <div class="t"><button class="g" id="mo" title="Xem chi tiết gợi ý mã hàng">Gợi ý mã ${mo ? "▾" : "▴"}</button>${maList.map((m) => `<button data-m="${esc(m)}" title="Điền ${esc(lenh(m))} vào ô trả lời">${esc(lenh(m))}</button>`).join("")}${LENH_CO_DINH.map(([ten, l]) => `<button class="f" data-l="${esc(l)}" title="Điền ${esc(l)} vào ô trả lời">${esc(ten)}</button>`).join("")}<button class="s" id="sua" title="Đổi mẫu lệnh">✎</button><button class="s" id="thu" title="Thu nhỏ thanh này">–</button></div>`;
       thanhRoot.querySelectorAll("button[data-l]").forEach((b) => b.onclick = () => {
         if (!dien(b.dataset.l)) b.textContent = "Không thấy ô soạn tin";
       });
@@ -228,6 +236,7 @@
         if (!dien(lenh(b.dataset.m))) b.textContent = "Không thấy ô soạn tin";
       });
       thanhRoot.getElementById("mo").onclick = () => { mo = !mo; if (goc) goc.style.display = mo ? "" : "none"; veThanh(maHienTai); datThanh(); };
+      thanhRoot.getElementById("thu").onclick = () => datThu(true);
       thanhRoot.getElementById("sua").onclick = () => {
         const v = prompt("Mẫu lệnh trả lời nhanh, dùng {ma} thay cho mã (chữ hoa). Ví dụ: /{ma}", layMau());
         if (v && v.includes("{ma}")) { try { localStorage.setItem(MAU_KEY, v.trim()); } catch (e) {} thanhKhoa = ""; veThanh(maHienTai); }
