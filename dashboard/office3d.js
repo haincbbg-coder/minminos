@@ -787,9 +787,11 @@
   }
   // ---------- bảng HIỆU SUẤT SALE (26.10.245): điểm 100 từ Thống kê Pancake, tường bên Phòng Sale ----------
   // Số lấy thẳng /office/hieu-suat (máy chủ gọi Pancake, đệm 60 giây), không chờ MinMin ghi file.
-  // Bảng tự xoay Hôm nay -> Hôm qua -> 7 ngày mỗi HS_XOAY ms. Nhãn trên đầu nhân viên Sale thêm điểm + hạng.
-  var HS_KY = ["nay", "qua", "7ngay"], HS_TEN = { nay: "Hôm nay", qua: "Hôm qua", "7ngay": "7 ngày" }, HS_XOAY = 15000;
-  var hsDL = {}, hsLuc = {}, hsKy = "nay", hsId = 0;
+  // Bảng KHÔNG tự xoay (bố yêu cầu 26/10): bấm nút Hôm nay / Hôm qua / 7 ngày vẽ trên bảng để chọn, nhớ lựa chọn.
+  // Nhãn trên đầu nhân viên Sale thêm điểm + hạng.
+  var HS_KY = ["nay", "qua", "7ngay"], HS_TEN = { nay: "Hôm nay", qua: "Hôm qua", "7ngay": "7 ngày" };
+  var hsDL = {}, hsLuc = {}, hsKy = "nay";
+  try { var hsNho = localStorage.getItem("mmOfficeHsKy"); if (HS_KY.indexOf(hsNho) >= 0) hsKy = hsNho; } catch (e) {}
   function khoaTen(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/\s+/g, " ").trim(); }
   function soVN(v, n) { v = Number(v) || 0; return v.toFixed(n == null ? 1 : n).replace(".", ","); }
   function veBangHieuSuat() {
@@ -843,7 +845,20 @@
       if (ky === "nay") { pancakeSig = ""; if (pancakeDL) xepNhanVien(); }
     }).catch(function () { hsLuc[ky] = 0; });
   }
-  function xoayHieuSuat() { hsKy = HS_KY[(HS_KY.indexOf(hsKy) + 1) % HS_KY.length]; napHieuSuat(hsKy); veLaiHieuSuat(); }
+  function chonKyHieuSuat(ky) {
+    if (HS_KY.indexOf(ky) < 0) return; hsKy = ky; try { localStorage.setItem("mmOfficeHsKy", ky); } catch (e) {}
+    veLaiHieuSuat(); napHieuSuat(ky);
+  }
+  // nút kỳ dưới con trỏ (toạ độ trên canvas 1120x560 của bảng: hàng nút y 30..68, x = 700 + i*130, rộng 118)
+  function kyDuoiChuot(e) {
+    var b = bangPhong.sale_hs; if (!b || !raycaster || !camera) return null;
+    var rc = renderer.domElement.getBoundingClientRect();
+    raycaster.setFromCamera({ x: ((e.clientX - rc.left) / rc.width) * 2 - 1, y: -((e.clientY - rc.top) / rc.height) * 2 + 1 }, camera);
+    var h = raycaster.intersectObject(b, false)[0]; if (!h || !h.uv) return null;
+    var x = h.uv.x * 1120, y = (1 - h.uv.y) * 560; if (y < 24 || y > 74) return null;
+    for (var i = 0; i < HS_KY.length; i++) { var x0 = 700 + i * 130; if (x >= x0 - 4 && x <= x0 + 122) return HS_KY[i]; }
+    return null;
+  }
   function diemCua(ten) {
     var d = hsDL.nay; if (!d || !d.nhan_vien) return null; var k = khoaTen(ten);
     for (var i = 0; i < d.nhan_vien.length; i++) if (khoaTen(d.nhan_vien[i].ten) === k) return d.nhan_vien[i];
@@ -1678,12 +1693,13 @@
   }
 
   function nhapTay() {
-    var el = renderer.domElement, ptr = {}, lastD = 0, lastM = null, moved = 0;
+    var el = renderer.domElement, ptr = {}, lastD = 0, lastM = null, moved = 0, lanTro = 0;
     el.style.touchAction = "none"; el.tabIndex = 0; el.style.outline = "none";
     el.addEventListener("contextmenu", function (e) { e.preventDefault(); });
     el.addEventListener("pointerdown", function (e) { el.setPointerCapture(e.pointerId); el.focus(); ptr[e.pointerId] = { x: e.clientX, y: e.clientY, b: e.button, sh: e.shiftKey || e.ctrlKey }; moved = 0; lastD = 0; lastM = null; });
     el.addEventListener("pointermove", function (e) {
-      var p = ptr[e.pointerId]; if (!p) return; var ids = Object.keys(ptr), px = e.clientX - p.x, py = e.clientY - p.y, k = cam.dist * 0.0021;
+      var p = ptr[e.pointerId];
+      if (!p) { if (e.pointerType === "mouse") { var tn = performance.now(); if (tn - lanTro > 80) { lanTro = tn; el.style.cursor = kyDuoiChuot(e) ? "pointer" : ""; } } return; } var ids = Object.keys(ptr), px = e.clientX - p.x, py = e.clientY - p.y, k = cam.dist * 0.0021;
       if (ids.length >= 2) {
         var o = ptr[ids.filter(function (i) { return +i !== e.pointerId; })[0]]; var d = Math.hypot(e.clientX - o.x, e.clientY - o.y), mx = (e.clientX + o.x) / 2, my = (e.clientY + o.y) / 2;
         if (lastD) cam.dist *= lastD / d; if (lastM) panCam(-(mx - lastM.x) * k, (my - lastM.y) * k); lastD = d; lastM = { x: mx, y: my };
@@ -1714,6 +1730,7 @@
     window.addEventListener("keydown", kd); window.addEventListener("keyup", ku);
   }
   function chamRobot(e) {
+    var ky = kyDuoiChuot(e); if (ky) { chonKyHieuSuat(ky); return; }   // bấm nút kỳ trên bảng Hiệu suất Sale
     var rc = renderer.domElement.getBoundingClientRect();
     raycaster.setFromCamera({ x: ((e.clientX - rc.left) / rc.width) * 2 - 1, y: -((e.clientY - rc.top) / rc.height) * 2 + 1 }, camera);
     var meshes = []; banDo().forEach(function (a) { meshes.push(a.r.than); });
@@ -1772,12 +1789,12 @@
       if (!r[0]) { toast("Máy này không dựng được cảnh 3D"); dong(); return; }
       try { dung(r[1]); } catch (e) { console.warn("[office]", e); toast("Không dựng được văn phòng 3D"); dong(); return; }
       if (camLuu) { cam.az = camLuu.az; cam.pol = camLuu.pol; cam.dist = camLuu.dist; cam.tx = camLuu.tx; cam.ty = camLuu.ty; cam.tz = camLuu.tz; camLuu = null; }
-      seq = 0; hoi(); pollId = setInterval(hoi, 1500); kpiId = setInterval(function () { napKpi(); napPancake(); napHieuSuat("nay"); }, 60000); clearInterval(hsId); hsId = setInterval(xoayHieuSuat, HS_XOAY);
+      seq = 0; hoi(); pollId = setInterval(hoi, 1500); kpiId = setInterval(function () { napKpi(); napPancake(); napHieuSuat(hsKy); if (hsKy !== "nay") napHieuSuat("nay"); }, 60000);
       if (!r[1].length) toast("Brain này chưa có agent nào. Tạo agent ở trang Cộng sự để họ xuất hiện ở đây.");
     });
   }
   function dong() {
-    if (!mo) return; mo = false; clearInterval(pollId); clearInterval(kpiId); clearInterval(hsId);
+    if (!mo) return; mo = false; clearInterval(pollId); clearInterval(kpiId);
     host.hidden = true; host.classList.remove("mm-menu-open"); document.documentElement.classList.remove("mm-office-on");
     var nut = $("officeToggleBtn"); if (nut) nut.setAttribute("aria-pressed", "false");
     xoaCanh();
