@@ -98,12 +98,32 @@ check("bộ não khác có hội thoại riêng", store.get_session(d4[len("web:
 tat = vhn.HopViec(lambda: store, tmp / "x.json", bat=lambda: False)
 check("tắt thì về hội thoại cũ", tat.doi_dich("web:" + dang_chat, {"kind": "loop"}) == "web:" + dang_chat)
 
+# 26.10.260: mục mang khoá "brain", hội thoại mang khoá đường dẫn của CÙNG bộ não.
+BIET_DANH = {"/brains/Brain Default": ["/brains/Brain Default", "brain"]}
+hop2 = vhn.HopViec(lambda: store, tmp / "y.json", brain_keys=lambda b: BIET_DANH.get(b, [b]))
+for p in store.list_projects("brain"):
+    store.delete_project(p["id"])
+pid_bo = store.create_project("Việc Hàng Ngày", brain="brain")
+pid_tu_tao = store.create_project("Việc Hàng Ngày", brain="/brains/Brain Default")  # mục lỡ tạo
+o_dai = store.create_session(brain="/brains/Brain Default", title="Quét Sheet")
+d5 = hop2.doi_dich("web:" + o_dai, {"kind": "loop"})
+check("khoá khác tên vẫn dùng đúng mục người dùng tạo (mục cũ nhất)",
+      store.get_session(d5[len("web:"):])["project_id"] == pid_bo)
+check("hội thoại mới mang khoá bộ não của hội thoại gốc",
+      store.get_session(d5[len("web:"):])["brain"] == "/brains/Brain Default")
+check("lần sau dùng lại, không đẻ thêm", hop2.doi_dich("web:" + o_dai, {"kind": "loop"}) == d5)
+store.delete_project(pid_bo); store.delete_project(pid_tu_tao)
+d6 = hop2.doi_dich("web:" + o_dai, {"kind": "task"})
+check("chưa có mục thì tạo bằng khoá 'brain'",
+      store.get_project(store.get_session(d6[len("web:"):])["project_id"])["brain"] == "brain")
+
 # Nối dây ở main.py và tasks.py.
 MAIN = (SERVER / "main.py").read_text(encoding="utf-8")
 TASKS = (SERVER / "tasks.py").read_text(encoding="utf-8")
 check("_notify_owner đổi đích trước khi bỏ hòm thư",
       MAIN.index("owner_chat = await asyncio.to_thread(_HOP_VIEC.doi_dich")
       < MAIN.index("vao_hom = await _bo_vao_hom_thu("))
+check("main.py truyền _brain_keys", "brain_keys=lambda b: _brain_keys(b)" in MAIN)
 check("GATE đổi đích về Bảng Việc", '_HOP_VIEC.doi_dich, chat, None, "bang"' in MAIN)
 check("báo gộp việc kẹt mang khối việc", 'viec={"kind": "task", "status": "blocked"' in TASKS)
 check("không có gạch dài", not any(c in (SERVER / "viec_hang_ngay.py").read_text(encoding="utf-8")

@@ -62,8 +62,13 @@ class HopViec:
     """Tìm/tạo mục Việc Hàng Ngày và hai hội thoại của nó. An toàn đa luồng."""
 
     def __init__(self, store_getter: Callable[[], Any], state_path: Path,
-                 bat: Optional[Callable[[], bool]] = None):
+                 bat: Optional[Callable[[], bool]] = None,
+                 brain_keys: Optional[Callable[[str], list]] = None):
         self._store = store_getter
+        # Mọi cách viết cùng trỏ về một bộ não ("brain", "/brains/Brain Default"...). 26.10.260:
+        # mục chủ repo tạo mang khoá "brain" còn hội thoại mang khoá đường dẫn, so đúng một
+        # chuỗi là không thấy mục và đẻ ra mục thứ hai mà danh sách không hiện.
+        self._keys = brain_keys or (lambda b: [b])
         self._path = Path(state_path)
         self._bat = bat or (lambda: True)
         self._lock = threading.Lock()
@@ -90,10 +95,23 @@ class HopViec:
         """id của mục Việc Hàng Ngày trong bộ não này, tạo nếu chưa có."""
         st = self._store()
         dich = chuan_ten(TEN_MUC)
-        for p in st.list_projects(brain) or []:
-            if chuan_ten(p.get("name")) == dich:
-                return str(p["id"])
-        return st.create_project(TEN_MUC, icon=ICON_MUC, brain=brain)
+        keys = self._cac_khoa(brain)
+        thay = [p for k in keys for p in (st.list_projects(k) or [])
+                if chuan_ten(p.get("name")) == dich]
+        if thay:
+            # Nhiều mục trùng tên: lấy mục CŨ nhất, tức mục người dùng tự tạo trước.
+            thay.sort(key=lambda p: float(p.get("created_at") or 0))
+            return str(thay[0]["id"])
+        # Tạo bằng khoá ngắn "brain" khi có: đó là khoá danh sách hội thoại đang đọc.
+        return st.create_project(TEN_MUC, icon=ICON_MUC,
+                                 brain="brain" if "brain" in keys else keys[0])
+
+    def _cac_khoa(self, brain: str) -> list:
+        try:
+            keys = [str(k) for k in (self._keys(brain) or []) if k]
+        except Exception:
+            keys = []
+        return keys or [brain]
 
     def _day(self, sid: str, sess: dict) -> bool:
         if int(sess.get("msg_count") or 0) >= TRAN_TIN:
@@ -120,7 +138,8 @@ class HopViec:
             sid = str(cu.get("sid") or "")
             phan = max(1, int(cu.get("phan") or 1))
             sess = st.get_session(sid) if sid else None
-            if (sess and str(sess.get("brain") or "") == brain and not int(sess.get("archived") or 0)
+            if (sess and str(sess.get("brain") or "") in self._cac_khoa(brain)
+                    and not int(sess.get("archived") or 0)
                     and str(sess.get("project_id") or "") == pid):
                 if not self._day(sid, sess):
                     return sid
