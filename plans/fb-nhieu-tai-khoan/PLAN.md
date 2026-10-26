@@ -2,7 +2,7 @@
 
 Thiết kế đã chọn: **phương án A "Bảng gộp theo Trang"** trên canvas "MinMin Facebook nhiều tài khoản"
 (chủ repo chốt 2026-10-26), cộng màn Soi quyền, thẻ duyệt bật/tắt camp trong chat và trên Telegram.
-Branch: `claude/fb-nhieu-tai-khoan-26.10.252` - PR #264.
+Branch: `claude/fb-nhieu-tai-khoan-26.10.252` - PR #264, phát hành bản 26.10.255 (252-254 bị bản khác lấy trước).
 
 ## Vì sao
 Chủ nối nhiều tài khoản Facebook (app tự tạo, Graph API). Trang chủ cầm quyền cá nhân (quản trị,
@@ -114,3 +114,7 @@ Kho đề xuất (JSON trong STATE_DIR), hết hạn 30 phút. Chèn được: `
 - 02 ✅ `meta-pages-graph`: lật trang theo `after`; ID không có trong danh sách thì hỏi thẳng từng tài khoản, dùng tài khoản nhận được token Trang; không ai được giao thì trỏ sang Soi quyền. 8 kiểm tra mới, test cũ xanh.
 - 03 ✅ `server/meta_ads_duyet.py` + `meta_ads_tim` / `meta_ads_de_xuat_trang_thai`: đề xuất không đổi gì; chọn tài khoản Facebook có quyền ghi với TKQC; khoá theo id nên bấm Duyệt hai lần cùng lúc vẫn chạy một lần; đọc lại trạng thái; lỗi quyền gợi ý Soi quyền; hết hạn 30 phút; hoàn tác 30 phút; chính sách "tiền" = chặn thì không chạy; ghi sổ hành động; nút Telegram. Mã đối tượng chỉ nhận chữ số (chặn chèn đường dẫn). 32 kiểm tra.
 - 03b ✅ route ở đuôi main.py qua `routes/meta_fb.py`, nhánh `fa:` của `_tg_callback` (giữ chữ tin gốc, nối kết quả, gỡ nút), gửi Telegram chỉ tới chat trong danh sách cho phép. Bảng route chụp lại.
+- 04 ✅ giao diện phương án A + Soi quyền + thẻ duyệt (lane 2), 122 kiểm tra JS.
+- 05 ✅ gắn vào trang Kết nối, chạy MinMin thật với Facebook giả, chụp 15 ảnh sáng/tối/điện thoại. Sửa theo ảnh: "BM BM", Trang chỉ thấy trong BM ghi "Chưa có vai trò".
+- Soát độc lập (agent riêng): sửa 3 lỗ nặng (meta_ads_get nhận method=post; đề xuất sửa trong file; chính sách fail-open) + 6 lỗ vừa/nhẹ. Còn mở: não CLI mức Toàn quyền có shell vẫn tự gọi Facebook được (có từ trước); nút Telegram trong nhóm xét theo chat, chưa xét người bấm; quyền ads_management do gói kết nối ở kho ngoài quyết định.
+- GATE ✅ chủ duyệt ảnh 2026-10-26. 719/719 test xanh.
