@@ -41,7 +41,7 @@ EXPECTED = {
 NORMALIZED = [
     "style.css", "console.css", "noi-mem.css", "minmin-galaxy.css", "minmin-workspace.css",
     "file-shelf.css", "cua-chinh.css", "conversation-ops.css", "office3d.css", "app-theme.css",
-    "tong-quan.css", "doi-ai.css",
+    "tong-quan.css", "doi-ai.css", "fb-tai-san.css", "duyet-ads.css",
 ]
 
 MAX_LIST = 15
