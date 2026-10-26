@@ -137,11 +137,44 @@ def _fmt(d):
 
 
 async def _pages(user_token):
-    """Danh sách Trang user quản lý, mỗi Trang kèm access_token RIÊNG. Trả (list, err)."""
-    d = await _get("me/accounts", {"fields": "id,name,category,access_token,tasks", "limit": 200}, user_token)
-    if isinstance(d, dict) and d.get("error"):
-        return None, _fmt(d)
-    return (d or {}).get("data") or [], None
+    """Danh sách Trang user quản lý, mỗi Trang kèm access_token RIÊNG. Trả (list, err).
+
+    26.10.252: lật trang theo con trỏ `after`. Trước đây chỉ lấy 200 Trang đầu rồi dừng im lặng."""
+    out, after = [], ""
+    for _ in range(25):
+        params = {"fields": "id,name,category,access_token,tasks", "limit": 200}
+        if after:
+            params["after"] = after
+        d = await _get("me/accounts", params, user_token)
+        if isinstance(d, dict) and d.get("error"):
+            if out:
+                break                 # trang sau lỗi: giữ phần đã có còn hơn mất hết
+            return None, _fmt(d)
+        out += (d or {}).get("data") or []
+        pg = (d or {}).get("paging") or {}
+        after = ((pg.get("cursors") or {}).get("after") or "") if pg.get("next") else ""
+        if not after:
+            break
+    return out, None
+
+
+async def _trang_theo_id(pid, tai_khoan=""):
+    """Trang KHÔNG có trong me/accounts nhưng chủ đưa thẳng ID: hỏi Facebook từng tài khoản đã nối
+    (mặc định trước). Tài khoản nào nhận được access_token của Trang thì dùng tài khoản đó.
+    Trả (page_dict|None, ghi_chú_lỗi)."""
+    accts, err = await _acct_tokens(tai_khoan)
+    if err or not accts:
+        return None, err or ""
+    loi = ""
+    for label, utok in accts:
+        d = await _get(str(pid), {"fields": "id,name,category,access_token,tasks"}, utok)
+        if isinstance(d, dict) and d.get("access_token"):
+            return {"id": d.get("id") or pid, "name": d.get("name"), "category": d.get("category"),
+                    "access_token": d.get("access_token"), "tasks": d.get("tasks"), "dung_tai_khoan": label,
+                    "owners": [label] if label else []}, ""
+        if isinstance(d, dict) and d.get("error"):
+            loi = (d["error"] or {}).get("message", "") if isinstance(d["error"], dict) else str(d["error"])
+    return None, loi
 
 
 # id Trang -> nhãn tài khoản Facebook đã được dùng cho lần thao tác gần nhất (để báo lại cho người dùng)
@@ -200,7 +233,7 @@ async def _resolve_page(args, user_token=None):
     pages, _loi, err = await _all_pages(args.get("tai_khoan"))
     if err:
         return None, None, None, err
-    if not pages:
+    if not pages and not str(args.get("page_id") or args.get("page") or "").strip().isdigit():
         return None, None, None, ("ERROR: Không thấy Trang nào bạn quản lý. Kiểm tra: bạn là Admin của Trang, "
                                   "và khi đăng nhập Facebook đã TICK chọn Trang đó cho app.")
 
@@ -221,6 +254,14 @@ async def _resolve_page(args, user_token=None):
             return None, None, None, ("ERROR: '" + ref + "' khớp nhiều Trang: " +
                                       ", ".join(f"{p.get('name')} ({p.get('id')})" for p in hit) +
                                       ". Chỉ rõ page_id hoặc tên đầy đủ.")
+        if ref.isdigit():
+            # 26.10.252: Trang chủ cầm mà danh sách không có - thử lấy thẳng theo ID.
+            p, loi = await _trang_theo_id(ref, args.get("tai_khoan"))
+            if p:
+                return _chon(p)
+            return None, None, None, (f"ERROR: Facebook chưa giao Trang {ref} cho tài khoản nào đang nối"
+                                      + (f" ({loi})" if loi else "") + ". Mở trang Kết nối > Facebook > Soi quyền "
+                                      "để xem lý do, thường là chưa tick Trang này lúc đăng nhập.")
         return None, None, None, f"ERROR: Không khớp Trang '{ref}'. Trang bạn có: {avail}"
     if len(pages) == 1:
         return _chon(pages[0])

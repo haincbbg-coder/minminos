@@ -1,13 +1,18 @@
-"""Plugin bundled: đọc số liệu Meta Ads (Facebook/Instagram) qua Graph API - CHỈ ĐỌC.
+"""Plugin bundled: Meta Ads (Facebook/Instagram) qua Graph API.
 
 Không đi qua MCP beta bị khoá của Meta (mcp.facebook.com/ads); gọi THẲNG graph.facebook.com
 Marketing API bằng user access token của kết nối "meta-ads-graph" (connector BYO app - user tự
 tạo Facebook App, OAuth do oauth_mcp lo, token tự gia hạn ~60 ngày). Đây là cách Composio/byadsco
-làm. Mọi tool đều readonly (chỉ GET) - không tạo/sửa chiến dịch, không tiêu tiền.
+làm. Các tool đọc chỉ GET.
+
+26.10.252: thêm `meta_ads_tim` (đọc: tìm chiến dịch/nhóm/quảng cáo theo tên trên MỌI tài khoản) và
+`meta_ads_de_xuat_trang_thai` (tạo ĐỀ XUẤT bật/tắt chờ chủ duyệt, KHÔNG đổi gì). Chỉ nút Duyệt của
+chủ (dashboard hoặc Telegram, server/meta_ads_duyet.py) mới đổi trạng thái thật trên Facebook.
 """
 from __future__ import annotations
 
 import json
+import re
 
 GRAPH = "https://graph.facebook.com/v26.0"
 CONNECTOR_ID = "meta-ads-graph"
@@ -91,7 +96,7 @@ async def _get(path, params, token):
         except Exception:
             return {"error": {"message": f"HTTP {r.status_code}: {r.text[:200]}"}}
     except Exception as e:
-        return {"error": {"message": f"{type(e).__name__}: {e}"}}
+        return {"error": {"message": re.sub(r"access_token=[^&\s'\"]+", "access_token=***", f"{type(e).__name__}: {e}")}}
 
 
 def _fmt(d):
@@ -230,11 +235,126 @@ async def _raw_get(args, ctx):
             params = {}
     if not isinstance(params, dict):
         params = {}
+    # 26.10.252 (soát độc lập): Graph nhận `method=post` gửi kèm GET, nên một "lệnh đọc" thô có thể
+    # bật camp lách qua bước duyệt. Chỉ cho đường dẫn sạch và đúng các tham số ĐỌC dưới đây.
+    if not re.fullmatch(r"[A-Za-z0-9_./-]{1,200}", path) or ".." in path:
+        return "ERROR: 'path' chỉ được gồm chữ, số, '_', '.', '-', '/' (không kèm ?, &, #)."
+    la = sorted(k for k in params if str(k) not in _THAM_SO_DOC)
+    if la:
+        return ("ERROR: meta_ads_get chỉ để ĐỌC; không nhận tham số " + ", ".join(map(str, la)) +
+                ". Muốn bật/tắt dùng meta_ads_de_xuat_trang_thai (chờ chủ duyệt).")
     accts, aerr = await _acct_tokens(args.get("tai_khoan"))
     if aerr:
         return aerr
-    d = await _get(path, params, accts[0][1] if accts else token)
+    d = await _get(path, {str(k): v for k, v in params.items()}, accts[0][1] if accts else token)
     return _fmt(d)
+
+
+_THAM_SO_DOC = {"fields", "limit", "after", "before", "date_preset", "time_range", "time_ranges", "level",
+                "filtering", "breakdowns", "action_breakdowns", "time_increment", "sort", "since", "until",
+                "summary", "effective_status", "action_attribution_windows", "use_account_attribution_setting",
+                "metadata", "locale", "date_format"}
+
+
+# ---------------------------------------------------------------- bật/tắt có duyệt (26.10.252)
+_CANH = {"campaign": "campaigns", "adset": "adsets", "ad": "ads"}
+
+
+def _check_fb():
+    try:
+        import meta_tai_san
+        if meta_tai_san._ket_noi():
+            return None
+    except Exception:
+        pass
+    return _check()
+
+
+async def _tim(args, ctx):
+    """Tìm chiến dịch / nhóm quảng cáo / quảng cáo theo tên trên MỌI tài khoản quảng cáo của MỌI tài khoản
+    Facebook đã nối (lọc ngay ở Facebook bằng filtering CONTAIN, chạy song song, tối đa 8 luồng)."""
+    import asyncio
+    args = args or {}
+    q = str(args.get("q") or "").strip()
+    cap = str(args.get("cap") or "campaign").strip().lower()
+    if cap not in _CANH:
+        return "ERROR: cap phải là campaign, adset hoặc ad."
+    if not q and not args.get("account_id"):
+        return "ERROR: cần q (một phần tên) hoặc account_id."
+    accts, err = await _acct_tokens(args.get("tai_khoan"))
+    if err:
+        return err
+    if not accts:
+        return "ERROR: " + (_check() or "chưa kết nối")
+    muon = str(args.get("account_id") or "").replace("act_", "").strip()
+    viec, thay = [], set()
+    for label, tok in accts:
+        rows, e = await _all_adaccounts(tok, "account_id,name")
+        if e:
+            continue
+        for r in rows or []:
+            aid = str(r.get("account_id"))
+            if aid in thay or (muon and aid != muon):
+                continue
+            thay.add(aid)
+            viec.append((label, tok, aid, r.get("name") or aid))
+    sem = asyncio.Semaphore(8)
+
+    async def mot(label, tok, aid, ten):
+        params = {"fields": "id,name,status,effective_status,daily_budget,lifetime_budget", "limit": 50}
+        if q:
+            params["filtering"] = json.dumps([{"field": "name", "operator": "CONTAIN", "value": q}])
+        async with sem:
+            d = await _get(f"act_{aid}/{_CANH[cap]}", params, tok)
+        if isinstance(d, dict) and d.get("error"):
+            return []
+        out = []
+        for x in (d or {}).get("data") or []:
+            if str(x.get("effective_status") or "") in ("DELETED", "ARCHIVED"):
+                continue
+            out.append({"id": x.get("id"), "ten": x.get("name"), "cap": cap, "trang_thai": x.get("status"),
+                        "hieu_luc": x.get("effective_status"), "ngan_sach_ngay": x.get("daily_budget"),
+                        "tk_id": aid, "tk_ten": ten, "tai_khoan": label})
+        return out
+
+    kq = []
+    for part in await asyncio.gather(*[mot(*v) for v in viec]):
+        kq += part
+    kq.sort(key=lambda x: (x.get("hieu_luc") != "ACTIVE", str(x.get("ten") or "").lower()))
+    return _fmt({"so": len(kq), "data": kq[:40], "da_quet_tkqc": len(viec),
+                 "ghi_chu": "Muốn bật/tắt: gọi meta_ads_de_xuat_trang_thai với các id ở trên." if kq else
+                            "Không thấy. Thử một phần tên ngắn hơn, hoặc cap khác (adset/ad)."})
+
+
+async def _de_xuat(args, ctx):
+    args = args or {}
+    muc = args.get("muc")
+    if isinstance(muc, str):
+        try:
+            muc = json.loads(muc)
+        except Exception:
+            muc = None
+    if not isinstance(muc, list):
+        return "ERROR: muc phải là danh sách [{\"id\": \"<mã>\", \"trang_thai\": \"bat|tat\"}]."
+    try:
+        import meta_ads_duyet
+    except Exception as e:
+        return f"ERROR: không nạp được bộ duyệt: {e}"
+    v = await meta_ads_duyet.tao(muc, chat=str(args.get("chat") or ""), ly_do=str(args.get("ly_do") or ""))
+    if not v.get("ok"):
+        return "ERROR: " + str(v.get("loi") or "không tạo được đề xuất")
+    tom = [{"ten": m["ten"], "tk": m["tk_ten"], "dung_tai_khoan_facebook": m["fb_ten"], "tu": m["tu"], "sang": m["sang"],
+            "khong_doi": m["khong_doi"]} for m in v["muc"]]
+    if v.get("da_gui_telegram"):
+        huong = ("Đã gửi tin có nút Duyệt / Từ chối lên Telegram cho chủ. CHƯA đổi gì trên Facebook. Nói ngắn với chủ "
+                 "là đã gửi đề xuất, bấm Duyệt trên Telegram thì MinMin mới đổi. Không gọi thêm lệnh đổi trạng thái nào.")
+    else:
+        huong = ("CHƯA đổi gì trên Facebook. Chép NGUYÊN dòng THE_DUYET dưới đây vào cuối câu trả lời (dashboard vẽ thẻ "
+                 "có nút Duyệt); nói ngắn với chủ là bấm Duyệt thì MinMin mới đổi. Không gọi thêm lệnh đổi trạng thái nào.")
+    return _fmt({"ok": True, "de_xuat_id": v["id"], "trang_thai": "cho_duyet", "muc": tom, "bo_qua": v.get("bo_qua") or [],
+                 "huong_dan": huong,
+                 "THE_DUYET": "" if v.get("da_gui_telegram") else
+                 f'<!-- JAVIS_CARD: {{"type":"duyet_ads","id":"{v["id"]}"}} -->'})
 
 
 def register(ctx):
@@ -278,4 +398,31 @@ def register(ctx):
             "path": {"type": "string", "description": "Đường dẫn Graph API, vd 'act_123/adsets'"},
             "params": {"type": "object", "description": "Tham số query (vd {\"fields\":\"name,status\"})"}},
             "required": ["path"]},
+    )
+
+    ctx.register_tool(
+        name="meta_ads_tim", min_mode="readonly", check_fn=_check, handler=_tim,
+        description=("Tìm chiến dịch / nhóm quảng cáo / quảng cáo theo một phần TÊN trên MỌI tài khoản quảng cáo của MỌI "
+                     "tài khoản Facebook đã nối. Trả id, trạng thái, tài khoản quảng cáo, tài khoản Facebook. Dùng trước "
+                     "khi đề xuất bật/tắt."),
+        schema={"type": "object", "properties": {
+            "q": {"type": "string", "description": "Một phần tên, vd 'Melya Lady' hoặc mã sản phẩm"},
+            "cap": {"type": "string", "description": "campaign (mặc định) | adset | ad"},
+            "account_id": {"type": "string", "description": "Chỉ tìm trong tài khoản quảng cáo này (act_<id> hoặc <id>)"},
+            "tai_khoan": {"type": "string", "description": "Chỉ dùng tài khoản Facebook này (bỏ trống = tất cả)"}}},
+    )
+    ctx.register_tool(
+        name="meta_ads_de_xuat_trang_thai", min_mode="safe", check_fn=_check_fb, handler=_de_xuat,
+        description=("Bật hoặc tắt chiến dịch / nhóm quảng cáo / quảng cáo Facebook trên bất kỳ tài khoản nào đã nối: tạo "
+                     "ĐỀ XUẤT chờ chủ duyệt, KHÔNG đổi gì ngay. MinMin tự chọn tài khoản Facebook có quyền với từng đối "
+                     "tượng. Chủ bấm Duyệt (thẻ trong chat hoặc nút Telegram) thì mới đổi thật. Lấy id bằng meta_ads_tim. "
+                     "Chat Telegram thì truyền chat = chat_id để gửi nút duyệt lên Telegram."),
+        schema={"type": "object", "properties": {
+            "muc": {"type": "array", "description": "Danh sách đối tượng cần đổi",
+                    "items": {"type": "object", "properties": {
+                        "id": {"type": "string", "description": "Mã chiến dịch / nhóm / quảng cáo"},
+                        "trang_thai": {"type": "string", "description": "bat | tat"}}, "required": ["id", "trang_thai"]}},
+            "chat": {"type": "string", "description": "chat_id Telegram của người đang chat (bỏ trống khi chat trên dashboard)"},
+            "ly_do": {"type": "string", "description": "Lý do ngắn, hiện trong sổ"}},
+            "required": ["muc"]},
     )

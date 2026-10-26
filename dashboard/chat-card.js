@@ -6,6 +6,8 @@
      chart    {"title", "kind": "bar"|"line", "labels": [..], "series": [{"name", "data": [numbers]}]}
      stats    {"title", "items": [{"label", "value", "delta"}]}        a row of number tiles
      buttons  {"title", "buttons": [{"label", "reply"}]}               each sends `reply` (or its label) as your message
+     duyet_ads {"id": "<[a-z0-9]{8,32}>"}                               placeholder only; duyet-ads.js loads the
+                                                                       proposal from the SERVER and draws it (fb-nhieu-tai-khoan)
    The blocks are drawn by markdownToHtml (chat-render.js), so live answers, history and pushed messages
    look the same. Telegram and other text channels get a plain-text version (server/channel_context.py).
 
@@ -38,6 +40,11 @@
     var o;
     try { o = JSON.parse(json); } catch (e) { return null; }
     if (!o || typeof o !== "object") return null;
+    if (o.type === "duyet_ads") {
+      // Chỉ nhận id: nội dung thẻ duyệt lấy từ máy chủ, không bao giờ từ chữ model.
+      var id = typeof o.id === "string" ? o.id : "";
+      return /^[a-z0-9]{8,32}$/.test(id) ? { type: "duyet_ads", id: id } : null;
+    }
     var title = txt(o.title, 100);
     if (o.type === "chart") {
       var labels = (Array.isArray(o.labels) ? o.labels : []).slice(0, MAX_POINTS).map(function (l) { return txt(l, 24); });
@@ -101,6 +108,10 @@
 
   function html(card) {
     if (!card) return "";
+    if (card.type === "duyet_ads") {
+      var cho = (typeof window !== "undefined" && window.t) ? window.t("dads.dang_tai") : "Đang tải đề xuất…";
+      return '<div class="jv-card dads" data-duyet-ads="' + esc(card.id) + '">' + esc(cho) + "</div>";
+    }
     var head = card.title ? '<div class="jv-card-title" style="font-weight:600;margin-bottom:6px">' + esc(card.title) + "</div>" : "";
     var inner = "";
     if (card.type === "chart") {

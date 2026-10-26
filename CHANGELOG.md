@@ -4,6 +4,14 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.255] - 2026-10-26
+### Thêm mới
+- **Facebook nhiều tài khoản** ở trang Kết nối: một bảng gộp mọi Trang và tài khoản quảng cáo của tất cả tài khoản Facebook đã nối, ghi rõ ai cầm, vai trò gì, MinMin sẽ đăng bằng ai.
+- **Soi quyền**: xem Facebook đã giao cho MinMin những gì, cái nào chưa giao và vì sao, kèm nút sửa. Ô **Hỏi Facebook** nhận tên, ID hoặc link Trang và trả lời bằng lời thường.
+- **Bật/tắt camp có duyệt**: nhờ MinMin tắt hay bật chiến dịch trên bất kỳ tài khoản nào, MinMin tự chọn đúng tài khoản Facebook và gửi thẻ duyệt (trong chat hoặc Telegram). Chưa bấm Duyệt thì không đổi gì; có Hoàn tác 30 phút.
+### Cải thiện
+- Danh sách Trang không còn dừng ở 200 Trang; đưa ID một Trang chưa có trong danh sách thì MinMin tự thử trên từng tài khoản.
+
 ## [26.10.254] - 2026-10-26
 ### Thêm mới
 - **Đội Ads lên camp Facebook tới bước bật**: qua MCP Meta Ads chính chủ, đội dựng camp ở trạng thái TẮT (tên HALIMI, nữ 23-54, 23:59, 300.000đ/ngày), dừng ở GATE. Bấm Duyệt là bật đúng camp đó, rồi đọc lại trạng thái thật từ Meta.

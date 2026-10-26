@@ -22920,6 +22920,9 @@ async def _tg_callback(data, chat=None):
     if data.startswith("gv:"):
         # Đội AI - GATE: Duyệt (d) / Từ chối (t) / Xem chi tiết (x) một job đang chờ duyệt
         return await _gate_callback(data, chat_key)
+    if data.startswith("fa:"):
+        # Bật/tắt camp Facebook có duyệt (26.10.252): Duyệt (d) / Từ chối (t) một đề xuất
+        return await _meta_ads_duyet_callback(data, chat_key)
     if data.startswith("dy:"):
         # nút Đồng ý/Từ chối của cổng hỏi trước (26.10.165)
         try:
@@ -24597,6 +24600,43 @@ tong_quan_mod.register(app, tong_quan_mod.TongQuanDeps(
 
 # Bảng Hiệu suất Sale của Văn phòng 3D (26.10.245): GET /office/hieu-suat, số thẳng từ Thống kê Pancake.
 hud_routes.register_hieu_suat(app, _hud_deps)
+
+
+# Facebook nhiều tài khoản (26.10.252): soi quyền Trang / tài khoản quảng cáo theo từng tài khoản Facebook,
+# và bật/tắt camp qua đề xuất chủ bấm Duyệt (server/meta_tai_san.py, server/meta_ads_duyet.py,
+# routes/meta_fb.py). Đăng ký ở đuôi cho bảng route.
+import meta_ads_duyet   # noqa: E402
+import routes.meta_fb as meta_fb_routes   # noqa: E402
+
+
+async def _meta_ads_gui_tg(chat, text, reply_markup) -> bool:
+    """Gửi tin có nút Duyệt cho đề xuất bật/tắt camp. Chỉ gửi tới chat nằm trong danh sách cho phép."""
+    if not (_TG_BOT and str(chat) in tg_parse_ids(cfgmod.read_settings().get("telegram", {}).get("chat_id"))):
+        return False
+    try:
+        await _TG_BOT.send_text(str(chat), text, reply_markup=reply_markup)
+        return True
+    except Exception as e:
+        print(f"[meta-ads duyệt] gửi Telegram: {type(e).__name__}: {e}", file=sys.stderr)
+        return False
+
+
+async def _meta_ads_duyet_callback(data: str, chat_key: str):
+    """Nhánh "fa:<id>:<d|t>" của `_tg_callback`. Giữ chữ tin gốc, nối thêm kết quả, gỡ nút."""
+    try:
+        r = await meta_ads_duyet.tg_callback(data, ai=f"telegram:{chat_key}")
+    except Exception as e:
+        return {"alert": f"Không xử lý được: {e}"[:190]}
+    if r is None:
+        return {"alert": "Dữ liệu nút lỗi"}
+    if r.get("alert"):
+        return {"alert": str(r.get("text") or "lỗi")[:190]}
+    chu = str(r.get("text") or "Đã xử lý.")
+    return {"text": chu, "them_vao_goc": chu, "alert": chu.split("\n")[0][:190]}
+
+
+meta_ads_duyet.dat_gui_telegram(_meta_ads_gui_tg)
+meta_fb_routes.register(app)
 
 if __name__ == "__main__":
     import uvicorn

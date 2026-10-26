@@ -6947,6 +6947,34 @@
       // Hai khu kết nối sẵn của CLI: GẬP mặc định (dân thường không cần thấy) + LAZY:
       // chỉ gọi /mcp/ambient (chậm - phải health check) khi người dùng thật sự mở ra.
       + '</div>';
+    // Facebook nhiều tài khoản (26.10.252): khối gộp Trang / tài khoản quảng cáo ở đầu tab Đã nối,
+    // chỉ hiện khi có kết nối Facebook. Dữ liệu từ /meta/tai-san (dashboard/fb-tai-san.js).
+    if (window.FbTaiSan && conns.some(c => c.connector_id === "facebook-pages" || c.connector_id === "meta-ads-graph")) {
+      const tabFb = document.getElementById("mcpTabDaNoi");
+      if (tabFb) {
+        const box = document.createElement("div");
+        box.id = "fbTaiSan";
+        box.className = "cview-section";
+        tabFb.insertBefore(box, tabFb.firstChild);
+        box.addEventListener("fbts:them", () => {
+          const nut = el.querySelector('[data-addacc="facebook-pages"]') || el.querySelector('[data-addacc="meta-ads-graph"]');
+          if (nut) nut.click();
+        });
+        box.addEventListener("fbts:dang-nhap-lai", (e) => {
+          const d = (e && e.detail) || {};
+          const ds = (d.ket_noi || []).map(k => conns.find(c => c.id === k.id)).filter(Boolean);
+          // Thiếu quyền quảng cáo thì đăng nhập lại kết nối Meta Ads; còn lại ưu tiên kết nối Trang.
+          const muonAds = /quang_cao|ads|tkqc|cap_quyen|thieu_quyen/i.test(String(d.ly_do || ""));
+          ds.sort((a, b) => ((a.connector_id === "meta-ads-graph") === muonAds ? -1 : 1) - ((b.connector_id === "meta-ads-graph") === muonAds ? -1 : 1));
+          if (ds[0]) reconnectAccount(el, ds[0], byId[ds[0].connector_id]);
+        });
+        box.addEventListener("fbts:huong-dan", () => {
+          const con = byId["meta-ads-graph"] || byId["facebook-pages"] || {};
+          window.open(con.guide_url || "https://developers.facebook.com/apps", "_blank", "noopener");
+        });
+        window.FbTaiSan.mount(box);
+      }
+    }
     // Ba tab. Hai tab đầu chỉ đổi khối hiển thị trong trang; tab thứ ba ĐIỀU HƯỚNG sang kho
     // cài đặt - nơi có cả connector không nằm trong bản app.
     const doiTab = (v) => {

@@ -135,8 +135,11 @@ class _Ctx:
 ctx = _Ctx()
 plug.register(ctx)
 names = {t["name"] for t in ctx.tools}
-check("plugin: đủ 4 tool", names == {"meta_ads_accounts", "meta_ads_insights", "meta_ads_campaigns", "meta_ads_get"})
-check("plugin: mọi tool readonly", all(t["min_mode"] == "readonly" for t in ctx.tools))
+check("plugin: đủ 6 tool (4 đọc + tìm + đề xuất bật/tắt, 26.10.252)",
+      names == {"meta_ads_accounts", "meta_ads_insights", "meta_ads_campaigns", "meta_ads_get",
+                "meta_ads_tim", "meta_ads_de_xuat_trang_thai"})
+check("plugin: mọi tool đọc là readonly; chỉ đề xuất bật/tắt là safe (không đổi gì, chờ chủ duyệt)",
+      all(t["min_mode"] == ("safe" if t["name"] == "meta_ads_de_xuat_trang_thai" else "readonly") for t in ctx.tools))
 
 # chưa kết nối → _check chặn + handler trả ERROR
 plug._connected_id = lambda: None
