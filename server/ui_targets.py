@@ -21,7 +21,7 @@ PAGES = (
     "tongquan", "home", "chat", "settings", "workspace", "skills", "chatbots", "conversations", "files",
     "terminal", "coding", "selfimprove", "learn", "kanban", "models", "channels", "mcp", "plugins",
     "packs", "logs", "account", "usage", "pet", "share", "matnha", "ketnoingoai",
-    "biendong", "ketnoi", "khach", "congviec",
+    "biendong", "ketnoi", "khach", "congviec", "doingu",
 )
 
 # Bí danh người dùng hay nói, ánh xạ về id trang. Thường hoá không dấu trước khi tra, nên viết
