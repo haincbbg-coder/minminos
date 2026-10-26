@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.248] - 2026-10-26
+### Thêm mới
+- **Gợi ý mã hàng**: thêm 4 nút gõ nhanh cố định trên thanh ghim: Địa chỉ `/dc`, Cao cân `/cc`, Inbox `/ib`, Lên đơn `/ld`. Bấm là điền lệnh vào ô trả lời, Enter hai lần là gửi.
+### Cải thiện
+- Thanh nâng cao thêm một chút để không chèn vào danh sách thẻ.
+
 ## [26.10.247] - 2026-10-26
 ### Cải thiện
 - **Văn phòng 3D**: bảng số liệu của cả 3 phòng (Phòng Sale, Văn phòng, Phòng Marketing) đưa lên lơ lửng phía trên tường sau, to hơn và nhìn rõ từ xa.
