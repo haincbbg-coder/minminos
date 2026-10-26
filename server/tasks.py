@@ -1207,6 +1207,7 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
         chat_id = str(task.get("chat_id") or "")
         self._ro_bao.setdefault(chat_id, []).append({
             "title": str(task.get("title") or ""),
+            "id": str(task.get("id") or ""),
             "reason": str(task.get("block_reason") or task.get("block_kind") or "").strip(),
         })
         cu = self._hen_bao.get(chat_id)
@@ -1241,8 +1242,13 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             dong.append("Xem chi tiết ở trang Việc.")
             parts = dong
         try:
+            # `viec` để bản báo gộp cũng thành thẻ việc và đi về hội thoại "Bảng Việc" của mục
+            # Việc Hàng Ngày như mọi tin khác của Bảng việc (26.10.259), không lọt vào khung đang chat.
+            ten = items[0]["title"] if len(items) == 1 else f"{len(items)} việc đang chờ bạn"
             await self.deps.report(
-                chat_id, channel_context.strip_control_blocks("\n\n".join(parts)), quiet=False)
+                chat_id, channel_context.strip_control_blocks("\n\n".join(parts)), quiet=False,
+                viec={"kind": "task", "status": "blocked", "title": str(ten)[:160],
+                      "id": str(items[0].get("id") or "") if len(items) == 1 else ""})
         except Exception as e:
             print(f"[kanban] báo gộp việc kẹt lỗi: {type(e).__name__}: {e}", file=sys.stderr)
 

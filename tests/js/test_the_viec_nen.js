@@ -122,5 +122,18 @@ m = msgGia("x");
 V.ve(m, { kind: "loop", status: "timeout", title: "a" });
 check("loại không có nhãn riêng thì rơi về nhãn chung", m._bubble._html.indexOf("Việc nền quá giờ") !== -1);
 
+// ---- 7. Chữ dự phòng khi từ điển chưa nạp (26.10.259) ----
+for (const k of Object.keys(VI).filter(k => k.startsWith("viec."))) check("dự phòng khớp vi.json: " + k, V.DU_PHONG[k] === VI[k]);
+{
+  const cu = global.window && global.window.t;
+  global.window = global.window || {};
+  global.window.t = (k) => k;   // từ điển rỗng: t() trả lại chính khoá
+  check("từ điển rỗng vẫn ra 'Vòng lặp vừa chạy'", V.tw("viec.loop_done") === "Vòng lặp vừa chạy");
+  check("khoá không có trong dự phòng thì trả nguyên khoá", V.tw("viec.task_done") === "viec.task_done");
+  global.window.t = (k) => "EN:" + k;
+  check("từ điển đã nạp thì dùng từ điển", V.tw("viec.st_done") === "EN:viec.st_done");
+  global.window.t = cu;
+}
+
 if (fails.length) { console.log("\n" + fails.length + " FAIL"); process.exit(1); }
 console.log("\nTất cả ok");

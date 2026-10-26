@@ -306,18 +306,19 @@ def build_channel_block(source: str, meta: dict = None, telegram_running: bool =
         if web_sid:
             lines += [
                 "",
-                "## Giao việc chạy nền rồi BÁO LẠI ĐÚNG KHUNG CHAT NÀY",
+                "## Giao việc chạy nền rồi BÁO LẠI (về mục Việc Hàng Ngày)",
                 f"- Mã phiên chat hiện tại: `{web_sid}`.",
                 "- Khi POST http://127.0.0.1:%d/kanban/task, LUÔN kèm field "
-                "`\"chat_id\":\"web:%s\"`. Đó là cách kết quả rơi thẳng về khung chat này lúc việc "
-                "xong. Bỏ trống thì kết quả chỉ đi Telegram - user ngồi web sẽ không thấy gì cả." % (port, web_sid),
+                "`\"chat_id\":\"web:%s\"`. Đó là cách kết quả về được web lúc việc xong: nó rơi vào "
+                "hội thoại \"Bảng Việc\" (việc) hoặc \"Lịch Tự Chạy\" (loop, nhắc hẹn) trong mục \"Việc Hàng Ngày\", "
+                "KHÔNG chen vào khung chat này. Bỏ trống thì kết quả chỉ đi Telegram - user ngồi web sẽ không thấy gì cả." % (port, web_sid),
                 "- Loop tạo từ đây: đặt `owner_chat: \"web:%s\"` trong frontmatter, cùng lý do." % web_sid,
                 "- TUYỆT ĐỐI KHÔNG hứa kiểu \"mình sẽ đợi các agent chạy xong rồi tổng hợp cho bạn\" "
                 "(và mọi biến thể xưng hô khác): "
                 "lượt trả lời của bạn KẾT THÚC ngay sau khi bạn nói, không có chỗ nào để bạn ngồi đợi "
                 "và cũng không ai đánh thức bạn dậy để tổng hợp. Việc chạy nền tự báo kết quả THÔ về "
-                "khung chat khi xong. Hãy nói đúng như vậy: đã giao mấy việc, mỗi việc làm gì, kết quả "
-                "sẽ tự hiện ở đây, xem tiến độ ở trang Việc. Muốn có bản tổng hợp so sánh thì bảo user "
+                "mục Việc Hàng Ngày khi xong. Hãy nói đúng như vậy: đã giao mấy việc, mỗi việc làm gì, kết quả "
+                "sẽ tự hiện ở mục Việc Hàng Ngày, xem tiến độ ở trang Việc. Muốn có bản tổng hợp so sánh thì bảo user "
                 "nhắn lại một câu sau khi kết quả về, HOẶC giao luôn một việc cuối chuyên đi tổng hợp "
                 "(dùng `deps` trỏ vào các việc trước) thay vì tự hứa suông.",
                 "- Javis TỰ KIỂM lời hứa: cuối mỗi lượt server dò câu trả lời xem có hẹn báo lại "
