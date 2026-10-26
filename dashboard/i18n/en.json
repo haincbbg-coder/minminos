@@ -4278,5 +4278,7 @@
   "dads.hoan_tac": "Undo",
   "dads.dang_gui": "Sending...",
   "dads.loi_gui": "Could not send: {loi}",
-  "dads.sua_mau": "Revise campaign change proposal #{id}: "
+  "dads.sua_mau": "Revise campaign change proposal #{id}: ",
+  "cc.ghim": "Pin menu",
+  "cc.bo_ghim": "Unpin menu"
 }
