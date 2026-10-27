@@ -189,6 +189,18 @@ check("graph: câu TRÍCH trong bài không bị coi là hết lượt",
 _kq3, _ = _chay_buoc([[{"type": "final", "content": "BẢN THẢO"}]])
 check("graph: lần chạy sạch không đổi gì", not _kq3.get("error") and _kq3.get("output") == "BẢN THẢO")
 
+# Fail closed (26.10.307, học Javis #807): agent kiểm chứng LỖI thì không chứng nhận được, kể cả
+# khi nó đã kịp in một câu "đạt". Trước đây nhánh lỗi tự ghi {"pass": true} ("tạm chấp nhận").
+_LOI_SAU_DAT = [{"type": "final", "content": '{"pass": true, "reason": "ok"}'},
+                {"type": "error", "content": "engine chết"}]
+_kq4, _khung4 = _chay_buoc([[{"type": "final", "content": "BẢN THẢO"}], _LOI_SAU_DAT,
+                            [{"type": "final", "content": "BẢN THẢO 2"}], _LOI_SAU_DAT], verify="nguoi-sua")
+_kd4 = [k for k in _khung4 if k.get("type") == "step_verify_result"]
+check("kiểm chứng lỗi thì KHÔNG đạt, dù đã in pass",
+      _kd4 and all(k["passed"] is False for k in _kd4) and _kq4.get("verified") is False)
+check("lý do nói rõ agent kiểm chứng lỗi", _kd4 and "kiểm chứng lỗi" in _kd4[0]["reason"])
+check("cả hai đường đều bỏ câu 'tạm chấp nhận'", "verify lỗi, tạm chấp nhận" not in (SERVER / "main.py").read_text(encoding="utf-8"))
+
 
 # ============================================================
 # 3. Dây nối: hàng rào phải được GỌI, và nút Chạy phải gửi cờ
