@@ -1,8 +1,12 @@
 # Nhật ký cập nhật
 
-Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Tuỳ chỉnh → Cập nhật**.
+Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Cài đặt → Cập nhật**.
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
+
+## [26.10.264] - 2026-10-27
+### Cải thiện
+- **Menu gọn hơn, đợt 4**: trang "Tuỳ chỉnh" đổi tên thành "Cài đặt", nhóm menu "Thiết lập" cũng đổi thành "Cài đặt".
 
 ## [26.10.263] - 2026-10-26
 ### Cải thiện
