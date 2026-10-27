@@ -217,6 +217,26 @@
   // Quét vẫn chạy, chỉ là không đứng chắn trước mặt người dùng nữa: nó đi đường `/usage/refresh`
   // ở nền, xong thì vẽ lại. Server chỉ vẽ lại khi lượt quét ĐỘNG tới thứ gì (`_co_thay_doi`),
   // nên mở trang lúc không có log mới thì không có cú nháy nào.
+  // 24 giờ qua theo từng giờ (26.10.271). Biểu đồ theo ngày dồn cả hôm nay vào một cột, nên không
+  // trả lời được "sáng nay cái gì đốt token". Cùng kiểu cột chồng theo provider với biểu đồ ngày;
+  // trục chỉ ghi mỗi 3 giờ cho khỏi chật trên điện thoại. Không giờ nào có token thì không vẽ.
+  function veGio24(g) {
+    g = g || [];
+    var maxH = Math.max.apply(null, g.map(function (h) { return h.total || 0; }).concat([0]));
+    if (!maxH) return "";
+    var cols = g.map(function (h) {
+      function seg(v, col) { return v > 0 ? '<div class="tk-seg2" style="height:' + (v / maxH * 100) + "%;background:" + col + '"></div>' : ""; }
+      var tip = window.t("usage.chart.tip_gio", { gio: (h.gio < 10 ? "0" : "") + h.gio + ":00", tok: fTok(h.total), count: (h.turns || 0) });
+      return '<div class="tk-col" title="' + esc(tip) + '">'
+        + seg(h.claude, PROV_COLOR.claude) + seg(h.codex, PROV_COLOR.codex) + seg(h.api, PROV_COLOR.api) + "</div>";
+    }).join("");
+    var xs = g.map(function (h, i) {
+      return '<div class="tk-x">' + (i % 3 === 0 ? esc(String(h.gio)) + "h" : "") + "</div>";
+    }).join("");
+    return '<div class="tk-sec">' + window.t("usage.sec.gio_24") + '</div><div class="tk-chart">' + cols
+      + '</div><div class="tk-xrow">' + xs + "</div>";
+  }
+
   function render(el) {
     injectCss();
     state.el = el;
@@ -788,6 +808,7 @@
       + "<span>" + ic("zap", { cls: "ic-sm ic-accent" }) + " " + window.t("usage.legend.doi_muc") + " · "
       + ic("brain", { cls: "ic-sm ic-accent" }) + " " + window.t("usage.legend.doi_nao") + "</span></div>";
     var chart = ts.length ? ('<div class="tk-sec">' + window.t("usage.sec.theo_ngay") + '</div><div class="tk-chart">' + cols + '</div><div class="tk-xrow">' + xs + '</div><div class="tk-mrow">' + ms + "</div>" + legend) : "";
+    chart += veGio24(t.gio_24);
 
     var grid = '<div class="tk-grid">'
       + '<div><div class="tk-sec">' + window.t("usage.sec.nguon_tieu") + "</div>"

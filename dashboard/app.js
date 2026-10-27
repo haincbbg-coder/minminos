@@ -3851,11 +3851,12 @@ function _renderCtxLine(msgEl, data) {
               + (data.model ? " · " + _shortModel(data.model) : ""));
   }
   if (data.ctx_path) phan.push(CTX_PATH_LABEL[data.ctx_path] ? window.t(CTX_PATH_LABEL[data.ctx_path]) : data.ctx_path);
-  const cache = Number(data.ctx_cache) || 0;
+  const cache = Math.min(Number(data.ctx_cache) || 0, tok);
   if (tok) {
-    // Phần đọc lại từ cache (Anthropic tính 10% giá): 311k token mà 85% là cache thì tiền thật
-    // khác hẳn. Chỉ nói khi đếm được; 0 thì im, vì "0% cache" trên engine không báo là nói sai.
-    phan.push(_fmtTok(tok) + " token" + (cache > 0 ? " (" + Math.round(cache * 100 / tok) + "% cache)" : ""));
+    // 26.10.271: dòng chỉ đếm token MỚI của lượt. Phần đọc lại từ cache (ngữ cảnh cũ phát lại, giá
+    // rẻ hơn nhiều) cộng chung vào thì một câu chào trên Claude Code hiện "60k token" và người dùng
+    // tưởng mình vừa tiêu 60k token mới. Tổng và phần cache nằm ở chú thích khi rê chuột.
+    phan.push(_fmtTok(tok - cache) + " token");
   }
   el.textContent = phan.join(" · ");
   const chuThich = [];
@@ -3866,7 +3867,7 @@ function _renderCtxLine(msgEl, data) {
     chuThich.push(cu ? window.t("app.ctx_hint_full")
                      : window.t("app.ctx_hint_saving"));
   }
-  if (cache > 0) chuThich.push(window.t("app.ctx_hint_cache", { cache: _fmtTok(cache) }));
+  if (cache > 0) chuThich.push(window.t("app.ctx_hint_cache", { cache: _fmtTok(cache), tong: _fmtTok(tok) }));
   el.title = chuThich.join("\n");
   msgEl.appendChild(el);
 }
