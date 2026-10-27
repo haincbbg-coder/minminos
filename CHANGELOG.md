@@ -1,5 +1,13 @@
 # MinMin OS
 
+## [26.10.305] - 2026-10-30
+### Thêm mới
+- **Tua lại hội thoại**: dưới mỗi câu hỏi của bố có nút Tua lại, bấm là xoá câu đó và mọi thứ sau nó, câu hỏi quay về ô gõ để sửa rồi gửi lại. MinMin cũng quên luôn phần đã tua.
+- **Thanh mục tiêu** trên ô chat: chạy nhiều mục tiêu `/goal` cùng lúc, bấm Dừng thì mục tiêu tạm dừng chứ không mất. Menu "/" gọn, thẳng hàng, lệnh gõ vào được tô màu.
+- **Telegram ghim model theo từng cuộc trò chuyện**: mỗi nhóm hoặc chat riêng giữ model đã ghim của nó.
+### Bảo mật
+- **Vá Node.js tháng 10/2026**: bản cài mới lấy Node đã vá, và MinMin tự báo trong chuông Tin tức nếu máy đang chạy Node cũ.
+
 ## [26.10.304] - 2026-10-30
 ### Sửa lỗi
 - Tìm kiếm/lọc đích đăng và giữ lựa chọn, phong cách khi chuyển bộ lọc trong chiến dịch AI.
