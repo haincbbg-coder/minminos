@@ -7,6 +7,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 ## [26.10.265] - 2026-10-27
 ### Cải thiện
 - **Landing page soi kỹ hơn trước khi giao**: kỹ năng HTML sang Webcake giờ chạy thêm máy soi thiết kế Impeccable, bắt chữ khó đọc, tiêu đề không nổi và các kiểu trang "AI làm" mà bộ soi cũ bỏ sót.
+
 ## [26.10.264] - 2026-10-27
 ### Cải thiện
 - **Menu gọn hơn, đợt 4**: trang "Tuỳ chỉnh" đổi tên thành "Cài đặt", nhóm menu "Thiết lập" cũng đổi thành "Cài đặt".
