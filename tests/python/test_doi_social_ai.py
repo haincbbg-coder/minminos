@@ -262,6 +262,15 @@ check("social_ke_hoach gửi Telegram, không tự chạy", goi_tro_ly[-1][2] ==
 s = chay(pl._chay_mau({"kich_ban": "fb_binh_luan_nhom_sp", "nick": ["7"], "tham_so": {"san_pham": "1"}}, c))
 check("social_chay_mau: mẫu AI mặc định chạy thử", goi_dot and goi_dot[-1]["tham_so"]["che_do"] == "chay_thu"
       and goi_dot[-1]["nick"] == [7] and "#5" in s, s)
+VIEC = {9: {"id": 9, "nhan_ky_nang": "Đăng bài", "nick_ten": "Mai", "trang_thai": "loi", "thong_diep": "không đăng được",
+            "buoc": ["Mở profile", "Chẩn đoán trang: 1 dấu hiệu lỗi gần nhất", "  HTTP 500: POST https://x/api"]},
+        10: {"id": 10, "nhan_ky_nang": "Đăng bài", "nick_ten": "Mai", "trang_thai": "xong", "thong_diep": "ok",
+             "buoc": ["Mở profile"]}}
+f_ds.lay_viec = lambda i: VIEC.get(i)
+s = pl._viec({"id": 9}, c)
+check("social_viec theo id, việc lỗi -> kèm nhật ký có chẩn đoán", "HTTP 500" in s and "Chẩn đoán trang" in s, s)
+s = pl._viec({"id": 10}, c)
+check("social_viec theo id, việc xong -> không dài dòng nhật ký", "Mở profile" not in s, s)
 n = len(goi_dot)
 s = chay(pl._chay_mau({"kich_ban": "fb_nuoi_nick", "nick": "Mai"}, c))
 check("social_chay_mau: tên khớp nhiều nick -> hỏi lại, không chạy", len(goi_dot) == n and "khớp 2 nick" in s, s)

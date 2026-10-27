@@ -525,6 +525,16 @@ def duong_tep(vid, luu: str) -> Optional[Path]:
     return p if p.is_file() else None
 
 
+def gon_buoc(buoc, toi_da: int = 50) -> list:
+    """Nhật ký quá dài thì giữ đầu và ĐUÔI: từ 26.10.267 Worker ghi chẩn đoán lỗi ở cuối, cắt đuôi là mất nó."""
+    ds = [str(x) for x in (buoc or [])]
+    if len(ds) <= toi_da:
+        return ds
+    dau = 15
+    duoi = toi_da - dau - 1
+    return ds[:dau] + [f"... bỏ bớt {len(ds) - dau - duoi} dòng giữa ..."] + ds[-duoi:]
+
+
 def ghi_ket_qua(vid, may_id: str, ok: bool, thong_diep: str = "", buoc=None, anh: bytes = b"",
                 dem: Optional[dict] = None) -> dict:
     with _khoa, _db() as c:
@@ -548,7 +558,7 @@ def ghi_ket_qua(vid, may_id: str, ok: bool, thong_diep: str = "", buoc=None, anh
         c.execute("UPDATE viec SET trang_thai=?, xong_luc=?, thong_diep=?, buoc=?, co_anh=?, ket_qua=? WHERE id=?",
                   ("bo" if huy else ("xong" if ok else "loi"), _bay_gio(),
                    (("Bạn đã huỷ việc này. " if huy else "") + str(thong_diep or ""))[:1000],
-                   json.dumps(list(buoc or [])[:50], ensure_ascii=False), co_anh,
+                   json.dumps(gon_buoc(buoc), ensure_ascii=False), co_anh,
                    json.dumps(kq), int(vid)))
         import doi_social_v2
         doi_social_v2.sau_viec(c, int(vid))

@@ -91,6 +91,13 @@ check("ghi kết quả + ảnh, dọn tệp đính kèm",
       xong["trang_thai"] == "xong" and xong["co_anh"] == 1 and ds.duong_anh(v["id"]).read_bytes() == b"\x89PNGanh"
       and not (goc / "kho" / "tep" / str(v["id"])).exists() and xong["buoc"] == ["a", "b"])
 
+dai = [f"b{i}" for i in range(80)] + ["Chẩn đoán trang: 1 dấu hiệu", "  console: lỗi"]
+gon = ds.gon_buoc(dai)
+check("nhật ký dài: giữ đầu và đuôi (dòng chẩn đoán cuối không bị cắt), tối đa 50 dòng",
+      len(gon) == 50 and gon[0] == "b0" and gon[-1] == "  console: lỗi" and "Chẩn đoán trang: 1 dấu hiệu" in gon
+      and any("bỏ bớt" in x for x in gon), gon)
+check("nhật ký ngắn giữ nguyên", ds.gon_buoc(["a", "b"]) == ["a", "b"] and ds.gon_buoc(None) == [])
+
 # ---- khoảng nghỉ và giới hạn ngày
 v2 = ds.tao_viec(ky_nang="fb_dang_bai", nick="Minh Anh 2", noi_dung="bài 2", can_duyet=False)
 check("không cần duyệt thì vào thẳng hàng chờ", v2["trang_thai"] == "cho_chay")

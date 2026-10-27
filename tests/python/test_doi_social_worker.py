@@ -91,7 +91,8 @@ class MinMinGia(mw.MayChuGia):
         return super().goi(method, duong, body, timeout)
 
     def ket_qua(self, vid, ok_, thong_diep, buoc, anh=b"", dem=None):
-        self.ket_qua_ds.append({"vid": vid, "ok": ok_, "thong_diep": thong_diep, "dem": dem, "anh": bool(anh)})
+        self.ket_qua_ds.append({"vid": vid, "ok": ok_, "thong_diep": thong_diep, "dem": dem, "anh": bool(anh),
+                                "buoc": list(buoc)})
 
     def su_kien_ds(self):
         return [b for m, d, b in self.goi_ds if "/su-kien/" in d and isinstance(b, dict)]
@@ -404,8 +405,43 @@ check("nick khác chạy song song", [v["id"] for v in dp.lay_de_chay()] == [3] 
       and not dp.con_cho())
 check("song_song có trần 3, tối thiểu 1", mw.DieuPhoi(9).song_song == 3 and mw.DieuPhoi(0).song_song == 1)
 
+# ---------------------------------------------------------------------------- 5b. ghi chẩn đoán trang (không cần trình duyệt)
+class _TrangGia:
+    def __init__(self):
+        self.nghe = {}
+
+    def on(self, ten, ham):
+        self.nghe.setdefault(ten, []).append(ham)
+
+    def phat(self, ten, x):
+        for h in self.nghe.get(ten, []):
+            h(x)
+
+
+class _Vat:
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+
+_t = _TrangGia()
+_cd = mw.gan_chan_doan(_t, toi_da=4)
+_t.phat("console", _Vat(type="warning", text="chỉ cảnh báo"))
+_t.phat("console", _Vat(type="error", text="Uncaught TypeError: x is null"))
+_t.phat("pageerror", RuntimeError("lỗi JS ném ra"))
+_t.phat("requestfailed", _Vat(url="https://x.com/anh.jpg?t=1", method="GET", resource_type="image", failure="net::ERR"))
+_t.phat("requestfailed", _Vat(url="https://www.facebook.com/api/graphql/?access_token=BIMAT#x", method="POST",
+                              resource_type="fetch", failure="net::ERR_CONNECTION_RESET"))
+_t.phat("response", _Vat(status=200, url="https://a.vn/ok", request=_Vat(method="GET", resource_type="xhr")))
+_t.phat("response", _Vat(status=500, url="https://a.vn/loi?k=1", request=_Vat(method="POST", resource_type="xhr")))
+check("chẩn đoán: giữ lỗi console/JS/tải hỏng/HTTP>=400, bỏ cảnh báo, ảnh, HTTP 200",
+      len(_cd) == 4 and "TypeError" in _cd[0] and "lỗi JS ném ra" in _cd[1]
+      and "graphql" in _cd[2] and "ERR_CONNECTION_RESET" in _cd[2] and "HTTP 500" in _cd[3], list(_cd))
+check("chẩn đoán: bỏ phần ?query và #, không lộ token", not any("BIMAT" in x or "?" in x for x in _cd), list(_cd))
+_t.phat("console", _Vat(type="error", text="mới nhất"))
+check("chẩn đoán: chỉ giữ N dòng mới nhất", len(_cd) == 4 and "mới nhất" in _cd[-1], list(_cd))
+
 # ---------------------------------------------------------------------------- 6. lam_viec đầu-cuối (trình duyệt thật)
-exe = sorted(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome")) or sorted(
+exe = sorted(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux*/chrome")) or sorted(
     glob.glob(os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux/chrome")))
 if not exe:
     print("SKIP các test trình duyệt: không thấy Chromium ở /opt/pw-browsers")
@@ -462,6 +498,20 @@ else:
     mw.lam_viec(m, GPMGia, viec_mau("tt_loi"), kb_t, connect=connect)
     kq = m.ket_qua_ds[-1]
     check("không thành công nào mà có lỗi -> ok=false", not kq["ok"] and kq["dem"]["loi"] == 1, kq)
+
+    def ham_trang_loi(nc):
+        nc.page.set_content("<script>console.error('nut dang bai khong co'); null.x</script>")
+        nc.su_kien("dang_tuong", "loi", "không thấy nút Đăng")
+        return "không đăng được"
+
+    kb_t["tt_trang_loi"] = ham_trang_loi
+    mw.lam_viec(m, GPMGia, viec_mau("tt_trang_loi"), kb_t, connect=connect)
+    kq = m.ket_qua_ds[-1]
+    bc = "\n".join(kq["buoc"])
+    check("việc lỗi -> nhật ký kèm chẩn đoán trang (console + lỗi JS)",
+          not kq["ok"] and "Chẩn đoán trang" in bc and "nut dang bai khong co" in bc and "null" in bc, bc)
+    mw.lam_viec(m, GPMGia, viec_mau("tt_tot", vid=12), kb_t, connect=connect)
+    check("việc thành công -> không chèn chẩn đoán", "Chẩn đoán trang" not in "\n".join(m.ket_qua_ds[-1]["buoc"]))
     n_sk = len(m.su_kien_ds())
     mw.lam_viec(m, GPMGia, viec_mau("tt_cp"), kb_t, connect=connect)
     kq = m.ket_qua_ds[-1]
