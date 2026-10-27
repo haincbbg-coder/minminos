@@ -719,6 +719,11 @@ def _nan_provider_da_go(cfg: dict) -> None:
     if tg.get("provider") in _PROVIDER_DA_GO:
         da_nan.append(("model Telegram", tg["provider"]))
         m["telegram"] = {"provider": "", "model": ""}   # về "theo model chính", không chết kênh
+    # Ghim riêng của từng cuộc trò chuyện Telegram (26.10.274): cùng luật, gỡ ghim là cuộc đó theo lại.
+    chats = m.get("telegram_chats") if isinstance(m.get("telegram_chats"), dict) else {}
+    for k in [k for k, v in chats.items() if (v or {}).get("provider") in _PROVIDER_DA_GO]:
+        da_nan.append((f"model Telegram của cuộc {k}", chats[k]["provider"]))
+        chats.pop(k, None)
     # Trường legacy `engine`: bỏ sót nó là `_effective_main` suy ngược ra provider vừa gỡ.
     if m.get("engine") in _PROVIDER_DA_GO:
         da_nan.append(("engine (legacy)", m["engine"]))
