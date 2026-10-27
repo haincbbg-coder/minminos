@@ -47,6 +47,8 @@ Ví dụ spec chuẩn viết tay: `examples/salepage-16-buoc-spec.json`. Ví d�
 ## Quy trình khi kích hoạt (BẮT BUỘC đủ 6 bước)
 
 1. **Xác định HTML nguồn.** Người dùng đưa file `.html` hoặc dán HTML. Dán thì ghi ra file tạm trước.
+   **Soi thiết kế nguồn bằng Impeccable** (mục "Máy soi Impeccable" bên dưới) để biết trước những
+   lỗi sẽ bị mang sang: chữ khó đọc, tiêu đề không nổi, các kiểu trang "AI làm".
 2. **Chuyển tự động**: `node tools/webcake-from-html.js trang.html spec.json`.
    **ĐỌC KỸ mục "CẦN LƯU Ý"** nó in ra - đó là những thứ nó KHÔNG mang sang được (ảnh local,
    svg/canvas, hiệu ứng hover, CSS từ file ngoài). Đừng bỏ qua rồi giao file thiếu.
@@ -59,8 +61,28 @@ Ví dụ spec chuẩn viết tay: `examples/salepage-16-buoc-spec.json`. Ví d�
 6. **Soi trước khi giao**: `node tools/webcake-preview.js out.pke preview` rồi mở
    `preview.desktop.html` + `preview.mobile.html`. Chụp được màn hình thì đặt cạnh trang gốc mà so:
    thứ tự section, màu nền từng dải, cỡ tiêu đề, vị trí ảnh. Lệch đâu sửa spec rồi lặp lại.
+   Chạy Impeccable lần nữa trên `preview.mobile.html`; lỗi nào còn thì sửa spec hoặc ghi lý do giữ.
 7. **Giao file**: đặt `out.pke` cạnh HTML gốc hoặc trong vault, nhúng link markdown cho user tải,
-   báo cáo NGẮN: bao nhiêu section, đã QA những gì, nhắc "upload lên Webcake để sửa" + các giới hạn.
+   báo cáo NGẮN: bao nhiêu section, đã QA những gì (lint + Impeccable: còn mấy lỗi, giữ vì sao),
+   nhắc "upload lên Webcake để sửa" + các giới hạn.
+
+## Máy soi Impeccable (soi thiết kế, không cần AI)
+
+Lint ở bước 5 chỉ soát bố cục và tương phản theo ngưỡng của nó. Impeccable có 62 luật soi kiểu
+trang "AI làm" và lỗi đọc: ví dụ nút chữ trắng trên nền cam đậm 3.2:1 vẫn qua lint nhưng dưới
+chuẩn 4.5:1 cho chữ nút cỡ thường. Chạy bằng `npx`, có sẵn trong image MinMin:
+
+`DO_NOT_TRACK=1 IMPECCABLE_NO_TELEMETRY=1 npx -y impeccable detect trang.html`
+
+- Lần đầu nó tải một file chạy nhỏ nên cần mạng. Lệnh lỗi hoặc không có mạng thì KHÔNG chặn việc:
+  giao tiếp theo lint, và ghi một dòng "chưa soi được Impeccable" trong báo cáo.
+- Trên HTML nguồn: mọi lỗi đều đáng xem. Sửa trong spec những gì chuyển sang được (màu chữ/nền,
+  cỡ tiêu đề, bóng), còn lại báo người dùng.
+- Trên `preview.*.html` bỏ qua hai loại do cách dựng canvas, không phải lỗi trang:
+  `overused-font` với Montserrat (engine đo chữ theo Montserrat) và `cramped-padding` trên khối
+  `sec` (khung section của preview).
+- Không đổi màu thương hiệu hay phong cách người dùng đã chốt chỉ để làm vừa máy soi. Brief của
+  người dùng thắng; lúc đó ghi rõ lỗi nào giữ lại theo ý họ.
 
 ## Schema của spec.json
 
@@ -129,6 +151,9 @@ tuyệt đối của canvas và làm vỡ bố cục.
 5. **Spacing bội số 8** cho padTop/padBottom/gap; đừng cắt vụn mỗi dòng một section.
 6. **CTA lặp 2-3 lần**, cùng màu cùng radius; nút chính nổi bật nhất trang.
 7. **Lint 0 ERROR + preview 2 khổ**: không chồng chữ, không hụt nền, không chữ chìm vào nền.
+8. **Tránh dấu hiệu "AI làm"** (trừ khi người dùng yêu cầu): pill `kicker` đánh số 01/02/03 trên
+   mọi tiêu đề, bóng phát sáng màu trên nền tối, viền trái dày tô màu trên card, chữ gradient
+   tràn lan. Chữ trên nút cỡ dưới 19px phải đạt tương phản 4.5:1.
 
 ## Nguyên tắc chuyển đổi
 
