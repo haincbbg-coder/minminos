@@ -4,7 +4,7 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
-## [26.10.271] - 2026-10-28
+## [26.10.270] - 2026-10-28
 ### Cải thiện
 - **Chào hỏi gần như không tốn token**: bố nhắn "chào", "cảm ơn", "ok" hay một biểu tượng cảm xúc, MinMin trả lời nhanh mà không nạp cả bộ hướng dẫn, công cụ và trí nhớ.
 - **Chat dài trên Claude Code không phình mãi**: tới khoảng 180 nghìn token, cuộc chat tự gom gọn thay vì kéo lên gần 1 triệu token mỗi lượt.

@@ -77,7 +77,7 @@ def _tok(chars):
 # Đo lại khi cần (chú ý `python -m pip` để chắc chắn cài vào đúng Python đang chạy):
 #     python -m pip install tiktoken
 #     python -c "import tiktoken; print(len(tiktoken.get_encoding('cl100k_base').encode(open('CLAUDE.md', encoding='utf-8').read())))"
-# 26.10.271: hạ xuống 29.700 sau khi gọn bốn mục chỉ cần lúc làm việc cụ thể thành lời trỏ sang
+# 26.10.270: hạ xuống 29.700 sau khi gọn bốn mục chỉ cần lúc làm việc cụ thể thành lời trỏ sang
 # skill javis-builder (CLAUDE.md 33.482 -> 29.118 ký tự). Chừa chừng 580 ký tự như trước.
 KERNEL_MAX_CHARS = 29_700
 

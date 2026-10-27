@@ -43,7 +43,7 @@ def stable_bucket(session_id: str, salt: str, buckets: int = 10_000) -> int:
     return int.from_bytes(digest[:8], "big") % max(1, int(buckets or 10_000))
 
 
-# 26.10.271: câu CHỈ có chào hỏi hoặc cảm ơn ("chào em", "cảm ơn nhé", "hi MinMin 👋") đi đường tắt
+# 26.10.270: câu CHỈ có chào hỏi hoặc cảm ơn ("chào em", "cảm ơn nhé", "hi MinMin 👋") đi đường tắt
 # ở MỌI mức tiết kiệm, mọi engine. Trên Claude Code đường đầy đủ tốn hàng chục nghìn token cho một câu
 # chào (CLAUDE.md, MEMORY.md, schema tool, danh sách skill), đường tắt chỉ vài trăm. Luật khớp CỐ Ý
 # chặt: MỌI từ phải là lời chào, lời cảm ơn hoặc từ xưng hô/đệm, nên "chào em, doanh thu hôm nay?"
@@ -268,7 +268,7 @@ class FastPathPlan:
     reserved_output_tokens: int = 0
     policy_version: str = CANARY_POLICY_VERSION
     rejection_message: str = ""
-    # True = lượt chỉ là chào hỏi/cảm ơn (26.10.271). Chỗ gọi GIỮ mạch native của engine: mạch đó
+    # True = lượt chỉ là chào hỏi/cảm ơn (26.10.270). Chỗ gọi GIỮ mạch native của engine: mạch đó
     # không biết câu "cảm ơn" là vô hại, còn dọn mạch là bắt lượt sau mồi lại từ đầu.
     small_talk: bool = False
 
