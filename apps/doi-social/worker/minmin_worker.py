@@ -34,7 +34,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PHIEN_BAN = "26.10.267"
+PHIEN_BAN = "26.10.268"
 THU_MUC = Path(__file__).resolve().parent
 CAU_HINH = THU_MUC / "worker.json"
 NHAT_KY = THU_MUC / "worker.log"
@@ -280,6 +280,46 @@ def _tai_tep_viec(may_chu, viec: dict, td: Path) -> list:
     return out
 
 
+def _url_gon(url: str) -> str:
+    """Bỏ ?query và #mảnh: link Facebook/TikTok hay mang token phiên ở đó."""
+    return re.split(r"[?#]", str(url or ""), maxsplit=1)[0][:160]
+
+
+def gan_chan_doan(page, toi_da: int = 15):
+    """Nghe trang và giữ N dấu hiệu lỗi mới nhất: console error, lỗi JS, lượt tải hỏng, HTTP >= 400.
+    Bỏ ảnh/font/media/css vì Facebook sinh hàng trăm lượt hỏng loại này mà chẳng nói lên gì.
+    Chỉ đọc vào nhật ký khi việc lỗi, để MinMin đọc ra nguyên nhân thay vì chỉ thấy chữ "lỗi"."""
+    from collections import deque
+    ds = deque(maxlen=toi_da)
+    bo_qua = ("image", "font", "media", "stylesheet")
+
+    def _an(ham):
+        def boc(x):
+            try:
+                ham(x)
+            except Exception:      # noqa: BLE001 - nghe lỗi không được làm hỏng việc chính
+                pass
+        return boc
+
+    def _console(m):
+        if m.type == "error":
+            ds.append(f"console: {str(m.text)[:200]}")
+
+    def _hong(r):
+        if r.resource_type not in bo_qua:
+            ds.append(f"tải hỏng: {r.method} {_url_gon(r.url)} ({str(r.failure)[:80]})")
+
+    def _phan_hoi(r):
+        if r.status >= 400 and r.request.resource_type not in bo_qua:
+            ds.append(f"HTTP {r.status}: {r.request.method} {_url_gon(r.url)}")
+
+    page.on("console", _an(_console))
+    page.on("pageerror", _an(lambda e: ds.append(f"lỗi JS: {str(e)[:200]}")))
+    page.on("requestfailed", _an(_hong))
+    page.on("response", _an(_phan_hoi))
+    return ds
+
+
 def tom_tat_dem(dem: dict) -> str:
     return f"thành công {dem.get('thanh_cong', 0)}, bỏ qua {dem.get('bo_qua', 0)}, lỗi {dem.get('loi', 0)}"
 
@@ -354,6 +394,7 @@ def lam_viec(may_chu, tao_gpm, viec: dict, kb: dict = None, day_buoc=None, toc_d
                     trinh = connect(pw, cdp) if connect else pw.chromium.connect_over_cdp(cdp, timeout=60000)
                 ctx = trinh.contexts[0] if trinh.contexts else trinh.new_context()
                 page = ctx.new_page()
+                chan_doan = gan_chan_doan(page)
                 nc = NguCanh(may_chu, viec, page, ctx, nhat_ky, thu_muc_tam=td, toc_do=toc_do)
                 nc.tep_cuc_bo = list(tep_cuc_bo)
                 if nc.chay_thu:
@@ -384,6 +425,10 @@ def lam_viec(may_chu, tao_gpm, viec: dict, kb: dict = None, day_buoc=None, toc_d
                         log(traceback.format_exc())
                     if nc.dem["thanh_cong"]:
                         msg += f" (trước đó đã làm được {nc.dem['thanh_cong']} thao tác)"
+                if not ok and chan_doan:
+                    nhat_ky(f"Chẩn đoán trang: {len(chan_doan)} dấu hiệu lỗi gần nhất")
+                    for dong in list(chan_doan):
+                        nhat_ky("  " + dong)
                 anh = nc.chup()
                 try:
                     page.close()

@@ -99,6 +99,10 @@ def _viec(args, ctx):
     for v in ds:
         out.append(f"#{v['id']} {v['nhan_ky_nang']} · {v['nick_ten']} · {nhan.get(v['trang_thai'], v['trang_thai'])}"
                    + (f" · {v['thong_diep']}" if v.get("thong_diep") else ""))
+    if args.get("id") and ds[0].get("trang_thai") == "loi" and ds[0].get("buoc"):
+        # Việc lỗi: kèm nhật ký Worker (có chẩn đoán trang) để trả lời được "vì sao lỗi".
+        out.append("Nhật ký máy nhà:")
+        out += [f"- {b}" for b in ds[0]["buoc"]]
     return "\n".join(out)
 
 
@@ -377,7 +381,7 @@ def register(ctx):
     )
     ctx.register_tool(
         name="social_viec",
-        description="Đội Social: xem trạng thái các lượt đăng (chờ duyệt, đang chạy, xong, lỗi) hoặc một việc theo id.",
+        description="Đội Social: xem trạng thái các lượt đăng (chờ duyệt, đang chạy, xong, lỗi) hoặc một việc theo id; việc lỗi kèm nhật ký và chẩn đoán trang.",
         handler=_viec, min_mode="readonly", check_fn=_check,
         schema={"type": "object", "properties": {
             "id": {"type": "integer"},
