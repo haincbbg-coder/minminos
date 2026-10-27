@@ -9,7 +9,10 @@
 
 # ---------- Stage 1: Node 22 LTS source ----------
 # Copy node/npm/npx from the official image instead of apt (Debian's nodejs lags LTS).
-FROM node:22-bookworm-slim AS node_source
+# Ghim ĐÚNG bản đã vá (26.10.274): thẻ trôi `node:22` có thể bị cache build phục vụ bản cũ rất lâu
+# sau một đợt vá. 22.23.4 = đợt vá bảo mật Node.js 21/10/2026 (CVE-2026-111497 Brotli RCE và 9 lỗi
+# khác). Đổi cùng lúc với BAN_DOCKER trong server/kiem_node.py và node_floor trong install.sh.
+FROM node:22.23.4-bookworm-slim AS node_source
 
 # ---------- Stage 2: runtime ----------
 FROM python:3.12-slim

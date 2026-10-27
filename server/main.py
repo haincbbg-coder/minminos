@@ -170,6 +170,7 @@ import channels          # sổ đăng ký kênh của Hộp thư hội thoại 
 import conversations     # Hộp thư hội thoại khách: kho khách -> hội thoại -> tin (Chatbot V2)
 import zalo_personal_channel   # Hộp thư hội thoại: đọc tin Zalo cá nhân từ MCP theo cursor
 import deploy_info              # Javis đang đứng ở đâu (docker/native) - xem _deploy_mode
+import kiem_node                # Node.js của máy thiếu bản vá bảo mật thì nhắc trong chuông (26.10.274)
 import ollama_catalog           # danh mục model để gợi ý + tìm kiếm
 import ollama_local             # dò/tải/gỡ model trên máy chạy Ollama
 import sessions                  # PROJECT_INSTRUCTIONS_MAX cho khối project trong system prompt
@@ -4146,6 +4147,18 @@ async def _cap_nhat_claude(ly_do: str) -> dict:
 async def claude_update_now():
     """Nút "Cập nhật Claude Code" trên trang Models: chạy ngay, không chờ vòng hằng ngày."""
     return await _cap_nhat_claude("tay")
+
+
+@app.on_event("startup")
+async def _tu_soi_node():
+    """Lúc khởi động soi Node.js của máy một lần (26.10.274): thiếu bản vá thì ghi một dòng nhật ký.
+    Chạy trong luồng phụ để không chặn khởi động; chuông Tin tức tự hiện tin nhắc ở lần tải sau."""
+    async def _chay():
+        try:
+            await asyncio.to_thread(kiem_node.tu_soi_khi_khoi_dong, deploy_info.deploy_mode())
+        except Exception as e:   # noqa: BLE001 - soi hỏng không được làm hỏng khởi động
+            print(f"[node] không soi được Node.js: {type(e).__name__}: {e}", file=sys.stderr)
+    asyncio.create_task(_chay())
 
 
 @app.on_event("startup")
@@ -15041,7 +15054,7 @@ def _parse_announcements(raw: str):
         if expires and expires[:10] < today:
             continue
         kind = text(row.get("kind"), 24).lower()
-        if kind not in ("community", "marketing"):
+        if kind not in ("community", "marketing", "security"):
             kind = "community"
         priority = text(row.get("priority"), 16).lower()
         if priority not in ("high", "normal", "low"):
@@ -15238,9 +15251,16 @@ async def notifications_info():
 
     changelog_task = asyncio.create_task(changelog_index())
     announcements_task = asyncio.create_task(_load_community_announcements())
-    changelog, (announcements, announcement_error) = await asyncio.gather(
-        changelog_task, announcements_task
+    node_task = asyncio.create_task(asyncio.to_thread(kiem_node.phien_ban_node))
+    changelog, (announcements, announcement_error), node_ban = await asyncio.gather(
+        changelog_task, announcements_task, node_task
     )
+    # Tin phát chung trong ANNOUNCEMENTS.json dành cho bản cũ chưa biết tự soi. Ở đây Node.js THẬT của
+    # máy quyết định, nên máy đã vá không bị nhắc vá (26.10.274).
+    announcements = [a for a in announcements if not str(a.get("id") or "").startswith(kiem_node.DOT_VA_ID)]
+    _tin_node = kiem_node.tin_canh_bao(node_ban, deploy_info.deploy_mode())
+    if _tin_node:
+        announcements.append(_tin_node)
 
     releases = []
     for rel in (changelog.get("releases") or [])[:30]:

@@ -1929,6 +1929,7 @@
   "sess.hist": "Lịch sử",
   "noti.kind_marketing": "Tin mới",
   "noti.kind_community": "Cộng đồng",
+  "noti.kind_security": "Bảo mật",
   "noti.ago_min": "{count} phút trước",
   "noti.ago_min.one": "{count} phút trước",
   "noti.ago_min.other": "{count} phút trước",

@@ -91,6 +91,7 @@
   function kindLabel(kind) {
     if (kind === "marketing") return window.t("noti.kind_marketing");
     if (kind === "community") return window.t("noti.kind_community");
+    if (kind === "security") return window.t("noti.kind_security");
     return window.t("noti.kind_update");
   }
   function openUpdates() {

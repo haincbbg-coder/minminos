@@ -98,6 +98,26 @@ if ($SkipCli) {
       winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements | Out-Null
       Refresh-Path
     }
+  } elseif (Have "node") {
+    # 26.10.274: Node.js co dot va bao mat 21/10/2026 (CVE-2026-111497 Brotli RCE). Node 22 chua va thi
+    # nang bang winget; dong 24/26 tu cai thi chi nhac. Giu khop BAN_VA trong server/kiem_node.py.
+    $nv = ((& node --version) -replace '^v', '').Trim()
+    $san = @{ 22 = [version]"22.23.4"; 24 = [version]"24.22.1"; 26 = [version]"26.12.1" }
+    try { $cur = [version]$nv } catch { $cur = $null }
+    if ($cur) {
+      $floor = $san[$cur.Major]
+      if (($cur.Major -le 22 -and (-not $floor -or $cur -lt $floor)) -and (Have "winget")) {
+        Line "    Node.js v$nv thieu ban va bao mat 21/10/2026, dang nang bang winget..."
+        winget upgrade -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements | Out-Null
+        Refresh-Path
+        $nv = ((& node --version) -replace '^v', '').Trim()
+      } elseif ($floor -and $cur -lt $floor) {
+        Warn "Node.js v$nv thieu ban va bao mat 21/10/2026. Nang len $floor tro len o nodejs.org."
+      } elseif (-not $floor -and $cur.Major -lt 26) {
+        Warn "Node.js v$nv da het ho tro. Cai Node.js 22 LTS (22.23.4 tro len) o nodejs.org."
+      }
+      Ok "Node.js v$nv"
+    }
   }
   if (Have "npm") {
     foreach ($it in @(
