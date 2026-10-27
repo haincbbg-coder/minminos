@@ -995,6 +995,7 @@ def build_system_prompt(brain: str = "brain", include_memory: bool = True,
     # đi kèm vì tên thứ trong tuần cũng phải theo ngôn ngữ đó.
     base += "\n\n# === BÂY GIỜ ===\n" + context_compiler.dong_ho(lang=_lma)
     base += lang_mod.khoi_ngon_ngu(_lq or lang_mod.LangDecision(_lma, "default", 1.0, True))
+    base += context_compiler.khoi_tra_loi_gon(_tra_loi_gon_bat())
     try:
         # 1 dòng MỨC DÙNG để Javis TRẢ LỜI được khi user hỏi "token tiêu bao nhiêu" (chi tiết ở panel).
         _t = usage_store.summary().get("today", {}).get("total", {})
@@ -20820,12 +20821,28 @@ async def runtime_muc(brain: str = Query("brain")):
         # Người dùng đã tự chọn mức, hay đây chỉ là mặc định của bản đã cài? Hai thứ trông y
         # hệt nhau trên màn hình mà ý nghĩa ngược nhau: cái sau còn đi lên theo bản cập nhật.
         "tu_chon": str((settings.get("preset_choice") or {}).get("source") or "") == "user",
+        "tra_loi_gon": _tra_loi_gon_bat(),
         "uoc_tinh": await _uoc_tinh_tiet_kiem(brain),
         "do_duoc": _do_duoc_tiet_kiem(tasks, 24.0, cfgmod.read_settings().get("model", {}) or {}),
         # Cần để nói ĐÚNG về phần quy đổi tiền: người dùng gói thuê bao không trả theo token,
         # nên con số tiền với họ là mức quy đổi chứ không phải tiền mặt tiết kiệm được.
         "engine": _engine_runtime_view(settings),
     }
+
+
+def _tra_loi_gon_bat() -> bool:
+    return context_compiler.tra_loi_gon_bat()
+
+
+@app.post("/runtime/tra-loi-gon")
+async def runtime_tra_loi_gon_set(bat: str = Form(...)):
+    """Bật/tắt "Trả lời gọn". Tách khỏi ba mức tiết kiệm: mức lo phần GỬI cho model, công tắc
+    này lo phần model VIẾT RA. Mặc định tắt (chủ repo chốt 2026-10-27)."""
+    on = str(bat or "").strip().casefold() in ("1", "true", "on", "bat")
+    cfg = cfgmod.read_settings()
+    cfg["tra_loi_gon"] = on
+    cfgmod.write_settings(cfg)
+    return {"ok": True, "tra_loi_gon": on}
 
 
 @app.post("/runtime/preset")

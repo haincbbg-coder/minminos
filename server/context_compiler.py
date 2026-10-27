@@ -60,6 +60,32 @@ def _cau_ngon_ngu(lang: str = "") -> str:
     return (f"Viết TOÀN BỘ câu trả lời bằng {l.lang_directive} ({l.code}); giữ nguyên không "
             f"dịch tên riêng, đường dẫn, tên tool và khối mã. {l.nudge}")
 
+_KHOI_TRA_LOI_GON = (
+    "\n\n# === TRẢ LỜI GỌN (chủ đã bật) ===\n"
+    "Nói ít chữ, giữ đủ ý. Câu đầu là kết quả. Bỏ câu chào, rào đón, nhắc lại câu hỏi, tóm tắt "
+    "cuối và lời mời hỏi thêm; không kể lại từng bước đã gọi công cụ. Giữ nguyên mọi con số, "
+    "đơn vị, tên riêng, lệnh, đường dẫn và mọi chữ không/chưa/chỉ. Vẫn viết đầy đủ, rõ ràng khi: "
+    "cảnh báo rủi ro, xác nhận việc không hoàn tác được, hướng dẫn từng bước, hỏi lại người "
+    "dùng, và mọi nội dung soạn cho người khác đọc (bài đăng, quảng cáo, tin nhắn khách, email, "
+    "tài liệu)."
+)
+
+
+def khoi_tra_loi_gon(bat: bool) -> str:
+    """Khối luật "Trả lời gọn" (ý tưởng từ Caveman: chữ AI viết ra đắt gấp nhiều lần chữ nó đọc).
+    Tắt thì trả chuỗi rỗng, để prompt giống hệt từng byte so với trước khi có công tắc."""
+    return _KHOI_TRA_LOI_GON if bat else ""
+
+
+def tra_loi_gon_bat() -> bool:
+    """Công tắc trên trang Mức dùng, MẶC ĐỊNH TẮT. Đọc lười để không tạo vòng import với config."""
+    try:
+        import config as _cfg
+        return _cfg.read_settings().get("tra_loi_gon") is True
+    except Exception:
+        return False
+
+
 def _nhan_mui_gio(n) -> str:
     """Nhãn múi giờ cho câu đồng hồ, vd "Asia/Ho_Chi_Minh (UTC+7)".
 
@@ -452,6 +478,7 @@ class ContextCompiler:
             "gạch đầu dòng khi liệt kê từ 3 ý trở lên, chỉ nhấn mạnh điểm then chốt. "
             "Thiếu dữ liệu thì nói rõ đang thiếu gì. Không nói là đã làm xong việc gì khi chưa "
             "có bằng chứng thực thi."
+            + khoi_tra_loi_gon(tra_loi_gon_bat())
         )
 
     @staticmethod
