@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.266] - 2026-10-27
+### Cải thiện
+- **Tinh gọn đợt 1**: Việc hàng ngày và Công cụ khác đổi từ thẻ to sang từng dòng gọn, đỡ phải kéo xuống.
+- Bấm **Xem chi tiết** mở ngăn bên phải (trên điện thoại trượt từ dưới lên), Sửa, Xoá, Tắt nằm trong ngăn đó.
+
 ## [26.10.264] - 2026-10-27
 ### Cải thiện
 - **Menu gọn hơn, đợt 4**: trang "Tuỳ chỉnh" đổi tên thành "Cài đặt", nhóm menu "Thiết lập" cũng đổi thành "Cài đặt".
