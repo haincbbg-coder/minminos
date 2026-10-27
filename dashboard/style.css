@@ -2654,6 +2654,9 @@ body.ne-full-on .cview { z-index: 250; }
 }
 :root[data-theme="light"] .goal-bar { border: 0; }
 .goal-bar[hidden] { display: none; }
+/* Trang Trò chuyện đang mở trình sửa (console.js, lưới 6 hàng): thanh nằm chung hàng 4 với dải đính kèm,
+   chiếm trọn bề ngang và đứng trên nó (dải đính kèm rỗng thì cao 0). */
+.chatpage-main.edit-on > .chatpage-slot > .goal-bar { grid-row: 4; grid-column: 1 / -1; align-self: start; }
 .gb-row { display: flex; align-items: center; gap: var(--mm-sp-1); min-height: 40px; padding: 2px var(--mm-sp-1) 2px var(--mm-sp-2); min-width: 0; }
 .gb-ic { flex: none; display: inline-flex; color: var(--mm-brand); }
 .gb-paused .gb-ic, .gb-waiting .gb-ic { color: var(--mm-dim); }
@@ -2718,6 +2721,11 @@ body.ne-full-on .cview { z-index: 250; }
   /* Điện thoại: bỏ nhãn trạng thái nhường chỗ cho chữ mục tiêu; màu biểu tượng và nút đã nói trạng thái. */
   .gb-lbl { display: none; }
   .gb-detail { padding-left: var(--mm-sp-4); }
+  /* Nút tròn của kệ file (file-shelf.css) nổi cố định ở góc phải ngay trên ô gõ: chừa chỗ cho nó để nút
+     tạm dừng và xoá không nằm dưới. Bấm chữ mục tiêu đã mở chi tiết nên bỏ nút mũi tên cho gọn. */
+  body:has(.mm-shelf-launch) .goal-bar { margin-right: 88px; }
+  body:has(.mm-shelf-launch) .chatpage-slot > .goal-bar { width: auto; margin-left: 0; margin-right: 88px; }
+  .gb-exp { display: none; }
 }
 
 /* ==========================================================================
