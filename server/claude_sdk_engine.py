@@ -549,7 +549,7 @@ class ClaudeSDK:
         # dùng cho phiên cải tiến: một server đọc file khoá trong thư mục bằng chứng, thay cho Read
         # native (Read native nhận đường dẫn tuyệt đối nên đọc được đáp án và điểm ở chỗ khác).
         self.sdk_servers = None
-        # JSON settings đưa cho Claude Code qua `--settings` (26.10.271): bỏ CLAUDE.md của repo
+        # JSON settings đưa cho Claude Code qua `--settings` (26.10.270): bỏ CLAUDE.md của repo
         # khỏi phần nó tự nạp và tự gom gọn mạch ở ~180k. `claude_cli.claude_engine` đặt.
         self.settings_json = None
 

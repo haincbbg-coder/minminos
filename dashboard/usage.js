@@ -217,7 +217,7 @@
   // Quét vẫn chạy, chỉ là không đứng chắn trước mặt người dùng nữa: nó đi đường `/usage/refresh`
   // ở nền, xong thì vẽ lại. Server chỉ vẽ lại khi lượt quét ĐỘNG tới thứ gì (`_co_thay_doi`),
   // nên mở trang lúc không có log mới thì không có cú nháy nào.
-  // 24 giờ qua theo từng giờ (26.10.271). Biểu đồ theo ngày dồn cả hôm nay vào một cột, nên không
+  // 24 giờ qua theo từng giờ (26.10.270). Biểu đồ theo ngày dồn cả hôm nay vào một cột, nên không
   // trả lời được "sáng nay cái gì đốt token". Cùng kiểu cột chồng theo provider với biểu đồ ngày;
   // trục chỉ ghi mỗi 3 giờ cho khỏi chật trên điện thoại. Không giờ nào có token thì không vẽ.
   function veGio24(g) {

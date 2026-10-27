@@ -487,7 +487,7 @@ SYSTEM_PROMPT = CLAUDE_MD_PATH.read_text(encoding="utf-8") if CLAUDE_MD_PATH.exi
 # nâng trần thì phải sửa HAI chỗ và phải viết ra lý do ở cả hai, đủ ma sát để người sửa dừng
 # lại nghĩ thay vì gõ số mới cho xong.
 #
-# 26.10.271: hạ từ 33.600 xuống 29.700. Bốn mục chỉ cần lúc làm việc cụ thể (plugin, dựng năng
+# 26.10.270: hạ từ 33.600 xuống 29.700. Bốn mục chỉ cần lúc làm việc cụ thể (plugin, dựng năng
 # lực, file đính kèm, tạo agent/workflow) đã gọn lại, mẫu và chi tiết vốn nằm sẵn trong skill
 # javis-builder và mô tả tool: CLAUDE.md 33.482 -> 29.118 ký tự, bớt chừng 4.400 ký tự mỗi lượt
 # của MỌI engine. Trần hạ theo để phần tiết kiệm không lặng lẽ bị lấp lại.
@@ -2464,7 +2464,7 @@ def _claude_sub_stream(model, messages, reasoning="off", *, brain=None, tag="cha
                         tag=tag, allowed_tools=CLAUDE_SUB_KHONG_TOOL,
                         model=_claude_api_model(model) or None)
     cli.system_prompt_raw = bool(tiet_kiem)
-    # 26.10.271: đường này không tool nào được chạy (CLAUDE_SUB_KHONG_TOOL), vậy mà Claude Code vẫn
+    # 26.10.270: đường này không tool nào được chạy (CLAUDE_SUB_KHONG_TOOL), vậy mà Claude Code vẫn
     # gửi kèm schema của mọi tool native và danh sách skill: Javis đo được 27.665 token vào cho câu
     # "chào em". "*" rút hết khỏi request, kể cả tool mà Claude Code bản sau mới thêm (đo lại: 183
     # token). Đường này chỉ để nói chuyện, không mất gì.
@@ -3219,7 +3219,7 @@ async def _fast_path_core(plan, provider: str, api_key: str, model: str, reasoni
                           dem: dict = None):
     """Lõi đường tắt, KHÔNG dính kênh nào. Trả (text, model, tokens_in).
 
-    `dem` (26.10.271, tuỳ chọn): dict nhận thêm `cache` = phần của tokens_in chỉ đọc lại từ cache,
+    `dem` (26.10.270, tuỳ chọn): dict nhận thêm `cache` = phần của tokens_in chỉ đọc lại từ cache,
     để dòng token dưới câu trả lời chỉ đếm token MỚI. Giữ bộ ba trả về như cũ cho các chỗ gọi khác.
 
     Tách ra khỏi `_execute_fast_path` để Telegram dùng lại được. Trước đó toàn bộ hệ Tiết
@@ -3643,7 +3643,7 @@ def _gio_luot_noi_mach(cli, prompt, lang: str = ""):
 
     Claude Code nối phiên bằng --resume và GIỮ system prompt của lượt ĐẦU phiên, nên câu đồng hồ trong
     system prompt đông cứng ở giờ của tin nhắn đầu tiên: hỏi "mấy giờ rồi" giữa một chat dài nhận về giờ
-    cũ (26.10.271). Phiên MỚI không gắn, system prompt của nó vừa dựng nên giờ trong đó đúng. Lỗi gì
+    cũ (26.10.270). Phiên MỚI không gắn, system prompt của nó vừa dựng nên giờ trong đó đúng. Lỗi gì
     cũng trả nguyên prompt: thiếu dòng giờ không được làm hỏng lượt chat.
     """
     if not getattr(cli, "session_id", None) or not isinstance(prompt, str):
@@ -10388,7 +10388,7 @@ async def usage_tong_quan(period: str = "this_month", brain: str = "brain", refr
         "du_bao": db,
         "luot": {"so_luot": k.get("turns") or 0, "moi_luot": k.get("avg_per_turn") or 0},
         "nhip_engine": await asyncio.to_thread(usage_index.nhip_engine, period),
-        # 26.10.271: 24 giờ qua theo từng giờ. Luôn là 24 giờ gần nhất, không theo chip kỳ.
+        # 26.10.270: 24 giờ qua theo từng giờ. Luôn là 24 giờ gần nhất, không theo chip kỳ.
         "gio_24": await asyncio.to_thread(usage_index.gio_24),
         "bao_cao_tuan": mcfg.get("bao_cao_tuan") or "",
         "moc": usage_saving.doc_moc((s.get("range") or ["", ""])[0],
@@ -16813,7 +16813,7 @@ async def websocket_endpoint(ws: WebSocket):
                     im_lang_khi_loi=True,
                 )
                 if final_text and getattr(_codex_fast_plan, "small_talk", False):
-                    # 26.10.271: lượt chỉ là chào hỏi/cảm ơn. GIỮ mạch native: mạch thiếu một câu
+                    # 26.10.270: lượt chỉ là chào hỏi/cảm ơn. GIỮ mạch native: mạch thiếu một câu
                     # "cảm ơn" chẳng làm sai gì, còn dọn mạch là bắt lượt sau mồi lại từ SQLite và
                     # mất phần ngữ cảnh ngầm engine đang giữ (kết quả tool, file đã đọc).
                     used_fast_path = True

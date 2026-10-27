@@ -3853,7 +3853,7 @@ function _renderCtxLine(msgEl, data) {
   if (data.ctx_path) phan.push(CTX_PATH_LABEL[data.ctx_path] ? window.t(CTX_PATH_LABEL[data.ctx_path]) : data.ctx_path);
   const cache = Math.min(Number(data.ctx_cache) || 0, tok);
   if (tok) {
-    // 26.10.271: dòng chỉ đếm token MỚI của lượt. Phần đọc lại từ cache (ngữ cảnh cũ phát lại, giá
+    // 26.10.270: dòng chỉ đếm token MỚI của lượt. Phần đọc lại từ cache (ngữ cảnh cũ phát lại, giá
     // rẻ hơn nhiều) cộng chung vào thì một câu chào trên Claude Code hiện "60k token" và người dùng
     // tưởng mình vừa tiêu 60k token mới. Tổng và phần cache nằm ở chú thích khi rê chuột.
     phan.push(_fmtTok(tok - cache) + " token");

@@ -846,7 +846,7 @@ def luot_theo_ngay(period: str = "this_month", nguon: tuple = ("javis",),
 
 
 def gio_24(now: datetime = None) -> list:
-    """Token TUNG GIO trong 24 gio gan nhat, tach theo provider (26.10.271, tu Javis 0.329.0).
+    """Token TUNG GIO trong 24 gio gan nhat, tach theo provider (26.10.270, tu Javis 0.329.0).
 
     Bieu do theo NGAY khong tra loi duoc "sang nay cai gi dot token": hom nay chi la mot cot.
     Day lap du 24 moc lien tuc (gio khong dung thi 0) de cot nao cung dung cho cua no.

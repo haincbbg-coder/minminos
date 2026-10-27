@@ -1001,13 +1001,13 @@ def claude_engine(system_prompt=None, cwd=None, tag="chat", allowed_tools=None, 
     from claude_sdk_engine import ClaudeSDK
     eng = ClaudeSDK(system_prompt=system_prompt, cwd=cwd, tag=tag,
                     allowed_tools=allowed_tools, model=model)
-    # 26.10.271: mọi lượt Claude Code (chat, loop, nhắc hẹn, bot) đều bỏ CLAUDE.md của repo khỏi
+    # 26.10.270: mọi lượt Claude Code (chat, loop, nhắc hẹn, bot) đều bỏ CLAUDE.md của repo khỏi
     # phần Claude Code tự nạp và tự gom gọn mạch ở ~180k. Xem `cai_dat_claude_minmin`.
     eng.settings_json = cai_dat_claude_minmin()
     return eng
 
 
-# 26.10.271: Claude Code tự gom gọn (compact) mạch khi ngữ cảnh chạm cửa sổ này. Mặc định "auto"
+# 26.10.270: Claude Code tự gom gọn (compact) mạch khi ngữ cảnh chạm cửa sổ này. Mặc định "auto"
 # của nó bám theo cửa sổ của model, mà model 1M thì cửa sổ đo được là ~980k: một chat dài đọc lại gần
 # một triệu token MỖI LƯỢT trước khi nó chịu gom. 200k là cửa sổ Claude kinh điển, nên model 200k
 # chạy y như cũ, còn model 1M gom ở ~180k (Claude Code chừa 20k đệm) bằng bản tóm tắt của chính nó,
@@ -1036,7 +1036,7 @@ def _claude_md_cua_repo() -> list:
 
 
 def cai_dat_claude_minmin(goc=None) -> str:
-    """JSON settings cho mọi lượt Claude Code MinMin chạy (26.10.271), gộp lên trên `goc`.
+    """JSON settings cho mọi lượt Claude Code MinMin chạy (26.10.270), gộp lên trên `goc`.
 
     - `claudeMdExcludes`: bản cài thường để brain nằm trong repo (BRAINS_DIR mặc định là
       <repo>/brains), và Claude Code đi ngược từ cwd lên, nạp mọi CLAUDE.md gặp trên đường. File
@@ -1788,7 +1788,7 @@ class CodexCLI:
                 yield {"type": "final", "content": final_text, "session_id": self.session_id,
                        # Codex đã tính cached_input_tokens trong input_tokens.
                        "tokens_in": u.get("input_tokens") or 0,
-                       # Phần đó tách riêng ra (26.10.271) để dòng token chỉ đếm token MỚI.
+                       # Phần đó tách riêng ra (26.10.270) để dòng token chỉ đếm token MỚI.
                        "tokens_cache": u.get("cached_input_tokens") or 0,
                        "tokens_out": u.get("output_tokens") or 0}
             elif t in ("error", "stream.error") and la_thong_bao_ket_noi_lai(ev.get("message")):

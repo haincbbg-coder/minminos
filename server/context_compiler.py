@@ -139,7 +139,7 @@ _NHAN_GIO_GUI = {"vi": "Giờ gửi tin này", "en": "This message was sent at"}
 def dong_ho_ngan(now=None, lang: str = "") -> str:
     """Một dòng ngắn "tin này gửi lúc mấy giờ", đặt ở ĐẦU tin nhắn của lượt nối phiên Claude Code.
 
-    Vì sao (26.10.271): Claude Code nối phiên bằng --resume và GIỮ system prompt của lượt ĐẦU phiên, nên
+    Vì sao (26.10.270): Claude Code nối phiên bằng --resume và GIỮ system prompt của lượt ĐẦU phiên, nên
     câu `dong_ho` trong system prompt đông cứng ở giờ của tin nhắn đầu tiên. Dòng này đi theo tin nhắn nên
     luôn mới. Viết NGẮN vì nó nằm lại trong lịch sử phiên, mỗi lượt một dòng.
     """

@@ -1,4 +1,4 @@
-"""Tiết kiệm token mỗi lượt chat (26.10.271).
+"""Tiết kiệm token mỗi lượt chat (26.10.270).
 
     python tests/run.py tiet_kiem_token_luot
 
