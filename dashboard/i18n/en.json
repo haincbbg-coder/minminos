@@ -4312,5 +4312,10 @@
   "cs.ct_hooks": "Auto hooks",
   "cs.ct_source": "Source",
   "cs.ct_version": "Version",
-  "cs.ct_state": "Status"
+  "cs.ct_state": "Status",
+  "knn.chi_tiet": "Details",
+  "knn.giai_thich": "What is this?",
+  "knn.mo_ta": "About",
+  "knn.han_dung": "Valid until",
+  "knn.khach": "Customer"
 }

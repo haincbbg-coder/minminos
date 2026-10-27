@@ -1996,6 +1996,7 @@
   }
   // Rời trang thì đóng ngăn (ngăn nằm ngoài khung trang nên không tự biến mất).
   window.addEventListener("hashchange", dongNgan);
+  window.MinMinNgan = { mo: moNgan, dong: dongNgan };   // cho các module rời (ket-noi-ngoai.js...)
 
   // Một dòng gọn: icon, tên, dòng phụ, trạng thái, nút. Nút thao tác phụ nằm trong .wf-actions
   // (ẩn trên dòng, hiện trong ngăn kéo).
@@ -4162,6 +4163,32 @@
     chay();
   }
 
+  // Thẻ nhà cung cấp thu thành dòng gọn (26.10.266): chỉ thấy tên, trạng thái, MAIN; bấm dòng
+  // mới bung phần đăng nhập/ghi chú. Phần thân GIỮ NGUYÊN trong thẻ (chỉ ẩn) nên mọi nút và
+  // ô trạng thái đã gắn sự kiện vẫn chạy. Nhớ thẻ nào đang mở qua các lần vẽ lại.
+  const _provMo = new Set();
+  function gonTheNhaCungCap(list) {
+    if (!list) return;
+    list.querySelectorAll(":scope > .prov-card").forEach((card, i) => {
+      const head = card.querySelector(":scope > .prov-head");
+      if (!head) return;
+      const body = document.createElement('div');
+      body.className = "prov-body";
+      [...card.children].forEach(c => { if (c !== head) body.appendChild(c); });
+      if (!body.children.length) return;
+      card.appendChild(body);
+      const key = (card.querySelector(".prov-name") || {}).textContent || String(i);
+      const car = document.createElement('span');
+      car.className = "prov-car"; car.innerHTML = ic("chevron-down");
+      head.appendChild(car);
+      head.classList.add("prov-head-click");
+      head.setAttribute("role", "button"); head.setAttribute("tabindex", "0");
+      const dat = (mo) => { card.classList.toggle("open", mo); head.setAttribute("aria-expanded", String(mo)); mo ? _provMo.add(key) : _provMo.delete(key); };
+      head.onclick = () => dat(!card.classList.contains("open"));
+      head.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); head.click(); } };
+      dat(_provMo.has(key));
+    });
+  }
   async function renderModelsCloudTab(el) {
     el.innerHTML = `<div class="cview-placeholder"><div class="ph-ico">${ic("loader", { cls: "ic-xl ic-spin" })}</div><div>${esc(t("common.loading"))}</div></div>`;
     const s = await freshSettings();
@@ -4691,6 +4718,7 @@
           <div id="tkStats" class="aux-note" style="margin-top:6px"></div>
         </div>
       </div>`;
+    gonTheNhaCungCap(el.querySelector(".prov-list"));
     // Tool nóng kèm tên kết nối: cùng pos_order trên hai shop thì tên ngắn trùng nhau, nhìn
     // như bị lặp. Chỉ ghi kết nối khi tên ngắn xuất hiện hơn một lần, cho gọn.
     const tkNongHtml = (d) => {

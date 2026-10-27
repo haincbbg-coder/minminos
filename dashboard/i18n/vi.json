@@ -4312,5 +4312,10 @@
   "cs.ct_hooks": "Móc tự chạy",
   "cs.ct_source": "Nguồn",
   "cs.ct_version": "Phiên bản",
-  "cs.ct_state": "Trạng thái"
+  "cs.ct_state": "Trạng thái",
+  "knn.chi_tiet": "Chi tiết",
+  "knn.giai_thich": "Giải thích",
+  "knn.mo_ta": "Mô tả",
+  "knn.han_dung": "Hạn dùng",
+  "knn.khach": "Khách"
 }
