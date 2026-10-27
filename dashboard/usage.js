@@ -196,6 +196,10 @@
       + ".tk-tien .s{font-size:11px;color:var(--text3);margin-top:2px}"
       + ".tk-tien .tien .v{color:var(--accent2,var(--accent))}"
       + ".tk-tien-note{font-size:11.5px;color:var(--text3);line-height:1.65;margin-top:11px}"
+      + ".tk-gon{display:flex;align-items:flex-start;gap:10px;margin-top:10px;padding:12px 15px;border-radius:12px;border:1px solid var(--glass-brd);background:var(--glass);cursor:pointer}"
+      + ".tk-gon input{margin-top:3px;accent-color:var(--accent)}"
+      + ".tk-gon b{display:block;font-size:14px;color:var(--text)}"
+      + ".tk-gon small{display:block;font-size:12px;line-height:1.5;color:var(--text2)}"
       + ".tk-muc-toast{padding:9px 13px;border-radius:10px;font-size:13px;margin-top:10px;border:1px solid var(--glass-brd)}"
       + ".tk-muc-toast.ok{border-color:var(--accent)}"
       + ".tk-muc-toast.err{color:var(--red)}";
@@ -416,12 +420,15 @@
       + (mm.phan_tram ? ' <span class="pc">-' + (+mm.phan_tram || 0) + "%</span>" : "")
       + (mm.token_moi_request != null
         ? " · " + window.t("usage.token_moi_luot", { n: (+mm.token_moi_request || 0).toLocaleString(LOC()) }) : "")
+      + (d.tra_loi_gon ? " · " + window.t("usage.gon.ten") : "")
       + "</span>"
       + '<span class="sp">' + (state.moMuc ? window.t("usage.muc.thu_lai") : window.t("usage.muc.doi"))
       + ic(state.moMuc ? "chevron-up" : "chevron-down", { cls: "ic-sm" }) + "</span></button>";
 
     var body = state.moMuc
       ? '<div class="tk-muc-body"><div class="tk-muc-list">' + btns + "</div>"
+      + '<label class="tk-gon"><input type="checkbox" id="tk-gon"' + (d.tra_loi_gon ? " checked" : "") + ">"
+      + "<span><b>" + window.t("usage.gon.ten") + "</b><small>" + window.t("usage.gon.mo_ta") + "</small></span></label>"
       + (state.toast ? state.toast : "")
       + doHtml
       + '<div class="tk-muc-note">'
@@ -436,6 +443,22 @@
     var el = state.el; if (!el) return;
     var mo = el.querySelector('[data-act="mo-muc"]');
     if (mo) mo.onclick = function () { state.moMuc = !state.moMuc; load(false); };
+    var gon = el.querySelector("#tk-gon");
+    if (gon) gon.onchange = function () {
+      gon.disabled = true;
+      var fd = new FormData(); fd.append("bat", gon.checked ? "1" : "0");
+      fetch("/runtime/tra-loi-gon", { method: "POST", body: fd }).then(jsonOk)
+        .then(function (j) {
+          state.toast = '<div class="tk-muc-toast ok">'
+            + window.t(j.tra_loi_gon ? "usage.gon.bat" : "usage.gon.tat") + "</div>";
+          return loadMuc(true);
+        })
+        .catch(function (e) {
+          state.toast = '<div class="tk-muc-toast err">' + window.t("usage.muc.err2") + " "
+            + esc(e && e.message ? e.message : e) + "</div>";
+        })
+        .then(function () { load(false); });
+    };
     el.querySelectorAll("[data-muc]").forEach(function (b) {
       b.onclick = function () {
         var id = b.getAttribute("data-muc");
