@@ -14,7 +14,7 @@ from typing import Any, Dict, Iterable, Optional
 
 # Cùng danh sách với _KHOI_NGU_CANH trong dashboard/app.js. Khối file đang mở neo ở phần đầu chung để
 # nhận cả bản cũ ghi "của Javis" lẫn bản ghi "của MinMin".
-KHOI_NGU_CANH = ("[FILE ĐANG MỞ trong trình sửa", "[File đính kèm", "[NGỮ CẢNH GIAO DIỆN:", "[SKILL: ")
+KHOI_NGU_CANH = ("[FILE ĐANG MỞ trong trình sửa", "[File đính kèm", "[NGỮ CẢNH GIAO DIỆN:", "[SKILL: ", "[MỤC TIÊU:")
 
 
 def chu_nguoi_go(text: Any) -> str:

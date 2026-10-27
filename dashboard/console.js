@@ -8984,7 +8984,7 @@
   // (giữ nguyên mọi handler + WebSocket + streaming đã gắn trong app.js) rồi TRẢ về HUD khi
   // rời trang. Cùng một cuộc trò chuyện hiển thị ở cả màn Javis lẫn tab này.
   // ============================================
-  const CHAT_NODE_IDS = ["callBar", "chatArea", "bgStrip", "attachBar", "modelBar", "minminProgress", "dictationStatus", "hudVoice"];
+  const CHAT_NODE_IDS = ["callBar", "chatArea", "bgStrip", "goalBar", "attachBar", "modelBar", "minminProgress", "dictationStatus", "hudVoice"];
   let _chatSlots = [];        // vị trí gốc từng node để trả về đúng chỗ trong HUD
 
   function _injectChatCss() {

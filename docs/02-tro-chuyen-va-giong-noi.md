@@ -132,6 +132,18 @@ Ba lệnh phiên đứng đầu danh sách:
 
 Trên bản web, `/new` và `/reset` cùng mở một hội thoại mới.
 
+Menu chia nhóm (Lệnh, Agent, Workflow, Skill), mỗi lệnh một dòng, mô tả thẳng một cột. Lệnh gõ vào ô được **tô màu** khi nó là lệnh có thật, nhìn là biết MinMin sẽ hiểu nó thành lệnh.
+
+### Lệnh `/goal`: làm tới khi đạt
+
+Gõ `/goal <điều kiện>`, ví dụ `/goal mọi đơn hôm nay đã đối soát xong`. MinMin làm, tự kiểm bằng dữ liệu thật, chưa đạt thì tự làm tiếp vòng sau, tối đa 5 vòng. Hai vòng liền không tiến triển, thiếu quyền hay thiếu kết nối, hoặc MinMin cần hỏi lại thì nó dừng và nói lý do.
+
+Thanh mục tiêu hiện ngay trên ô gõ: mục tiêu, đồng hồ, nút xoá, tạm dừng hoặc chạy tiếp, nút xem chi tiết.
+
+- Mỗi hội thoại một mục tiêu; nhiều hội thoại thì nhiều mục tiêu cùng lúc. Có từ hai mục tiêu, ô số ở đầu thanh xổ ra danh sách.
+- Bấm **Dừng** hay gõ chen một câu thì mục tiêu **tạm dừng**, không mất. Rời sang chat khác thì nó chờ, mở lại chat là chạy tiếp. Tải lại trang thì nó tạm dừng.
+- `/goal` không kèm chữ để xem trạng thái, `/goal clear` để tắt.
+
 Bên dưới ba lệnh đó là **toàn bộ skill của brain đang chọn**, mỗi dòng gồm `/slug`, tên skill và một dòng mô tả.
 
 Cách điều khiển menu:

@@ -2,6 +2,8 @@
 // phan menu DOM o cuoi file chi chay trong trinh duyet. Pattern giong chat-ask.js.
 (function () {
   var SESSION_COMMANDS = ["new", "reset", "stop"];
+  // Lenh HE THONG chay o trinh duyet (26.10.274): /goal (chat-goal.js). Chi nhan o DAU tin.
+  var SYSTEM_COMMANDS = ["goal"];
 
   // Chu hien ra lay tu tu dien. Trong trinh duyet la window.t (i18n/index.js nap dau tien);
   // duoi node (test require file nay) khong co window nen doc thang vi.json. Chu tw chu
@@ -69,8 +71,41 @@
   }
 
   function classify(cmd) {
-    return SESSION_COMMANDS.indexOf(cmd) !== -1 ? "session" : "skill";
+    if (SESSION_COMMANDS.indexOf(cmd) !== -1) return "session";
+    return SYSTEM_COMMANDS.indexOf(cmd) !== -1 ? "system" : "skill";
   }
+
+  // Vung lenh de TO MAU trong o go (26.10.274): {start, end} cua dung token ma route() se dung, hoac null.
+  // O dau tin chi to lenh co that (lenh phien, lenh he thong, skill, cong su): dang go do "/go" thi chua
+  // phai lenh nao, to len la noi doi. Giua cau thi nhu parseSlashAnywhere: skill/cong su co that, lan cuoi.
+  function laCongSu(cmd) { return knownPartners.some(function (x) { return x.cmd === String(cmd || "").toLowerCase(); }); }
+  function vungLenh(text) {
+    if (typeof text !== "string" || text.indexOf("/") === -1) return null;
+    var dau = text.match(/^\/([a-zA-Z0-9_-]+)(?=\s|$)/);
+    if (dau) {
+      var c = dau[1].toLowerCase();
+      if (classify(c) !== "skill" || isKnownSkill(c) || laCongSu(c)) return { start: 0, end: 1 + dau[1].length };
+    }
+    var hit = null, m;
+    MID_RE.lastIndex = 0;
+    while ((m = MID_RE.exec(text)) !== null) {
+      if (m.index === 0 && !m[1] && dau) continue;   // token dau tin da xet o tren
+      if (isKnownSkill(m[2]) || laCongSu(m[2])) hit = m;
+    }
+    if (!hit) return null;
+    var st = hit.index + hit[1].length;
+    return { start: st, end: st + 1 + hit[2].length };
+  }
+
+  // Be rong cot lenh cua menu theo ky tu (font don cach): lenh dai nhat dang hien, co san va tran. Moi dong
+  // chung mot be rong nen mo ta bat dau thang mot cot.
+  function cotLenh(items) {
+    var dai = 0;
+    (items || []).forEach(function (it) { dai = Math.max(dai, String((it && it.cmd) || "").length + 1); });
+    return Math.max(7, Math.min(dai, 18));
+  }
+  // Nhom cua mot dong menu: lenh (phien + he thong), agent, workflow, skill.
+  function nhomCua(it) { return (it.kind === "session" || it.kind === "system") ? "cmd" : it.kind; }
 
   // Lệnh skill đi thành một KHỐI NGỮ CẢNH đặt TRƯỚC câu người dùng, không viết lại câu đó.
   //
@@ -104,6 +139,7 @@
     var p = parseSlashAnywhere(text);
     if (!p) return { type: "passthrough" };
     if (classify(p.cmd) === "session") return { type: "session", cmd: p.cmd };
+    if (classify(p.cmd) === "system" && !p.giuaCau) return { type: "goal", cmd: p.cmd, arg: p.arg };
     var partner = knownPartners.find(function (x) { return x.cmd === p.cmd; });
     if (partner) return { type: partner.kind, slug: partner.slug, message: p.arg };
     return { type: "skill", cmd: p.cmd,
@@ -117,6 +153,7 @@
       { kind: "session", cmd: "new", name: tw("top.new_chat"), desc: tw("slash.new_desc") },
       { kind: "session", cmd: "reset", name: tw("slash.reset_name"), desc: tw("slash.reset_desc") },
       { kind: "session", cmd: "stop", name: tw("slash.stop_name"), desc: tw("slash.stop_desc") },
+      { kind: "system", cmd: "goal", name: tw("slash.goal_name"), desc: tw("slash.goal_desc") },
     ];
   }
 
@@ -171,6 +208,10 @@
     setKnownSkills: setKnownSkills,
     setKnownPartners: setKnownPartners,
     SESSION_COMMANDS: SESSION_COMMANDS,
+    SYSTEM_COMMANDS: SYSTEM_COMMANDS,
+    vungLenh: vungLenh,
+    cotLenh: cotLenh,
+    nhomCua: nhomCua,
     classify: classify,
     buildSkillInvocation: buildSkillInvocation,
     route: route,
@@ -210,6 +251,7 @@
       cacheBrain = brain;
       // route() can biet slug CO THAT de dam nhan duoc lenh giua cau (xem parseSlashAnywhere).
       api.setKnownSkills(skillsCache);
+      try { if (api.syncHighlight) api.syncHighlight(); } catch (e) {}   // skill vua biet thi to duoc
       return skillsCache;
     }
 
@@ -228,14 +270,36 @@
       });
     }
 
+    // 26.10.274: mot dong moi lenh, cot lenh chung be rong (cotLenh) nen mo ta thang hang; ten roi mo ta mo
+    // noi tiep tren cung dong, tran thi "...". Chua go chu loc thi chia nhom co tieu de nho; dang loc thi ket
+    // qua xep theo do khop nen bo tieu de, nhan nhom nam cuoi dong.
+    function tenNhom(g) {
+      if (g === "agent") return tw("ws.tab_agent");
+      if (g === "workflow") return tw("ws.tab_workflow");
+      if (g === "skill") return tw("slash.grp_skill");
+      return tw("slash.grp_cmd");
+    }
+    function rows() { return box.querySelectorAll(".slash-item"); }
     function renderList() {
       box.innerHTML = "";
+      box.style.setProperty("--slash-cmdw", api.cotLenh(items) + "ch");
+      var coTieuDe = !(tok && tok.query), nhomTruoc = null;
       items.forEach(function (it, i) {
+        var g = api.nhomCua(it);
+        if (coTieuDe && g !== nhomTruoc) {
+          var h = document.createElement("div");
+          h.className = "slash-head";
+          h.textContent = tenNhom(g);
+          box.appendChild(h);
+        }
+        nhomTruoc = g;
         var row = document.createElement("div");
         row.className = "slash-item" + (i === active ? " active" : "");
+        row.setAttribute("role", "option");
         row.innerHTML = '<span class="slash-cmd">/' + esc(it.cmd) + '</span>' +
-          '<span class="slash-name">' + esc(it.kind === 'agent' ? tw('ws.tab_agent') + ' · ' : it.kind === 'workflow' ? tw('ws.tab_workflow') + ' · ' : '') + esc(it.name) + '</span>' +
-          '<span class="slash-desc">' + esc(it.desc) + '</span>';
+          '<span class="slash-text"><span class="slash-name">' + esc(it.name) + '</span>' +
+          (it.desc ? '<span class="slash-desc">' + esc(it.desc) + '</span>' : '') + '</span>' +
+          (!coTieuDe && g !== "cmd" ? '<span class="slash-kind">' + esc(tenNhom(g)) + '</span>' : '');
         row.addEventListener("mousedown", function (e) { e.preventDefault(); choose(i); });
         box.appendChild(row);
       });
@@ -249,7 +313,7 @@
       var input = document.getElementById("chatInput");
       var t = tok;
       hide();
-      if (it.kind !== "session") {
+      if (it.kind !== "session") {   // lenh he thong (/goal) cung chen vao o go: no can chu di kem
         // Thay DUNG token dang go, giu nguyen chu hai ben - go lenh giua cau khong duoc
         // xoa cau dang viet. Khong ro token thi rot ve hanh vi cu (thay ca o).
         var val = input.value;
@@ -289,16 +353,63 @@
 
     function onKeydown(e) {
       if (!box || box.style.display === "none") return;
-      if (e.key === "ArrowDown") { e.preventDefault(); active = (active + 1) % items.length; renderList(); box.children[active].scrollIntoView({block: "nearest"}); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); active = (active - 1 + items.length) % items.length; renderList(); box.children[active].scrollIntoView({block: "nearest"}); }
+      if (e.key === "ArrowDown") { e.preventDefault(); active = (active + 1) % items.length; renderList(); rows()[active].scrollIntoView({block: "nearest"}); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); active = (active - 1 + items.length) % items.length; renderList(); rows()[active].scrollIntoView({block: "nearest"}); }
       else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); e.stopImmediatePropagation(); choose(active); }
       else if (e.key === "Escape") { e.preventDefault(); hide(); }
     }
+
+    // ===== To mau lenh da go trong o go (26.10.274) =====
+    // <textarea> khong to mau tung chu duoc, nen dat mot lop GUONG ngay duoi no: cung font, cung le, cung be
+    // rong, chu y het, rieng token lenh boc trong <mark>. Co lenh thi chu cua o go trong suot (con tro van hien)
+    // va mat thay chu cua guong. Khong co lenh thi guong an. app.js hay gan thang gia tri o go (gui xong thi
+    // xoa) ma khong ban su kien input, nen trong luc dang to, moi khung hinh soi lai gia tri.
+    var hl = null, hlKey = "", hlLoop = 0;
+    var CHEP = ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing",
+      "textIndent", "textTransform", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "tabSize"];
+    function syncHl() {
+      var input = document.getElementById("chatInput");
+      if (!input) return;
+      var v = input.value, r = api.vungLenh(v);
+      if (!r) {
+        input.classList.remove("has-cmd");
+        if (hl) hl.hidden = true;
+        hlKey = "";
+        if (hlLoop) { cancelAnimationFrame(hlLoop); hlLoop = 0; }
+        return;
+      }
+      if (!hl) {
+        hl = document.createElement("div");
+        hl.className = "ci-hl";
+        hl.setAttribute("aria-hidden", "true");
+      }
+      if (hl.nextSibling !== input) input.parentNode.insertBefore(hl, input);
+      var key = v + "|" + input.scrollTop + "|" + input.clientWidth + "|" + input.clientHeight + "|" + input.offsetTop + "|" + input.offsetLeft;
+      if (key !== hlKey || hl.hidden) {
+        hlKey = key;
+        var cs = getComputedStyle(input);
+        CHEP.forEach(function (p) { hl.style[p] = cs[p]; });
+        hl.style.top = (input.offsetTop + input.clientTop) + "px";
+        hl.style.left = (input.offsetLeft + input.clientLeft) + "px";
+        hl.style.width = input.clientWidth + "px";
+        hl.style.height = input.clientHeight + "px";
+        hl.innerHTML = esc(v.slice(0, r.start)) + '<mark class="ci-cmd">' + esc(v.slice(r.start, r.end)) + "</mark>" +
+          esc(v.slice(r.end)) + "\n";
+        hl.hidden = false;
+        hl.scrollTop = input.scrollTop;
+        input.classList.add("has-cmd");
+      }
+      if (hlLoop) cancelAnimationFrame(hlLoop);
+      hlLoop = requestAnimationFrame(function () { hlLoop = 0; syncHl(); });
+    }
+    api.syncHighlight = syncHl;
 
     api._initMenu = function () {
       var input = document.getElementById("chatInput");
       if (!input) return;
       input.addEventListener("input", onInput);
+      input.addEventListener("input", syncHl);
+      input.addEventListener("scroll", syncHl);
       // Keydown PHAI dang ky TRUOC app.js (cung element -> chay theo thu tu dang ky). Script
       // nay nap truoc app.js va #chatInput da ton tai, nen init DONG BO ngay o duoi. Khi menu
       // mo, onKeydown goi stopImmediatePropagation chan handler Enter cua app.js.

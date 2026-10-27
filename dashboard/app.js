@@ -53,6 +53,7 @@ function stopCurrent() {
   try { ketThucTheoLoi(false); } catch (e) {}
   voice.stopSpeaking();
   const sid = savedSessionId;
+  try { if (window.MinMinGoals && window.MinMinGoals.biDung) window.MinMinGoals.biDung(sid); } catch (e) {}   // Dừng = tạm dừng /goal, không xoá
   if (sid && adaptiveCurrent.has(sid)) adaptiveCancelled.add(adaptiveCurrent.get(sid));
   // Dừng ĐÚNG phiên đang xem (phiên nền khác vẫn chạy). Server huỷ lượt + gửi turn_done về.
   if (sid && ws && ws.readyState === WebSocket.OPEN) {
@@ -1192,6 +1193,7 @@ function handleMessage(data) {
       return;
     }
     const { clean: askClean, ask } = window.JavisAsk.extract(data.content || "");
+    try { if (window.MinMinGoals) window.MinMinGoals.traLoi(sid, data.content || "", !!ask); } catch (e) {}
     const finalText = askClean || (t && t.text) || "";
     const shownText = finalText || window.t("app.no_content");
     if (t) t.text = shownText;
@@ -1235,6 +1237,7 @@ function handleMessage(data) {
     }
     refreshUsage();     // cập nhật panel Mức dùng sau mỗi lượt
   } else if (data.type === "error") {
+    try { if (window.MinMinGoals) window.MinMinGoals.loi(sid); } catch (e) {}
     if (t && data.limit) t.limit = data.limit;
     if (t) t.errored = true;   // khung response rỗng theo sau không vẽ thêm "(không có nội dung)"
     if (isActive) {
@@ -1294,6 +1297,9 @@ function handleMessage(data) {
     // một lần ở đây vô hại với lượt thường - hideActivity() là thao tác không cộng dồn.
     if (isActive) { hideActivity(); veKhoiBuoc(t, false); syncActiveUI(); runActions(turn.turnDone()); cum.reset(); }
     if (sid) delete turns[sid];
+    // /goal: vòng vừa đóng, lúc duy nhất quyết định có tự gửi vòng tiếp. Gọi cả cho chat chạy nền: mục tiêu
+    // của chat đó ghi nhận vòng đã xong, mở lại chat là nó đi tiếp.
+    try { if (window.MinMinGoals) window.MinMinGoals.hetLuot(sid); } catch (e) {}
     if (isActive && _tinChoLuot) guiTinCho();   // câu người dùng chen ngang: lượt cũ dừng hẳn rồi thì gửi
     if (isActive) guiCauChoLuot();               // câu nói lúc đang trả lời (cuộc gọi): gửi nếu loa đã im
     notifySessions();
@@ -1465,6 +1471,11 @@ async function sendMessage(text, opts) {
     });
     return;
   }
+  if (_slash.type === "goal") {   // 26.10.274: /goal chạy ở chat-goal.js, nó gọi lại sendMessage kèm khối mục tiêu
+    chatInput.value = ""; chatInput.style.height = "auto";
+    if (window.MinMinGoals && window.MinMinGoals.lenh) window.MinMinGoals.lenh(_slash.arg);
+    return;
+  }
   if (_slash.type === "session") {
     chatInput.value = ""; chatInput.style.height = "auto";
     if (_slash.cmd === "stop") { try { stopCurrent(); } catch (e) {} }
@@ -1593,6 +1604,10 @@ async function sendMessage(text, opts) {
       + `thì ghi thẳng vào chính file này.]\n\n${outMsg}`;
   }
 
+  // Khối mục tiêu của /goal (chat-goal.js) đứng NGOÀI cùng; chuNguoiGo bóc nó khỏi bong bóng. Tin thường gõ
+  // vào chat đang có mục tiêu thì mục tiêu tạm dừng, để lượt của bố không bị vòng tự động giành lời.
+  if (opts && opts.prefix) outMsg = `${opts.prefix}${outMsg}`;
+  try { if (window.MinMinGoals && !(opts && opts.goal)) window.MinMinGoals.chenNgang(sid); } catch (e) {}
   chatInput.value = ""; chatInput.style.height = "auto";
   clearAttachments();
   turns[sid] = { text: "", bubble: null, spoke: false, running: true, id: ++_luotSeq };
@@ -1645,6 +1660,19 @@ function nguCanhChon() {
 }
 // Chip lựa chọn (chat-ask.js) gửi đáp án qua đây: bấm chip = y như người dùng gõ tay nhãn đó.
 window.JavisSend = sendMessage;
+// Cửa cho chat-goal.js (/goal): gửi một vòng, hỏi phiên đang mở / đang chạy, ghi một dòng chú thích.
+// send() trả true khi tin thật sự đi: có kết nối và phiên không đang trả lời.
+window.MinMinChat = {
+  sid: () => savedSessionId,
+  dangChay: (s) => !!(s && turns[s] && turns[s].running),
+  send: (text, opts) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    if (savedSessionId && turns[savedSessionId] && turns[savedSessionId].running) return false;
+    sendMessage(text, opts);
+    return true;
+  },
+  note: (text) => ghiChuThoang(text),
+};
 // Module ngoài (limit-resume.js) gửi một khung điều khiển thô lên server. true = đã gửi.
 window.JavisWsSend = function (obj) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return false;
@@ -2000,7 +2028,7 @@ function lastUserText() {
 // "[SKILL: " là khối do chat-slash.js dựng khi người dùng gõ lệnh "/". Gỡ nó ra thì bong bóng
 // hiện ĐÚNG câu họ đã gõ, thay vì câu máy dựng quanh câu đó - khách báo đúng chuyện này 16/09.
 // Giữ MỘT DÒNG: test_dinh_kem_khong_roi.js bóc đúng dòng này ra để chạy docDinhKem bằng node.
-const _KHOI_NGU_CANH = ["[FILE ĐANG MỞ trong trình sửa của Javis:", "[File đính kèm", "[NGỮ CẢNH GIAO DIỆN:", "[SKILL: "];
+const _KHOI_NGU_CANH = ["[FILE ĐANG MỞ trong trình sửa của Javis:", "[File đính kèm", "[NGỮ CẢNH GIAO DIỆN:", "[SKILL: ", "[MỤC TIÊU:"];
 
 // Gỡ mấy khối đó ra để lấy lại ĐÚNG câu người dùng đã gõ.
 //
