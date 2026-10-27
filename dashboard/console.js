@@ -1961,18 +1961,55 @@
     if (dangCai) _ctTimer = setTimeout(() => veCongCuTuyChon(host), 2000);
   }
 
-  // Khung "Xem chi tiết" dưới một thẻ (dùng cho thẻ công cụ; thẻ việc có bản riêng trong renderSelfImprove).
-  function ganChiTiet(div, rows) {
+  // Ngăn kéo bên phải (26.10.266): "Xem chi tiết" mở ngăn cạnh bên thay vì đẩy trang xuống.
+  // Trên điện thoại ngăn trượt lên từ dưới. Chỉ một ngăn mở một lúc. Nút thao tác của dòng
+  // (Sửa, Xoá, Tắt...) được MƯỢN vào ngăn rồi trả về chỗ cũ khi đóng, nên sự kiện đã gắn vẫn chạy.
+  let _ngan = null;
+  function dongNgan() {
+    const n = _ngan; if (!n) return;
+    _ngan = null;
+    if (n.tra) { try { n.tra(); } catch (e) { } }
+    n.box.remove(); n.bd.remove();
+    document.removeEventListener("keydown", n.esc);
+  }
+  function moNgan(o) {
+    dongNgan();
+    const bd = document.createElement("div"); bd.className = "ngan-bd";
+    const box = document.createElement("aside"); box.className = "ngan";
+    box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true");
+    box.innerHTML = `<div class="ngan-h"><span class="ngan-t">${o.icon ? ic(o.icon) + " " : ""}${esc(o.title || "")}</span>`
+      + `<button type="button" class="ngan-x" aria-label="${esc(window.t("cs.ct_close"))}">${ic("x")}</button></div>`
+      + `<div class="ngan-b"><dl>${(o.rows || []).filter(r => r && r[1]).map(r => `<dt>${esc(r[0])}</dt><dd>${esc(String(r[1]))}</dd>`).join("")}</dl></div>`;
+    let tra = null;
+    if (o.actions && o.actions.parentNode) {
+      const holder = o.actions.parentNode, next = o.actions.nextSibling, act = o.actions;
+      const foot = document.createElement("div"); foot.className = "ngan-f";
+      foot.appendChild(act); box.appendChild(foot);
+      tra = () => holder.insertBefore(act, next);
+    }
+    const esc_ = e => { if (e.key === "Escape") dongNgan(); };
+    _ngan = { box, bd, tra, esc: esc_ };
+    bd.onclick = dongNgan; box.querySelector(".ngan-x").onclick = dongNgan;
+    document.addEventListener("keydown", esc_);
+    document.body.appendChild(bd); document.body.appendChild(box);
+    box.querySelector(".ngan-x").focus({ preventScroll: true });
+  }
+  // Rời trang thì đóng ngăn (ngăn nằm ngoài khung trang nên không tự biến mất).
+  window.addEventListener("hashchange", dongNgan);
+
+  // Một dòng gọn: icon, tên, dòng phụ, trạng thái, nút. Nút thao tác phụ nằm trong .wf-actions
+  // (ẩn trên dòng, hiện trong ngăn kéo).
+  function dongHangHtml(o) {
+    return `<div class="lp-r"><span class="lp-ic">${ic(o.icon)}</span>`
+      + `<div class="lp-m"><div class="wf-name">${o.name}</div><div class="lp-sub">${o.sub || ""}</div></div>`
+      + `<div class="lp-st">${o.status || ""}</div><div class="lp-b">${o.btns || ""}</div></div>`;
+  }
+
+  // Gắn nút "Xem chi tiết" của một thẻ/dòng vào ngăn kéo.
+  function ganChiTiet(div, rows, title, icon, actions) {
     const btn = div.querySelector(".ctBtn");
     if (!btn) return;
-    const det = document.createElement("div");
-    det.className = "ct-det"; det.hidden = true;
-    det.innerHTML = "<dl>" + rows.filter(r => r && r[1]).map(r => `<dt>${esc(r[0])}</dt><dd>${esc(String(r[1]))}</dd>`).join("") + "</dl>";
-    div.appendChild(det);
-    btn.onclick = () => {
-      det.hidden = !det.hidden;
-      btn.textContent = det.hidden ? window.t("cs.ct_btn") : window.t("cs.ct_close");
-    };
+    btn.onclick = () => moNgan({ title: title || "", icon, rows, actions });
   }
   async function renderPlugins(el) {
     _injectExtraCss();
@@ -1999,15 +2036,10 @@
                     p.version ? `v${esc(p.version)}` : "", p.author ? esc(p.author) : ""].filter(Boolean).join(" · ");
       const chips = (p.tools || []).map(t => chip(t, "wrench")).join("") + (p.hooks || []).map(h => chip(h, "webhook")).join("");
       const div = document.createElement("div");
-      div.className = "wf-card" + (p.loaded ? "" : " off");
-      div.innerHTML = `
-        <div class="wf-top">
-          <div class="wf-name">${ic("puzzle")} ${esc(p.name)} <span class="dim" style="font-size:12px">${esc(p.slug)}</span> ${srcBadge(p.source)}</div>
-          <div>${status}</div>
-        </div>
-        <div class="wf-desc">${esc(p.description || "")}</div>
-        <div class="wf-steps">${meta}${chips ? `<div style="margin-top:8px">${chips}</div>` : ""}${p.error ? `<div style="margin-top:6px;color:var(--red)">${esc(p.error)}</div>` : ""}</div>
-        <div class="wf-actions"><button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>${p.page ? `<a class="s-btn-ghost" href="${esc(safeHref(p.page))}" target="_blank" rel="noopener">${esc(window.t("cs.pl_open_page"))} ↗</a>` : ""}${p.source === "pack"
+      div.className = "wf-card lp-rowcard" + (p.loaded ? "" : " off");
+      div.innerHTML = dongHangHtml({ icon: "puzzle", name: `${esc(p.name)} <span class="dim" style="font-size:12px">${esc(p.slug)}</span> ${srcBadge(p.source)}`,
+        sub: esc(p.description || ""), status, btns: `<button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>` }) + `
+        <div class="wf-actions">${p.page ? `<a class="s-btn-ghost" href="${esc(safeHref(p.page))}" target="_blank" rel="noopener">${esc(window.t("cs.pl_open_page"))} ↗</a>` : ""}${p.source === "pack"
             ? `<button class="s-btn-ghost" data-goto-packs="1">${esc(window.t("cs.pl_manage_store"))}</button>`
             : p.removed
               ? `<button class="s-btn-ghost undel">${esc(window.t("store.reinstall"))}</button>`
@@ -2022,7 +2054,7 @@
         [window.t("cs.ct_version"), [p.version ? "v" + p.version : "", p.author || ""].filter(Boolean).join(" · ")],
         [window.t("cs.ct_state"), p.error ? window.t("app.err_low") : p.gated ? window.t("cs.pl_st_gated") : p.loaded ? window.t("usage.loop.on") : p.enabled ? window.t("cs.pl_st_idle") : window.t("cs.st_off_low")],
         [window.t("cs.ct_error"), p.error || ""],
-      ]);
+      ], p.name, "puzzle", div.querySelector(".wf-actions"));
       // Plugin đến từ gói thì bật/tắt và gỡ đều làm ở Kho cài đặt - nó đi theo cả gói, và có
       // đúng MỘT chỗ gỡ thì người dùng không phải đoán gỡ ở đâu mới là gỡ thật.
       const nutGoto = div.querySelector("[data-goto-packs]");
@@ -2464,22 +2496,6 @@
       if (c) return window.t("cs.ct_rep_tg", { id: c });
       return window.t("cs.ct_rep_default");
     }
-    function detBlock(rows) {
-      const box = document.createElement("div");
-      box.className = "ct-det"; box.hidden = true;
-      box.innerHTML = "<dl>" + rows.filter(r => r && r[1]).map(r =>
-        `<dt>${esc(r[0])}</dt><dd>${esc(String(r[1]))}</dd>`).join("") + "</dl>";
-      return box;
-    }
-    function wireDet(div, rows) {
-      const btn = div.querySelector(".ctBtn");
-      const det = detBlock(rows);
-      div.appendChild(det);
-      btn.onclick = () => {
-        det.hidden = !det.hidden;
-        btn.textContent = det.hidden ? window.t("cs.ct_btn") : window.t("cs.ct_close");
-      };
-    }
     function loopCard(lp) {
       const paused = !!lp.auto_paused_reason;
       const dot = lp.running ? `<span style="color:var(--green)">${ic("loader", { cls: "ic-spin" })} ${window.t("usage.loop.on")}</span>`
@@ -2504,19 +2520,17 @@
       div.className = "wf-card" + (lp.enabled ? "" : " off");
       div.dataset.kind = "loop";
       div.dataset.search = _lpNorm(`${lp.name} ${lp.slug} ${lp.goal || ""} ${GNAME[lp.goal] || ""}`);
-      div.innerHTML = `
-        <div class="wf-top"><div class="wf-name">${ic("repeat")} ${esc(lp.name)} <span class="dim" style="font-size:12px">${esc(lp.slug)}</span></div><div>${dot}</div></div>
-        <div class="wf-desc">${extra}</div>
-        <div class="wf-steps">${last}${verify}${next}${paused ? `<br>${WARN_ICON} ${esc(lp.auto_paused_reason)}` : ""}</div>
+      div.classList.add("lp-rowcard");
+      div.innerHTML = dongHangHtml({ icon: "repeat", name: `${esc(lp.name)} <span class="dim" style="font-size:12px">${esc(lp.slug)}</span>`,
+        sub: `${extra}<br>${last}${verify}${next}${paused ? `<br>${WARN_ICON} ${esc(lp.auto_paused_reason)}` : ""}`, status: dot,
+        btns: `<button class="s-btn-ghost run">▶ ${esc(window.t("cs.si_run_now"))}</button><button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>` }) + `
         <div class="wf-actions">
           <button class="s-btn-ghost tgl">${lp.enabled ? window.t("cb.tat") : window.t("cb.bat")}</button>
-          <button class="s-btn-ghost run">▶ ${esc(window.t("cs.si_run_now"))}</button>
-          <button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>
           <button class="s-btn-ghost edit">${esc(window.t("common.edit"))}</button>
           <button class="s-btn-ghost del" style="color:var(--red)">${esc(window.t("common.delete"))}</button>
           <select class="mv loop-sel" style="font-size:12px"><option value="">${esc(window.t("cs.si_move_brain"))}</option>${moveOptions(lp.brain_path)}</select>
         </div>`;
-      wireDet(div, [
+      ganChiTiet(div, [
         [window.t("cs.ct_when"), [window.t("cs.si_every", { so: lp.interval_min }),
           lp.quiet_hours ? window.t("cs.si_quiet", { gio: lp.quiet_hours }) : "",
           lp.max_runs_per_day ? window.t("cs.si_maxruns", { so: lp.max_runs_per_day, da: lp.runs_today }) : ""].filter(Boolean).join(" · ")],
@@ -2527,7 +2541,7 @@
         [window.t("cs.ct_result"), String(lp.last_summary || "").slice(0, 600)],
         [window.t("cs.ct_next"), (lp.enabled && !paused && lp.next_run) ? fmtWhen(lp.next_run) + " · " + fmtLeft(lp.next_run) : ""],
         [window.t("cs.ct_brain"), lp.brain_name || ""],
-      ]);
+      ], lp.name, "repeat", div.querySelector(".wf-actions"));
       // MỌI thao tác gửi brain của CHÍNH item (lp.brain_path), KHÔNG phải fbrain() - trang này gộp
       // nhiều brain nên bám sidebar sẽ nhắm nhầm brain.
       div.querySelector(".tgl").onclick = async () => {
@@ -2585,17 +2599,17 @@
       div.className = "wf-card";
       div.dataset.kind = "rem";
       div.dataset.search = _lpNorm(`${title} ${when} ${r.cron || ""} ${kind} ${mq}`);
-      div.innerHTML = `<b>${ic("alarm-clock")} ${esc(title)}</b>
-        <div class="dim" style="font-size:12px;color:var(--text3)">${esc(when)} · ${esc(kind)}${mq ? ` · <span class="rm-mq${r.muc_quyen === "full" ? " on" : ""}">${esc(mq)}</span>` : ""}${r.cron ? ` · <code>${esc(r.cron)}</code>` : ""}</div>
-        ${r.error ? `<div style="font-size:12px;color:var(--warn-ink);margin-top:4px">${WARN_ICON} ${esc(window.t("cs.si_prev_err"))} ${esc(r.error.slice(0, 160))}</div>` : ""}
-        <div class="wf-actions" style="margin-top:8px">
-          <button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>
+      div.classList.add("lp-rowcard");
+      div.innerHTML = dongHangHtml({ icon: "alarm-clock", name: esc(title),
+        sub: `${esc(when)} · ${esc(kind)}${mq ? ` · <span class="rm-mq${r.muc_quyen === "full" ? " on" : ""}">${esc(mq)}</span>` : ""}${r.error ? `<br>${WARN_ICON} ${esc(window.t("cs.si_prev_err"))} ${esc(r.error.slice(0, 160))}` : ""}`,
+        status: "", btns: `<button class="s-btn-ghost ctBtn">${esc(window.t("cs.ct_btn"))}</button>` }) + `
+        <div class="wf-actions">
           <button class="s-btn-ghost rmEdit">${esc(window.t("common.edit"))}</button>
           <button class="s-btn-ghost rmCancel">${esc(window.t("common.cancel"))}</button>
           <button class="s-btn-ghost rmDel" style="color:var(--red)">${esc(window.t("common.delete"))}</button>
           <select class="mv loop-sel" style="font-size:12px"><option value="">${esc(window.t("cs.si_move_brain"))}</option>${moveOptions(r.brain_path)}</select>
         </div>`;
-      wireDet(div, [
+      ganChiTiet(div, [
         [window.t("cs.ct_when"), when],
         [window.t("cs.ct_kind"), kind],
         [window.t("cs.ct_what"), String(r.text || "").trim()],
@@ -2604,7 +2618,7 @@
         [window.t("cs.ct_result"), String(r.result || "").slice(0, 600)],
         [window.t("cs.ct_error"), r.error ? String(r.error).slice(0, 300) : ""],
         [window.t("cs.ct_brain"), r.brain_name || ""],
-      ]);
+      ], title, "alarm-clock", div.querySelector(".wf-actions"));
       div.querySelector(".rmEdit").onclick = () => openForm(null, r);
       div.querySelector(".rmCancel").onclick = async () => {
         if (!confirm(window.t("cs.si_rem_cancel_confirm", { ten: title }))) return;

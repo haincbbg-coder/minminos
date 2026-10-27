@@ -2512,3 +2512,38 @@ details.h2-sec[open] > summary.h2-h { margin-bottom: 6px; }
 .ct-det dt { color: var(--text3); }
 .ct-det dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 560px) { .ct-det dl { grid-template-columns: minmax(0, 1fr); } .ct-det dt { margin-top: 6px; font-weight: 700; } }
+
+/* ===== Dòng gọn + ngăn kéo bên phải (26.10.266) ===== */
+.wf-card.lp-rowcard { padding: 8px 12px; margin-bottom: 6px; }
+.lp-r { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lp-ic { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: var(--mm-r-btn); background: var(--accent2-wash); color: var(--accent); }
+.lp-m { flex: 1 1 auto; min-width: 0; }
+.lp-m .wf-name { font-size: var(--mm-fs-14); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-sub { font-size: var(--mm-fs-12); color: var(--text3); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.lp-st { flex: none; font-size: var(--mm-fs-12); white-space: nowrap; }
+.lp-st:empty { display: none; }
+.lp-b { flex: none; display: flex; gap: 6px; }
+.lp-rowcard > .wf-actions { display: none; }
+@media (max-width: 640px) {
+  .lp-r { flex-wrap: wrap; }
+  .lp-m { flex: 1 1 calc(100% - 50px); }
+  .lp-st { order: 3; }
+  .lp-b { order: 4; margin-left: auto; }
+}
+.ngan-bd { position: fixed; inset: 0; z-index: 900; background: rgba(0, 0, 0, .28); }
+.ngan { position: fixed; z-index: 901; top: 0; right: 0; bottom: 0; width: min(400px, 100vw); display: flex; flex-direction: column; background: var(--bg2); border-left: 1px solid var(--border); box-shadow: -8px 0 28px rgba(0, 0, 0, .18); animation: ngan-vao .16s ease-out; }
+.ngan-h { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.ngan-t { flex: 1; min-width: 0; font-weight: 700; font-size: var(--mm-fs-16); overflow-wrap: anywhere; }
+.ngan-x { flex: none; border: 0; background: transparent; color: var(--text2); cursor: pointer; padding: 6px; border-radius: var(--mm-r-btn); }
+.ngan-b { flex: 1; overflow-y: auto; padding: 12px 14px; }
+.ngan-b dl { margin: 0; display: grid; grid-template-columns: minmax(80px, 120px) minmax(0, 1fr); gap: 8px 12px; font-size: var(--mm-fs-13); }
+.ngan-b dt { color: var(--text3); }
+.ngan-b dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ngan-f { padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); }
+.ngan .wf-actions { display: flex; }
+@keyframes ngan-vao { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 640px) {
+  .ngan { top: auto; left: 0; width: 100%; max-height: 85vh; border-left: 0; border-top: 1px solid var(--border); border-radius: var(--mm-r-card) var(--mm-r-card) 0 0; animation: none; }
+  .ngan-b dl { grid-template-columns: minmax(0, 1fr); }
+  .ngan-b dt { margin-top: 6px; font-weight: 700; }
+}
