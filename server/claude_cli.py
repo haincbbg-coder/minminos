@@ -999,8 +999,67 @@ def claude_engine(system_prompt=None, cwd=None, tag="chat", allowed_tools=None, 
         print(f"[claude engine] JAVIS_CLAUDE_ENGINE={mode} đã gỡ từ v0.9.37 - engine Claude "
               "luôn chạy Agent SDK. Gặp lỗi hãy báo issue kèm log.", file=sys.stderr)
     from claude_sdk_engine import ClaudeSDK
-    return ClaudeSDK(system_prompt=system_prompt, cwd=cwd, tag=tag,
-                     allowed_tools=allowed_tools, model=model)
+    eng = ClaudeSDK(system_prompt=system_prompt, cwd=cwd, tag=tag,
+                    allowed_tools=allowed_tools, model=model)
+    # 26.10.271: mọi lượt Claude Code (chat, loop, nhắc hẹn, bot) đều bỏ CLAUDE.md của repo khỏi
+    # phần Claude Code tự nạp và tự gom gọn mạch ở ~180k. Xem `cai_dat_claude_minmin`.
+    eng.settings_json = cai_dat_claude_minmin()
+    return eng
+
+
+# 26.10.271: Claude Code tự gom gọn (compact) mạch khi ngữ cảnh chạm cửa sổ này. Mặc định "auto"
+# của nó bám theo cửa sổ của model, mà model 1M thì cửa sổ đo được là ~980k: một chat dài đọc lại gần
+# một triệu token MỖI LƯỢT trước khi nó chịu gom. 200k là cửa sổ Claude kinh điển, nên model 200k
+# chạy y như cũ, còn model 1M gom ở ~180k (Claude Code chừa 20k đệm) bằng bản tóm tắt của chính nó,
+# mạch vẫn giữ nguyên. Đặt MINMIN_CLAUDE_COMPACT_WINDOW=auto để trả về mặc định của Claude Code.
+CLAUDE_COMPACT_WINDOW = 200_000
+
+
+def _cua_so_gom_gon():
+    v = (os.getenv("MINMIN_CLAUDE_COMPACT_WINDOW") or "").strip().lower()
+    if v in ("auto", "0", "off"):
+        return None
+    if not v:
+        return CLAUDE_COMPACT_WINDOW
+    try:
+        n = int(v[:-1]) * 1000 if v.endswith("k") else int(v)
+    except ValueError:
+        return CLAUDE_COMPACT_WINDOW
+    # Claude Code chỉ nhận 100k tới 1M, ngoài khoảng đó nó bỏ qua cả khoá.
+    return max(100_000, min(n, 1_000_000))
+
+
+def _claude_md_cua_repo() -> list:
+    """CLAUDE.md của chính repo MinMin, ở cả hai kiểu viết đường dẫn Claude Code có thể so."""
+    p = Path(__file__).resolve().parent.parent / "CLAUDE.md"
+    return list(dict.fromkeys([str(p), p.as_posix()]))
+
+
+def cai_dat_claude_minmin(goc=None) -> str:
+    """JSON settings cho mọi lượt Claude Code MinMin chạy (26.10.271), gộp lên trên `goc`.
+
+    - `claudeMdExcludes`: bản cài thường để brain nằm trong repo (BRAINS_DIR mặc định là
+      <repo>/brains), và Claude Code đi ngược từ cwd lên, nạp mọi CLAUDE.md gặp trên đường. File
+      ở gốc repo CHÍNH LÀ system prompt MinMin, thứ MinMin đã tự gắn vào lượt, nên mỗi lượt trả
+      tiền cho nó hai lần (~33k ký tự). CLAUDE.md của brain vẫn nạp như cũ.
+    - `autoCompactWindow`: xem CLAUDE_COMPACT_WINDOW. Phải là SỐ, "200k" bị bỏ qua.
+    Claude Code bản cũ bỏ qua khoá nó không biết, nên không có gì hỏng ở máy chưa cập nhật."""
+    d = goc
+    if isinstance(goc, str):
+        try:
+            d = json.loads(goc) if goc.strip() else {}
+        except ValueError:
+            d = {}
+    if not isinstance(d, dict):
+        d = {}
+    d = dict(d)
+    cu = d.get("claudeMdExcludes")
+    cu = cu if isinstance(cu, list) else []
+    d["claudeMdExcludes"] = list(dict.fromkeys([*cu, *_claude_md_cua_repo()]))
+    w = _cua_so_gom_gon()
+    if w:
+        d.setdefault("autoCompactWindow", w)
+    return json.dumps(d, ensure_ascii=False)
 
 
 # ============================================================
@@ -1729,6 +1788,8 @@ class CodexCLI:
                 yield {"type": "final", "content": final_text, "session_id": self.session_id,
                        # Codex đã tính cached_input_tokens trong input_tokens.
                        "tokens_in": u.get("input_tokens") or 0,
+                       # Phần đó tách riêng ra (26.10.271) để dòng token chỉ đếm token MỚI.
+                       "tokens_cache": u.get("cached_input_tokens") or 0,
                        "tokens_out": u.get("output_tokens") or 0}
             elif t in ("error", "stream.error") and la_thong_bao_ket_noi_lai(ev.get("message")):
                 # "Reconnecting... 2/5 (...)": Codex đang tự thử lại, lượt CHƯA hỏng. Đẩy lên thành

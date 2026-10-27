@@ -549,6 +549,9 @@ class ClaudeSDK:
         # dùng cho phiên cải tiến: một server đọc file khoá trong thư mục bằng chứng, thay cho Read
         # native (Read native nhận đường dẫn tuyệt đối nên đọc được đáp án và điểm ở chỗ khác).
         self.sdk_servers = None
+        # JSON settings đưa cho Claude Code qua `--settings` (26.10.271): bỏ CLAUDE.md của repo
+        # khỏi phần nó tự nạp và tự gom gọn mạch ở ~180k. `claude_cli.claude_engine` đặt.
+        self.settings_json = None
 
     def _on_stderr(self, line):
         """Nhận từng dòng stderr của tiến trình `claude`.
@@ -842,6 +845,8 @@ class ClaudeSDK:
             kw["effort"] = self.effort
         if self.session_id:
             kw["resume"] = self.session_id
+        if self.settings_json and "settings" in fields:
+            kw["settings"] = self.settings_json
         servers, strict = self._mcp_servers()
         # Nhớ lượt này có đấu hub Javis không: lỗi hết giờ khởi động cần biết để khỏi đổ cho hub
         # khi hub vốn không được đấu. Chuỗi (đường dẫn thô) coi như có đấu vì không đọc được.

@@ -9,7 +9,7 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 - **Chào hỏi gần như không tốn token**: bố nhắn "chào", "cảm ơn", "ok" hay một biểu tượng cảm xúc, MinMin trả lời nhanh mà không nạp cả bộ hướng dẫn, công cụ và trí nhớ.
 - **Chat dài trên Claude Code không phình mãi**: tới khoảng 180 nghìn token, cuộc chat tự gom gọn thay vì kéo lên gần 1 triệu token mỗi lượt.
 - **Dòng token dưới mỗi câu trả lời chỉ đếm phần mới** của lượt đó, phần đọc lại từ bộ nhớ đệm xem khi rê chuột.
-- Hỏi giờ giữa một cuộc chat dài vẫn ra **đúng giờ hiện tại**.
+- Hỏi giờ giữa một cuộc chat dài vẫn ra **đúng giờ hiện tại**. Trang Mức dùng có thêm biểu đồ **24 giờ qua** theo từng giờ.
 
 ## [26.10.269] - 2026-10-27
 ### Thêm mới

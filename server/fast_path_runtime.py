@@ -11,7 +11,7 @@ import hashlib
 import math
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Optional
 
 import capability_resolver
@@ -41,6 +41,31 @@ def stable_bucket(session_id: str, salt: str, buckets: int = 10_000) -> int:
         )
     ).digest()
     return int.from_bytes(digest[:8], "big") % max(1, int(buckets or 10_000))
+
+
+# 26.10.271: câu CHỈ có chào hỏi hoặc cảm ơn ("chào em", "cảm ơn nhé", "hi MinMin 👋") đi đường tắt
+# ở MỌI mức tiết kiệm, mọi engine. Trên Claude Code đường đầy đủ tốn hàng chục nghìn token cho một câu
+# chào (CLAUDE.md, MEMORY.md, schema tool, danh sách skill), đường tắt chỉ vài trăm. Luật khớp CỐ Ý
+# chặt: MỌI từ phải là lời chào, lời cảm ơn hoặc từ xưng hô/đệm, nên "chào em, doanh thu hôm nay?"
+# hay "cảm ơn, gửi tin cho Lan nhé" không bao giờ lọt. "ok", "được", "👍" CỐ Ý không tính: đó là cách
+# người ta nói "làm đi" với một việc MinMin vừa đề xuất, mà đường tắt không có tool lẫn lịch sử.
+# Biểu tượng cảm xúc chỉ đi kèm được (bị bỏ khi so), một mình nó không đủ là lời chào.
+_ST_CHAO = r"xin chao|chao|hello|helo|hi|hey|alo|good morning|good afternoon|good evening"
+_ST_CAM_ON = r"cam on|thanks|thank you|thank u|thank|thx|tks|many thanks"
+_ST_DEM = (r"em|anh|chi|ban|minh|bo|me|minmin|a|nhe|nha|nhieu|lam|oi|ha|ca nha|rat|"
+           r"very much|so much|buoi sang|buoi chieu|buoi toi")
+_ST_TRON = re.compile(rf"^(?:(?:{_ST_CHAO}|{_ST_CAM_ON}|{_ST_DEM})\b\s*)+$")
+_ST_LOI = re.compile(rf"\b(?:{_ST_CHAO}|{_ST_CAM_ON})\b")
+SMALL_TALK_MAX_CHARS = 60
+
+
+def is_small_talk(text: str) -> bool:
+    """True khi CẢ tin nhắn chỉ là một lời chào hoặc lời cảm ơn, không kèm việc gì."""
+    raw = str(text or "").strip()
+    if not raw or len(raw) > SMALL_TALK_MAX_CHARS:
+        return False
+    words = " ".join(re.sub(r"[^a-z0-9\s]", " ", _norm(raw)).split())
+    return bool(words) and bool(_ST_TRON.match(words)) and bool(_ST_LOI.search(words))
 
 
 @dataclass(frozen=True)
@@ -115,6 +140,15 @@ class QuotaRule:
     window_seconds: int
     priority: int
     rule_id: str
+
+
+# Ngân sách cho capsule chào hỏi khi engine không có quota rule riêng (gói thuê bao chưa khai
+# `subscription_context`). Rộng tay có chủ ý: capsule chừng 1k token, số này chỉ để preflight của
+# compiler có số mà so, không bao giờ dùng để chặn một câu chào.
+SMALL_TALK_RULE = QuotaRule(
+    provider="*", model_pattern="*", rolling_tpm=1_000_000, hard_max_input_tokens=32_000,
+    reserved_output_tokens=1_024, window_seconds=60, priority=-2, rule_id="small-talk",
+)
 
 
 @dataclass(frozen=True)
@@ -234,6 +268,9 @@ class FastPathPlan:
     reserved_output_tokens: int = 0
     policy_version: str = CANARY_POLICY_VERSION
     rejection_message: str = ""
+    # True = lượt chỉ là chào hỏi/cảm ơn (26.10.271). Chỗ gọi GIỮ mạch native của engine: mạch đó
+    # không biết câu "cảm ơn" là vô hại, còn dọn mạch là bắt lượt sau mồi lại từ đầu.
+    small_talk: bool = False
 
 
 class FastPathCanary:
@@ -270,19 +307,34 @@ class FastPathCanary:
         if not trace:
             return FastPathPlan("legacy", "trace_unavailable", "legacy")
         bucket = stable_bucket(trace.session_id, policy.salt)
-        if policy.mode not in ("canary", "on"):
-            return self._legacy(trace, policy, bucket, "mode_not_canary")
-        if policy.allocation_basis_points <= bucket:
-            return self._legacy(trace, policy, bucket, "outside_allocation")
-        if channel not in policy.channels:
-            return self._legacy(trace, policy, bucket, "channel_not_allowed")
-        if provider_kind not in policy.provider_kinds:
-            return self._legacy(trace, policy, bucket, "provider_kind_not_allowed")
+        # Chào hỏi bỏ qua các cổng của mức tiết kiệm (mode, tỉ lệ, kênh, loại engine), bộ phân loại
+        # ý định (câu chào 7 ký tự quá ngắn để đoán ngôn ngữ) và bộ dò capability (câu chào không
+        # cần tool). Quota và preflight của compiler bên dưới vẫn áp như thường.
+        small_talk = not has_attachments and is_small_talk(objective)
+        if not small_talk:
+            if policy.mode not in ("canary", "on"):
+                return self._legacy(trace, policy, bucket, "mode_not_canary")
+            if policy.allocation_basis_points <= bucket:
+                return self._legacy(trace, policy, bucket, "outside_allocation")
+            if channel not in policy.channels:
+                return self._legacy(trace, policy, bucket, "channel_not_allowed")
+            if provider_kind not in policy.provider_kinds:
+                return self._legacy(trace, policy, bucket, "provider_kind_not_allowed")
         rule = policy.quota_rule(provider, model)
         if rule is None and str(provider_kind or "") in ("cli", "oauth"):
             rule = policy._rule_thue_bao(self.settings_reader() or {})
+        if rule is None and small_talk:
+            rule = SMALL_TALK_RULE
         if rule is None:
             return self._legacy(trace, policy, bucket, "hard_quota_unknown")
+        if small_talk:
+            self.runtime.record_runtime_event(trace, "fast_path.small_talk", {"chars": len(objective)})
+            plan = self._compile_and_admit(
+                trace, policy, bucket, rule, objective, brain, channel, provider, model,
+                provider_kind, lang_tra_loi,
+                {"ranked": [], "selected": [], "selected_count": 0, "candidate_count": 0},
+            )
+            return replace(plan, small_talk=True) if plan.action == "execute" else plan
 
         intent = self.classifier.classify(
             objective, has_attachments=has_attachments,
@@ -354,6 +406,15 @@ class FastPathCanary:
         if diem_chan_kind >= policy.min_resolver_score:
             return self._legacy(trace, policy, bucket, "capability_kind_blocked")
 
+        return self._compile_and_admit(
+            trace, policy, bucket, rule, objective, brain, channel, provider, model,
+            provider_kind, lang_tra_loi, resolution,
+        )
+
+    def _compile_and_admit(self, trace, policy: CanaryPolicy, bucket: Optional[int],
+                           rule: QuotaRule, objective: str, brain: str, channel: str,
+                           provider: str, model: str, provider_kind: str, lang_tra_loi: str,
+                           resolution: dict) -> FastPathPlan:
         compile_resolution = dict(resolution)
         # Resolver miss "index_or_alias" nghĩa là không tìm thấy capability, không đồng nghĩa
         # chat-thuần bị lỗi. Classifier bảo thủ ở trên là authority để chọn path fast.

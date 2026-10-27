@@ -845,6 +845,38 @@ def luot_theo_ngay(period: str = "this_month", nguon: tuple = ("javis",),
     return [{"day": r[0], "turns": r[1] or 0} for r in rows]
 
 
+def gio_24(now: datetime = None) -> list:
+    """Token TUNG GIO trong 24 gio gan nhat, tach theo provider (26.10.271, tu Javis 0.329.0).
+
+    Bieu do theo NGAY khong tra loi duoc "sang nay cai gi dot token": hom nay chi la mot cot.
+    Day lap du 24 moc lien tuc (gio khong dung thi 0) de cot nao cung dung cho cua no.
+    Grain la gio dia phuong cua bang file_hourly, cung nguon voi `cua_so`.
+    """
+    now = now or datetime.now(_tz())
+    dau = now.replace(minute=0, second=0, microsecond=0)
+    moc = [dau - timedelta(hours=23 - i) for i in range(24)]
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT hour, provider, COALESCE(SUM(tokens),0), COALESCE(SUM(turns),0) FROM file_hourly "
+            "WHERE hour>=? GROUP BY hour, provider", (moc[0].strftime("%Y-%m-%dT%H"),)).fetchall()
+    finally:
+        conn.close()
+    theo = {}
+    for h, prov, tok, turns in rows:
+        o = theo.setdefault(h, {"claude": 0, "codex": 0, "api": 0, "total": 0, "turns": 0})
+        o[prov if prov in ("claude", "codex") else "api"] += tok or 0
+        o["total"] += tok or 0
+        o["turns"] += turns or 0
+    ra = []
+    for h in moc:
+        k = h.strftime("%Y-%m-%dT%H")
+        o = theo.get(k) or {}
+        ra.append({"hour": k, "gio": h.hour, "claude": o.get("claude", 0), "codex": o.get("codex", 0),
+                   "api": o.get("api", 0), "total": o.get("total", 0), "turns": o.get("turns", 0)})
+    return ra
+
+
 def dinh_cua_so(gio: float = 5.0, ngay_gan_day: int = 60, now: datetime = None) -> dict:
     """Cua so `gio` gio NANG NHAT tung do duoc trong `ngay_gan_day` ngay. Tra {tokens, hour}.
 
