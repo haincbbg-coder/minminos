@@ -142,14 +142,14 @@
         '<div class="knn-may">' +
           '<div><div class="knn-nho">' + esc(t("knn.ma_may")) + '</div><code id="knnMaMay">' + esc(d.ma_may) + '</code>' +
           ' <button type="button" class="s-btn-ghost knn-chep" data-chep="knnMaMay">' + ic("copy") + ' ' + esc(t("knn.chep")) + '</button></div>' +
-          '<div class="knn-nho">' + esc(t("knn.ma_may_giai_thich")) + '</div>' +
+          '<details class="knn-gt"><summary>' + esc(t("knn.giai_thich")) + '</summary><div class="knn-nho">' + esc(t("knn.ma_may_giai_thich")) + '</div></details>' +
         '</div>' +
         '<div class="knn-kh">' +
           '<input type="text" id="knnMa" placeholder="' + esc(t("knn.nhap_ma")) + '" autocomplete="off" spellcheck="false">' +
           '<button type="button" class="s-btn" id="knnKichHoat">' + ic("key") + ' ' + esc(t("knn.kich_hoat")) + '</button>' +
         '</div>' +
         '<div class="knn-thong" id="knnThong"></div>' +
-        '<div class="ud-luoi knn-luoi">' + uds.map(function (u) { return the(u, d); }).join("") + '</div>' +
+        '<div class="knn-ds">' + uds.map(function (u) { return the(u, d); }).join("") + '</div>' +
         (d.nha_phat_hanh ? khungTaoMa(uds) : "") +
         '<div class="knn-chan"><a href="#" id="knnDieuKhoan">' + ic("scroll-text") + ' ' + esc(t("knn.xem_dieu_khoan")) + '</a></div>' +
       '</div>';
@@ -176,6 +176,16 @@
         thong.textContent = e.message;
       }
     };
+    el.querySelectorAll("[data-ct]").forEach(function (b) {
+      b.onclick = function () {
+        var u = uds.filter(function (x) { return x.id === b.dataset.ct; })[0];
+        if (!u || !window.MinMinNgan) return;
+        var han = u.mo ? (u.het_han ? t("knn.han_den", { ngay: ngayVN(u.het_han) }) : t("knn.vinh_vien")) : "";
+        window.MinMinNgan.mo({ title: tenApp(u.id), icon: u.icon, rows: [
+          [t("knn.mo_ta"), moTaApp(u.id)], [t("knn.han_dung"), han], [t("knn.khach"), u.kh || ""],
+        ] });
+      };
+    });
     el.querySelectorAll("[data-mo]").forEach(function (b) {
       b.onclick = async function () {
         var u = uds.filter(function (x) { return x.id === b.dataset.mo; })[0];
@@ -196,17 +206,18 @@
       : '<span class="ud-tt khoa">' + ic("lock") + ' ' + esc(t("knn.chua_mo")) + '</span>';
     if (u.san_sang === false && u.mo) trang += ' <span class="ud-tt on">' + esc(t("knn.da_co_ma")) + '</span>';
     var han = u.mo ? (u.het_han ? t("knn.han_den", { ngay: ngayVN(u.het_han) }) : t("knn.vinh_vien")) : "";
-    return '<div class="ud-the knn-the' + (u.mo ? " mo" : "") + '">' +
+    return '<div class="knn-hang' + (u.mo ? " mo" : "") + '">' +
       '<div class="ud-ic">' + ic(u.icon) + '</div>' +
-      '<div class="ud-nd"><b>' + esc(tenApp(u.id)) + '</b>' + trang +
-      '<p>' + esc(moTaApp(u.id)) + '</p>' +
-      (han ? '<div class="knn-han">' + esc(han) + (u.kh ? " · " + esc(u.kh) : "") + '</div>' : "") +
-      '<div class="ud-nut"><button type="button" class="s-btn" data-mo="' + esc(u.id) + '"' +
-      (u.mo && u.san_sang ? "" : " disabled") + '>' + esc(t("knn.mo")) + '</button></div></div></div>';
+      '<div class="knn-hm"><b>' + esc(tenApp(u.id)) + '</b>' +
+      '<div class="knn-ht">' + esc(moTaApp(u.id)) + '</div></div>' +
+      '<div class="knn-hs">' + trang + (han ? '<span class="knn-han">' + esc(han) + '</span>' : "") + '</div>' +
+      '<div class="knn-hb"><button type="button" class="s-btn-ghost" data-ct="' + esc(u.id) + '">' + ic("eye") + ' ' + esc(t("knn.chi_tiet")) + '</button>' +
+      '<button type="button" class="s-btn" data-mo="' + esc(u.id) + '"' +
+      (u.mo && u.san_sang ? "" : " disabled") + '>' + esc(t("knn.mo")) + '</button></div></div>';
   }
 
   function khungTaoMa(uds) {
-    return '<div class="knn-ph"><h4>' + ic("key") + ' ' + esc(t("knn.ph_tieu_de")) + '</h4>' +
+    return '<details class="knn-ph"><summary><b>' + ic("key") + ' ' + esc(t("knn.ph_tieu_de")) + '</b></summary>' +
       '<p class="knn-nho">' + esc(t("knn.ph_giai_thich")) + '</p>' +
       '<div class="knn-ph-luoi">' +
         '<label>' + esc(t("knn.ph_khach")) + '<input type="text" id="phKhach"></label>' +
@@ -221,7 +232,7 @@
       }).join("") + '</div>' +
       '<button type="button" class="s-btn" id="phTao">' + esc(t("knn.ph_tao")) + '</button>' +
       '<textarea id="phKetQua" readonly rows="3" hidden></textarea>' +
-      '<div class="knn-thong" id="phThong"></div></div>';
+      '<div class="knn-thong" id="phThong"></div></details>';
   }
   function noiTaoMa(el) {
     el.querySelector("#phTao").onclick = async function () {
