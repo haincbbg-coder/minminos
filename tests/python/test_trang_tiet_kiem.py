@@ -166,8 +166,9 @@ check("endpoint gọn trả về dict", isinstance(_muc_api, dict))
 # trả theo token, nên với họ con số tiền là mức quy đổi nếu tính theo giá API chứ không phải
 # tiền mặt tiết kiệm được - không phân biệt là cả trang mất tin cậy. Nó rẻ (chỉ đọc settings),
 # khác hẳn nhóm trường chẩn đoán bị cấm ở phép thử ngay dưới.
+# `tra_loi_gon` thêm ở 26.10.269: trạng thái công tắc Trả lời gọn vẽ trong cùng khối này (chỉ đọc settings).
 check("trả đúng những thứ trang cần, không hơn",
-      set(_muc_api) == {"muc", "danh_sach", "tu_chon", "uoc_tinh", "do_duoc", "engine"})
+      set(_muc_api) == {"muc", "danh_sach", "tu_chon", "tra_loi_gon", "uoc_tinh", "do_duoc", "engine"})
 check("CANARY: và KHÔNG kèm số liệu chẩn đoán",
       not ({"canaries", "tpm_window", "quota_presets", "registry", "tasks"} & set(_muc_api)))
 check("danh sách mức khớp bảng mức thật",
