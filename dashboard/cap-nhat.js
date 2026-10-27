@@ -1,7 +1,7 @@
 /* cap-nhat.js - NÚT CẬP NHẬT ngay trên thanh bên, dưới nhóm Thiết lập (26.10.1).
  *
  * Chủ repo muốn: bấm một nút là cập nhật, app hỏi "đồng ý hay không" trước; và mỗi khi có
- * bản mới thì app TỰ BÁO chứ không phải vào Tuỳ chỉnh > Cập nhật mới biết.
+ * bản mới thì app TỰ BÁO chứ không phải vào Cài đặt > Cập nhật mới biết.
  *
  * - Hỏi /version lúc mở app và mỗi 30 phút. Có bản mới: nút hiện chấm đỏ + số phiên bản, và
  *   một thẻ báo nổi lên ở góc (mỗi phiên bản báo một lần, bấm "Để sau" là thôi).
