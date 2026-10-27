@@ -695,6 +695,10 @@ LEGACY_HASHES.update({
         "d12ab25e78405804c378af7ffb13c136d5fd6639cd5140b17231a533704b8bc8",
         "68e678ad331e4a93bfa5fb0e8b173ea9fa9be83a0e47315d64c41346b9dd9e60",
     },
+    "skills/html-to-webcake": {
+        # bản 26.10.264 (trước khi thêm máy soi Impeccable)
+        "e6ea4dcd892a6eea593f698f38908d5d17cccc5f97896ba1c0f71c3fc53d6677",
+    },
     "skills/query-wiki": {
         "de1f90fb9094ea7ab66fef95b62f0c8627058599165bb0ba1ae99e40163eb261",
         "e02eb3ba911b3bd7f1ef79447e5b37d8f7368f3c4793504af0851272f6325d4d",
