@@ -8868,5 +8868,15 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 827,
+  "type": "APIRoute",
+  "path": "/sessions/{session_id}/rewind",
+  "name": "sessions_rewind",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
  }
 ]

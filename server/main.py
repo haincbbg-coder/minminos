@@ -24846,6 +24846,12 @@ async def _meta_ads_duyet_callback(data: str, chat_key: str):
 meta_ads_duyet.dat_gui_telegram(_meta_ads_gui_tg)
 meta_fb_routes.register(app)
 
+# Nút Tua lại dưới câu hỏi trong khung chat (26.10.274): POST /sessions/{id}/rewind, server/tua_lai.py.
+# Đăng ký ở đuôi cho bảng route.
+import tua_lai as tua_lai_mod   # noqa: E402
+tua_lai_mod.register(app, lambda: get_store(), dang_chay=lambda s: bool(_CHAT_RUNTIME.get_job(s)),
+                     huy_cho_chay_lai=limit_resume.REGISTRY.cancel)
+
 if __name__ == "__main__":
     import uvicorn
     # 127.0.0.1: chỉ máy này truy cập được (an toàn - tránh người khác trong mạng LAN

@@ -1077,7 +1077,7 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
   border-radius: var(--mm-r-chip); cursor: pointer; font-size: var(--mm-fs-13); line-height: 1; padding: 3px 6px; }
 .msg-act:hover { color: var(--text-hi); border-color: var(--border); }
 /* Đang chạy một lượt thì không cho bấm gửi lại (app.js gắn .busy vào #chatArea) */
-.transcript.busy .msg-act[data-act="retry"] { opacity: 0.35; pointer-events: none; }
+.transcript.busy .msg-act[data-act="rewind"] { opacity: 0.35; pointer-events: none; }
 
 /* Copy code block (nút nổi góc phải khối code) */
 .code-wrap { position: relative; }

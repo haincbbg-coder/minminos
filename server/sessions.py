@@ -673,6 +673,25 @@ class SessionStore:
             return True
         return bool(self._write(_do))
 
+    def cat_tu_tin(self, session_id: str, message_id: int) -> int:
+        """Nút Tua lại (26.10.274): xoá tin NGƯỜI DÙNG `message_id` cùng MỌI tin sau nó (theo thứ tự hiển
+        thị `ts, id`), sửa lại msg_count. Trả số tin đã xoá; 0 khi đó không phải tin người dùng của phiên này.
+        Chỗ gọi tự dọn mạch native của engine, vì mạch vẫn còn giữ các lượt vừa xoá."""
+        def _do(conn):
+            row = conn.execute("SELECT ts, role FROM messages WHERE id = ? AND session_id = ?",
+                               (int(message_id), session_id)).fetchone()
+            if not row or row[1] != "user":
+                return 0
+            moc = float(row[0])
+            n = conn.execute(
+                "DELETE FROM messages WHERE session_id = ? AND (ts > ? OR (ts = ? AND id >= ?))",
+                (session_id, moc, moc, int(message_id))).rowcount
+            conn.execute(
+                "UPDATE sessions SET msg_count = (SELECT COUNT(*) FROM messages WHERE session_id = ?), "
+                "updated_at = ? WHERE id = ?", (session_id, time.time(), session_id))
+            return int(n or 0)
+        return int(self._write(_do) or 0)
+
     def replace_last_message(self, session_id: str, role: str, content: str,
                              expected_content: Optional[str] = None) -> bool:
         """Thay NỘI DUNG tin cuối của phiên nếu nó đúng vai. Trả True khi có thay.
