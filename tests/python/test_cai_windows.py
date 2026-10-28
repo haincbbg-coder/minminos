@@ -171,7 +171,7 @@ check("bản nhớ bị .gitignore che (STATE_DIR mặc định là server/)", _
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
 check("README nói một lệnh cài hết cho Windows", "install.ps1" in readme)
 check("README nhắc phải khởi động lại Javis khi cài thêm CLI",
-      "khởi động lại javis" in readme.lower())
+      "khởi động lại minmin" in readme.lower())
 check("README không còn mời Gemini CLI (đã gỡ ở 0.50.0)", "Gemini CLI" not in readme)
 
 if _fails:

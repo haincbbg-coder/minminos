@@ -127,16 +127,7 @@ def register(app: FastAPI, dashboard_dir: Path) -> None:
         "business.js", "audit-ui.js",
     }
 
-    @app.get("/apps/business-finance")
-    def business_finance_redirect():
-        return RedirectResponse("/apps/business-finance/", status_code=307)
-
-    @app.get("/apps/business-finance/")
-    def business_finance_index():
-        return business_finance_asset("index.html")
-
-    @app.get("/apps/business-finance/{name}")
-    def business_finance_asset(name: str):
+    def _serve_business_finance(name: str):
         if name not in finance_files:
             return JSONResponse({"ok": False, "error": "Không có tệp này."}, status_code=404)
         if not giay_phep.da_mo("business_finance"):
@@ -147,3 +138,15 @@ def register(app: FastAPI, dashboard_dir: Path) -> None:
         if not path.is_file():
             return JSONResponse({"ok": False, "error": "Bộ tệp ứng dụng chưa đầy đủ. Hãy cập nhật MinMin."}, status_code=404)
         return FileResponse(str(path), headers={"Cache-Control": "no-cache"})
+
+    @app.get("/apps/business-finance")
+    def business_finance_redirect():
+        return RedirectResponse("/apps/business-finance/", status_code=307)
+
+    @app.get("/apps/business-finance/")
+    def business_finance_index():
+        return _serve_business_finance("index.html")
+
+    @app.get("/apps/business-finance/{name}")
+    def business_finance_asset(name: str):
+        return _serve_business_finance(name)
