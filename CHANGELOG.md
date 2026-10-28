@@ -2,14 +2,14 @@
 
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Cài đặt → Cập nhật**.
 
-Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [26.10.279] - 2026-10-28
+Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
+
+## [26.10.279] - 2026-10-28
 ### Thêm mới
 - **Pancake đọc được từng hội thoại** bằng kết nối đang có. Gửi chữ/ảnh, gắn thẻ, phân công và ghi chú đều chờ duyệt đầy đủ nội dung; thu hồi quyền thì dừng.
 - **Webhook giữ sự kiện qua khởi động lại**, có lọc đơn, chống trùng theo shop/đơn/trạng thái và trang xem lỗi, chạy lại. Kết quả gửi chưa rõ thì chờ kiểm tra, không tự gửi thêm.
 - **Store có mục theo repo gốc**, hiện nguồn và ngày đồng bộ; cập nhật vẫn qua màn hình kiểm tra gói.
 - **GitHub ngay trong chat**: chọn repo/nhánh, làm việc riêng cho từng chat, kiểm tra mã, mở PR và theo dõi CI đúng commit; có trạng thái, vòng sửa lỗi và công tắc tự merge.
-
-## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
 ## [26.10.278] - 2026-10-28
 ### Thêm mới
