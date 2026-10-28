@@ -77,6 +77,8 @@ UNG_DUNG = (
      "duong_dan": "/apps/doi-social/"},
     {"id": "concat", "icon": "layers", "san_sang": True, "dieu_khoan_rieng": "",
      "duong_dan": "/apps/concat/"},
+    {"id": "business_finance", "icon": "calculator", "san_sang": True, "dieu_khoan_rieng": "",
+     "duong_dan": "/apps/business-finance/#calculator"},
     {"id": "dieu_khien_may", "icon": "hand", "san_sang": False, "dieu_khoan_rieng": "dieu_khien"},
 )
 ID_UNG_DUNG = tuple(u["id"] for u in UNG_DUNG)
@@ -340,4 +342,5 @@ def _main(argv=None) -> int:
 
 if __name__ == "__main__":
     sys.exit(_main())
+
 

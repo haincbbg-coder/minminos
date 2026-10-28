@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 import giay_phep
 
@@ -116,3 +116,34 @@ def register(app: FastAPI, dashboard_dir: Path) -> None:
         except ValueError as e:
             return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
         return {"ok": True, "dong_y": ghi, "dieu_khoan": trang_thai_dieu_khoan()}
+
+
+
+    # App bundled with MinMin: always retain both the normal auth guard and app license.
+    finance_dir = Path(dashboard_dir).parent / "apps" / "business-finance" / "web"
+    finance_files = {
+        "index.html", "style.css", "design.css", "readability.css", "theme-bridge.css",
+        "app.js", "numbers.js", "profit.js", "calculator.js", "business-engine.js",
+        "business.js", "audit-ui.js",
+    }
+
+    @app.get("/apps/business-finance")
+    def business_finance_redirect():
+        return RedirectResponse("/apps/business-finance/", status_code=307)
+
+    @app.get("/apps/business-finance/")
+    def business_finance_index():
+        return business_finance_asset("index.html")
+
+    @app.get("/apps/business-finance/{name}")
+    def business_finance_asset(name: str):
+        if name not in finance_files:
+            return JSONResponse({"ok": False, "error": "Không có tệp này."}, status_code=404)
+        if not giay_phep.da_mo("business_finance"):
+            return JSONResponse({"ok": False, "error": "Bảng tính kinh doanh chưa được mở khóa. Nhập mã tại Kết Nối Ngoài."}, status_code=403)
+        if not da_dong_y("chung"):
+            return JSONResponse({"ok": False, "error": "Cần đồng ý điều khoản sử dụng MinMin trước."}, status_code=403)
+        path = finance_dir / name
+        if not path.is_file():
+            return JSONResponse({"ok": False, "error": "Bộ tệp ứng dụng chưa đầy đủ. Hãy cập nhật MinMin."}, status_code=404)
+        return FileResponse(str(path), headers={"Cache-Control": "no-cache"})

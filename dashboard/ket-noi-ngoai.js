@@ -119,6 +119,7 @@
     bo_chung_tu_ke_toan: ["knn.app.bo_chung_tu_ke_toan.ten", "knn.app.bo_chung_tu_ke_toan.mo_ta"],
     xuong_video: ["knn.app.xuong_video.ten", "knn.app.xuong_video.mo_ta"],
     doi_social: ["knn.app.doi_social.ten", "knn.app.doi_social.mo_ta"],
+    business_finance: ["knn.app.business_finance.ten", "knn.app.business_finance.mo_ta"],
     concat: ["knn.app.concat.ten", "knn.app.concat.mo_ta"],
     dieu_khien_may: ["knn.app.dieu_khien_may.ten", "knn.app.dieu_khien_may.mo_ta"],
   };
@@ -258,3 +259,4 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", kiemLucMo);
   else kiemLucMo();
 })();
+
