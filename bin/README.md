@@ -1,6 +1,6 @@
-# JAVIS OS - macOS launchers
+# Minmin OS - macOS launchers
 
-Portable helpers to run JAVIS OS natively on macOS (no Docker), so you can
+Portable helpers to run Minmin OS natively on macOS (no Docker), so you can
 start it like a normal app.
 
 ## Prereqs (once)

@@ -1,8 +1,8 @@
-# Javis OS - Quick start
+# Minmin OS - Quick start
 
 *[Tiếng Việt](QUICKSTART.md) · **English***
 
-Get Javis OS running in a few minutes. Full guides: [docs/](docs/README.md).
+Get Minmin OS running in a few minutes. Full guides: [docs/](docs/README.md).
 
 ## Option 1 - Hostinger VPS (Docker Manager, one click)
 

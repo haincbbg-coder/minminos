@@ -2,20 +2,20 @@
 
 ***Tiếng Việt** · [English](en/10-models-and-engines.md)*
 
-Trang **Models** là nơi bạn chọn "bộ não" cho Javis: dùng engine nào, model nào để trả lời, đăng nhập vào nhà cung cấp AI, chọn model rẻ cho việc chạy nền, và bật mức suy nghĩ sâu. Đây là trang quyết định Javis thông minh tới đâu và tiêu hạn mức của gói nào.
+Trang **Models** là nơi bạn chọn "bộ não" cho Minmin: dùng engine nào, model nào để trả lời, đăng nhập vào nhà cung cấp AI, chọn model rẻ cho việc chạy nền, và bật mức suy nghĩ sâu. Đây là trang quyết định Minmin thông minh tới đâu và tiêu hạn mức của gói nào.
 
-Nếu bạn mới bắt đầu, xem trước [Bắt đầu & thiết lập lần đầu](01-bat-dau-thiet-lap.md). Khi cần gắn thêm công cụ ngoài cho Javis, xem [Kết nối & số liệu kinh doanh](09-mcp-va-so-lieu.md).
+Nếu bạn mới bắt đầu, xem trước [Bắt đầu & thiết lập lần đầu](01-bat-dau-thiet-lap.md). Khi cần gắn thêm công cụ ngoài cho Minmin, xem [Kết nối & số liệu kinh doanh](09-mcp-va-so-lieu.md).
 
 ## Tính năng này là gì
 
-Javis có thể chạy trên nhiều "engine" (nhà cung cấp AI) khác nhau. Bạn chọn 1 cái làm **Main Model** (model chính cho hội thoại), và tùy chọn thêm:
+Minmin có thể chạy trên nhiều "engine" (nhà cung cấp AI) khác nhau. Bạn chọn 1 cái làm **Main Model** (model chính cho hội thoại), và tùy chọn thêm:
 
-- **Model việc nền**: model rẻ hơn cho những việc Javis tự chạy khi bạn không ngồi đó - loop, việc Kanban, nhắc hẹn, tự học, tiêu hoá nguồn.
+- **Model việc nền**: model rẻ hơn cho những việc Minmin tự chạy khi bạn không ngồi đó - loop, việc Kanban, nhắc hẹn, tự học, tiêu hoá nguồn.
 - **Suy nghĩ (reasoning)**: mức độ model động não trước khi trả lời.
 
-Điểm quan trọng nhất cần hiểu: **đổi model KHÔNG làm Javis mất chức năng.** Mọi provider đều được cấp cùng một bộ đồ nghề qua trung tâm kết nối (MCP Hub) của Javis: gọi kho Kết nối đã đấu, đọc/ghi file trong brain, chạy skill, giao việc Kanban (tool `javis_task`), tạo agent/workflow/loop/nhắc hẹn (tool `javis_schedule`).
+Điểm quan trọng nhất cần hiểu: **đổi model KHÔNG làm Minmin mất chức năng.** Mọi provider đều được cấp cùng một bộ đồ nghề qua trung tâm kết nối (MCP Hub) của Minmin: gọi kho Kết nối đã đấu, đọc/ghi file trong brain, chạy skill, giao việc Kanban (tool `javis_task`), tạo agent/workflow/loop/nhắc hẹn (tool `javis_schedule`).
 
-| Cách gọi | Provider | MCP Javis · tool file brain · skill | Chạy lệnh máy (Bash) |
+| Cách gọi | Provider | MCP Minmin · tool file brain · skill | Chạy lệnh máy (Bash) |
 |---|---|---|---|
 | Qua **Claude Code** | Anthropic OAuth (Claude Code) | Có - MCP native + skill native | **Có** |
 | Qua **Codex** | OpenAI OAuth (ChatGPT) | Có - MCP qua hub (cả kết nối local như Zalo/Webcake) + kho MCP GỐC của Codex (server bạn tự `codex mcp add`) + skill qua router (`javis_use_skill` / đọc file `skills/`) | **Có** |
@@ -44,11 +44,11 @@ Ngoài từng ấy, mọi năng lực còn lại là như nhau. Cụ thể là: 
 
 > **Giao việc Kanban từ engine API có từ 0.17.1.** Trước đó đường duy nhất là `POST /kanban/task`, mà gọi được nó thì phải có Bash và curl - nên chỉ Claude Code với Codex làm được, dù tài liệu vẫn hứa mọi bộ não đều làm được. Nay có tool `javis_task` đi qua hub nên lời hứa đó thành đúng.
 
-Nói ngắn gọn: **năng lực nằm ở Javis, không nằm ở model.** Ba engine CLI (**Claude Code** với gói Claude, **Codex** với gói ChatGPT, **Antigravity CLI** với gói Google) tận dụng chính gói subscription bạn đang trả và chạy thêm được lệnh máy; sáu provider API chỉ cần một API key và làm được mọi thứ còn lại - kể cả điều phối việc, tạo loop, chạy skill. Agent trong Workflow cũng chọn được model theo nhà cung cấp - xem [Agents & Workflows](07-agents-va-workflows.md).
+Nói ngắn gọn: **năng lực nằm ở Minmin, không nằm ở model.** Ba engine CLI (**Claude Code** với gói Claude, **Codex** với gói ChatGPT, **Antigravity CLI** với gói Google) tận dụng chính gói subscription bạn đang trả và chạy thêm được lệnh máy; sáu provider API chỉ cần một API key và làm được mọi thứ còn lại - kể cả điều phối việc, tạo loop, chạy skill. Agent trong Workflow cũng chọn được model theo nhà cung cấp - xem [Agents & Workflows](07-agents-va-workflows.md).
 
-## Mở ở đâu trong Javis
+## Mở ở đâu trong Minmin
 
-1. Mở dashboard Javis (mặc định ở cổng `7777`).
+1. Mở dashboard Minmin (mặc định ở cổng `7777`).
 2. Ở thanh bên trái, mở nhóm **Kết nối**, rồi bấm mục **Models**.
 3. Trang Models hiện 4 khối theo thứ tự: **◆ Main Model** ("model chính cho hội thoại"), **◆ Providers** ("đăng nhập / kết nối nhà cung cấp model"), **◆ Model việc nền** ("loop · việc Kanban · nhắc hẹn · tự học · tiêu hoá nguồn"), **◆ Suy nghĩ** ("độ sâu reasoning khi trả lời").
 
@@ -60,7 +60,7 @@ Khối **Providers** liệt kê 10 nhà cung cấp. **Cái nào đã kết nối
 |---|---|---|
 | **Anthropic OAuth (Claude Code)** | Đăng nhập Claude Code, không cần key | Đầy đủ MCP/skill/tool máy. Là Main Model mặc định |
 | **OpenAI OAuth (ChatGPT)** | Device code (đăng nhập gói ChatGPT) | Chạy qua Codex, đấu kho Kết nối qua hub + dùng skill qua router |
-| **xAI Grok Build CLI** | Đăng nhập **ngay trên trang Models** (device code), không cần key | Dùng gói **SuperGrok / X Premium+** sẵn có. Chạy qua binary `grok`. Đầy đủ MCP/skill/tool máy, nối lại được mạch hội thoại. Là thẻ CLI **duy nhất đăng nhập được khi Javis chạy trên VPS** - xem [B1a](#b1a-kết-nối-grok-build-cli-dùng-gói-supergrok--x-premium) |
+| **xAI Grok Build CLI** | Đăng nhập **ngay trên trang Models** (device code), không cần key | Dùng gói **SuperGrok / X Premium+** sẵn có. Chạy qua binary `grok`. Đầy đủ MCP/skill/tool máy, nối lại được mạch hội thoại. Là thẻ CLI **duy nhất đăng nhập được khi Minmin chạy trên VPS** - xem [B1a](#b1a-kết-nối-grok-build-cli-dùng-gói-supergrok--x-premium) |
 | **Google Antigravity CLI** | Gõ `agy` **một lần trong terminal**, không cần key | Bản Google chỉ định thay Gemini CLI. Chạy qua binary `agy`. Đầy đủ MCP/skill/tool máy, và chọn được **đúng dàn model của Antigravity IDE** (có cả model không phải của Google) |
 | **OpenRouter** | Dán API key | Nhiều model 1 chỗ, MCP + tool file + skill qua hub |
 | **Anthropic (API)** | Dán API key | MCP + tool file + skill qua hub (từ 0.9) |
@@ -69,60 +69,60 @@ Khối **Providers** liệt kê 10 nhà cung cấp. **Cái nào đã kết nối
 | **Groq (API)** | Dán API key | MCP + tool file + skill qua hub. Suy luận rất nhanh, hợp làm model việc nền. Key này còn là thứ cho phép **ra lệnh bằng ghi âm trên Telegram và Zalo** (Whisper nghe giọng thành chữ) - xem [Telegram](11-telegram.md) và [Kênh Zalo Bot](26-kenh-zalo-bot.md); đấu key là đủ, không bắt buộc đổi model chính sang Groq |
 | **Ollama Cloud** | Dán API key lấy ở ollama.com | MCP + tool file + skill qua hub. Model mã nguồn mở cỡ lớn (gpt-oss, qwen3-coder, deepseek) chạy trên máy chủ của Ollama |
 
-Mỗi card provider hiển thị trạng thái **● Đã kết nối** hoặc **○ Chưa kết nối**, kèm số model khả dụng, và một nhãn kiểu bên cạnh tên: **MCP/skill** (Claude Code), **Device code** (ChatGPT), **MCP Javis** (các provider API). Card nào đang là Main Model sẽ có nhãn **MAIN**.
+Mỗi card provider hiển thị trạng thái **● Đã kết nối** hoặc **○ Chưa kết nối**, kèm số model khả dụng, và một nhãn kiểu bên cạnh tên: **MCP/skill** (Claude Code), **Device code** (ChatGPT), **MCP Minmin** (các provider API). Card nào đang là Main Model sẽ có nhãn **MAIN**.
 
-> Nhãn của các provider API trước 0.9.270 ghi là **chat**, khiến nhiều người tưởng chúng chỉ chat suông. Sai: chúng gọi kho Kết nối, đọc/ghi brain và chạy skill y như hai engine CLI. Nhãn giờ là **MCP Javis** cho đúng.
+> Nhãn của các provider API trước 0.9.270 ghi là **chat**, khiến nhiều người tưởng chúng chỉ chat suông. Sai: chúng gọi kho Kết nối, đọc/ghi brain và chạy skill y như hai engine CLI. Nhãn giờ là **MCP Minmin** cho đúng.
 
 ## Cách dùng (từng bước)
 
 ### A. Kết nối Claude Code (mặc định)
 
-Đây là engine mặc định. Nó dùng được toàn bộ công cụ, skill và bộ nhớ, cộng thêm chạy lệnh máy. Không bắt buộc: nếu bạn không có gói Claude thì bỏ qua mục này và đi thẳng xuống mục B (ChatGPT) hoặc C (API key) - Javis chạy đủ chức năng như nhau, chỉ thiếu phần lệnh máy khi đi bằng API key.
+Đây là engine mặc định. Nó dùng được toàn bộ công cụ, skill và bộ nhớ, cộng thêm chạy lệnh máy. Không bắt buộc: nếu bạn không có gói Claude thì bỏ qua mục này và đi thẳng xuống mục B (ChatGPT) hoặc C (API key) - Minmin chạy đủ chức năng như nhau, chỉ thiếu phần lệnh máy khi đi bằng API key.
 
 1. Vào **Models**, tìm card **Anthropic OAuth (Claude Code)**.
 2. Nếu chưa đăng nhập, card báo **○ Chưa đăng nhập** và có hai nút: **Đăng nhập Claude** và **↻ Kiểm tra lại**.
-3. Bấm **Đăng nhập Claude**. Javis hiện dòng "**1)** Mở link này để đăng nhập claude.ai" kèm đường link.
+3. Bấm **Đăng nhập Claude**. Minmin hiện dòng "**1)** Mở link này để đăng nhập claude.ai" kèm đường link.
 4. Mở link đó để đăng nhập tài khoản claude.ai của bạn.
-5. Nếu trang hiện **một mã code**, dán mã vào ô "dán code (nếu có)" rồi bấm **Gửi code**. Một số luồng không cần dán code - Javis vừa chờ vừa tự kiểm tra mỗi 3 giây, kết nối xong là card tự đổi. Quá 5 phút không xong thì báo "Hết thời gian, thử lại.".
+5. Nếu trang hiện **một mã code**, dán mã vào ô "dán code (nếu có)" rồi bấm **Gửi code**. Một số luồng không cần dán code - Minmin vừa chờ vừa tự kiểm tra mỗi 3 giây, kết nối xong là card tự đổi. Quá 5 phút không xong thì báo "Hết thời gian, thử lại.".
 6. Khi xong, card đổi sang **● Đã kết nối** kèm email và gói.
 
-Nút **↻ Kiểm tra lại** chỉ có ở trạng thái chưa đăng nhập, dùng khi bạn vừa đăng nhập bằng terminal và muốn Javis nhìn lại. Khi đã kết nối, card chỉ còn đúng một nút **Ngắt**.
+Nút **↻ Kiểm tra lại** chỉ có ở trạng thái chưa đăng nhập, dùng khi bạn vừa đăng nhập bằng terminal và muốn Minmin nhìn lại. Khi đã kết nối, card chỉ còn đúng một nút **Ngắt**.
 
 Cách này chạy được cả trên VPS không có màn hình. Nếu thích dùng dòng lệnh, bạn có thể chạy `claude auth login --claudeai` trong terminal.
 
 ### B. Kết nối ChatGPT bằng gói thuê bao
 
-Dùng gói ChatGPT Plus/Pro của bạn thay cho API key. Cách này chạy qua Codex và Javis tự đẩy các kết nối của bạn (ví dụ POS bán hàng) sang Codex để ChatGPT cũng gọi được công cụ.
+Dùng gói ChatGPT Plus/Pro của bạn thay cho API key. Cách này chạy qua Codex và Minmin tự đẩy các kết nối của bạn (ví dụ POS bán hàng) sang Codex để ChatGPT cũng gọi được công cụ.
 
 Card **OpenAI OAuth (ChatGPT)** khi chưa kết nối có **hai** nút, ứng với hai đường đăng nhập:
 
 **Đường 1 - nút "Đăng nhập ChatGPT" (device code, dùng cho hầu hết mọi người):**
 
-1. Bấm **Đăng nhập ChatGPT**. Javis mở trang xác thực của OpenAI và hiện một dòng dạng "Mở &lt;đường link&gt; · nhập mã **XXXX-XXXX** - đang chờ…".
+1. Bấm **Đăng nhập ChatGPT**. Minmin mở trang xác thực của OpenAI và hiện một dòng dạng "Mở &lt;đường link&gt; · nhập mã **XXXX-XXXX** - đang chờ…".
 2. Ở trang vừa mở, nhập đúng mã đó.
-3. Javis tự động chờ và kiểm tra. Xong thì hiện **✓ Đã kết nối!** và card đổi sang **● Đã kết nối** kèm gói tài khoản.
-4. Javis chờ tối đa khoảng 16 phút rồi bỏ cuộc với dòng "Hết hạn, thử lại." - lúc đó bấm **Đăng nhập ChatGPT** lại để lấy mã mới.
+3. Minmin tự động chờ và kiểm tra. Xong thì hiện **✓ Đã kết nối!** và card đổi sang **● Đã kết nối** kèm gói tài khoản.
+4. Minmin chờ tối đa khoảng 16 phút rồi bỏ cuộc với dòng "Hết hạn, thử lại." - lúc đó bấm **Đăng nhập ChatGPT** lại để lấy mã mới.
 
 **Đường 2 - nút "Qua trình duyệt" (khi workspace của bạn CHẶN device code):**
 
 Một số workspace ChatGPT tắt đường device code, bấm nút thứ nhất là báo lỗi. Đừng tưởng hỏng, dùng nút này:
 
-1. Bấm **Qua trình duyệt**. Javis mở trang đăng nhập ChatGPT trong tab mới.
-2. Đăng nhập xong, trình duyệt sẽ nhảy sang địa chỉ **localhost** và rất có thể **báo không tải được trang - chuyện bình thường**, vì Javis không thật sự mở cổng đó.
-3. **Copy toàn bộ đường dẫn trên thanh địa chỉ** (dạng `http://localhost:1455/auth/callback?code=…`) rồi dán vào ô trong Javis, bấm **Xác nhận**.
-4. Javis tách mã trong đường dẫn đó ra và đổi lấy token. Xong thì hiện **✓ Đã kết nối!**.
+1. Bấm **Qua trình duyệt**. Minmin mở trang đăng nhập ChatGPT trong tab mới.
+2. Đăng nhập xong, trình duyệt sẽ nhảy sang địa chỉ **localhost** và rất có thể **báo không tải được trang - chuyện bình thường**, vì Minmin không thật sự mở cổng đó.
+3. **Copy toàn bộ đường dẫn trên thanh địa chỉ** (dạng `http://localhost:1455/auth/callback?code=…`) rồi dán vào ô trong Minmin, bấm **Xác nhận**.
+4. Minmin tách mã trong đường dẫn đó ra và đổi lấy token. Xong thì hiện **✓ Đã kết nối!**.
 
-Vì chỉ cần dán lại đường dẫn nên đường này cũng chạy được khi Javis nằm trên VPS còn trình duyệt ở máy bạn.
+Vì chỉ cần dán lại đường dẫn nên đường này cũng chạy được khi Minmin nằm trên VPS còn trình duyệt ở máy bạn.
 
-Muốn ngắt: bấm **Ngắt** trên card này. Nếu ChatGPT đang là Main Model khi bạn ngắt, Javis tự chuyển Main Model về Claude Code để chat không bị gãy.
+Muốn ngắt: bấm **Ngắt** trên card này. Nếu ChatGPT đang là Main Model khi bạn ngắt, Minmin tự chuyển Main Model về Claude Code để chat không bị gãy.
 
 Lưu ý: đây là kênh thử nghiệm (chạy nền Codex). Nếu cần ổn định tối đa, dùng Claude Code hoặc OpenRouter.
 
 ### B1a. Kết nối Grok Build CLI (dùng gói SuperGrok / X Premium+)
 
-Đây là đường **xAI** dùng gói bạn đang trả tiền, không phải mua API key riêng. Điểm khác biệt lớn nhất so với hai thẻ CLI của Google: **đăng nhập xong ngay trên trang Models**, kể cả khi Javis chạy trên VPS không có trình duyệt.
+Đây là đường **xAI** dùng gói bạn đang trả tiền, không phải mua API key riêng. Điểm khác biệt lớn nhất so với hai thẻ CLI của Google: **đăng nhập xong ngay trên trang Models**, kể cả khi Minmin chạy trên VPS không có trình duyệt.
 
-1. Cài CLI một lần trên máy chạy Javis:
+1. Cài CLI một lần trên máy chạy Minmin:
    - Linux/macOS: `curl -fsSL https://x.ai/cli/install.sh | bash`
    - Windows PowerShell: `irm https://x.ai/cli/install.ps1 | iex`
 2. Vào **Models**, thẻ **xAI Grok Build CLI**, bấm **Đăng nhập**. Nó hiện ra một đường link và một mã. Mở link đó trên máy bạn (điện thoại cũng được), nhập mã, xác nhận. Thẻ tự chuyển sang **● Đã đăng nhập**, không phải bấm gì thêm.
@@ -134,51 +134,51 @@ Lưu ý: đây là kênh thử nghiệm (chạy nền Codex). Nếu cần ổn �
 
 Vài chỗ đáng biết:
 
-- **Tool của Javis đấu vào `<brain>/.grok/config.toml`**, mục `[mcp_servers.javis]`. Grok đọc cấu hình theo **thư mục làm việc**, mà Javis luôn chạy nó với thư mục làm việc là gốc brain - nên mỗi brain một hub riêng, và Javis **không đụng vào `~/.grok/config.toml`** cá nhân của bạn. Kiểm trong 10 giây: bấm **Kiểm tra lại** ở thẻ, nó ghi lại cấu hình rồi **đọc lại chính file đó** và báo *tool của Javis đã đấu* / *chưa đấu được tool của Javis* / *trung tâm kết nối đang tắt*.
-- **File `config.toml` của bạn không bị đè hỏng.** Javis giữ nguyên mọi mục khác trong file (`[models]`, `[tools]`...). Và nếu file đang có lỗi cú pháp khiến Javis không đọc nổi, nó **không ghi đè** - thà chạy thiếu tool còn hơn xoá mất cấu hình của bạn; khi đó thẻ báo "chưa đấu được tool của Javis" chứ không báo xanh giả.
-- **Có nối lại mạch hội thoại của CLI** (khác thẻ Antigravity). `grok` tự sinh id phiên rồi phát ra trong dòng sự kiện, Javis chỉ đọc lại id đó chứ không tự bịa - nên không có chuyện lưu nhầm rồi lượt sau nối vào một mạch không tồn tại. Mạch dài quá ngưỡng thì Javis tự mở mạch mới và mồi lại bằng lịch sử đã lưu.
-- **Javis ĐO cờ của bản CLI đang cài, không đoán.** Trước mỗi lượt nó hỏi `grok --help` (nhớ 5 phút) rồi chỉ truyền những cờ mà binary tự khai. Bản cũ thiếu một cờ thì mất đúng tính năng đó, không làm hỏng cả lượt chat vì "unknown flag".
-- **Prompt đi qua file, không qua dòng lệnh** (`--prompt-file`), cùng lý do với thẻ Antigravity: Windows chặn tổng dòng lệnh ở 32767 ký tự mà system prompt của Javis đã hơn 36.000.
-- Danh sách model hỏi CLI chứ Javis không giữ bảng chép tay, nên xAI đổi tên model cũng không làm picker lạc hậu.
-- **Javis tắt bộ tự cập nhật của CLI** ở mọi lượt (cờ `--no-auto-update` khi bản CLI có, cộng biến `GROK_DISABLE_AUTOUPDATER=1` luôn luôn). Lý do: Javis chạy `grok` headless trên VPS và trong container, để nó tự tải bản mới giữa lượt là in thêm chữ vào luồng kết quả rồi hỏng câu trả lời, hoặc ghi vào chỗ chỉ đọc rồi chết. Muốn nó tự cập nhật thì tự đặt `GROK_DISABLE_AUTOUPDATER=0` - Javis tôn trọng giá trị bạn đặt. Nâng cấp tay lúc nào cũng được: `grok update`.
+- **Tool của Minmin đấu vào `<brain>/.grok/config.toml`**, mục `[mcp_servers.javis]`. Grok đọc cấu hình theo **thư mục làm việc**, mà Minmin luôn chạy nó với thư mục làm việc là gốc brain - nên mỗi brain một hub riêng, và Minmin **không đụng vào `~/.grok/config.toml`** cá nhân của bạn. Kiểm trong 10 giây: bấm **Kiểm tra lại** ở thẻ, nó ghi lại cấu hình rồi **đọc lại chính file đó** và báo *tool của Minmin đã đấu* / *chưa đấu được tool của Minmin* / *trung tâm kết nối đang tắt*.
+- **File `config.toml` của bạn không bị đè hỏng.** Minmin giữ nguyên mọi mục khác trong file (`[models]`, `[tools]`...). Và nếu file đang có lỗi cú pháp khiến Minmin không đọc nổi, nó **không ghi đè** - thà chạy thiếu tool còn hơn xoá mất cấu hình của bạn; khi đó thẻ báo "chưa đấu được tool của Minmin" chứ không báo xanh giả.
+- **Có nối lại mạch hội thoại của CLI** (khác thẻ Antigravity). `grok` tự sinh id phiên rồi phát ra trong dòng sự kiện, Minmin chỉ đọc lại id đó chứ không tự bịa - nên không có chuyện lưu nhầm rồi lượt sau nối vào một mạch không tồn tại. Mạch dài quá ngưỡng thì Minmin tự mở mạch mới và mồi lại bằng lịch sử đã lưu.
+- **Minmin ĐO cờ của bản CLI đang cài, không đoán.** Trước mỗi lượt nó hỏi `grok --help` (nhớ 5 phút) rồi chỉ truyền những cờ mà binary tự khai. Bản cũ thiếu một cờ thì mất đúng tính năng đó, không làm hỏng cả lượt chat vì "unknown flag".
+- **Prompt đi qua file, không qua dòng lệnh** (`--prompt-file`), cùng lý do với thẻ Antigravity: Windows chặn tổng dòng lệnh ở 32767 ký tự mà system prompt của Minmin đã hơn 36.000.
+- Danh sách model hỏi CLI chứ Minmin không giữ bảng chép tay, nên xAI đổi tên model cũng không làm picker lạc hậu.
+- **Minmin tắt bộ tự cập nhật của CLI** ở mọi lượt (cờ `--no-auto-update` khi bản CLI có, cộng biến `GROK_DISABLE_AUTOUPDATER=1` luôn luôn). Lý do: Minmin chạy `grok` headless trên VPS và trong container, để nó tự tải bản mới giữa lượt là in thêm chữ vào luồng kết quả rồi hỏng câu trả lời, hoặc ghi vào chỗ chỉ đọc rồi chết. Muốn nó tự cập nhật thì tự đặt `GROK_DISABLE_AUTOUPDATER=0` - Minmin tôn trọng giá trị bạn đặt. Nâng cấp tay lúc nào cũng được: `grok update`.
 - Lượt chạy quá lâu thì bị cắt ở **900 giây**; đổi bằng biến môi trường `JAVIS_GROK_TIMEOUT`. Binary nằm chỗ lạ thì trỏ bằng `JAVIS_GROK_BIN`.
 
 ### B1b. Kết nối Antigravity CLI (dùng gói Google của bạn)
 
-Đây là đường **Google chỉ định** sau khi họ ngắt Gemini CLI với tài khoản cá nhân (18/06/2026), và Javis đã gỡ hẳn engine Gemini CLI ở bản 0.50.0. Ưu điểm lớn nhất: bạn chọn được **đúng dàn model hiện trong Antigravity IDE**, gồm cả model không phải của Google.
+Đây là đường **Google chỉ định** sau khi họ ngắt Gemini CLI với tài khoản cá nhân (18/06/2026), và Minmin đã gỡ hẳn engine Gemini CLI ở bản 0.50.0. Ưu điểm lớn nhất: bạn chọn được **đúng dàn model hiện trong Antigravity IDE**, gồm cả model không phải của Google.
 
-1. Cài CLI một lần trên máy chạy Javis:
+1. Cài CLI một lần trên máy chạy Minmin:
    - Linux/macOS: `curl -fsSL https://antigravity.google/cli/install.sh | bash`
    - Windows PowerShell: `irm https://antigravity.google/cli/install.ps1 | iex`
-2. Gõ `agy` một lần **trong terminal của máy chạy Javis** (trang **Code** trong Javis là chắc ăn nhất - đúng user đang chạy Javis). Máy để bàn có màn hình thì nó tự mở trình duyệt. Máy chủ không có màn hình (VPS, Docker - kể cả Docker trên chính máy Mac của bạn) thì nó in ra một đường link: mở link đó bằng trình duyệt trên máy bạn, đăng nhập Google xong trình duyệt sẽ nhảy sang một địa chỉ `http://localhost:...` **báo không mở được - đó là bước đúng**, copy nguyên địa chỉ trên thanh URL rồi dán ngược vào terminal và Enter. Phiên lưu trong keyring của hệ điều hành nên chỉ phải làm một lần.
+2. Gõ `agy` một lần **trong terminal của máy chạy Minmin** (trang **Code** trong Minmin là chắc ăn nhất - đúng user đang chạy Minmin). Máy để bàn có màn hình thì nó tự mở trình duyệt. Máy chủ không có màn hình (VPS, Docker - kể cả Docker trên chính máy Mac của bạn) thì nó in ra một đường link: mở link đó bằng trình duyệt trên máy bạn, đăng nhập Google xong trình duyệt sẽ nhảy sang một địa chỉ `http://localhost:...` **báo không mở được - đó là bước đúng**, copy nguyên địa chỉ trên thanh URL rồi dán ngược vào terminal và Enter. Phiên lưu trong keyring của hệ điều hành nên chỉ phải làm một lần.
 
-   > Vì sao phải dán tay: `agy` nhận mã về qua một cổng loopback trên chính máy chạy nó. Trình duyệt của bạn ở máy khác nên không với tới cổng đó. Từ 0.55.46, terminal của Javis tự khai đây là phiên từ xa (`SSH_CONNECTION`) để `agy` hỏi chỗ dán thay vì nằm chờ im lặng. Bản `agy` cũ không hỏi thì mở thêm một phiên terminal rồi chạy `curl "<địa chỉ localhost vừa copy>"` cũng xong. Bố trí lạ (X11 forwarding, máy để bàn có màn hình) muốn tắt hành vi này thì đặt `JAVIS_TERMINAL_REMOTE=0`.
+   > Vì sao phải dán tay: `agy` nhận mã về qua một cổng loopback trên chính máy chạy nó. Trình duyệt của bạn ở máy khác nên không với tới cổng đó. Từ 0.55.46, terminal của Minmin tự khai đây là phiên từ xa (`SSH_CONNECTION`) để `agy` hỏi chỗ dán thay vì nằm chờ im lặng. Bản `agy` cũ không hỏi thì mở thêm một phiên terminal rồi chạy `curl "<địa chỉ localhost vừa copy>"` cũng xong. Bố trí lạ (X11 forwarding, máy để bàn có màn hình) muốn tắt hành vi này thì đặt `JAVIS_TERMINAL_REMOTE=0`.
 3. Quay lại **Models**, thẻ **Google Antigravity CLI**, bấm **Kiểm tra lại** (nó chạy thử một lượt chat thật). Thẻ đổi sang **● Đã đăng nhập**.
 4. Bấm **Đổi model ▾** ở khối Main Model, chọn nhà cung cấp này rồi chọn model.
 
-Danh sách model **hỏi thẳng `agy models`** chứ Javis không giữ bảng chép tay, nên tài khoản bạn được cấp model nào là thấy đúng model đó, và Google đổi tên model cũng không làm picker lạc hậu.
+Danh sách model **hỏi thẳng `agy models`** chứ Minmin không giữ bảng chép tay, nên tài khoản bạn được cấp model nào là thấy đúng model đó, và Google đổi tên model cũng không làm picker lạc hậu.
 
 Vài chỗ đáng biết, nói trước cho khỏi hiểu nhầm:
 
-- **Đăng nhập làm trong terminal, dashboard không có nút** (từ 0.32.2). Bản 0.30.0 từng dựng một luồng đăng nhập ngay trên trang: Javis mở `agy` trong một terminal giả rồi làm người đưa thư giữa nó và trình duyệt của bạn. Nó chạy được trên Linux, nhưng cái hiện ra trên trang là một ô terminal bấm vào không ăn nên rốt cuộc vẫn phải mở terminal thật, còn Windows thì không có pseudo-terminal nên chưa bao giờ dùng được. Người dùng `agy` đều là dân code sẵn terminal trong tay, nên gõ một lệnh gọn hơn hẳn một luồng UI nửa vời. Đổi lại, Javis không cầm token của ai - nó nằm trong keyring hệ điều hành.
-- **Mức Chỉ đọc ở đây nhẹ hơn.** Bên Grok Build, mức `suggest` xuống thẳng cờ `--deny` nên chính CLI chặn. `agy` không có nấc tương đương, nên Javis siết bằng `--sandbox` cộng với lời dặn trong system prompt. Rào tiền/đơn/đăng bài vẫn nằm ở MCP Hub như mọi engine.
+- **Đăng nhập làm trong terminal, dashboard không có nút** (từ 0.32.2). Bản 0.30.0 từng dựng một luồng đăng nhập ngay trên trang: Minmin mở `agy` trong một terminal giả rồi làm người đưa thư giữa nó và trình duyệt của bạn. Nó chạy được trên Linux, nhưng cái hiện ra trên trang là một ô terminal bấm vào không ăn nên rốt cuộc vẫn phải mở terminal thật, còn Windows thì không có pseudo-terminal nên chưa bao giờ dùng được. Người dùng `agy` đều là dân code sẵn terminal trong tay, nên gõ một lệnh gọn hơn hẳn một luồng UI nửa vời. Đổi lại, Minmin không cầm token của ai - nó nằm trong keyring hệ điều hành.
+- **Mức Chỉ đọc ở đây nhẹ hơn.** Bên Grok Build, mức `suggest` xuống thẳng cờ `--deny` nên chính CLI chặn. `agy` không có nấc tương đương, nên Minmin siết bằng `--sandbox` cộng với lời dặn trong system prompt. Rào tiền/đơn/đăng bài vẫn nằm ở MCP Hub như mọi engine.
 - **Mức `auto` KHÔNG kèm `--sandbox`** (từ 0.59.44). Đo trên agy 1.2.7: `--sandbox` đi cùng `--dangerously-skip-permissions` làm tool shell của agy chạy như một việc nền rồi bị chính agy huỷ sau 5 giây khi thoát chế độ in một lượt, nên việc Kanban/Loop mức auto không đọc thư mục hay ghi file được mà không có lấy một dòng lỗi. Bỏ cờ này không mất lớp phòng vệ nào vì rào hành động ra ngoài nằm ở MCP Hub.
 - **Chưa nối lại mạch hội thoại của CLI.** Mỗi lượt mở mạch mới rồi mồi lại bằng lịch sử đã lưu, nên **không mất ngữ cảnh** nhưng tốn token hơn.
-- Javis không tự cài `agy` lúc cài đặt (khác ba engine npm): trình cài của Google là một script tải về chạy thẳng, nên để bạn tự chạy khi muốn.
-- **Trên Windows, prompt không đi qua dòng lệnh nữa** (từ 0.33.1, sửa tiếp ở 0.33.2). Windows chặn tổng dòng lệnh ở 32767 ký tự, mà riêng system prompt của Javis trên một brain trống đã hơn 36.000 - tức bộ não này từng chết hẳn trên Windows, và câu báo lỗi lại đổ cho "hội thoại quá dài" nên mở chat mới bao nhiêu lần cũng không thoát.
-- **Javis ĐO xem bản `agy` của bạn nhận prompt kiểu gì, không đoán.** Đây là bài học phải trả giá hai lần: bản 0.33.1 suy cú pháp từ tài liệu chính chủ (CHANGELOG 1.1.1 nói `agy` đọc stdin khi prompt không cấp qua cờ) rồi gửi `--print ""`, và bản `agy` thật trả lại `Error: empty prompt` vì nó kiểm giá trị cờ trước khi ngó tới stdin. Tài liệu đúng về nguyên lý, sai về cú pháp. Nay lần chạy đầu tiên Javis thử ba cách bơm stdin bằng một prompt tí hon có mã riêng, cách nào vọng mã về thì dùng cách đó, rồi nhớ lại cho những lần sau. Không cách nào ăn thì nó ghi ngữ cảnh ra file và bảo model tự đọc; model không đọc được thì nó nói thẳng chứ không lặng lẽ trả lời thiếu luật.
+- Minmin không tự cài `agy` lúc cài đặt (khác ba engine npm): trình cài của Google là một script tải về chạy thẳng, nên để bạn tự chạy khi muốn.
+- **Trên Windows, prompt không đi qua dòng lệnh nữa** (từ 0.33.1, sửa tiếp ở 0.33.2). Windows chặn tổng dòng lệnh ở 32767 ký tự, mà riêng system prompt của Minmin trên một brain trống đã hơn 36.000 - tức bộ não này từng chết hẳn trên Windows, và câu báo lỗi lại đổ cho "hội thoại quá dài" nên mở chat mới bao nhiêu lần cũng không thoát.
+- **Minmin ĐO xem bản `agy` của bạn nhận prompt kiểu gì, không đoán.** Đây là bài học phải trả giá hai lần: bản 0.33.1 suy cú pháp từ tài liệu chính chủ (CHANGELOG 1.1.1 nói `agy` đọc stdin khi prompt không cấp qua cờ) rồi gửi `--print ""`, và bản `agy` thật trả lại `Error: empty prompt` vì nó kiểm giá trị cờ trước khi ngó tới stdin. Tài liệu đúng về nguyên lý, sai về cú pháp. Nay lần chạy đầu tiên Minmin thử ba cách bơm stdin bằng một prompt tí hon có mã riêng, cách nào vọng mã về thì dùng cách đó, rồi nhớ lại cho những lần sau. Không cách nào ăn thì nó ghi ngữ cảnh ra file và bảo model tự đọc; model không đọc được thì nó nói thẳng chứ không lặng lẽ trả lời thiếu luật.
 
-- **Tool của Javis đấu vào đâu, và vì sao chỗ đó** (sửa ở 0.43.0). Đây là chỗ sai ba bản liên tiếp mà không bản nào lộ ra, vì hỏng kiểu này không có câu lỗi nào: `agy` vẫn chạy, vẫn trả lời trôi chảy, chỉ là không có lấy một tool nào của Javis - không MCP, không Kanban, không skill. Hai chỗ sai chồng lên nhau:
-  - **Sai tên trường.** Javis ghi `httpUrl`, đó là schema của Gemini CLI (engine đã gỡ) chép nguyên sang. `agy` đọc `serverUrl` (tài liệu di trú của Google nói thẳng là trường `url` được đổi tên thành `serverUrl`). Entry không có trường nào nó hiểu thì server không có địa chỉ, và nó bỏ qua trong im lặng.
-  - **Sai chỗ đặt.** Javis ghi vào trong brain. `agy` nạp MCP từ cấu hình **tầng HOME**: `~/.gemini/config/mcp_config.json` (hiện hành, dùng chung với Antigravity 2.0/IDE) và `~/.gemini/antigravity-cli/mcp_config.json` (đường cũ). Tầng workspace `<brain>/.agents/mcp_config.json` có thật trong tài liệu, nhưng issue #60 của chính repo `antigravity-cli` ghi nhận CLI **tìm thấy rồi bỏ qua** `mcpServers` trong đó. Nay Javis ghi cả hai tầng: HOME để chạy được ngay, workspace để bản nào vá xong issue đó thì tự có cách ly theo brain.
+- **Tool của Minmin đấu vào đâu, và vì sao chỗ đó** (sửa ở 0.43.0). Đây là chỗ sai ba bản liên tiếp mà không bản nào lộ ra, vì hỏng kiểu này không có câu lỗi nào: `agy` vẫn chạy, vẫn trả lời trôi chảy, chỉ là không có lấy một tool nào của Minmin - không MCP, không Kanban, không skill. Hai chỗ sai chồng lên nhau:
+  - **Sai tên trường.** Minmin ghi `httpUrl`, đó là schema của Gemini CLI (engine đã gỡ) chép nguyên sang. `agy` đọc `serverUrl` (tài liệu di trú của Google nói thẳng là trường `url` được đổi tên thành `serverUrl`). Entry không có trường nào nó hiểu thì server không có địa chỉ, và nó bỏ qua trong im lặng.
+  - **Sai chỗ đặt.** Minmin ghi vào trong brain. `agy` nạp MCP từ cấu hình **tầng HOME**: `~/.gemini/config/mcp_config.json` (hiện hành, dùng chung với Antigravity 2.0/IDE) và `~/.gemini/antigravity-cli/mcp_config.json` (đường cũ). Tầng workspace `<brain>/.agents/mcp_config.json` có thật trong tài liệu, nhưng issue #60 của chính repo `antigravity-cli` ghi nhận CLI **tìm thấy rồi bỏ qua** `mcpServers` trong đó. Nay Minmin ghi cả hai tầng: HOME để chạy được ngay, workspace để bản nào vá xong issue đó thì tự có cách ly theo brain.
 
-  Hệ quả phải biết: file HOME là **của bạn** và dùng chung với Antigravity IDE, nên IDE cũng sẽ thấy tool của Javis; và hai brain chạy `agy` cùng lúc thì brain sau ghi đè brain trước. Không muốn Javis đụng vào HOME thì đặt `JAVIS_AGY_MCP_HOME=0` (khi đó chỉ còn đường workspace, tức chỉ chạy trên bản `agy` đã vá issue #60). Muốn chỉ định một file khác thì đặt `JAVIS_AGY_MCP_CONFIG=/đường/dẫn/mcp_config.json`. Bản `agy` của bạn từ chối cấu hình vì có khoá lạ thì đặt `JAVIS_AGY_MCP_KEY=serverUrl` (hoặc `=url` cho bản 1.0.x cũ) để Javis chỉ ghi đúng một khoá.
+  Hệ quả phải biết: file HOME là **của bạn** và dùng chung với Antigravity IDE, nên IDE cũng sẽ thấy tool của Minmin; và hai brain chạy `agy` cùng lúc thì brain sau ghi đè brain trước. Không muốn Minmin đụng vào HOME thì đặt `JAVIS_AGY_MCP_HOME=0` (khi đó chỉ còn đường workspace, tức chỉ chạy trên bản `agy` đã vá issue #60). Muốn chỉ định một file khác thì đặt `JAVIS_AGY_MCP_CONFIG=/đường/dẫn/mcp_config.json`. Bản `agy` của bạn từ chối cấu hình vì có khoá lạ thì đặt `JAVIS_AGY_MCP_KEY=serverUrl` (hoặc `=url` cho bản 1.0.x cũ) để Minmin chỉ ghi đúng một khoá.
 
-  **Tự kiểm trong 10 giây:** vào **Models**, thẻ **Google Antigravity CLI**, bấm **Kiểm tra lại**. Nó ghi lại cấu hình rồi đọc lại chính file đó, và báo một trong ba câu: *tool của Javis đã đấu*, *chưa đấu được tool của Javis*, hoặc *trung tâm kết nối đang tắt*. Xem tận file thì: `cat ~/.gemini/config/mcp_config.json` - phải thấy một entry tên `javis` có `serverUrl` trỏ về `/hub/mcp`.
+  **Tự kiểm trong 10 giây:** vào **Models**, thẻ **Google Antigravity CLI**, bấm **Kiểm tra lại**. Nó ghi lại cấu hình rồi đọc lại chính file đó, và báo một trong ba câu: *tool của Minmin đã đấu*, *chưa đấu được tool của Minmin*, hoặc *trung tâm kết nối đang tắt*. Xem tận file thì: `cat ~/.gemini/config/mcp_config.json` - phải thấy một entry tên `javis` có `serverUrl` trỏ về `/hub/mcp`.
 
-- **Dấu tiếng Việt không vỡ dọc đường** (từ 0.33.6). Triệu chứng cũ: chữ "gồm" thành `g<?><?>m`, mỗi ký tự tiếng Việt 3 byte hoá đúng 3 dấu `<?>`. Đó là chữ ký của một bên đọc cắt mẩu ống dẫn giữa một ký tự rồi giải mã từng mẩu rời. Đã đo và loại trừ phía Javis (bộ đọc của nó dùng giải mã tăng dần, cắt byte giữa ký tự vẫn ghép lại đúng), nên chỗ vỡ nằm ở bộ đọc của `agy`. Javis không vá được CLI, nhưng chỉnh được chỗ mình đặt ranh giới: nay nó bơm prompt theo từng mẩu kết thúc đúng biên ký tự, nên bên kia đọc kiểu gì cũng không vỡ. Chữ về mà vẫn có ký tự hỏng thì Javis tự đổi sang đường file rồi hỏi lại một lần; vẫn hỏng thì nó nói thẳng là lỗi nằm trong CLI.
+- **Dấu tiếng Việt không vỡ dọc đường** (từ 0.33.6). Triệu chứng cũ: chữ "gồm" thành `g<?><?>m`, mỗi ký tự tiếng Việt 3 byte hoá đúng 3 dấu `<?>`. Đó là chữ ký của một bên đọc cắt mẩu ống dẫn giữa một ký tự rồi giải mã từng mẩu rời. Đã đo và loại trừ phía Minmin (bộ đọc của nó dùng giải mã tăng dần, cắt byte giữa ký tự vẫn ghép lại đúng), nên chỗ vỡ nằm ở bộ đọc của `agy`. Minmin không vá được CLI, nhưng chỉnh được chỗ mình đặt ranh giới: nay nó bơm prompt theo từng mẩu kết thúc đúng biên ký tự, nên bên kia đọc kiểu gì cũng không vỡ. Chữ về mà vẫn có ký tự hỏng thì Minmin tự đổi sang đường file rồi hỏi lại một lần; vẫn hỏng thì nó nói thẳng là lỗi nằm trong CLI.
 
-- **Model đã kèm sẵn mức nghĩ thì Javis không gửi thêm Độ sâu suy nghĩ** (từ 0.55.55). `agy models` trả về những tên như `gemini-3.8-flash-medium`, tức chọn model cũng chính là chọn mức nghĩ, và `agy` từ chối chạy nếu nhận thêm mức nghĩ lần nữa: `invalid model selection ... conflicts with --effort=high`, thoát mã 1, cả lượt chat mất trắng chứ không phải chậm hay kém. Nay Javis nhận ra loại tên đó và bỏ phần gửi thừa, còn độ sâu bạn chọn thì chuyển thành một câu nhắc trong prompt. Bản `agy` nào từ chối vì lý do khác thì Javis đọc chính câu lỗi đó rồi chạy lại ngay trong lượt, không cờ.
+- **Model đã kèm sẵn mức nghĩ thì Minmin không gửi thêm Độ sâu suy nghĩ** (từ 0.55.55). `agy models` trả về những tên như `gemini-3.8-flash-medium`, tức chọn model cũng chính là chọn mức nghĩ, và `agy` từ chối chạy nếu nhận thêm mức nghĩ lần nữa: `invalid model selection ... conflicts with --effort=high`, thoát mã 1, cả lượt chat mất trắng chứ không phải chậm hay kém. Nay Minmin nhận ra loại tên đó và bỏ phần gửi thừa, còn độ sâu bạn chọn thì chuyển thành một câu nhắc trong prompt. Bản `agy` nào từ chối vì lý do khác thì Minmin đọc chính câu lỗi đó rồi chạy lại ngay trong lượt, không cờ.
 
 **Nếu vẫn gặp lỗi trên Windows**, đặt biến môi trường `JAVIS_AGY_PROMPT_DAI=file` để ép đi thẳng đường file, rồi báo lại giúp kèm câu lỗi `agy` in ra.
 
@@ -189,7 +189,7 @@ Vài chỗ đáng biết, nói trước cho khỏi hiểu nhầm:
 3. Bấm **Kết nối**.
 4. Card chuyển sang **● Đã kết nối** kèm số model.
 
-Muốn đổi key sau này: nhập key mới rồi bấm **Đổi key** (ô lúc này ghi "đổi key" kèm 4 ký tự cuối của key cũ). Muốn ngắt: bấm **Ngắt** (thao tác này xoá key). Nếu provider đang là Main Model khi bị ngắt, Javis tự chuyển về Claude Code.
+Muốn đổi key sau này: nhập key mới rồi bấm **Đổi key** (ô lúc này ghi "đổi key" kèm 4 ký tự cuối của key cũ). Muốn ngắt: bấm **Ngắt** (thao tác này xoá key). Nếu provider đang là Main Model khi bị ngắt, Minmin tự chuyển về Claude Code.
 
 Lấy key ở đâu:
 
@@ -209,13 +209,13 @@ Lấy key ở đâu:
 4. Bấm chọn provider ở cột trái, rồi bấm chọn model ở cột phải. Model đang dùng có nhãn **ĐANG DÙNG**.
 5. Bấm **Switch** để áp dụng, hoặc **Huỷ** (hay nút ✕) để đóng.
 
-Danh sách model được nạp động từ chính provider (có nhãn **· live**). Nếu không lấy được từ mạng, Javis dùng danh sách dự phòng (nhãn **· catalog**); đang tải thì hiện **· đang tải…**. Model bạn chọn được lưu và áp dụng cho phiên chat mới.
+Danh sách model được nạp động từ chính provider (có nhãn **· live**). Nếu không lấy được từ mạng, Minmin dùng danh sách dự phòng (nhãn **· catalog**); đang tải thì hiện **· đang tải…**. Model bạn chọn được lưu và áp dụng cho phiên chat mới.
 
-Khối Main Model cũng ghi một dòng về engine đang dùng, nói rõ đường đi và giới hạn thật: "Qua Claude Code - MCP Javis + skill + loop + chạy lệnh máy", "Qua Codex - MCP Javis + skill + loop + chạy lệnh máy", hoặc "Gọi API thẳng - MCP Javis + skill + loop (không chạy lệnh máy)". Trước 0.9.270 dòng cuối ghi "chat thuần (không MCP)" - sai và đã bỏ.
+Khối Main Model cũng ghi một dòng về engine đang dùng, nói rõ đường đi và giới hạn thật: "Qua Claude Code - MCP Minmin + skill + loop + chạy lệnh máy", "Qua Codex - MCP Minmin + skill + loop + chạy lệnh máy", hoặc "Gọi API thẳng - MCP Minmin + skill + loop (không chạy lệnh máy)". Trước 0.9.270 dòng cuối ghi "chat thuần (không MCP)" - sai và đã bỏ.
 
 ### E. Chọn model việc nền
 
-Khối **◆ Model việc nền** quyết định model nào chạy những việc Javis làm khi bạn không ngồi trước máy: **loop · việc Kanban · nhắc hẹn · tự học · tiêu hoá nguồn**. Đây thường là phần đốt hạn mức âm thầm nhất, nên chọn model rẻ ở đây tiết kiệm thấy rõ.
+Khối **◆ Model việc nền** quyết định model nào chạy những việc Minmin làm khi bạn không ngồi trước máy: **loop · việc Kanban · nhắc hẹn · tự học · tiêu hoá nguồn**. Đây thường là phần đốt hạn mức âm thầm nhất, nên chọn model rẻ ở đây tiết kiệm thấy rõ.
 
 1. Xuống khối **◆ Model việc nền**. Dòng lớn cho biết đang dùng gì: chưa đổi gì thì ghi **Mặc định của Claude Code** kèm dòng nhỏ "không đổi model, dùng model mặc định".
 2. Bấm **Đổi model ▾**. Cửa sổ mở ra giống hệt bảng chọn Main Model nhưng tiêu đề là **MODEL VIỆC NỀN**, chân bảng ghi "Việc nền: loop · việc Kanban · nhắc hẹn · tự học · tiêu hoá nguồn", và nút áp dụng tên là **Chọn**.
@@ -226,12 +226,12 @@ Vài điều cần biết:
 
 - **Chọn được MỌI provider bạn đã đấu**, không riêng Claude: Claude Code, ChatGPT/Codex, OpenRouter, OpenAI, Gemini, Anthropic API. Chọn nhà cung cấp khác thì việc nền chạy bằng gói hoặc khoá của nhà đó, không ăn vào hạn mức Claude nữa.
 - Nếu bạn chọn một provider **chưa kết nối**, khối này hiện cảnh báo "⚠ nhà cung cấp này chưa kết nối - việc nền sẽ tự dùng lại Claude". Việc nền không chết, chỉ là không tiết kiệm được.
-- **Công cụ không giống nhau giữa các đường.** Claude Code và Codex đọc/ghi file trực tiếp trong brain. Các model API (OpenRouter, OpenAI, Gemini, Anthropic API) đọc/ghi qua công cụ vault của Javis và **không chạy được lệnh máy**, nên hợp với việc đọc - tổng hợp - ghi ghi chú; việc nền nào cần chạy lệnh thì cứ để Claude.
+- **Công cụ không giống nhau giữa các đường.** Claude Code và Codex đọc/ghi file trực tiếp trong brain. Các model API (OpenRouter, OpenAI, Gemini, Anthropic API) đọc/ghi qua công cụ vault của Minmin và **không chạy được lệnh máy**, nên hợp với việc đọc - tổng hợp - ghi ghi chú; việc nền nào cần chạy lệnh thì cứ để Claude.
 - Với đường API, công cụ ghi file tự khoá lại khi loop đang ở mức `suggest`, đúng như khi chạy bằng Claude.
 
 ### E1. Chỗ nào chạy model nào (bảng tra)
 
-Javis có ba chỗ đặt model, và câu hỏi hay gặp nhất là "cái nào thắng cái nào". Thứ tự: **model của Agent** (ô Model trong Cài đặt trợ lý) thắng **model chính**, còn **model việc nền** chỉ dùng cho các đường chạy nền.
+Minmin có ba chỗ đặt model, và câu hỏi hay gặp nhất là "cái nào thắng cái nào". Thứ tự: **model của Agent** (ô Model trong Cài đặt trợ lý) thắng **model chính**, còn **model việc nền** chỉ dùng cho các đường chạy nền.
 
 | Bạn đang ở đâu | Model chạy thật |
 |---|---|
@@ -241,7 +241,7 @@ Javis có ba chỗ đặt model, và câu hỏi hay gặp nhất là "cái nào 
 | Một bước trong quy trình (workflow) | Model của trợ lý ở bước đó; để **Mặc định** thì **model việc nền** |
 | Loop, việc Kanban, nhắc hẹn, tự học, tiêu hoá nguồn | Model việc nền |
 
-Nhà cung cấp mà trợ lý đã chọn nếu bị gỡ key thì Javis lui về model chính, chứ không để trợ lý hay bot chết câm.
+Nhà cung cấp mà trợ lý đã chọn nếu bị gỡ key thì Minmin lui về model chính, chứ không để trợ lý hay bot chết câm.
 
 Ô **Model** trong Cài đặt trợ lý dùng đúng bảng chọn của thanh model dưới khung chat: gõ để tìm, và nhà chưa cắm API key vẫn hiện ra kèm ổ khoá, bấm vào là sang trang Models để mở.
 
@@ -261,14 +261,14 @@ Mức này áp dụng khác nhau tuỳ engine:
 
 ### G. Local Model - Ollama chạy trên máy bạn hoặc trên VPS
 
-Tab **Local Model** (cạnh tab Cloud Model trên trang Models) nối Javis với một Ollama do bạn tự chạy: model mã nguồn mở, ngoại tuyến, không tốn lượt. Provider tương ứng trong ô chọn model là **Ollama (Local)**, khác với **Ollama Cloud** ở tab Cloud (bản trả phí qua ollama.com).
+Tab **Local Model** (cạnh tab Cloud Model trên trang Models) nối Minmin với một Ollama do bạn tự chạy: model mã nguồn mở, ngoại tuyến, không tốn lượt. Provider tương ứng trong ô chọn model là **Ollama (Local)**, khác với **Ollama Cloud** ở tab Cloud (bản trả phí qua ollama.com).
 
-**Javis chạy thẳng trên máy (Windows/Mac/Linux):** cài Ollama bằng lệnh tab hiện sẵn, bấm Kết nối với địa chỉ `http://127.0.0.1:11434` đã điền sẵn. Xong.
+**Minmin chạy thẳng trên máy (Windows/Mac/Linux):** cài Ollama bằng lệnh tab hiện sẵn, bấm Kết nối với địa chỉ `http://127.0.0.1:11434` đã điền sẵn. Xong.
 
-**Javis chạy trong Docker/VPS:** ba bước, làm bằng SSH trên máy chủ thật, không phải terminal trong Javis (terminal đó nằm trong container, không có quyền root, và mọi thứ cài vào đó mất sạch ở lần cập nhật kế).
+**Minmin chạy trong Docker/VPS:** ba bước, làm bằng SSH trên máy chủ thật, không phải terminal trong Minmin (terminal đó nằm trong container, không có quyền root, và mọi thứ cài vào đó mất sạch ở lần cập nhật kế).
 
 1. Cài Ollama trên máy chủ: `curl -fsSL https://ollama.com/install.sh | sh`.
-2. Cho Ollama nghe ở địa chỉ cầu nối Docker. Tab Local đã dò sẵn địa chỉ và sinh sẵn lệnh, chỉ việc chép. Nó ghi một file override cho systemd với `OLLAMA_HOST=<địa chỉ cầu nối>:11434` rồi restart. Gắn vào đúng địa chỉ này thì chỉ container trên máy đó gọi được, không lộ ra Internet, không cần tường lửa. Chỉ khi Javis dò không ra địa chỉ thì lệnh mới rơi về `0.0.0.0`, lúc đó bắt buộc chặn cổng 11434 ở tường lửa vì Ollama không có mật khẩu.
+2. Cho Ollama nghe ở địa chỉ cầu nối Docker. Tab Local đã dò sẵn địa chỉ và sinh sẵn lệnh, chỉ việc chép. Nó ghi một file override cho systemd với `OLLAMA_HOST=<địa chỉ cầu nối>:11434` rồi restart. Gắn vào đúng địa chỉ này thì chỉ container trên máy đó gọi được, không lộ ra Internet, không cần tường lửa. Chỉ khi Minmin dò không ra địa chỉ thì lệnh mới rơi về `0.0.0.0`, lúc đó bắt buộc chặn cổng 11434 ở tường lửa vì Ollama không có mật khẩu.
 3. Bấm **Kết nối** (địa chỉ đã điền sẵn).
 
 Không nối được sau ba bước? Trên máy chủ chạy `ss -ltnp | grep 11434`: không ra dòng nào là Ollama chưa chạy (`systemctl status ollama`); ra dòng có `127.0.0.1` là bước 2 chưa ăn.
@@ -277,24 +277,24 @@ Không nối được sau ba bước? Trên máy chủ chạy `ss -ltnp | grep 1
 
 ## Engine Claude chạy bằng gì bên dưới
 
-Từ bản 0.9.37, engine Claude của Javis chạy **duy nhất qua Claude Agent SDK** (bộ thư viện chính chủ của Anthropic). Nhánh cũ tự gọi lệnh `claude` như một tiến trình rời đã bị gỡ hẳn. Hai điều người dùng cần biết:
+Từ bản 0.9.37, engine Claude của Minmin chạy **duy nhất qua Claude Agent SDK** (bộ thư viện chính chủ của Anthropic). Nhánh cũ tự gọi lệnh `claude` như một tiến trình rời đã bị gỡ hẳn. Hai điều người dùng cần biết:
 
 - **Máy vẫn PHẢI có `claude` CLI.** SDK gọi chính CLI đó bên dưới, và toàn bộ phần đăng nhập lẫn MCP native đều đi qua nó. Chưa cài CLI thì card Claude Code báo lỗi và engine không chạy - xem [Bắt đầu & thiết lập lần đầu](01-bat-dau-thiet-lap.md).
-- **Quyền công cụ ở phiên chạy nền được chặn theo TỪNG LẦN GỌI.** Khi loop hoặc workflow chạy trong chế độ nền an toàn, mỗi lần Javis định gọi một công cụ ngoài danh sách cho phép là bị từ chối ngay tại chỗ và ghi vào nhật ký, chứ không chỉ khai báo danh sách lúc khởi động. Thông báo từ chối nói rõ đây là rào quyền của phiên nền, **không phải** kết nối MCP hỏng - gặp dòng đó thì đừng đi đăng nhập lại connector.
+- **Quyền công cụ ở phiên chạy nền được chặn theo TỪNG LẦN GỌI.** Khi loop hoặc workflow chạy trong chế độ nền an toàn, mỗi lần Minmin định gọi một công cụ ngoài danh sách cho phép là bị từ chối ngay tại chỗ và ghi vào nhật ký, chứ không chỉ khai báo danh sách lúc khởi động. Thông báo từ chối nói rõ đây là rào quyền của phiên nền, **không phải** kết nối MCP hỏng - gặp dòng đó thì đừng đi đăng nhập lại connector.
 
 ## Claude Code (đầy đủ công cụ) và gọi API thẳng khác nhau ra sao
 
 Đây là điểm dễ nhầm nhất, cần nắm rõ:
 
-- **Main Model = Claude Code**: mạnh nhất - đọc/ghi file native, chạy lệnh máy, gọi MCP, skill native, loop tự động, session resume. Chế độ khai thác hết sức mạnh Javis OS.
-- **Main Model = ChatGPT OAuth (Codex)**: gọi được toàn bộ kho Kết nối (hub tự đẩy sang Codex, gồm cả kết nối local như Zalo), có tool file của Codex, và dùng được skill qua router (Javis bơm danh sách skill vào system prompt + tool `javis_use_skill`; Codex chạy cwd=brain nên đọc thẳng `skills/<slug>/SKILL.md`). Ngoài ra Codex còn nạp kho MCP GỐC của chính nó (server bạn tự đăng ký bằng `codex mcp add`, xem trong khối gập "◆ Kết nối sẵn của Claude Code và Codex" ở trang Kết nối) - tương tự cách engine Claude dùng MCP gốc của Claude Code.
+- **Main Model = Claude Code**: mạnh nhất - đọc/ghi file native, chạy lệnh máy, gọi MCP, skill native, loop tự động, session resume. Chế độ khai thác hết sức mạnh Minmin OS.
+- **Main Model = ChatGPT OAuth (Codex)**: gọi được toàn bộ kho Kết nối (hub tự đẩy sang Codex, gồm cả kết nối local như Zalo), có tool file của Codex, và dùng được skill qua router (Minmin bơm danh sách skill vào system prompt + tool `javis_use_skill`; Codex chạy cwd=brain nên đọc thẳng `skills/<slug>/SKILL.md`). Ngoài ra Codex còn nạp kho MCP GỐC của chính nó (server bạn tự đăng ký bằng `codex mcp add`, xem trong khối gập "◆ Kết nối sẵn của Claude Code và Codex" ở trang Kết nối) - tương tự cách engine Claude dùng MCP gốc của Claude Code.
 - **Main Model = OpenRouter / OpenAI (API) / Anthropic (API) / Gemini**: từ bản 0.9 cả bốn đều gọi được kho Kết nối qua vòng gọi tool, kèm tool đọc/ghi file trong vault và kích hoạt skill (`javis_use_skill`). **Việc nền cũng chạy được bằng những provider này** (xem mục E). Khác biệt còn lại so với Claude Code: không có tool chạy lệnh máy (Bash), không có WebFetch, và không resume được session CLI.
 
-Kết luận thực dụng: để Javis "làm việc" trọn vẹn nhất, giữ Main ở **Claude Code**. Chuyển sang provider API khi bạn muốn thử một model cụ thể của hãng khác, hoặc muốn đẩy phần việc nền sang một gói rẻ hơn cho đỡ hạn mức Claude.
+Kết luận thực dụng: để Minmin "làm việc" trọn vẹn nhất, giữ Main ở **Claude Code**. Chuyển sang provider API khi bạn muốn thử một model cụ thể của hãng khác, hoặc muốn đẩy phần việc nền sang một gói rẻ hơn cho đỡ hạn mức Claude.
 
 ## Tiết kiệm token áp cho cả gói thuê bao
 
-Khối **Chế độ tiết kiệm token** ở đầu trang **Mức dùng** (nhóm Hệ thống) cho Javis gửi ít chữ hơn mỗi lượt: chỉ nạp phần bộ nhớ liên quan tới câu hỏi, chỉ nạp skill khi cần thay vì liệt kê hết.
+Khối **Chế độ tiết kiệm token** ở đầu trang **Mức dùng** (nhóm Hệ thống) cho Minmin gửi ít chữ hơn mỗi lượt: chỉ nạp phần bộ nhớ liên quan tới câu hỏi, chỉ nạp skill khi cần thay vì liệt kê hết.
 
 Từ bản 0.12.4, phần này chạy được cho **cả ba loại bộ não**, không riêng bộ não dùng API key:
 
@@ -306,9 +306,9 @@ Từ bản 0.12.4, phần này chạy được cho **cả ba loại bộ não**,
 
 Mở trang là thấy ngay khối **Bộ não đang dùng**: nó nói bộ não hiện tại thuộc loại nào, đang ăn được mấy mảng tiết kiệm, và mảng nào không áp cho nó cùng lý do. Có mảng cố ý chỉ chạy trên bộ não dùng API key - ví dụ phần gửi lại lịch sử hội thoại, vì Claude Code và Codex vốn tự nhớ mạch hội thoại của chúng, gửi thêm là gửi hai lần.
 
-**Hết lượt gói thuê bao** thì Javis nói bằng tiếng Việt: hết lượt gói nào, còn khoảng bao lâu nữa, và bộ não nào bạn đã cắm sẵn để chạy tạm trong lúc chờ. Javis **không tự đổi bộ não hộ** - đổi là tiêu hạn mức của một tài khoản khác, có khi mất tiền thật, nên đó là quyết định của bạn (đổi ở ngay trang này, hội thoại giữ nguyên). Lưu ý loại hạn mức này đếm **lượt dùng theo giờ** chứ không đếm độ dài, nên rút gọn câu hỏi không giúp gì.
+**Hết lượt gói thuê bao** thì Minmin nói bằng tiếng Việt: hết lượt gói nào, còn khoảng bao lâu nữa, và bộ não nào bạn đã cắm sẵn để chạy tạm trong lúc chờ. Minmin **không tự đổi bộ não hộ** - đổi là tiêu hạn mức của một tài khoản khác, có khi mất tiền thật, nên đó là quyết định của bạn (đổi ở ngay trang này, hội thoại giữ nguyên). Lưu ý loại hạn mức này đếm **lượt dùng theo giờ** chứ không đếm độ dài, nên rút gọn câu hỏi không giúp gì.
 
-Từ 0.55.44, khi nhà cung cấp nói rõ **mốc mở lại**, dưới câu báo có thẻ **"Tự chạy lại lúc HH:MM"**: đến giờ Javis tự hỏi lại đúng câu đó và trả lời vào cùng hội thoại, tab đóng hay điện thoại tắt màn hình vẫn chạy (việc nằm ở máy chủ). Trên thẻ có ô **"Tự tiếp tục khi hạn mức reset"** (tắt là chỉ nhắc giờ, không tự chạy; lựa chọn được nhớ cho lần sau) và nút **"Chạy lại ngay"**. Gửi tin mới trong lúc chờ là lịch tự huỷ. Javis chỉ hẹn khi biết mốc, tối đa 3 lần cho một câu hỏi, và không hẹn mốc xa hơn một ngày; khởi động lại máy chủ thì lịch đang chờ mất, câu báo hết lượt vẫn còn trong hội thoại để bạn bấm "Gửi lại".
+Từ 0.55.44, khi nhà cung cấp nói rõ **mốc mở lại**, dưới câu báo có thẻ **"Tự chạy lại lúc HH:MM"**: đến giờ Minmin tự hỏi lại đúng câu đó và trả lời vào cùng hội thoại, tab đóng hay điện thoại tắt màn hình vẫn chạy (việc nằm ở máy chủ). Trên thẻ có ô **"Tự tiếp tục khi hạn mức reset"** (tắt là chỉ nhắc giờ, không tự chạy; lựa chọn được nhớ cho lần sau) và nút **"Chạy lại ngay"**. Gửi tin mới trong lúc chờ là lịch tự huỷ. Minmin chỉ hẹn khi biết mốc, tối đa 3 lần cho một câu hỏi, và không hẹn mốc xa hơn một ngày; khởi động lại máy chủ thì lịch đang chờ mất, câu báo hết lượt vẫn còn trong hội thoại để bạn bấm "Gửi lại".
 
 ## Đổi nhanh model
 
@@ -318,10 +318,10 @@ Bạn không cần rời trang Models để đổi model: bấm **Đổi model �
 
 Đổi model ngay trong lúc đang chat thì **cuộc trò chuyện đi tiếp liền mạch**: model mới đọc được toàn bộ những gì đã nói trước đó và trả lời tiếp, không hỏi lại từ đầu. Bạn đổi bao nhiêu lần trong một cuộc cũng được.
 
-Bên dưới, Javis làm việc này theo hai cách tuỳ loại bộ não:
+Bên dưới, Minmin làm việc này theo hai cách tuỳ loại bộ não:
 
-- **Bộ não dùng API key** (OpenRouter, OpenAI, Anthropic, Gemini, Groq, Ollama) vốn không tự nhớ gì, nên mỗi lượt Javis gửi lại lịch sử hội thoại cho chúng.
-- **Bộ não chạy bằng gói thuê bao** (Claude Code, ChatGPT/Codex, Grok Build) thì tự giữ mạch hội thoại của riêng chúng, và Javis nối lại đúng mạch đó cho rẻ. Nhưng ngay khi một lượt do bộ não khác trả lời, mạch cũ đó **thiếu đúng lượt vừa rồi**. Javis vì vậy bỏ liên kết mạch của mọi bộ não khác sau mỗi lượt; lần bạn quay lại bộ não đó, nó dựng lại ngữ cảnh từ lịch sử đã lưu thay vì nối tiếp một mạch khuyết.
+- **Bộ não dùng API key** (OpenRouter, OpenAI, Anthropic, Gemini, Groq, Ollama) vốn không tự nhớ gì, nên mỗi lượt Minmin gửi lại lịch sử hội thoại cho chúng.
+- **Bộ não chạy bằng gói thuê bao** (Claude Code, ChatGPT/Codex, Grok Build) thì tự giữ mạch hội thoại của riêng chúng, và Minmin nối lại đúng mạch đó cho rẻ. Nhưng ngay khi một lượt do bộ não khác trả lời, mạch cũ đó **thiếu đúng lượt vừa rồi**. Minmin vì vậy bỏ liên kết mạch của mọi bộ não khác sau mỗi lượt; lần bạn quay lại bộ não đó, nó dựng lại ngữ cảnh từ lịch sử đã lưu thay vì nối tiếp một mạch khuyết.
 
 Nói ngắn: đổi qua đổi lại vẫn liền mạch, chỉ là lượt đầu tiên sau khi đổi tốn thêm một chút vì phải gửi lại lịch sử.
 
@@ -348,24 +348,24 @@ Từ 0.42.1 trở về trước có lỗi ở đúng chỗ này: chỉ mạch c�
 
 ## Mẹo
 
-- Nếu chỉ muốn Javis nhớ và làm việc trơn tru, đừng đổi Main khỏi Claude Code. Các provider khác dành cho nhu cầu đặc biệt.
+- Nếu chỉ muốn Minmin nhớ và làm việc trơn tru, đừng đổi Main khỏi Claude Code. Các provider khác dành cho nhu cầu đặc biệt.
 - Đặt **Model việc nền** là model rẻ để loop, việc Kanban, nhắc hẹn, tự học và tiêu hoá nguồn không ngốn hết hạn mức của gói chính. Muốn biết chỗ nào đang đốt nhiều nhất thì xem [Mức dùng: token & chi phí](23-muc-dung-token.md).
 - Bật **Suy nghĩ** mức Vừa hoặc Cao khi hỏi việc khó (phân tích, chiến lược); tắt khi chỉ hỏi nhanh để đỡ chờ.
 - OpenRouter là lựa chọn tiện nếu muốn thử nhiều model của nhiều hãng chỉ với một key.
-- Muốn ChatGPT gọi được công cụ bán hàng của bạn: gắn kết nối trong trang [Kết nối & số liệu kinh doanh](09-mcp-va-so-lieu.md) trước, Javis sẽ tự đẩy sang Codex.
+- Muốn ChatGPT gọi được công cụ bán hàng của bạn: gắn kết nối trong trang [Kết nối & số liệu kinh doanh](09-mcp-va-so-lieu.md) trước, Minmin sẽ tự đẩy sang Codex.
 
 ## Sự cố thường gặp
 
 - **Card Claude Code báo "Claude CLI chưa cài"**: máy chưa cài Claude Code CLI. Engine Claude bắt buộc phải có nó (SDK gọi chính CLI này bên dưới). Cài xong bấm **↻ Kiểm tra lại**. Xem [Bắt đầu & thiết lập lần đầu](01-bat-dau-thiet-lap.md).
 - **Đăng nhập ChatGPT không ra mã, hoặc báo lỗi ngay**: workspace của bạn có thể đã chặn device code. Dùng nút **Qua trình duyệt** ở mục B.
-- **Đăng nhập ChatGPT báo "Hết hạn, thử lại."**: Javis chờ khoảng 16 phút rồi bỏ cuộc. Bấm **Đăng nhập ChatGPT** lại để lấy mã mới.
+- **Đăng nhập ChatGPT báo "Hết hạn, thử lại."**: Minmin chờ khoảng 16 phút rồi bỏ cuộc. Bấm **Đăng nhập ChatGPT** lại để lấy mã mới.
 - **Chọn được provider nhưng cột model trống**: provider đó chưa kết nối, hoặc chưa có model. Kết nối lại ở khối Providers, hoặc thêm model vào `settings.json` (mục `model.catalog`). Xem [Cấu hình .env](16-cau-hinh-env.md).
 - **Model trả về rỗng**: thử lại hoặc đổi sang model khác trong bảng SET MAIN MODEL. Với Anthropic API, thông báo còn kèm lý do (ví dụ hết max_tokens: nhắn "tiếp tục" để model viết tiếp).
 - **Trang Kết nối hiện dòng vàng "⚠ Main Model đang là ... - chưa hỗ trợ gọi công cụ. Đổi ở trang Models."**: từ 0.9.270 **không provider có sẵn nào** làm nổ dòng này nữa. Trước đó Google Gemini bị sót khỏi danh sách nên báo nhầm dù bên dưới đã chạy MCP qua hub bình thường. Dòng vàng giờ chỉ còn để chặn provider lạ. Sáu provider Claude Code, OpenRouter, OpenAI, Anthropic API, Gemini và Groq hiện thẻ XANH; riêng ChatGPT OAuth có thẻ xanh riêng nói rõ nó chạy qua Codex CLI.
 
 - **Banner đỏ "⚠ Bộ não claude mất đăng nhập" trên máy chưa từng cài Claude**: sửa ở 0.9.270. Đèn báo não giữ trạng thái trong RAM và không ai dọn, nên đèn đỏ thắp hồi Claude còn là Main Model treo mãi sau khi bạn đổi sang OpenRouter. Giờ đèn chỉ tính những bộ não bạn THẬT SỰ chọn (Main Model + model việc nền khi đặt rõ provider), và tự tắt ngay khi bạn đổi sang nhà cung cấp khác - không phải chờ vòng quét 10 phút.
-- **Bấm Ngắt provider đang là Main**: Javis tự chuyển Main về Claude Code để chat không gãy. Đây là hành vi cố ý, không phải lỗi.
-- **ChatGPT OAuth báo chưa cài Codex CLI**: kênh này cần Codex CLI trên máy. Từ 0.28.8 hai engine CLI npm (Claude Code, Codex) đều được cài sẵn lúc cài Javis - bản Docker, `install.sh` lẫn `setup.bat` - nên báo thiếu thường là bản cài cũ, **cập nhật Javis** một lần là có. Cài tay cũng được: `npm i -g @openai/codex`.
+- **Bấm Ngắt provider đang là Main**: Minmin tự chuyển Main về Claude Code để chat không gãy. Đây là hành vi cố ý, không phải lỗi.
+- **ChatGPT OAuth báo chưa cài Codex CLI**: kênh này cần Codex CLI trên máy. Từ 0.28.8 hai engine CLI npm (Claude Code, Codex) đều được cài sẵn lúc cài Minmin - bản Docker, `install.sh` lẫn `setup.bat` - nên báo thiếu thường là bản cài cũ, **cập nhật Minmin** một lần là có. Cài tay cũng được: `npm i -g @openai/codex`.
 
 ## Liên quan
 

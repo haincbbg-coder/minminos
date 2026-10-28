@@ -1,4 +1,4 @@
-# Contributing to Javis OS
+# Contributing to Minmin OS
 
 *[Tiếng Việt](CONTRIBUTING.md) · **English***
 

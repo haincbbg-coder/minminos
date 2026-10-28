@@ -2,23 +2,23 @@
 
 ***Tiếng Việt** · [English](en/05-file-manager.md)*
 
-Trang "Tệp tin" là trình quản lý tệp ngay trong dashboard Javis. Bạn tìm file, duyệt thư mục, mở và sửa file văn bản (.md, .txt...) trực tiếp trên trình duyệt rồi lưu, tải file lên, tải file về (mọi loại file), tải cả thư mục về dạng .zip, tạo thư mục, đổi tên và xoá. Điểm vào luôn là "brain" (bộ não) bạn đang chọn, không cần mở File Explorer hay dùng lệnh.
+Trang "Tệp tin" là trình quản lý tệp ngay trong dashboard Minmin. Bạn tìm file, duyệt thư mục, mở và sửa file văn bản (.md, .txt...) trực tiếp trên trình duyệt rồi lưu, tải file lên, tải file về (mọi loại file), tải cả thư mục về dạng .zip, tạo thư mục, đổi tên và xoá. Điểm vào luôn là "brain" (bộ não) bạn đang chọn, không cần mở File Explorer hay dùng lệnh.
 
 ## Tính năng này là gì
 
-Mỗi brain của Javis thực chất là một thư mục trên máy/VPS chứa toàn bộ tri thức: ghi chú nguồn, Wiki, bộ nhớ, agents, workflows... Trang "Tệp tin" cho bạn xem và chỉnh sửa các file đó một cách trực quan:
+Mỗi brain của Minmin thực chất là một thư mục trên máy/VPS chứa toàn bộ tri thức: ghi chú nguồn, Wiki, bộ nhớ, agents, workflows... Trang "Tệp tin" cho bạn xem và chỉnh sửa các file đó một cách trực quan:
 
 - Tìm file trong toàn brain theo **tên** hoặc theo **nội dung**.
 - Duyệt cây thư mục (nhấp vào thư mục để đi sâu vào, có breadcrumb để quay lại).
 - Mở file để đọc: trình sửa mở **ngay trong trang**, chiếm chỗ danh sách file (không phải cửa sổ bật lên). Đúng trình sửa mà bạn dùng ở khung chat, nên .md có soạn thảo trực quan, thanh định dạng, Lùi/Tiến giữa các note; ảnh và PDF xem tại chỗ.
 - Sửa file dạng chữ (.md, .txt, .json...) rồi bấm lưu.
 - Tải file từ máy bạn lên brain, hoặc tải file trong brain về máy (mọi loại file, không riêng .md).
-- Tải cả một thư mục về máy: Javis nén thành .zip rồi mới gửi.
+- Tải cả một thư mục về máy: Minmin nén thành .zip rồi mới gửi.
 - Tạo thư mục mới, tạo file mới, đổi tên, xoá.
 
 ## Phạm vi duyệt: tới đâu là hết
 
-Điểm vào mặc định luôn là thư mục gốc của brain đang chọn. Nhưng **trần duyệt** (chỗ nút "↑ Lên" không đi lên được nữa) thì tuỳ cách bạn chạy Javis:
+Điểm vào mặc định luôn là thư mục gốc của brain đang chọn. Nhưng **trần duyệt** (chỗ nút "↑ Lên" không đi lên được nữa) thì tuỳ cách bạn chạy Minmin:
 
 | Cách chạy | Trần duyệt | Ý nghĩa |
 |---|---|---|
@@ -28,17 +28,17 @@ Mỗi brain của Javis thực chất là một thư mục trên máy/VPS chứa
 | Đặt `JAVIS_FILES_ROOT=drive` (hoặc `root`) | Ổ đĩa chứa brain | Ép mở rộng tới ổ đĩa |
 | Đặt `JAVIS_FILES_ROOT=<đường dẫn>` | Đúng thư mục đó | Trần tuỳ ý, phải là thư mục có chứa brain |
 
-Vì thế trên máy cá nhân, bấm **↑ Lên** nhiều lần có thể đưa bạn ra ngoài brain tới tận gốc ổ đĩa. Nút **⌂ Brain** đưa bạn về nhà ngay lập tức. Khi đã đứng ở trần, nút **↑ Lên** tự ẩn đi. Javis luôn chặn các đường dẫn cố vượt quá trần (kiểu `../../`), và brain luôn nằm trong trần.
+Vì thế trên máy cá nhân, bấm **↑ Lên** nhiều lần có thể đưa bạn ra ngoài brain tới tận gốc ổ đĩa. Nút **⌂ Brain** đưa bạn về nhà ngay lập tức. Khi đã đứng ở trần, nút **↑ Lên** tự ẩn đi. Minmin luôn chặn các đường dẫn cố vượt quá trần (kiểu `../../`), và brain luôn nằm trong trần.
 
 Cách chỉnh biến môi trường xem [Cấu hình .env](16-cau-hinh-env.md).
 
-## Mở ở đâu trong Javis
+## Mở ở đâu trong Minmin
 
-1. Mở dashboard Javis (mặc định ở cổng 7777).
+1. Mở dashboard Minmin (mặc định ở cổng 7777).
 2. Trên rail điều hướng bên trái, mở nhóm **Bộ não** rồi bấm mục **Tệp tin**.
-3. Trang hiện ô tìm kiếm ở trên cùng, dưới đó là thanh công cụ, dưới nữa là danh sách file/thư mục. Lần đầu vào, Javis hiển thị thư mục gốc của brain đang chọn.
+3. Trang hiện ô tìm kiếm ở trên cùng, dưới đó là thanh công cụ, dưới nữa là danh sách file/thư mục. Lần đầu vào, Minmin hiển thị thư mục gốc của brain đang chọn.
 
-Nếu danh sách báo lỗi kiểu "Máy chủ Javis chưa có chức năng Tệp tin", hãy khởi động lại server (chạy `stop-javis.bat` rồi `start-javis.vbs`) và tải lại trang. Xem thêm [Khắc phục sự cố & FAQ](17-khac-phuc-su-co.md).
+Nếu danh sách báo lỗi kiểu "Máy chủ Minmin chưa có chức năng Tệp tin", hãy khởi động lại server (chạy `stop-javis.bat` rồi `start-javis.vbs`) và tải lại trang. Xem thêm [Khắc phục sự cố & FAQ](17-khac-phuc-su-co.md).
 
 ## Chọn brain đang làm việc
 
@@ -60,7 +60,7 @@ Về nút 🗑, có ba điều cần nhớ:
 
 - Với brain thật (🧠): xoá **toàn bộ** brain, không phải xoá một file. Hộp xác nhận ghi rõ não này sẽ được chuyển vào **THÙNG RÁC (giữ 30 ngày rồi tự xoá hẳn)**, và việc xoá sẽ **ĐỒNG BỘ sang mọi máy khác**. Bạn phải gõ chính xác tên brain mới xoá được.
 - Với mục folder ngoài (📁): nút này chỉ **gỡ khỏi danh sách chọn**, không đụng dữ liệu trên ổ đĩa. Hộp xác nhận nói rõ "Chỉ gỡ khỏi menu chọn não, KHÔNG xoá dữ liệu trên ổ đĩa."
-- Brain mặc định không xoá được, Javis báo "Không thể xoá Brain mặc định (não khởi đầu)."
+- Brain mặc định không xoá được, Minmin báo "Không thể xoá Brain mặc định (não khởi đầu)."
 
 Đừng nhầm nút này với nút "Xoá" từng dòng file bên trong trang Tệp tin. Chi tiết về brain và bộ nhớ xem [Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md).
 
@@ -91,19 +91,19 @@ Bên dưới là danh sách. Mỗi dòng gồm biểu tượng loại file, tên
 
 1. Bấm vào ô **Tìm file trong toàn brain...** ở trên cùng trang.
 2. Chọn phạm vi: chip **Tên** để khớp tên file, chip **Nội dung** để quét chữ bên trong file.
-3. Gõ từ khoá. Javis tự tìm sau khi bạn ngừng gõ một chút; muốn tìm ngay thì nhấn **Enter**.
+3. Gõ từ khoá. Minmin tự tìm sau khi bạn ngừng gõ một chút; muốn tìm ngay thì nhấn **Enter**.
 4. Danh sách bên dưới đổi thành kết quả tìm kiếm. Mỗi dòng gồm: tên file, đường dẫn của nó, đoạn trích (nếu tìm theo nội dung), và nhãn loại khớp - **Tên file** hoặc **Trong nội dung · dòng 42**.
 5. Bấm nút **Mở** (hoặc bấm thẳng vào tên file) để mở file đó ngay.
 6. Bấm nút **⤓ Tải** để tải thẳng file đó về máy, khỏi cần đi vào thư mục chứa nó.
-7. Bấm nút **Vị trí** để nhảy về thư mục chứa file, Javis cuộn tới đúng dòng và tô sáng nó.
+7. Bấm nút **Vị trí** để nhảy về thư mục chứa file, Minmin cuộn tới đúng dòng và tô sáng nó.
 8. Xoá hết chữ trong ô tìm (hoặc bấm **✕**, hoặc nhấn **Esc**) để quay lại danh sách thư mục.
 
 Vài điều nên biết về tìm kiếm:
 
-- Phạm vi quét luôn là **gốc brain**, kể cả khi trần duyệt của bạn đang mở tới cả ổ đĩa. Javis cố ý không quét cả ổ đĩa vì sẽ rất chậm.
+- Phạm vi quét luôn là **gốc brain**, kể cả khi trần duyệt của bạn đang mở tới cả ổ đĩa. Minmin cố ý không quét cả ổ đĩa vì sẽ rất chậm.
 - Tìm theo **tên** không phân biệt dấu tiếng Việt: gõ `bao cao` vẫn ra `báo-cáo.md`. Áp dụng cho mọi loại file.
 - Tìm theo **nội dung** chỉ quét file dạng chữ (.md, .txt, .json, .yaml, .csv, .py, .js...), bỏ qua file nặng hơn 1MB, và bỏ qua các thư mục kỹ thuật `.git`, `node_modules`, `__pycache__`, `.obsidian`, `.trash`, `.venv` cùng mọi thư mục ẩn.
-- Chế độ **Nội dung** cần ít nhất 2 ký tự. Gõ 1 ký tự thì Javis nhắc "Nhập ít nhất 2 ký tự để tìm trong nội dung."
+- Chế độ **Nội dung** cần ít nhất 2 ký tự. Gõ 1 ký tự thì Minmin nhắc "Nhập ít nhất 2 ký tự để tìm trong nội dung."
 - Không có kết quả thì hiện `Không tìm thấy file phù hợp với "<từ khoá>".`
 - Ô **Tìm note...** ở cột VAULT bên trái dùng chung đường tìm này từ bản **0.52.9**. Trước đó nó tự bò cả vault từ trình duyệt, mỗi thư mục một lượt hỏi máy chủ, nên qua mạng tới VPS thì chậm hẳn so với ô tìm ở trang này. Nay hai ô nhanh như nhau.
 
@@ -122,7 +122,7 @@ Vài điều nên biết về tìm kiếm:
 4. Bấm **✕** (hoặc phím `Esc`) để đóng và quay lại danh sách file. Danh sách tự nạp lại, nên file bạn vừa đổi tên hay xoá ngay trong trình sửa hiện đúng trạng thái mới.
 5. Thanh trên trình sửa còn có: đổi tên, xoá, **↗** mở tab mới, **⤓ Tải** về máy, và nút phóng to toàn màn hình.
 
-**Khối "Thuộc tính" ở đầu note .md.** Nếu file mở đầu bằng khối `---` (frontmatter: `type`, `status`, `created`...), Javis hiện nó thành một khối riêng, **khoá lại không cho sửa** trong chế độ Sửa. Đó là metadata chứ không phải văn bản, và khoá lại chính là thứ giữ cho nó nguyên vẹn từng ký tự sau mỗi lần lưu. Muốn sửa metadata thì chuyển sang chế độ **Nguồn**.
+**Khối "Thuộc tính" ở đầu note .md.** Nếu file mở đầu bằng khối `---` (frontmatter: `type`, `status`, `created`...), Minmin hiện nó thành một khối riêng, **khoá lại không cho sửa** trong chế độ Sửa. Đó là metadata chứ không phải văn bản, và khoá lại chính là thứ giữ cho nó nguyên vẹn từng ký tự sau mỗi lần lưu. Muốn sửa metadata thì chuyển sang chế độ **Nguồn**.
 
 ### Lùi về / Tiến lên giữa các note
 
@@ -135,42 +135,42 @@ Vài điều nên biết về tìm kiếm:
 - Vệt đường đi **giữ nguyên khi bạn đóng trình sửa** rồi mở lại (đóng ra để chat về chính note đó là chuyện thường), và **tự xoá khi bạn đổi sang brain khác** - vì mọi bước trong vệt đều thuộc brain cũ.
 - Đang đứng giữa vệt mà mở một note mới thì phần phía trước bị cắt, y như trình duyệt.
 
-**Rời một file đang sửa dở thì Javis tự lưu trước.** Bấm mũi tên, bấm một wikilink, hay bấm file khác trong cây - nếu bạn có sửa gì mà chưa bấm Lưu, Javis lưu lại rồi mới đi. Nếu lưu hỏng (mất mạng, file bị khoá) thì **Javis không đi đâu cả** và nút Lưu hiện lỗi, để bài bạn vừa viết không bị vứt đi âm thầm. File bạn chỉ mở ra đọc rồi rời đi thì không bị ghi lại gì cả.
+**Rời một file đang sửa dở thì Minmin tự lưu trước.** Bấm mũi tên, bấm một wikilink, hay bấm file khác trong cây - nếu bạn có sửa gì mà chưa bấm Lưu, Minmin lưu lại rồi mới đi. Nếu lưu hỏng (mất mạng, file bị khoá) thì **Minmin không đi đâu cả** và nút Lưu hiện lỗi, để bài bạn vừa viết không bị vứt đi âm thầm. File bạn chỉ mở ra đọc rồi rời đi thì không bị ghi lại gì cả.
 
-**Mở file nào thì Javis làm việc trên file đó.** Ngay khi mở một file văn bản để sửa, Javis tự **ghim** file đó vào khung chat: một thẻ màu cam hiện phía trên thanh nhập, ghi tên file kèm dòng "đang mở - bấm để sửa tiếp". Từ lúc đó bạn hỏi gì thì Javis cũng đã có sẵn file đó làm đầu vào, khỏi phải dán đường dẫn hay mô tả lại. Bảo "dọn lại phần quá hạn giúp anh" hay "viết thêm mục kết luận" mà không nói file nào thì Javis ghi thẳng vào chính file đang mở.
+**Mở file nào thì Minmin làm việc trên file đó.** Ngay khi mở một file văn bản để sửa, Minmin tự **ghim** file đó vào khung chat: một thẻ màu cam hiện phía trên thanh nhập, ghi tên file kèm dòng "đang mở - bấm để sửa tiếp". Từ lúc đó bạn hỏi gì thì Minmin cũng đã có sẵn file đó làm đầu vào, khỏi phải dán đường dẫn hay mô tả lại. Bảo "dọn lại phần quá hạn giúp anh" hay "viết thêm mục kết luận" mà không nói file nào thì Minmin ghi thẳng vào chính file đang mở.
 
 Thẻ ghim khác thẻ file đính kèm ở ba chỗ:
 - **Chỉ có một.** Mở file khác là thẻ đổi theo file mới, không cộng dồn.
 - **Không mất sau khi gửi.** File đính kèm gửi xong là biến mất; thẻ ghim ở lại suốt cuộc trò chuyện vì nó là file bạn đang làm việc trên đó. Đóng cửa sổ sửa cũng không bỏ ghim - đóng ra để quay sang chat về chính file đó là chuyện thường.
-- **Bấm vào thẻ là quay lại sửa file đó.** Đóng trình sửa rồi chat vài lượt, muốn sửa tiếp thì bấm thẳng vào thẻ (hoặc chọn thẻ bằng phím Tab rồi Enter) - file mở lại trong trình sửa, cây vault bên trái tự xổ tới đúng nhánh chứa nó, khỏi đi tìm lại từ đầu. Nếu file đang mở sẵn thì Javis chỉ đưa bạn về đó chứ không nạp lại, nên chữ đang gõ dở không mất. Trên điện thoại, thẻ mở file trong khung sửa bung giữa màn hình. Bấm dấu **✕** trên thẻ vẫn là bỏ ghim chứ không mở file.
+- **Bấm vào thẻ là quay lại sửa file đó.** Đóng trình sửa rồi chat vài lượt, muốn sửa tiếp thì bấm thẳng vào thẻ (hoặc chọn thẻ bằng phím Tab rồi Enter) - file mở lại trong trình sửa, cây vault bên trái tự xổ tới đúng nhánh chứa nó, khỏi đi tìm lại từ đầu. Nếu file đang mở sẵn thì Minmin chỉ đưa bạn về đó chứ không nạp lại, nên chữ đang gõ dở không mất. Trên điện thoại, thẻ mở file trong khung sửa bung giữa màn hình. Bấm dấu **✕** trên thẻ vẫn là bỏ ghim chứ không mở file.
 
 Bỏ ghim bằng cách bấm **✕** trên thẻ. Ghim cũng tự bỏ khi bạn đổi sang brain khác hoặc xoá chính file đang ghim, và nó sống qua F5 nên tải lại trang không mất mạch làm việc.
 
 Lưu ý:
 - Nút **Sửa** chỉ xuất hiện với các loại file văn bản nêu trên.
-- File lớn hơn 2MB sẽ không mở để xem trong trình duyệt. Javis báo bạn tải về thay vì mở.
+- File lớn hơn 2MB sẽ không mở để xem trong trình duyệt. Minmin báo bạn tải về thay vì mở.
 - Nếu file là dạng nhị phân (không phải văn bản), trình sửa đề nghị **⤓ Tải** về thay vì hiển thị ô soạn thảo.
 
 ### Chữa file .md hỏng từ bản cũ
 
-Bản Javis **trước 0.33.4** có một lỗi âm thầm: mở note `.md` trong trình sửa trực quan rồi bấm Lưu là khối `---` ở đầu note (frontmatter: `type`, `status`, `created`...) bị biến thành `* * *`, và mỗi lần mở ra sửa lại thêm một lớp dấu gạch chéo vào chữ (`1.` → `1\.` → `1\\.`). File vẫn mở được, nhưng metadata coi như mất - Javis, dataview và Obsidian đều đọc trượt từ đó.
+Bản Minmin **trước 0.33.4** có một lỗi âm thầm: mở note `.md` trong trình sửa trực quan rồi bấm Lưu là khối `---` ở đầu note (frontmatter: `type`, `status`, `created`...) bị biến thành `* * *`, và mỗi lần mở ra sửa lại thêm một lớp dấu gạch chéo vào chữ (`1.` → `1\.` → `1\\.`). File vẫn mở được, nhưng metadata coi như mất - Minmin, dataview và Obsidian đều đọc trượt từ đó.
 
 Bản này đã bịt đường đó. Với file lỡ hỏng rồi:
 
-1. Vào trang **Tệp tin**. Javis tự soi cả brain một lượt ngay khi bạn vào. **Không có file nào hỏng thì không hiện gì cả** - im lặng là tin tốt.
+1. Vào trang **Tệp tin**. Minmin tự soi cả brain một lượt ngay khi bạn vào. **Không có file nào hỏng thì không hiện gì cả** - im lặng là tin tốt.
 2. Có thì hiện một khung vàng ở đầu trang, kèm danh sách file và hỏng ở chỗ nào.
-3. Bấm **Chữa hết N file**. Javis dựng lại khối thuộc tính và gỡ dấu gạch chéo thừa, rồi báo lại số file đã chữa.
+3. Bấm **Chữa hết N file**. Minmin dựng lại khối thuộc tính và gỡ dấu gạch chéo thừa, rồi báo lại số file đã chữa.
 
-Từ 0.52.8, brain nào soi ra **sạch** thì Javis nhớ và **thôi soi lại** ở những lần mở trang sau. Vòng soi này đọc toàn bộ file `.md` của brain, nên với brain vài nghìn note nó làm trang Tệp tin mở chậm hẳn và cả ô tìm kiếm cũng ì theo. Vết hỏng thì do một bản không còn tồn tại gây ra, nên sạch một lần là sạch hẳn. Brain còn file hỏng thì vẫn soi lại mỗi lần vào, tới khi bạn bấm chữa. Chép một vault cũ từ máy khác vào và muốn soi lại thì mở `/files/md-hong?force=1`.
+Từ 0.52.8, brain nào soi ra **sạch** thì Minmin nhớ và **thôi soi lại** ở những lần mở trang sau. Vòng soi này đọc toàn bộ file `.md` của brain, nên với brain vài nghìn note nó làm trang Tệp tin mở chậm hẳn và cả ô tìm kiếm cũng ì theo. Vết hỏng thì do một bản không còn tồn tại gây ra, nên sạch một lần là sạch hẳn. Brain còn file hỏng thì vẫn soi lại mỗi lần vào, tới khi bạn bấm chữa. Chép một vault cũ từ máy khác vào và muốn soi lại thì mở `/files/md-hong?force=1`.
 
-Javis chỉ sửa thứ mà **chỉ lỗi đó mới tạo ra được**: khối `* * *` ở ngay đầu file kẹp giữa toàn dòng trông như metadata, và chuỗi từ hai dấu gạch chéo trở lên. Đường kẻ ngang giữa bài, file có frontmatter còn lành, hay một dấu gạch chéo lẻ bạn cố ý gõ - đều không bị đụng tới.
+Minmin chỉ sửa thứ mà **chỉ lỗi đó mới tạo ra được**: khối `* * *` ở ngay đầu file kẹp giữa toàn dòng trông như metadata, và chuỗi từ hai dấu gạch chéo trở lên. Đường kẻ ngang giữa bài, file có frontmatter còn lành, hay một dấu gạch chéo lẻ bạn cố ý gõ - đều không bị đụng tới.
 
-### Khi link trỏ trượt: Javis đi tìm hộ
+### Khi link trỏ trượt: Minmin đi tìm hộ
 
 Đường dẫn trong chat có lúc lệch tên file trên đĩa - hay gặp nhất là chat ghi có dấu ("Kế hoạch...") còn file lưu không dấu ("Ke Hoach..."). Trước đây bấm vào là rơi vào một trang trống ghi "Không phải thư mục". Nay:
 
-- Đường dẫn trỏ vào **một file** (dù trông như tên thư mục) thì Javis mở thẳng file đó ra sửa.
-- Đường dẫn **không có gì ở đó** thì Javis mở thư mục gần nhất còn tồn tại, nói rõ đã tìm cái gì, rồi **tự dò cả brain theo tên** (không phân biệt dấu tiếng Việt) và bày ra danh sách file tên gần giống - bấm một phát là mở.
+- Đường dẫn trỏ vào **một file** (dù trông như tên thư mục) thì Minmin mở thẳng file đó ra sửa.
+- Đường dẫn **không có gì ở đó** thì Minmin mở thư mục gần nhất còn tồn tại, nói rõ đã tìm cái gì, rồi **tự dò cả brain theo tên** (không phân biệt dấu tiếng Việt) và bày ra danh sách file tên gần giống - bấm một phát là mở.
 - Mở file trực tiếp trong trình sửa mà không thấy file cũng vậy: trình sửa gợi ý luôn các file tên gần giống thay vì báo lỗi rồi thôi.
 
 ### Xem ảnh và PDF ngay trong dashboard
@@ -185,7 +185,7 @@ Các loại file còn lại (video, file nén, file dữ liệu...) không có n
 
 1. Bấm **+ File** trên thanh công cụ.
 2. Nhập tên file, nhớ kèm đuôi. Ví dụ: `ghi-chu.md`.
-3. Javis tạo file rỗng ngay trong thư mục hiện tại. Bạn có thể bấm **Sửa** để nhập nội dung.
+3. Minmin tạo file rỗng ngay trong thư mục hiện tại. Bạn có thể bấm **Sửa** để nhập nội dung.
 
 ### Tạo thư mục mới
 
@@ -197,9 +197,9 @@ Các loại file còn lại (video, file nén, file dữ liệu...) không có n
 
 1. Bấm **⤒ Tải lên**.
 2. Chọn một hoặc nhiều file từ máy của bạn.
-3. Javis tải lần lượt vào thư mục hiện tại rồi làm mới danh sách.
+3. Minmin tải lần lượt vào thư mục hiện tại rồi làm mới danh sách.
 
-Nếu trong thư mục đã có file trùng tên, Javis tự thêm hậu tố số vào tên file mới (ví dụ `bao-cao_1.pdf`) để không ghi đè file cũ.
+Nếu trong thư mục đã có file trùng tên, Minmin tự thêm hậu tố số vào tên file mới (ví dụ `bao-cao_1.pdf`) để không ghi đè file cũ.
 
 ### Tải file về máy
 
@@ -217,11 +217,11 @@ Có hai đường, dùng đường nào cũng ra kết quả như nhau:
 - Bấm **⤓ Zip** ở dòng thư mục trong danh sách.
 - Đi vào thư mục đó rồi bấm **⤓ Tải thư mục** trên thanh công cụ.
 
-Javis đo thư mục trước, rồi nén toàn bộ bên trong (giữ nguyên cây thư mục con) thành một file .zip đặt theo tên thư mục, ví dụ `attachments.zip`. Vài điều nên biết:
+Minmin đo thư mục trước, rồi nén toàn bộ bên trong (giữ nguyên cây thư mục con) thành một file .zip đặt theo tên thư mục, ví dụ `attachments.zip`. Vài điều nên biết:
 
-- Thư mục nặng hơn 200MB thì Javis hỏi lại trước khi nén, kèm số file và dung lượng ước tính, để bạn khỏi ngồi chờ oan.
-- Trần an toàn là 20.000 file hoặc 2GB. Vượt trần Javis báo thẳng và đề nghị bạn tải từng thư mục con - rào này để một cú bấm nhầm ở thư mục gốc ổ đĩa không kéo cả ổ đĩa vào file nén.
-- Thư mục rỗng thì Javis báo không có gì để tải thay vì đưa bạn một file .zip trống.
+- Thư mục nặng hơn 200MB thì Minmin hỏi lại trước khi nén, kèm số file và dung lượng ước tính, để bạn khỏi ngồi chờ oan.
+- Trần an toàn là 20.000 file hoặc 2GB. Vượt trần Minmin báo thẳng và đề nghị bạn tải từng thư mục con - rào này để một cú bấm nhầm ở thư mục gốc ổ đĩa không kéo cả ổ đĩa vào file nén.
+- Thư mục rỗng thì Minmin báo không có gì để tải thay vì đưa bạn một file .zip trống.
 - Thư mục con rỗng vẫn được giữ trong file .zip.
 
 Cây file bên trang ghi chú cũng có nút **⤓** y hệt: đứng ở file thì tải file, đứng ở thư mục thì tải cả thư mục dạng .zip.
@@ -231,33 +231,33 @@ Cây file bên trang ghi chú cũng có nút **⤓** y hệt: đứng ở file t
 1. Rê chuột vào dòng file hoặc thư mục, bấm **Đổi tên**.
 2. Nhập tên mới rồi xác nhận. Bỏ trống hoặc giữ nguyên tên cũ thì không có gì thay đổi.
 
-Ký tự lạ trong tên sẽ được Javis thay bằng dấu gạch dưới cho an toàn, nên tên thực tế có thể khác nhẹ so với tên bạn gõ. Chữ tiếng Việt có dấu, dấu chấm, gạch ngang, gạch dưới, khoảng trắng và ngoặc đơn thì được giữ nguyên.
+Ký tự lạ trong tên sẽ được Minmin thay bằng dấu gạch dưới cho an toàn, nên tên thực tế có thể khác nhẹ so với tên bạn gõ. Chữ tiếng Việt có dấu, dấu chấm, gạch ngang, gạch dưới, khoảng trắng và ngoặc đơn thì được giữ nguyên.
 
 ### Xoá
 
 1. Rê chuột vào dòng cần xoá, bấm **Xoá** (nút màu cảnh báo).
-2. Javis hỏi xác nhận: `Xoá "<tên>"? Không thể hoàn tác.` Bấm đồng ý mới xoá.
+2. Minmin hỏi xác nhận: `Xoá "<tên>"? Không thể hoàn tác.` Bấm đồng ý mới xoá.
 3. Với thư mục, thao tác xoá sẽ xoá luôn toàn bộ file bên trong.
 
-Cảnh báo: thao tác xoá không có thùng rác, không hoàn tác được. Hãy chắc chắn trước khi xác nhận. Javis không cho phép xoá thư mục gốc của brain cũng như thư mục trần duyệt, báo "Không thể xoá thư mục gốc / brain".
+Cảnh báo: thao tác xoá không có thùng rác, không hoàn tác được. Hãy chắc chắn trước khi xác nhận. Minmin không cho phép xoá thư mục gốc của brain cũng như thư mục trần duyệt, báo "Không thể xoá thư mục gốc / brain".
 
 ### Chia sẻ một file ra ngoài (link `/s/`)
 
-Trong khung mở file có nút **Chia sẻ**: nó cho ra một đường link gửi cho ai người đó cũng xem được, không cần đăng nhập Javis. File `.md` hiện thành trang đã dựng sẵn (đậm, nghiêng, ảnh), còn file `.html` thì **chạy thật** như một app nhỏ.
+Trong khung mở file có nút **Chia sẻ**: nó cho ra một đường link gửi cho ai người đó cũng xem được, không cần đăng nhập Minmin. File `.md` hiện thành trang đã dựng sẵn (đậm, nghiêng, ảnh), còn file `.html` thì **chạy thật** như một app nhỏ.
 
-Trang chia sẻ chạy trong một hộp cách ly: script trong đó không đọc được cookie đăng nhập của bạn và không gọi được API của Javis. Đó là điều kiện để dám mở một file `.html` do AI viết ra cho người lạ xem. Cái giá của nó là ba điều cần biết khi làm app để chia sẻ:
+Trang chia sẻ chạy trong một hộp cách ly: script trong đó không đọc được cookie đăng nhập của bạn và không gọi được API của Minmin. Đó là điều kiện để dám mở một file `.html` do AI viết ra cho người lạ xem. Cái giá của nó là ba điều cần biết khi làm app để chia sẻ:
 
 - **Đọc dữ liệu bằng đường dẫn tương đối** (`./data.json`), đừng trỏ vào `/files/raw`. Link chia sẻ phục vụ được các file nằm **cạnh** trang; còn `/files/raw` đòi cookie đăng nhập nên người xem nhận lỗi 401 và app hiện trống trơn.
 - **Để app trong một thư mục riêng** (`apps/bang-gia/index.html` cùng dữ liệu của nó), đừng để ngay gốc brain. Chỉ trang nằm trong thư mục riêng mới được đọc file dữ liệu bên cạnh, vì "thư mục" của một trang ở gốc brain chính là cả kho ghi chú của bạn.
-- **Lưu tạm (localStorage) vẫn dùng được** nhưng chỉ sống tới khi đóng tab. Javis tự vá chỗ này khi phục vụ trang, nên app không bị chết giữa chừng như trước; đừng để trong đó thứ người xem không được phép mất.
+- **Lưu tạm (localStorage) vẫn dùng được** nhưng chỉ sống tới khi đóng tab. Minmin tự vá chỗ này khi phục vụ trang, nên app không bị chết giữa chừng như trước; đừng để trong đó thứ người xem không được phép mất.
 
 Thu hồi link: bấm lại nút Chia sẻ rồi chọn thu hồi. Link chết ngay, và mọi file kèm theo nó cũng ngừng phục vụ.
 
 ## Hai thư mục là vùng cache, đừng để dữ liệu quý ở đó
 
-`attachments/` và `inbox/` của mỗi brain được Javis coi là **vùng cache**, không phải kho lưu trữ:
+`attachments/` và `inbox/` của mỗi brain được Minmin coi là **vùng cache**, không phải kho lưu trữ:
 
-- File trong hai thư mục đó quá **30 ngày** sẽ tự bị dọn, và nếu tổng dung lượng vượt trần **300MB** thì Javis dọn từ cũ tới mới cho tới khi xuống dưới trần.
+- File trong hai thư mục đó quá **30 ngày** sẽ tự bị dọn, và nếu tổng dung lượng vượt trần **300MB** thì Minmin dọn từ cũ tới mới cho tới khi xuống dưới trần.
 - Riêng ghi chú `.md` lỡ nằm trong hai thư mục đó thì được chừa ra, không bị dọn.
 - Muốn tắt hẳn việc tự dọn, đặt `enabled: false` ở khoá `media` trong `settings.json`. Ngưỡng ngày và dung lượng cũng chỉnh ở đó.
 - Ảnh cũ đã hết hạn khi hiện lại trong hội thoại sẽ thành một ô xám viền đứt ghi **"Ảnh đã hết hạn"** thay vì biểu tượng ảnh vỡ.
@@ -291,15 +291,15 @@ Kết luận thực dụng: tài liệu bạn muốn giữ lâu dài thì chuy�
 ## Mẹo
 
 - Không nhớ file nằm ở đâu thì đừng duyệt tay: gõ vào ô tìm là nhanh nhất. Nhớ mang máng nội dung thì chuyển sang chip **Nội dung**, nó tìm cả trong thân file.
-- File Wiki và ghi chú trong vault đều là .md, nên bạn có thể sửa nhanh ngay tại đây thay vì mở app khác. Nhưng nếu chỉ chỉnh nội dung tri thức, thường tiện hơn khi để Javis làm qua trò chuyện. Xem [Trò chuyện & giọng nói](02-tro-chuyen-va-giong-noi.md) và [Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md).
-- Đặt tên file mô tả rõ ý chính, tránh tên chung chung. Điều này giúp bạn và Javis tìm lại dễ hơn.
-- Muốn đưa một bài viết, ảnh chụp kiến thức hay tài liệu vào cho Javis tiêu hoá, hãy tải lên thư mục nguồn của brain rồi yêu cầu Javis xử lý trong khung trò chuyện.
+- File Wiki và ghi chú trong vault đều là .md, nên bạn có thể sửa nhanh ngay tại đây thay vì mở app khác. Nhưng nếu chỉ chỉnh nội dung tri thức, thường tiện hơn khi để Minmin làm qua trò chuyện. Xem [Trò chuyện & giọng nói](02-tro-chuyen-va-giong-noi.md) và [Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md).
+- Đặt tên file mô tả rõ ý chính, tránh tên chung chung. Điều này giúp bạn và Minmin tìm lại dễ hơn.
+- Muốn đưa một bài viết, ảnh chụp kiến thức hay tài liệu vào cho Minmin tiêu hoá, hãy tải lên thư mục nguồn của brain rồi yêu cầu Minmin xử lý trong khung trò chuyện.
 - Trên máy cá nhân bạn duyệt được ra cả ổ đĩa, nên hãy nhìn breadcrumb trước khi xoá. Thấy "🏠" không phải tên brain của bạn là đang đứng ngoài brain.
 - Trước khi thao tác hàng loạt, kiểm tra lại đang đứng đúng brain qua ô chọn brain trên thanh trên cùng. Sửa nhầm brain là lỗi hay gặp nhất.
 
 ## Sự cố thường gặp
 
-**Danh sách báo "Máy chủ Javis chưa có chức năng Tệp tin".** Server đang chạy bản cũ chưa có tính năng này. Khởi động lại server (`stop-javis.bat` rồi `start-javis.vbs`) và tải lại trang.
+**Danh sách báo "Máy chủ Minmin chưa có chức năng Tệp tin".** Server đang chạy bản cũ chưa có tính năng này. Khởi động lại server (`stop-javis.bat` rồi `start-javis.vbs`) và tải lại trang.
 
 **Báo "Phiên đăng nhập hết hạn" hoặc lỗi 401.** Tải lại trang và đăng nhập lại. Xem [Bảo mật & tài khoản](14-bao-mat-tai-khoan.md).
 
@@ -317,7 +317,7 @@ Kết luận thực dụng: tài liệu bạn muốn giữ lâu dài thì chuy�
 
 **Tải thư mục báo "Thư mục quá lớn để nén".** Thư mục vượt trần an toàn 20.000 file hoặc 2GB. Đi vào trong rồi tải từng thư mục con. Hay gặp nhất khi bạn đứng ở thư mục gốc ổ đĩa chứ không phải trong brain - nhìn breadcrumb để kiểm tra.
 
-**Tải thư mục báo "không có file nào để tải".** Thư mục rỗng. Javis không tạo file .zip trống.
+**Tải thư mục báo "không có file nào để tải".** Thư mục rỗng. Minmin không tạo file .zip trống.
 
 **Bấm Tải mà không thấy file về đâu.** Kiểm tra thư mục Downloads của trình duyệt, và xem trình duyệt có chặn tải xuống tự động không. Riêng thư mục lớn cần vài giây để nén trước khi trình duyệt bắt đầu nhận file.
 

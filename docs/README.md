@@ -1,8 +1,8 @@
-# 📚 Tài liệu Javis OS
+# 📚 Tài liệu Minmin OS
 
 ***Tiếng Việt** · [English](en/README.md)*
 
-Hướng dẫn sử dụng chi tiết từng chức năng của Javis OS. Mỗi trang là một how-to độc lập: mở ở đâu, bấm gì, dùng thế nào.
+Hướng dẫn sử dụng chi tiết từng chức năng của Minmin OS. Mỗi trang là một how-to độc lập: mở ở đâu, bấm gì, dùng thế nào.
 
 > Mới bắt đầu? Đọc [Cài đặt trong README](../README.md#-cài-đặt) trước, rồi qua [01 - Bắt đầu & thiết lập lần đầu](01-bat-dau-thiet-lap.md).
 
@@ -20,7 +20,7 @@ Thanh điều hướng của dashboard gom **19 trang** thành **7 nhóm**: Tr�
 - [05 - Quản lý tệp tin](05-quan-ly-tep-tin.md) - duyệt brain, tìm file theo tên/nội dung, sửa .md/.txt trực tiếp, tải lên/về.
 
 ### Code (nhóm Code)
-- [27 - Nhóm Code: Terminal](27-tab-code-terminal.md) - dòng lệnh thật của máy chạy Javis, mở ngay trong dashboard, không cần SSH.
+- [27 - Nhóm Code: Terminal](27-tab-code-terminal.md) - dòng lệnh thật của máy chạy Minmin, mở ngay trong dashboard, không cần SSH.
 
 ### Mở rộng năng lực (nhóm Năng lực)
 - [06 - Skills](06-skills.md) - gom nhóm, tìm kiếm, bật/tắt, thêm/sửa/xoá, nhập/xuất skill.
@@ -36,15 +36,15 @@ Thanh điều hướng của dashboard gom **19 trang** thành **7 nhóm**: Tr�
 ### Việc chạy nền (nhóm Việc & Bộ não)
 - [08 - Việc định kỳ & Nhắc hẹn](08-viec-dinh-ky.md) - nhiều vòng lặp chạy nền + nhắc hẹn theo giờ hoặc cron.
 - [21 - Việc (Kanban)](21-viec-kanban.md) - giao goal bằng lời, AI tự đặc tả và chạy task nền.
-- [22 - Tự học](22-tu-hoc.md) - Javis tự rút ký ức, đúc Wiki và kỹ năng sau mỗi hội thoại, hoàn tác được.
+- [22 - Tự học](22-tu-hoc.md) - Minmin tự rút ký ức, đúc Wiki và kỹ năng sau mỗi hội thoại, hoàn tác được.
 
 ### Kết nối & kênh (nhóm Kết nối)
 - [09 - Kết nối & số liệu kinh doanh](09-mcp-va-so-lieu.md) - kho dịch vụ ngoài đa tài khoản, phân quyền, báo cáo số thật.
 - [10 - Models & engine](10-models-va-engine.md) - đổi bộ não giữa Claude Code, ChatGPT/Codex, Antigravity CLI, OpenRouter, OpenAI, Gemini, Anthropic, Groq, Ollama mà không mất chức năng; mức suy nghĩ, model việc nền.
-- [11 - Kênh Telegram](11-telegram.md) - hỏi Javis qua điện thoại, gửi và nhận file.
-- [26 - Kênh Zalo Bot](26-kenh-zalo-bot.md) - hỏi Javis trên Zalo bằng API chính thức, ghép nối bằng một cú bấm.
+- [11 - Kênh Telegram](11-telegram.md) - hỏi Minmin qua điện thoại, gửi và nhận file.
+- [26 - Kênh Zalo Bot](26-kenh-zalo-bot.md) - hỏi Minmin trên Zalo bằng API chính thức, ghép nối bằng một cú bấm.
 - [12 - Zalo Agent MCP](12-zalo.md) - đăng nhập QR, đọc/tìm lịch sử và gửi tin qua MCP chuẩn.
-- [24 - Javis CLI (terminal)](24-cli-terminal.md) - gõ `javis "..."` từ terminal, token API, ghép vào script.
+- [24 - Minmin CLI (terminal)](24-cli-terminal.md) - gõ `javis "..."` từ terminal, token API, ghép vào script.
 
 ### Bộ não & dữ liệu
 - [13 - Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md) - đa brain, bộ nhớ sống, tiêu hoá tri thức.
@@ -55,7 +55,7 @@ Thanh điều hướng của dashboard gom **19 trang** thành **7 nhóm**: Tr�
 - [14 - Bảo mật & tài khoản](14-bao-mat-tai-khoan.md) - đăng nhập bắt buộc, mật khẩu, rate-limit, mã hoá khoá bí mật.
 - [15 - Thương hiệu & tên miền riêng](15-thuong-hieu-ten-mien.md) - đổi logo/avatar, trỏ tên miền và bật HTTPS.
 - [16 - Cấu hình .env](16-cau-hinh-env.md) - tham chiếu mọi biến môi trường.
-- [23 - Mức dùng: token & chi phí](23-muc-dung-token.md) - Javis tự đo token vào/ra theo ngày, theo nhà cung cấp, theo nguồn.
+- [23 - Mức dùng: token & chi phí](23-muc-dung-token.md) - Minmin tự đo token vào/ra theo ngày, theo nhà cung cấp, theo nguồn.
 
 ### Khi có sự cố
 - [17 - Khắc phục sự cố & FAQ](17-khac-phuc-su-co.md) - lỗi thường gặp và cách xử lý.
@@ -70,7 +70,7 @@ repo có [README.en.md](../README.en.md), [QUICKSTART.en.md](../QUICKSTART.en.md
 [DEPLOY.en.md](../DEPLOY.en.md) và [CONTRIBUTING.en.md](../CONTRIBUTING.en.md).
 
 Bản tiếng Việt là bản gốc: sửa nội dung thì sửa bên tiếng Việt trước rồi cập nhật bản tiếng Anh
-tương ứng, đừng để hai bên nói khác nhau. Thêm một ngôn ngữ vào chính Javis (không phải tài
+tương ứng, đừng để hai bên nói khác nhau. Thêm một ngôn ngữ vào chính Minmin (không phải tài
 liệu) thì theo [sổ tay thêm ngôn ngữ](dev/them-mot-ngon-ngu.md).
 
 ---

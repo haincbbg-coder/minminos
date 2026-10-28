@@ -2,7 +2,7 @@
 
 *[Tiếng Việt](../19-task-va-dataview.md) · **English***
 
-Since version 0.9.216, notes in a Javis brain are far more "alive" in the Obsidian sense: a `- [ ]` checkbox in a note is **clickable and saves itself**, and a ` ```dataview ` block **actually runs** inside the dashboard, showing task lists, note lists and summary tables pulled from the whole brain. Both features are inspired by two well-known Obsidian plugins, **Tasks** and **Dataview**, reimplemented compactly by Javis with no need to install Obsidian or any plugin.
+Since version 0.9.216, notes in a Minmin brain are far more "alive" in the Obsidian sense: a `- [ ]` checkbox in a note is **clickable and saves itself**, and a ` ```dataview ` block **actually runs** inside the dashboard, showing task lists, note lists and summary tables pulled from the whole brain. Both features are inspired by two well-known Obsidian plugins, **Tasks** and **Dataview**, reimplemented compactly by Minmin with no need to install Obsidian or any plugin.
 
 ## 1. Clickable task checkboxes
 
@@ -15,28 +15,28 @@ In a markdown file, a task line written in the standard syntax:
 - [x] Close the steel batch quote
 ```
 
-Javis used to display these boxes decoratively, and ticking one meant opening Source mode and hand-editing `[ ]` into `[x]`. Now clicking the box is enough: the tick appears, the text is struck through, and **the file is saved immediately**, with no 💾 Save button needed.
+Minmin used to display these boxes decoratively, and ticking one meant opening Source mode and hand-editing `[ ]` into `[x]`. Now clicking the box is enough: the tick appears, the text is struck through, and **the file is saved immediately**, with no 💾 Save button needed.
 
 ### Where you can tick
 
 - **The Files page** (**Brain** group on the left nav rail): open an `.md` file and stay in **Edit** mode (the rendered view, the default). Clicking a checkbox ticks it and saves.
-- **The file editor opened from chat** (clicking a file link in one of Javis's answers): exactly the same, ticking saves.
+- **The file editor opened from chat** (clicking a file link in one of Minmin's answers): exactly the same, ticking saves.
 - **Inside a chat message**: checkboxes are display-only and not clickable. The reason: chat content is not bound to any file to write back to.
 - **In dataview block results**: clickable, writing straight into the source file holding that task (see part 2).
 
 ### Typing tasks quickly with the suggestion menu (Obsidian style, condensed)
 
-In a note's **Edit** mode, Javis offers suggestions like Obsidian's Tasks plugin but trimmed down so it is not overwhelming:
+In a note's **Edit** mode, Minmin offers suggestions like Obsidian's Tasks plugin but trimmed down so it is not overwhelming:
 
 1. Type `- [ ]` at the start of a line then **press space**, and the line becomes a real task with a checkbox. Inside a bullet list you only need `[ ]` then space.
 2. Standing at the **end of a task line**, press space to open a 6-item menu: 📅 due date, ⏳ scheduled date, 🛫 start date, and the 3 priority levels ⏫🔼🔽.
-3. Choose a date item and a second menu opens: **Today / Tomorrow / This weekend / Next week / Pick a date…** (opening a calendar). Once chosen, Javis inserts `📅 2026-07-28` straight into the line in proper obsidian-tasks format, so every query block understands it.
+3. Choose a date item and a second menu opens: **Today / Tomorrow / This weekend / Next week / Pick a date…** (opening a calendar). Once chosen, Minmin inserts `📅 2026-07-28` straight into the line in proper obsidian-tasks format, so every query block understands it.
 
 Navigate with the up and down arrows plus Enter, or with the mouse. Esc closes it, and typing on dismisses the menu so it never gets in the way of writing.
 
 ### Date and priority markers (Tasks plugin style)
 
-Javis understands the emoji markers the obsidian-tasks plugin uses, written inline in the task:
+Minmin understands the emoji markers the obsidian-tasks plugin uses, written inline in the task:
 
 | Marker | Meaning | Example |
 |---|---|---|
@@ -65,7 +65,7 @@ TASK WHERE !completed
 ```
 ````
 
-When you open that note in Javis (or when Javis pastes such a block into a chat answer), the block is no longer shown as code but **runs a real query** across every `.md` note in the selected brain and draws the result: unfinished tasks, grouped by file, each tickable.
+When you open that note in Minmin (or when Minmin pastes such a block into a chat answer), the block is no longer shown as code but **runs a real query** across every `.md` note in the selected brain and draws the result: unfinished tasks, grouped by file, each tickable.
 
 Three query kinds:
 
@@ -131,7 +131,7 @@ SORT file.mtime DESC
 
 ### Ticking tasks right in the results
 
-A `TASK` result has checkboxes just like the note does. Ticking one makes Javis write straight into the **source file** holding that task line, even while you are standing in a different summary note. There is a safety rail: if the source file was just edited (the task line is no longer where it was), Javis re-locates the correct line by content; when it cannot be sure it reports "The file changed" and **writes nothing blindly**, so reloading the page and ticking again is all it takes.
+A `TASK` result has checkboxes just like the note does. Ticking one makes Minmin write straight into the **source file** holding that task line, even while you are standing in a different summary note. There is a safety rail: if the source file was just edited (the task line is no longer where it was), Minmin re-locates the correct line by content; when it cannot be sure it reports "The file changed" and **writes nothing blindly**, so reloading the page and ticking again is all it takes.
 
 ### Practical examples
 
@@ -203,13 +203,13 @@ Every block producing a task list (` ```tasks ` or `TASK`) has a **+ Task** butt
 
 That file is **only created the first time you add a task**. Never use the "+ Task" button and it never appears, so the Dashboard folder has no empty file sitting around.
 
-Javis **detects** the dashboard folder rather than hard-coding a name: any top-level folder of the brain named `dashboard` (case insensitive, allowing a numeric prefix like `00 - Dashboard`, `01 - dashboard`, `02_Dashboard`) receives new tasks. Only when a brain has no matching folder does Javis create one named `00 - Dashboard`.
+Minmin **detects** the dashboard folder rather than hard-coding a name: any top-level folder of the brain named `dashboard` (case insensitive, allowing a numeric prefix like `00 - Dashboard`, `01 - dashboard`, `02_Dashboard`) receives new tasks. Only when a brain has no matching folder does Minmin create one named `00 - Dashboard`.
 
 ### The default Dashboard page
 
 The dashboard folder is part of the brain's standard structure: a new brain gets `00 - Dashboard` ready-made with a seed file `Dashboard.md` (task blocks for overdue, today, upcoming and no due date). An older brain missing it gets a create button in the vault-structure banner. The seed file is only created when absent, so anything you edit is left alone.
 
-`Task Inbox.md` is **not** part of the seed set (since 0.55.17): it only appears when you first click "+ Task". If an older brain already has that file and you do not use it, just delete it, Javis will not recreate it.
+`Task Inbox.md` is **not** part of the seed set (since 0.55.17): it only appears when you first click "+ Task". If an older brain already has that file and you do not use it, just delete it, Minmin will not recreate it.
 
 ### What is not supported
 
@@ -240,8 +240,8 @@ The remaining limits:
 ## Troubleshooting
 
 - **Clicking a checkbox does nothing**: check you are in **Edit** mode (the rendered view) rather than **Source**; in chat, checkboxes are display-only by design. If it still does nothing, the server is probably older than 0.9.216, so update and reload the page (Ctrl+Shift+R).
-- **A dataview block sits on "Running query…" forever**: the server has no `/files/mdindex` API (an old build). Update Javis then restart the server.
+- **A dataview block sits on "Running query…" forever**: the server has no `/files/mdindex` API (an old build). Update Minmin then restart the server.
 - **The result is empty although tasks certainly exist**: check the `FROM`, since a folder name must be verbatim (with diacritics and numeric prefix, for example `"05 - Việc"` rather than `"Việc"`); a tag must carry the `#`.
-- **It reports "The file changed, reload then tick again"**: the source file was just edited elsewhere (by you or by Javis). Reload the page so the block runs against the new data, then tick again.
+- **It reports "The file changed, reload then tick again"**: the source file was just edited elsewhere (by you or by Minmin). Reload the page so the block runs against the new data, then tick again.
 
 See also: [File manager](05-file-manager.md) (opening and editing notes), [Second Brain: memory, Wiki, INGEST](13-second-brain.md) (brain structure), [Troubleshooting and FAQ](17-troubleshooting.md).

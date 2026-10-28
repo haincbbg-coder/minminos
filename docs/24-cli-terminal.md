@@ -1,29 +1,29 @@
-# Javis CLI - hỏi Javis từ terminal
+# Minmin CLI - hỏi Minmin từ terminal
 
 ***Tiếng Việt** · [English](en/24-cli.md)*
 
-Cài một gói nhỏ lên máy tính rồi gõ `javis "doanh thu tuần này thế nào"` ngay trong terminal, không cần mở trình duyệt. Câu trả lời vẫn đến từ chính Javis của bạn: cùng brain, cùng bộ nhớ, cùng MCP đã đấu, cùng lịch sử hội thoại.
+Cài một gói nhỏ lên máy tính rồi gõ `javis "doanh thu tuần này thế nào"` ngay trong terminal, không cần mở trình duyệt. Câu trả lời vẫn đến từ chính Minmin của bạn: cùng brain, cùng bộ nhớ, cùng MCP đã đấu, cùng lịch sử hội thoại.
 
-> **Đọc dòng này trước:** Javis CLI **không chứa Javis bên trong**. Nó là cái ống nói - đầu kia phải có một máy chủ Javis đang chạy, trên chính máy này hoặc trên VPS. Không có máy chủ thì CLI không làm gì được, và nó sẽ nói thẳng như vậy chứ không báo lỗi mạng mơ hồ.
+> **Đọc dòng này trước:** Minmin CLI **không chứa Minmin bên trong**. Nó là cái ống nói - đầu kia phải có một máy chủ Minmin đang chạy, trên chính máy này hoặc trên VPS. Không có máy chủ thì CLI không làm gì được, và nó sẽ nói thẳng như vậy chứ không báo lỗi mạng mơ hồ.
 
 ## Tính năng này là gì
 
-- **Kênh thứ ba**, bên cạnh dashboard web và Telegram. Cùng một Javis, chỉ khác chỗ đứng.
+- **Kênh thứ ba**, bên cạnh dashboard web và Telegram. Cùng một Minmin, chỉ khác chỗ đứng.
 - Hỏi một câu rồi thoát (`javis "..."`), hoặc mở phiên hỏi đáp liên tục (`javis chat`).
-- Nối được nhiều Javis: một hồ sơ cho máy nhà, một cho VPS, đổi bằng `--profile`.
+- Nối được nhiều Minmin: một hồ sơ cho máy nhà, một cho VPS, đổi bằng `--profile`.
 - Giao việc Kanban, duyệt brain, xem loop, xem trạng thái máy chủ - đều từ terminal.
 - **Ghép được vào script**: câu trả lời ra stdout, mọi thứ khác ra stderr. Nên `javis "tóm tắt tuần này" > bao-cao.md` cho ra đúng nội dung, không dính dòng trạng thái.
-- Javis biết mình đang nói qua terminal nên trả lời khác: không bảng markdown, không nhúng ảnh, đường dẫn file in tuyệt đối để bạn copy chạy được luôn.
+- Minmin biết mình đang nói qua terminal nên trả lời khác: không bảng markdown, không nhúng ảnh, đường dẫn file in tuyệt đối để bạn copy chạy được luôn.
 
 ## Cài đặt
 
-Cần Python 3.9 trở lên. Gói chỉ kéo theo **một** thư viện (`httpx`), cài trên máy chưa từng có Javis vẫn được.
+Cần Python 3.9 trở lên. Gói chỉ kéo theo **một** thư viện (`httpx`), cài trên máy chưa từng có Minmin vẫn được.
 
 ```bash
 pip install javis-cli
 ```
 
-Cài từ mã nguồn (khi bạn đã clone repo Javis):
+Cài từ mã nguồn (khi bạn đã clone repo Minmin):
 
 ```bash
 pip install ./cli
@@ -33,9 +33,9 @@ Xong thì có lệnh `javis`. Kiểm tra: `javis --help`.
 
 ## Bước 1: tạo token trong dashboard
 
-Máy chủ Javis không nhận lệnh từ bên ngoài nếu chưa có token. **Không có token nào sẵn** - chưa tự tay tạo thì cửa này đóng.
+Máy chủ Minmin không nhận lệnh từ bên ngoài nếu chưa có token. **Không có token nào sẵn** - chưa tự tay tạo thì cửa này đóng.
 
-1. Mở dashboard Javis, vào **Tài khoản** (nhóm **Hệ thống** ở cuối thanh bên trái) rồi kéo tới mục **Token API (cho CLI)**. Cùng trang với mật khẩu đăng nhập, vì token cũng là một cách đăng nhập.
+1. Mở dashboard Minmin, vào **Tài khoản** (nhóm **Hệ thống** ở cuối thanh bên trái) rồi kéo tới mục **Token API (cho CLI)**. Cùng trang với mật khẩu đăng nhập, vì token cũng là một cách đăng nhập.
 2. Đặt tên dễ nhớ, ví dụ "laptop của anh" - sau này thu hồi thì biết đang thu hồi cái nào.
 3. Chọn phạm vi:
    - **Chỉ chat** - vào được `/chat`, `/version`, `/health`, `/sessions`. Đủ để hỏi đáp và xem lịch sử. Chọn cái này nếu chỉ định hỏi han.
@@ -44,7 +44,7 @@ Máy chủ Javis không nhận lệnh từ bên ngoài nếu chưa có token. **
 
 Mất token thì không xem lại được, chỉ tạo cái mới rồi thu hồi cái cũ. Đó là cố ý.
 
-## Bước 2: nối CLI vào Javis của bạn
+## Bước 2: nối CLI vào Minmin của bạn
 
 ```bash
 javis login https://javis-cua-ban.com
@@ -60,7 +60,7 @@ CLI **thử kết nối thật** trước khi lưu, nên nếu địa chỉ sai 
 
 Cấu hình lưu ở `~/.javis/config.json`, quyền `600` (chỉ chủ máy đọc được). File này chứa token nên đừng đưa vào repo hay backup công khai.
 
-### Nhiều Javis cùng lúc
+### Nhiều Minmin cùng lúc
 
 ```bash
 javis login http://localhost:7777 --name nha
@@ -75,7 +75,7 @@ Ba biến này đè lên file cấu hình, tiện khi không muốn ghi token xu
 
 | Biến | Nghĩa |
 |---|---|
-| `JAVIS_URL` | địa chỉ máy chủ Javis |
+| `JAVIS_URL` | địa chỉ máy chủ Minmin |
 | `JAVIS_TOKEN` | token API |
 | `JAVIS_BRAIN` | brain dùng mặc định |
 | `JAVIS_PROFILE` | tên hồ sơ dùng mặc định |
@@ -89,7 +89,7 @@ javis "doanh thu tuần này thế nào"
 javis "tóm tắt các ghi chú tuần rồi"
 ```
 
-Không cần lệnh con nào cả - gõ thẳng câu hỏi là chạy. Đang ngồi trước terminal thì bạn thấy dòng tiến độ chạy ở bên (Javis đang gọi MCP nào, đọc file nào), rồi câu trả lời hiện ra.
+Không cần lệnh con nào cả - gõ thẳng câu hỏi là chạy. Đang ngồi trước terminal thì bạn thấy dòng tiến độ chạy ở bên (Minmin đang gọi MCP nào, đọc file nào), rồi câu trả lời hiện ra.
 
 ### Phiên hỏi đáp liên tục
 
@@ -97,7 +97,7 @@ Không cần lệnh con nào cả - gõ thẳng câu hỏi là chạy. Đang ng�
 javis chat
 ```
 
-Gõ câu, Enter, đọc trả lời, gõ tiếp. Cả phiên dùng chung một mã hội thoại nên Javis nhớ mạch: hỏi "còn tháng trước?" là nó hiểu đang nói về cái vừa nãy. `Ctrl+D` hoặc `/thoat` để ra.
+Gõ câu, Enter, đọc trả lời, gõ tiếp. Cả phiên dùng chung một mã hội thoại nên Minmin nhớ mạch: hỏi "còn tháng trước?" là nó hiểu đang nói về cái vừa nãy. `Ctrl+D` hoặc `/thoat` để ra.
 
 Muốn nối lại đúng mạch cũ ở lần chạy sau thì tự đặt mã phiên:
 
@@ -122,7 +122,7 @@ Cờ `-q` tắt luôn dòng tiến độ. Thất bại thì CLI thoát khác 0 v
 javis status
 ```
 
-Cho biết phiên bản Javis, có bản mới không, đang chạy bộ não nào, mức tiết kiệm token đang đặt ở đâu, và 24 giờ qua tiết kiệm được bao nhiêu phần trăm.
+Cho biết phiên bản Minmin, có bản mới không, đang chạy bộ não nào, mức tiết kiệm token đang đặt ở đâu, và 24 giờ qua tiết kiệm được bao nhiêu phần trăm.
 
 ### Giao việc, duyệt brain, xem loop
 
@@ -142,17 +142,17 @@ javis loops                                          # loop nào đang bật, m�
 
 Việc giao xong chạy nền trên máy chủ. Kết quả tự về đúng nơi bạn giao việc, xem tiến độ ở trang **Việc** trên dashboard hoặc gõ lại `javis tasks`.
 
-### Bật Javis trên chính máy này
+### Bật Minmin trên chính máy này
 
-Nếu máy bạn đã cài Javis (clone repo về):
+Nếu máy bạn đã cài Minmin (clone repo về):
 
 ```bash
 javis up
 ```
 
-Nó tìm bản cài (qua biến `JAVIS_HOME`, thư mục hiện tại, hoặc `~/javis-os`), bật lên rồi lưu sẵn hồ sơ `local` để lần sau `javis "..."` là chạy. Javis đang chạy sẵn rồi thì nó nhận ra và không bật thêm cái thứ hai.
+Nó tìm bản cài (qua biến `JAVIS_HOME`, thư mục hiện tại, hoặc `~/javis-os`), bật lên rồi lưu sẵn hồ sơ `local` để lần sau `javis "..."` là chạy. Minmin đang chạy sẵn rồi thì nó nhận ra và không bật thêm cái thứ hai.
 
-Không tìm thấy bản cài thì nó nói thẳng: **`javis up` không chứa server bên trong**, và chỉ ba cách xử lý (đặt `JAVIS_HOME`, chạy từ trong thư mục Javis, hoặc `javis login` tới một Javis ở nơi khác).
+Không tìm thấy bản cài thì nó nói thẳng: **`javis up` không chứa server bên trong**, và chỉ ba cách xử lý (đặt `JAVIS_HOME`, chạy từ trong thư mục Minmin, hoặc `javis login` tới một Minmin ở nơi khác).
 
 ## Quản lý token
 
@@ -160,7 +160,7 @@ Vào **Tài khoản > Token API** trong dashboard. Danh sách hiện tên, 12 k�
 
 Bấm **Thu hồi** là token chết lập tức, máy nào đang dùng nó mất kết nối ngay và không hoàn tác được.
 
-Vài điều đáng biết về cách Javis giữ token:
+Vài điều đáng biết về cách Minmin giữ token:
 
 - **Trên đĩa chỉ có bản băm** (SHA-256). Ai đọc được file cấu hình của máy chủ cũng không lấy được token.
 - **Không dùng token để tạo token.** Muốn tạo token mới phải đang đăng nhập bằng trình duyệt. Nếu một token lỡ rò ra, kẻ cầm nó không tự cấp thêm được cái khác - thu hồi là dứt.
@@ -169,15 +169,15 @@ Vài điều đáng biết về cách Javis giữ token:
 
 ## Khi có trục trặc
 
-**"Chưa nối tới Javis nào"** - chạy `javis login <địa-chỉ>` trước.
+**"Chưa nối tới Minmin nào"** - chạy `javis login <địa-chỉ>` trước.
 
 **Báo 401 hoặc "token không hợp lệ"** - token sai, hoặc đã bị thu hồi. Tạo cái mới ở Tài khoản > Token API rồi `javis login` lại.
 
 **Báo 403 khi gõ `javis task add` hay `javis brain ls`** - token của bạn là loại **chỉ chat**. Tạo một token **toàn quyền** cho những lệnh này.
 
-**Bị chặn tạm thời** - sai token quá nhiều lần liên tiếp. Chờ 15 phút, hoặc khởi động lại máy chủ Javis.
+**Bị chặn tạm thời** - sai token quá nhiều lần liên tiếp. Chờ 15 phút, hoặc khởi động lại máy chủ Minmin.
 
-**Không kết nối được** - kiểm tra máy chủ Javis còn chạy không (`javis status`, hoặc mở dashboard trong trình duyệt). Nếu Javis nằm trên VPS, kiểm tra cổng và tên miền.
+**Không kết nối được** - kiểm tra máy chủ Minmin còn chạy không (`javis status`, hoặc mở dashboard trong trình duyệt). Nếu Minmin nằm trên VPS, kiểm tra cổng và tên miền.
 
 **Chữ tiếng Việt hiện sai trên Windows** - chạy `chcp 65001` trong terminal trước, hoặc dùng Windows Terminal thay cho cmd.exe cũ.
 
@@ -187,9 +187,9 @@ Xem thêm [17 - Khắc phục sự cố & FAQ](17-khac-phuc-su-co.md).
 
 Câu hỏi hợp lý: sao không làm hẳn một agent chạy độc lập trong terminal, khỏi cần server?
 
-Vì gần như mọi thứ làm nên Javis đều đòi một tiến trình **sống dài**: loop chạy theo chu kỳ, nhắc hẹn chờ tới giờ, MCP Hub giữ kết nối tới POS và quảng cáo, kho capability giữ registry, runtime tiết kiệm token học dần qua từng lượt. Một CLI gõ xong là thoát không phải chỗ cho những thứ đó.
+Vì gần như mọi thứ làm nên Minmin đều đòi một tiến trình **sống dài**: loop chạy theo chu kỳ, nhắc hẹn chờ tới giờ, MCP Hub giữ kết nối tới POS và quảng cáo, kho capability giữ registry, runtime tiết kiệm token học dần qua từng lượt. Một CLI gõ xong là thoát không phải chỗ cho những thứ đó.
 
-Làm bản thứ hai nghĩa là chép lại toàn bộ rồi để hai bản trôi lệch nhau - và bản nào ít người dùng hơn thì lỗi cứ nằm im ở đó. Nên CLI đi qua **đúng cái lõi** mà dashboard và Telegram đang dùng. Đổi lại: tính năng mới vào Javis là CLI thấy ngay, không phải sửa hai chỗ.
+Làm bản thứ hai nghĩa là chép lại toàn bộ rồi để hai bản trôi lệch nhau - và bản nào ít người dùng hơn thì lỗi cứ nằm im ở đó. Nên CLI đi qua **đúng cái lõi** mà dashboard và Telegram đang dùng. Đổi lại: tính năng mới vào Minmin là CLI thấy ngay, không phải sửa hai chỗ.
 
 Chi tiết thiết kế ở [spec CLI](dev/2026-08-cli-spec.md).
 

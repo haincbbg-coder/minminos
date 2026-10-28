@@ -6,7 +6,7 @@ Put an **Agent** you created in front of other people: they message a dedicated 
 
 It suits anything you answer over and over for other people: questions about a product or a service, explaining internal rules to colleagues, fielding students' questions, guiding members of a community, filtering questions before they reach you.
 
-It differs from [the Telegram channel](11-telegram.md) in one decisive way: the Telegram bot on the **Channels** page is **your own Javis** (full power, reading the main brain, able to call every data source, and only you can message it). The bot on the **Chatbot** page is **an Agent on duty** (read-only by default, seeing only its own brain, and strangers can message it). Do not use one in place of the other.
+It differs from [the Telegram channel](11-telegram.md) in one decisive way: the Telegram bot on the **Channels** page is **your own Minmin** (full power, reading the main brain, able to call every data source, and only you can message it). The bot on the **Chatbot** page is **an Agent on duty** (read-only by default, seeing only its own brain, and strangers can message it). Do not use one in place of the other.
 
 A dedicated bot **can do real work** if you raise its permission level: writing files, calling data sources, even acting outside. But whoever drives it is the person messaging it, not you, so read [The three permission levels](#the-three-permission-levels-what-the-bot-may-do) carefully before raising it.
 
@@ -16,14 +16,14 @@ A dedicated bot **can do real work** if you raise its permission level: writing 
 - **The channel is a choice**: Telegram or Zalo. For Vietnamese customers Zalo is almost always the right one, because they already have the app. See [Choosing Telegram or Zalo](#choosing-telegram-or-zalo).
 - The Chatbot page **belongs to the open brain**: switching brains at the top of the page shows that brain's bots, just like the Agents and Skills pages.
 - People message the bot directly, or you drop the bot into a group.
-- **The bot follows your Agent file exactly.** Javis inserts no rules of its own.
+- **The bot follows your Agent file exactly.** Minmin inserts no rules of its own.
 - **Three permission levels**, chosen at creation and changeable later: Read only (the default), Can write, Full power. Raising the level requires ticking a consent box after reading the risks.
 - Two rails **do not change with the level**, and they are locked in code rather than in wording: **the bot only sees its own brain**, and **it cannot run machine commands**.
 - Questions beyond its knowledge are handed to the human on duty you nominate.
 - The Chatbot page is built for **many bots** from the start: a card grid, a search field, add/edit/delete, and enable/disable in place. Running one bot or ten uses the same interface.
 - Every chat a customer has with a bot is kept in the **conversation inbox** (the **Conversations** page): read it back, see where the bot got stuck, press Take over to answer yourself. See [Customer conversations](28-customer-conversations.md).
 
-## Where to open it in Javis
+## Where to open it in Minmin
 
 The left navigation rail, the **Capabilities** group, the **Conversations** item, **Chatbots** tab (since 0.61.0 Chatbots, Channels and the Inbox share one page). Saying "open chatbots" lands on this tab.
 
@@ -57,9 +57,9 @@ If the bot runs on **Telegram**: go to **@BotFather**, type `/newbot`, set a nam
 
 If the bot runs on **Zalo**: open the Zalo app, find the Official Account **Zalo Bot Manager** and choose **Create bot**. The bot name must start with the word "Bot" (for example "Bot Kim Khí Hà Lộc"). The token arrives as a Zalo message, shaped `123456789:abc-xyz`, and it **does not expire** until you reset it yourself.
 
-**Each bot needs its own token, and do not use your main Javis bot's token.** One token can only run one process; sharing kills both and the server returns a 409. Javis blocks this when you click Test, but knowing in advance is better.
+**Each bot needs its own token, and do not use your main Minmin bot's token.** One token can only run one process; sharing kills both and the server returns a 409. Minmin blocks this when you click Test, but knowing in advance is better.
 
-Pasting one channel's token into the other makes Javis say so outright rather than leaving you guessing: the **Test** button asks the platform you actually selected.
+Pasting one channel's token into the other makes Minmin say so outright rather than leaving you guessing: the **Test** button asks the platform you actually selected.
 
 ## Choosing Telegram or Zalo
 
@@ -84,12 +84,12 @@ On the card grid, each bot carries a **channel marker** in two places: a small b
 
 ### How the Zalo Bot differs from Zalo Agent MCP
 
-Javis has two ways into Zalo, and they do not replace each other:
+Minmin has two ways into Zalo, and they do not replace each other:
 
 - **The Zalo Bot** (this page) is a **separate identity** using the official API. No risk of the account being locked, but it only sees what people send directly to it.
 - **[Zalo Agent MCP](12-zalo-agent-mcp.md)** signs into **your own Zalo account** through the unofficial API. It reads real conversations and can message anyone, at the cost of the account possibly being restricted or locked.
 
-The first is for **other people talking to Javis**. The second is for **Javis acting on your behalf**. Using both is fine.
+The first is for **other people talking to Minmin**. The second is for **Minmin acting on your behalf**. Using both is fine.
 
 ## How to use it (step by step)
 
@@ -112,7 +112,7 @@ With only a Zalo Bot account the last two fields **disappear** rather than appea
 
 **There is no brain field**, and that is deliberate: the bot belongs to the brain you have open. For a bot in another brain, switch brains at the top of the page and create it there; one place to look, with no two layers to keep in sync.
 
-When pasting a new token, click **Check** before saving: Javis asks the platform you selected whether the token is real, returns the actual bot name, and reports at once if that token is already an account in Javis (free: just tick that account; on duty: it names the bot). For Zalo Bot, if your tier does not allow groups it says so right here.
+When pasting a new token, click **Check** before saving: Minmin asks the platform you selected whether the token is real, returns the actual bot name, and reports at once if that token is already an account in Minmin (free: just tick that account; on duty: it names the bot). For Zalo Bot, if your tier does not allow groups it says so right here.
 
 **A newly created bot is always OFF.** That is deliberate: turning it on makes the bot talk to real people immediately, so turning it on has to be a conscious click rather than a side effect of creating it.
 
@@ -120,7 +120,7 @@ When pasting a new token, click **Check** before saving: Javis asks the platform
 
 Turn the bot on with the **Enable** button on the card, then open Telegram and message that bot directly with a few questions as a real outsider would. Ask a few questions within its scope, then one you know is not in the documents. See whether it answers in the right voice, whether it invents things, and whether it is willing to say it does not have that information.
 
-If it is not right, turn it off, edit the Agent or add documents to the brain, then try again. Turning off takes effect immediately, with no Javis restart.
+If it is not right, turn it off, edit the Agent or add documents to the brain, then try again. Turning off takes effect immediately, with no Minmin restart.
 
 ### Step 3: Handing over to a human
 
@@ -154,7 +154,7 @@ To make it answer **every message in the group**, change the "When the bot speak
 
 ### Telegram's privacy mode (read this if the bot is silent in a group)
 
-Every new bot has privacy mode **on**. While it is on, Telegram **does not forward** most group messages to the bot, blocking them on Telegram's side, so Javis never sees those messages whatever you set in the dashboard.
+Every new bot has privacy mode **on**. While it is on, Telegram **does not forward** most group messages to the bot, blocking them on Telegram's side, so Minmin never sees those messages whatever you set in the dashboard.
 
 What **certainly** reaches the bot while it is on:
 
@@ -171,7 +171,7 @@ Fix it in **one of two ways**:
 
 Then **turn the bot off and on again** on the Chatbot page so it re-reads the new state. The bot card shows this state for every bot that uses groups, and `/id` in the group states it too.
 
-**When an ordinary group is upgraded to a supergroup, Telegram changes its id** (adding the `-100` prefix). Javis hears that and updates the list itself, so you do not have to re-declare it; this used to be a way for the bot to go silent leaving no clue at all.
+**When an ordinary group is upgraded to a supergroup, Telegram changes its id** (adding the `-100` prefix). Minmin hears that and updates the list itself, so you do not have to re-declare it; this used to be a way for the bot to go silent leaving no clue at all.
 
 ## Reading a bot card
 
@@ -210,13 +210,13 @@ On the line under an answer and in the measurement table, a bot turn shows as **
 
 A bot still counts towards **Usage** like any other turn, under the provider and model actually running.
 
-Do not confuse a bot with **your own Telegram channel**: that channel *does* go through the two saving levels (since 0.24.0), because your Javis really does have a CLAUDE.md and a MEMORY.md to trim. A bot has nothing to trim.
+Do not confuse a bot with **your own Telegram channel**: that channel *does* go through the two saving levels (since 0.24.0), because your Minmin really does have a CLAUDE.md and a MEMORY.md to trim. A bot has nothing to trim.
 
 ## What the bot answers from
 
-Every time someone asks, Javis **looks up documents in the bot's brain first**, takes the few best-matching passages, then puts them straight into that turn's prompt.
+Every time someone asks, Minmin **looks up documents in the bot's brain first**, takes the few best-matching passages, then puts them straight into that turn's prompt.
 
-That differs from "the bot has permission to read the brain". Permission to read does not mean it will read: the model can answer straight from its general knowledge, the sentence flows just as confidently, and **you cannot tell from the outside**. So Javis looks up first rather than leaving that decision to the model.
+That differs from "the bot has permission to read the brain". Permission to read does not mean it will read: the model can answer straight from its general knowledge, the sentence flows just as confidently, and **you cannot tell from the outside**. So Minmin looks up first rather than leaving that decision to the model.
 
 ### Two modes, chosen when creating the bot
 
@@ -224,29 +224,29 @@ The difference lies only in **what happens when no matching document is found**.
 
 | Mode | What the bot does with no document found | Suits |
 |---|---|---|
-| **The Agent's expertise** (default) | Javis adds nothing; the Agent handles it by the rules you wrote | Advisory, coaching, training and know-how bots |
+| **The Agent's expertise** (default) | Minmin adds nothing; the Agent handles it by the rules you wrote | Advisory, coaching, training and know-how bots |
 | **Documents only** | One rule is added: say there is no information, do not use general knowledge | Bots quoting figures and rules, where a wrong sentence is a real loss |
 
 Choosing wrong is obvious immediately: a coaching Agent running in "documents only" answers "I do not have that information" to questions squarely in its expertise, however carefully you wrote the role instructions. Change the mode with the **Edit** button, effective immediately.
 
-### Javis does NOT write rules for the bot
+### Minmin does NOT write rules for the bot
 
 This is the most important thing to know about this page.
 
-The bot runs on **exactly the content of your Agent file**, nothing more. Javis inserts no rules on top: it does not tell it how to address people, does not forbid a topic, does not force short answers. The rules you write in the Agent are the only rules the bot has.
+The bot runs on **exactly the content of your Agent file**, nothing more. Minmin inserts no rules on top: it does not tell it how to address people, does not forbid a topic, does not force short answers. The rules you write in the Agent are the only rules the bot has.
 
-The one exception is the "documents only" mode above, and that is a rule **you deliberately turned on**, not a Javis default.
+The one exception is the "documents only" mode above, and that is a rule **you deliberately turned on**, not a Minmin default.
 
 So **the Agent file decides the bot's quality almost entirely**. Write it like briefing a new hire: how to speak, how far the scope goes, what must not be promised, and in which cases to hand over to a human. When the bot behaves wrongly, fix the Agent rather than hunting for another button.
 
-### Two rails Javis locks at EVERY level
+### Two rails Minmin locks at EVERY level
 
 The two points below hold even when you give the bot full power. They live in the source code rather than in wording, so no clever phrasing gets around them:
 
 - The bot **cannot see another brain**, your main brain included. Every file read and write is clamped inside the bot's own brain folder; climbing out with `../` or an absolute path is refused outright.
 - The bot **cannot run machine commands**, cannot open an unfamiliar web page to read, cannot spawn child agents. The bot also has **no admin commands**: `/brain`, `/model`, `/status` do nothing.
 
-How Javis guarantees it: **the bot never touches the engine's native tools.** At the Read only level it has no tools at all; at the two higher levels every tool goes through Javis's connection hub, where file paths are clamped and the permission level is applied right at the call site. The bot does not open a CLI, so Claude Code's `Bash` and absolute-path `Read` are simply not present here.
+How Minmin guarantees it: **the bot never touches the engine's native tools.** At the Read only level it has no tools at all; at the two higher levels every tool goes through Minmin's connection hub, where file paths are clamped and the permission level is applied right at the call site. The bot does not open a CLI, so Claude Code's `Bash` and absolute-path `Read` are simply not present here.
 
 Documents are still looked up by Python before the model runs and placed into the prompt, at every level. The bot reads its own brain without needing any tool.
 
@@ -262,7 +262,7 @@ Chosen in the **What the bot may do** field when creating or editing a bot. The 
 
 ### What you lose by raising the level
 
-This is the part of the page most worth reading carefully, because it is the fundamental difference between a dedicated bot and your own Javis: **the person typing into the bot is somebody else, not you.**
+This is the part of the page most worth reading carefully, because it is the fundamental difference between a dedicated bot and your own Minmin: **the person typing into the bot is somebody else, not you.**
 
 At Read only that is harmless: however cleverly someone talks it around, the bot can only say something off topic, because it has nothing with which to do harm. Raising the level removes exactly that property.
 
@@ -270,7 +270,7 @@ At Read only that is harmless: however cleverly someone talks it around, the bot
 
 - The bot can write files in its brain. One message from someone genuinely changes content in the brain, **with no approval step**.
 - The bot can call the data sources you attached, at read and write level. Everything in those sources is within reach of whoever is chatting with the bot.
-- Javis still **hard-blocks** the outward-action group at this level: no sending, no payments, no booking or cancelling, no deleting, no publishing. Blocked at the tool-call layer, not by wording.
+- Minmin still **hard-blocks** the outward-action group at this level: no sending, no payments, no booking or cancelling, no deleting, no publishing. Blocked at the tool-call layer, not by wording.
 
 **The Full power level:**
 
@@ -284,7 +284,7 @@ So: **only turn Full power on when you control the list of people who can messag
 
 1. Click **Edit** on the bot card (or choose it while creating).
 2. Pick the level in the **What the bot may do** field. That level's risk list appears right below.
-3. Tick **I have read and accept the risks above**. Without the tick it cannot be saved, and Javis blocks it in both the interface and the server, so removing the tick box with devtools does not raise it either.
+3. Tick **I have read and accept the risks above**. Without the tick it cannot be saved, and Minmin blocks it in both the interface and the server, so removing the tick box with devtools does not raise it either.
 4. Full power asks once more before saving.
 5. Enabling the bot asks again too, because creation may have been days ago and whoever clicks Enable may not remember what level this one is at.
 
@@ -312,9 +312,9 @@ That route also does not open a CLI, so a bot answers faster than your own chat 
 
 ### Making documents match well
 
-- **Give files clear headings.** Javis splits documents by markdown headings (`##`), and each passage is retrieved on its own. A long file with no headings can let the bot read half a condition and answer as if it were the whole condition. Splitting into "Retail price", "Wholesale price", "Returns", "Delivery" and so on matches best.
+- **Give files clear headings.** Minmin splits documents by markdown headings (`##`), and each passage is retrieved on its own. A long file with no headings can let the bot read half a condition and answer as if it were the whole condition. Splitting into "Retail price", "Wholesale price", "Returns", "Delivery" and so on matches best.
 - **Files outsiders upload do NOT count as documents.** They sit in `inbox/khach/` and are excluded from the lookup entirely. Otherwise anyone could upload a file overriding your rules, ask a question, and have the bot quote it as official documentation.
-- **Javis's own convention files are excluded too.** `CLAUDE.md`, `AGENTS.md`, `wiki/index.md`, `wiki/log.md` and a few other navigation files exist in every brain but are system innards, not content to answer outsiders with. Your real Wiki notes are used normally.
+- **Minmin's own convention files are excluded too.** `CLAUDE.md`, `AGENTS.md`, `wiki/index.md`, `wiki/log.md` and a few other navigation files exist in every brain but are system innards, not content to answer outsiders with. Your real Wiki notes are used normally.
 - **Typing with or without diacritics both find things**, but typing with diacritics is more accurate: "bán" does not match "bản", "cà" does not match "cả". Documents should be spelled correctly and accented correctly.
 
 ## The log and where documents are missing
@@ -339,7 +339,7 @@ A single stuck question does not call. Reporting every stray question makes the 
 
 The third case is the bot **breaking** (unable to reach the model). That is reported on the first occurrence rather than waiting for two questions, because every silent minute makes the person messaging feel abandoned. But it is reported **once** until a turn works again, otherwise the on-duty inbox becomes an error log.
 
-Before considering it broken, Javis has already retried up to three times if the error was **transient** (the provider returning 429 for too many calls, a 5xx overload, a network blip). A momentary 429 no longer wakes the person on duty. A break notice carrying *(retried 3 times)* means everything was tried, so go and look at the **Models** page or the account's quota. Details in [Troubleshooting](17-troubleshooting.md#the-provider-reports-a-rate-limit).
+Before considering it broken, Minmin has already retried up to three times if the error was **transient** (the provider returning 429 for too many calls, a 5xx overload, a network blip). A momentary 429 no longer wakes the person on duty. A break notice carrying *(retried 3 times)* means everything was tried, so go and look at the **Models** page or the account's quota. Details in [Troubleshooting](17-troubleshooting.md#the-provider-reports-a-rate-limit).
 
 The log keeps the 2000 most recent turns per bot, trimming older ones. Deleting a bot deletes its log with it.
 
@@ -351,19 +351,19 @@ The log keeps the 2000 most recent turns per bot, trimming older ones. Deleting 
 
 **Everything else depends on the permission level** you set: writing files, calling data sources, acting outside. See the table in [The three permission levels](#the-three-permission-levels-what-the-bot-may-do). The default is Read only, meaning none of those.
 
-The bot's Telegram command menu has only three items (`/help`, `/nhanvien`, `/id`), not the main Javis bot's admin menu. Listing commands the bot refuses to run there would only teach people to go looking for a different command set.
+The bot's Telegram command menu has only three items (`/help`, `/nhanvien`, `/id`), not the main Minmin bot's admin menu. Listing commands the bot refuses to run there would only teach people to go looking for a different command set.
 
-And **how it speaks, what scope it accepts, what it refuses** are decided by your Agent file, not by Javis. To make the bot avoid a topic, not make promises on your behalf, or not change role when talked around, write those things into the Agent.
+And **how it speaks, what scope it accepts, what it refuses** are decided by your Agent file, not by Minmin. To make the bot avoid a topic, not make promises on your behalf, or not change role when talked around, write those things into the Agent.
 
 The right way to understand the limits above: they live in the **permission level in the source code**, not in wording inside the prompt. Wording can be talked around by clever phrasing; a permission level cannot, because the tool is simply not granted for that run. The flip side of the same truth: when you **do** grant tools for that run, the wording in the Agent cannot hold it back either.
 
 ## The bot speaks like a person, exposing no machine state
 
-A dedicated bot **shows no Javis status lines** to the person messaging it. This is the sharp difference from your own main Javis bot (which does show everything, see [Telegram](11-telegram.md), because the owner needs to see how far Javis has got).
+A dedicated bot **shows no Minmin status lines** to the person messaging it. This is the sharp difference from your own main Minmin bot (which does show everything, see [Telegram](11-telegram.md), because the owner needs to see how far Minmin has got).
 
 Specifically, someone messaging a dedicated bot will NEVER see:
 
-- the "🤔 Javis is working…" message and its "⏳ ⚙ Calling a tool…" updates
+- the "🤔 Minmin is working…" message and its "⏳ ⚙ Calling a tool…" updates
 - the sentence "⏳ Still handling the previous question. Send /stop to stop then ask again."
 - a technical error line like "⚠ Error: TimeoutError: ..."
 - the words "(no content)" when a turn returns empty
@@ -390,15 +390,15 @@ Click **Delete** on the card. The bot stops answering immediately.
 
 **Which model does a bot use?** The very model you chose on the Models page. Changing the model changes the bot's model, and how it works does not change, since every brain takes the same route.
 
-**Can a bot call the data sources I attached?** Not by default; the Read only level has nothing but the documents in its brain. Raising it to **Can write** grants that, and **Full power** grants the outward-action group too. Weigh the fact that whoever drives it is whoever messages it; for something only you need, asking Javis on the dashboard or your own Telegram channel is still safer.
+**Can a bot call the data sources I attached?** Not by default; the Read only level has nothing but the documents in its brain. Raising it to **Can write** grants that, and **Full power** grants the outward-action group too. Weigh the fact that whoever drives it is whoever messages it; for something only you need, asking Minmin on the dashboard or your own Telegram channel is still safer.
 
-**Is a Full power bot dangerous?** Yes, which is why Javis requires a consent tick then asks once more. The danger is not the model misbehaving but that **anyone can message the bot**: one clever sentence makes the bot call a real tool, unrecoverably and without checking with you. Only use it where you control the list of people who can message it.
+**Is a Full power bot dangerous?** Yes, which is why Minmin requires a consent tick then asks once more. The danger is not the model misbehaving but that **anyone can message the bot**: one clever sentence makes the bot call a real tool, unrecoverably and without checking with you. Only use it where you control the list of people who can message it.
 
-**What do I do right now if a Full power bot looks wrong?** Click **Disable** on the card, effective within seconds and needing no Javis restart. Then click Edit and lower it to Read only; lowering asks nothing. Review what the bot did under **Log**, the Recent conversations tab.
+**What do I do right now if a Full power bot looks wrong?** Click **Disable** on the card, effective within seconds and needing no Minmin restart. Then click Edit and lower it to Read only; lowering asks nothing. Review what the bot did under **Log**, the Recent conversations tab.
 
 **Can I run several bots at once?** Yes. Each bot has its own token and its own process. The Chatbot page is built for it.
 
-**Can two bots share one Agent?** Yes, and sometimes it makes sense: the same role but two different brains for two different audiences. The reverse, two bots sharing one token, is not allowed and Javis blocks it.
+**Can two bots share one Agent?** Yes, and sometimes it makes sense: the same role but two different brains for two different audiences. The reverse, two bots sharing one token, is not allowed and Minmin blocks it.
 
 **What happens when people send the bot images?** Uploaded files land in `inbox/khach/` in that bot's brain, kept apart from your files, and do not count as documents for answering.
 
@@ -410,9 +410,9 @@ Click **Delete** on the card. The bot stops answering immediately.
 
 **I dropped the bot into a group, tagged its name and it does not answer, but direct messages work?** Type **`/id`** in that very group and the bot will answer and state the cause. Three causes produce this one symptom: the group is not enabled yet (click **Allow this group** on the bot card), Telegram's privacy mode is still on (see [Privacy mode](#telegrams-privacy-mode-read-this-if-the-bot-is-silent-in-a-group)), or the bot could not ask for its own identity (turn the bot off and on again). If even `/id` gets no response, the bot is not running, so check the status dot on the card.
 
-**The bot is set to "answer every message" but still only answers when named?** Telegram's privacy mode is still on, blocking those messages on Telegram's side so Javis never sees them. Turn it off in @BotFather (`/setprivacy` → Disable) or make the bot a group administrator, then turn the bot off and on again. The bot card warns you when this situation applies.
+**The bot is set to "answer every message" but still only answers when named?** Telegram's privacy mode is still on, blocking those messages on Telegram's side so Minmin never sees them. Turn it off in @BotFather (`/setprivacy` → Disable) or make the bot a group administrator, then turn the bot off and on again. The bot card warns you when this situation applies.
 
-**Does the bot run when Javis is off?** No. The bot runs inside the Javis process, so the machine or VPS has to be on. Restarting Javis restarts every enabled bot by itself.
+**Does the bot run when Minmin is off?** No. The bot runs inside the Minmin process, so the machine or VPS has to be on. Restarting Minmin restarts every enabled bot by itself.
 
 ## See also
 

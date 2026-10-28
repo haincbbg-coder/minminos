@@ -2,13 +2,13 @@
 
 ***Tiếng Việt** · [English](en/01-getting-started.md)*
 
-Trang này hướng dẫn bạn từ lúc mở Javis lần đầu tiên cho tới khi Javis sẵn sàng trò chuyện: tạo tài khoản admin, chọn nhà cung cấp AI làm "bộ não", chọn model, và kiểm tra trạng thái hệ thống ở trang Cài đặt.
+Trang này hướng dẫn bạn từ lúc mở Minmin lần đầu tiên cho tới khi Minmin sẵn sàng trò chuyện: tạo tài khoản admin, chọn nhà cung cấp AI làm "bộ não", chọn model, và kiểm tra trạng thái hệ thống ở trang Cài đặt.
 
 ## Tính năng này là gì
 
-Javis OS là một lớp điều hành AI chạy trên máy hoặc VPS của bạn. Bộ não là nhà cung cấp AI mà bạn đấu vào: Claude Code, ChatGPT (qua Codex), Antigravity CLI, OpenRouter, OpenAI API, Anthropic API, Google Gemini, Groq hoặc Ollama Cloud. Bộ cài đặt lần đầu **chọn sẵn** Claude Code vì đó là lựa chọn được khuyên dùng, chứ Javis không bị khoá vào một nhà cung cấp nào.
+Minmin OS là một lớp điều hành AI chạy trên máy hoặc VPS của bạn. Bộ não là nhà cung cấp AI mà bạn đấu vào: Claude Code, ChatGPT (qua Codex), Antigravity CLI, OpenRouter, OpenAI API, Anthropic API, Google Gemini, Groq hoặc Ollama Cloud. Bộ cài đặt lần đầu **chọn sẵn** Claude Code vì đó là lựa chọn được khuyên dùng, chứ Minmin không bị khoá vào một nhà cung cấp nào.
 
-Trước khi dùng được, Javis cần 3 thứ:
+Trước khi dùng được, Minmin cần 3 thứ:
 
 1. Một tài khoản admin (để chặn người lạ, bắt buộc khi chạy công khai trên VPS).
 2. Một nhà cung cấp AI đã đăng nhập hoặc đã dán API key.
@@ -16,7 +16,7 @@ Trước khi dùng được, Javis cần 3 thứ:
 
 Lần đầu mở app, một bộ cài đặt (wizard) sẽ hiện ra và dẫn bạn qua đúng 3 việc này. Mọi thứ đặt ở đây đều đổi lại được sau trong các trang quản lý.
 
-## Mở ở đâu trong Javis
+## Mở ở đâu trong Minmin
 
 - Trên máy cá nhân, mở trình duyệt và vào `http://localhost:7777` (cổng mặc định là 7777).
 - Trên VPS hoặc Docker, dùng địa chỉ mà nhà cung cấp cấp cho bạn, ví dụ `http://<ip-vps>:7777` hoặc link HTTPS dạng `https://<app>.<vps>.hstgr.cloud`.
@@ -34,13 +34,13 @@ Sau khi thiết lập xong, các mục liên quan nằm trên rail điều hư�
 
 ### Bước 1: Mở app và gặp bộ cài đặt
 
-Mở `http://localhost:7777` (hoặc địa chỉ VPS của bạn). Nếu đây là lần đầu và chưa có tài khoản, Javis hiện cửa sổ **Chào mừng tới Javis** với 3 mục đánh số sẵn.
+Mở `http://localhost:7777` (hoặc địa chỉ VPS của bạn). Nếu đây là lần đầu và chưa có tài khoản, Minmin hiện cửa sổ **Chào mừng tới Minmin** với 3 mục đánh số sẵn.
 
-Nếu bạn chạy trên máy cá nhân (localhost), mục mật khẩu là tùy chọn, có thể bỏ trống. Nếu bạn chạy công khai (VPS/Docker), Javis bắt buộc bạn đặt tên đăng nhập và mật khẩu mới cho qua; lúc đó dòng nhắc "Đặt tên đăng nhập và mật khẩu (tối thiểu 8 ký tự) để bảo vệ Javis trên server công khai. Sau khi vào, nên bật thêm 2FA." hiện ngay dưới nút.
+Nếu bạn chạy trên máy cá nhân (localhost), mục mật khẩu là tùy chọn, có thể bỏ trống. Nếu bạn chạy công khai (VPS/Docker), Minmin bắt buộc bạn đặt tên đăng nhập và mật khẩu mới cho qua; lúc đó dòng nhắc "Đặt tên đăng nhập và mật khẩu (tối thiểu 8 ký tự) để bảo vệ Minmin trên server công khai. Sau khi vào, nên bật thêm 2FA." hiện ngay dưới nút.
 
 ### Bước 2: Đặt tên Workspace
 
-Ở mục **1. Workspace**, gõ tên hiển thị vào ô **Tên hiển thị** (ví dụ tên cửa hàng hoặc tên bạn). Bỏ trống thì Javis dùng mặc định là "Javis OS". Đây chỉ là nhãn hiển thị, đổi lại bất cứ lúc nào.
+Ở mục **1. Workspace**, gõ tên hiển thị vào ô **Tên hiển thị** (ví dụ tên cửa hàng hoặc tên bạn). Bỏ trống thì Minmin dùng mặc định là "Minmin OS". Đây chỉ là nhãn hiển thị, đổi lại bất cứ lúc nào.
 
 ### Bước 3: Tạo tài khoản admin
 
@@ -48,9 +48,9 @@ Nếu bạn chạy trên máy cá nhân (localhost), mục mật khẩu là tùy
 
 1. Gõ tên tài khoản vào ô **Tài khoản** (mặc định gợi ý là `admin`).
 2. Gõ mật khẩu vào ô **Mật khẩu**. Mật khẩu phải dài tối thiểu 8 ký tự.
-3. Nếu Javis chạy công khai, làm bước này **ngay sau khi deploy** rồi bật xác thực 2 lớp (2FA) ở trang **Tài khoản** (xem mục "Server công khai: tạo admin sớm và bật 2FA" bên dưới).
+3. Nếu Minmin chạy công khai, làm bước này **ngay sau khi deploy** rồi bật xác thực 2 lớp (2FA) ở trang **Tài khoản** (xem mục "Server công khai: tạo admin sớm và bật 2FA" bên dưới).
 
-Trên máy cá nhân, nếu bạn để trống mật khẩu thì Javis không đặt tài khoản và ai mở link máy này cũng dùng được. Chỉ nên bỏ trống khi máy chỉ mình bạn dùng.
+Trên máy cá nhân, nếu bạn để trống mật khẩu thì Minmin không đặt tài khoản và ai mở link máy này cũng dùng được. Chỉ nên bỏ trống khi máy chỉ mình bạn dùng.
 
 ### Bước 4: Chọn nhà cung cấp AI (bộ não)
 
@@ -59,14 +59,14 @@ Trên máy cá nhân, nếu bạn để trống mật khẩu thì Javis không �
 | Lựa chọn | Chữ trên thẻ | Cần gì để dùng |
 |---|---|---|
 | **🧠 Claude Code** (chọn sẵn) | "Đăng nhập subscription Claude → đủ MCP, skill, đọc/ghi file, vòng lặp tự cải thiện. Mạnh & đầy đủ nhất." | Đăng nhập subscription Claude 1 lần (không cần API key) |
-| **💬 ChatGPT (gói subscription)** | "Đăng nhập ChatGPT Plus/Pro (qua Codex) → vẫn dùng được MCP của Javis." | Đăng nhập ChatGPT ở trang Models |
-| **🌐 OpenRouter** | "Nhiều model giá rẻ một chỗ, vẫn đủ MCP Javis + skill + đọc/ghi file brain. Chỉ cần API key - không cần đăng nhập." | Dán API key OpenRouter (dán ngay hoặc để sau ở Models) |
+| **💬 ChatGPT (gói subscription)** | "Đăng nhập ChatGPT Plus/Pro (qua Codex) → vẫn dùng được MCP của Minmin." | Đăng nhập ChatGPT ở trang Models |
+| **🌐 OpenRouter** | "Nhiều model giá rẻ một chỗ, vẫn đủ MCP Minmin + skill + đọc/ghi file brain. Chỉ cần API key - không cần đăng nhập." | Dán API key OpenRouter (dán ngay hoặc để sau ở Models) |
 
-Chọn cái nào cũng ra một Javis đủ chức năng: cả ba đều gọi được kho Kết nối (MCP), đọc/ghi file trong brain, chạy skill, giao việc và tạo loop. Khác biệt duy nhất là **chạy lệnh máy**, thứ chỉ các engine CLI (Claude Code, Codex, Antigravity CLI) làm được. Wizard chỉ hiện 3 thẻ cho gọn; vào trang **Models** còn Antigravity CLI, OpenAI API, Google Gemini, Anthropic API, Groq và Ollama, đổi lúc nào cũng được.
+Chọn cái nào cũng ra một Minmin đủ chức năng: cả ba đều gọi được kho Kết nối (MCP), đọc/ghi file trong brain, chạy skill, giao việc và tạo loop. Khác biệt duy nhất là **chạy lệnh máy**, thứ chỉ các engine CLI (Claude Code, Codex, Antigravity CLI) làm được. Wizard chỉ hiện 3 thẻ cho gọn; vào trang **Models** còn Antigravity CLI, OpenAI API, Google Gemini, Anthropic API, Groq và Ollama, đổi lúc nào cũng được.
 
 Nếu chọn **OpenRouter**, một ô nhập **OpenRouter API key** sẽ hiện ra, bạn có thể dán key ngay hoặc để trống rồi dán sau ở trang Models. Dưới danh sách còn một dòng gợi ý thay đổi theo thẻ bạn chọn, ví dụ chọn ChatGPT thì gợi ý "Sau khi vào: mục **Models** → đăng nhập ChatGPT".
 
-Bấm **Bắt đầu dùng Javis →** để lưu và vào app. Wizard đồng thời đặt luôn một model mặc định cho nhà cung cấp bạn chọn: `sonnet` cho Claude Code, `gpt-5.5` cho ChatGPT, `openai/gpt-4o-mini` cho OpenRouter. Đổi lại ở trang Models bất cứ lúc nào.
+Bấm **Bắt đầu dùng Minmin →** để lưu và vào app. Wizard đồng thời đặt luôn một model mặc định cho nhà cung cấp bạn chọn: `sonnet` cho Claude Code, `gpt-5.5` cho ChatGPT, `openai/gpt-4o-mini` cho OpenRouter. Đổi lại ở trang Models bất cứ lúc nào.
 
 ### Bước 5: Đăng nhập Claude làm bộ não
 
@@ -75,15 +75,15 @@ Bấm **Bắt đầu dùng Javis →** để lưu và vào app. Wizard đồng t
 1. Vào mục **Models** trên rail bên trái.
 2. Tìm thẻ **Anthropic OAuth (Claude Code)**. Trạng thái ban đầu là "○ Chưa đăng nhập".
 3. Bấm nút **Đăng nhập Claude**.
-4. Javis hiện một đường link. Bấm mở link đó (mở trong tab mới) để đăng nhập tại claude.ai.
-5. Nếu sau khi đăng nhập trang hiện một mã code, dán mã đó vào ô **dán code (nếu có)** rồi bấm **Gửi code**. Một số luồng không cần dán code, Javis tự dò lại trạng thái mỗi 3 giây và cập nhật thẻ.
+4. Minmin hiện một đường link. Bấm mở link đó (mở trong tab mới) để đăng nhập tại claude.ai.
+5. Nếu sau khi đăng nhập trang hiện một mã code, dán mã đó vào ô **dán code (nếu có)** rồi bấm **Gửi code**. Một số luồng không cần dán code, Minmin tự dò lại trạng thái mỗi 3 giây và cập nhật thẻ.
 6. Khi xong, trạng thái thẻ đổi thành "● Đã kết nối" (kèm email/gói nếu có).
 
 Đây là luồng device-code: bạn không cần nhập API key. Cách này chạy được cả trên VPS không có màn hình. Nếu bạn có quyền vào terminal của server, cũng có thể đăng nhập một lần bằng lệnh `claude auth login --claudeai` thay cho các bước trên.
 
-Nút **↻ Kiểm tra lại** trên thẻ dùng để nạp lại trạng thái đăng nhập bất cứ lúc nào. Nút **Ngắt** dùng để đăng xuất Claude khỏi Javis.
+Nút **↻ Kiểm tra lại** trên thẻ dùng để nạp lại trạng thái đăng nhập bất cứ lúc nào. Nút **Ngắt** dùng để đăng xuất Claude khỏi Minmin.
 
-Engine Claude của Javis chạy qua **Claude Agent SDK**, nhưng SDK vẫn gọi tới `claude` CLI trên máy, nên máy chạy Javis phải cài sẵn `claude` thì đăng nhập và MCP native mới hoạt động.
+Engine Claude của Minmin chạy qua **Claude Agent SDK**, nhưng SDK vẫn gọi tới `claude` CLI trên máy, nên máy chạy Minmin phải cài sẵn `claude` thì đăng nhập và MCP native mới hoạt động.
 
 ### Bước 6: Chọn model chính và model việc nền
 
@@ -94,7 +94,7 @@ Sau khi đã đăng nhập, kiểm tra và chọn model ở trang **Models**:
 - Phần **◆ Model việc nền** (phụ đề "loop · việc Kanban · nhắc hẹn · tự học · tiêu hoá nguồn") cho phép chọn một model rẻ cho các việc chạy nền để đỡ hạn mức. Chưa đổi thì dòng trạng thái ghi "Mặc định của Claude Code". Bấm **Đổi model ▾** để chọn, bấm **Về mặc định** để trả lại. Nếu bạn chọn nhà cung cấp chưa kết nối, thẻ cảnh báo "⚠ nhà cung cấp này chưa kết nối - việc nền sẽ tự dùng lại Claude".
 - Phần **◆ Suy nghĩ** (reasoning) đặt độ sâu suy nghĩ khi trả lời: **Tắt**, **Thấp**, **Vừa**, **Cao**. Mặc định là Tắt (trả lời nhanh).
 
-Việc nền chạy được bằng cả nhà cung cấp API, không riêng Claude. Khác biệt thật nằm ở chỗ khác: Claude Code và Codex đọc/ghi file trực tiếp trong brain và chạy được lệnh máy, còn các model API đọc/ghi qua công cụ vault của Javis và không chạy lệnh máy, nên hợp với việc đọc, tổng hợp và ghi ghi chú.
+Việc nền chạy được bằng cả nhà cung cấp API, không riêng Claude. Khác biệt thật nằm ở chỗ khác: Claude Code và Codex đọc/ghi file trực tiếp trong brain và chạy được lệnh máy, còn các model API đọc/ghi qua công cụ vault của Minmin và không chạy lệnh máy, nên hợp với việc đọc, tổng hợp và ghi ghi chú.
 
 Chi tiết đầy đủ về từng nhà cung cấp và model xem [Models & engine](10-models-va-engine.md).
 
@@ -122,15 +122,15 @@ Phụ đề: "Hiệu năng đồ thị và cấu trúc dữ liệu". Gồm ba th
 **Thẻ Đồ thị não** cho biết đồ thị tri thức đang bật hay tắt.
 
 - Bấm **Tắt đồ thị** để giảm tải tối đa; khi đang tắt, nút đổi thành **Bật đồ thị**.
-- Nếu màn hình hẹp (dưới 860px, tức điện thoại), Javis tự vào chế độ nhẹ: đồ thị dừng chạy dù công tắc đang bật. App vẫn mở ở màn Javis như trên máy tính - màn đó đã có sẵn ô chat, chỉ khác là không vẽ khoang não.
+- Nếu màn hình hẹp (dưới 860px, tức điện thoại), Minmin tự vào chế độ nhẹ: đồ thị dừng chạy dù công tắc đang bật. App vẫn mở ở màn Minmin như trên máy tính - màn đó đã có sẵn ô chat, chỉ khác là không vẽ khoang não.
 
 Chi tiết về đồ thị xem [Đồ thị tri thức](03-do-thi-tri-thuc.md).
 
 **Thẻ Chuẩn hóa brain** gom các thư mục `agents`, `workflows`, `memory`, `skills` của brain đang chọn về cấu trúc phẳng đồng nhất. Bấm **Chuẩn hóa brain đang chọn** để chạy.
 
-Thao tác này an toàn: chỉ di chuyển khi thư mục đích chưa có, không ghi đè, chạy lại nhiều lần cũng vô hại (ví dụ chuyển `Javis/agents` sang `agents`, `Memory` sang `memory`). Sau khi chạy, Javis báo đã di chuyển gì hoặc "Không có gì cần di chuyển (đã chuẩn)".
+Thao tác này an toàn: chỉ di chuyển khi thư mục đích chưa có, không ghi đè, chạy lại nhiều lần cũng vô hại (ví dụ chuyển `Javis/agents` sang `agents`, `Memory` sang `memory`). Sau khi chạy, Minmin báo đã di chuyển gì hoặc "Không có gì cần di chuyển (đã chuẩn)".
 
-**Thẻ Dấu nguồn gốc ảnh AI** quyết định ảnh Javis tạo ra có mang dấu nguồn gốc (Content Credentials, chuẩn C2PA) hay không. Nhãn góc phải là "Đang giữ" hoặc "Đang gỡ".
+**Thẻ Dấu nguồn gốc ảnh AI** quyết định ảnh Minmin tạo ra có mang dấu nguồn gốc (Content Credentials, chuẩn C2PA) hay không. Nhãn góc phải là "Đang giữ" hoặc "Đang gỡ".
 
 - Mặc định là **Giữ dấu**: ảnh mang sẵn dấu ghi rằng ảnh do AI sinh ra. Facebook đọc dấu này để gắn nhãn "Nội dung do AI tạo" lên bài.
 - Bấm **Gỡ dấu** thì ảnh mới tạo không còn dấu, nhãn trên nền tảng thường không hiện nữa. Ảnh đã tạo trước đó không đổi.
@@ -150,13 +150,13 @@ Chi tiết xem [Trò chuyện & giọng nói](02-tro-chuyen-va-giong-noi.md) và
 
 ### Tab Chung: Khởi động cùng Windows
 
-Nhóm này **chỉ hiện trên bản chạy Windows**; bản Docker/Linux ẩn hẳn. Thẻ **Tự bật Javis** cho biết trạng thái ("Bật" hoặc "Tắt") và có một nút duy nhất: **Bật tự khởi động** hoặc **Tắt tự khởi động**. Khi bật, Javis tự chạy nền lúc bạn đăng nhập Windows, mở `localhost:7777` là dùng được.
+Nhóm này **chỉ hiện trên bản chạy Windows**; bản Docker/Linux ẩn hẳn. Thẻ **Tự bật Minmin** cho biết trạng thái ("Bật" hoặc "Tắt") và có một nút duy nhất: **Bật tự khởi động** hoặc **Tắt tự khởi động**. Khi bật, Minmin tự chạy nền lúc bạn đăng nhập Windows, mở `localhost:7777` là dùng được.
 
 #### Khi thẻ ghi "Bật nhưng không chạy"
 
-Mở máy lên mà `localhost:7777` báo **ERR_CONNECTION_REFUSED** thì mở lại trang này. Javis tự kiểm ba nguyên nhân và ghi thẳng nguyên nhân dưới thẻ, vì cả ba đều **không để lại lỗi ở đâu**:
+Mở máy lên mà `localhost:7777` báo **ERR_CONNECTION_REFUSED** thì mở lại trang này. Minmin tự kiểm ba nguyên nhân và ghi thẳng nguyên nhân dưới thẻ, vì cả ba đều **không để lại lỗi ở đâu**:
 
-- **Windows đang chặn mục khởi động này.** Task Manager, thẻ **Startup**, khi bạn bấm Disable thì nó không xoá gì cả, chỉ ghi một cờ để Windows bỏ qua. Nhiều phần mềm "dọn máy, tăng tốc khởi động" cũng tắt bằng đúng cờ đó mà không hỏi. Bấm **Bật tự khởi động** lại là Javis tự gỡ cờ.
+- **Windows đang chặn mục khởi động này.** Task Manager, thẻ **Startup**, khi bạn bấm Disable thì nó không xoá gì cả, chỉ ghi một cờ để Windows bỏ qua. Nhiều phần mềm "dọn máy, tăng tốc khởi động" cũng tắt bằng đúng cờ đó mà không hỏi. Bấm **Bật tự khởi động** lại là Minmin tự gỡ cờ.
 - **Thư mục cài đặt đã đổi chỗ**, lệnh khởi động còn trỏ đường dẫn cũ. Bấm bật lại để cập nhật.
 - **Thiếu `start-javis.vbs` hoặc `.venv\Scripts\python.exe`.** Chạy lại `setup.bat` để dựng lại phần thiếu.
 
@@ -166,7 +166,7 @@ Về Second Brain (bộ nhớ, Wiki, cấu trúc vault), xem [Second Brain: bộ
 
 ## Cập nhật phiên bản
 
-Phần này nằm ở **Hệ thống → Cài đặt → Cập nhật**. Khung Javis OS trên cùng hiển thị phiên bản đang chạy và cho biết có bản mới trên GitHub hay không.
+Phần này nằm ở **Hệ thống → Cài đặt → Cập nhật**. Khung Minmin OS trên cùng hiển thị phiên bản đang chạy và cho biết có bản mới trên GitHub hay không.
 
 - Có bản mới: "🆕 Có bản mới **v...** (đang chạy v...)" kèm nhãn môi trường (`Windows`, `Linux`, `macOS` hoặc `Docker / VPS`), và khối "Bản mới có gì" liệt kê tối đa 2 bản gần nhất.
 - Đang mới nhất: "✅ Đang dùng bản mới nhất (v...)".
@@ -174,7 +174,7 @@ Phần này nằm ở **Hệ thống → Cài đặt → Cập nhật**. Khung J
 
 ### Nút "⬆ Cập nhật ngay" hiện khi nào
 
-Nút **⬆ Cập nhật ngay** chỉ hiện khi Javis tự cập nhật tại chỗ được. Javis không đoán theo tên nhà cung cấp: nó **dò thật** xem có container Watchtower đang lắng nghe không.
+Nút **⬆ Cập nhật ngay** chỉ hiện khi Minmin tự cập nhật tại chỗ được. Minmin không đoán theo tên nhà cung cấp: nó **dò thật** xem có container Watchtower đang lắng nghe không.
 
 | Kiểu chạy | Cập nhật một chạm? |
 |---|---|
@@ -196,33 +196,33 @@ Hostinger thì vào Docker Manager bấm **Redeploy** (stack đọc lại compos
 
 Tải lại trang là nút hiện ra. Không muốn có Watchtower thì cập nhật tay vẫn được: `docker compose up -d --pull always`.
 
-**Muốn Javis TỰ cập nhật, khỏi bấm nút**: thêm `JAVIS_AUTO_UPDATE=true` vào `.env` (Hostinger: ô Environment) rồi dựng lại. Mặc định tắt có chủ ý, vì tự cập nhật là app tự khởi động lại bất cứ lúc nào có bản mới, cắt ngang việc nền đang chạy. Chu kỳ mặc định 24 giờ, đổi bằng `JAVIS_AUTO_UPDATE_INTERVAL` (giây).
+**Muốn Minmin TỰ cập nhật, khỏi bấm nút**: thêm `JAVIS_AUTO_UPDATE=true` vào `.env` (Hostinger: ô Environment) rồi dựng lại. Mặc định tắt có chủ ý, vì tự cập nhật là app tự khởi động lại bất cứ lúc nào có bản mới, cắt ngang việc nền đang chạy. Chu kỳ mặc định 24 giờ, đổi bằng `JAVIS_AUTO_UPDATE_INTERVAL` (giây).
 
 Khung Cập nhật tự phân biệt các trường hợp này và ghi đúng cách xử lý cho máy bạn.
 
 ### Thanh tiến trình 6 bước
 
-Bấm **⬆ Cập nhật ngay**, Javis hỏi xác nhận ("Cập nhật Javis lên bản mới nhất? App sẽ tự khởi động lại; nếu lỗi hệ thống sẽ thử quay về bản cũ."). Đồng ý xong, một thanh tiến trình hiện ra và sáng dần qua 6 bước:
+Bấm **⬆ Cập nhật ngay**, Minmin hỏi xác nhận ("Cập nhật Minmin lên bản mới nhất? App sẽ tự khởi động lại; nếu lỗi hệ thống sẽ thử quay về bản cũ."). Đồng ý xong, một thanh tiến trình hiện ra và sáng dần qua 6 bước:
 
 **Chuẩn bị → Tải code → Cài thư viện → Khởi động lại → Kiểm tra sức khoẻ → Xong**
 
-Bước đang chạy có dấu ⏳, bước đã qua có ✅. Trong lúc chạy, dòng trạng thái ghi "⏳ Đang cập nhật… đừng tắt trang." Nếu mã nguồn trên máy có sửa đổi cục bộ, Javis báo "📦 Sửa đổi cục bộ đã được cất vào git stash." (cất đi chứ không xoá). Xong xuôi thì hiện "✅ Đã cập nhật xong. Đang tải lại trang…" và app tự tải lại sau khoảng 1,5 giây.
+Bước đang chạy có dấu ⏳, bước đã qua có ✅. Trong lúc chạy, dòng trạng thái ghi "⏳ Đang cập nhật… đừng tắt trang." Nếu mã nguồn trên máy có sửa đổi cục bộ, Minmin báo "📦 Sửa đổi cục bộ đã được cất vào git stash." (cất đi chứ không xoá). Xong xuôi thì hiện "✅ Đã cập nhật xong. Đang tải lại trang…" và app tự tải lại sau khoảng 1,5 giây.
 
 ### Khi bản mới hỏng: lùi bản
 
-Javis có sẵn đường lùi, không bỏ bạn kẹt ở bản lỗi:
+Minmin có sẵn đường lùi, không bỏ bạn kẹt ở bản lỗi:
 
-- **Tự lùi:** nếu bản mới không qua được bước Kiểm tra sức khoẻ, Javis tự quay về bản cũ. Thanh tiến trình hiện "↩ Bản mới lỗi, đang tự quay về bản cũ…", xong thì báo "↩ Bản mới lỗi, đã **tự quay về bản cũ**."
-- **Lùi tay trên Docker:** nếu sau một lúc phiên bản vẫn chưa đổi, Javis báo "⚠ Bản mới chưa lên sau một lúc - có thể lỗi." rồi hiện khối **Cách lùi bản Docker** với lệnh `docker compose pull && docker compose up -d`, kèm gợi ý pin image `ghcr.io/blogminhquy/javis-os:<phiên-bản-cũ>` rồi Redeploy.
+- **Tự lùi:** nếu bản mới không qua được bước Kiểm tra sức khoẻ, Minmin tự quay về bản cũ. Thanh tiến trình hiện "↩ Bản mới lỗi, đang tự quay về bản cũ…", xong thì báo "↩ Bản mới lỗi, đã **tự quay về bản cũ**."
+- **Lùi tay trên Docker:** nếu sau một lúc phiên bản vẫn chưa đổi, Minmin báo "⚠ Bản mới chưa lên sau một lúc - có thể lỗi." rồi hiện khối **Cách lùi bản Docker** với lệnh `docker compose pull && docker compose up -d`, kèm gợi ý pin image `ghcr.io/blogminhquy/javis-os:<phiên-bản-cũ>` rồi Redeploy.
 - **Lỗi khác:** khung báo lỗi cụ thể và nhắc xem file `update.log`. Nếu server không lên lại sau khoảng 3 phút, khung ghi "Server chưa lên lại sau khoảng 3 phút - thử tải lại trang."
 
 Bên dưới khung cập nhật là nhật ký phiên bản: từng bản có gì mới, chia trang, bản đang cài được đánh dấu.
 
 ## Server công khai: tạo admin sớm và bật 2FA
 
-Khi Javis chạy công khai (nghe trên `0.0.0.0`, tức VPS/Docker/Hostinger) mà chưa có tài khoản admin, màn chạy lần đầu chỉ hỏi tên đăng nhập và mật khẩu. Nghĩa là **ai mở link trước khi có admin sẽ tạo được admin**, mà bộ não lại chạy với toàn quyền trên máy. Vì vậy:
+Khi Minmin chạy công khai (nghe trên `0.0.0.0`, tức VPS/Docker/Hostinger) mà chưa có tài khoản admin, màn chạy lần đầu chỉ hỏi tên đăng nhập và mật khẩu. Nghĩa là **ai mở link trước khi có admin sẽ tạo được admin**, mà bộ não lại chạy với toàn quyền trên máy. Vì vậy:
 
-- **Cách khuyến nghị:** khi deploy, đặt sẵn hai biến môi trường `JAVIS_ADMIN_USER` và `JAVIS_ADMIN_PASSWORD` (`install.sh` đã hỏi sẵn hai giá trị này). Javis tự tạo tài khoản admin lúc khởi động, mở app ra là màn đăng nhập luôn, không có khoảng trống nào. Chi tiết biến môi trường xem [Cấu hình .env](16-cau-hinh-env.md).
+- **Cách khuyến nghị:** khi deploy, đặt sẵn hai biến môi trường `JAVIS_ADMIN_USER` và `JAVIS_ADMIN_PASSWORD` (`install.sh` đã hỏi sẵn hai giá trị này). Minmin tự tạo tài khoản admin lúc khởi động, mở app ra là màn đăng nhập luôn, không có khoảng trống nào. Chi tiết biến môi trường xem [Cấu hình .env](16-cau-hinh-env.md).
 - **Nếu không đặt env:** mở app và tạo tài khoản ngay sau khi deploy, đừng để server public trống admin.
 - **Sau lần đăng nhập đầu:** bật xác thực 2 lớp (2FA) ở trang **Tài khoản**. Xem [Bảo mật & tài khoản](14-bao-mat-tai-khoan.md).
 
@@ -230,18 +230,18 @@ Khi Javis chạy công khai (nghe trên `0.0.0.0`, tức VPS/Docker/Hostinger) m
 
 | Nút / dòng chữ | Ở đâu | Làm gì |
 |---|---|---|
-| **Bắt đầu dùng Javis →** | Wizard | Lưu workspace, tài khoản, nhà cung cấp rồi vào app |
+| **Bắt đầu dùng Minmin →** | Wizard | Lưu workspace, tài khoản, nhà cung cấp rồi vào app |
 | **Đăng nhập Claude** | Models, thẻ Anthropic OAuth (Claude Code) | Bắt đầu luồng device-code, hiện link claude.ai |
 | **Gửi code** | Models, sau khi bấm Đăng nhập Claude | Gửi mã code lấy từ trang claude.ai |
 | **↻ Kiểm tra lại** | Models, thẻ Claude Code | Nạp lại trạng thái đăng nhập |
-| **Ngắt** | Models | Đăng xuất nhà cung cấp khỏi Javis |
+| **Ngắt** | Models | Đăng xuất nhà cung cấp khỏi Minmin |
 | **Đổi model ▾** | Models, mục Main Model và Model việc nền | Mở bảng chọn model |
 | **Về mặc định** | Models, mục Model việc nền | Trả việc nền về model mặc định của Claude Code |
 | "○ Chưa đăng nhập" / "● Đã kết nối" | Models | Trạng thái nhà cung cấp |
 | **Bật đồ thị** / **Tắt đồ thị** | Cài đặt, thẻ Đồ thị não | Bật hoặc tắt đồ thị tri thức |
 | **Chuẩn hóa brain đang chọn** | Cài đặt, thẻ Chuẩn hóa brain | Gom thư mục brain về cấu trúc phẳng |
-| **Giữ dấu** / **Gỡ dấu** | Cài đặt, thẻ Dấu nguồn gốc ảnh AI | Bật/tắt dấu C2PA trên ảnh Javis tạo |
-| **Bật tự khởi động** / **Tắt tự khởi động** | Cài đặt, nhóm Khởi động cùng Windows | Cho Javis chạy nền khi đăng nhập Windows |
+| **Giữ dấu** / **Gỡ dấu** | Cài đặt, thẻ Dấu nguồn gốc ảnh AI | Bật/tắt dấu C2PA trên ảnh Minmin tạo |
+| **Bật tự khởi động** / **Tắt tự khởi động** | Cài đặt, nhóm Khởi động cùng Windows | Cho Minmin chạy nền khi đăng nhập Windows |
 | **Kiểm tra lại** | Cập nhật | So phiên bản với GitHub |
 | **⬆ Cập nhật ngay** | Cập nhật (chỉ hiện khi tự cập nhật được) | Chạy cập nhật 6 bước rồi tự tải lại trang |
 
@@ -259,7 +259,7 @@ Khi Javis chạy công khai (nghe trên `0.0.0.0`, tức VPS/Docker/Hostinger) m
 - **Báo "Đã có tài khoản - hãy đăng nhập":** admin đã được tạo trước đó (ví dụ qua env). Dùng màn đăng nhập với tài khoản/mật khẩu đã đặt.
 - **Claude báo chưa đăng nhập:** vào **Models**, bấm **Đăng nhập Claude**, mở link, dán code nếu được hỏi. Hoặc chạy `claude auth login --claudeai` trong terminal server.
 - **Quên mật khẩu admin:** ở màn đăng nhập bấm "Quên mật khẩu?" để xem hướng dẫn. Cách xử lý là mở file `server/settings.json`, xóa khối `"auth"` (hoặc đặt rỗng), rồi khởi động lại server; mở lại app sẽ về wizard để tạo tài khoản mới. Xem thêm [Bảo mật & tài khoản](14-bao-mat-tai-khoan.md).
-- **Sai quá nhiều lần khi đăng nhập, bị báo "Quá nhiều lần sai":** Javis khóa tạm để chống dò mật khẩu. Đợi ít phút rồi thử lại.
+- **Sai quá nhiều lần khi đăng nhập, bị báo "Quá nhiều lần sai":** Minmin khóa tạm để chống dò mật khẩu. Đợi ít phút rồi thử lại.
 - **Bấm cập nhật nhưng báo "Đang cập nhật rồi, chờ chút.":** một lần cập nhật khác đang chạy. Chờ tiến trình chạy xong rồi thử lại.
 - **Không thấy nút "⬆ Cập nhật ngay":** bạn đang chạy Docker mà Watchtower chưa chạy. Khung Cập nhật nói rõ máy bạn thiếu gì. Trên VPS tự quản, chạy `docker compose --profile update up -d` một lần rồi tải lại trang - `docker compose up -d` thường lệ KHÔNG bật Watchtower vì nó nằm trong profile riêng. Trên Hostinger thì không bật được, dùng Redeploy.
 - **Mở đúng cổng nhưng không thấy app:** kiểm tra địa chỉ có đúng `http://localhost:7777` (hoặc IP VPS kèm cổng 7777) không. Nếu vừa sửa code, khởi động lại server rồi thử lại.

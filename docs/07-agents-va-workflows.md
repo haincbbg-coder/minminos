@@ -6,14 +6,14 @@
 
 ## Tính năng này là gì
 
-- **Agent** là một "nhân viên AI" có vai trò cố định. Mỗi agent gồm: một cái tên, một mô tả vai trò, một hướng dẫn làm việc chi tiết (system prompt), danh sách kỹ năng (skill) được phép dùng, một **model chạy**, và một **bộ nhớ riêng** tích luỹ theo thời gian. Model chọn được từ **mọi nhà cung cấp bạn đã kết nối** ở trang Models: Claude (Claude Code), ChatGPT (Codex), Grok Build CLI, Antigravity CLI, OpenRouter, Anthropic API, OpenAI, Google Gemini, Groq. Danh sách trong ô chọn lấy thẳng từ các nhà đã kết nối, nên kết nối thêm là có thêm lựa chọn. Nhà nào cũng đọc/ghi được file trong vault và dùng được MCP; riêng Claude Code và Codex có thêm lệnh máy cùng khả năng tự mở web. Nhà đã chọn trục trặc lúc chạy thì Javis tự lùi sang bộ não khác thay vì để agent chết lặng. (Ollama chưa chạy được agent nên không xuất hiện ở đây.) Model của agent được áp THẬT khi workflow chạy.
+- **Agent** là một "nhân viên AI" có vai trò cố định. Mỗi agent gồm: một cái tên, một mô tả vai trò, một hướng dẫn làm việc chi tiết (system prompt), danh sách kỹ năng (skill) được phép dùng, một **model chạy**, và một **bộ nhớ riêng** tích luỹ theo thời gian. Model chọn được từ **mọi nhà cung cấp bạn đã kết nối** ở trang Models: Claude (Claude Code), ChatGPT (Codex), Grok Build CLI, Antigravity CLI, OpenRouter, Anthropic API, OpenAI, Google Gemini, Groq. Danh sách trong ô chọn lấy thẳng từ các nhà đã kết nối, nên kết nối thêm là có thêm lựa chọn. Nhà nào cũng đọc/ghi được file trong vault và dùng được MCP; riêng Claude Code và Codex có thêm lệnh máy cùng khả năng tự mở web. Nhà đã chọn trục trặc lúc chạy thì Minmin tự lùi sang bộ não khác thay vì để agent chết lặng. (Ollama chưa chạy được agent nên không xuất hiện ở đây.) Model của agent được áp THẬT khi workflow chạy.
   - Lưu ý an toàn: khi workflow chạy **nền tự động** (dispatcher Kanban, chế độ giới hạn công cụ file), agent luôn dùng Claude Code để giữ giới hạn công cụ an toàn - kể cả khi bạn chọn nhà khác. Model bạn chọn chỉ áp khi bạn gửi tin ở trang **Cộng sự**.
 - **Workflow** là một chuỗi nhiều bước, mỗi bước giao cho một agent làm một nhiệm vụ. Kết quả bước trước có thể chảy sang bước sau. Bạn có thể gắn thêm một **bước kiểm chứng**: một agent khác đóng vai người soi lỗi, mặc định giả định kết quả đang sai và phải tự chứng minh; nếu chưa đạt, workflow tự sửa lại vài lần.
-- Mọi agent và workflow được lưu thành **file .md trong vault** (bộ não đang chọn), nên bạn xem được, sửa tay được, và Javis cũng tạo được bằng lời qua chat.
+- Mọi agent và workflow được lưu thành **file .md trong vault** (bộ não đang chọn), nên bạn xem được, sửa tay được, và Minmin cũng tạo được bằng lời qua chat.
 
 Liên quan: chọn model cho agent xem [Models & engine](10-models-va-engine.md); tạo và bật/tắt skill để gán cho agent xem [Skills](06-skills.md).
 
-## Mở ở đâu trong Javis
+## Mở ở đâu trong Minmin
 
 Mở **Năng lực > Cộng sự** trên thanh bên của dashboard (mặc định tại cổng 7777). Trang có hai tab **Trợ lý | Quy trình**. Skills và Plugins vẫn nằm trong nhóm Năng lực.
 
@@ -30,11 +30,11 @@ Trên màn hình hẹp, dùng nút mở danh sách hoặc cột chi tiết để
 3. Sửa tên, vai trò, hướng dẫn, skills hoặc model ở cột phải rồi bấm **Lưu**.
 4. Bấm nút tạo hội thoại mới để bắt đầu một cuộc trò chuyện riêng với cùng trợ lý. Mỗi trợ lý có nhiều hội thoại; mở lại hội thoại gần đây ở cột phải để tiếp tục.
 
-Hội thoại cộng sự tách khỏi lịch sử chat chính của Javis. Quay lại một cộng sự sẽ mở tiếp phiên gần nhất của cộng sự đó.
+Hội thoại cộng sự tách khỏi lịch sử chat chính của Minmin. Quay lại một cộng sự sẽ mở tiếp phiên gần nhất của cộng sự đó.
 
-## Tạo mới, tìm kiếm và Javis Store
+## Tạo mới, tìm kiếm và Minmin Store
 
-Chọn tab cần dùng rồi bấm nút tạo trợ lý hoặc quy trình ở cuối cột trái. **Javis Store** mở kho gói tương ứng để thêm cộng sự có sẵn. Muốn xếp nhóm, điền trường **Nhóm** trong trình sửa.
+Chọn tab cần dùng rồi bấm nút tạo trợ lý hoặc quy trình ở cuối cột trái. **Minmin Store** mở kho gói tương ứng để thêm cộng sự có sẵn. Muốn xếp nhóm, điền trường **Nhóm** trong trình sửa.
 
 Ô tìm lọc theo tên, slug, vai trò hoặc mô tả, hỗ trợ gõ không dấu. Bộ lọc nhóm kết hợp với ô tìm. Mục chưa có nhóm thuộc **Chung**; mục chưa dùng nằm sau các mục đã dùng và được xếp theo tên.
 
@@ -53,7 +53,7 @@ Chọn tab cần dùng rồi bấm nút tạo trợ lý hoặc quy trình ở cu
 | **Skills** | Danh sách skill có sẵn trong vault, bấm tick để cho agent được dùng. | Chọn skill hợp với vai trò |
 | **Model** | Ô chọn có 8 lựa chọn, xem bảng ngay dưới. | Sonnet cho cân bằng, Opus khi cần suy luận sâu, Haiku khi cần nhanh và rẻ |
 
-4. Bấm **Lưu**. Nếu bạn quên nhập Tên, Javis sẽ nhắc "Nhập tên".
+4. Bấm **Lưu**. Nếu bạn quên nhập Tên, Minmin sẽ nhắc "Nhập tên".
 5. Thẻ agent mới hiện trong danh sách, có biểu tượng 🤖, kèm tên model và các nhãn skill đã gán. Nếu chưa gán skill nào, thẻ ghi "chưa gán skill".
 
 Ghi chú về ô Skills: danh sách skill lấy từ thư mục skill của vault. Nếu vault chưa có skill nào, khung sẽ báo "Vault chưa có skill trong skills/ - vẫn tạo agent được, gán skill sau." Bạn vẫn tạo agent bình thường và quay lại gán sau. Cách tạo skill xem trang [Skills](06-skills.md).
@@ -73,7 +73,7 @@ Ghi chú về ô Skills: danh sách skill lấy từ thư mục skill của vaul
 
 Dưới ô Model có dòng ghi chú: "Agent chạy qua CLI của nhà cung cấp: chọn Claude → Claude Code; chọn ChatGPT → Codex (cần đã đăng nhập ChatGPT ở máy/VPS). Cả hai đều đọc/ghi file vault + dùng MCP."
 
-**"Mặc định (theo CLI)" thật ra làm gì:** để trống thì Javis lấy **model phụ** bạn đặt ở trang **Models** trước (chỉ khi model phụ là một model Claude); không có model phụ Claude nào thì mới rơi về model mặc định của CLI. Nếu bạn muốn một agent luôn chạy đúng một model bất kể cấu hình chung, hãy chọn thẳng model cho nó thay vì để trống.
+**"Mặc định (theo CLI)" thật ra làm gì:** để trống thì Minmin lấy **model phụ** bạn đặt ở trang **Models** trước (chỉ khi model phụ là một model Claude); không có model phụ Claude nào thì mới rơi về model mặc định của CLI. Nếu bạn muốn một agent luôn chạy đúng một model bất kể cấu hình chung, hãy chọn thẳng model cho nó thay vì để trống.
 
 ### Tài liệu và link của một trợ lý
 
@@ -81,7 +81,7 @@ Mỗi trợ lý có một tủ tài liệu riêng: mở **Cài đặt trợ lý*
 
 - **Tab File**: tìm một file có sẵn trong brain để gắn vào, hoặc tải file từ máy lên (file tải lên nằm ở thư mục `sources` của brain). Kéo thả file vào khung cũng được.
 - **Tab Link**: dán một địa chỉ `http://` hoặc `https://` kèm tên gợi nhớ.
-- **Nút ghim** trên mỗi file: ghim là Javis **nạp sẵn nội dung file** vào đầu mỗi lượt trợ lý làm việc (tối đa 2000 ký tự mỗi file, 6000 ký tự tổng), thay vì chỉ cho nó biết tên file rồi tự mở khi cần. Ghim bảng giá vào là trợ lý trả lời được ngay mà không phải đi đọc.
+- **Nút ghim** trên mỗi file: ghim là Minmin **nạp sẵn nội dung file** vào đầu mỗi lượt trợ lý làm việc (tối đa 2000 ký tự mỗi file, 6000 ký tự tổng), thay vì chỉ cho nó biết tên file rồi tự mở khi cần. Ghim bảng giá vào là trợ lý trả lời được ngay mà không phải đi đọc.
 - **Nút X** gỡ khỏi trợ lý nhưng **không** xoá file trong brain. Muốn xoá hẳn thì dùng nút thùng rác bên cạnh.
 
 Phạm vi: danh sách này thuộc về **trợ lý**, nên mọi cuộc trò chuyện với nó và mọi bước quy trình gọi tới nó đều thấy. Muốn gắn tài liệu cho riêng một cuộc trò chuyện thì dùng nút **File & link** ở thanh trên khung chat. Chỗ lưu là chính file `.md` của trợ lý (khoá `assets` trong frontmatter), nên xuất trợ lý ra hay copy brain sang máy khác thì danh sách đi theo.
@@ -96,12 +96,12 @@ Nhóm **không** nằm trong form cài đặt (từ bản 0.62.0). Bạn xếp n
 
 Ngoài file `.md`, mỗi agent còn có hai thứ nằm trong thư mục `memory/agents/<slug>/` của brain:
 
-- **`MEMORY.md` - bộ nhớ riêng.** Mỗi lần agent chạy, Javis đọc file này và chèn thẳng vào system prompt của agent dưới tiêu đề `# Bộ nhớ của bạn:`. Đây là chỗ để tích luỹ những gì agent cần nhớ lâu dài: quy ước riêng, danh sách khách, những lỗi đã bị nhắc. File này có **hai nguồn ghi**: bạn viết tay, và chính agent **tự bồi đắp lúc chạy** - cuối một nhiệm vụ, nếu rút ra được bài học tái dùng, agent đề xuất và Javis ghi hộ vào mục `## Bài học (tự học)` của file. Javis (chứ không phải model) cầm bút nên có rào cứng: tự loại bài học trùng, chỉ giữ 15 dòng mới nhất để bộ nhớ đặc dần thay vì dài dần, và phần bạn viết tay ngoài mục đó không bao giờ bị chạm. Nghĩa là agent thông minh dần lên theo mỗi lần dùng, không có job nền nào quét hàng loạt.
-- **`runs/` - nhật ký chạy.** Mỗi bước workflow chạy xong (kể cả bước kiểm chứng), Javis ghi thêm một mục vào `runs/<YYYY-MM-DD>.md` gồm giờ chạy, nhiệm vụ đã giao, và kết quả (cắt gọn). Đây là chỗ để soi lại "hôm qua agent này đã làm gì" mà không cần mở lại bảng theo dõi. Nhật ký thô này không đi vào git của brain.
+- **`MEMORY.md` - bộ nhớ riêng.** Mỗi lần agent chạy, Minmin đọc file này và chèn thẳng vào system prompt của agent dưới tiêu đề `# Bộ nhớ của bạn:`. Đây là chỗ để tích luỹ những gì agent cần nhớ lâu dài: quy ước riêng, danh sách khách, những lỗi đã bị nhắc. File này có **hai nguồn ghi**: bạn viết tay, và chính agent **tự bồi đắp lúc chạy** - cuối một nhiệm vụ, nếu rút ra được bài học tái dùng, agent đề xuất và Minmin ghi hộ vào mục `## Bài học (tự học)` của file. Minmin (chứ không phải model) cầm bút nên có rào cứng: tự loại bài học trùng, chỉ giữ 15 dòng mới nhất để bộ nhớ đặc dần thay vì dài dần, và phần bạn viết tay ngoài mục đó không bao giờ bị chạm. Nghĩa là agent thông minh dần lên theo mỗi lần dùng, không có job nền nào quét hàng loạt.
+- **`runs/` - nhật ký chạy.** Mỗi bước workflow chạy xong (kể cả bước kiểm chứng), Minmin ghi thêm một mục vào `runs/<YYYY-MM-DD>.md` gồm giờ chạy, nhiệm vụ đã giao, và kết quả (cắt gọn). Đây là chỗ để soi lại "hôm qua agent này đã làm gì" mà không cần mở lại bảng theo dõi. Nhật ký thô này không đi vào git của brain.
 
 Cả hai đều là file văn bản thường: mở, đọc và sửa tay được qua [Quản lý tệp tin](05-quan-ly-tep-tin.md). Muốn dạy một agent nhớ điều gì, cứ viết thẳng vào `memory/agents/<slug>/MEMORY.md` là lần chạy sau nó đã biết.
 
-Phân biệt: bộ nhớ này là của **riêng một agent**; bộ nhớ chung của Javis về bạn và doanh nghiệp nằm ở `memory/MEMORY.md` và `memory/facts/`, xem [Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md).
+Phân biệt: bộ nhớ này là của **riêng một agent**; bộ nhớ chung của Minmin về bạn và doanh nghiệp nằm ở `memory/MEMORY.md` và `memory/facts/`, xem [Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md).
 
 ### Sửa hoặc xoá agent
 
@@ -125,7 +125,7 @@ Tạo ít nhất một trợ lý ở tab **Trợ lý** trước khi tạo quy tr
      - `{{prev}}` = kết quả của bước ngay trước đó.
    - Phần **Kiểm chứng** (không bắt buộc): chọn một agent đóng vai người soi lỗi cho bước này, và số lần cho phép sửa lại. Để mặc định "- không kiểm chứng -" nếu không cần. Số lần sửa mặc định là 1, cho phép từ 0 đến 5.
 5. Bấm **+ Bước** để thêm bước mới.
-6. Bấm **Lưu**. Nếu quên nhập Tên, Javis nhắc "Nhập tên". Workflow mới lưu ở trạng thái sẵn sàng (active).
+6. Bấm **Lưu**. Nếu quên nhập Tên, Minmin nhắc "Nhập tên". Workflow mới lưu ở trạng thái sẵn sàng (active).
 
 ### Hàng tiêu đề của một bước
 
@@ -142,7 +142,7 @@ Mỗi bước có một hàng tiêu đề, đọc từ trái sang phải:
 
 **Gập và mở bước:** bấm vào hàng tiêu đề (chỗ trống, không phải nút hay ô chọn) để gập hoặc mở phần thân của bước đó. Khi bạn mở một workflow đã có để **sửa**, tất cả các bước mặc định gập hết lại để bạn thấy toàn cảnh dây chuyền trước; bấm vào bước nào thì bước đó mở ra cho sửa. Workflow **mới tạo** chỉ có một bước nên mở sẵn.
 
-Chữ đang gõ dở không bị mất khi bạn gập/mở, đổi thứ tự hay xoá bước khác - Javis lưu tạm nội dung mọi bước trước mỗi lần vẽ lại.
+Chữ đang gõ dở không bị mất khi bạn gập/mở, đổi thứ tự hay xoá bước khác - Minmin lưu tạm nội dung mọi bước trước mỗi lần vẽ lại.
 
 ### Ví dụ một workflow 2 bước
 
@@ -162,19 +162,19 @@ Chọn quy trình ở cột trái. Cột phải có nút **Sửa**, **Xuất** v
 4. Nếu cần duyệt, đọc yêu cầu và dùng nút duyệt ở cột phải để tiếp tục. Lỗi và trạng thái chờ cũng được báo trong chat.
 5. Khi hoàn tất, kết quả về khung chat. Tin tiếp theo trong cùng hội thoại nhớ kết quả lần trước, nên bạn có thể góp ý và chạy lại, ví dụ: "Giữ ý chính, viết ngắn hơn".
 
-**Lịch sử chạy** ở cột phải liệt kê các lần chạy gần nhất. Bấm một lần chạy để xem chi tiết và mở lại hội thoại nếu lần chạy có phiên chat. Quy trình vừa chạy tự lên đầu danh sách. Bạn cũng có thể hỏi Javis ở khung chat chính: "Quy trình chạy gần nhất ra sao?" để tra lịch sử đã lưu, bao gồm lần chạy từ Cộng sự và Kanban.
+**Lịch sử chạy** ở cột phải liệt kê các lần chạy gần nhất. Bấm một lần chạy để xem chi tiết và mở lại hội thoại nếu lần chạy có phiên chat. Quy trình vừa chạy tự lên đầu danh sách. Bạn cũng có thể hỏi Minmin ở khung chat chính: "Quy trình chạy gần nhất ra sao?" để tra lịch sử đã lưu, bao gồm lần chạy từ Cộng sự và Kanban.
 
 Mỗi bước vẫn ghi nhật ký của trợ lý tại `memory/agents/<slug>/runs/`. Nếu mất kết nối, kiểm tra lịch sử chạy trước khi gửi lại để tránh chạy trùng.
 
 ## Tạo agent và workflow bằng lời (qua chat)
 
-Bạn không bắt buộc phải dùng form. Trong khung trò chuyện với Javis (xem [Trò chuyện & giọng nói](02-tro-chuyen-va-giong-noi.md)), bạn có thể ra lệnh bằng lời, ví dụ:
+Bạn không bắt buộc phải dùng form. Trong khung trò chuyện với Minmin (xem [Trò chuyện & giọng nói](02-tro-chuyen-va-giong-noi.md)), bạn có thể ra lệnh bằng lời, ví dụ:
 
 - "Tạo agent chuyên viết email bán hàng."
 - "Tạo workflow nghiên cứu rồi viết bài."
 - "Thêm bước biên tập vào workflow X."
 
-Khi đó Javis tự ghi file .md tương ứng vào vault, tự đặt slug không dấu, tự xếp nhóm (đọc nhóm đang dùng trong brain rồi lấy nhóm sát nhất), tự gán skill hợp lý từ skill có sẵn, và nếu workflow nhắc tới một agent chưa tồn tại thì tạo agent đó trước. Sau khi làm xong, Javis báo ngắn gọn đã tạo/sửa file nào. Bạn quay lại trang Cộng sự là thấy ngay, không cần thao tác thêm.
+Khi đó Minmin tự ghi file .md tương ứng vào vault, tự đặt slug không dấu, tự xếp nhóm (đọc nhóm đang dùng trong brain rồi lấy nhóm sát nhất), tự gán skill hợp lý từ skill có sẵn, và nếu workflow nhắc tới một agent chưa tồn tại thì tạo agent đó trước. Sau khi làm xong, Minmin báo ngắn gọn đã tạo/sửa file nào. Bạn quay lại trang Cộng sự là thấy ngay, không cần thao tác thêm.
 
 Cách này tiện khi bạn mô tả được ý định bằng lời nhưng ngại điền form, hoặc muốn chỉnh nhiều bước cùng lúc.
 
@@ -182,7 +182,7 @@ Cách này tiện khi bạn mô tả được ý định bằng lời nhưng ng�
 
 Trong brain theo cấu trúc mới, mỗi agent là một file `agents/<slug>.md` và mỗi workflow là một file `workflows/<slug>.md`. `slug` là tên viết thường, có gạch ngang, không dấu (ví dụ "viết email" thành `viet-email`).
 
-**Brain cũ chưa chuyển cấu trúc** thì hai thư mục đó nằm ở `Javis/agents/` và `Javis/workflows/`. Javis tự dò: có thư mục mới thì dùng thư mục mới, không có thì dùng đường cũ. Nên nếu bạn mở trang Tệp tin mà không thấy `agents/` ở gốc brain, hãy tìm trong `Javis/`.
+**Brain cũ chưa chuyển cấu trúc** thì hai thư mục đó nằm ở `Javis/agents/` và `Javis/workflows/`. Minmin tự dò: có thư mục mới thì dùng thư mục mới, không có thì dùng đường cũ. Nên nếu bạn mở trang Tệp tin mà không thấy `agents/` ở gốc brain, hãy tìm trong `Javis/`.
 
 Vì là file văn bản, bạn có thể mở qua [Quản lý tệp tin](05-quan-ly-tep-tin.md) để xem hoặc sửa tay. Cấu trúc file:
 
@@ -209,13 +209,13 @@ Sửa file rồi lưu thì trang Cộng sự tự nhận nội dung mới ở l�
 Bạn có thể đóng gói một agent, skill hoặc workflow thành **một file `.zip`** để gửi cho người khác, và nhận file của người khác về brain của mình.
 
 - **Xuất:** mỗi thẻ agent / skill / workflow có nút **⤓ Xuất**. Bấm là tải về một gói `.zip`. Gói này **tự kèm phụ thuộc** để bên nhận chạy được ngay: xuất một workflow sẽ kèm luôn các agent mà workflow đó dùng và các skill của những agent đó; xuất một agent sẽ kèm skill của agent. Skill **hệ thống** không được đóng gói vì brain nào cũng đã có sẵn.
-- **An toàn:** khi nhập, Javis chặn các đường dẫn bất thường trong gói (không cho ghi ra ngoài các thư mục agent/skill/workflow) và giới hạn dung lượng để tránh file độc. Dù vậy, chỉ nên nhập gói từ nguồn bạn tin tưởng, vì nội dung skill là hướng dẫn cho AI làm theo.
+- **An toàn:** khi nhập, Minmin chặn các đường dẫn bất thường trong gói (không cho ghi ra ngoài các thư mục agent/skill/workflow) và giới hạn dung lượng để tránh file độc. Dù vậy, chỉ nên nhập gói từ nguồn bạn tin tưởng, vì nội dung skill là hướng dẫn cho AI làm theo.
 
 Lưu ý: gói xuất chỉ chứa file định nghĩa. **Bộ nhớ riêng và nhật ký chạy của agent không đi theo gói** - bên nhận có được vai trò và kỹ năng, không có ký ức.
 
 ## Thao tác nhanh và khắc phục sự cố
 
-- **Tạo mới:** chọn tab rồi bấm nút tạo ở cuối cột trái; hoặc mở **Javis Store**.
+- **Tạo mới:** chọn tab rồi bấm nút tạo ở cuối cột trái; hoặc mở **Minmin Store**.
 - **Hội thoại mới:** bắt đầu phiên riêng với cộng sự đang chọn.
 - **Sửa / Xuất / Xoá:** nằm ở cột phải của cộng sự.
 - **Danh sách trống:** kiểm tra brain đang chọn, ô tìm và bộ lọc nhóm, rồi tạo cộng sự nếu chưa có.
@@ -230,5 +230,5 @@ Lưu ý: gói xuất chỉ chứa file định nghĩa. **Bộ nhớ riêng và n
 - [Plugins](20-plugins.md) - mục trong nhóm Năng lực, dành cho tool chạy code thật.
 - [Models & engine](10-models-va-engine.md) - chọn model chính, model phụ và các nhà cung cấp.
 - [Việc / Kanban](21-viec-kanban.md) - nơi workflow chạy nền tự động theo task.
-- [Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md) - phân biệt bộ nhớ riêng của agent với bộ nhớ chung của Javis.
+- [Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md) - phân biệt bộ nhớ riêng của agent với bộ nhớ chung của Minmin.
 - [Quản lý tệp tin](05-quan-ly-tep-tin.md) - mở và sửa tay file agent, workflow, bộ nhớ.

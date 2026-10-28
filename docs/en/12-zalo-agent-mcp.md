@@ -2,8 +2,8 @@
 
 *[Tiếng Việt](../12-zalo.md) · **English***
 
-> **Javis touches Zalo in THREE places, do not mix them up.** This page covers the first:
-> signing in with **your own Zalo account** so Javis can act on your behalf. The other two
+> **Minmin touches Zalo in THREE places, do not mix them up.** This page covers the first:
+> signing in with **your own Zalo account** so Minmin can act on your behalf. The other two
 > use the official API, which is safe, but they only see what people send directly to the bot.
 >
 > | | Zalo Agent MCP (this page) | [Zalo Bot channel](26-zalo-bot-channel.md) | [Chatbot](25-chatbots.md) |
@@ -13,11 +13,11 @@
 > | Risk of account lockout | Yes | No | No |
 > | Can read old conversations | Yes | Only messages sent to the bot | Only messages sent to the bot |
 > | Can message someone who never contacted the bot | Yes | No | No |
-> | Used for | Javis working on your behalf | **You** messaging Javis | **Customers** messaging Javis |
+> | Used for | Minmin working on your behalf | **You** messaging Minmin | **Customers** messaging Minmin |
 >
 > Running all three at once is fine, they do not collide.
 
-Javis connects a personal Zalo account through the standard MCP of the
+Minmin connects a personal Zalo account through the standard MCP of the
 [`zalo-agent-cli`](https://github.com/PhucMPham/zalo-agent-cli) project. The new flow has a
 single MCP process: sign in by QR, read or search conversations and send messages through the
 tools the upstream project provides.
@@ -28,11 +28,11 @@ tools the upstream project provides.
 
 ## What you need
 
-- Node.js 20 or newer on the machine or VPS running Javis.
+- Node.js 20 or newer on the machine or VPS running Minmin.
 - A phone already signed in to the Zalo account you want to connect.
-- Javis started and you able to sign in to the dashboard.
+- Minmin started and you able to sign in to the dashboard.
 
-Javis pins `zalo-agent-cli` at version `1.6.2`, the version verified against the seven MCP
+Minmin pins `zalo-agent-cli` at version `1.6.2`, the version verified against the seven MCP
 tools below.
 
 ## Connecting by QR
@@ -66,7 +66,7 @@ The list follows the `zalo-agent-cli` 1.6.2 source. Upstream MCP documentation:
 
 ## Sending images and files
 
-`zalo_send_message` above **only sends text**. To send an image (say one Javis just generated)
+`zalo_send_message` above **only sends text**. To send an image (say one Minmin just generated)
 or a file (a PDF report, a spreadsheet), use the `zalo_send_image` tool provided by the bundled
 `zalo-image` plugin. The plugin is on by default, needs no extra install, and uses exactly the
 Zalo account you scanned the QR with.
@@ -81,14 +81,14 @@ to Nam over Zalo".
 Three things worth knowing:
 
 - **Only files inside the brain in use can be sent.** This is a deliberate safety rail: without
-  it, one cleverly worded chat message could make Javis send any file on the server outside, and
+  it, one cleverly worded chat message could make Minmin send any file on the server outside, and
   a Zalo message cannot be recalled.
 - **One send carries one kind**, either all images or all files, up to 10 files. Mixing them
-  makes Zalo display the wrong type, so Javis reports back instead of guessing.
-- **With several Zalo accounts attached, Javis asks** which one to send from. Sending from the
+  makes Zalo display the wrong type, so Minmin reports back instead of guessing.
+- **With several Zalo accounts attached, Minmin asks** which one to send from. Sending from the
   wrong account means sending under someone else's identity, so this is not a place to guess.
 
-Node.js 20+ is required on the machine running Javis, same as for the Zalo connection itself.
+Node.js 20+ is required on the machine running Minmin, same as for the Zalo connection itself.
 
 ## Using it in chat
 
@@ -100,8 +100,8 @@ You can speak naturally:
 - "Send the Sales group: meeting at 9am tomorrow."
 
 When sending, state the name or `threadId` clearly, the content, and whether it is a person or a
-group. If the search returns several chats with the same name, Javis must ask back rather than
-guess. If exactly one result matches, Javis sends right away with `zalo_send_message`; no
+group. If the search returns several chats with the same name, Minmin must ask back rather than
+guess. If exactly one result matches, Minmin sends right away with `zalo_send_message`; no
 listener has to be enabled, the recipient does not have to message first, and nothing depends on
 a watch list.
 
@@ -123,8 +123,8 @@ The new flow dropped the `listen --webhook` sidecar, the `/hook/zalo` endpoint, 
 continuously" panel, the per-chat rules file and the two plugins `javis_zalo_rule` and
 `javis_zalo_send`. No listener process turns the MCP connector off and back on any more.
 
-Because of that, Javis does not forward Zalo messages to Telegram in the background. When you
-want to check messages, ask Javis; MCP can use `zalo_get_messages` for buffered messages or
+Because of that, Minmin does not forward Zalo messages to Telegram in the background. When you
+want to check messages, ask Minmin; MCP can use `zalo_get_messages` for buffered messages or
 `zalo_get_history` for history.
 
 ## Troubleshooting
@@ -145,4 +145,4 @@ want to check messages, ask Javis; MCP can use `zalo_get_messages` for buffered 
 
 - [The `zalo-agent-cli` repository](https://github.com/PhucMPham/zalo-agent-cli)
 - [Upstream MCP guide](https://github.com/PhucMPham/zalo-agent-cli/blob/main/skill/references/mcp-guide.md)
-- [Connections and MCP permissions in Javis](09-connections-and-business-data.md)
+- [Connections and MCP permissions in Minmin](09-connections-and-business-data.md)

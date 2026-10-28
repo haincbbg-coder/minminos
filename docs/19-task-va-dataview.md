@@ -2,7 +2,7 @@
 
 ***Tiếng Việt** · [English](en/19-tasks-and-dataview.md)*
 
-Từ bản 0.9.216, note trong brain của Javis "sống" hơn hẳn theo kiểu Obsidian: ô checkbox `- [ ]` trong note **bấm được và tự lưu**, còn khối ` ```dataview ` **chạy thật** ngay trong dashboard - hiện danh sách việc, danh sách note, bảng tổng hợp lấy từ toàn bộ brain. Hai tính năng này lấy cảm hứng từ hai plugin nổi tiếng của Obsidian là **Tasks** và **Dataview**, được Javis tự cài lại gọn nhẹ, không cần cài Obsidian hay plugin nào cả.
+Từ bản 0.9.216, note trong brain của Minmin "sống" hơn hẳn theo kiểu Obsidian: ô checkbox `- [ ]` trong note **bấm được và tự lưu**, còn khối ` ```dataview ` **chạy thật** ngay trong dashboard - hiện danh sách việc, danh sách note, bảng tổng hợp lấy từ toàn bộ brain. Hai tính năng này lấy cảm hứng từ hai plugin nổi tiếng của Obsidian là **Tasks** và **Dataview**, được Minmin tự cài lại gọn nhẹ, không cần cài Obsidian hay plugin nào cả.
 
 ## 1. Checkbox task bấm được
 
@@ -15,28 +15,28 @@ Trong file markdown, một dòng việc viết theo cú pháp chuẩn:
 - [x] Chốt báo giá lô hàng thép
 ```
 
-Trước đây Javis chỉ hiển thị mấy ô này cho đẹp, muốn tick phải mở chế độ Nguồn sửa tay chữ `[ ]` thành `[x]`. Giờ thì bấm thẳng vào ô vuông là xong: dấu tick hiện ra, chữ gạch ngang, và **file được lưu ngay lập tức** - không cần bấm nút 💾 Lưu.
+Trước đây Minmin chỉ hiển thị mấy ô này cho đẹp, muốn tick phải mở chế độ Nguồn sửa tay chữ `[ ]` thành `[x]`. Giờ thì bấm thẳng vào ô vuông là xong: dấu tick hiện ra, chữ gạch ngang, và **file được lưu ngay lập tức** - không cần bấm nút 💾 Lưu.
 
 ### Tick ở đâu
 
 - **Trang Tệp tin** (nhóm **Bộ não** trên thanh nav trái): mở một file `.md`, để ở chế độ **Sửa** (bản render, mặc định). Bấm checkbox là tick và tự lưu.
-- **Khung sửa file bung ra từ chat** (khi bấm vào link file trong câu trả lời của Javis): y hệt, tick là lưu.
+- **Khung sửa file bung ra từ chat** (khi bấm vào link file trong câu trả lời của Minmin): y hệt, tick là lưu.
 - **Trong tin nhắn chat**: checkbox chỉ để xem, không bấm được. Lý do: nội dung chat không gắn với file nào để ghi lại.
 - **Trong kết quả khối dataview**: bấm được, ghi thẳng vào file gốc chứa việc đó (xem phần 2).
 
 ### Gõ nhanh task với menu gợi ý (kiểu Obsidian, bản gọn)
 
-Trong chế độ **Sửa** của note, Javis có bộ gợi ý giống plugin Tasks của Obsidian nhưng rút gọn cho đỡ ngợp:
+Trong chế độ **Sửa** của note, Minmin có bộ gợi ý giống plugin Tasks của Obsidian nhưng rút gọn cho đỡ ngợp:
 
 1. Gõ `- [ ]` ở đầu dòng rồi **ấn phím cách** - dòng đó biến ngay thành task thật có checkbox. Đang ở danh sách gạch đầu dòng thì chỉ cần gõ `[ ]` rồi ấn cách.
 2. Đứng ở **cuối dòng task**, ấn phím cách - bung menu 6 mục: 📅 hạn chót, ⏳ ngày dự kiến, 🛫 ngày bắt đầu, và 3 mức ưu tiên ⏫🔼🔽.
-3. Chọn mục ngày - bung tiếp: **Hôm nay / Ngày mai / Cuối tuần / Tuần sau / Chọn ngày…** (mở lịch). Chọn xong Javis chèn thẳng `📅 2026-07-28` vào dòng, đúng chuẩn obsidian-tasks nên mọi khối truy vấn đều hiểu.
+3. Chọn mục ngày - bung tiếp: **Hôm nay / Ngày mai / Cuối tuần / Tuần sau / Chọn ngày…** (mở lịch). Chọn xong Minmin chèn thẳng `📅 2026-07-28` vào dòng, đúng chuẩn obsidian-tasks nên mọi khối truy vấn đều hiểu.
 
 Điều khiển bằng mũi tên lên xuống + Enter, hoặc bấm chuột. Esc để đóng, gõ chữ tiếp thì menu tự tắt, không cản trở việc viết.
 
 ### Ký hiệu ngày và độ ưu tiên (kiểu plugin Tasks)
 
-Javis hiểu các ký hiệu emoji mà plugin obsidian-tasks dùng, viết ngay trong dòng việc:
+Minmin hiểu các ký hiệu emoji mà plugin obsidian-tasks dùng, viết ngay trong dòng việc:
 
 | Ký hiệu | Ý nghĩa | Ví dụ |
 |---|---|---|
@@ -65,7 +65,7 @@ TASK WHERE !completed
 ```
 ````
 
-Khi mở note đó trong Javis (hoặc khi Javis dán khối này vào câu trả lời chat), khối không hiện dưới dạng code nữa mà **chạy truy vấn thật** trên toàn bộ note `.md` của brain đang chọn và vẽ kết quả: danh sách việc chưa xong, gom theo từng file, tick được từng việc.
+Khi mở note đó trong Minmin (hoặc khi Minmin dán khối này vào câu trả lời chat), khối không hiện dưới dạng code nữa mà **chạy truy vấn thật** trên toàn bộ note `.md` của brain đang chọn và vẽ kết quả: danh sách việc chưa xong, gom theo từng file, tick được từng việc.
 
 Ba loại truy vấn:
 
@@ -131,7 +131,7 @@ SORT file.mtime DESC
 
 ### Tick việc ngay trong kết quả
 
-Kết quả `TASK` có checkbox y như trong note. Tick một cái là Javis ghi thẳng vào **file gốc** chứa dòng việc đó, kể cả khi bạn đang đứng ở một note tổng hợp khác. Có rào an toàn: nếu file gốc vừa bị sửa (dòng việc không còn đúng chỗ cũ), Javis tự dò lại đúng dòng theo nội dung; dò không chắc chắn thì báo lỗi "File đã thay đổi" và **không ghi bừa** - bạn tải lại trang rồi tick lại là được.
+Kết quả `TASK` có checkbox y như trong note. Tick một cái là Minmin ghi thẳng vào **file gốc** chứa dòng việc đó, kể cả khi bạn đang đứng ở một note tổng hợp khác. Có rào an toàn: nếu file gốc vừa bị sửa (dòng việc không còn đúng chỗ cũ), Minmin tự dò lại đúng dòng theo nội dung; dò không chắc chắn thì báo lỗi "File đã thay đổi" và **không ghi bừa** - bạn tải lại trang rồi tick lại là được.
 
 ### Ví dụ thực dụng
 
@@ -203,13 +203,13 @@ Mọi khối ra danh sách việc (` ```tasks ` hoặc `TASK`) đều có nút *
 
 File này **chỉ được tạo ở lần bạn thêm việc đầu tiên**. Không dùng nút "+ Việc" thì nó không bao giờ xuất hiện, nên thư mục Dashboard không có file rỗng nằm chờ.
 
-Javis **dò** thư mục dashboard chứ không cắm cứng một tên: thư mục cấp 1 nào của brain có tên là `dashboard` (không phân biệt hoa thường, cho phép tiền tố số thứ tự kiểu `00 - Dashboard`, `01 - dashboard`, `02_Dashboard`) thì việc mới rơi vào đó. Brain chưa có thư mục nào khớp thì Javis mới tạo mới với tên `00 - Dashboard`.
+Minmin **dò** thư mục dashboard chứ không cắm cứng một tên: thư mục cấp 1 nào của brain có tên là `dashboard` (không phân biệt hoa thường, cho phép tiền tố số thứ tự kiểu `00 - Dashboard`, `01 - dashboard`, `02_Dashboard`) thì việc mới rơi vào đó. Brain chưa có thư mục nào khớp thì Minmin mới tạo mới với tên `00 - Dashboard`.
 
 ### Trang Dashboard mặc định
 
-Thư mục dashboard nằm trong cấu trúc chuẩn của brain: brain mới được tạo sẵn `00 - Dashboard` kèm một file seed là `Dashboard.md` (các khối tasks: quá hạn, hôm nay, sắp tới, chưa có hạn). Brain cũ thiếu thì banner cấu trúc vault có nút tạo bổ sung. File seed chỉ tạo khi chưa có - bạn sửa gì Javis giữ nguyên.
+Thư mục dashboard nằm trong cấu trúc chuẩn của brain: brain mới được tạo sẵn `00 - Dashboard` kèm một file seed là `Dashboard.md` (các khối tasks: quá hạn, hôm nay, sắp tới, chưa có hạn). Brain cũ thiếu thì banner cấu trúc vault có nút tạo bổ sung. File seed chỉ tạo khi chưa có - bạn sửa gì Minmin giữ nguyên.
 
-`Task Inbox.md` **không** nằm trong bộ seed (từ 0.55.17): nó chỉ mọc ra khi bạn bấm "+ Việc" lần đầu. Brain cũ đang có sẵn file đó mà bạn không dùng thì cứ xoá, Javis không tạo lại.
+`Task Inbox.md` **không** nằm trong bộ seed (từ 0.55.17): nó chỉ mọc ra khi bạn bấm "+ Việc" lần đầu. Brain cũ đang có sẵn file đó mà bạn không dùng thì cứ xoá, Minmin không tạo lại.
 
 ### Chưa hỗ trợ gì
 
@@ -240,8 +240,8 @@ Giới hạn còn lại:
 ## Khắc phục sự cố
 
 - **Bấm checkbox không ăn**: kiểm tra bạn đang ở chế độ **Sửa** (bản render) chứ không phải **Nguồn**; trong chat thì checkbox vốn chỉ để xem. Nếu vẫn không ăn, khả năng server đang chạy bản cũ hơn 0.9.216 - cập nhật rồi tải lại trang (Ctrl+Shift+R).
-- **Khối dataview hiện "Đang chạy truy vấn…" mãi**: server chưa có API `/files/mdindex` (bản cũ). Cập nhật Javis rồi khởi động lại server.
+- **Khối dataview hiện "Đang chạy truy vấn…" mãi**: server chưa có API `/files/mdindex` (bản cũ). Cập nhật Minmin rồi khởi động lại server.
 - **Kết quả trống dù chắc chắn có việc**: xem lại `FROM` - tên thư mục phải đúng nguyên văn (có dấu, có số thứ tự, ví dụ `"05 - Việc"` chứ không phải `"Việc"`); tag phải có `#`.
-- **Báo "File đã thay đổi - tải lại rồi tick lại"**: file gốc vừa bị sửa chỗ khác (bởi bạn hoặc bởi Javis). Tải lại trang cho khối chạy lại với dữ liệu mới rồi tick lại.
+- **Báo "File đã thay đổi - tải lại rồi tick lại"**: file gốc vừa bị sửa chỗ khác (bởi bạn hoặc bởi Minmin). Tải lại trang cho khối chạy lại với dữ liệu mới rồi tick lại.
 
 Xem thêm: [Quản lý tệp tin](05-quan-ly-tep-tin.md) (mở và sửa note), [Second Brain: bộ nhớ, Wiki, INGEST](13-second-brain-bo-nho-wiki.md) (cấu trúc brain), [Khắc phục sự cố & FAQ](17-khac-phuc-su-co.md).

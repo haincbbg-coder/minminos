@@ -10,7 +10,7 @@ Mở tại: trang **Tự học** (nhóm **Bộ não** trên thanh nav trái), k�
 
 ## Vì sao nên bật
 
-Brain là toàn bộ tri thức Javis tích luỹ được về bạn và công việc. Nó nằm trên đĩa máy/VPS. Nếu chỉ có một bản, một sự cố là mất sạch. Đồng bộ với GitHub cho bạn:
+Brain là toàn bộ tri thức Minmin tích luỹ được về bạn và công việc. Nó nằm trên đĩa máy/VPS. Nếu chỉ có một bản, một sự cố là mất sạch. Đồng bộ với GitHub cho bạn:
 
 - Bản sao ngoài, an toàn khi máy hỏng.
 - Lịch sử từng lần thay đổi (xem lại, khôi phục điểm cũ).
@@ -40,7 +40,7 @@ Brain là toàn bộ tri thức Javis tích luỹ được về bạn và công 
 4. **Permissions** → Repository permissions → **Contents** → chọn **Read and write**.
 5. Bấm Generate, **copy token** (dạng `github_pat_...`). Token chỉ hiện 1 lần - copy ngay.
 
-### Bước 3 - Dán vào Javis
+### Bước 3 - Dán vào Minmin
 
 1. Mở trang **Tự học** → mục **⇅ Đồng bộ brain với GitHub (2 chiều)**.
 2. Dán **URL repo (https)** và **GitHub token (fine-grained, quyền Contents)** vào ô tương ứng.
@@ -71,7 +71,7 @@ Mỗi lượt đồng bộ làm 4 việc theo thứ tự:
 1. **Chụp** thư mục brains vào một bản sao sạch (bỏ file nhạy cảm + git thô của từng brain) và ghi nhận thay đổi của máy này.
 2. **Kéo về** bản mới nhất trên GitHub và **hoà nhập**: file khác nhau thì tự ghép; hai máy cùng sửa MỘT file thì **bản sửa mới hơn thắng**, bản thua được giữ nguyên thành file `.conflict-<local|remote>-<thời điểm>` ngay cạnh để bạn tự quyết; một bên sửa một bên xoá thì bản sửa thắng (không âm thầm mất dữ liệu).
 3. **Áp kết quả** về thư mục brains của máy (file vừa sửa tay ngay trong lúc đồng bộ sẽ không bị đè - máy giữ bản của bạn, vòng sau tự hoà tiếp).
-4. **Đẩy lên** GitHub (đẩy thường, KHÔNG force). Nếu máy khác vừa đẩy chen ngang, Javis tự kéo về hoà tiếp rồi đẩy lại.
+4. **Đẩy lên** GitHub (đẩy thường, KHÔNG force). Nếu máy khác vừa đẩy chen ngang, Minmin tự kéo về hoà tiếp rồi đẩy lại.
 
 Ghi chú an toàn của cơ chế:
 
@@ -100,20 +100,20 @@ Với chữ, tính chất đó là ưu điểm. Git nén rất tốt và chỉ l
 
 Với media thì ngược hẳn. File `.mp4` hay `.jpg` đã được codec nén sẵn, git không nén thêm được, và hai bản render của cùng một clip thì với git là hai file hoàn toàn khác nhau chứ không phải một file sửa nhẹ. Mỗi lượt xuất lại là thêm nguyên một cục vào kho, vĩnh viễn. Một brain vài trăm MB media cộng thói quen chỉnh vài lượt mỗi clip sẽ đẩy repo lên nhiều GB trong ít tháng, và máy mới clone về phải tải cả những bản render đã bỏ từ năm ngoái.
 
-Lúc đó muốn dọn thì phải **viết lại toàn bộ lịch sử** (`git filter-repo` hoặc BFG). Việc đó đổi mã băm của mọi commit, nên mọi bản sao ở máy khác thành không tương thích và phải tải lại từ đầu. Với Javis đang đồng bộ hai chiều nhiều máy thì đó là thảm hoạ chứ không phải một thao tác bảo trì. Nên cách đúng là ngay từ đầu đừng cho media vào.
+Lúc đó muốn dọn thì phải **viết lại toàn bộ lịch sử** (`git filter-repo` hoặc BFG). Việc đó đổi mã băm của mọi commit, nên mọi bản sao ở máy khác thành không tương thích và phải tải lại từ đầu. Với Minmin đang đồng bộ hai chiều nhiều máy thì đó là thảm hoạ chứ không phải một thao tác bảo trì. Nên cách đúng là ngay từ đầu đừng cho media vào.
 
 ### Vậy media sao lưu ở đâu
 
 Dùng thứ lưu theo **trạng thái hiện tại**: Google Drive, OneDrive, ổ cứng ngoài, NAS. Ở đó xoá là mất thật và đòi lại được dung lượng thật - đúng thứ bạn cần cho ảnh và video. Hai công cụ chia việc cho nhau chứ không thay nhau: git giữ tri thức và toàn bộ lịch sử của nó, Drive giữ file nặng ở trạng thái mới nhất.
 
-Sau mỗi lần bấm **⇅ Đồng bộ ngay**, nếu có media bị bỏ qua thì Javis ghi rõ ngay dưới dòng trạng thái: bao nhiêu file, tổng bao nhiêu MB. Bỏ qua lặng lẽ thì có ngày bạn tưởng ảnh của mình cũng đã được sao lưu, tới lúc mất máy mới biết là không.
+Sau mỗi lần bấm **⇅ Đồng bộ ngay**, nếu có media bị bỏ qua thì Minmin ghi rõ ngay dưới dòng trạng thái: bao nhiêu file, tổng bao nhiêu MB. Bỏ qua lặng lẽ thì có ngày bạn tưởng ảnh của mình cũng đã được sao lưu, tới lúc mất máy mới biết là không.
 
 ### Muốn ảnh cũng đi theo: công tắc "Đồng bộ cả ảnh"
 
 Có người thật sự cần ảnh trong brain (chụp màn hình, ảnh sản phẩm vài trăm KB) đi theo tri thức sang máy khác. Từ bản 0.46.0, trong khối đồng bộ có thêm công tắc **Đồng bộ cả ảnh** (mặc định tắt). Bật lên thì:
 
 - Ảnh **jpg / png / gif / webp**, mỗi ảnh tối đa **10 MB** (đổi bằng biến môi trường `JAVIS_SYNC_ANH_MAX_MB`), cũng lên repo và đồng bộ 2 chiều như file chữ. Video, âm thanh, PDF và ảnh quá trần vẫn không bao giờ lên; `inbox/` cũng không - đó là chỗ trung chuyển một lượt chat.
-- Javis **ngừng tự dọn `attachments/`** trên máy đó (vẫn dọn `inbox/`): ảnh đã backup mà máy dọn xoá theo hạn thì lệnh xoá lan sang mọi máy, ảnh backup tự biến mất - nên hai thứ này phải đi cùng nhau.
+- Minmin **ngừng tự dọn `attachments/`** trên máy đó (vẫn dọn `inbox/`): ảnh đã backup mà máy dọn xoá theo hạn thì lệnh xoá lan sang mọi máy, ảnh backup tự biến mất - nên hai thứ này phải đi cùng nhau.
 
 Ba điều cần cân nhắc TRƯỚC khi bật:
 
@@ -123,11 +123,11 @@ Ba điều cần cân nhắc TRƯỚC khi bật:
 
 ### Media trong brain vẫn tự hết hạn như cũ
 
-Khi KHÔNG bật "Đồng bộ cả ảnh", Javis coi `attachments/` và `inbox/` là vùng cache: cứ 6 tiếng một lần, file quá **30 ngày** bị xoá, và nếu tổng vượt trần **300 MB** thì xoá từ cũ tới mới cho tới khi xuống dưới trần. Luật này không liên quan tới đồng bộ, nhưng cần biết vì nó là lý do ảnh cũ tự biến mất khỏi máy. Muốn giữ lâu dài thì rút nội dung ra note `.md`, chuyển file sang thư mục khác của brain, hoặc nới/tắt luật dọn (khoá `media` trong `settings.json`). Chi tiết cách tắt ở [Khắc phục sự cố & FAQ](17-khac-phuc-su-co.md).
+Khi KHÔNG bật "Đồng bộ cả ảnh", Minmin coi `attachments/` và `inbox/` là vùng cache: cứ 6 tiếng một lần, file quá **30 ngày** bị xoá, và nếu tổng vượt trần **300 MB** thì xoá từ cũ tới mới cho tới khi xuống dưới trần. Luật này không liên quan tới đồng bộ, nhưng cần biết vì nó là lý do ảnh cũ tự biến mất khỏi máy. Muốn giữ lâu dài thì rút nội dung ra note `.md`, chuyển file sang thư mục khác của brain, hoặc nới/tắt luật dọn (khoá `media` trong `settings.json`). Chi tiết cách tắt ở [Khắc phục sự cố & FAQ](17-khac-phuc-su-co.md).
 
 ## Khôi phục brain trên máy mới
 
-Không cần thao tác git tay: cài Javis, vào **Tự học → ⇅ Đồng bộ brain với GitHub (2 chiều)**, dán repo + token + đúng nhánh, bấm **⇅ Đồng bộ ngay** - toàn bộ brain về lại đủ. (Cách cũ `git clone` thẳng vào thư mục brains vẫn dùng được.)
+Không cần thao tác git tay: cài Minmin, vào **Tự học → ⇅ Đồng bộ brain với GitHub (2 chiều)**, dán repo + token + đúng nhánh, bấm **⇅ Đồng bộ ngay** - toàn bộ brain về lại đủ. (Cách cũ `git clone` thẳng vào thư mục brains vẫn dùng được.)
 
 ## Xử lý file .conflict-*
 
@@ -141,7 +141,7 @@ Khi hai máy sửa cùng một file giữa hai lần đồng bộ, bạn sẽ th
 
 - **Luôn dùng repo Private.** Brain có thể chứa số liệu kinh doanh, tên khách hàng, đôi khi cả khoá bạn lỡ dán trong hội thoại - và như mục trên đã nói, cả ảnh/file bạn gửi lên chat cũng đi theo.
 - Token nên đặt thời hạn và chỉ cấp quyền **Contents** cho đúng repo đó - không cấp rộng hơn.
-- Một repo dùng cho MỘT bộ brains. Đừng trỏ 2 hệ thống Javis khác mục đích (dữ liệu khác nhau hoàn toàn) vào cùng repo - chúng sẽ trộn dữ liệu vào nhau đúng như thiết kế sync.
+- Một repo dùng cho MỘT bộ brains. Đừng trỏ 2 hệ thống Minmin khác mục đích (dữ liệu khác nhau hoàn toàn) vào cùng repo - chúng sẽ trộn dữ liệu vào nhau đúng như thiết kế sync.
 
 ## Sự cố thường gặp
 
@@ -149,7 +149,7 @@ Khi hai máy sửa cùng một file giữa hai lần đồng bộ, bạn sẽ th
 |---|---|
 | "máy chưa cài git" | Cài git trên máy/VPS. Docker image chính thức đã có sẵn. |
 | Kiểm tra kết nối báo lỗi 403 | Token thiếu quyền Contents: Read and write, hoặc chưa chọn đúng repo. |
-| Đẩy được nhưng trên GitHub không thấy file ở nhánh quen thuộc | Ô **Nhánh** đang khác nhánh mặc định của repo (mặc định Javis dùng `main`). Sửa ô Nhánh cho khớp rồi Lưu cấu hình và đồng bộ lại. |
+| Đẩy được nhưng trên GitHub không thấy file ở nhánh quen thuộc | Ô **Nhánh** đang khác nhánh mặc định của repo (mặc định Minmin dùng `main`). Sửa ô Nhánh cho khớp rồi Lưu cấu hình và đồng bộ lại. |
 | "push liên tục bị vượt" | Nhiều máy đồng bộ cùng lúc liên tục. Bấm lại sau ít phút - cơ chế tự hoà sẽ khớp. |
 | "Áp bản đồng bộ về máy lỗi N file" | Có file đang bị khoá/không ghi được trên máy (vd đang mở trong app khác). Lần này KHÔNG đẩy gì lên (an toàn), đóng app đang giữ file rồi đồng bộ lại. |
 | Thấy nhiều file `.conflict-*` | Hai máy hay sửa cùng file giữa hai lần đồng bộ. Rút ngắn chu kỳ Tự động, hoặc chia việc mỗi máy một mảng; xử lý file conflict theo mục ở trên. |
