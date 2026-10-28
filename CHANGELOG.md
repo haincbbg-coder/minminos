@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.276] - 2026-10-28
+### Thêm mới
+- Bộ bán hàng cơ bản cài sẵn 4 trợ lý và 12 kỹ năng: POS, Pancake, hóa đơn và Google Sheets.
+- Mỗi bộ não nhận bản mẫu riêng, giữ nguyên nội dung khách đã sửa khi cập nhật; không kèm tài khoản hay dữ liệu doanh nghiệp mẫu.
+
 ## [26.10.270] - 2026-10-28
 ### Cải thiện
 - **Chào hỏi gần như không tốn token**: bố nhắn "chào", "cảm ơn", "ok" hay một biểu tượng cảm xúc, MinMin trả lời nhanh mà không nạp cả bộ hướng dẫn, công cụ và trí nhớ.
