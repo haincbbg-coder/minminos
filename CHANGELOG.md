@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.277] - 2026-10-28
+### Thêm mới
+- **Bảng tính kinh doanh** trong Kết Nối Ngoài: dự toán thương mại, sản xuất và dịch vụ; có ba kịch bản và bảng độ nhạy lợi nhuận.
+- Liệt kê riêng phí sàn, giao hàng, nguyên vật liệu, nhân công và vận hành. Chữ lớn hơn, giải thích rõ tỷ lệ đơn được miễn ship.
+
 ## [26.10.270] - 2026-10-28
 ### Cải thiện
 - **Chào hỏi gần như không tốn token**: bố nhắn "chào", "cảm ơn", "ok" hay một biểu tượng cảm xúc, MinMin trả lời nhanh mà không nạp cả bộ hướng dẫn, công cụ và trí nhớ.
