@@ -11,6 +11,11 @@ Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 n
 
 ## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.278] - 2026-10-28
+### Thêm mới
+- Bộ bán hàng cơ bản cài sẵn 4 trợ lý và 12 kỹ năng: POS, Pancake, hóa đơn và Google Sheets.
+- Mỗi bộ não nhận bản mẫu riêng, giữ nội dung khách đã sửa, xóa hoặc tắt; không kèm tài khoản hay dữ liệu doanh nghiệp khác.
+
 ## [26.10.277] - 2026-10-28
 ### Thêm mới
 - **Bảng tính kinh doanh** trong Kết Nối Ngoài: dự toán thương mại, sản xuất và dịch vụ; có ba kịch bản và bảng độ nhạy lợi nhuận.
