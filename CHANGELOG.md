@@ -4,6 +4,13 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.282] - 2026-10-28
+### Thêm mới
+- Chọn biểu phí Shopee, TikTok Shop, Lazada theo ngành hàng và loại gian hàng; xem nguồn, ngày hiệu lực rồi lưu bản riêng để chỉnh sửa.
+- Kê riêng phí bắt buộc, chương trình tự tham gia, trần phí và phần đơn hoàn vẫn bị thu phí.
+### Sửa lỗi
+- Cước khách trả trực tiếp sàn chỉ cộng vào cơ sở tính phí giao dịch, không cộng vào doanh thu shop.
+
 ## [26.10.281] - 2026-10-28
 ### Thêm mới
 - Pancake POS có sẵn trong Nguồn dữ liệu: bấm Kết nối, dán API key riêng của cửa hàng, không cần cài gói hoặc nhập URL.
