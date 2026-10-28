@@ -1,0 +1,110 @@
+/* Trang Webhook (26.10.273). Chỉ token --mm-*: dòng gọn + ngăn phải, trên điện thoại ngăn trượt từ dưới. */
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body[data-mm-app="webhook"] { font-size: var(--mm-fs-14); line-height: 1.5; }
+.dau { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: var(--mm-sp-3);
+  padding: var(--mm-sp-3) var(--mm-sp-4); padding-top: max(var(--mm-sp-3), env(safe-area-inset-top));
+  background: var(--mm-bg); box-shadow: var(--mm-out-sm); }
+.dau h1 { flex: 1; margin: 0; font-size: var(--mm-fs-20); }
+.lui { color: var(--mm-muted); text-decoration: none; font-size: var(--mm-fs-20); padding: var(--mm-sp-1) var(--mm-sp-2); }
+.tabs { display: flex; gap: var(--mm-sp-2); padding: var(--mm-sp-3) var(--mm-sp-4) 0; max-width: 900px; margin: 0 auto; overflow-x: auto; }
+main { max-width: 900px; margin: 0 auto; padding: var(--mm-sp-4) var(--mm-sp-4) var(--mm-sp-12); }
+.gioi-thieu { color: var(--mm-muted); margin: 0 0 var(--mm-sp-4); }
+.trong { color: var(--mm-dim); }
+
+.tab, .nut-phu {
+  background: var(--mm-panel); color: var(--mm-muted); border: 1px solid var(--mm-line);
+  border-radius: var(--mm-r-btn); box-shadow: var(--mm-out-sm); font: inherit; font-size: var(--mm-fs-13);
+  padding: var(--mm-sp-2) var(--mm-sp-3); min-height: 36px; cursor: pointer; white-space: nowrap;
+  transition: box-shadow .16s, color .16s;
+}
+.nut-phu:hover, .tab:hover { color: var(--mm-link); box-shadow: var(--mm-out); }
+:is(.tab, .nut-phu):is(:active, .on, [aria-selected="true"]) { color: var(--mm-link); box-shadow: var(--mm-in-sm); }
+.nut-phu:disabled { color: var(--mm-dim); box-shadow: var(--mm-out-xs); opacity: .7; cursor: default; }
+.nut-chinh {
+  background: var(--mm-primary); color: var(--mm-on-brand); border: 0; border-radius: var(--mm-r-btn);
+  box-shadow: var(--mm-primary-shadow); font: inherit; font-size: var(--mm-fs-14); font-weight: 600;
+  padding: var(--mm-sp-3) var(--mm-sp-4); min-height: 44px; cursor: pointer;
+}
+.nut-chinh:hover { filter: brightness(1.05); }
+.nut-chinh:active { box-shadow: var(--mm-in-sm); }
+.nut-nguy { color: var(--mm-bad); }
+:root[data-theme="light"] :is(.tab, .nut-phu) { border: 0; }
+
+.o-nhap {
+  width: 100%; background: var(--mm-field); color: var(--mm-text); border: 1px solid var(--mm-line);
+  border-radius: var(--mm-r-field); box-shadow: var(--mm-in-sm); font: inherit; font-size: var(--mm-fs-16);
+  padding: var(--mm-sp-2) var(--mm-sp-3);
+}
+:root[data-theme="light"] .o-nhap { border-color: transparent; }
+.o-nhap:focus { outline: none; border-color: var(--mm-link); }
+textarea.o-nhap { resize: vertical; font-family: inherit; }
+label { display: block; color: var(--mm-muted); font-size: var(--mm-fs-13); margin-bottom: var(--mm-sp-3); }
+label .o-nhap { margin-top: var(--mm-sp-1); }
+
+.the { background: var(--mm-panel); border: 1px solid var(--mm-line); border-radius: var(--mm-r-card);
+  box-shadow: var(--mm-out); padding: var(--mm-sp-4); margin-bottom: var(--mm-sp-4); }
+:root[data-theme="light"] .the { border: 0; }
+.bao-mat code { display: block; margin-top: var(--mm-sp-2); padding: var(--mm-sp-2) var(--mm-sp-3); border-radius: var(--mm-r-chip);
+  background: var(--mm-wash); color: var(--mm-text); word-break: break-all; font-size: var(--mm-fs-13); }
+.hang-nut { display: flex; flex-wrap: wrap; gap: var(--mm-sp-2); margin-bottom: var(--mm-sp-4); }
+.loc { display: flex; flex-wrap: wrap; gap: var(--mm-sp-2); align-items: center; margin-bottom: var(--mm-sp-3); }
+.loc .o-nhap { width: auto; min-width: 150px; flex: 1 1 150px; }
+
+/* Dòng gọn */
+.ds-dong { list-style: none; margin: 0; padding: 0; background: var(--mm-panel); border: 1px solid var(--mm-line);
+  border-radius: var(--mm-r-card); box-shadow: var(--mm-out); overflow: hidden; }
+:root[data-theme="light"] .ds-dong { border: 0; }
+.ds-dong:empty { display: none; }
+.ds-dong li { display: flex; align-items: center; gap: var(--mm-sp-3); padding: var(--mm-sp-3) var(--mm-sp-4);
+  border-top: 1px solid var(--mm-line); min-width: 0; }
+.ds-dong li:first-child { border-top: 0; }
+.ds-dong li:hover { background: var(--mm-row); }
+.cham { flex: none; width: 8px; height: 8px; border-radius: var(--mm-r-pill); background: var(--mm-dim); }
+.cham.ok { background: var(--mm-ok); } .cham.warn { background: var(--mm-warn); } .cham.bad { background: var(--mm-bad); }
+.giua { flex: 1; min-width: 0; }
+.ten { color: var(--mm-text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phu { color: var(--mm-dim); font-size: var(--mm-fs-12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-tt { display: inline-flex; align-items: center; font-size: var(--mm-fs-12); font-weight: 600; padding: 2px var(--mm-sp-2);
+  border-radius: var(--mm-r-pill); color: var(--mm-muted); background: color-mix(in srgb, var(--mm-muted) 10%, transparent); white-space: nowrap; }
+.chip-tt.ok { color: var(--mm-ok); background: color-mix(in srgb, var(--mm-ok) 10%, transparent); }
+.chip-tt.warn { color: var(--mm-warn); background: color-mix(in srgb, var(--mm-warn) 10%, transparent); }
+.chip-tt.bad { color: var(--mm-bad); background: color-mix(in srgb, var(--mm-bad) 10%, transparent); }
+
+.tong { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--mm-sp-3); margin-bottom: var(--mm-sp-4); }
+.tong .o { background: var(--mm-panel); border-radius: var(--mm-r-card); box-shadow: var(--mm-out-sm); padding: var(--mm-sp-3); min-width: 0; border: 1px solid var(--mm-line); }
+:root[data-theme="light"] .tong .o { border: 0; }
+.tong span { display: block; color: var(--mm-dim); font-size: var(--mm-fs-12); }
+.tong b { display: block; font-size: var(--mm-fs-24); font-variant-numeric: tabular-nums; }
+
+/* Ngăn phải */
+.ngan-bd { position: fixed; inset: 0; z-index: 20; background: var(--mm-scrim); }
+.ngan { position: fixed; z-index: 21; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); display: flex; flex-direction: column;
+  background: var(--mm-panel); border-left: 1px solid var(--mm-line); box-shadow: var(--mm-out); }
+:root[data-theme="light"] .ngan { border: 0; }
+.ngan-h { display: flex; align-items: center; gap: var(--mm-sp-2); padding: var(--mm-sp-3) var(--mm-sp-4); box-shadow: var(--mm-out-xs); }
+.ngan-t { flex: 1; min-width: 0; font-weight: 700; font-size: var(--mm-fs-16); overflow-wrap: anywhere; }
+.ngan-x { border: 0; background: transparent; color: var(--mm-muted); font-size: var(--mm-fs-20); cursor: pointer; padding: var(--mm-sp-1) var(--mm-sp-2); border-radius: var(--mm-r-btn); }
+.ngan-b { flex: 1; overflow-y: auto; padding: var(--mm-sp-4); }
+.ngan-b h3 { font-size: var(--mm-fs-14); margin: var(--mm-sp-4) 0 var(--mm-sp-2); }
+.ngan-b dl { display: grid; grid-template-columns: minmax(80px, 130px) minmax(0, 1fr); gap: var(--mm-sp-2) var(--mm-sp-3); margin: 0; font-size: var(--mm-fs-13); }
+.ngan-b dt { color: var(--mm-dim); }
+.ngan-b dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.ngan-b pre { margin: 0; max-height: 360px; overflow: auto; padding: var(--mm-sp-3); border-radius: var(--mm-r-btn);
+  background: var(--mm-field); box-shadow: var(--mm-in-sm); font-size: var(--mm-fs-12); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ngan-f { display: flex; flex-wrap: wrap; gap: var(--mm-sp-2); padding: var(--mm-sp-3) var(--mm-sp-4) calc(var(--mm-sp-3) + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--mm-out-xs); }
+.tg { list-style: none; margin: 0; padding: 0; font-size: var(--mm-fs-13); }
+.tg li { padding: var(--mm-sp-1) 0 var(--mm-sp-1) var(--mm-sp-3); box-shadow: inset 2px 0 var(--mm-line); }
+.tg .gio { color: var(--mm-dim); margin-right: var(--mm-sp-2); font-variant-numeric: tabular-nums; }
+.ghi-chu { color: var(--mm-dim); font-size: var(--mm-fs-12); }
+
+@media (max-width: 640px) {
+  .ds-dong li { flex-wrap: wrap; }
+  .giua { flex: 1 1 calc(100% - 40px); }
+  .tong { grid-template-columns: minmax(0, 1fr); }
+  .ngan { top: auto; left: 0; width: 100%; max-height: 88vh; border-left: 0; border-radius: var(--mm-r-card) var(--mm-r-card) 0 0; }
+  .ngan-b dl { grid-template-columns: minmax(0, 1fr); }
+  .ngan-b dt { margin-top: var(--mm-sp-2); font-weight: 700; }
+}
+

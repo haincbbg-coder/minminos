@@ -52,6 +52,12 @@
     return String(s).replace(/\{(\w+)\}/g, (m, ten) =>
       (bien && bien[ten] != null) ? String(bien[ten]) : m);
   }
+  // (i) button from info-tip.js; without it (node tests) the explanation is drawn inline.
+  function infoBtn() { var J = typeof window !== "undefined" && window.JavisInfo; return J ? J.btn(tw("info.more")) : ""; }
+  function infoBody(html) {
+    var J = typeof window !== "undefined" && window.JavisInfo;
+    return J ? J.body(html) : '<div class="info-body">' + html + "</div>";
+  }
   // Tên nhóm của gói là tiếng Việt và là KHOÁ lọc (`data-kho-nhom`), nên chỉ dịch lúc vẽ; xem
   // `JavisI18n.catLabel`. Tên lạ do gói cộng đồng tự đặt thì giữ nguyên.
   function nhanNhom(ten) {
@@ -200,8 +206,13 @@
     tool:      { nhan: "store.kind.tool",      icon: "toolbox",  trang: "plugins" },
     connector: { nhan: "store.kind.connector", icon: "plug",     trang: "mcp" },
     bundle:    { nhan: "store.kind.bundle",    icon: "package",  trang: "" },
+    // Recommended repos (0.370.0): not a kind but a tab of its own, listing every Store entry that follows
+    // its author's GitHub repo (`upstream`), whatever its kind. It only shows when the Store has one.
+    repo:      { nhan: "store.kind.repo",      icon: "git-branch", trang: "" },
   };
   const THU_TU_LOAI = ["agent", "skill", "workflow", "tool", "connector"];
+  const theoGoc = g => !!(g && g.upstream && g.upstream.repo);
+  const trongTab = (g, loai) => loai === "repo" ? theoGoc(g) : (g.kind || "bundle") === loai;
 
   // Trần dung lượng tệp .zip, do server nói (`/packs` trả `max_mb`). Giữ ở module để hộp thoại
   // chọn tệp nói đúng con số ngay cả khi nó mở lại sau một lần lỗi, lúc không còn `d` trong tay.
@@ -247,8 +258,13 @@
   //
   // `tuTep` là hàm quay về bước chọn tệp. Có khi cài từ kho thì không có nó, và chân hộp hiện
   // "Huỷ" thay cho "Chọn tệp khác".
-  function manHinhDongY(d, el, tuTep) {
+  //
+  // `tuy` (0.73.0) cho lối vào từ chỗ khác ngoài trang kho, như "vừa quét QR Zalo xong thì mời cài gói
+  // Zalo": `sauKhiCai(r)` thay cho việc vẽ lại trang kho vào `el`. Gói có mã luôn mặc định tắt.
+  function manHinhDongY(d, el, tuTep, tuy) {
+    tuy = tuy || {};
     const coMa = d.tier === "code";
+    const batSan = !coMa;
     const py = (d.py_files || []);
     const kn = (d.connectors || []);
     const vt = vaultTom(d.vault);
@@ -268,9 +284,10 @@
         '<div class="pkm-o-gt">' + tw("store.inspect.conn_count", { count: kn.length }) + ' '
         + kn.map(x => '<code>' + esc(x) + '</code>').join(", ") + '</div>',
         tw("store.inspect.conn_note"), true) : "",
-      vt.length ? o(tw("store.inspect.add_vault"),
-        '<div class="pkm-o-gt">' + vt.join(", ") + '</div>',
-        tw("store.inspect.vault_note"), true) : "",
+      // How name clashes and uninstall are handled: behind the (i) on the label.
+      vt.length ? o(tw("store.inspect.add_vault") + infoBtn(),
+        '<div class="pkm-o-gt">' + vt.join(", ") + '</div>'
+        + infoBody(esc(tw("store.inspect.vault_note"))), "", true) : "",
     ].filter(Boolean).join("");
 
     modal(
@@ -326,8 +343,8 @@
       + '<button class="pkm-gat" id="pkBat" type="button" aria-pressed="' + (coMa ? "false" : "true") + '">'
       + '<span><span class="pkm-gat-t">' + tw("store.inspect.enable.title") + '</span>'
       + '<span class="pkm-gat-s">'
-      + (coMa ? tw("store.inspect.enable.off_note")
-              : tw("store.inspect.enable.on_note"))
+      + (batSan ? tw("store.inspect.enable.on_note")
+                : tw("store.inspect.enable.off_note"))
       + '</span></span>'
       + '<span class="pkm-cong"><span></span></span></button>'
       + '</div>'
@@ -362,11 +379,12 @@
         return;
       }
       dong();
-      veLai(el);
+      if (typeof tuy.sauKhiCai === "function") tuy.sauKhiCai(r);
+      else veLai(el);
     };
   }
 
-  async function tuUrl(el, url, expect, tin) {
+  async function tuUrl(el, url, expect, tin, tuy) {
     // Tải từ kho hay từ link đều dừng ở bước SOI rồi mở đúng màn hình xác nhận như tệp tải
     // lên. Đường từ kho về máy không được phép ngắn hơn đường từ tệp: cùng một thứ để đọc,
     // cùng một chốt dấu vân tay.
@@ -378,7 +396,27 @@
       return;
     }
     d._tin = tin || null;
-    manHinhDongY(d, el);
+    manHinhDongY(d, el, null, tuy);
+  }
+
+  // Mở thẳng màn hình đồng ý cài của MỘT gói trong kho, theo id, từ bất kỳ trang nào (0.73.0).
+  // Lối vào đầu tiên: quét QR Zalo xong thì mời cài `javis.zalo`, vì ba tool Zalo mở rộng đã rời
+  // app sang kho. Đi qua ĐÚNG đường cài từ kho (`tuUrl`: tải, soi, hiện mã, chốt vân tay), không
+  // có đường tắt nào cài mà người dùng chưa thấy màn hình này.
+  //
+  // Trả "da_cai" khi gói đã cài và đang bật (không mở gì), "da_tat" khi đã cài nhưng đang tắt
+  // (bật lại là việc của người dùng ở trang kho), "khong_co" khi kho không có gói đó, "mo" khi
+  // đã mở màn hình đồng ý.
+  async function caiGoiKho(id, tuy) {
+    tuy = tuy || {};
+    let ds;
+    try { ds = await (await fetch("/packs/store")).json(); } catch (e) { ds = null; }
+    const g = ((ds && ds.packs) || []).find(x => x && x.id === id && x.nguon !== "app");
+    if (!g || !g.download || !g.download.url) return "khong_co";
+    if (g.installed) return g.enabled === false ? "da_tat" : "da_cai";
+    const el = tuy.el || document.createElement("div");
+    await tuUrl(el, g.download.url, g.download.sha256, g, tuy);
+    return "mo";
   }
 
   // ---- Gỡ một connector ĐI KÈM APP khỏi kho Kết nối ----
@@ -509,6 +547,17 @@
       + tw("store.installed_latest", { ver: esc(g.installed_version) }) + '</div>';
   }
 
+  // "Follows the source repo" line: the author's GitHub repo as a link, and the day the Store last took a new
+  // version from it. The repo is a plain owner/name (checked server-side in `packs_store._upstream`).
+  function dongGoc(g) {
+    if (!theoGoc(g)) return "";
+    const u = g.upstream;
+    return '<div class="prov-meta kho-goc">' + ic("git-branch") + ' ' + tw("store.upstream_follows")
+      + ' <a href="https://github.com/' + esc(u.repo) + '" target="_blank" rel="noopener noreferrer">'
+      + esc(u.repo) + '</a>'
+      + (u.synced ? ' · ' + esc(tw("store.upstream_synced", { ngay: u.synced })) : "") + '</div>';
+  }
+
   function theKho(g) {
     const bac = BAC[g.tier] || BAC.data;
     const lo = LOAI[g.kind] || LOAI.bundle;
@@ -519,6 +568,9 @@
     // "Đã cài" kể chuyện phiên bản, một chỗ duy nhất và nói đủ cả hai số.
     const meta = [g.id, g.installed ? "" : (g.version ? "v" + g.version : ""),
                   (g.author && g.author.name) || ""].filter(Boolean).map(esc).join(" · ");
+    // A long description shows two lines on the card; the full text sits behind the (i) on the name.
+    const moTa = nn(g.description);
+    const dai = moTa.length > 90;
     return '<div class="cat-card kho-the" data-loai="' + esc(g.kind || "bundle") + '"'
       + ' data-nhom="' + esc(g.nhom || "") + '" data-ng="' + (g.verified ? "1" : "0") + '">'
       + '<div class="kho-dau">' + veAvatar(g)
@@ -530,9 +582,12 @@
           ? ' <span class="prov-kind" style="color:var(--ok-ink,#2f855a)">'
             + tw("store.verified") + '</span>'
           : ' <span class="prov-kind">' + tw("store.community") + '</span>')
+      + (dai ? infoBtn() : "")
       + '</div>'
-      + '<div class="cat-desc">' + esc(nn(g.description)) + '</div>'
+      + '<div class="cat-desc' + (dai ? " j-clamp2" : "") + '">' + esc(moTa) + '</div>'
+      + (dai ? infoBody(esc(moTa)) : "")
       + '<div class="prov-meta">' + meta + '</div>'
+      + dongGoc(g)
       + dongDaCai(g)
       + '<div class="kho-nut">'
       // Bật/tắt tạm một gói đã cài. Trước 0.55.34 nút này chỉ có ở khối "Đã cài" dưới trang;
@@ -619,7 +674,8 @@
   function veLuoi(el, host) {
     const d = _kho.dl || { packs: [] };
     const ds = d.packs || [];
-    const cungLoai = ds.filter(g => (g.kind || "bundle") === _kho.loai);
+    if (_kho.loai === "repo" && !ds.some(theoGoc)) _kho.loai = "skill";
+    const cungLoai = ds.filter(g => trongTab(g, _kho.loai));
     const daCai = cungLoai.filter(g => g.installed);
     // Đếm bản mới trên MỌI loại, không chỉ tab đang mở. Đây là chỗ sửa cái lỗi nặng nhất của
     // tầng này: lưới lọc theo `_kho.loai` và tab mặc định là "Kết nối", nên một gói Kỹ năng có
@@ -662,9 +718,9 @@
     _kho.trang = trang;
     const hienThi = hop.slice((trang - 1) * MOI_TRANG, trang * MOI_TRANG);
 
-    const tabLoai = THU_TU_LOAI.map(k => {
+    const tabLoai = (ds.some(theoGoc) ? ["repo"] : []).concat(THU_TU_LOAI).map(k => {
       const on = k === _kho.loai;
-      const trong = ds.filter(g => (g.kind || "bundle") === k);
+      const trong = ds.filter(g => trongTab(g, k));
       const nMoi = trong.filter(coBanMoi).length;
       return '<button class="kho-tab' + (on ? " on" : "") + '" data-kho-loai="' + k + '">'
         + esc(tw(LOAI[k].nhan))
@@ -699,6 +755,10 @@
       (d.stale ? '<div class="conn-guide" style="border-left:3px solid var(--warn,#e0a33e);padding-left:10px;margin-bottom:12px">' + tw("store.stale") + '</div>' : "")
       + bangMoi
       + '<div class="kho-tabs">' + tabLoai + '</div>'
+      + (_kho.loai === "repo"
+          ? '<div class="prov-meta kho-goc-gt">' + tw("store.repo_lead") + ' ' + infoBtn() + '</div>'
+            + infoBody(esc(tw("store.repo_info")))
+          : "")
       + '<div class="kho-than">'
       + '<div class="kho-cot">'
       + '<div class="kho-cot-tieu">' + tw("studio.groups") + '</div>'
@@ -812,9 +872,15 @@
   // ẩn, nên KHÔNG kéo thả được, mà kéo tệp vừa tải về vào cửa sổ lại đúng là thao tác quen tay
   // nhất. Tệ hơn: thả trượt ra ngoài thì trình duyệt MỞ tệp zip đó thay cho trang, mất sạch
   // trạng thái. Giờ có một vùng thả thật, và cả lớp phủ chặn thả trượt.
-  function manHinhChon(el, maxMb) {
+  // `tuy` (Plugins page, 2026-10-25): the same drop zone with other words and another handler, so a
+  // plugin zip is picked exactly like a pack zip. {tieu, phu, tinHtml (an infoBody block),
+  // gioiHan(mb), khiChon(file)}.
+  function manHinhChon(el, maxMb, tuy) {
+    tuy = tuy || {};
     const m = modal(
-      pkmDau(null, tw("store.from_zip"), tw("store.pick.body"))
+      pkmDau(null, (tuy.tieu || tw("store.from_zip")) + infoBtn(), tuy.phu || tw("store.pick.body"))
+      // Trust note and what the next step shows: behind the (i) on the title; the next screen shows the real warning.
+      + (tuy.tinHtml || infoBody(esc(tw("store.pick.trust"))))
       + '<div class="pkm-than">'
       + '<label class="pkm-tha" id="pkTha">'
       + '<input type="file" accept=".zip" id="pkTepHop" style="display:none">'
@@ -822,17 +888,17 @@
       + '<span class="pkm-tha-t">' + tw("store.pick.drop") + '</span>'
       + '<span class="pkm-tha-s">' + tw("store.pick.or") + ' <u>' + tw("store.pick.browse")
       + '</u></span>'
-      + '<span class="pkm-tha-n">' + tw("store.pick.limit", { mb: (maxMb || 25) }) + '</span>'
+      + '<span class="pkm-tha-n">' + (tuy.gioiHan ? tuy.gioiHan(maxMb || 25)
+          : tw("store.pick.limit", { mb: (maxMb || 25) })) + '</span>'
       + '</label>'
-      + '<div class="pkm-luuy">' + ic("info")
-      + '<span>' + tw("store.pick.trust") + '</span></div>'
       + '</div>'
       + '<div class="pkm-chan"><button class="mp-btn" data-act="close">'
       + tw("common.cancel") + '</button></div>', true);
 
     const tha = document.getElementById("pkTha");
     const inp = document.getElementById("pkTepHop");
-    inp.onchange = () => { if (inp.files && inp.files[0]) chonTep(el, inp.files[0]); };
+    const chon = tuy.khiChon || ((f) => chonTep(el, f));
+    inp.onchange = () => { if (inp.files && inp.files[0]) chon(inp.files[0]); };
     // Thả TRƯỢT ra ngoài vùng nhận cũng phải bị nuốt: mặc định của trình duyệt là điều hướng
     // sang chính tệp vừa thả, tức là mất trang và mất luôn việc đang làm.
     ["dragenter", "dragover", "drop"].forEach(ev =>
@@ -843,7 +909,7 @@
       tha.addEventListener(ev, () => tha.classList.remove("dang-keo")));
     tha.addEventListener("drop", e => {
       const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (f) chonTep(el, f);
+      if (f) chon(f);
     });
   }
 
@@ -865,6 +931,171 @@
       return;
     }
     manHinhDongY(d, el, lai);
+  }
+
+  // ---- Plugins page: install ONE plugin from a .zip (owner request 2026-10-25) ----
+  //
+  // Same machinery as a pack zip: the drop zone above, `/plugins/inspect` (which runs the pack
+  // zip rules on the server), a confirmation drawn ONLY from that result, then `/plugins/install`
+  // with the inspected sha256. A full store pack zip dropped here gets the PACK confirmation and
+  // `/packs/install`, not a second copy of it.
+  const MM_KEY = { readonly: "cs.pl_mm_readonly", safe: "cs.pl_mm_safe", full: "cs.pl_mm_full" };
+  const PL_FILES_SHOWN = 12;
+
+  // Pure: what the confirmation shows, from the inspect result alone. Exposed for the node test.
+  function pluginZipView(d) {
+    d = d || {};
+    const files = d.files || [];
+    const notes = ["off"];
+    if (d.existing) notes.push("exists");
+    if (d.vault_shadow) notes.push("vault");
+    if (d.user_gate === false) notes.push("gate");
+    return {
+      tools: (d.tools || []).map(x => ({ name: String((x && x.name) || ""),
+                                         mm: MM_KEY[x && x.min_mode] ? x.min_mode : "readonly" })),
+      hooks: (d.hooks || []).map(String),
+      files: files.slice(0, PL_FILES_SHOWN).map(f => String(f.path || "")),
+      moreFiles: Math.max(0, (d.file_count || files.length) - PL_FILES_SHOWN),
+      needsReplace: !!d.existing,
+      zipAskedOn: !!d.enabled_in_zip,
+      notes: notes,
+    };
+  }
+
+  // o = {brain, maxMb, xong(result)}: `xong` redraws the Plugins page after an install.
+  function caiPluginZip(o) {
+    o = o || {};
+    const lai = () => manHinhChon(null, o.maxMb || _maxMb, {
+      tieu: tw("plzip.pick_title"), phu: tw("plzip.pick_body"),
+      tinHtml: infoBody(esc(tw("plzip.pick_trust"))),
+      gioiHan: (mb) => tw("plzip.pick_limit", { mb: mb }),
+      khiChon: (f) => chonTepPlugin(f, o, lai),
+    });
+    lai();
+  }
+
+  async function chonTepPlugin(file, o, lai) {
+    const tieu = tw("plzip.pick_title");
+    if (!/\.zip$/i.test(file.name || "")) {
+      manHinhLoi(tieu, tw("store.not_zip", { ten: (file.name || "?") }), "", lai);
+      return;
+    }
+    dangCho(tieu, tw("plzip.reading"));
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("brain", o.brain || "brain");
+    let d;
+    try { d = await (await fetch("/plugins/inspect", { method: "POST", body: fd })).json(); }
+    catch (e) { d = { ok: false, error: String(e) }; }
+    if (!d || !d.ok) {
+      manHinhLoi(tieu, (d && d.error) || tw("store.bad_zip"), d && d.stage, lai);
+      return;
+    }
+    if (d.kind === "pack") {
+      manHinhDongY(d, document.createElement("div"), lai, {
+        sauKhiCai: (r) => { if (typeof o.xong === "function") o.xong({ kind: "pack", ok: !!(r && r.ok), id: r && r.id }); },
+      });
+      return;
+    }
+    manHinhPlugin(d, o, lai);
+  }
+
+  function manHinhPlugin(d, o, lai) {
+    const v = pluginZipView(d);
+    const oBang = (nhan, gt, phu, rong) =>
+      '<div class="pkm-o' + (rong ? " rong" : "") + '"><div class="pkm-o-nhan">' + nhan + '</div>'
+      + gt + (phu ? '<div class="pkm-o-phu">' + phu + '</div>' : "") + '</div>';
+    const canh = (mau, icon, tieu, than) => '<div class="pkm-canh ' + mau + '"><div class="pkm-canh-tieu">'
+      + ic(icon) + tieu + '</div><div>' + than + '</div></div>';
+    const bang = [
+      oBang(tw("store.inspect.file"), '<div class="pkm-o-gt">'
+        + esc(d.filename || tw("store.inspect.file_fallback"))
+        + ' <span class="nhe">· ' + co(d.size) + '</span></div>'),
+      oBang(tw("store.inspect.sha"),
+        '<div class="pkm-o-ma">' + esc((d.sha256 || "").slice(0, 20)) + '…</div>',
+        tw("store.inspect.sha_note")),
+      oBang(tw("plzip.tools"), '<div class="pkm-o-gt">'
+        + (v.tools.length
+          ? v.tools.map(x => '<div><code>' + esc(x.name) + '</code> <span class="pkm-nhe">· '
+              + esc(tw("cs.pl_minmode", { muc: tw(MM_KEY[x.mm]) })) + '</span></div>').join("")
+          : esc(tw("plzip.no_tools")))
+        + '</div>', v.tools.length ? tw("plzip.tools_note") : "", true),
+      v.hooks.length ? oBang(tw("plzip.hooks"), '<div class="pkm-o-gt">'
+        + v.hooks.map(h => '<code>' + esc(h) + '</code>').join(", ") + '</div>', "", true) : "",
+      oBang(tw("plzip.files"), '<div class="pkm-o-gt">'
+        + esc(tw("plzip.files_sum", { count: d.file_count || v.files.length, size: co(d.unpacked) || "0 B" }))
+        + '</div>', v.files.map(f => '<code>' + esc(f) + '</code>').join(", ")
+        + (v.moreFiles ? " " + esc(tw("plzip.files_more", { count: v.moreFiles })) : ""), true),
+      oBang(tw("plzip.target"), '<div class="pkm-o-ma">' + esc(d.target || "") + '</div>',
+        tw("plzip.target_note"), true),
+    ].filter(Boolean).join("");
+
+    const ghiChu = v.notes.map(k => {
+      if (k === "off") return canh("tin", "info", esc(tw("plzip.off_title")),
+        esc(tw("plzip.off_body")) + (v.zipAskedOn ? " " + esc(tw("plzip.off_zip")) : ""));
+      if (k === "vault") return canh("vang", "info", esc(tw("plzip.vault_title")), esc(tw("plzip.vault_body")));
+      if (k === "gate") return canh("vang", "triangle-alert", esc(tw("plzip.gate_title")),
+        tw("plzip.gate_body", { bien: "<code>JAVIS_ENABLE_USER_PLUGINS=false</code>" }));
+      return "";
+    }).join("");
+
+    // The replace question sits right under the description: it is what keeps Install disabled,
+    // so it must be seen without scrolling.
+    const thayHtml = v.needsReplace
+      ? canh("vang", "info", esc(tw("plzip.exists_title")),
+          esc(tw("plzip.exists_body", { ver: (d.existing && d.existing.version) || "?" })))
+        + '<button class="pkm-gat" id="pzThay" type="button" aria-pressed="false">'
+        + '<span><span class="pkm-gat-t">' + esc(tw("plzip.replace")) + '</span>'
+        + '<span class="pkm-gat-s">' + esc(tw("plzip.replace_note")) + '</span></span>'
+        + '<span class="pkm-cong"><span></span></span></button>'
+      : "";
+
+    modal(
+      pkmDau({ id: d.slug || "", name: d.name || d.slug || "", icon: "puzzle" }, esc(d.name || d.slug)
+          + (d.version ? '<span class="pkm-ver">v' + esc(d.version) + '</span>' : ""),
+        '<code>' + esc(d.slug) + '</code>'
+          + (d.author ? ' · ' + tw("store.inspect.author", { ten: esc(d.author) }) : ""))
+      + '<div class="pkm-than">'
+      + (d.description ? '<p class="pkm-mota">' + esc(d.description) + '</p>' : "")
+      + thayHtml
+      + '<div class="pkm-bang">' + bang + '</div>'
+      // Not foldable, not softened: this is the screen where foreign code is let in.
+      + canh("do", "triangle-alert", esc(tw("plzip.code_title")), esc(tw("plzip.code_body")))
+      + ghiChu
+      + '</div>'
+      + '<div class="pkm-chan"><span class="mp-note" id="pzNote"></span>'
+      + '<button class="mp-btn" id="pzKhac">' + tw("store.pick_other_file") + '</button>'
+      + '<button class="mp-btn primary" id="pzCai"' + (v.needsReplace ? " disabled" : "") + '>'
+      + esc(tw(v.needsReplace ? "plzip.install_replace" : "plzip.install")) + '</button></div>', true);
+
+    // Focus on the LEFT button: an Enter out of habit must not mean "install foreign code".
+    const khac = document.getElementById("pzKhac");
+    if (khac) { khac.focus(); khac.onclick = lai; }
+    const nut = document.getElementById("pzCai");
+    const thay = document.getElementById("pzThay");
+    if (thay) thay.onclick = () => {
+      const on = thay.getAttribute("aria-pressed") !== "true";
+      thay.setAttribute("aria-pressed", on ? "true" : "false");
+      nut.disabled = !on;
+    };
+    const note = document.getElementById("pzNote");
+    nut.onclick = async () => {
+      const replace = !!(thay && thay.getAttribute("aria-pressed") === "true");
+      if (v.needsReplace && !replace) return;
+      nut.disabled = true;
+      note.textContent = tw("store.installing");
+      const r = await postJson("/plugins/install", {
+        staging_id: d.staging_id, consent_sha256: d.sha256, replace: replace,
+        brain: o.brain || "brain",
+      });
+      if (!r || !r.ok) {
+        note.textContent = (r && r.error) || tw("store.install_failed");
+        nut.disabled = false;
+        return;
+      }
+      dong();
+      if (typeof o.xong === "function") o.xong(Object.assign({ kind: "plugin" }, r));
+    };
   }
 
   async function hopGo(el, pid) {
@@ -951,11 +1182,7 @@
       return;
     }
     if (d && d.error) {
-      // Kho ngoài lỗi (chưa đăng nhập, mạng...) thì Ứng dụng MinMin vẫn phải hiện: chúng có
-      // sẵn trong app, không phụ thuộc kho.
-      el.innerHTML = '<div class="cview-section kho-khoi">' + veUngDung()
-        + '<div class="cview-placeholder">' + esc(d.error) + '</div></div>';
-      noiUngDung(el);
+      el.innerHTML = '<div class="cview-placeholder">' + esc(d.error) + '</div>';
       return;
     }
     // Bộ lọc loại thì lấy rồi XOÁ NGAY: nó là ý định của MỘT lần bấm tab. Giữ lại thì lần sau
@@ -983,7 +1210,6 @@
         ? '<div class="conn-guide" style="border-left:3px solid var(--warn,#e0a33e);padding-left:10px;margin-top:12px">'
           + tw("store.disabled_env", { bien: '<code>JAVIS_DISABLE_PACKS</code>' }) + '</div>'
         : "")
-      + veUngDung()
       + '<div id="pkKho" style="margin-top:12px"></div>'
       + '<div class="gcard-meta" style="margin-top:16px;opacity:.7">'
       + tw("store.dir_note", { duong: '<code>' + esc(d.dir || "") + '</code>' }) + ' '
@@ -998,44 +1224,6 @@
     };
     const hostKho = document.getElementById("pkKho");
     if (hostKho) veKho(el, hostKho, false, loaiDau, timDau);
-    noiUngDung(el);
-  }
-
-  // ---- ỨNG DỤNG MINMIN (26.10.1) ----
-  // Ứng dụng là trang có sẵn trong app, không tải từ kho ngoài: "cài" = hiện lên thanh bên (nhóm
-  // Kết nối & khách), "gỡ" = ẩn đi. Trạng thái do console.js giữ (window.JavisApps).
-  const UNG_DUNG = [
-    { id: "matnha", icon: "eye", ten: "store.app.matnha.name", mo_ta: "store.app.matnha.desc" },
-    { id: "biendong", icon: "wallet", ten: "store.app.biendong.name", mo_ta: "store.app.biendong.desc" },
-  ];
-  function veUngDung() {
-    const A = window.JavisApps;
-    if (!A) return "";
-    const ic = (n) => (window.ic ? window.ic(n) : "");
-    return '<div class="ud-khoi"><h4>' + tw("store.app.title") + '</h4><div class="ud-luoi">'
-      + UNG_DUNG.map((u) => {
-        const cai = A.daCai(u.id);
-        return '<div class="ud-the" data-ud="' + esc(u.id) + '">'
-          + '<div class="ud-ic">' + ic(u.icon) + '</div>'
-          + '<div class="ud-nd"><b>' + tw(u.ten) + '</b>'
-          + '<span class="ud-tt' + (cai ? " on" : "") + '">' + tw(cai ? "store.app.installed" : "store.app.not_installed") + '</span>'
-          + '<p>' + tw(u.mo_ta) + '</p>'
-          + '<div class="ud-nut">'
-          + (cai ? '<button class="s-btn" data-ud-mo="' + esc(u.id) + '">' + tw("store.app.open") + '</button>'
-                 + '<button class="s-btn-ghost" data-ud-go="' + esc(u.id) + '">' + tw("store.app.remove") + '</button>'
-                 : '<button class="s-btn" data-ud-cai="' + esc(u.id) + '">' + tw("store.app.install") + '</button>')
-          + '</div></div></div>';
-      }).join("") + '</div></div>';
-  }
-  function noiUngDung(el) {
-    const A = window.JavisApps;
-    if (!A) return;
-    el.querySelectorAll("[data-ud-mo]").forEach((b) => b.onclick = () => {
-      const s = window.Alpine && Alpine.store("nav"); if (s && s.go) s.go(b.dataset.udMo);
-    });
-    const doi = (id, on) => async () => { if (await A.dat(id, on)) veLai(el); };
-    el.querySelectorAll("[data-ud-cai]").forEach((b) => b.onclick = doi(b.dataset.udCai, true));
-    el.querySelectorAll("[data-ud-go]").forEach((b) => b.onclick = doi(b.dataset.udGo, false));
   }
 
   // Mở kho với một loại đã lọc sẵn. Tab "Kho cài đặt" trên trang Trợ lý / Kỹ năng / Quy
@@ -1059,5 +1247,7 @@
   // được lỗi đó.
   window.JavisPacks = { render: render, moKho: moKho, LOAI: LOAI, goApp: goApp, hoi: hoi,
                         coBanMoi: coBanMoi, nutThe: nutThe, theKho: theKho,
-                        ghiConTro: ghiConTro, traConTro: traConTro, veKho: veKho };
+                        ghiConTro: ghiConTro, traConTro: traConTro, veKho: veKho,
+                        caiGoiKho: caiGoiKho, caiPluginZip: caiPluginZip,
+                        pluginZipView: pluginZipView };
 })();

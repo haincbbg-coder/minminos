@@ -2716,12 +2716,15 @@ def _hub_enabled():
 
 
 async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=None,
-                          force_lazy=False, mode="full"):
+                          force_lazy=False, mode="full", coding_row=None):
     """Model API/OAuth dùng MCP của Javis qua HUB: đa tài khoản + quyền + audit + builtin tools
     (file vault, use_skill) → engine API cũng là agent thực thụ. anthropic-api giờ CÓ tool loop.
     ChatGPT OAuth ở các kênh tương tác đi qua Codex CLI native MCP, không dùng fallback này."""
     tools, route = [], {}
     inventory_tools, inventory_route = [], {}
+    import coding_ctx
+    _coding = coding_ctx.for_session(str((coding_row or {}).get("id") or "")) if coding_row else None
+    _workspace = _coding.workspace_roots if _coding and _coding.active else None
     if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat",
                 "deepseek", "qwen", "glm", "minimax"):
         try:
@@ -2734,7 +2737,8 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
                 # chuyên trách dựng tool ở chỗ khác và KHÔNG truyền cờ này - khách lạ vẫn chỉ
                 # thấy brain của bot.
                 tools, route = await mcp_hub.discover_all(
-                    mode, vault_root=vault_root, force_lazy=force_lazy, staging=True
+                    mode, vault_root=vault_root, force_lazy=force_lazy, staging=True,
+                    workspace_root=_workspace, coding_ctx_cua_phien=_coding
                 )
                 inventory_tools, inventory_route = mcp_hub.registry_inventory(
                     mode, vault_root=vault_root, force_lazy=force_lazy, staging=True)
@@ -6189,19 +6193,13 @@ def _cwd_luot_chat(row, brain: str) -> str:
 
 
 def _khoi_coding(row) -> str:
-    """Khối prompt của phiên Coding (thư mục làm việc, nhánh, và mức quyền nghĩa là gì).
-
-    Trả "" cho mọi phiên khác, nên nối vào prompt là vô hại ở đường chat thường. Đặt `cwd`
-    thôi chưa đủ: model vẫn đoán đường dẫn từ trí nhớ của nó, và ở chế độ Plan thì còn phải
-    NÓI cho nó biết là hãy lập kế hoạch rồi dừng.
-    """
-    try:
-        sid = (row or {}).get("id") or ""
-        if sid and str((row or {}).get("channel") or "").startswith("coding:"):
-            return coding_store.khoi_prompt(sid)
-    except Exception:
-        pass
-    return ""
+    """Folder and attached GitHub worktrees apply to every model in a chat."""
+    sid = str((row or {}).get("id") or "")
+    if not sid:
+        return ""
+    block = coding_store.khoi_prompt(sid) if str((row or {}).get("channel") or "").startswith("coding:") else coding_store.pinned_folder_prompt(sid, "")
+    import github_repos
+    return block + github_repos.prompt_block(sid, (row or {}).get("brain") or "")
 
 
 def _muc_quyen_luot_chat(row, brain=None) -> str:
@@ -10737,12 +10735,14 @@ async def _run_workflow_step(node, prompt, mk, agent_sysprompt, sink, router=Non
             "Đánh giá kết quả có ĐẠT nhiệm vụ không. Trả JSON như hướng dẫn."
         )
         vcli = mk(v_sys, v_model, v_prov)
-        v_out = ""
+        v_out, v_err = "", ""
         async for ev in vcli.query(v_prompt):
             if ev["type"] == "final":
                 v_out = ev.get("content") or v_out
             elif ev["type"] == "error":
-                v_out = '{"pass":true,"reason":"verify lỗi, tạm chấp nhận"}'
+                # Fail closed (học Javis #807): agent kiểm chứng LỖI thì không chứng nhận được gì,
+                # kể cả khi nó đã kịp in ra một câu "đạt" trước khi hỏng.
+                v_err = str(ev.get("content") or "lỗi")[:200]
         vm = re.search(r"\{.*\}", v_out, re.DOTALL)
         verdict = {}
         if vm:
@@ -10753,6 +10753,8 @@ async def _run_workflow_step(node, prompt, mk, agent_sysprompt, sink, router=Non
         passed = bool(verdict.get("pass", True))
         reason = verdict.get("reason", "")
         fixes = verdict.get("fixes", "")
+        if v_err:
+            passed, reason, fixes = False, f"Agent kiểm chứng lỗi, không kết luận được: {v_err}", ""
         await sink({"type": "step_verify_result", "i": index, "node": node.id, "passed": passed,
                     "reason": reason, "attempt": attempt})
         if log_run:
@@ -11252,12 +11254,12 @@ async def _execute_workflow_raw(brain, slug, input="", tools=None, session_id=""
                 "Đánh giá kết quả có ĐẠT nhiệm vụ không. Trả JSON như hướng dẫn."
             )
             vcli = _mk(v_sys, v_model, v_prov)   # agent kiểm chứng cũng dùng model của nó
-            v_out = ""
+            v_out, v_err = "", ""
             async for ev in vcli.query(v_prompt):
                 if ev["type"] == "final":
                     v_out = ev.get("content") or v_out
                 elif ev["type"] == "error":
-                    v_out = '{"pass":true,"reason":"verify lỗi, tạm chấp nhận"}'
+                    v_err = str(ev.get("content") or "lỗi")[:200]   # fail closed, như đường graph
             vm = re.search(r"\{.*\}", v_out, re.DOTALL)
             verdict = {}
             if vm:
@@ -11268,6 +11270,8 @@ async def _execute_workflow_raw(brain, slug, input="", tools=None, session_id=""
             passed = bool(verdict.get("pass", True))
             reason = verdict.get("reason", "")
             fixes = verdict.get("fixes", "")
+            if v_err:
+                passed, reason, fixes = False, f"Agent kiểm chứng lỗi, không kết luận được: {v_err}", ""
             yield {"type": "step_verify_result", "i": i, "passed": passed, "reason": reason, "attempt": attempt}
             _log(verify_slug, f"[kiểm chứng bước của {agent_name}] {task_f}", v_out)
             verified = passed
@@ -14431,6 +14435,8 @@ async def hanh_dong_duyet(request: Request):
         data = await request.json()
     except Exception:
         data = {}
+    if request.headers.get("sec-fetch-site") != "same-origin":
+        return JSONResponse({"ok": False, "error": "Duyệt bằng nút trên dashboard."}, status_code=403)
     ok, why = hanh_dong.quyet(str(data.get("id") or ""), bool(data.get("dong_y")), ai="dashboard")
     return {"ok": ok, "error": why}
 
@@ -16501,6 +16507,11 @@ async def _persist_turn(store, conv_sid, brain, user_message, final_text):
         await learn_feature.enqueue(brain, conv_sid, user_message, clean)
     except Exception as _e:
         print(f"[learn enqueue hook] {_e}", file=__import__('sys').stderr)
+    # Repo work is driven by saved turns, never by a model claiming that CI passed.
+    import github_work
+    task = asyncio.create_task(github_work.after_turn(str(conv_sid), brain, user_message))
+    _PUSH_TASKS.add(task)
+    task.add_done_callback(_PUSH_TASKS.discard)
     return clean
 
 
@@ -17475,7 +17486,7 @@ async def websocket_endpoint(ws: WebSocket):
                 # elif kind == "api" and api_key: bên dưới) ép toàn cụm rơi thẳng xuống nhánh
                 # Phase 8 API/OAuth cuối cùng, nơi đã đọc `_persona` để dùng `_legacy_system_prompt()`
                 # (chính là `_agent_chat_prompt`). Mất mấy đường tắt rẻ tiền, đổi lại đúng vai.
-                if kind == "api" and api_key and not _persona:
+                if kind == "api" and api_key and not _persona and not coding_store.cwd_cua_phien(conv_sid):
                     # Phase 9 xét TRƯỚC: lượt này có thể là câu xác nhận cho một hành
                     # động ghi đã đề xuất ở lượt trước, không phải một yêu cầu mới.
                     try:
@@ -17526,7 +17537,7 @@ async def websocket_endpoint(ws: WebSocket):
                         "session_id": conv_sid,
                         **_ctx_frame(runtime_trace, _ctx_in),
                     }))
-                elif kind == "api" and api_key and not _persona:
+                elif kind == "api" and api_key and not _persona and not coding_store.cwd_cua_phien(conv_sid):
                     # Mọi exception trong prepare của canary phải rơi tiếp xuống nhánh
                     # sau (cuối cùng là legacy), không được phá lượt chat (spec mục 23).
                     try:
@@ -17639,7 +17650,7 @@ async def websocket_endpoint(ws: WebSocket):
                             "dashboard", {"session_id": conv_sid},
                             telegram_running=bool(_TG_BOT), port=_javis_port(),
                             brain_root=_brain_root(brain),
-                        )
+                        ) + _khoi_coding(_row0)
 
                     if _persona:
                         # Phiên cộng sự: prompt luôn là _agent_chat_prompt, không cần tốn công
@@ -17708,7 +17719,7 @@ async def websocket_endpoint(ws: WebSocket):
                             gen = await _api_stream_mcp(
                                 prov, api_key, api_model, or_messages, reasoning, brain=brain,
                                 force_lazy=(_phase8_plan.action == "use" or _attempt > 1),
-                                mode=_muc_quyen_luot_chat(_row0, brain),
+                                mode=_muc_quyen_luot_chat(_row0, brain), coding_row=_row0,
                             )
                             async for ev in gen:
                                 if ev["type"] == "meta":
@@ -19488,6 +19499,11 @@ async def sessions_rename(session_id: str, title: str = Form(...)):
 
 @app.post("/sessions/{session_id}/delete")
 async def sessions_delete(session_id: str):
+    # Detach Github bookkeeping before deleting the transcript; preserve unpushed worktrees.
+    import github_repos
+    import github_store
+    await asyncio.to_thread(github_repos.forget_session, session_id)
+    await asyncio.to_thread(github_store.store().delete_session, session_id)
     get_store().delete(session_id)
     # Phase 8 state is a disposable projection; purge it with the source transcript.
     if _ADAPTIVE_CONTEXT is not None:
@@ -23921,6 +23937,93 @@ import routes.coding as coding_routes   # noqa: E402
 coding_routes.register(app, coding_routes.CodingDeps(brain_keys=_brain_keys))
 
 
+# GitHub inside chat (0.362.0, docs/dev/2026-10-github-trong-chat-spec.md): the built-in GitHub connection, repo
+# clones per brain (outside the brain tree) and the repos attached to a conversation.
+import routes.github as github_routes   # noqa: E402
+github_routes.register(app, github_routes.GitHubDeps(brain_root=lambda b: str(_brain_root(b))))
+import github_work   # noqa: E402
+# 0.363.0: the gate result (and from G3 the PR and CI news) lands in the chat that owns the repo, plus the inbox.
+github_work.configure(notify=lambda sid, text, ok: _notify_owner(
+    f"{WEB_CHAT_PREFIX}{sid}", text, label="GitHub", source="github", quiet=bool(ok)))
+
+
+async def _github_start_turn(sid: str, text: str) -> bool:
+    """A fix round (0.364.0) runs as the next turn of the same chat: same worktree, same engine. It goes through
+    the follow-up opener the chat's WebSocket handler left in `_NOI_TIEP_WEB` (it waits for the chat to be idle).
+    False when this process has none for the chat (after a restart): github_work then asks the person instead."""
+    runner = _NOI_TIEP_WEB.get(str(sid or ""))
+    if runner is None:
+        return False
+    t = asyncio.create_task(runner(text, 0))
+    _PUSH_TASKS.add(t)
+    t.add_done_callback(_PUSH_TASKS.discard)
+    return True
+
+
+def _github_session_info(sid: str) -> dict:
+    """Title, the person's latest request, and the engine/model a chat runs on, for the PR, the review and metrics.
+
+    `task` is the latest message the PERSON wrote (not a fix round Javis opened): a chat can hold several jobs, and
+    the chat title only describes the first one."""
+    store = get_store()
+    row = store.get_session(sid) or {}
+    task = ""
+    try:
+        for m in reversed(store.get_messages(sid) or []):
+            if m.get("role") != "user":
+                continue
+            text = str(m.get("content") or "").strip()
+            if text and not text.startswith("[Javis GitHub]"):
+                task = text
+                break
+    except Exception:  # noqa: BLE001
+        task = ""
+    main_m = (cfgmod.read_settings().get("model") or {}).get("main") or {}
+    return {"title": row.get("title") or "", "task": task[:2000],
+            "engine": row.get("pinned_provider") or main_m.get("provider") or "",
+            "model": row.get("pinned_model") or main_m.get("model") or ""}
+
+
+async def _github_review_ask(prompt: str, provider: str) -> str:
+    """API-only cross review, with an empty explicit tool list and no fallback provider."""
+    if provider not in aux_engine.API_PROVIDERS:
+        raise ValueError("Reviewer must support an explicit empty tool list")
+    cwd = cfgmod.STATE_DIR / "github-review-empty"
+    cwd.mkdir(parents=True, exist_ok=True)
+    base = claude_engine(system_prompt="Review code; return only the requested JSON.", cwd=str(cwd), tag="gh-review", allowed_tools=[])
+    eng = aux_engine.dung_rieng({"provider": provider, "model": ""}, base, "suggest", "gh-review")
+    eng.khong_tool = True
+    eng.tools_override = ([], {})
+    final = ""
+    async for ev in eng.query(prompt):
+        if ev.get("type") == "error":
+            raise RuntimeError(str(ev.get("content") or "review failed")[:200])
+        if ev.get("type") == "final":
+            final = ev.get("content") or ""
+    return final
+
+
+def _github_reviewers() -> list:
+    out = []
+    for p in aux_engine.API_PROVIDERS:
+        if aux_engine.availability({"provider": p})[0]:
+            out.append(p)
+    return out
+
+
+github_work.configure(start_turn=_github_start_turn, session_info=_github_session_info,
+                      review=_github_review_ask, reviewers=_github_reviewers,
+                      brain_root=lambda b: str(_brain_root(b)))
+github_routes._DEPS.busy_jobs = github_work.busy_jobs
+
+
+@app.on_event("startup")
+async def _github_watcher():
+    """0.364.0: watch every pushed commit's CI and PR until it settles (github_work.run_watcher)."""
+    t = asyncio.create_task(github_work.run_watcher())
+    _PUSH_TASKS.add(t)
+
+
 @app.post("/telegram/test")
 async def telegram_test():
     """Gửi tin test tới TẤT CẢ chat ID trong whitelist - báo rõ ID nào lỗi (vd chưa bấm Start bot)."""
@@ -24641,8 +24744,21 @@ assert bien_dong_routes.LOI_VAO_CONG_KHAI == _BIEN_DONG_CONG_KHAI
 
 # Webhook vào (26.10.167) - routes/webhooks.py, cũng đăng ký ở đuôi cho bảng route.
 import routes.webhooks as webhooks_routes   # noqa: E402
+
+
+async def _webhook_chay_ai(brain: str, prompt: str, muc_quyen: str):
+    """Việc AI của một sự kiện webhook (26.10.273): cùng bộ chạy của nhắc hẹn chế độ task, cùng
+    khoá một-việc-một-lúc, nhưng nhận TRỌN sự kiện (nhắc hẹn cắt ở 2000 ký tự)."""
+    async with reminders_feature.lock:
+        return await reminders_feature._run_task(brain, prompt, muc_quyen)
+
+
+async def _webhook_bao_chu(ten: str, text: str):
+    await _notify_owner("", text, kind="system", label=f"Webhook: {ten}"[:120], source="webhook")
+
+
 webhooks_routes.register(app, webhooks_routes.WebhooksDeps(
-    nhac_hen=lambda: reminders_feature, duong_dan_goc=lambda r: str(r.base_url)))
+    chay_ai=_webhook_chay_ai, bao_chu=_webhook_bao_chu))
 assert webhooks_routes.LOI_VAO_CONG_KHAI == _HOOK_CONG_KHAI
 
 # Concat (26.10.196): MinMin điều khiển trình dựng video Concat ở máy nhà qua cầu nối + MCP của
@@ -24721,3 +24837,4 @@ if __name__ == "__main__":
     host = os.getenv("JAVIS_HOST", "127.0.0.1")
     port = int(os.getenv("JAVIS_PORT", "7777"))
     uvicorn.run("main:app", host=host, port=port, reload=False)
+

@@ -1118,6 +1118,7 @@ function handleMessage(data) {
       el.innerHTML = `<div class="duyet-card"><b>${escapeHtml(window.t("app.duyet_head"))}</b> `
         + `${escapeHtml(y.nhan_loai || y.loai || "")} · <code>${escapeHtml(y.tool || "")}</code>${y.label ? " (" + escapeHtml(y.label) + ")" : ""}`
         + (y.args ? `<div style="opacity:.75;font-size:12px">${escapeHtml(y.args)}</div>` : "")
+        + (y.chi_tiet ? `<pre class="pc-review">${escapeHtml(y.chi_tiet)}</pre>` : "")
         + `<div style="margin-top:6px;display:flex;gap:8px"><button class="gcard-btn" data-duyet="${escapeHtml(y.id)}" data-gat="1">${escapeHtml(window.t("app.duyet_ok"))}</button>`
         + `<button class="gcard-btn ghost" data-duyet="${escapeHtml(y.id)}" data-gat="0">${escapeHtml(window.t("app.duyet_no"))}</button></div></div>`;
       el.querySelectorAll("[data-duyet]").forEach(b => b.onclick = async () => {
@@ -1442,7 +1443,7 @@ const _gocCongSu = {};
 // `opts.wfRun`: tin này đến từ nút CHẠY của trang Cộng sự. Server dùng cờ đó để không
 // đoán lại ý người dùng (xem workflow_chat.quyet_dinh_luot): bấm đúng nút Chạy thì chạy,
 // dù câu trong ô nhập có nghe như đang nói về chính quy trình.
-function sendMessage(text, opts) {
+async function sendMessage(text, opts) {
   dictation.stop();
   if (window.JavisWorkspace && !window.JavisWorkspace.canSend()) return;
   const msg = (text || chatInput.value).trim();
@@ -1616,6 +1617,15 @@ function sendMessage(text, opts) {
                           wf_run: !!(opts && opts.wfRun), ...(adaptiveMeta || {}) };
   if(adaptiveMeta) { adaptiveCurrent.set(sid,adaptiveMeta.utterance_id);adaptiveOutbox.set(adaptiveMeta.utterance_id,{payload,element:userElement,since:performance.now()}); }
   try { if (window.MinMinOffice) window.MinMinOffice.onChatStart(msg || outMsg); } catch (e) {}
+  if (window.JavisGithubRepos) {
+    try { await window.JavisGithubRepos.claimPending(sid); }
+    catch (e) {
+      turns[sid].running = false; setSessionRunning(sid, false); syncActiveUI();
+      showActivity(escapeHtml(String(e.message || e)));
+      chatInput.value = msg;
+      return;
+    }
+  }
   ws.send(JSON.stringify(payload));
   _tuGiong = false;
 }
@@ -4454,3 +4464,4 @@ renderChips();
     },
   };
 })();
+

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Webhook - MinMin</title>
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/app-theme.css?v=26.10.273">
+<link rel="stylesheet" href="/static/webhook/webhook.css?v=1">
+<script src="/static/theme.js"></script>
+</head>
+<body data-mm-app="webhook">
+<header class="dau">
+  <a class="lui" href="/" aria-label="Về MinMin">&larr;</a>
+  <h1>Webhook</h1>
+  <span class="chip-tt" id="ttChay">…</span>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Phần của trang Webhook">
+  <button class="tab on" role="tab" aria-selected="true" data-tab="cau-hinh">Cấu hình</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="su-kien">Sự kiện</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="tinh-trang">Tình trạng</button>
+</nav>
+
+<main>
+  <section id="p-cau-hinh" class="phan">
+    <p class="gioi-thieu">Hệ thống ngoài (Pancake POS, form landing page, cổng thanh toán) gọi đường bí mật của webhook. MinMin <b>lưu sự kiện trước</b>, rồi mới lọc và chạy việc, nên máy khởi động lại cũng không mất đơn.</p>
+    <div class="hang-nut">
+      <button class="nut-chinh" id="themMoi" type="button">+ Thêm webhook</button>
+    </div>
+    <div class="the" id="formMoi" hidden>
+      <label>Tên <input class="o-nhap" id="mTen" placeholder="Ví dụ: Đơn Pancake"></label>
+      <label>Việc MinMin làm khi có sự kiện <textarea class="o-nhap" id="mViec" rows="3" placeholder="Ví dụ: Báo bố có đơn mới, kèm tên sản phẩm và tổng tiền"></textarea></label>
+      <label>Mức quyền
+        <select class="o-nhap" id="mMuc">
+          <option value="suggest">Chỉ đọc và đề xuất (an toàn)</option>
+          <option value="auto">Được ghi file nháp</option>
+          <option value="full">Được làm việc thật (gửi, đăng, tạo đơn)</option>
+        </select></label>
+      <div class="hang-nut"><button class="nut-chinh" id="mTao" type="button">Tạo</button><button class="nut-phu" id="mHuy" type="button">Huỷ</button></div>
+    </div>
+    <div class="the bao-mat" id="baoMa" hidden></div>
+    <ul class="ds-dong" id="dsHook" aria-live="polite"></ul>
+    <p class="trong" id="trongHook" hidden>Chưa có webhook nào.</p>
+  </section>
+
+  <section id="p-su-kien" class="phan" hidden>
+    <div class="loc">
+      <select class="o-nhap" id="locHook" aria-label="Lọc theo webhook"><option value="">Mọi webhook</option></select>
+      <select class="o-nhap" id="locTT" aria-label="Lọc theo trạng thái">
+        <option value="">Mọi trạng thái</option>
+        <option value="bi_chan">Bị chặn</option>
+        <option value="thu_lai">Chờ thử lại</option>
+        <option value="cho">Đang chờ</option>
+        <option value="xong">Xong</option>
+        <option value="bo_qua">Bỏ qua</option>
+      </select>
+      <button class="nut-phu" id="chayLaiHet" type="button">Chạy lại mọi sự kiện bị chặn</button>
+    </div>
+    <ul class="ds-dong" id="dsSK" aria-live="polite"></ul>
+    <p class="trong" id="trongSK" hidden>Chưa có sự kiện nào.</p>
+  </section>
+
+  <section id="p-tinh-trang" class="phan" hidden>
+    <div class="tong" id="tongTT"></div>
+    <ul class="ds-dong" id="dsTT"></ul>
+  </section>
+</main>
+<script src="/static/webhook/webhook.js?v=1"></script>
+</body>
+</html>
+

@@ -516,7 +516,7 @@ _SECRET_PATHS = (
     # Token truy cập kho hoặc repo RIÊNG, một khoá cho mỗi tên máy. Dấu * cuối nghĩa là
     # "mọi khoá của dict này" - cần vì tên máy do người dùng nhập nên không liệt kê trước
     # được. Xem `_secret_keys`.
-    "packs.tokens.*",
+    "packs.tokens.*", "github.token",
     "model.openrouter_key", "model.anthropic_api_key", "model.openai_api_key", "model.gemini_api_key",
     "model.groq_api_key", "model.xai_api_key", "model.meta_api_key", "model.ollama_key", "model.ollama_local_key", "model.openai_compat_key",
     *("model." + kf for kf in nha_api_rieng.KEY_FIELDS),   # deepseek/qwen/glm/minimax_api_key
@@ -1329,3 +1329,4 @@ def provision_admin_from_env():
     write_settings(cfg)
     clear_sessions()
     return "reset"
+

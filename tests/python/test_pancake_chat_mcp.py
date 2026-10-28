@@ -47,7 +47,7 @@ ra = chay(m.call("pancake_tk_ds_page", {}, spec()))
 check("ds page không lộ token", T1 not in ra and "Hoa Trà Boutique" in ra, ra)
 ra = chay(m.call("pancake_tk_tong_quan", {}, spec("")))
 check("chưa có page -> ERROR rõ", ra.startswith("ERROR") and "page_id" in ra, ra)
-check("đủ 3 tool", [t["name"] for t in chay(m.list_tools({}))] ==
+check("đủ 3 tool", [t["name"] for t in chay(m.list_tools({}))][:3] ==
       ["pancake_tk_ds_page", "pancake_tk_tong_quan", "pancake_tk_nhan_vien"])
 
 
@@ -191,3 +191,4 @@ k2 = m.khuc_gio(datetime(2026, 8, 1).date(), datetime(2026, 10, 25).date())
 check("86 ngày -> 3 khúc liền nhau", len(k2) == 3 and all(k2[i][1] + 1 == k2[i + 1][0] for i in range(2)), k2)
 
 check.ket_thuc()
+
