@@ -124,7 +124,7 @@ def register(app: FastAPI, dashboard_dir: Path) -> None:
     finance_files = {
         "index.html", "style.css", "design.css", "readability.css", "theme-bridge.css",
         "app.js", "numbers.js", "profit.js", "calculator.js", "business-engine.js",
-        "business.js", "audit-ui.js",
+        "business.js", "audit-ui.js", "fee-data.js", "fee-catalog.js", "fee-presets.js", "fee-presets.css",
     }
 
     def _serve_business_finance(name: str):

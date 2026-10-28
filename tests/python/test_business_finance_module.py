@@ -17,7 +17,7 @@ with TestClient(app) as tc:
     giay_phep.tao_cap_khoa()
     assert tc.get('/apps/business-finance/').status_code==403
     knn.ghi_dong_y('chung')
-    for filename in ['index.html','profit.js','business-engine.js','calculator.js','business.js','numbers.js','readability.css','theme-bridge.css','audit-ui.js']:
+    for filename in ['index.html','profit.js','business-engine.js','calculator.js','business.js','numbers.js','readability.css','theme-bridge.css','audit-ui.js','fee-data.js','fee-catalog.js','fee-presets.js','fee-presets.css']:
         response=tc.get('/apps/business-finance/'+filename)
         assert response.status_code==200, filename
         assert response.headers.get('cache-control')=='no-cache'

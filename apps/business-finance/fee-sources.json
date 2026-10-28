@@ -1,0 +1,74 @@
+{
+  "checked": "2026-10-28",
+  "version": "vn-2026-10-28",
+  "counts": {
+    "shopee": 1656,
+    "shopee_mall": 1439,
+    "tiktok": 2040,
+    "lazada": 2829,
+    "lazada_mall": 2829
+  },
+  "pdfs": [
+    {
+      "file": "lazada.pdf",
+      "sha256": "e182b57ddb496c78e265bf1deb6d4e6e2ee3cf9987901916d6eebcff23c61047"
+    },
+    {
+      "file": "shopee-mall-current.pdf",
+      "sha256": "e22c24c5441485ab4e7aefc34d12a52c08a524040e00e78010ad3a7884b88ce3"
+    },
+    {
+      "file": "shopee.pdf",
+      "sha256": "ff58192bce06477bf410d6e543925fc0c9c8c36e0faa7fdcd4c2814be2064686"
+    },
+    {
+      "file": "lazada-mall.pdf",
+      "sha256": "ce52df411d854d769e11cccfbfd2cea33b60d991892f9600b94ab5d4adaa85cb"
+    },
+    {
+      "file": "tiktok.pdf",
+      "sha256": "d38a7af979339e36d2dbc7645786243ac9ec83395561df25eefc5735d6e9c538"
+    },
+    {
+      "file": "lazada-books.pdf",
+      "sha256": "b8ba31ef40bc7c5a5414c991cc0b48e80d17ae6eb291cd76300a4e7ff303eb6a"
+    },
+    {
+      "file": "shopee-mall.pdf",
+      "sha256": "2eb3c66eb9ecc9ae83b2b60aa47f93b41fe726ecb42f80db48b0f12d1262dd71"
+    }
+  ],
+  "scope": "Vietnam. Category snapshots are separate for standard and Mall shops. No live account sync; no silent overwrite.",
+  "sources": [
+    {
+      "market": "Shopee standard",
+      "effective": "2026-05-23",
+      "page": "https://banhang.shopee.vn/edu/article/2139",
+      "pdf": "https://mms.file.susercontent.com/api/v4/11195002/mms/vn-11195002-bmlg5-mo82qh7ujsau29"
+    },
+    {
+      "market": "Shopee Mall",
+      "effective": "2026-10-04",
+      "page": "https://banhang.shopee.vn/edu/article/28220",
+      "pdf": "https://mms.file.susercontent.com/api/v4/11195002/mms/vn-11195002-bmlg7-mt3ouejkfbiaaa?app_type=shopee"
+    },
+    {
+      "market": "TikTok Shop",
+      "effective_standard": "2026-07-03",
+      "effective_mall": "2026-10-20",
+      "page": "https://seller-vn.tiktok.com/university/essay?knowledge_id=3396736626312961"
+    },
+    {
+      "market": "Lazada standard",
+      "effective": "2026-06-04",
+      "page": "https://sellercenter.lazada.vn/helpcenter/s/faq/knowledge?categoryId=1000028699&m_station=faq&questionId=1000155629"
+    },
+    {
+      "market": "LazMall",
+      "effective": "2026-06-04",
+      "book_override_effective": "2026-10-04",
+      "page": "https://sellercenter.lazada.vn/helpcenter/s/faq/knowledge?categoryId=1000028702&m_station=faq&questionId=1000149707",
+      "books": "https://sellercenter.lazada.vn/helpcenter/s/faq/knowledge?categoryId=1000028699&m_station=faq&questionId=1000159595"
+    }
+  ]
+}
