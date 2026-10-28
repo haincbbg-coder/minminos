@@ -4,6 +4,10 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.284] - 2026-10-28
+### Cải thiện
+- Đang phát triển thương hiệu MinMin trên Telegram và Chatbot đa kênh.
+
 ## [26.10.282] - 2026-10-28
 ### Thêm mới
 - Chọn biểu phí Shopee, TikTok Shop, Lazada theo ngành hàng và loại gian hàng; xem nguồn, ngày hiệu lực rồi lưu bản riêng để chỉnh sửa.
