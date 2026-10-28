@@ -1,15 +1,15 @@
 # Nhật ký cập nhật
 
-## 26.10.282 — 2026-10-28
-
-- Bảng tính kinh doanh: gợi ý biểu phí Shopee, TikTok Shop, Lazada theo ngành hàng, loại gian hàng; xem nguồn/ngày hiệu lực, sao chép và sửa linh hoạt.
-- Tách phí bắt buộc và chương trình tùy chọn; hỗ trợ trần phí, tỷ lệ đơn áp dụng, phí giữ lại khi hoàn hàng.
-- Sửa cơ sở tính phí giao dịch: ship khách trả trực tiếp sàn không cộng doanh thu shop; giữ bộ kiểm thử tính tay.
-
-
 Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay trong app tại nút **Cập nhật** trên thanh bên, hoặc **Cài đặt → Cập nhật**.
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
+
+## [26.10.282] - 2026-10-28
+### Thêm mới
+- Chọn biểu phí Shopee, TikTok Shop, Lazada theo ngành hàng và loại gian hàng; xem nguồn, ngày hiệu lực rồi lưu bản riêng để chỉnh sửa.
+- Kê riêng phí bắt buộc, chương trình tự tham gia, trần phí và phần đơn hoàn vẫn bị thu phí.
+### Sửa lỗi
+- Cước khách trả trực tiếp sàn chỉ cộng vào cơ sở tính phí giao dịch, không cộng vào doanh thu shop.
 
 ## [26.10.281] - 2026-10-28
 ### Thêm mới
