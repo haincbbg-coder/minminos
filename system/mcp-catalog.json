@@ -117,10 +117,10 @@
     },
     {
       "id": "pancake-thong-ke",
-      "name": "Thống kê Pancake",
+      "name": "Pancake: Thống kê & hội thoại",
       "icon": "📊",
       "category": "Nhắn tin",
-      "description": "Thống kê Pancake (tool pancake_tk_*). Số liệu hội thoại Pancake theo thời gian thực: khách nhắn, số điện thoại, đơn chốt, tỷ lệ chốt, của tất cả page và từng page, xếp hạng nhân viên sale. Một kết nối gom nhiều page (MinMin tự dựng cầu nối).",
+      "description": "Thống kê nhiều page, đọc hội thoại, soạn trả lời và gửi sau duyệt. Dùng lại danh sách page hiện có.",
       "status": "beta",
       "transport": "internal",
       "internal": "pancake_chat",
@@ -134,7 +134,7 @@
             "multiline": true
           }
         ],
-        "guide": "Làm cho từng page:\n1. Vào pancake.vn, chọn page, mở Cài đặt > Công cụ.\n2. Ở mục Public API access token bấm Tạo Token, rồi Sao chép.\n3. Dán vào ô bên dưới thành một dòng: page_id | token | tên page.\n\nPage ID là dãy số trong địa chỉ trang Pancake của page đó.\nToken không hết hạn. Bấm Xoá token hoặc Tạo lại trên Pancake thì phải dán token mới vào đây.\nKhông cần bật Webhook.",
+        "guide": "Làm cho từng page:\n1. Vào pancake.vn, chọn page, mở Cài đặt > Công cụ.\n2. Ở mục Public API access token sao chép token đang có; chỉ tạo nếu chưa có token.\n3. Dán vào ô bên dưới thành một dòng: page_id | token | tên page.\n\nPage ID là dãy số trong địa chỉ trang Pancake của page đó.\nToken không hết hạn. Bấm Xoá token hoặc Tạo lại trên Pancake thì phải dán token mới vào đây.\nKhông cần bật Webhook.",
         "guide_url": "https://developer.pancake.biz/"
       },
       "validate": {
@@ -145,12 +145,24 @@
         "read": [
           "pancake_tk_ds_page",
           "pancake_tk_tong_quan",
-          "pancake_tk_nhan_vien"
+          "pancake_tk_nhan_vien",
+          "pancake_conversations_list",
+          "pancake_messages_get",
+          "pancake_tags_list",
+          "pancake_staff_list",
+          "pancake_posts_list"
         ],
         "write": [],
-        "danger": []
+        "danger": [
+          "pancake_conversation_tag",
+          "pancake_conversation_mark_read",
+          "pancake_conversation_assign",
+          "pancake_customer_add_note",
+          "pancake_send_message",
+          "pancake_send_image"
+        ]
       },
-      "risk": "Bản này CHỈ ĐỌC số liệu thống kê, không đọc nội dung tin nhắn và không gửi gì.\n\nToken được lưu đã mã hoá trong kết nối, không hiện ra trong hội thoại hay nhật ký.",
+      "risk": "Mặc định chỉ đọc. Muốn thao tác, chọn Toàn quyền cho kết nối. Mọi lệnh ghi Pancake vẫn chờ chủ bấm duyệt từng nội dung, gồm gắn thẻ, phân công, ghi chú và gửi tin/ảnh. Quyền Chặn vẫn có hiệu lực.",
       "default_perm": "readonly"
     },
     {
@@ -2049,3 +2061,4 @@
     }
   ]
 }
+

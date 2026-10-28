@@ -2672,7 +2672,7 @@
       if (!d || !d.ok || myGen !== _renderGen) { box.style.display = "none"; return; }
       const T = (k, p) => esc(window.t(k, p));
       const post = async (u, b) => (await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })).json();
-      let h = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b>${T("cs.wh_head")}</b><button class="s-btn-ghost" id="whAdd">${T("cs.wh_add")}</button></div>`;
+      let h = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b>${T("cs.wh_head")}</b><span style="display:flex;gap:6px;flex-wrap:wrap"><a class="s-btn-ghost" href="/webhook" target="_blank" rel="noopener">${T("cs.wh_page")}</a><button class="s-btn-ghost" id="whAdd">${T("cs.wh_add")}</button></span></div>`;
       if (secret) h += `<div style="margin-top:8px;padding:8px 10px;border:1px solid var(--hairline);border-radius:8px;word-break:break-all"><div>${T("cs.wh_secret")}</div><code style="font-size:13px">${esc(secret)}</code></div>`;
       h += `<div id="whForm" style="display:none;margin-top:8px"><input id="whName" class="inp" style="width:100%;font-size:16px;margin-bottom:6px" placeholder="${T("cs.wh_name")}">
         <textarea id="whJob" class="inp" rows="3" style="width:100%;font-size:16px;margin-bottom:6px" placeholder="${T("cs.wh_job")}"></textarea>
@@ -7090,6 +7090,7 @@
       // Cả hai khối đều NẰM TRONG DOM, chỉ ẩn đi - phần dây nối bên dưới tìm theo id và
       // chạy một lần cho cả hai, nên đổi tab không phải vẽ lại hay nối lại gì cả.
       + '<div id="mcpTabDaNoi"' + (_mcpTab === "danoi" ? "" : " hidden") + '>'
+      + '<div id="mcpGithub"></div>'
       // Trụ 4 (26.10.139): sổ hành động ra ngoài + quyền theo loại việc. Vẽ khung, dữ liệu nạp sau.
       + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.hd_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.hd_sub")) + '</span></h3>'
       + '<div class="gcard aux-card"><div class="gcard-meta">' + esc(window.t("cs.hd_meta")) + '</div>'
@@ -7125,6 +7126,7 @@
       // chỉ gọi /mcp/ambient (chậm - phải health check) khi người dùng thật sự mở ra.
       + '</div>';
     // Facebook nhiều tài khoản (26.10.252): khối gộp Trang / tài khoản quảng cáo ở đầu tab Đã nối,
+    if (window.JavisGithubRepos) window.JavisGithubRepos.mount(document.getElementById("mcpGithub"));
     // chỉ hiện khi có kết nối Facebook. Dữ liệu từ /meta/tai-san (dashboard/fb-tai-san.js).
     if (window.FbTaiSan && conns.some(c => c.connector_id === "facebook-pages" || c.connector_id === "meta-ads-graph")) {
       const tabFb = document.getElementById("mcpTabDaNoi");
@@ -7220,6 +7222,7 @@
         box.innerHTML = `<div><b>${esc(window.t("cs.hd_cho_duyet", { n: ds.length }))}</b></div>` + ds.map(y =>
           `<div class="aux-now-act" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:4px">`
           + `<span><b>${esc(y.nhan_loai || y.loai)}</b> · ${esc(y.tool)}${y.label ? " (" + esc(y.label) + ")" : ""}<div style="opacity:.7;font-size:12px">${esc(y.args || "")}</div></span>`
+          + (y.chi_tiet ? `<pre class="pc-review">${esc(y.chi_tiet)}</pre>` : "")
           + `<button class="gcard-btn" data-duyet="${esc(y.id)}" data-gat="1">${esc(window.t("cs.hd_dong_y"))}</button>`
           + `<button class="gcard-btn ghost" data-duyet="${esc(y.id)}" data-gat="0">${esc(window.t("cs.hd_tu_choi"))}</button></div>`).join("");
         box.querySelectorAll("[data-duyet]").forEach(b => b.onclick = async () => {
@@ -10582,3 +10585,4 @@
   if (window.Alpine && Alpine.version) boot();           // Alpine đã sẵn (hiếm)
   else document.addEventListener("alpine:initialized", boot);
 })();
+

@@ -1679,6 +1679,7 @@
       // Hai nút mới gắn handler RIÊNG kèm stopPropagation, không nhét thêm nhánh vào
       // item.onclick bên dưới. Handler đó là thứ test_chat_side_actions.js bóc ra chạy thật
       // với đúng năm tham số của nó; thêm tên hàm lạ vào là test nổ ReferenceError.
+      item.setAttribute("data-sid", s.id);
       item.querySelector(".pin").onclick = function (ev) { ev.stopPropagation(); togglePin(s); };
       var nutXep = item.querySelector(".mov");
       if (nutXep) nutXep.onclick = function (ev) { ev.stopPropagation(); moveMenu(ev.currentTarget, s); };
@@ -1703,6 +1704,7 @@
       };
       listEl.appendChild(item);
     });
+    if (window.JavisGithubRepos) window.JavisGithubRepos.decorate(listEl);
     if (hasMore) {
       var more = el('<button class="cside-more" type="button">' + esc(window.t("sess.more", { so: PAGE })) + '</button>');
       more.onclick = function () { shown += PAGE; loadList(); };
@@ -1973,3 +1975,4 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bindGlobal);
   else bindGlobal();
 })();
+

@@ -262,11 +262,19 @@ def _guard(ent, fn, mode):
     connector = mcp_catalog.get(conn.get("connector_id"))
 
     async def _call(args):
+        # Freeze the exact arguments the person will approve.
+        import copy
+        args = copy.deepcopy(args or {})
         cls = mcp_catalog.classify(connector, tool, args)
         ok, why = mcp_catalog.allowed(connector, conn.get("perm"), mode, tool, args)
         # QUYỀN THEO LOẠI VIỆC (Trụ 4): lớp cứng thứ hai, chỉ xét việc GHI. Chủ chặn "tiền" thì
         # không prompt nào mở được, kể cả ở mức full.
         loai = hanh_dong.loai_viec(conn.get("connector_id"), tool, args) if cls != "read" else ""
+        pancake_write = conn.get("connector_id") in ("pancake-thong-ke", "pancake-chat") and cls != "read"
+        if pancake_write:
+            loai = "nhan_tin"
+            if mode != "full" or conn.get("perm") != "full":
+                ok, why = False, "Thao tác Pancake cần kết nối Toàn quyền và duyệt từng nội dung."
         if ok and loai:
             ok, why = hanh_dong.cho_phep(_chinh_sach_loai_viec(), loai)
         # LUẬT ĐỘI ADS (26.10.248): lệnh ghi vào MCP Meta Ads chính chủ còn bị soi theo TRỊ SỐ -
@@ -306,10 +314,14 @@ def _guard(ent, fn, mode):
                     args=args, err=why))
             return "ERROR: " + why
         # HỎI TRƯỚC (26.10.165): loại việc chủ đặt "hỏi trước" thì dừng lại, báo chủ, chờ gật.
-        if loai and hanh_dong.can_hoi(_chinh_sach_loai_viec(), loai):
+        if loai and (pancake_write or hanh_dong.can_hoi(_chinh_sach_loai_viec(), loai)):
             yc = hanh_dong.tao_yeu_cau(ai=hanh_dong.nguoi_lam(), tool=tool,
                                        connector=conn.get("connector_id"), label=conn.get("label"),
                                        loai=loai, args=args)
+            if pancake_write:
+                fields = {"page", "conversation_id", "tag_id", "action", "read", "assignee_ids",
+                          "page_customer_id", "message", "paths", "reply_to_comment_id"}
+                yc["chi_tiet"] = json.dumps({k: v for k, v in args.items() if k in fields}, ensure_ascii=False, indent=2)
             kq = await hanh_dong.cho_quyet(yc, timeout=_hoi_truoc_giay())
             if kq != "dong_y":
                 ly_do = ("chủ TỪ CHỐI" if kq == "tu_choi" else
@@ -331,6 +343,12 @@ def _guard(ent, fn, mode):
                 ai=hanh_dong.nguoi_lam(), tool=tool, connector=conn.get("connector_id"),
                 label=conn.get("label"), loai=loai, cls=cls, mode=mode, ok=True, ms=0,
                 args=args, err=f"ĐÃ DUYỆT bởi {yc.get('nguoi_quyet') or 'chủ'} (#{yc['id']})"))
+        if pancake_write:
+            # A revocation while the approval dialog was open must win.
+            current = next((c for c in mcp_store.list_connections() if c.get("id") == conn["id"]), None)
+            policy_ok, _ = hanh_dong.cho_phep(_chinh_sach_loai_viec(), loai)
+            if not current or not current.get("enabled") or current.get("perm") != "full" or not policy_ok:
+                return "ERROR: Quyền Pancake đã thay đổi trong lúc chờ duyệt; chưa thực hiện."
         t0 = time.time()
         # ĐỆM TOOL ĐỌC (Lớp 6): cùng kết nối + tool + tham số trong vài phút -> trả lại ngay,
         # không gọi POS/ads lần nữa. Một báo cáo gọi pos_order 4 lần cùng tham số là 3 lần thừa.
@@ -2166,3 +2184,4 @@ async def validate_connection(conn_id):
                     "error": _friendly_tool_error(str(res)[7:], conn_id)}
         label = _extract_label(str(res), val.get("label_paths"))
     return {"ok": True, "label": label, "tools": len(tools), "error": ""}
+

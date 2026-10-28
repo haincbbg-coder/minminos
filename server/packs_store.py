@@ -32,10 +32,12 @@ rồi hiện sai.
 from __future__ import annotations
 
 import json
+import re
 import time
 from urllib.parse import urljoin, urlparse
 
 from config import STATE_DIR
+import localefmt
 
 CACHE = STATE_DIR / "packs-store-cache.json"
 TTL = 6 * 3600
@@ -82,6 +84,31 @@ def _map_nn(v, tran=MAX_TEN) -> dict:
     return {"en": s} if s else {}
 
 
+_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$")
+_REF_RE = re.compile(r"^[A-Za-z0-9._/-]{1,100}$")
+
+
+def _upstream(v) -> dict:
+    """Recommended repos (0.370.0): an entry that follows its author's GitHub repo says so in `upstream`.
+
+    The Store shows it as a "Follows the source repo" line with a link to github.com/<repo>, so the repo
+    has to be a plain owner/name before it becomes a link: anything else drops the field and the card
+    shows as an ordinary pack. The store refreshes these packs from the source daily
+    (javis-store `tools/theo-goc.py`); updating still goes through the usual confirm screen."""
+    if not isinstance(v, dict):
+        return {}
+    repo = _chuoi(v.get("repo"), 201)
+    if not _REPO_RE.match(repo) or ".." in repo:
+        return {}
+    ref = _chuoi(v.get("ref"), 100)
+    commit = _chuoi(v.get("commit"), 40).lower()
+    synced = _chuoi(v.get("synced"), 10)
+    return {"repo": repo,
+            "ref": ref if _REF_RE.match(ref) else "",
+            "commit": commit if re.match(r"^[0-9a-f]{7,40}$", commit) else "",
+            "synced": synced if re.match(r"^\d{4}-\d{2}-\d{2}$", synced) else ""}
+
+
 def _lam_sach(m: dict) -> dict:
     """Giữ đúng những trường Javis biết dùng. Trường lạ bị bỏ, không bao giờ đi tiếp.
 
@@ -109,6 +136,7 @@ def _lam_sach(m: dict) -> dict:
         "verified": bool(m.get("verified")),
         "updated": _chuoi(m.get("updated"), 32),
         "homepage": _chuoi(m.get("homepage"), 300),
+        "upstream": _upstream(m.get("upstream")),
         # Logo trên thẻ. Đường dẫn TƯƠNG ĐỐI so với file index (như `download.url`), ghép ở
         # `lay()`. Không nhận URL tuyệt đối: logo phải nằm CÙNG nơi với index, để một mục trong
         # kho không thành beacon gõ về máy chủ của bên thứ ba mỗi lần vẽ lưới. `veAvatar`
@@ -168,13 +196,14 @@ async def lay(lam_moi: bool = False) -> dict:
         raw = await packs_fetch.tai(u, tran=4 * 1024 * 1024)
         d = json.loads(raw.decode("utf-8"))
         if not isinstance(d, dict):
-            raise ValueError("gốc phải là object")
+            raise ValueError(localefmt.chu("gốc phải là object", "the root must be an object"))
         if str(d.get("format")) != FORMAT:
-            raise ValueError("tệp này không phải danh mục gói của Javis")
+            raise ValueError(localefmt.chu("tệp này không phải danh mục gói của Javis", "this file is not a Javis pack catalog"))
         fv = int(d.get("format_version") or 0)
         if fv > FORMAT_VERSION:
             # Đọc nửa vời một định dạng mới hơn là cách chắc chắn để hiện sai. Nói thẳng.
-            raise ValueError(f"kho này cần bản Javis mới hơn (định dạng v{fv})")
+            raise ValueError(localefmt.chu(f"kho này cần bản Javis mới hơn (định dạng v{fv})",
+                                           f"this store needs a newer Javis (format v{fv})"))
         goi = [_lam_sach(x) for x in (d.get("packs") or [])[:MAX_GOI] if isinstance(x, dict)]
         # Mục thiếu id hoặc thiếu chỗ tải thì bỏ: hiện một thẻ bấm vào không cài được thì tệ
         # hơn là không hiện.

@@ -77,7 +77,8 @@ TOOLS = [
 
 
 async def list_tools(spec):
-    return TOOLS
+    import pancake_hoi_thoai
+    return TOOLS + pancake_hoi_thoai.TOOLS
 
 
 # ---------------------------------------------------------------- đọc cấu hình page
@@ -416,6 +417,9 @@ async def nhan_vien(pages, a):
 
 
 async def call(tool, arguments, spec):
+    import pancake_hoi_thoai
+    if tool in pancake_hoi_thoai.READ + pancake_hoi_thoai.WRITE:
+        return await pancake_hoi_thoai.call(tool, arguments, spec)
     sec = k.bi_mat(spec)
     pages = doc_pages(sec.get("pages"))
     if not pages:
@@ -436,3 +440,4 @@ async def call(tool, arguments, spec):
             return k.giau("ERROR: không page nào đọc được số. " + " | ".join(kq["loi"])[:800], tat_ca_token)
         return k.giau(k.json_ra(kq, 12000), tat_ca_token)
     return f"ERROR: tool '{tool}' không có trong cầu nối Thống kê Pancake"
+
