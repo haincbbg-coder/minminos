@@ -643,6 +643,18 @@ def sync_brain(brain_root) -> dict:
                 _write_manifest(root, manifest)
             except Exception as e:
                 print(f"[system sync] ghi manifest {root}: {e}", file=sys.stderr)
+        # Commercial templates use their own manifest: preserve edits and deletions.
+        # Reuse this lifecycle for startup, new brains and external path: brains.
+        try:
+            import commercial_starter
+            starter = commercial_starter.sync_brain(root)
+            result["commercial"] = starter
+            if not starter["ok"]:
+                result["ok"] = False
+                print(f"[commercial starter] {starter['errors']}", file=sys.stderr)
+        except Exception as e:
+            result["ok"] = False
+            print(f"[commercial starter] {e}", file=sys.stderr)
         # (3) Mirror canonical skills/ → .claude/skills để Claude native (cwd=brain) nạp được.
         try:
             mirror_skills(root)
