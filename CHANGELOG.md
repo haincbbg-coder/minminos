@@ -4,6 +4,11 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.281] - 2026-10-28
+### Thêm mới
+- Pancake POS có sẵn trong Nguồn dữ liệu: bấm Kết nối, dán API key riêng của cửa hàng, không cần cài gói hoặc nhập URL.
+- Mặc định chỉ đọc, hỗ trợ thêm nhiều tài khoản cho nhiều shop; giữ nguyên tài khoản POS đã kết nối.
+
 ## [26.10.279] - 2026-10-28
 ### Thêm mới
 - **Pancake đọc được từng hội thoại** bằng kết nối đang có. Gửi chữ/ảnh, gắn thẻ, phân công và ghi chú đều chờ duyệt đầy đủ nội dung; thu hồi quyền thì dừng.
