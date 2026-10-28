@@ -6904,6 +6904,36 @@
  {
   "order": 693,
   "type": "APIRoute",
+  "path": "/apps/business-finance",
+  "name": "business_finance_redirect",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 694,
+  "type": "APIRoute",
+  "path": "/apps/business-finance/",
+  "name": "business_finance_index",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 695,
+  "type": "APIRoute",
+  "path": "/apps/business-finance/{name}",
+  "name": "business_finance_asset",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
+ },
+ {
+  "order": 696,
+  "type": "APIRoute",
   "path": "/tin-hieu",
   "name": "th_ghi",
   "methods": [
@@ -6912,7 +6942,7 @@
   "trong": null
  },
  {
-  "order": 694,
+  "order": 697,
   "type": "APIRoute",
   "path": "/tin-hieu/tom-tat",
   "name": "th_tom_tat",
@@ -6922,7 +6952,7 @@
   "trong": null
  },
  {
-  "order": 695,
+  "order": 698,
   "type": "APIRoute",
   "path": "/apps/zalo-forwarder",
   "name": "zf_goc",
@@ -6932,7 +6962,7 @@
   "trong": null
  },
  {
-  "order": 696,
+  "order": 699,
   "type": "APIRoute",
   "path": "/apps/zalo-forwarder/",
   "name": "zf_trang",
@@ -6942,7 +6972,7 @@
   "trong": null
  },
  {
-  "order": 697,
+  "order": 700,
   "type": "APIRoute",
   "path": "/apps/zalo-forwarder/api/trang-thai",
   "name": "zf_trang_thai",
@@ -6952,7 +6982,7 @@
   "trong": null
  },
  {
-  "order": 698,
+  "order": 701,
   "type": "APIRoute",
   "path": "/apps/zalo-forwarder/api/rpc/{ham}",
   "name": "zf_rpc",
@@ -6962,7 +6992,7 @@
   "trong": null
  },
  {
-  "order": 699,
+  "order": 702,
   "type": "APIRoute",
   "path": "/apps/zalo-forwarder/api/upload",
   "name": "zf_upload",
@@ -6972,7 +7002,7 @@
   "trong": null
  },
  {
-  "order": 700,
+  "order": 703,
   "type": "APIRoute",
   "path": "/apps/zalo-forwarder/api/events",
   "name": "zf_events",
@@ -6982,7 +7012,7 @@
   "trong": null
  },
  {
-  "order": 701,
+  "order": 704,
   "type": "APIRoute",
   "path": "/apps/zalo-forwarder/{ten}",
   "name": "zf_tinh",
@@ -6992,7 +7022,7 @@
   "trong": null
  },
  {
-  "order": 702,
+  "order": 705,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tim-ban-goc",
   "name": "listing",
@@ -7002,7 +7032,7 @@
   "trong": null
  },
  {
-  "order": 703,
+  "order": 706,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tim-ban-goc/nhap",
   "name": "intake",
@@ -7012,7 +7042,7 @@
   "trong": null
  },
  {
-  "order": 704,
+  "order": 707,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tim-ban-goc/kho",
   "name": "from_store",
@@ -7022,7 +7052,7 @@
   "trong": null
  },
  {
-  "order": 705,
+  "order": 708,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tim-ban-goc/chay",
   "name": "start",
@@ -7032,7 +7062,7 @@
   "trong": null
  },
  {
-  "order": 706,
+  "order": 709,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tim-ban-goc/nguon",
   "name": "update",
@@ -7042,7 +7072,7 @@
   "trong": null
  },
  {
-  "order": 707,
+  "order": 710,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don",
   "name": "hd_goc",
@@ -7052,7 +7082,7 @@
   "trong": null
  },
  {
-  "order": 708,
+  "order": 711,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/",
   "name": "hd_trang",
@@ -7062,7 +7092,7 @@
   "trong": null
  },
  {
-  "order": 709,
+  "order": 712,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/trang-thai",
   "name": "hd_trang_thai",
@@ -7072,7 +7102,7 @@
   "trong": null
  },
  {
-  "order": 710,
+  "order": 713,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/viec/{vid}",
   "name": "hd_viec",
@@ -7082,7 +7112,7 @@
   "trong": null
  },
  {
-  "order": 711,
+  "order": 714,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/viec/{vid}/dung",
   "name": "hd_viec_dung",
@@ -7092,7 +7122,7 @@
   "trong": null
  },
  {
-  "order": 712,
+  "order": 715,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/doanh-nghiep",
   "name": "hd_dn",
@@ -7102,7 +7132,7 @@
   "trong": null
  },
  {
-  "order": 713,
+  "order": 716,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/doanh-nghiep",
   "name": "hd_dn_luu",
@@ -7112,7 +7142,7 @@
   "trong": null
  },
  {
-  "order": 714,
+  "order": 717,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/doanh-nghiep/{mst}",
   "name": "hd_dn_xoa",
@@ -7122,7 +7152,7 @@
   "trong": null
  },
  {
-  "order": 715,
+  "order": 718,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/captcha",
   "name": "hd_captcha",
@@ -7132,7 +7162,7 @@
   "trong": null
  },
  {
-  "order": 716,
+  "order": 719,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/dang-nhap",
   "name": "hd_dang_nhap",
@@ -7142,7 +7172,7 @@
   "trong": null
  },
  {
-  "order": 717,
+  "order": 720,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/dang-xuat/{mst}",
   "name": "hd_dang_xuat",
@@ -7152,7 +7182,7 @@
   "trong": null
  },
  {
-  "order": 718,
+  "order": 721,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tra-cuu",
   "name": "hd_tra_cuu",
@@ -7162,7 +7192,7 @@
   "trong": null
  },
  {
-  "order": 719,
+  "order": 722,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/hoa-don",
   "name": "hd_ds",
@@ -7172,7 +7202,7 @@
   "trong": null
  },
  {
-  "order": 720,
+  "order": 723,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tai",
   "name": "hd_tai",
@@ -7182,7 +7212,7 @@
   "trong": null
  },
  {
-  "order": 721,
+  "order": 724,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/xem/{mst}/{loai}/{key}",
   "name": "hd_xem",
@@ -7192,7 +7222,7 @@
   "trong": null
  },
  {
-  "order": 722,
+  "order": 725,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tep/{mst}/{loai}/{key}/{kieu}",
   "name": "hd_tep",
@@ -7202,7 +7232,7 @@
   "trong": null
  },
  {
-  "order": 723,
+  "order": 726,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/cai-dat",
   "name": "hd_cai_dat",
@@ -7212,7 +7242,7 @@
   "trong": null
  },
  {
-  "order": 724,
+  "order": 727,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/captcha-api",
   "name": "cap_doc",
@@ -7222,7 +7252,7 @@
   "trong": null
  },
  {
-  "order": 725,
+  "order": 728,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/captcha-api",
   "name": "cap_luu",
@@ -7232,7 +7262,7 @@
   "trong": null
  },
  {
-  "order": 726,
+  "order": 729,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/tra-cuu-hang",
   "name": "hd_hang",
@@ -7242,7 +7272,7 @@
   "trong": null
  },
  {
-  "order": 727,
+  "order": 730,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/captcha-api/so-du",
   "name": "cap_so_du",
@@ -7252,7 +7282,7 @@
   "trong": null
  },
  {
-  "order": 728,
+  "order": 731,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/cai-dat",
   "name": "hd_cai_dat_luu",
@@ -7262,7 +7292,7 @@
   "trong": null
  },
  {
-  "order": 729,
+  "order": 732,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/xuat",
   "name": "hd_xuat",
@@ -7272,7 +7302,7 @@
   "trong": null
  },
  {
-  "order": 730,
+  "order": 733,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/chung-tu/mau",
   "name": "catalog",
@@ -7282,7 +7312,7 @@
   "trong": null
  },
  {
-  "order": 731,
+  "order": 734,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/chung-tu/nhan-su-mau",
   "name": "template",
@@ -7292,7 +7322,7 @@
   "trong": null
  },
  {
-  "order": 732,
+  "order": 735,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/chung-tu/nhan-su-nhap",
   "name": "intake",
@@ -7302,7 +7332,7 @@
   "trong": null
  },
  {
-  "order": 733,
+  "order": 736,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/chung-tu/xem-mau",
   "name": "preview",
@@ -7312,7 +7342,7 @@
   "trong": null
  },
  {
-  "order": 734,
+  "order": 737,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/bo-chung-tu",
   "name": "hd_bo_chung_tu",
@@ -7322,7 +7352,7 @@
   "trong": null
  },
  {
-  "order": 735,
+  "order": 738,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/canh-bao",
   "name": "hd_canh_bao",
@@ -7332,7 +7362,7 @@
   "trong": null
  },
  {
-  "order": 736,
+  "order": 739,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/cau-hinh",
   "name": "gm_ch",
@@ -7342,7 +7372,7 @@
   "trong": null
  },
  {
-  "order": 737,
+  "order": 740,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/cau-hinh",
   "name": "gm_ch_luu",
@@ -7352,7 +7382,7 @@
   "trong": null
  },
  {
-  "order": 738,
+  "order": 741,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/tai-khoan/{email}",
   "name": "gm_xoa",
@@ -7362,7 +7392,7 @@
   "trong": null
  },
  {
-  "order": 739,
+  "order": 742,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/client",
   "name": "gm_google_client",
@@ -7372,7 +7402,7 @@
   "trong": null
  },
  {
-  "order": 740,
+  "order": 743,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/bat-dau",
   "name": "gm_google_bat_dau",
@@ -7382,7 +7412,7 @@
   "trong": null
  },
  {
-  "order": 741,
+  "order": 744,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/google/ve",
   "name": "gm_google_ve",
@@ -7392,7 +7422,7 @@
   "trong": null
  },
  {
-  "order": 742,
+  "order": 745,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/quet",
   "name": "gm_quet",
@@ -7402,7 +7432,7 @@
   "trong": null
  },
  {
-  "order": 743,
+  "order": 746,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/ket-qua",
   "name": "gm_kq",
@@ -7412,7 +7442,7 @@
   "trong": null
  },
  {
-  "order": 744,
+  "order": 747,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/tep/{rid}/{kieu}",
   "name": "gm_tep",
@@ -7422,7 +7452,7 @@
   "trong": null
  },
  {
-  "order": 745,
+  "order": 748,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/xem/{rid}",
   "name": "gm_xem",
@@ -7432,7 +7462,7 @@
   "trong": null
  },
  {
-  "order": 746,
+  "order": 749,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/ghep-lai",
   "name": "gm_ghep_lai",
@@ -7442,7 +7472,7 @@
   "trong": null
  },
  {
-  "order": 747,
+  "order": 750,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/xuat",
   "name": "gm_xuat",
@@ -7452,7 +7482,7 @@
   "trong": null
  },
  {
-  "order": 748,
+  "order": 751,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/zip",
   "name": "gm_zip",
@@ -7462,7 +7492,7 @@
   "trong": null
  },
  {
-  "order": 749,
+  "order": 752,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/pdf-gop",
   "name": "gm_gop",
@@ -7472,7 +7502,7 @@
   "trong": null
  },
  {
-  "order": 750,
+  "order": 753,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/tai",
   "name": "gm_tai",
@@ -7482,7 +7512,7 @@
   "trong": null
  },
  {
-  "order": 751,
+  "order": 754,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/api/gmail/ma-tra-cuu",
   "name": "gm_ma",
@@ -7492,7 +7522,7 @@
   "trong": null
  },
  {
-  "order": 752,
+  "order": 755,
   "type": "APIRoute",
   "path": "/apps/tai-hoa-don/{ten}",
   "name": "hd_tinh",
@@ -7502,7 +7532,7 @@
   "trong": null
  },
  {
-  "order": 753,
+  "order": 756,
   "type": "APIRoute",
   "path": "/apps/xuong-video",
   "name": "xv_goc",
@@ -7512,7 +7542,7 @@
   "trong": null
  },
  {
-  "order": 754,
+  "order": 757,
   "type": "APIRoute",
   "path": "/apps/xuong-video/",
   "name": "xv_trang",
@@ -7522,7 +7552,7 @@
   "trong": null
  },
  {
-  "order": 755,
+  "order": 758,
   "type": "APIRoute",
   "path": "/apps/xuong-video/{ten}",
   "name": "xv_tinh",
@@ -7532,7 +7562,7 @@
   "trong": null
  },
  {
-  "order": 756,
+  "order": 759,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/trang-thai",
   "name": "xv_trang_thai",
@@ -7542,7 +7572,7 @@
   "trong": null
  },
  {
-  "order": 757,
+  "order": 760,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/khoa/{dv}",
   "name": "xv_khoa",
@@ -7552,7 +7582,7 @@
   "trong": null
  },
  {
-  "order": 758,
+  "order": 761,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/khoa/{dv}",
   "name": "xv_khoa_xoa",
@@ -7562,7 +7592,7 @@
   "trong": null
  },
  {
-  "order": 759,
+  "order": 762,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/cai-dat",
   "name": "xv_cai_dat",
@@ -7572,7 +7602,7 @@
   "trong": null
  },
  {
-  "order": 760,
+  "order": 763,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/youtube/ket-noi",
   "name": "xv_yt_ket_noi",
@@ -7582,7 +7612,7 @@
   "trong": null
  },
  {
-  "order": 761,
+  "order": 764,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/youtube/callback",
   "name": "xv_yt_callback",
@@ -7592,7 +7622,7 @@
   "trong": null
  },
  {
-  "order": 762,
+  "order": 765,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/tiktok/ket-noi",
   "name": "xv_tt_ket_noi",
@@ -7602,7 +7632,7 @@
   "trong": null
  },
  {
-  "order": 763,
+  "order": 766,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/tiktok/callback",
   "name": "xv_tt_callback",
@@ -7612,7 +7642,7 @@
   "trong": null
  },
  {
-  "order": 764,
+  "order": 767,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an",
   "name": "xv_ds",
@@ -7622,7 +7652,7 @@
   "trong": null
  },
  {
-  "order": 765,
+  "order": 768,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an",
   "name": "xv_tao",
@@ -7632,7 +7662,7 @@
   "trong": null
  },
  {
-  "order": 766,
+  "order": 769,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}",
   "name": "xv_xem",
@@ -7642,7 +7672,7 @@
   "trong": null
  },
  {
-  "order": 767,
+  "order": 770,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}",
   "name": "xv_xoa",
@@ -7652,7 +7682,7 @@
   "trong": null
  },
  {
-  "order": 768,
+  "order": 771,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}",
   "name": "xv_sua",
@@ -7662,7 +7692,7 @@
   "trong": null
  },
  {
-  "order": 769,
+  "order": 772,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/tai-lieu",
   "name": "xv_tai_lieu",
@@ -7672,7 +7702,7 @@
   "trong": null
  },
  {
-  "order": 770,
+  "order": 773,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/tep",
   "name": "xv_tep",
@@ -7682,7 +7712,7 @@
   "trong": null
  },
  {
-  "order": 771,
+  "order": 774,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/ban-dung",
   "name": "xv_ban_dung",
@@ -7692,7 +7722,7 @@
   "trong": null
  },
  {
-  "order": 772,
+  "order": 775,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/chay",
   "name": "xv_chay",
@@ -7702,7 +7732,7 @@
   "trong": null
  },
  {
-  "order": 773,
+  "order": 776,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/duyet",
   "name": "xv_duyet",
@@ -7712,7 +7742,7 @@
   "trong": null
  },
  {
-  "order": 774,
+  "order": 777,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/du-an/{pid}/dang-ngay",
   "name": "xv_dang_ngay",
@@ -7722,7 +7752,7 @@
   "trong": null
  },
  {
-  "order": 775,
+  "order": 778,
   "type": "APIRoute",
   "path": "/apps/xuong-video/api/lo",
   "name": "xv_lo",
@@ -7732,7 +7762,7 @@
   "trong": null
  },
  {
-  "order": 776,
+  "order": 779,
   "type": "APIRoute",
   "path": "/apps/viral-studio",
   "name": "root",
@@ -7742,7 +7772,7 @@
   "trong": null
  },
  {
-  "order": 777,
+  "order": 780,
   "type": "APIRoute",
   "path": "/apps/viral-studio/",
   "name": "page",
@@ -7752,7 +7782,7 @@
   "trong": null
  },
  {
-  "order": 778,
+  "order": 781,
   "type": "APIRoute",
   "path": "/apps/viral-studio/assets/{name}",
   "name": "assets",
@@ -7762,7 +7792,7 @@
   "trong": null
  },
  {
-  "order": 779,
+  "order": 782,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/state",
   "name": "state",
@@ -7772,7 +7802,7 @@
   "trong": null
  },
  {
-  "order": 780,
+  "order": 783,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/action/{action}",
   "name": "action",
@@ -7782,7 +7812,7 @@
   "trong": null
  },
  {
-  "order": 781,
+  "order": 784,
   "type": "APIRoute",
   "path": "/apps/viral-studio/api/export/{kind}",
   "name": "export",
@@ -7792,7 +7822,7 @@
   "trong": null
  },
  {
-  "order": 782,
+  "order": 785,
   "type": "APIRoute",
   "path": "/share/rename",
   "name": "share_rename",
@@ -7802,7 +7832,7 @@
   "trong": null
  },
  {
-  "order": 783,
+  "order": 786,
   "type": "APIRoute",
   "path": "/bien-dong",
   "name": "bien_dong_page",
@@ -7812,7 +7842,7 @@
   "trong": null
  },
  {
-  "order": 784,
+  "order": 787,
   "type": "APIRoute",
   "path": "/bien-dong/casso/{token}",
   "name": "bien_dong_casso",
@@ -7822,7 +7852,7 @@
   "trong": null
  },
  {
-  "order": 785,
+  "order": 788,
   "type": "APIRoute",
   "path": "/bien-dong/giao-dich",
   "name": "bien_dong_giao_dich",
@@ -7832,7 +7862,7 @@
   "trong": null
  },
  {
-  "order": 786,
+  "order": 789,
   "type": "APIRoute",
   "path": "/bien-dong/cai-dat",
   "name": "bien_dong_cai_dat",
@@ -7842,7 +7872,7 @@
   "trong": null
  },
  {
-  "order": 787,
+  "order": 790,
   "type": "APIRoute",
   "path": "/bien-dong/cai-dat",
   "name": "bien_dong_luu_cai_dat",
@@ -7852,7 +7882,7 @@
   "trong": null
  },
  {
-  "order": 788,
+  "order": 791,
   "type": "APIRoute",
   "path": "/bien-dong/doi-token",
   "name": "bien_dong_doi_token",
@@ -7862,7 +7892,7 @@
   "trong": null
  },
  {
-  "order": 789,
+  "order": 792,
   "type": "APIRoute",
   "path": "/bien-dong/thu",
   "name": "bien_dong_thu",
@@ -7872,7 +7902,7 @@
   "trong": null
  },
  {
-  "order": 790,
+  "order": 793,
   "type": "APIRoute",
   "path": "/hook/{token}",
   "name": "hook_vao",
@@ -7882,7 +7912,7 @@
   "trong": null
  },
  {
-  "order": 791,
+  "order": 794,
   "type": "APIRoute",
   "path": "/webhooks",
   "name": "wh_ds",
@@ -7892,7 +7922,7 @@
   "trong": null
  },
  {
-  "order": 792,
+  "order": 795,
   "type": "APIRoute",
   "path": "/webhooks",
   "name": "wh_tao",
@@ -7902,7 +7932,7 @@
   "trong": null
  },
  {
-  "order": 793,
+  "order": 796,
   "type": "APIRoute",
   "path": "/webhooks/doi-token",
   "name": "wh_doi",
@@ -7912,7 +7942,7 @@
   "trong": null
  },
  {
-  "order": 794,
+  "order": 797,
   "type": "APIRoute",
   "path": "/webhooks/cap-nhat",
   "name": "wh_capnhat",
@@ -7922,7 +7952,7 @@
   "trong": null
  },
  {
-  "order": 795,
+  "order": 798,
   "type": "APIRoute",
   "path": "/webhooks/xoa",
   "name": "wh_xoa",
@@ -7932,7 +7962,7 @@
   "trong": null
  },
  {
-  "order": 796,
+  "order": 799,
   "type": "APIRoute",
   "path": "/webhooks/thu",
   "name": "wh_thu",
@@ -7942,7 +7972,7 @@
   "trong": null
  },
  {
-  "order": 797,
+  "order": 800,
   "type": "APIRoute",
   "path": "/concat/may/ghep",
   "name": "cc_may_ghep",
@@ -7952,7 +7982,7 @@
   "trong": null
  },
  {
-  "order": 798,
+  "order": 801,
   "type": "APIRoute",
   "path": "/concat/may/nhip",
   "name": "cc_may_nhip",
@@ -7962,7 +7992,7 @@
   "trong": null
  },
  {
-  "order": 799,
+  "order": 802,
   "type": "APIRoute",
   "path": "/concat/may/viec",
   "name": "cc_may_viec",
@@ -7972,7 +8002,7 @@
   "trong": null
  },
  {
-  "order": 800,
+  "order": 803,
   "type": "APIRoute",
   "path": "/concat/may/tep/{vid}/{so}",
   "name": "cc_may_tep",
@@ -7982,7 +8012,7 @@
   "trong": null
  },
  {
-  "order": 801,
+  "order": 804,
   "type": "APIRoute",
   "path": "/concat/may/tai-len/{vid}",
   "name": "cc_may_tai_len",
@@ -7992,7 +8022,7 @@
   "trong": null
  },
  {
-  "order": 802,
+  "order": 805,
   "type": "APIRoute",
   "path": "/concat/may/ket-qua/{vid}",
   "name": "cc_may_ket_qua",
@@ -8002,7 +8032,7 @@
   "trong": null
  },
  {
-  "order": 803,
+  "order": 806,
   "type": "APIRoute",
   "path": "/apps/concat",
   "name": "cc_goc",
@@ -8012,7 +8042,7 @@
   "trong": null
  },
  {
-  "order": 804,
+  "order": 807,
   "type": "APIRoute",
   "path": "/apps/concat/",
   "name": "cc_trang",
@@ -8022,7 +8052,7 @@
   "trong": null
  },
  {
-  "order": 805,
+  "order": 808,
   "type": "APIRoute",
   "path": "/apps/concat/{ten}",
   "name": "cc_tinh",
@@ -8032,7 +8062,7 @@
   "trong": null
  },
  {
-  "order": 806,
+  "order": 809,
   "type": "APIRoute",
   "path": "/apps/concat/api/trang-thai",
   "name": "cc_trang_thai",
@@ -8042,7 +8072,7 @@
   "trong": null
  },
  {
-  "order": 807,
+  "order": 810,
   "type": "APIRoute",
   "path": "/apps/concat/api/ma-ghep",
   "name": "cc_ma_ghep",
@@ -8052,7 +8082,7 @@
   "trong": null
  },
  {
-  "order": 808,
+  "order": 811,
   "type": "APIRoute",
   "path": "/apps/concat/api/may/{may_id}",
   "name": "cc_go_may",
@@ -8062,7 +8092,7 @@
   "trong": null
  },
  {
-  "order": 809,
+  "order": 812,
   "type": "APIRoute",
   "path": "/apps/concat/api/bo-cai.zip",
   "name": "cc_bo_cai",
@@ -8072,7 +8102,7 @@
   "trong": null
  },
  {
-  "order": 810,
+  "order": 813,
   "type": "APIRoute",
   "path": "/goi-y-ma/may/ghep",
   "name": "gy_ghep",
@@ -8082,7 +8112,7 @@
   "trong": null
  },
  {
-  "order": 811,
+  "order": 814,
   "type": "APIRoute",
   "path": "/goi-y-ma/may/bang",
   "name": "gy_bang",
@@ -8092,7 +8122,7 @@
   "trong": null
  },
  {
-  "order": 812,
+  "order": 815,
   "type": "APIRoute",
   "path": "/goi-y-ma/may/tra",
   "name": "gy_tra",
@@ -8102,7 +8132,7 @@
   "trong": null
  },
  {
-  "order": 813,
+  "order": 816,
   "type": "APIRoute",
   "path": "/goi-y-ma/may/anh",
   "name": "gy_anh",
@@ -8112,7 +8142,7 @@
   "trong": null
  },
  {
-  "order": 814,
+  "order": 817,
   "type": "APIRoute",
   "path": "/goi-y-ma/may/xac-nhan",
   "name": "gy_xac_nhan",
@@ -8122,7 +8152,7 @@
   "trong": null
  },
  {
-  "order": 815,
+  "order": 818,
   "type": "APIRoute",
   "path": "/goi-y-ma/api/ma-ghep",
   "name": "gy_ma_ghep",
@@ -8132,7 +8162,7 @@
   "trong": null
  },
  {
-  "order": 816,
+  "order": 819,
   "type": "APIRoute",
   "path": "/goi-y-ma/api/thong-ke",
   "name": "gy_thong_ke",
@@ -8142,7 +8172,7 @@
   "trong": null
  },
  {
-  "order": 817,
+  "order": 820,
   "type": "APIRoute",
   "path": "/goi-y-ma/api/may",
   "name": "gy_ds_may",
@@ -8152,7 +8182,7 @@
   "trong": null
  },
  {
-  "order": 818,
+  "order": 821,
   "type": "APIRoute",
   "path": "/goi-y-ma/api/may/{may_id}",
   "name": "gy_go_may",
@@ -8162,7 +8192,7 @@
   "trong": null
  },
  {
-  "order": 819,
+  "order": 822,
   "type": "APIRoute",
   "path": "/office/lam-moi",
   "name": "office_lam_moi",
@@ -8172,7 +8202,7 @@
   "trong": null
  },
  {
-  "order": 820,
+  "order": 823,
   "type": "APIRoute",
   "path": "/tong-quan",
   "name": "tong_quan_trang",
@@ -8182,7 +8212,7 @@
   "trong": null
  },
  {
-  "order": 821,
+  "order": 824,
   "type": "APIRoute",
   "path": "/office/hieu-suat",
   "name": "office_hieu_suat",
@@ -8192,7 +8222,7 @@
   "trong": null
  },
  {
-  "order": 822,
+  "order": 825,
   "type": "APIRoute",
   "path": "/meta/tai-san",
   "name": "meta_tai_san_get",
@@ -8202,7 +8232,7 @@
   "trong": null
  },
  {
-  "order": 823,
+  "order": 826,
   "type": "APIRoute",
   "path": "/meta/soi-quyen",
   "name": "meta_soi_quyen_get",
@@ -8212,7 +8242,7 @@
   "trong": null
  },
  {
-  "order": 824,
+  "order": 827,
   "type": "APIRoute",
   "path": "/meta/hoi-trang",
   "name": "meta_hoi_trang_post",
@@ -8222,7 +8252,7 @@
   "trong": null
  },
  {
-  "order": 825,
+  "order": 828,
   "type": "APIRoute",
   "path": "/meta-ads/duyet/{rid}",
   "name": "meta_ads_duyet_get",
@@ -8232,7 +8262,7 @@
   "trong": null
  },
  {
-  "order": 826,
+  "order": 829,
   "type": "APIRoute",
   "path": "/meta-ads/duyet/{rid}",
   "name": "meta_ads_duyet_post",

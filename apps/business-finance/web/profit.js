@@ -1,0 +1,19 @@
+/* Expected order economics; full-order returns. Industry parameters are user assumptions, not official rates. */
+(function(root){
+function basketGroups(s){if(s.basketMode==='distribution')return [1,2,3].map(i=>({qty:i===3?(s.mix3qty||3):i,share:(s['mix'+i]||0)/100}));return [{qty:s.items??1,share:1}];}
+function freeRate(s,qty,net){const mode=s.freeMode||'none';if(mode==='all')return 1;if(mode==='none')return 0;if(s.basketMode!=='distribution')return (s.freeShare||0)/100;const byQty=qty>=(s.freeQty||2),byValue=qty*net>=(s.freeValue||0);return mode==='quantity'?Number(byQty):mode==='value'?Number(byValue):Number(byQty&&byValue);}
+function profit(s,profile){
+ const q=s.q,success=q*(1-s.returns/100),returned=q-success,net=Math.max(0,s.price-s.discount),groups=basketGroups(s),items=groups.reduce((n,g)=>n+g.qty*g.share,0),units=success*items,returnedUnits=returned*items;
+ const freeShare=groups.reduce((n,g)=>n+g.share*freeRate(s,g.qty,net),0),freeOrders=success*freeShare,shipping=(s.shipping||0)*(success-freeOrders),merchandise=net*units;
+ const cogs=s.cost*(units+returnedUnits*(1-s.restock/100)),packing=s.pack*q+(s.packItem||0)*q*items,ads=s.ads*q,returnCost=s.returnCost*returned,delivery=(s.delivery||0)*q,closing=(s.closeCost||0)*(s.closeScope==='success'?success:q),handling=(s.handling||0)*q,cod=(s.codCost||0)*success;
+ const feeLines=profile.rules.filter(r=>r.enabled).map(r=>{let amount=0;for(const g of groups){const free=freeRate(s,g.qty,net);for(const shipGroup of [{share:free,shipping:0},{share:1-free,shipping:s.shipping||0}]){const itemBased=r.unit==='item',qty=itemBased?1:g.qty,ship=itemBased?shipGroup.shipping/g.qty:shipGroup.shipping,count=(r.scope==='all'?q:r.scope==='return'?returned:success)*g.share*shipGroup.share*(itemBased?g.qty:1),base=r.base==='gross'?s.price*qty:r.base==='shipping'?ship:r.base==='netShipping'?net*qty+ship:net*qty;let unit=r.kind==='percent'?base*r.value/100:r.value;unit=Math.max(r.min||0,unit);if(r.max>0)unit=Math.min(unit,r.max);unit*=1+(r.tax||0)/100;amount+=unit*count}}return{name:r.name,amount}});
+ const fees=feeLines.reduce((n,r)=>n+r.amount,0),monthlyFields=['rent','electricity','water','staff','software','depreciation','internet','otherMonthly'],monthlyTotal=monthlyFields.reduce((n,k)=>n+(s[k]||0),0),allocatedMonthly=monthlyTotal*(s.allocation??100)/100,fixed=(s.fixed||0)+allocatedMonthly;
+ let industryCost=0,industryLines=[];
+ if(s.industry==='fashion'){const amount=success*(s.exchangeRate||0)/100*(s.exchangeCost||0);industryCost+=amount;industryLines.push({name:'Đổi size / đổi mẫu (thêm, không hoàn tiền)',amount})}
+ if(s.industry==='home'){const bulky=(s.bulkyCost||0)*q,warranty=success*(s.warrantyRate||0)/100*(s.warrantyCost||0);industryCost+=bulky+warranty;industryLines.push({name:'Phụ phí cồng kềnh',amount:bulky},{name:'Dự phòng bảo hành / lỗi',amount:warranty})}
+ if(s.industry==='beauty'){const samples=(s.sampleCost||0)*success,wastage=cogs*(s.wastageRate||0)/100;industryCost+=samples+wastage;industryLines.push({name:'Mẫu thử / quà tặng theo đơn',amount:samples},{name:'Dự phòng hao hụt / hết hạn (% giá vốn)',amount:wastage})}
+ const cost=cogs+packing+ads+returnCost+delivery+fees+closing+handling+cod+fixed+industryCost,revenue=merchandise+shipping,earn=revenue-cost;
+ return {success,returned,items,units,returnedUnits,freeOrders,paidShippingOrders:success-freeOrders,merchandise,shipping,revenue,cogs,packing,ads,returnCost,delivery,fees,feeLines,closing,handling,cod,monthlyTotal,allocatedMonthly,fixed,industryCost,industryLines,cost,profit:earn,margin:revenue?earn/revenue*100:null,perOrder:q?earn/q:0,perItem:units?earn/units:null,orderValue:net*items};
+}
+root.MinminProfit=profit;root.MinminBasketGroups=basketGroups;
+})(typeof window==='undefined'?globalThis:window);

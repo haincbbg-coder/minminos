@@ -1,6 +1,6 @@
 # Bộ bán hàng cơ bản: 4 agent và 12 skill
 
-Từ phiên bản 26.10.276, bộ mẫu đi kèm mã nguồn và Docker image. Khách tải ZIP bản mới, giải nén, cài và chạy bình thường. Không cần tải hoặc nhập gói thứ hai.
+Từ phiên bản 26.10.278, bộ mẫu đi kèm mã nguồn và Docker image. Khách tải ZIP bản mới, giải nén, cài và chạy bình thường. Không cần tải hoặc nhập gói thứ hai.
 
 ## Bắt đầu
 

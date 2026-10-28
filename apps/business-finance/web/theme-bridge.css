@@ -1,0 +1,19 @@
+/* Native MinMin module: reuse the host tokens while preserving the approved layout. */
+body[data-mm-app="business-finance"]{--bg:var(--mm-bg);--ink:var(--mm-text);--muted:var(--mm-muted);--plum:var(--mm-link);--line:var(--mm-line);--green:var(--mm-ok);--red:var(--mm-bad);font-family:var(--mm-font);font-size:var(--mm-fs-16);background:var(--mm-bg);color:var(--mm-text)}
+body[data-mm-app="business-finance"] :is(h1,h2,h3,h4,input,select,button){font-family:var(--mm-font)}
+body[data-mm-app="business-finance"] :is(.panel,.scenario,dialog,.recipe-item){background:var(--mm-panel)!important;color:var(--mm-text);border-color:var(--mm-line);border-radius:var(--mm-r-card);box-shadow:var(--mm-out-sm)}
+body[data-mm-app="business-finance"] :is(input,select){background:var(--mm-field)!important;color:var(--mm-text)!important;border-color:var(--mm-line);border-radius:var(--mm-r-field);box-shadow:var(--mm-in-sm);font-size:var(--mm-fs-16)!important}
+body[data-mm-app="business-finance"] :is(.business-tabs,.basket-summary,.result-grid>div,.design-fee>button,.callout,.notice,.hint,.free-shipping-help,.industry-note,.allocation-note,.plan-status,.badge,.status){background:var(--mm-wash)!important;color:var(--mm-text);border-color:var(--mm-line)}
+body[data-mm-app="business-finance"] :is(.design-heading h1,.design-field,.design-heading p,.scenario-intro p,.result-grid small,.result-grid em,.small-explain,.sub,.bar-label,.product-name,input:disabled){color:var(--mm-text)!important}
+body[data-mm-app="business-finance"] .top-navigation{background:var(--mm-primary);color:var(--mm-on-brand);border:0}
+body[data-mm-app="business-finance"] .top-navigation :is(.brand,.brand span,nav button,.account-label){color:var(--mm-on-brand)}
+body[data-mm-app="business-finance"] button{background:var(--mm-panel);color:var(--mm-link);border-radius:var(--mm-r-btn);border-color:var(--mm-line);box-shadow:var(--mm-out-xs)}
+body[data-mm-app="business-finance"] button.primary{background:var(--mm-primary);color:var(--mm-on-brand);box-shadow:var(--mm-primary-shadow)}
+body[data-mm-app="business-finance"] :is(.top-navigation nav button,.text-button){background:transparent;box-shadow:none}
+body[data-mm-app="business-finance"] :is(.base-case,.business-tabs button.selected){border-color:var(--mm-brand);box-shadow:var(--mm-in-sm)}
+body[data-mm-app="business-finance"] :is(table th,tr:nth-child(even) td){background:var(--mm-row);color:var(--mm-text)}
+body[data-mm-app="business-finance"] :is(.green,.revenue-result b,.profit-result b){color:var(--mm-ok)!important}
+body[data-mm-app="business-finance"] :is(.red,.negative b){color:var(--mm-bad)!important}
+body[data-mm-app="business-finance"] .profit-svg text{fill:currentColor!important}
+body[data-mm-app="business-finance"] .heat td{color:var(--mm-text)!important}
+body[data-mm-app="business-finance"] :focus-visible{outline:2px solid var(--mm-link);outline-offset:3px}
