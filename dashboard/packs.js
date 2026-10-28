@@ -260,12 +260,11 @@
   // "Huỷ" thay cho "Chọn tệp khác".
   //
   // `tuy` (0.73.0) cho lối vào từ chỗ khác ngoài trang kho, như "vừa quét QR Zalo xong thì mời cài gói
-  // Zalo": `batSan` bật sẵn công tắc chạy ngay (người dùng vừa tự tay đấu đúng dịch vụ này, gói tắt thì
-  // cài xong không có gì xảy ra), `sauKhiCai(r)` thay cho việc vẽ lại trang kho vào `el`.
+  // Zalo": `sauKhiCai(r)` thay cho việc vẽ lại trang kho vào `el`. Gói có mã luôn mặc định tắt.
   function manHinhDongY(d, el, tuTep, tuy) {
     tuy = tuy || {};
     const coMa = d.tier === "code";
-    const batSan = !coMa || !!tuy.batSan;
+    const batSan = !coMa;
     const py = (d.py_files || []);
     const kn = (d.connectors || []);
     const vt = vaultTom(d.vault);
@@ -341,7 +340,7 @@
       //           vài tệp vào bộ não - nên cài xong mà nó nằm im là một cái bẫy chứ không phải
       //           một lớp an toàn. Vấp thật khi thử đường di trú: kết nối đang chết, người dùng
       //           bấm cài đúng gói cần, và KHÔNG có gì xảy ra vì gói vào máy ở trạng thái tắt.
-      + '<button class="pkm-gat" id="pkBat" type="button" aria-pressed="' + (batSan ? "true" : "false") + '">'
+      + '<button class="pkm-gat" id="pkBat" type="button" aria-pressed="' + (coMa ? "false" : "true") + '">'
       + '<span><span class="pkm-gat-t">' + tw("store.inspect.enable.title") + '</span>'
       + '<span class="pkm-gat-s">'
       + (batSan ? tw("store.inspect.enable.on_note")
@@ -1204,7 +1203,7 @@
         ? '<button class="kho-quaylai" id="pkQuayLai">← '
           + tw("store.back_to", { trang: esc(veTrang.nhan) }) + '</button>'
         : "")
-      + '<div class="cview-section kho-khoi"><h3>◆ Javis Store</h3>'
+      + '<div class="cview-section kho-khoi"><h3>◆ ' + tw("page.packs.label") + '</h3>'
       + '<div class="gcard-meta" style="max-width:740px">' + tw("store.intro") + ' '
       + tw("store.intro_press", { nut: '<b>' + tw("store.btn.install") + '</b>' }) + '</div>'
       + (d.disabled
