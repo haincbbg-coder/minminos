@@ -16,8 +16,8 @@ class PancakePosCatalogTests(unittest.TestCase):
             con = mc.load()["pancake-pos"]
             self.assertEqual(con["name"], "Pancake POS")
             self.assertEqual(con["default_perm"], "readonly")
-            self.assertEqual(con["icon"], "/static/logos/pancake-pos.png")
-            self.assertTrue((ROOT / "dashboard/logos/pancake-pos.png").is_file())
+            self.assertEqual(con["icon"], "/static/logos/pancake-pos.svg")
+            self.assertTrue((ROOT / "dashboard/logos/pancake-pos.svg").is_file())
             cards = mc.public_catalog()
             if isinstance(cards, dict):
                 cards = list(cards.values())

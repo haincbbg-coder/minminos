@@ -1011,7 +1011,7 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 .cat-x:hover { background: var(--danger-bg, #f5dcdc); color: var(--danger-ink, #b3261e); }
 .cat-x svg { width: 14px; height: 14px; }
 .cat-ico { font-size: 30px; height: 34px; display: flex; align-items: center; }
-.ico-img { width: 32px; height: 32px; object-fit: contain; border-radius: var(--mm-r-chip); vertical-align: middle; }
+.ico-img { width: 32px; height: 32px; object-fit: contain; border-radius: 0; vertical-align: middle; }
 .conn-card .conn-ico .ico-img { display: block; margin: 0 auto; }
 .cat-name { font-weight: 600; font-size: var(--mm-fs-14); }
 .cat-desc { font-size: var(--mm-fs-13); opacity: .7; flex: 1; line-height: 1.45; }

@@ -5,7 +5,7 @@
     {
       "id": "pancake-pos",
       "name": "Pancake POS",
-      "icon": "/static/logos/pancake-pos.png",
+      "icon": "/static/logos/pancake-pos.svg",
       "category": "Bán hàng",
       "description": "Đơn hàng, doanh thu, khách hàng, tồn kho, quảng cáo từ Pancake POS. Mỗi cửa hàng 1 API key - thêm nhiều tài khoản cho nhiều shop.",
       "status": "ready",
@@ -82,7 +82,7 @@
     {
       "id": "composio",
       "name": "Composio",
-      "icon": "puzzle",
+      "icon": "/static/logos/composio.png",
       "category": "Kho ứng dụng",
       "description": "Cổng đa ứng dụng của Composio: một kết nối mở ra hơn 500 app (Gmail, Notion, Google Sheets, GitHub, Linear, Slack...). Javis tìm tool, nối tài khoản từng app và chạy hành động qua Composio, không cần Javis viết connector riêng cho mỗi app. Dán API key (ck_...) là xong.",
       "status": "beta",
@@ -195,7 +195,7 @@
     {
       "id": "pancake-thong-ke",
       "name": "Pancake: Thống kê & hội thoại",
-      "icon": "📊",
+      "icon": "/static/logos/pancake-thong-ke.svg",
       "category": "Nhắn tin",
       "description": "Thống kê nhiều page, đọc hội thoại, soạn trả lời và gửi sau duyệt. Dùng lại danh sách page hiện có.",
       "status": "beta",
@@ -295,7 +295,7 @@
     {
       "id": "google-search-console",
       "name": "Google Search Console",
-      "icon": "search",
+      "icon": "/static/logos/google-search-console.png",
       "category": "Marketing",
       "description": "Số liệu SEO website: khách tìm từ khoá gì ra trang của bạn, lượt hiển thị, lượt bấm, trang top.",
       "status": "beta",
@@ -323,7 +323,7 @@
     {
       "id": "google-workspace",
       "name": "Google Workspace (Gmail, Lịch, Drive, Docs)",
-      "icon": "mail",
+      "icon": "/static/logos/google-workspace.png",
       "group": "google",
       "group_line": "Gộp Gmail, Lịch, Drive, Docs, Sheets vào MỘT kết nối. Cần máy có màn hình; VPS thì dùng thẻ Lịch và Gmail riêng.",
       "category": "Văn phòng",
@@ -384,7 +384,7 @@
     {
       "id": "google-tasks",
       "name": "Google Tasks",
-      "icon": "list-todo",
+      "icon": "/static/logos/google-tasks.svg",
       "group": "google",
       "group_line": "Việc cần làm: xem danh sách, thêm việc, đặt hạn, đánh dấu xong. Chỉ xin quyền Tasks.",
       "category": "Văn phòng",
@@ -688,7 +688,7 @@
     {
       "id": "google-keep",
       "name": "Google Keep",
-      "icon": "notebook",
+      "icon": "/static/logos/google-keep.svg",
       "group": "google",
       "group_line": "Ghi chú Keep: tìm, tạo, ghim. Dùng token TOÀN QUYỀN tài khoản - cân nhắc kỹ.",
       "category": "Văn phòng",
@@ -765,7 +765,7 @@
     {
       "id": "notebooklm",
       "name": "Google NotebookLM",
-      "icon": "notebook",
+      "icon": "/static/logos/notebooklm.svg",
       "_group_doc": "CỐ Ý không nằm trong nhóm \"google\": nhóm đó là các connector đi chung MỘT key OAuth client (Javis dựng sẵn màn đăng nhập Google, chọn phạm vi từng dịch vụ). NotebookLM không có OAuth - nó mượn cookie phiên trình duyệt, cách đăng nhập khác hẳn và rủi ro khác hẳn. Xếp chung là hứa một trải nghiệm một-cửa mà nó không làm được.",
       "category": "Văn phòng",
       "description": "Đọc và thao tác notebook trên Google NotebookLM: liệt kê notebook, đọc nguồn, hỏi đáp ngay trong notebook, thêm nguồn, lưu ghi chú, tạo tóm tắt/audio ở Studio. LƯU Ý: NotebookLM chưa có API chính chủ nên phải mượn PHIÊN ĐĂNG NHẬP trình duyệt (cookie Google), không phải OAuth giới hạn phạm vi như Gmail hay Lịch.",
@@ -821,7 +821,7 @@
     {
       "id": "shopee",
       "name": "Shopee",
-      "icon": "🧡",
+      "icon": "/static/logos/shopee.png",
       "category": "Bán hàng",
       "description": "Đơn hàng, sản phẩm, tiền thực nhận và thông tin shop Shopee qua Shopee Open Platform (MinMin tự dựng cầu nối). Mỗi kết nối là một shop, thêm nhiều kết nối để theo dõi nhiều shop.",
       "status": "beta",
@@ -895,7 +895,7 @@
     {
       "id": "tiktok-shop",
       "name": "TikTok Shop",
-      "icon": "🛍️",
+      "icon": "/static/logos/tiktok-shop.png",
       "category": "Bán hàng",
       "description": "Đơn hàng, sản phẩm và thông tin shop TikTok Shop qua Partner API (MinMin tự dựng cầu nối). Mỗi kết nối là một shop, thêm nhiều kết nối để theo dõi nhiều shop.",
       "status": "beta",
@@ -952,7 +952,7 @@
     {
       "id": "lazada",
       "name": "Lazada",
-      "icon": "🛒",
+      "icon": "/static/logos/lazada.png",
       "category": "Bán hàng",
       "description": "Đơn hàng, sản phẩm và thông tin shop Lazada Việt Nam qua Lazada Open Platform (MinMin tự dựng cầu nối). Mỗi kết nối là một shop, thêm nhiều kết nối để theo dõi nhiều shop.",
       "status": "beta",
@@ -1010,7 +1010,7 @@
     {
       "id": "ghn",
       "name": "Giao Hàng Nhanh (GHN)",
-      "icon": "🚚",
+      "icon": "/static/logos/ghn.png",
       "category": "Vận chuyển",
       "description": "Tra phí, dịch vụ, địa giới, chi tiết đơn và tạo/hủy đơn Giao Hàng Nhanh qua API chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản GHN (một token quản lý được nhiều cửa hàng), thêm nhiều kết nối nếu có nhiều tài khoản.",
       "status": "beta",
@@ -1067,7 +1067,7 @@
     {
       "id": "ghtk",
       "name": "Giao Hàng Tiết Kiệm (GHTK)",
-      "icon": "📦",
+      "icon": "/static/logos/ghtk.png",
       "category": "Vận chuyển",
       "description": "Tính phí, tra trạng thái đơn, xem địa chỉ lấy hàng và tạo/hủy đơn Giao Hàng Tiết Kiệm qua API chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản GHTK, thêm nhiều kết nối nếu có nhiều tài khoản.",
       "status": "beta",
@@ -1119,7 +1119,7 @@
     {
       "id": "sepay",
       "name": "SePay",
-      "icon": "🏦",
+      "icon": "/static/logos/sepay.png",
       "category": "Thanh toán",
       "description": "Xem biến động số dư các tài khoản ngân hàng đã liên kết với SePay: tiền vào, tiền ra, nội dung chuyển khoản, tổng tiền trong ngày (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản SePay, thêm nhiều kết nối để theo dõi nhiều tài khoản.",
       "status": "beta",
@@ -1158,7 +1158,7 @@
     {
       "id": "casso",
       "name": "Casso",
-      "icon": "💳",
+      "icon": "/static/logos/casso.svg",
       "category": "Thanh toán",
       "description": "Xem giao dịch và số dư các tài khoản ngân hàng đã liên kết với Casso: tiền vào, tiền ra, tổng tiền trong ngày (MinMin tự dựng cầu nối). Mỗi kết nối là một doanh nghiệp trên Casso, thêm nhiều kết nối để theo dõi nhiều doanh nghiệp.",
       "status": "beta",
@@ -1196,7 +1196,7 @@
     {
       "id": "payos",
       "name": "payOS",
-      "icon": "🧾",
+      "icon": "/static/logos/payos.svg",
       "category": "Thanh toán",
       "description": "Tạo link thanh toán kèm mã VietQR để gửi khách chuyển khoản, xem trạng thái đã trả hay chưa và huỷ link qua payOS (MinMin tự dựng cầu nối). Mỗi kết nối là một kênh thanh toán, thêm nhiều kết nối để nhận tiền vào nhiều tài khoản.",
       "status": "beta",
@@ -1392,7 +1392,7 @@
     {
       "id": "viettel-post",
       "name": "Viettel Post",
-      "icon": "📦",
+      "icon": "/static/logos/viettel-post.png",
       "category": "Vận chuyển",
       "description": "Tra địa giới, kho hàng, dịch vụ và giá cước, tạo/hủy đơn Viettel Post qua Partner API v2 (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản Viettel Post, thêm nhiều kết nối nếu có nhiều tài khoản.",
       "status": "beta",
@@ -1446,7 +1446,7 @@
     {
       "id": "jt-express",
       "name": "J&T Express Việt Nam",
-      "icon": "🚛",
+      "icon": "/static/logos/jt-express.png",
       "category": "Vận chuyển",
       "description": "Tra hành trình vận đơn và hủy đơn chưa lấy hàng của J&T Express Việt Nam qua API đối tác (MinMin tự dựng cầu nối). Cần thông tin API J&T cấp khi ký hợp đồng. Chưa có tạo đơn và tra giá.",
       "status": "beta",
@@ -1489,7 +1489,7 @@
     {
       "id": "ahamove",
       "name": "Ahamove",
-      "icon": "🛵",
+      "icon": "/static/logos/ahamove.png",
       "category": "Vận chuyển",
       "description": "Tra thành phố, dịch vụ, ước tính phí, tra đơn và gọi/hủy đơn giao nhanh Ahamove qua Partner API v3 (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản Ahamove.",
       "status": "beta",
@@ -1542,7 +1542,7 @@
     {
       "id": "instagram",
       "name": "Instagram (đăng bài)",
-      "icon": "📸",
+      "icon": "/static/logos/instagram.webp",
       "category": "Mạng xã hội",
       "description": "Đăng ảnh, carousel, Reel lên tài khoản Instagram chuyên nghiệp và đọc bài, chỉ số, bình luận qua Instagram Graph API chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một tài khoản, thêm nhiều kết nối để quản lý nhiều tài khoản.",
       "status": "beta",
@@ -1605,7 +1605,7 @@
     {
       "id": "threads",
       "name": "Threads",
-      "icon": "🧵",
+      "icon": "/static/logos/threads.png",
       "category": "Mạng xã hội",
       "description": "Đăng bài chữ, ảnh, video, carousel lên Threads, trả lời bài, đọc bài, trả lời và chỉ số qua Threads API chính thức (MinMin tự dựng cầu nối). Mỗi kết nối là một hồ sơ Threads.",
       "status": "beta",
@@ -1720,7 +1720,7 @@
     {
       "id": "haravan",
       "name": "Haravan",
-      "icon": "🛍️",
+      "icon": "/static/logos/haravan.png",
       "category": "Bán hàng",
       "description": "Đơn hàng, sản phẩm, khách hàng, chi nhánh và tồn kho của cửa hàng Haravan qua Haravan Omni API (MinMin tự dựng cầu nối). Mỗi kết nối là một cửa hàng, thêm nhiều kết nối để theo dõi nhiều cửa hàng.",
       "status": "beta",
@@ -1762,7 +1762,7 @@
     {
       "id": "sapo",
       "name": "Sapo",
-      "icon": "🏬",
+      "icon": "/static/logos/sapo.png",
       "category": "Bán hàng",
       "description": "Đơn hàng, sản phẩm, khách hàng, chi nhánh và tồn kho của cửa hàng Sapo (tên miền mysapo.net) qua Admin API (MinMin tự dựng cầu nối). Mỗi kết nối là một cửa hàng.",
       "status": "beta",
@@ -1820,7 +1820,7 @@
     {
       "id": "kiotviet",
       "name": "KiotViet",
-      "icon": "🧾",
+      "icon": "/static/logos/kiotviet.png",
       "category": "Bán hàng",
       "description": "Chi nhánh, hàng hoá, tồn kho, đặt hàng, hoá đơn bán và khách hàng của gian hàng KiotViet qua Public API (MinMin tự dựng cầu nối). Mỗi kết nối là một gian hàng.",
       "status": "beta",
@@ -1872,7 +1872,7 @@
     {
       "id": "nhanh-vn",
       "name": "Nhanh.vn",
-      "icon": "⚡",
+      "icon": "/static/logos/nhanh-vn.png",
       "category": "Bán hàng",
       "description": "Đơn hàng, sản phẩm, tồn kho theo kho, khách hàng và danh sách kho của doanh nghiệp trên Nhanh.vn qua Open API v3 (MinMin tự dựng cầu nối). Mỗi kết nối là một doanh nghiệp.",
       "status": "beta",
@@ -1944,7 +1944,7 @@
     {
       "id": "tiki",
       "name": "Tiki",
-      "icon": "🛍️",
+      "icon": "/static/logos/tiki.png",
       "category": "Bán hàng",
       "description": "Đơn hàng, sản phẩm, kho và tồn kho của nhà bán Tiki qua Tiki Open Platform (MinMin tự dựng cầu nối). Mỗi kết nối là một nhà bán, thêm nhiều kết nối để theo dõi nhiều gian hàng.",
       "status": "beta",
@@ -2003,7 +2003,7 @@
     {
       "id": "misa-meinvoice",
       "name": "MISA meInvoice",
-      "icon": "🧾",
+      "icon": "/static/logos/misa-meinvoice.svg",
       "category": "Hoá đơn & thuế",
       "description": "Mẫu và ký hiệu hoá đơn, trạng thái hoá đơn đã phát hành (gửi cơ quan thuế, mã CQT, huỷ, người mua đã nhận) và link xem PDF qua API tích hợp MISA meInvoice (MinMin tự dựng cầu nối). Mỗi kết nối là một mã số thuế.",
       "status": "beta",
@@ -2061,7 +2061,7 @@
     {
       "id": "rea",
       "name": "REA - Dịch ngược phần mềm",
-      "icon": "cpu",
+      "icon": "/static/logos/rea.svg",
       "category": "Lập trình",
       "description": "Nối agent tới bộ công cụ dịch ngược chạy cục bộ (Reverse Engineer Anything): mổ app JavaScript/Electron, website, .NET, Android APK, và binary gốc (cần Ghidra/Hopper/IDA). Dùng để hiểu một tính năng của app người ta hoạt động thế nào rồi dựng lại cho sản phẩm của mình. Phân tích chạy ngay trên máy, không upload app đi đâu.",
       "status": "beta",
@@ -2103,7 +2103,7 @@
     {
       "id": "vieneu",
       "name": "VieNeu (giọng đọc tiếng Việt)",
-      "icon": "🎙️",
+      "icon": "/static/logos/vieneu.svg",
       "category": "Marketing",
       "description": "Giọng đọc AI tiếng Việt VieNeu, hơn 1.000 giọng đủ ba miền, đọc đúng cả số và công thức. MinMin xem được danh sách giọng, số dư token và đọc văn bản thành file mp3 hoặc wav lưu vào brain (làm lời bình cho video, quảng cáo). Mỗi kết nối là một khoá API, thêm nhiều kết nối nếu có nhiều tài khoản.",
       "status": "beta",
