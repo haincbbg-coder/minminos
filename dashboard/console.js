@@ -6348,7 +6348,7 @@
 
   // ── Nhóm connector (khối B): mọi dịch vụ Google gom về MỘT card, bấm vào chọn dịch vụ ──
   const GROUP_META = {
-    google: { name: "Google", icon: '<span class="gico">G</span>', category: "Văn phòng",
+    google: { name: "Google", icon: '<img class="ico-img" src="/static/logos/google-workspace.png" alt="Google" loading="lazy">', category: "Văn phòng",
               desc_key: "cs.cn_g_google" },
   };
   function catSolo(cat) { return cat.filter(c => !c.group); }
