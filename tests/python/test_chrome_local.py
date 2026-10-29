@@ -130,6 +130,19 @@ async def integration():
         async with httpx.AsyncClient(base_url=url, trust_env=False) as http:
             denied = await http.get('/doi-social/may/chrome/profiles', headers={'x-minmin-may': remote.token})
             assert denied.status_code == 403
+        async with httpx.AsyncClient(base_url=url, trust_env=False) as http:
+            assert (await http.get('/doi-social/may/chrome-local/control')).status_code == 401
+            gpm = ds.ghep(ds.tao_ma_ghep(), 'Other GPM')
+            assert (await http.get('/doi-social/may/chrome-local/control', headers={'x-minmin-may': gpm['token']})).status_code == 403
+            owner_url = '/doi-social/chrome-local/' + paired['may_id']
+            cid = (await http.post(owner_url, json={'action': 'refresh', 'params': {}})).json()['id']
+            claimed = (await http.get('/doi-social/may/chrome-local/control', headers={'x-minmin-may': remote.token})).json()['command']
+            assert claimed['id'] == cid
+            result = {'id': cid, 'ok': True, 'message': 'fixture refresh', 'inventory': {'profiles': [], 'existing': []}}
+            other = ds.ghep(ds.tao_ma_ghep(), 'Other Chrome', 'chrome-local')
+            assert (await http.post('/doi-social/may/chrome-local/result', headers={'x-minmin-may': other['token']}, json=result)).status_code == 400
+            assert (await http.post('/doi-social/may/chrome-local/result', headers={'x-minmin-may': remote.token}, json=result)).status_code == 200
+            assert (await http.get(owner_url)).json()['commands'][0]['state'] == 'done'
         async with async_playwright() as pw:
             exe = pw.chromium.executable_path
         if not Path(exe).is_file():
@@ -167,7 +180,8 @@ async def integration():
                     page = context.new_page()
                     page.goto(url + '/apps/doi-social/#/chrome', wait_until='networkidle')
                     page.locator('#chrome-location').select_option('local')
-                    page.get_by_text('Local fixture PC', exact=True).wait_for()
+                    page.locator('#chrome-local-machines').get_by_text('Local fixture PC', exact=True).wait_for()
+                    page.locator('#chrome-local-machine').select_option(paired['may_id'])
                     assert page.locator('#chrome-host').is_hidden()
                     page.locator('[data-act=local-refresh]').click()
                     page.locator('#chrome-local-inventory').get_by_text('Test local Facebook', exact=False).wait_for()
