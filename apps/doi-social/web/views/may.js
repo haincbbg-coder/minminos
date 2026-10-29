@@ -4,6 +4,7 @@
   var esc = DS.esc, ic = DS.ic;
 
   function theUpBai(u) {
+    u = u || {};
     var c = (u && u.cau_hinh) || {}, lc = (u && u.lan_cuoi) || {};
     var h = '<div class="card"><div class="card-h"><h3>' + ic("file") + 'Up bài từ Google Sheet</h3><button class="btn btn-sm" data-act="ub-kiem-tra">Kiểm tra Sheet (không đăng)</button><button class="btn btn-sm btn-soft" data-act="ub-chay">' + ic("play") + "Chạy ngay</button></div>" +
       '<p class="small muted" style="margin:0 0 12px">Mỗi dòng ở tab HÀNG ĐỢI UP BÀI: Tên Page, Page ID, Link video (TikTok, Facebook, Instagram...), Giá, Mã. MinMin tự tải video, AI nhận diện đồ và viết nội dung, gửi Telegram để bạn duyệt, rồi đăng Reels đúng giờ theo tab CẤU HÌNH PAGE.</p>' +
@@ -36,10 +37,11 @@
         });
       }
       function ve() {
+        if (el.contains(document.activeElement) && document.activeElement.matches("input,textarea,select")) return;
         var may = D.may || [], viec = D.viec || [], gh = D.gioi_han || {}, nick = D.nick || [], mau = DS.mauTheoId(KB);
         var foc = document.activeElement && el.contains(document.activeElement) ? document.activeElement.id : "";
         var giu = {};
-        ["f-nick", "f-noi-sel", "f-noi", "f-nd"].forEach(function (k) { var x = el.querySelector("#" + k); if (x) giu[k] = x.value; });
+        ["f-nick", "f-noi-sel", "f-noi", "f-nd", "ub-sheet", "ub-bat", "ub-tu", "g-bai", "g-nghi"].forEach(function (k) { var x = el.querySelector("#" + k); if (x) giu[k] = x.type === "checkbox" ? x.checked : x.value; });
         var h = DS.ph("Máy ở nhà", "Máy tính chạy MinMin Worker với Chrome riêng hoặc GPM Login. Máy nhận việc từ VPS, giữ phiên đăng nhập và mở trình duyệt ngay trên máy đó.",
           '<a class="btn" href="/doi-social/tai-worker.zip">' + ic("download") + 'Tải MinMin Worker</a><button class="btn btn-pri" data-act="ma">' + ic("link") + "Tạo mã ghép</button>");
         h += '<div id="may-ma">' + (maGhep || "") + "</div>";
@@ -90,7 +92,7 @@
         }).join("") + "</tbody></table></div>";
         h += "</div>";
         el.innerHTML = h;
-        Object.keys(giu).forEach(function (k) { var x = el.querySelector("#" + k); if (x && k !== "f-noi-sel") x.value = giu[k]; });
+        Object.keys(giu).forEach(function (k) { var x = el.querySelector("#" + k); if (x && k !== "f-noi-sel") { if (x.type === "checkbox") x.checked = giu[k]; else x.value = giu[k]; } });
         veNoi(giu["f-noi-sel"]);
         if (foc) { var f = el.querySelector("#" + foc); if (f) f.focus(); }
       }

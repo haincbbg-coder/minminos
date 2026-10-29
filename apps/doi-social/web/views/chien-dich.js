@@ -4,10 +4,11 @@
   DS.view("chien-dich", {title: "Chiến dịch AI", render: function (el, ctx) {
     var esc = DS.esc, tools = [], key = "cmp-" + Date.now() + "-" + Math.random().toString(36).slice(2);
     var base = "/doi-social/campaigns";
+    var available = [], styleOptions = {}, picked = {}, voices = {}, targetLimit = 20;
     function api(method, path, body) { return DS.api(method, base + path, body); }
     el.innerHTML = '<div class="page-head"><div><h1>Chiến dịch AI</h1><p class="muted">Một ý tưởng → bài riêng theo từng nền tảng → ảnh → lịch đăng.</p></div></div>' +
       '<div class="card"><div class="fld"><label for="cp-prompt">Ý tưởng và yêu cầu</label><textarea class="ta" id="cp-prompt" rows="6" placeholder="Mỗi thứ hai, tư, sáu lúc 09:00 và 20:00, chia sẻ mẹo chăm sóc da. Facebook kể chuyện, Threads ngắn vui, Instagram giàu cảm xúc. Mỗi lượt một góc mới, ảnh tối giản không có chữ."></textarea></div>' +
-      '<h3>Đăng ở đâu, giọng văn nào?</h3><p class="small muted">Chọn đúng tài khoản. Nick qua Worker cần máy online và đã đăng nhập nền tảng tương ứng.</p><div id="cp-targets">Đang tải…</div>' +
+      '<h3>Đăng ở đâu, giọng văn nào?</h3><p class="small muted">Chọn đúng tài khoản. Nick qua Worker cần máy online và đã đăng nhập nền tảng tương ứng.</p><p id="cp-picked" role="status">Chưa chọn đích đăng</p><details id="cp-chooser"><summary>Tìm và chọn tài khoản / Trang</summary><div class="grid g2 mt"><div class="fld"><label for="cp-search">Tìm tên tài khoản hoặc Trang</label><input class="inp" id="cp-search" type="search" placeholder="Gõ tên để tìm trong mọi đích"></div><div class="fld"><label for="cp-platform">Lọc nền tảng</label><select class="sel" id="cp-platform"><option value="">Mọi nền tảng</option></select></div></div><div id="cp-targets">Đang tải…</div><button class="btn mt-s" id="cp-more" hidden>Xem thêm 20 đích</button></details>' +
       '<div class="grid g2 mt"><div class="fld"><label for="cp-source">Ảnh/video</label><select class="sel" id="cp-source"><option value="none">Chỉ nội dung chữ</option><option value="media">Kho media / tải tệp lên</option><option value="folder">Luân phiên ảnh từ thư mục MinMin</option><option value="mcp">Tạo ảnh qua MCP / Higgsfield</option></select></div><div class="fld"><label for="cp-zone">Múi giờ lịch đăng</label><input class="inp" id="cp-zone" value="Asia/Ho_Chi_Minh"></div></div>' +
       '<div id="cp-media" hidden><label class="drop">Tải ảnh/video<input type="file" id="cp-upload" multiple accept="image/jpeg,image/png,image/webp,video/*"></label><div id="cp-library"></div></div>' +
       '<div id="cp-folder-box" class="fld" hidden><label for="cp-folder">Thư mục ảnh trên máy cài MinMin</label><input class="inp" id="cp-folder" placeholder="/data/anh-san-pham"><p class="small muted">Không phải thư mục trên PC Worker. Mỗi lượt lấy một ảnh, không đọc thư mục con.</p></div>' +
@@ -25,9 +26,38 @@
     function library(items) {
       q("library").innerHTML = items.map(function (m) { return '<label class="row"><input type="checkbox" data-media="' + esc(m.tep) + '">' + esc(m.ten || m.tep) + '</label>'; }).join("") || '<p class="muted">Kho trống; tải tệp lên trước.</p>';
     }
+    function fold(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd'); }
+    function selectedSummary() {
+      var chosen = available.filter(function (t) { return picked[t.id]; });
+      q("picked").textContent = chosen.length ? 'Đã chọn ' + chosen.length + '/12: ' + chosen.map(function (t) { return t.name; }).join(' · ') : 'Chưa chọn đích đăng';
+    }
+    function drawTargets() {
+      var term = fold(q("search").value), platform = q("platform").value;
+      var found = available.filter(function (t) { return (!term || fold(t.name).indexOf(term) >= 0) && (!platform || t.platform === platform); });
+      q("targets").innerHTML = found.slice(0, targetLimit).map(function (t) {
+        return '<div class="row mt-s"><label><input type="checkbox" data-target="' + esc(t.id) + '"' + (picked[t.id] ? ' checked' : '') + '> ' + esc(t.name) + '</label><select class="sel" data-style="' + esc(t.id) + '" aria-label="Phong cách ' + esc(t.name) + '">' + Object.keys(styleOptions).map(function (s) { return '<option value="' + s + '"' + ((voices[t.id] || 'auto') === s ? ' selected' : '') + '>' + esc(styleOptions[s]) + '</option>'; }).join('') + '</select></div>';
+      }).join('') + '<p class="small muted">' + Math.min(found.length, targetLimit) + '/' + found.length + ' kết quả · tổng ' + available.length + ' đích. Lựa chọn và phong cách được giữ khi đổi bộ lọc.</p>';
+      q("more").hidden = found.length <= targetLimit;
+      selectedSummary();
+    }
+    q("targets").onchange = function (e) {
+      var id = e.target.dataset.target;
+      if (id) {
+        if (e.target.checked && Object.keys(picked).length >= 12) { e.target.checked = false; return DS.toast('Chọn tối đa 12 đích cho một chiến dịch', 'info'); }
+        if (e.target.checked) picked[id] = true; else delete picked[id];
+      }
+      if (e.target.dataset.style) voices[e.target.dataset.style] = e.target.value;
+      selectedSummary();
+    };
+    q("search").oninput = function () { targetLimit = 20; drawTargets(); };
+    q("platform").onchange = function () { targetLimit = 20; drawTargets(); };
+    q("more").onclick = function () { targetLimit += 20; drawTargets(); };
     api("GET", "/catalog").then(function (d) {
       if (!ctx.alive || d.ok === false) return;
-      q("targets").innerHTML = d.targets.map(function (t, i) { return '<div class="row mt-s"><label><input type="checkbox" data-target="' + esc(t.id) + '"> ' + esc(t.name) + '</label><select class="sel" data-style="' + esc(t.id) + '" aria-label="Phong cách ' + esc(t.name) + '">' + Object.keys(d.styles).map(function (s) { return '<option value="' + s + '">' + esc(d.styles[s]) + '</option>'; }).join("") + '</select></div>'; }).join("") || '<p>Chưa có đích đăng. Thêm Trang API hoặc profile tại Tài khoản trước.</p>';
+      available = d.targets || []; styleOptions = d.styles || {};
+      q("platform").innerHTML = '<option value="">Mọi nền tảng</option>' + Array.from(new Set(available.map(function (t) { return t.platform; }))).map(function (p) { return '<option value="' + esc(p) + '">' + esc(DS.NOI_DANG[p] || p) + '</option>'; }).join('');
+      drawTargets();
+      if (!available.length) q("targets").innerHTML = '<p>Chưa có đích đăng. Thêm Trang API hoặc profile tại Tài khoản trước.</p>';
       library(d.media || []);
     });
     q("source").onchange = function () { ["media", "mcp"].forEach(function (name) { q(name).hidden = q("source").value !== name; }); q("folder-box").hidden = q("source").value !== "folder"; };
@@ -44,7 +74,7 @@
     }); };
     q("tool").onchange = function () { var t = tools.find(function (x) { return x.id === q("tool").value; }); q("schema").textContent = JSON.stringify(t ? t.schema : {}, null, 2); };
     q("start").onclick = function () {
-      var targets = Array.from(el.querySelectorAll('[data-target]:checked')).map(function (box) { var style = Array.from(el.querySelectorAll('[data-style]')).find(function (s) { return s.dataset.style === box.dataset.target; }); return {id: box.dataset.target, style: style.value}; });
+      var targets = Object.keys(picked).map(function (id) { return {id: id, style: voices[id] || 'auto'}; });
       var image = {mode: q("source").value, media: Array.from(el.querySelectorAll('[data-media]:checked')).map(function (b) { return b.dataset.media; }), folder: q("folder").value, generate_tool: q("tool").value, args: q("args").value, poll_tool: q("poll").value, poll_args: q("poll-args").value};
       q("start").disabled = true; q("message").textContent = "Đang lưu chiến dịch…";
       api("POST", "", {client_key: key, prompt: q("prompt").value, targets: targets, image: image, timezone: q("zone").value, schedule: q("schedule").value, max_runs_day: Number(q("cap").value), max_images_day: Number(q("image-cap").value), auto_publish: q("auto").checked}).then(function (d) {
