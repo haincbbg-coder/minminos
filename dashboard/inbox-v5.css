@@ -436,3 +436,5 @@
 
 .mm-ops-open { display: inline-flex; align-items: center; gap: var(--mm-sp-2); white-space: nowrap; font-size: var(--mm-fs-16); }
 @media (max-width: 900px) { .ht-top .ht-title { order: 0; } .ht-top .mm-ops-open { order: 1; margin-left: auto; } .ht-top .ht-tabs { order: 2; } }
+
+@media (max-width: 900px) { .ht-page .ht-top .ht-title { width: auto; flex: 1 1 auto; min-width: 0; } .ht-page .ht-top .mm-ops-open { flex: none; } }
