@@ -1,5 +1,10 @@
 # MinMin OS
 
+## [26.10.304] - 2026-10-30
+### Sửa lỗi
+- Tìm kiếm/lọc đích đăng và giữ lựa chọn, phong cách khi chuyển bộ lọc trong chiến dịch AI.
+- Giữ nội dung form chưa lưu khi trang Máy ở nhà tự làm mới.
+
 ## [26.10.303] - 2026-10-30
 ### Thêm mới
 - Quản lý profile theo nhóm, proxy, vị trí lưu và tạo hàng loạt.
