@@ -1,6 +1,6 @@
 """Cổng Zalo Bot - API CHÍNH THỨC của Zalo (bot.zaloplatforms.com).
 
-Đây là kênh thứ tư của Javis, sau dashboard, Telegram và CLI. Nó KHÔNG thay
+Đây là kênh thứ tư của MinMin, sau dashboard, Telegram và CLI. Nó KHÔNG thay
 `zalo-agent-cli` (xem docs/12-zalo.md): hai thứ khác bản chất và cùng tồn tại.
 
   - `zalo-agent-cli` đăng nhập CHÍNH tài khoản Zalo của bạn qua API không chính thức. Đọc
@@ -8,7 +8,7 @@
   - Zalo Bot là một DANH TÍNH RIÊNG, chính thức, không bị khoá, nhưng chỉ thấy được thứ
     người ta nhắn thẳng cho nó.
 
-Cái đầu để Javis thao tác thay bạn. Cái sau để người khác nói chuyện với Javis. Gộp hai cái
+Cái đầu để MinMin thao tác thay bạn. Cái sau để người khác nói chuyện với Javis. Gộp hai cái
 làm một là mất một nửa năng lực.
 
 Về hình dạng, Zalo Bot API gần như một bản sao của Telegram Bot API (cùng vỏ
@@ -127,7 +127,7 @@ def _lay_url(msg: dict, khoa_thu) -> str:
 
 
 def _chat_type(raw) -> str:
-    """Zalo dùng PRIVATE/GROUP, Javis dùng private/group ở mọi nơi khác (xem
+    """Zalo dùng PRIVATE/GROUP, MinMin dùng private/group ở mọi nơi khác (xem
     `chatbot_runtime._ly_do_im`). Quy về MỘT bảng chữ ngay tại cửa vào, chứ đừng bắt mỗi
     chỗ đọc meta phải nhớ kênh nào viết hoa."""
     s = str(raw or "").strip().lower()
@@ -239,7 +239,7 @@ class ZaloBot(HangLuot):
         await self._api(client, "sendChatAction", chat_id=chat, action="typing")
 
     async def _giu_typing(self, client, chat):
-        """Giữ chấm "đang nhập" suốt lượt. Trên Zalo đây là THỨ DUY NHẤT báo được là Javis
+        """Giữ chấm "đang nhập" suốt lượt. Trên Zalo đây là THỨ DUY NHẤT báo được là MinMin
         đang làm việc: không sửa được tin nên không có tin trạng thái nào để cập nhật."""
         while True:
             await self._typing(client, chat)
@@ -381,7 +381,7 @@ class ZaloBot(HangLuot):
                 self._da_bao_khuon_thoai = True
                 print(f"[zalo voice] không tìm ra đường dẫn file thoại trong payload: "
                       f"{str(msg)[:400]}", file=sys.stderr)
-            return stt.loi_thanh_dong("loi", "Zalo không kèm đường dẫn file ghi âm nên Javis "
+            return stt.loi_thanh_dong("loi", "Zalo không kèm đường dẫn file ghi âm nên MinMin "
                                              "không tải về nghe được")
         try:
             rr = await client.get(url, timeout=httpx.Timeout(180.0))
@@ -391,7 +391,7 @@ class ZaloBot(HangLuot):
             return stt.loi_thanh_dong("loi", f"không tải được file ghi âm ({type(e).__name__}: {e})")
         if len(data) > MAX_TAI_MB * 1024 * 1024:
             return stt.loi_thanh_dong("qua_lon", f"({len(data) // (1024 * 1024)}MB, "
-                                                 f"trần tải về của Javis là {MAX_TAI_MB}MB)")
+                                                 f"trần tải về của MinMin là {MAX_TAI_MB}MB)")
         ten = f"zalo_{msg.get('message_id') or int(time.time())}.ogg"
         try:
             kq = await self.stt_fn(data, ten)
@@ -416,21 +416,21 @@ class ZaloBot(HangLuot):
         if ev == SK_VOICE:
             # Tin thoại đi ĐƯỜNG RIÊNG: nghe thành chữ rồi chạy như một câu hỏi, không tải về
             # đĩa rồi báo "đã tải về path" - người ta ghi âm để RA LỆNH, không phải để gửi
-            # Javis một file .ogg.
+            # MinMin một file .ogg.
             return await self._nghe_tin_thoai(client, msg, caption)
         if ev not in (SK_ANH,):
             return None
 
         url = _lay_url(msg, ("photo_url", "photo", "image_url", "url", "file_url"))
         if not url:
-            return _with_cap("[Người dùng gửi một ảnh qua Zalo nhưng Javis không lấy được "
+            return _with_cap("[Người dùng gửi một ảnh qua Zalo nhưng MinMin không lấy được "
                              "đường dẫn ảnh.]")
         try:
             rr = await client.get(url, timeout=httpx.Timeout(180.0))
             rr.raise_for_status()
             noi_dung = rr.content
             if len(noi_dung) > MAX_TAI_MB * 1024 * 1024:
-                return _with_cap(f"[Người dùng gửi một ảnh lớn hơn {MAX_TAI_MB}MB, Javis không "
+                return _with_cap(f"[Người dùng gửi một ảnh lớn hơn {MAX_TAI_MB}MB, MinMin không "
                                  "tải về.]")
             chat = str((msg.get("chat") or {}).get("id", ""))
             ddir = self.download_dir(chat) if callable(self.download_dir) else self.download_dir

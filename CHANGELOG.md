@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.285] - 2026-10-29
+### Sửa lỗi
+- MinMin nhớ dấu vết công cụ và mã tác vụ trong cùng hội thoại để kiểm tra kết quả trước khi tạo lại; kiểm tra công cụ kết nối trước khi báo không có.
+- Đồng bộ thông báo web, Telegram và Zalo thành **MinMin OS**; trạng thái soạn tin là **MinMin đang soạn tin**. Bot Telegram của chủ tự cập nhật tên hiển thị khi khởi động.
+- Thanh tiến độ nhận được phản hồi công cụ; kết thúc lượt trả lời không còn báo như đã hoàn tất toàn bộ công việc.
+
 ## [26.10.284] - 2026-10-29
 ### Cải thiện
 - **Telegram hiện MinMin đang xử lý**, giữ nguyên tên tài khoản và lịch sử cũ.

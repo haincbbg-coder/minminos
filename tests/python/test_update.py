@@ -364,9 +364,20 @@ check("/notifications có tin cộng đồng local", any(
     x.get("id") == "community-notification-inbox-launch"
     for x in _notifications.get("items", [])
 ))
-check("/notifications có release tự động", any(
-    x.get("kind") == "update" and x.get("id", "").startswith("release:")
-    for x in _notifications.get("items", [])
+check("bản khởi đầu không hiện lịch sử cập nhật cũ", not any(
+    x.get("kind") == "update" for x in _notifications.get("items", [])
+))
+# Test future releases independently of the intentionally empty baseline changelog.
+from unittest.mock import patch, AsyncMock
+with patch.object(main, "changelog_index", AsyncMock(return_value={
+    "current": "26.10.300", "latest": "26.10.301", "releases": [{
+        "version": "26.10.301", "date": "2026-10-30", "sections": [
+            {"title": "Sửa lỗi", "items": ["Một thay đổi mới"]}]}]
+})):
+    main._NOTIFICATION_CACHE.update({"at": 0.0, "data": None})
+    _future = _aio.run(main.notifications_info())
+check("phiên bản tiếp theo vẫn có thông báo cập nhật", any(
+    x.get("id") == "release:26.10.301" for x in _future.get("items", [])
 ))
 _index_text = (main.DASHBOARD_PATH / "index.html").read_text(encoding="utf-8")
 _noti_js = (main.DASHBOARD_PATH / "notifications.js").read_text(encoding="utf-8")
