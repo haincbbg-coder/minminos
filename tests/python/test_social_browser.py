@@ -50,6 +50,8 @@ async def run():
             return None, JSONResponse({'error': 'unauthorized'}, status_code=401)
         return m, None
     sb.register(app, lambda: None, auth)
+    from fastapi.staticfiles import StaticFiles
+    app.mount('/apps/doi-social', StaticFiles(directory=str(ROOT / 'apps/doi-social/web'), html=True), name='social-ui')
     sock = socket.socket()
     sock.bind(('127.0.0.1', 0))
     port = sock.getsockname()[1]
@@ -62,7 +64,7 @@ async def run():
     token = decrypt(host.read()['token'])
     outsider = ds.ghep(ds.tao_ma_ghep(), 'other machine')['token']
     try:
-        async with httpx.AsyncClient(base_url=url, trust_env=False) as client:
+        async with httpx.AsyncClient(base_url=url, trust_env=False, timeout=60) as client:
             assert (await client.get('/doi-social/may/chrome/profiles')).status_code == 401
             assert (await client.get('/doi-social/may/chrome/profiles', headers={'x-minmin-may': outsider})).status_code == 403
             headers = {'x-minmin-may': token}
@@ -82,8 +84,17 @@ async def run():
             item = await host.open(a['id'])
             assert item['headless'] == (not sb.desktop_available())
             page = host.page(a['id'])
+            await page.bring_to_front()
+            # Render the actual shipped Social UI and exercise profile creation through its controls.
+            await page.goto(url + '/apps/doi-social/#/chrome', wait_until='networkidle')
+            await page.get_by_role('heading', name='Chrome MinMin', exact=True).wait_for()
+            await page.locator('#chrome-name').fill('Created through UI')
+            await page.locator('[data-act=create]').click()
+            await page.get_by_text('Created through UI', exact=True).wait_for()
+            assert any(p['ten'] == 'Created through UI' for p in host.profiles())
             await page.context.add_cookies([{'name': 'login_fixture', 'value': 'persisted',
                                               'url': 'https://example.com', 'expires': 2000000000}])
+            await page.goto('about:blank')
             await page.set_content('<input id="field"><button>Login</button>')
             await page.locator('#field').focus()
             await host.action(a['id'], {'action': 'text', 'text': 'local-input'})
@@ -123,6 +134,23 @@ async def run():
                                                 {'fb_dang_tuong_kho': probe})
             assert result['ok'] and ds.lay_viec(job['id'])['trang_thai'] == 'xong'
             assert a['id'] not in host.live
+            # The production supervised child must announce its profiles/capabilities and restart.
+            ds.nhip(machine, driver_ok=False)
+            with patch.dict(os.environ, {'JAVIS_PORT': str(port)}):
+                await host.enable(True)
+                for _ in range(100):
+                    if next(m for m in ds.ds_may() if m['id'] == machine)['driver_ok']:
+                        break
+                    await asyncio.sleep(.2)
+                else:
+                    raise AssertionError('native child did not heartbeat')
+                old_pid = host.worker.pid
+                host.worker.terminate()
+                await host.worker.wait()
+                await host.ensure_worker()
+                assert host.worker.pid != old_pid
+                await host.enable(False)
+                assert not host.status()['running']
             print('PASS real Chromium: profile isolation, cookie persistence, manual input, screenshot, job locking, native Worker CDP, headless mode, cleanup')
     finally:
         await host.stop()

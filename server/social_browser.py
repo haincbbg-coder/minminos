@@ -220,6 +220,10 @@ class BrowserHost:
                 except Exception:
                     pass
                 await self.close(pid, manual=False)
+            if len(self.live) >= 3 and not manual:
+                idle = next((key for key in self.live if not self.busy(key)), None)
+                if idle:
+                    await self.close(idle, manual=False)
             if len(self.live) >= 3:
                 raise ValueError('Đã mở 3 profile; đóng một profile trước')
             exe = self.executable()
@@ -385,7 +389,7 @@ def register(app, blocked, worker_auth):
             return JSONResponse({'ok': False, 'error': blocked()}, status_code=403)
         try:
             page = HOST.page(pid)
-            return Response(await page.screenshot(type='jpeg', quality=65), media_type='image/jpeg',
+            return Response(await page.screenshot(type='jpeg', quality=65, timeout=15000, animations='disabled'), media_type='image/jpeg',
                             headers={'Cache-Control': 'no-store'})
         except Exception as exc:
             return failure(exc)
