@@ -99,6 +99,16 @@ out=asyncio.run(runtime._make_answer_fn(b)('Xin báo giá',{'chat_id':'333','acc
 assert out.get('draft') and not out.get('text') and inbox.draft_of(inbox.chi_tiet(live))['text']=='Câu tư vấn'
 assert seen[-1][0]=='suggest'
 assert not any(m['sender_type']=='ai' for m in inbox.tin_nhan(live))
+# Engine failure must need the owner, never appear stuck processing or expose secrets.
+inbox.clear_draft(live)
+async def broken(*args,**kwargs): raise RuntimeError('private-engine-detail')
+runtime.wire(answer=broken,brain_root=lambda _:str(state),read_agent=lambda *a:'')
+out=asyncio.run(runtime._make_answer_fn(b)('Xin báo giá',{'chat_id':'333','account_id':'page-a','chat_type':'private'}))
+assert not out.get('text') and inbox_state.state(inbox.chi_tiet(live),bots.get_bot(b),True)['who']=='you'
+assert inbox.chi_tiet(live)['metadata']['draft_error'] is True
+runtime.wire(answer=engine,brain_root=lambda _:str(state),read_agent=lambda *a:'')
+out=asyncio.run(runtime._make_answer_fn(b)('Xin báo giá',{'chat_id':'333','account_id':'page-a','chat_type':'private'}))
+assert inbox.draft_of(inbox.chi_tiet(live)) and not inbox.chi_tiet(live)['metadata'].get('draft_error')
 # Manual drafting uses the isolated engine session without durable chat writes.
 r=asyncio.run(runtime.manual_answer(inbox.chi_tiet(live),inbox.tin_nhan(live),True,'Báo giá sỉ'))
 assert r['ok'] and seen[-1]==('suggest',True,False)

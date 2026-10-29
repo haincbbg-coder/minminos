@@ -60,6 +60,8 @@ def state(conv: dict, bot: Optional[dict], running: bool, pending: Optional[dict
         return dict(out, who="you", who_code="waiting_you") if waiting else dict(out, who="owner", who_code="you")
     if not running:
         return dict(out, who="you", who_code="bot_off_waiting") if waiting else dict(out, who="log", who_code="bot_off")
+    if mode == "draft" and meta.get("draft_error"):
+        return dict(out, who="you", who_code="waiting")
     if mode == "draft":
         return dict(out, who="ai", who_code="draft_mode")
     return dict(out, who="ai", who_code="ai")

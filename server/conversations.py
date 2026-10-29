@@ -1235,6 +1235,7 @@ def save_draft(conversation_id: int, text: str, for_message_id: int = 0, instruc
     t = str(text or "").strip()[:MAX_DRAFT]
     if not t:
         return False
+    _set_meta_key(conversation_id, "draft_error", None)
     return _set_meta_key(conversation_id, "draft", {"text": t, "ts": _now(), "for_message_id": int(for_message_id or 0),
                                                     "instruction": str(instruction or "")[:500]})
 
@@ -1263,7 +1264,13 @@ def draft_uncertain(conversation_id: int) -> None:
             _set_meta_key(conversation_id, "draft", dict(d, delivery="uncertain"))
 
 
+def draft_failed(conversation_id: int) -> None:
+    """Expose a failed draft as needing the owner, without storing engine secrets."""
+    _set_meta_key(conversation_id, "draft_error", True)
+
+
 def clear_draft(conversation_id: int) -> bool:
+    _set_meta_key(conversation_id, "draft_error", None)
     return _set_meta_key(conversation_id, "draft", None)
 
 

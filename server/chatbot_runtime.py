@@ -1160,6 +1160,9 @@ def _make_answer_fn(bot_id: str):
         except Exception as e:
             print(f"[chatbot {bot_id}] {type(e).__name__}: {e}", file=sys.stderr)
             if draft_mode:
+                cid = conversations.conversation_id_of(kenh_luot, aid_luot, chat_id)
+                if cid:
+                    conversations.draft_failed(cid)
                 return {"text": "", "files": [], "im_lang": True, "error": "draft_engine"}
             xin_loi = "Anh chị đợi em chút xíu để em kiểm tra lại ạ."
             ghi_tin_bot(cfg, meta or {}, xin_loi, loi=f"{type(e).__name__}: {e}")
@@ -1254,6 +1257,8 @@ def _make_answer_fn(bot_id: str):
             cid = conversations.conversation_id_of(kenh_luot, aid_luot, chat_id)
             if cid and not loi_ky_thuat and str(dap).strip():
                 conversations.save_draft(cid, dap, conversations.last_customer_message_id(cid))
+            elif cid:
+                conversations.draft_failed(cid)
             return {"text": "", "files": [], "im_lang": True, "draft": True}
         # Câu bot nói (kể cả câu xin lỗi khi gãy) vào Hộp thư hội thoại, cạnh tin khách.
         ghi_tin_bot(cfg, meta or {}, dap, loi=loi_ky_thuat, files=(out or {}).get("files"))
