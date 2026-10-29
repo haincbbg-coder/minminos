@@ -602,6 +602,14 @@ def _chia_deu(dong: list, n: int) -> list:
     return ra
 
 
+def _kiem_chay_an(c, nicks, chay_an):
+    if chay_an:
+        for n in nicks:
+            machine = c.execute("SELECT driver FROM may WHERE id=?", (n["may_id"],)).fetchone()
+            if not machine or machine["driver"] != "chromium":
+                raise ValueError("Chạy ẩn chỉ hỗ trợ profile Chrome MinMin; tắt Chạy ẩn khi dùng GPM Login")
+
+
 def tao_dot(*, kich_ban, nick, tham_so, ten="", song_song=1, chay_an=False, nguon="web", lich_id=None,
             chay_thu=None) -> dict:
     """Tạo đợt chạy: một việc `cho_chay` cho mỗi nick. Raise ValueError câu tiếng Việt."""
@@ -611,6 +619,7 @@ def tao_dot(*, kich_ban, nick, tham_so, ten="", song_song=1, chay_an=False, nguo
     with ds._khoa, ds._db() as c:
         m, ts = _kiem_mau(c, kich_ban, tham_so)
         nicks = _tim_nick_ds(c, nick)
+        _kiem_chay_an(c, nicks, chay_an)
         if chay_thu is None:
             chay_thu = ts.get("che_do") == "chay_thu"
         chay_thu = bool(chay_thu)
@@ -826,6 +835,7 @@ def tao_lich(*, kich_ban, nick, tham_so, cron, ten="", song_song=1, chay_an=Fals
     with ds._khoa, ds._db() as c:
         m, ts = _kiem_mau(c, kich_ban, tham_so)
         nicks = _tim_nick_ds(c, nick)
+        _kiem_chay_an(c, nicks, chay_an)
         ten = _chu(ten, 120) or f"{m['ten']} · {len(nicks)} nick"
         cur = c.execute("INSERT INTO lich_hen(ten, kich_ban, nick, tham_so, song_song, cron, bat, lan_ke, so_lan, "
                         "so_loi, tao_luc, chay_an) VALUES(?,?,?,?,?,?,1,?,0,0,?,?)",
@@ -881,6 +891,7 @@ def sua_lich(lid, *, bat=None, ten=None, cron=None, nick=None, tham_so=None, son
             c.execute("UPDATE lich_hen SET song_song=? WHERE id=?",
                       (max(1, min(ds.SONG_SONG_TRAN, _int(song_song, 1))), r["id"]))
         if chay_an is not None:
+            _kiem_chay_an(c, _tim_nick_ds(c, _j(r["nick"], [])), chay_an)
             c.execute("UPDATE lich_hen SET chay_an=? WHERE id=?", (int(bool(chay_an)), r["id"]))
         if bat is not None:
             c.execute("UPDATE lich_hen SET bat=? WHERE id=?", (int(bool(bat)), r["id"]))

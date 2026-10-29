@@ -86,3 +86,6 @@ gpsoauth>=1.0
 # `tv_embedded` - cái tên đã bị xoá. Cài bản cũ thì quân dự bị coi như không có. Máy nào cập
 # nhật Javis từ trước 0.41.1 nên chạy thẳng: pip install -U yt-dlp
 yt-dlp>=2026.8.19
+
+# Managed Chromium for local/VPS Social profiles (browser binary downloaded on demand).
+playwright==1.64.1
