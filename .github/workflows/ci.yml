@@ -32,6 +32,7 @@ jobs:
       - run: python -m playwright install chromium
       - run: python tests/python/test_social_browser.py
       - run: python tests/python/test_chrome_local.py
+      - run: python tests/python/test_social_local_control.py
 
   social-browser:
     name: Đội Social trên Chromium thật

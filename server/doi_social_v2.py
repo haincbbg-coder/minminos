@@ -606,6 +606,8 @@ def _kiem_chay_an(c, nicks, chay_an):
     if chay_an:
         for n in nicks:
             machine = c.execute("SELECT driver FROM may WHERE id=?", (n["may_id"],)).fetchone()
+            if n["trinh_duyet"] == "chrome-existing":
+                raise ValueError("Phiên Chrome có sẵn không hỗ trợ chạy ẩn; tắt Chạy ẩn")
             if not machine or machine["driver"] not in ("chromium", "chrome-local"):
                 raise ValueError("Chạy ẩn chỉ hỗ trợ profile Chrome MinMin; tắt Chạy ẩn khi dùng GPM Login")
 

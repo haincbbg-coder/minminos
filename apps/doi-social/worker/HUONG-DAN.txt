@@ -45,3 +45,15 @@ Lưu ý:
 - Muốn đăng với tư cách Trang: trong profile đó hãy chuyển trang cá nhân sang Trang trước,
   hoặc giao việc với link Trang mà nick là quản trị.
 - Nhật ký nằm ở worker.log, token máy ở worker.json (đừng gửi file này cho ai).
+
+QUẢN LÝ PROFILE TỪ VPS
+Sau khi ghép Chrome và mở chay.bat, trang Chrome MinMin trên VPS có thể tạo/đổi tên/mở/đóng
+profile và mở Chrome Web Store để cài extension. Các lệnh chạy trên máy tính sau khoảng 3 giây.
+Tên trong MinMin là nhãn quản lý, không sửa tên profile cá nhân gốc.
+
+DÙNG PHIÊN ĐÃ ĐĂNG NHẬP
+Bấm Quét profile có sẵn, chọn Dùng profile này. Mở đúng profile tại máy tính, vào
+chrome://inspect/#remote-debugging, bật kết nối và chấp nhận hộp thoại khi Chrome hỏi.
+Chrome cần 144+; Cốc Cốc chỉ dùng được nếu phiên bản đang cài có cơ chế tương thích.
+Không chép/giải mã cookie, không tắt bảo vệ. Sau tác vụ giữ nguyên trình duyệt cá nhân.
+Chạy ẩn không dùng cho phiên có sẵn; Chrome có thể cần duyệt lại quyền mỗi lần kết nối.

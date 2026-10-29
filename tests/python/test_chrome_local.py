@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / 'apps/doi-social/worker'))
 import chrome_local as cl
 import minmin_worker as mw
 mw.NHAT_KY = Path(tempfile.mkdtemp()) / "worker.log"
+from chrome_control import Control
 from may_gpm import GPM, LoiGPM
 from playwright.sync_api import sync_playwright
 
@@ -137,6 +138,11 @@ async def integration():
             print('PASS real VPS pairing, heartbeat, dispatch and isolation; SKIP real browser: binary unavailable')
             return
 
+        manager_chrome = cl.ChromeLocal(local.root)
+        manager_chrome.executable = lambda: exe
+        manager = Control(remote, manager_chrome)
+        manager.start()
+
         def on_computer():
             local.executable = lambda: exe
             local.for_job({'tham_so': {'chay_an': not bool(os.getenv('DISPLAY')) and sys.platform != 'win32'}})
@@ -163,6 +169,22 @@ async def integration():
                     page.locator('#chrome-location').select_option('local')
                     page.get_by_text('Local fixture PC', exact=True).wait_for()
                     assert page.locator('#chrome-host').is_hidden()
+                    page.locator('[data-act=local-refresh]').click()
+                    page.locator('#chrome-local-inventory').get_by_text('Test local Facebook', exact=False).wait_for()
+                    page.locator('#chrome-local-name').fill('Created from VPS')
+                    page.locator('[data-act=local-create]').click()
+                    page.locator('#chrome-local-inventory').get_by_text('Created from VPS', exact=False).wait_for()
+                    created = next(p for p in local.profiles() if p['ten'] == 'Created from VPS')
+                    pid = created['id']
+                    page.locator('[data-name="' + pid + '"]').fill('Renamed from VPS')
+                    page.locator('[data-act=local-rename][data-id="' + pid + '"]').click()
+                    page.locator('#chrome-local-inventory').get_by_text('Renamed from VPS', exact=False).wait_for()
+                    page.locator('[data-act=local-open][data-id="' + pid + '"]').click()
+                    page.wait_for_function('(id) => Array.from(document.querySelectorAll("#chrome-local-inventory .row")).some(el => el.querySelector("[data-id=" + id + "]") && el.textContent.includes("Đang mở"))', arg=pid)
+                    assert pid in manager_chrome.live
+                    page.locator('[data-act=local-close][data-id="' + pid + '"]').click()
+                    page.wait_for_function('(id) => Array.from(document.querySelectorAll("#chrome-local-inventory .row")).some(el => el.querySelector("[data-id=" + id + "]") && !el.textContent.includes("Đang mở"))', arg=pid)
+                    assert pid not in manager_chrome.live
                     page.locator('[data-act=pair-local]').click()
                     page.wait_for_function("document.querySelector('#chrome-pair').textContent.includes('Mã ghép:')")
                     for dark in ('light', 'dark'):
@@ -175,6 +197,31 @@ async def integration():
             finally:
                 local.dong(a['id'])
             assert not local.live
+            # Attach to a separately running, consented fixture browser without copying
+            # its session or closing it. Personal Chrome's consent UI stays user-owned.
+            import chrome_existing
+            folder = local.root / a['id']
+            state_file = folder / 'Local State'
+            state = json.loads(state_file.read_text())
+            state.setdefault('profile', {}).update(last_used='Default', info_cache={'Default': {'name': 'Existing fixture'}})
+            state_file.write_text(json.dumps(state))
+            local.mo(a['id'])
+            try:
+                with patch.object(chrome_existing, 'roots', return_value=[('Chrome', folder, Path(exe))]):
+                    source = chrome_existing.public()[0]
+                    borrowed = cl.ChromeLocal(Path(tempfile.mkdtemp()))
+                    borrowed.use_existing(source['id'])
+                    bp = borrowed.profiles()[0]
+                    ep = borrowed.mo(bp['id'])
+                    try:
+                        with sync_playwright() as pw:
+                            browser = pw.chromium.connect_over_cdp(ep)
+                            assert any(c['name'] == 'login_fixture' for c in browser.contexts[0].cookies())
+                    finally:
+                        borrowed.dong(bp['id'])
+                    assert local.live[a['id']][0].poll() is None
+            finally:
+                local.dong(a['id'])
             def handler(nc):
                 assert any(c['name'] == 'login_fixture' and c['value'] == 'persisted' for c in nc.ctx.cookies())
                 nc.page.goto(url + '/fixture')
@@ -194,7 +241,10 @@ async def integration():
                     assert not any(c['name'] == 'login_fixture' for c in browser.contexts[0].cookies())
             finally:
                 local.dong(b['id'])
-        await asyncio.to_thread(on_computer)
+        try:
+            await asyncio.to_thread(on_computer)
+        finally:
+            await asyncio.to_thread(manager.stop)
         assert ds.lay_viec(job['id'])['trang_thai'] == 'xong'
         print('PASS real local Chromium, session persistence/isolation, VPS result, UI place selection')
     finally:

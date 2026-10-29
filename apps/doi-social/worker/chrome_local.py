@@ -69,9 +69,10 @@ class ChromeLocal:
         return json.loads(p.read_text(encoding='utf-8')) if p.exists() else []
 
     def ds_profile(self):
-        if not self.executable():
+        if not self.executable() and not any(p.get('kind') == 'existing' for p in self.profiles()):
             raise LoiGPM('Chưa có Chrome. Chạy chrome-may-tinh.bat và chọn Tải Chromium')
-        return [{**p, 'nhom': 'Chrome trên máy tính', 'trinh_duyet': 'chromium', 'co_proxy': False}
+        return [{'id': p['id'], 'ten': p['ten'], 'nhom': 'Chrome trên máy tính',
+                 'trinh_duyet': 'chrome-existing' if p.get('kind') == 'existing' else 'chromium', 'co_proxy': False}
                 for p in self.profiles()]
 
     def create(self, name):
@@ -89,6 +90,37 @@ class ChromeLocal:
             os.chmod(tmp, 0o600)
             os.replace(tmp, self.root / 'profiles.json')
             return p
+
+    def rename(self, pid, name):
+        self.profile(pid)
+        name = str(name or '').strip()[:80]
+        if not name:
+            raise ValueError('Nhập tên profile')
+        with FileLock(self.root / 'metadata.lock'):
+            profiles = self.profiles()
+            for p in profiles:
+                if p['id'] == pid:
+                    p['ten'] = name
+            self.save(profiles)
+
+    def save(self, profiles):
+        tmp = self.root / 'profiles.tmp'
+        tmp.write_text(json.dumps(profiles, ensure_ascii=False), encoding='utf-8')
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, self.root / 'profiles.json')
+
+    def use_existing(self, source):
+        import chrome_existing
+        item = chrome_existing.find(source)
+        with FileLock(self.root / 'metadata.lock'):
+            profiles = self.profiles()
+            if any(p.get('source') == source for p in profiles):
+                return
+            if len(profiles) >= 100:
+                raise ValueError('Tối đa 100 profile trên máy này')
+            profiles.append({'id': 'l' + secrets.token_hex(12), 'ten': item['name'],
+                             'kind': 'existing', 'source': source, 'browser': item['browser']})
+            self.save(profiles)
 
     def profile(self, pid):
         if not re.fullmatch(r'l[a-f0-9]{24}', str(pid)):
@@ -124,11 +156,11 @@ class ChromeLocal:
         self.job = job
 
     def mo(self, pid):
-        self.profile(pid)
+        profile = self.profile(pid)
         if pid in self.live:
             raise LoiGPM('Profile đã mở')
         exe = self.executable()
-        if not exe:
+        if not exe and profile.get('kind') != 'existing':
             raise LoiGPM('Chưa có Chrome trên máy này')
         profile_lock = FileLock(self.root / (pid + '.lock')).acquire()
         slot = None
@@ -141,6 +173,13 @@ class ChromeLocal:
                     pass
             if slot is None:
                 raise LoiGPM('Đang mở tối đa 3 profile; đóng một profile rồi thử lại')
+            if profile.get('kind') == 'existing':
+                import chrome_existing
+                if (self.job.get('tham_so') or {}).get('chay_an'):
+                    raise LoiGPM('Phiên Chrome có sẵn không hỗ trợ chạy ẩn; tắt Chạy ẩn')
+                endpoint = chrome_existing.connect(profile['source'])
+                self.live[pid] = (None, profile_lock, slot)
+                return endpoint
             folder = (self.root / pid).resolve()
             folder.mkdir(parents=True, exist_ok=True, mode=0o700)
             port_file = folder / 'DevToolsActivePort'
@@ -187,7 +226,7 @@ class ChromeLocal:
             return
         child, lock, slot = item
         try:
-            if child.poll() is None:
+            if child is not None and child.poll() is None:
                 # Graceful Browser.close flushes cookies before any fallback termination.
                 try:
                     from playwright.sync_api import sync_playwright

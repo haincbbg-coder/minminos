@@ -380,7 +380,7 @@ def lam_viec(may_chu, tao_gpm, viec: dict, kb: dict = None, day_buoc=None, toc_d
             if hasattr(gpm, "for_job"):
                 gpm.for_job(viec)
             cdp = gpm.mo(viec["nick_id"])
-            nhat_ky(f"Đã kết nối được trình duyệt ({cdp.split('/')[-1] if cdp.startswith('ws') else cdp})")
+            nhat_ky("Đã kết nối được trình duyệt")
         except Exception as e:
             gui(False, f"không chuẩn bị được: {e}", dem=dem0)
             return {"ok": False, "thong_diep": str(e), "dem": dem0}
@@ -398,7 +398,7 @@ def lam_viec(may_chu, tao_gpm, viec: dict, kb: dict = None, day_buoc=None, toc_d
                         pass
                     time.sleep(5)
                     cdp = gpm.mo(viec["nick_id"])
-                    nhat_ky(f"Mở lại xong ({cdp})")
+                    nhat_ky("Mở lại profile xong")
                     trinh = connect(pw, cdp) if connect else pw.chromium.connect_over_cdp(cdp, timeout=60000)
                 ctx = trinh.contexts[0] if trinh.contexts else trinh.new_context()
                 page = ctx.new_page()
@@ -580,6 +580,11 @@ def chay() -> int:
     dp = DieuPhoi(song_song)
     luong: dict = {}
     day_buoc = DayBuoc(may_chu)
+    profile_control = None
+    if ch.get("driver") == "chrome-local":
+        from chrome_control import Control
+        profile_control = Control(may_chu)
+        profile_control.start()
     nhip_cuoi = 0.0
     loi_lien = 0
     ban_dau = _dau_van_ma()
@@ -601,13 +606,21 @@ def chay() -> int:
                 # Chỉ đổi mã khi không có việc nào đang chạy: không bao giờ cắt ngang một lượt đăng.
                 if _dau_van_ma() != ban_dau:
                     log("Phát hiện bản Worker mới, khởi động lại...")
+                    if profile_control:
+                        profile_control.stop()
                     return 3
                 if ban_moi and time.time() >= tranh_cap_nhat_toi:
                     try:
+                        if profile_control:
+                            profile_control.stop()
                         return cap_nhat(may_chu, ban_moi)
                     except Exception as e:      # noqa: BLE001
                         log(f"Cập nhật Worker lỗi ({e}); làm việc tiếp, thử lại sau 10 phút")
                         ban_moi, tranh_cap_nhat_toi = "", time.time() + 600
+                        if profile_control:
+                            from chrome_control import Control
+                            profile_control = Control(may_chu)
+                            profile_control.start()
             if time.time() - nhip_cuoi > NHIP_GIAY:
                 chung = {"kich_ban": ds_kb, "song_song": song_song, "dang_chay": dp.ds_dang()}
                 try:
@@ -633,6 +646,8 @@ def chay() -> int:
                 time.sleep(1.5)
         except KeyboardInterrupt:
             log("Dừng Worker.")
+            if profile_control:
+                profile_control.stop()
             return 0
         except Exception as e:      # noqa: BLE001
             loi_lien += 1

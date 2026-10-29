@@ -3,8 +3,8 @@
 ## [26.10.302] - 2026-10-29
 ### Thêm mới
 - Chọn chạy Chrome ngay trên VPS hoặc trên máy tính cá nhân đã ghép. Máy cá nhân dùng Chrome riêng, không cần GPM Login.
-- Tạo profile và đăng nhập trực tiếp trên máy tính; Worker nhận việc từ VPS, đóng Chrome sau mỗi việc và giữ phiên cho lần sau.
-- Hiển thị đúng trạng thái Chrome/GPM của từng máy; mỗi máy mở tối đa 3 profile cùng lúc.
+- Quản lý profile máy tính ngay từ VPS: tạo, đổi tên, mở/đóng, mở kho extension. Người dùng đăng nhập và duyệt cài extension trực tiếp trên máy tính.
+- Có lựa chọn dùng phiên Chrome đã đăng nhập sẵn qua cơ chế cho phép kết nối của Chrome 144+. Cốc Cốc chỉ dùng khi bản đang cài hỗ trợ; không chép cookie và không tự đóng trình duyệt cá nhân.
 
 ## [26.10.301] - 2026-10-29
 ### Thêm mới
