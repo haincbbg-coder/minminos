@@ -64,7 +64,7 @@
       install: function () { api("/install").then(refresh); },
       enable: function () { api("/enable", { enabled: true }).then(refresh); },
       disable: function () { api("/enable", { enabled: false }).then(refresh); },
-      create: function () { api("/profiles", { name: el.querySelector("#chrome-name").value }).then(function (r) { if (r.ok) el.querySelector("#chrome-name").value = ""; refresh(); }); },
+      create: function () { api("/profiles", { name: el.querySelector("#chrome-name").value }).then(function (r) { if (r.ok) { el.querySelector("#chrome-name").value = ""; DS.boNho("nick"); } refresh(); }); },
       open: function (b) { var id = b.getAttribute("data-id"); api("/profile/" + id + "/open").then(function (r) { if (r.ok) select(id); }); },
       view: function (b) { select(b.getAttribute("data-id")); },
       close: function () { api("/profile/" + selected + "/close").then(function (r) { if (r.ok) { selected = ""; el.querySelector("#chrome-screen").hidden = true; refresh(); } }); },

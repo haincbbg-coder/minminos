@@ -19,6 +19,7 @@ from fastapi import Request
 import config
 import doi_social as ds
 import secrets_store
+import winproc
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -140,7 +141,8 @@ class BrowserHost:
                    MINMIN_NATIVE_MACHINE=data['machine'], PYTHONIOENCODING='utf-8')
         self.worker = await asyncio.create_subprocess_exec(
             sys.executable, str(ROOT / 'apps/doi-social/worker/minmin_worker.py'), 'chay',
-            env=env, cwd=str(self.root), stdout=self.worker_log, stderr=self.worker_log)
+            env=env, cwd=str(self.root), stdout=self.worker_log, stderr=self.worker_log,
+            **winproc.kwargs_no_window())
 
     async def watch(self):
         while True:
@@ -169,7 +171,7 @@ class BrowserHost:
             try:
                 proc = await asyncio.create_subprocess_exec(sys.executable, '-m', 'playwright', 'install', 'chromium',
                                                           env=env, stdout=asyncio.subprocess.DEVNULL,
-                                                          stderr=asyncio.subprocess.DEVNULL)
+                                                          stderr=asyncio.subprocess.DEVNULL, **winproc.kwargs_no_window())
                 try:
                     code = await asyncio.wait_for(proc.wait(), 1800)
                 except BaseException:
