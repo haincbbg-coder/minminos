@@ -442,8 +442,10 @@ check("chẩn đoán: chỉ giữ N dòng mới nhất", len(_cd) == 4 and "mớ
 
 # ---------------------------------------------------------------------------- 6. lam_viec đầu-cuối (trình duyệt thật)
 exe = sorted(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux*/chrome")) or sorted(
-    glob.glob(os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux/chrome")))
+    glob.glob(os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")))
 if not exe:
+    if os.environ.get("MINMIN_REQUIRE_CHROMIUM") == "1":
+        raise RuntimeError("Chromium required for this CI job; browser tests must not be skipped")
     print("SKIP các test trình duyệt: không thấy Chromium ở /opt/pw-browsers")
 else:
     EXE = exe[-1]

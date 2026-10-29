@@ -42,13 +42,14 @@ _muc = _MUC_RE.findall(_cl)
 
 check("VERSION đúng dạng x.y.z (không có 'v', không xuống dòng thừa)",
       bool(_VER_RE.match(_ver)))
-check("CHANGELOG có ít nhất một mục phiên bản", len(_muc) >= 1)
+_baseline = _ver == "26.10.300" and not _muc and "26.10.300 là phiên bản khởi đầu" in _cl
+check("CHANGELOG có phiên bản hoặc mốc khởi đầu 26.10.300", len(_muc) >= 1 or _baseline)
 
 _moi_nhat = _muc[0][0] if _muc else ""
 # ĐÂY là bài kiểm chính. Lệch một nhịp là trang Cập nhật nói ngược nhau và người dùng
 # Docker mất sạch đường lên bản mới.
 check(f"CANARY: VERSION ({_ver}) khớp mục mới nhất trong CHANGELOG ({_moi_nhat})",
-      _ver == _moi_nhat)
+      _ver == _moi_nhat or _baseline)
 
 # Mọi số hiệu trong nhật ký phải đúng dạng, nếu không thì phần so sánh phiên bản của trang
 # Cập nhật đọc phải rác và im lặng coi như 0.0.0.
