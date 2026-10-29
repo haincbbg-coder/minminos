@@ -1352,6 +1352,11 @@ def don_tep(sau_ngay: int, now: Optional[float] = None) -> int:
                 xoa.update(ms)
             else:
                 giu.update(ms)
+        if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='social_campaign'").fetchone():
+            for row in c.execute("SELECT settings FROM social_campaign WHERE state IN ('planning','active','paused','error')"):
+                giu.update((_j(row[0], {}).get('image') or {}).get('media') or [])
+            for row in c.execute("SELECT data FROM social_campaign_run WHERE state IN ('new','writing','generating','waiting_media')"):
+                giu.update(_j(row[0], {}).get('media') or [])
     so = 0
     for t in xoa - giu:
         p = duong_media(t)

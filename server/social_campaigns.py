@@ -262,8 +262,9 @@ def command(cid, action):
 
 
 class Engine:
-    def __init__(self, get_ai, get_knowledge):
+    def __init__(self, get_ai, get_knowledge, allowed=lambda: True):
         self.get_ai, self.get_knowledge = get_ai, get_knowledge
+        self.allowed = allowed
         self.lock = asyncio.Lock()
         self.stopped = False
 
@@ -352,7 +353,7 @@ class Engine:
     async def execute(self, row, run):
         data = json.loads(run['data'])
         config = row['settings']
-        if row['state'] != 'active' or fp.cai_dat()['dung_tu_dong']:
+        if not self.allowed() or row['state'] != 'active' or fp.cai_dat()['dung_tu_dong']:
             return
         available = {t['id'] for t in catalog()}
         if any(t['id'] not in available for t in config['targets']):
@@ -372,7 +373,7 @@ class Engine:
         outputs = data.setdefault('outputs', {})
         for index, target in enumerate(config['targets']):
             latest = read(row['id'])
-            if latest['state'] != 'active' or fp.cai_dat()['dung_tu_dong']:
+            if not self.allowed() or latest['state'] != 'active' or fp.cai_dat()['dung_tu_dong']:
                 return
             key = target['id']
             out = outputs.setdefault(key, {'kind': target['kind'], 'name': target['name']})
@@ -401,7 +402,7 @@ class Engine:
             if target['platform'] in ('instagram', 'tiktok') and not ids:
                 raise ValueError('Nền tảng này cần media')
             marker = 'cmp:' + run['id'] + ':' + str(index)
-            if read(row['id'])['state'] != 'active' or fp.cai_dat()['dung_tu_dong']:
+            if not self.allowed() or read(row['id'])['state'] != 'active' or fp.cai_dat()['dung_tu_dong']:
                 return
             hen = max(run['slot'], time.time()+5)
             if target['kind'] == 'api':
@@ -431,7 +432,7 @@ class Engine:
             c.execute('UPDATE social_campaign SET errors=0,message=?,updated=? WHERE id=?', ('Lượt gần nhất đã tạo nội dung; xem trạng thái đăng của từng bài', time.time(), row['id']))
 
     async def tick(self):
-        if self.lock.locked():
+        if not self.allowed() or self.lock.locked():
             return
         async with self.lock:
             init()
@@ -455,6 +456,12 @@ class Engine:
                     if row['next_at'] is None or row['next_at'] > time.time()+900:
                         continue
                     now = time.time()
+                    if row['plan']['kind'] != 'once' and row['next_at'] < now-900:
+                        # Do not flood today's publishing queue with days of missed slots.
+                        with ds._db() as c:
+                            c.execute('UPDATE social_campaign SET next_at=?,message=? WHERE id=?',
+                                      (schedule(row['plan'], now), 'Bỏ qua lịch đã lỡ khi máy dừng; tiếp tục từ lịch kế tiếp', cid))
+                        continue
                     local = datetime.fromtimestamp(row['next_at'], ZoneInfo(row['settings']['timezone']))
                     start = local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
                     end = (local + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
@@ -481,7 +488,7 @@ class Engine:
 
 
 def register(app, blocked, get_ai, get_knowledge, enabled=True):
-    engine = Engine(get_ai, get_knowledge)
+    engine = Engine(get_ai, get_knowledge, allowed=lambda: not blocked())
     task = None
     async def loop():
         await asyncio.sleep(5)

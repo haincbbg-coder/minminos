@@ -15,6 +15,7 @@ Không cần tạo hồ sơ sản phẩm để viết từ ý tưởng. Có th�
   Bài đăng hoặc Duyệt nội dung. Tạm dừng chiến dịch ngăn lượt tạo mới; bài đã duyệt cần dừng ở hàng đợi.
 - Giới hạn mặc định 5 lượt nội dung và 5 lượt tạo ảnh/ngày; chỉnh từ 1 đến 24. Lượt nội dung được
   tính theo ngày hẹn, lượt gọi tạo ảnh tính theo ngày gọi. Khởi động lại giữ mã tác vụ/nháp đã tạo.
+  Với lịch lặp bị lỡ quá 15 phút khi máy dừng, bỏ lượt lỡ và tiếp tục lịch kế tiếp, không đăng dồn bài cũ.
 - Chưa rõ kết quả một lệnh tạo ảnh thì báo cần kiểm tra; không tự gọi tạo ảnh lại. Ba lượt lỗi liên
   tiếp đưa chiến dịch sang Cần kiểm tra. Sửa kết nối trước khi tiếp tục lịch. Lượt lỗi không tự chạy lại.
 

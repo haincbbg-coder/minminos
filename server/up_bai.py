@@ -225,7 +225,9 @@ def kiem_tra_hang_doi(rows, cfg_rows):
             if action:
                 ready.append({**entry, 'hanh_dong': action, 'uu_tien': _bo_dau(status) == 'up ngay'})
                 continue
-            reason = 'Chờ hậu kiểm, đã xử lý hoặc chưa đủ điều kiện duyệt; không đăng lại'
+            reason = ('Có link media nhưng luồng video chưa nhận diện được nguồn; cần kiểm tra ảnh/tệp, không kết luận thiếu media'
+                      if _bo_dau(status) in ('', 'cho', 'up ngay') else
+                      'Chờ hậu kiểm, đã xử lý hoặc chưa đủ điều kiện duyệt; không đăng lại')
         ignored.append({**entry, 'ly_do': reason})
     ready.sort(key=lambda r: (not r['uu_tien'], -r['dong'] if r['uu_tien'] else r['dong']))
     return {'page_bat': [{'page_id': p.page_id, 'ten': p.ten} for p in cfgs.values() if p.bat],

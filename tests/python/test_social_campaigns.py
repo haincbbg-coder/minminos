@@ -97,6 +97,12 @@ async def run():
     assert [x[0] for x in image_calls] == ['generate', 'poll']
     imgpost = fp.lay_bai(runs(images)[0]['outputs'][0]['id'])
     assert imgpost['media'] and fp.duong_media(imgpost['media'][0]).is_file()
+    retained = cp.create(request(client_key='retain-library-image', image={'mode': 'media', 'media': imgpost['media']}))
+    cp.command(retained, 'pause')
+    with ds._db() as db:
+        db.execute("UPDATE fp_bai SET trang_thai='bo',tao_luc=? WHERE id=?", (time.time()-30*86400, imgpost['id']))
+    fp.don_tep(1)
+    assert fp.duong_media(imgpost['media'][0]).is_file(), 'active/paused campaign must retain its media'
     # Unknown result is stopped after restart; no silent duplicate paid generation.
     row = cp.read(images)
     with patch.object(media, 'call', side_effect=AssertionError('must not regenerate')):
@@ -128,6 +134,35 @@ async def run():
     with patch.object(cp.ai, 'viet_bai', side_effect=AssertionError('daily limit exceeded')):
         await engine.tick()
     assert len(runs(capped)) == 1 and cp.read(capped)['next_at'] is None
+    paired = ds.ghep(ds.tao_ma_ghep(), 'Fixture Chrome PC', 'chrome-local')
+    ds.nhip(paired['may_id'], [{'id': 'fixture-nick', 'ten': 'Fixture Nick', 'trinh_duyet': 'chrome'}],
+            kich_ban=['dang_ban_nhap'], song_song=1)
+    variant_requests = []
+    async def per_platform(kt, platform, number, prompt, **kwargs):
+        variant_requests.append((platform, prompt))
+        return ['Facebook kể câu chuyện trồng cây ban công với ánh sáng dịu và đất thoáng.' if platform == 'fb_trang' else
+                'Threads hỏi vui: hôm nay bạn đã ngắm lá mới chưa? Ban công nhỏ cũng có niềm vui xanh.']
+    multi = cp.create(request(client_key='multiple-platforms', targets=[{'id': 'api:111111', 'style': 'story'},
+        {'id': 'nick:fixture-nick:threads', 'style': 'fun'}], auto_publish=True))
+    with patch.object(cp.ai, 'viet_bai', per_platform):
+        await engine.tick()
+    posts = runs(multi)[0]['outputs']
+    assert len(posts) == 2 and {p['kind'] for p in posts} == {'api', 'nick'}
+    assert all(p['status'] != 'cho_duyet' for p in posts), posts
+    assert {p[0] for p in variant_requests} == {'fb_trang', 'threads'}
+    assert any('kể chuyện gần gũi' in p for _, p in variant_requests) and any('hóm hỉnh' in p for _, p in variant_requests)
+    missed = cp.create(request(client_key='missed-slots'))
+    await engine.plan(cp.read(missed))
+    with ds._db() as db:
+        db.execute('UPDATE social_campaign SET plan=?,next_at=? WHERE id=?',
+                   (json.dumps({'kind': 'interval', 'minutes': 60, 'timezone': conf['timezone']}), now-2*86400, missed))
+    with patch.object(cp.ai, 'viet_bai', side_effect=AssertionError('must not backfill old slots')):
+        await engine.tick()
+    assert not runs(missed) and cp.read(missed)['next_at'] > time.time()
+    blocked_campaign = cp.create(request(client_key='app-disabled'))
+    await cp.Engine(lambda: planner, lambda *a: None, allowed=lambda: False).tick()
+    assert cp.read(blocked_campaign)['state'] == 'planning'
+    cp.command(blocked_campaign, 'pause')
 
     # MIME/HTML is rejected rather than handed to the publisher.
     try:

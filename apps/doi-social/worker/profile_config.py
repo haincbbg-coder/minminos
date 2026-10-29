@@ -52,7 +52,8 @@ def names(data):
         result = [str(x).strip()[:80] for x in supplied]
     else:
         count = int(data.get('count') or 1)
-        start, digits = int(data.get('start') or 1), int(data.get('digits') or 2)
+        start = int(data.get('start') if data.get('start') not in (None, '') else 1)
+        digits = int(data.get('digits') if data.get('digits') not in (None, '') else 2)
         pattern = str(data.get('name') or '').strip()
         if not 1 <= count <= 100 or not 1 <= digits <= 6 or not 0 <= start <= 999999:
             raise ValueError('Số lượng từ 1 đến 100, số bắt đầu và số chữ số phải hợp lệ')

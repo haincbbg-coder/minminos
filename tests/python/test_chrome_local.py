@@ -203,7 +203,7 @@ async def integration():
                     bulk_ui.locator('[data-act=pm-create]').click()
                     bulk_ui.locator('[data-pm=table]').get_by_text('Bulk 01', exact=True).wait_for()
                     made = [p for p in local.profiles() if p['ten'].startswith('Bulk ')]
-                    assert len(made) == 2 and all(p['group'] == 'Fixture group' and Path(p['data_dir']).parent == local.root / 'custom-storage' for p in made)
+                    assert len(made) == 2 and all(p['group'] == 'Fixture group' and Path(p['data_dir']).parent == (local.root / 'custom-storage').resolve() for p in made)
                     assert 'fixture-password' not in bulk_ui.locator('[data-pm=table]').inner_text()
                     bulk_ui.locator('summary').click()
                     page.locator('[data-act=local-open][data-id="' + pid + '"]').click()
