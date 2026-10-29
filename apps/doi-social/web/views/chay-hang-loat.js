@@ -55,7 +55,7 @@
   DS.view("chay-hang-loat", {
     title: "Chạy hàng loạt",
     render: function (el, ctx) {
-      el.innerHTML = '<a class="back" href="#/automation">' + ic("back") + "Automation</a>" + DS.ph("Chạy hàng loạt", "Giao một mẫu việc cho nhiều nick. Máy ở nhà mở từng profile GPM và làm như người thật.") + DS.skel(8);
+      el.innerHTML = '<a class="back" href="#/automation">' + ic("back") + "Automation</a>" + DS.ph("Chạy hàng loạt", "Giao một mẫu việc cho nhiều nick. Máy đã chọn mở từng profile Chrome hoặc GPM để thực hiện.") + DS.skel(8);
       var S = { mau: ctx.q.mau || "", chon: {}, tim: "", locNhan: true, chuaNhan: true, thuMuc: "", ts: {}, ten: "", song_song: 1, chay_an: false,
         ddTim: {}, che_do: "ngay", lich: { kieu: "ngay", gio: "08:00", n: 2, cron: "0 8 * * *" } };
       var KB, NICK = [], KT = [], MAU = [];
@@ -97,7 +97,7 @@
         MAU.forEach(function (m) { (nhomNT[m.nen_tang] = nhomNT[m.nen_tang] || []).push(m); });
         var thuMuc = {};
         NICK.forEach(function (n) { if (n.nhom) thuMuc[n.nhom] = 1; });
-        var h = '<a class="back" href="#/automation">' + ic("back") + "Automation</a>" + DS.ph("Chạy hàng loạt", "Giao một mẫu việc cho nhiều nick. Máy ở nhà mở từng profile GPM và làm như người thật.") +
+        var h = '<a class="back" href="#/automation">' + ic("back") + "Automation</a>" + DS.ph("Chạy hàng loạt", "Giao một mẫu việc cho nhiều nick. Máy đã chọn mở từng profile Chrome hoặc GPM để thực hiện.") +
           '<div class="card" id="chl"><div class="sec"><div class="sec-t">Thông tin chung</div><div class="fgrid">' +
           '<div class="fld"><label for="chl-ten">Tên đợt</label><input class="inp" id="chl-ten" value="' + esc(S.ten) + '" placeholder="Để trống, MinMin tự đặt theo mẫu và giờ chạy"></div>' +
           '<div class="fld"><label for="chl-mau">Mẫu <span class="req">*</span></label><select class="sel" id="chl-mau"><option value="">Chọn mẫu việc</option>' +
@@ -109,7 +109,7 @@
           }).join("") + "</select></div></div><div id=\"chl-mau-info\"></div></div>" +
           '<div class="sec"><div class="sec-t">Nick chạy <span class="bd bd-brand" id="chl-dem"></span></div><div class="nick-box"><div class="nick-tools">' +
           '<div class="inp-ic grow" style="min-width:180px">' + ic("search") + '<input class="inp inp-sm" id="chl-tim" placeholder="Tìm nick, thư mục, máy" value="' + esc(S.tim) + '"></div>' +
-          '<select class="sel sel-sm" id="chl-tm" style="width:auto"><option value="">Mọi thư mục GPM</option>' + Object.keys(thuMuc).sort().map(function (t) {
+          '<select class="sel sel-sm" id="chl-tm" style="width:auto"><option value="">Mọi thư mục profile</option>' + Object.keys(thuMuc).sort().map(function (t) {
             return '<option' + (t === S.thuMuc ? " selected" : "") + ">" + esc(t) + "</option>";
           }).join("") + "</select>" +
           '<button class="btn btn-sm" type="button" data-act="chon-het" id="chl-chon-het">Chọn tất cả khớp</button><button class="btn btn-sm btn-ghost" type="button" data-act="bo-chon">Bỏ chọn</button></div>' +
@@ -149,7 +149,7 @@
         el.querySelector("#chl-dem").textContent = n + "/" + NICK.length + " đã chọn · " + ds.length + " khớp lọc";
         el.querySelector("#chl-chon-het").textContent = "Chọn tất cả khớp (" + ds.length + ")";
         var box = el.querySelector("#chl-nick");
-        if (!NICK.length) box.innerHTML = DS.rong("Chưa có nick nào", 'Ghép máy ở nhà để MinMin đọc danh sách profile GPM. <a href="#/may">Mở Máy ở nhà</a>', "list");
+        if (!NICK.length) box.innerHTML = DS.rong("Chưa có nick nào", 'Tạo profile Chrome MinMin hoặc ghép máy tính để chọn nick chạy. <a href="#/may">Mở Máy ở nhà</a>', "list");
         else if (!ds.length) box.innerHTML = DS.rong("Không có nick khớp bộ lọc", "Bỏ bớt bộ lọc, hoặc gắn nhãn nền tảng cho nick ở trang Tài khoản.", "list");
         else box.innerHTML = ds.map(function (x) {
           var on = !!S.chon[x.id], cb = x.canh_bao || {}, cbk = Object.keys(cb);

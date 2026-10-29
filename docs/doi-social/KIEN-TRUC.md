@@ -292,3 +292,28 @@ Không có giả dấu vân tay hay đảm bảo vượt chặn tự động; ng
 Kiểm chứng: `test_social_browser.py` chạy Chromium thật trên CI cả headless lẫn desktop qua
 Xvfb, kiểm cookie bền, cách ly profile, nhập liệu/ảnh màn hình, khoá tác vụ, quyền máy/profile,
 Worker CDP và đóng profile. Các trang/nội dung thử đều giả lập, không đăng lên tài khoản thật.
+
+### Chrome trên máy tính nhận việc từ VPS (26.10.302)
+Trang Chrome MinMin có lựa chọn nơi chạy: host hiện tại hoặc máy tính qua Worker.
+Chế độ `chrome-local` ghép bằng `ghep-chrome.bat`, không dùng API Chrome nội bộ VPS.
+`chrome_local.py` giữ profile trong `chrome-data`, mở Chromium/Chrome thường bằng CDP
+loopback cổng ngẫu nhiên; không mở HTTP server cho VPS hoặc cho web điều khiển local.
+Người dùng tạo / đăng nhập profile qua `chrome-may-tinh.bat`, đóng trước khi nhận việc.
+Worker long-poll VPS bằng token máy như GPM, dùng cùng điều phối và kỹ năng, đóng profile
+sau mỗi tác vụ. File lock của hệ điều hành chặn trùng profile giữa đăng nhập tay và Worker,
+giới hạn ba profile trên máy. `chrome-data` không nằm trong gói tải / tự cập nhật.
+Máy tính phải bật và chạy Worker; không tự chuyển tác vụ sang VPS nếu máy ngoại tuyến.
+
+Quản lý từ VPS: `social_local_control.py` lưu lệnh allowlist theo máy trong SQLite;
+Worker `chrome_control.py` hỏi mỗi 3 giây, xử lý create/rename/open/close/extensions/refresh/
+use-existing/install, gửi snapshot tên và trạng thái. Không nhận shell/path tùy ý, không
+truyền CDP/cookie/bí mật. Endpoint Worker ràng buộc token máy; UI qua login/CSRF hiện có.
+Lệnh có hạn, không tự chạy lại sau lỗi/khởi động lại để tránh mở profile hai lần.
+
+Profile có sẵn: chỉ quét tên từ Local State của Chrome/Cốc Cốc được cài trên máy.
+Chrome 144+ cần người dùng bật chrome://inspect/#remote-debugging rồi chấp nhận kết nối;
+Cốc Cốc không có cơ chế tương thích thì hiện chưa kết nối được, không hạ bảo vệ hay copy DB.
+Worker gắn vào DevToolsActivePort trên loopback, yêu cầu profile đang được Chrome chọn là
+profile đã đăng ký. Hết việc chỉ đóng tab do Worker tạo và ngắt kết nối, giữ Chrome cá nhân.
+Không hỗ trợ chạy ẩn cho profile có sẵn; trình duyệt có thể hỏi lại quyền mỗi lần kết nối.
+Đổi tên chỉ đổi nhãn trong MinMin. Cài extension mở Chrome Web Store, người dùng tự duyệt quyền.

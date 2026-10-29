@@ -21,7 +21,7 @@
   DS.view("may", {
     title: "Máy ở nhà",
     render: function (el, ctx) {
-      el.innerHTML = DS.ph("Máy ở nhà", "Máy Windows chạy GPM Login và MinMin Worker. Máy nhận việc từ đây, mở profile và làm như người thật.",
+      el.innerHTML = DS.ph("Máy ở nhà", "Máy tính chạy MinMin Worker với Chrome riêng hoặc GPM Login. Máy nhận việc từ VPS, giữ phiên đăng nhập và mở trình duyệt ngay trên máy đó.",
         '<a class="btn" href="/doi-social/tai-worker.zip">' + ic("download") + 'Tải MinMin Worker</a><button class="btn btn-pri" data-act="ma">' + ic("link") + "Tạo mã ghép</button>") +
         '<div id="may-ma"></div>' + DS.skel(6);
       var D = {}, KB = null, maGhep = "", NK = [];
@@ -40,11 +40,11 @@
         var foc = document.activeElement && el.contains(document.activeElement) ? document.activeElement.id : "";
         var giu = {};
         ["f-nick", "f-noi-sel", "f-noi", "f-nd"].forEach(function (k) { var x = el.querySelector("#" + k); if (x) giu[k] = x.value; });
-        var h = DS.ph("Máy ở nhà", "Máy Windows chạy GPM Login và MinMin Worker. Máy nhận việc từ đây, mở profile và làm như người thật.",
+        var h = DS.ph("Máy ở nhà", "Máy tính chạy MinMin Worker với Chrome riêng hoặc GPM Login. Máy nhận việc từ VPS, giữ phiên đăng nhập và mở trình duyệt ngay trên máy đó.",
           '<a class="btn" href="/doi-social/tai-worker.zip">' + ic("download") + 'Tải MinMin Worker</a><button class="btn btn-pri" data-act="ma">' + ic("link") + "Tạo mã ghép</button>");
         h += '<div id="may-ma">' + (maGhep || "") + "</div>";
         if (!may.length) h += '<div class="card mb"><div class="card-h"><h3>Bắt đầu trong 3 bước</h3></div><div class="steps-h">' +
-          '<div><span class="n">1</span><div><b>Tải Worker</b><div class="small muted">Về máy Windows đang cài GPM Login, giải nén.</div></div></div>' +
+          '<div><span class="n">1</span><div><b>Tải Worker</b><div class="small muted">Về máy Windows, giải nén. Chrome riêng không cần GPM.</div></div></div>' +
           '<div><span class="n">2</span><div><b>Chạy cai-dat.bat</b><div class="small muted">Cài Python và trình duyệt tự động, chỉ làm một lần.</div></div></div>' +
           '<div><span class="n">3</span><div><b>Chạy ghep-may.bat</b><div class="small muted">Nhập mã 6 số từ nút Tạo mã ghép ở trên.</div></div></div></div></div>';
 
@@ -54,7 +54,7 @@
           var kb = m.kich_ban || [];
           if (typeof kb === "string") { try { kb = JSON.parse(kb); } catch (e) { kb = []; } }
           return '<div class="machine"><span class="mi">' + ic("monitor") + '</span><div class="grow" style="min-width:0"><div class="row"><b style="font-size:14px">' + esc(m.ten) + "</b>" +
-            (m.online ? DS.bd("Đang bật", "ok", true) : DS.bd("Ngoại tuyến", "mu", true)) + (m.driver_ok ? DS.bd("GPM sẵn sàng", "ok") : DS.bd("GPM chưa sẵn sàng", "warn")) + "</div>" +
+            (m.online ? DS.bd("Đang bật", "ok", true) : DS.bd("Ngoại tuyến", "mu", true)) + (m.driver_ok ? DS.bd((m.driver === "gpm" ? "GPM" : "Chrome") + " sẵn sàng", "ok") : DS.bd((m.driver === "gpm" ? "GPM" : "Chrome") + " chưa sẵn sàng", "warn")) + "</div>" +
             '<div class="small muted" style="margin-top:3px">' + (m.so_nick || 0) + " nick · Worker " + esc(m.phien_ban || "?") + (m.song_song ? " · song song " + m.song_song : "") +
             " · nhịp cuối " + (m.nhip_luc ? DS.tuongDoi(m.nhip_luc) : "chưa có") + "</div>" +
             (m.loi_driver ? '<div class="small" style="color:var(--err);margin-top:3px">' + esc(m.loi_driver) + "</div>" : "") +
@@ -67,7 +67,7 @@
 
         h += '<div class="grid g2 mt"><div>' + (D.up_bai ? theUpBai(D.up_bai) : '<div class="card"><div class="card-h"><h3>' + ic("file") + "Up bài từ Google Sheet</h3></div>" + '<div class="small muted">Chức năng Up bài chưa bật trên máy chủ này.</div></div>') + "</div>";
         h += '<div><div class="card"><div class="card-h"><h3>' + ic("send") + 'Đăng thử một bài</h3></div><p class="small muted" style="margin:0 0 12px">Thường chỉ cần nhắn Telegram cho MinMin. Form này để thử nhanh một bài Facebook.</p>' +
-          '<div class="fld"><label for="f-nick">Nick (tên profile GPM)</label><input class="inp" id="f-nick" list="ds-nick" placeholder="Gõ để chọn"><datalist id="ds-nick">' +
+          '<div class="fld"><label for="f-nick">Nick (tên profile trình duyệt)</label><input class="inp" id="f-nick" list="ds-nick" placeholder="Gõ để chọn"><datalist id="ds-nick">' +
           nick.filter(function (n) { return n.trinh_duyet !== "firefox"; }).map(function (n) { return '<option value="' + esc(n.ten) + '">'; }).join("") + "</datalist></div>" +
           '<div class="fld"><label for="f-noi-sel">Nơi đăng</label><select class="sel" id="f-noi-sel"></select>' +
           '<input class="inp mt-s" id="f-noi" placeholder="Link Trang hoặc nhóm, bắt đầu bằng https://" hidden><div class="hint" id="f-noi-hint"></div></div>' +

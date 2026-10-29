@@ -344,7 +344,7 @@ def _goi_worker_zip(bo_cau_hinh: bool = True) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(WORKER_DIR.rglob("*")):
-            if not p.is_file() or "__pycache__" in p.parts or p.suffix == ".pyc":
+            if not p.is_file() or {"__pycache__", ".venv", "chrome-data"}.intersection(p.parts) or p.suffix == ".pyc":
                 continue
             if bo_cau_hinh and p.name in WORKER_BO_QUA:
                 continue
@@ -1946,6 +1946,8 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
     _dang_ky_fanpage(app, _chan, _than)
     import social_browser
     social_browser.register(app, ly_do_chan, _may)
+    import social_local_control
+    social_local_control.register(app, ly_do_chan, _may)
 
 
 # ---------------------------------------------------------------- 26.10.194: Fanpage qua Graph API
