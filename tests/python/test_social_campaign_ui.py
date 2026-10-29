@@ -98,9 +98,9 @@ async def run():
             await page.locator('#ub-bat').check()
             await page.locator('#ub-tu').check()
             await page.locator('#g-bai').fill('8')
-            await page.locator('h1').click()  # leave edit focus before periodic refresh
-            next_refresh = asyncio.create_task(page.wait_for_response(lambda r: '/up-bai/trang-thai' in r.url))
-            await next_refresh
+            async with page.expect_response(lambda r: '/up-bai/trang-thai' in r.url, timeout=25000) as next_refresh:
+                await page.locator('h1').click()  # leave edit focus before periodic refresh
+            await next_refresh.value
             await page.wait_for_load_state('networkidle')
             assert await page.locator('#ub-sheet').input_value() == 'FIXTURE_SHEET_UNSAVED'
             assert await page.locator('#ub-bat').is_checked() and await page.locator('#ub-tu').is_checked()
