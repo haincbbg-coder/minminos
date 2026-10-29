@@ -27,6 +27,9 @@ async def run():
         ds.mo(Path(tempfile.mkdtemp()))
         fp.ghi_trang({'id': '111111', 'name': 'Fixture garden', 'tasks': ['CREATE_CONTENT']})
         fp.dat_cai_dat({'dung_tu_dong': False})
+        paired = ds.ghep(ds.tao_ma_ghep(), 'Fixture PC', 'chrome-local')
+        ds.nhip(paired['may_id'], [{'id': 'nick-' + str(i), 'ten': 'Fixture Nick ' + str(i), 'trinh_duyet': 'chrome'} for i in range(50)],
+                kich_ban=['dang_ban_nhap'], song_song=1)
         async def model(prompt, images):
             if 'Lập kế hoạch nội dung' in prompt:
                 return json.dumps({'title': 'Ban công xanh', 'schedule': {'kind': 'once'}, 'angles': ['Tưới nước']})
@@ -35,6 +38,9 @@ async def run():
         routes.VONG_NEN_BAT = False
         app = FastAPI()
         routes.register(app, routes.DoiSocialDeps(goi_ai=model))
+        @app.get('/up-bai/trang-thai')
+        def fixture_sheet():
+            return {'ok': True, 'cau_hinh': {'sheet_id': '', 'bat': False, 'tu_duyet': False}, 'nhat_ky': []}
         app.mount('/apps/doi-social', StaticFiles(directory=str(ROOT / 'apps/doi-social/web'), html=True))
         sock = socket.socket(); sock.bind(('127.0.0.1', 0))
         url = 'http://127.0.0.1:' + str(sock.getsockname()[1])
@@ -48,8 +54,24 @@ async def run():
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
             await page.goto(url + '/apps/doi-social/#/chien-dich', wait_until='networkidle')
+            await page.locator('#cp-chooser summary').click()
+            await page.locator('[data-target="api:111111"]').wait_for()
+            assert await page.locator('[data-target]').count() == 20
             await page.locator('[data-target="api:111111"]').check()
             await page.locator('[data-style="api:111111"]').select_option('story')
+            await page.locator('#cp-more').click()
+            assert await page.locator('[data-target]').count() == 40
+            await page.locator('#cp-platform').select_option('threads')
+            await page.locator('#cp-search').fill('fixture nick 49')
+            assert await page.locator('[data-target]').count() == 1
+            assert 'Đã chọn 1/12' in await page.locator('#cp-picked').inner_text()
+            await page.locator('#cp-platform').select_option('')
+            await page.locator('#cp-search').fill('')
+            assert await page.locator('[data-target="api:111111"]').is_checked()
+            assert await page.locator('[data-style="api:111111"]').input_value() == 'story'
+            # Chosen target may be hidden by filtering at submission time.
+            await page.locator('#cp-platform').select_option('threads')
+            await page.locator('#cp-chooser summary').click()
             await page.locator('#cp-prompt').fill('Chia sẻ mẹo trồng cây ban công, phong cách kể chuyện, một lượt ngay.')
             await page.locator('#cp-schedule').select_option('once')
             assert not await page.locator('#cp-auto').is_checked()
@@ -65,13 +87,31 @@ async def run():
             await page.locator('#cp-list [data-cmd="pause"]').click()
             await page.locator('#cp-list').get_by_text('Tạm dừng · Chờ duyệt', exact=False).wait_for()
             assert cp.list_all()[0]['state'] == 'paused'
+            async with page.expect_response(lambda r: r.url.endswith('/doi-social/campaigns') and r.request.method == 'GET', timeout=20000) as refreshed_campaign:
+                await page.locator('#cp-list details summary').click()
+            await refreshed_campaign.value
+            await page.wait_for_load_state('networkidle')
+            assert await page.locator('#cp-list details').get_attribute('open') is not None
             for theme in ('light', 'dark'):
                 await page.locator('html').evaluate('(el, value) => el.setAttribute("data-theme", value)', theme)
                 for width in (390, 1280):
                     await page.set_viewport_size({'width': width, 'height': 850})
                     assert await page.locator('#cp-start').is_visible()
             assert not errors, errors
-            print('PASS real Chromium campaign form, styles, one-click persistence, AI draft, pause, mobile/desktop and themes')
+            await page.goto(url + '/apps/doi-social/#/may', wait_until='networkidle')
+            await page.locator('#ub-sheet').fill('FIXTURE_SHEET_UNSAVED')
+            await page.locator('#ub-bat').check()
+            await page.locator('#ub-tu').check()
+            await page.locator('#g-bai').fill('8')
+            async with page.expect_response(lambda r: '/up-bai/trang-thai' in r.url, timeout=25000) as next_refresh:
+                await page.locator('h1').click()  # leave edit focus before periodic refresh
+            await next_refresh.value
+            await page.wait_for_load_state('networkidle')
+            assert await page.locator('#ub-sheet').input_value() == 'FIXTURE_SHEET_UNSAVED'
+            assert await page.locator('#ub-bat').is_checked() and await page.locator('#ub-tu').is_checked()
+            assert await page.locator('#g-bai').input_value() == '8'
+            assert not errors, errors
+            print('PASS real Chromium campaign form with 351 targets, filters/retained style, one-click draft, pause, themes and unsaved Machine form after refresh')
         finally:
             await browser.close()
             server.should_exit = True
