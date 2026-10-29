@@ -113,13 +113,16 @@ class BrowserHost:
             self.write(data)
         if enabled:
             await self.ensure_worker()
-        elif self.worker and self.worker.returncode is None:
-            if any(self.busy(p['id']) for p in self.profiles()):
-                data['enabled'] = True
-                self.write(data)
-                raise ValueError('Còn tác vụ đang chạy; dừng tác vụ trước khi tắt')
-            self.worker.terminate()
-            await self.worker.wait()
+        else:
+            # Wait for an in-flight supervisor spawn, so disabling cannot leave a new Worker alive.
+            async with self.worker_lock:
+                if self.worker and self.worker.returncode is None:
+                    if any(self.busy(p['id']) for p in self.profiles()):
+                        data['enabled'] = True
+                        self.write(data)
+                        raise ValueError('Còn tác vụ đang chạy; dừng tác vụ trước khi tắt')
+                    self.worker.terminate()
+                    await self.worker.wait()
         return self.status()
 
     async def ensure_worker(self):

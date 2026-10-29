@@ -42,6 +42,32 @@ async def run():
             raise AssertionError('non-web url accepted')
         except ValueError:
             pass
+    # Disabling during process creation must also terminate the just-created child.
+    racing = sb.BrowserHost(Path(tempfile.mkdtemp()))
+    state = racing.register_machine()
+    state['enabled'] = True
+    racing.write(state)
+    racing.executable = lambda: '/fake/chrome'
+    entered, release = asyncio.Event(), asyncio.Event()
+    class Child:
+        returncode = None
+        def terminate(self):
+            self.returncode = 0
+        async def wait(self):
+            return self.returncode
+    async def spawn(*args, **kwargs):
+        entered.set()
+        await release.wait()
+        return Child()
+    with patch.object(sb.asyncio, 'create_subprocess_exec', spawn):
+        starting = asyncio.create_task(racing.ensure_worker())
+        await entered.wait()
+        disabling = asyncio.create_task(racing.enable(False))
+        await asyncio.sleep(0)
+        release.set()
+        await asyncio.gather(starting, disabling)
+        assert racing.worker.returncode == 0 and not racing.read()['enabled']
+    await racing.stop()
     app = FastAPI()
     async def auth(request):
         m = ds.may_theo_token(request.headers.get('x-minmin-may', ''))
