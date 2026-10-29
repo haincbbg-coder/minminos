@@ -29,20 +29,20 @@ check("lịch trống = mặc định 8h cách 60 phút", ub.doc_lich("")[:2] ==
 
 CFG = [["CHỈ CẦN CHỌN LOẠI CONTENT..."],
        ["Bật", "Tên Page", "Page ID", "Loại content", "Số bài/ngày", "Giờ đăng", "Trạng thái"],
-       ["TRUE", "Liora Belle", "1159115630616690", "GIÁ CAO", "2", "Bắt đầu đăng từ 08h sáng, và cứ cách 1 tiếng lại đăng bài", "ĐÃ CẤU HÌNH"],
+       ["TRUE", "Fixture Enabled Page", "1111111111111111", "GIÁ CAO", "2", "Bắt đầu đăng từ 08h sáng, và cứ cách 1 tiếng lại đăng bài", "ĐÃ CẤU HÌNH"],
        ["FALSE", "Trang Tắt", "999", "GIÁ THẤP", "3", "", ""]]
 cfgs = ub.doc_cau_hinh_page(CFG)
-check("đọc CẤU HÌNH PAGE", cfgs["1159115630616690"].bai_ngay == 2 and cfgs["1159115630616690"].loai == "GIÁ CAO"
+check("đọc CẤU HÌNH PAGE", cfgs["1111111111111111"].bai_ngay == 2 and cfgs["1111111111111111"].loai == "GIÁ CAO"
       and cfgs["999"].bat is False)
-c = cfgs["1159115630616690"]
+c = cfgs["1111111111111111"]
 luc = datetime(2026, 10, 20, 9, 30, tzinfo=ub.VN)
 check("được đăng khi tới mốc và chưa đủ bài", ub.den_gio_dang(c, [], luc) is None)
 check("mốc giờ đã có bài thì chờ", "mốc" in (ub.den_gio_dang(c, [luc.replace(minute=5)], luc) or ""))
 check("đủ số bài/ngày thì dừng", "đủ" in (ub.den_gio_dang(c, [luc.replace(hour=8), luc.replace(hour=9)], luc) or ""))
 check("trước giờ đăng đầu thì chờ", ub.den_gio_dang(c, [], luc.replace(hour=7)) is not None)
 check("Trang tắt thì không đăng", "tắt" in ub.den_gio_dang(cfgs["999"], [], luc))
-check("lấy id Sheet từ link", ub.id_sheet("https://docs.google.com/spreadsheets/d/1t3aWcs1gBuWh3_49diIBcbhFUQNOaBGHrz6LKDIiu-s/edit?usp=x")
-      == "1t3aWcs1gBuWh3_49diIBcbhFUQNOaBGHrz6LKDIiu-s" and ub.id_sheet("bậy") == "")
+check("lấy id Sheet từ link", ub.id_sheet("https://docs.google.com/spreadsheets/d/SHEET_FIXTURE_NOT_REAL_12345678901234567890/edit?usp=x")
+      == "SHEET_FIXTURE_NOT_REAL_12345678901234567890" and ub.id_sheet("bậy") == "")
 check("bóc JSON content", ub.boc_json('xin chào {"nhan_dien":"váy","content":"VÁY ĐẸP"} hết')["content"] == "VÁY ĐẸP"
       and ub.boc_json('{"nhan_dien":"x"}') is None)
 p = ub.prompt_content(c, "CS002", "470000", ["SALE 30% VÁY SƠ MI"], "")
@@ -55,9 +55,9 @@ TIEU = ["Ngày đăng", "Giờ đăng", "Tên Page", "Page ID", "Link video", "C
 SHEET = {
     ub.TAB_CAU_HINH: [r[:] for r in CFG],
     ub.TAB_HANG_DOI: [[""], ["MỖI VIDEO 1 DÒNG..."], TIEU[:],
-                      ["", "", "Liora Belle", "1159115630616690", "https://www.tiktok.com/@shop/video/1", "", "CS009", "520000"],
-                      ["", "", "Liora Belle", "1159115630616690", "không phải link", "", "", ""],
-                      ["12/10", "9h00", "Liora Belle", "1159115630616690", "https://www.facebook.com/reel/9", "", "CS001", "",
+                      ["", "", "Fixture Enabled Page", "1111111111111111", "https://www.tiktok.com/@shop/video/1", "", "CS009", "520000"],
+                      ["", "", "Fixture Enabled Page", "1111111111111111", "không phải link", "", "", ""],
+                      ["12/10", "9h00", "Fixture Enabled Page", "1111111111111111", "https://www.facebook.com/reel/9", "", "CS001", "",
                        "váy cũ", "SALE VÁY CŨ MẪU", "ĐÃ DUYỆT", "ĐÃ ĐĂNG", "1", "https://fb/1", ""]],
     ub.TAB_NHAT_KY: [["Thời gian", "Job ID"]],
 }
@@ -172,7 +172,7 @@ check("ghi một dòng NHẬT KÝ thành công", SHEET[ub.TAB_NHAT_KY][-1][5] ==
 check("báo chủ đã đăng và dọn video tạm", (4, "da_dang") in BAO and up._tim_video(4, "https://www.tiktok.com/@shop/video/1") is None)
 
 # ---- đăng lỗi sau khi đã đẩy video: không đăng lại, ghi cần kiểm tra
-SHEET[ub.TAB_HANG_DOI].append(["", "", "Liora Belle", "1159115630616690", "https://www.tiktok.com/@shop/video/2", "", "", "",
+SHEET[ub.TAB_HANG_DOI].append(["", "", "Fixture Enabled Page", "1111111111111111", "https://www.tiktok.com/@shop/video/2", "", "", "",
                                "", "VÁY B", "ĐÃ DUYỆT", "CHỜ ĐĂNG"])
 
 
@@ -195,7 +195,7 @@ kq = loop.run_until_complete(up.chay_mot_vong())
 check("dòng lỗi không bị chạy lại", kq["dang"] == 0 and kq["xu_ly"] == 0)
 
 # ---- tự duyệt
-SHEET[ub.TAB_HANG_DOI].append(["", "", "Liora Belle", "1159115630616690", "https://www.tiktok.com/@shop/video/3", "", "", ""])
+SHEET[ub.TAB_HANG_DOI].append(["", "", "Fixture Enabled Page", "1111111111111111", "https://www.tiktok.com/@shop/video/3", "", "", ""])
 up.tu_duyet = True
 kq = loop.run_until_complete(up.chay_mot_vong())
 r8 = SHEET[ub.TAB_HANG_DOI][-1]
@@ -205,10 +205,22 @@ check("chế độ tự duyệt: viết xong là CHỜ ĐĂNG + ĐÃ DUYỆT", r
 async def ai_bay(paths, prompt):
     return "xin lỗi tôi không xem được"
 deps.nhin_anh = ai_bay
-SHEET[ub.TAB_HANG_DOI].append(["", "", "Liora Belle", "1159115630616690", "https://www.tiktok.com/@shop/video/4"])
+SHEET[ub.TAB_HANG_DOI].append(["", "", "Fixture Enabled Page", "1111111111111111", "https://www.tiktok.com/@shop/video/4"])
 loop.run_until_complete(up.chay_mot_vong())
 r9 = SHEET[ub.TAB_HANG_DOI][-1]
 check("AI không trả content: LỖI - CHƯA ĐĂNG kèm lý do", r9[11] == "LỖI - CHƯA ĐĂNG" and "AI" in r9[14], r9)
+
+# Deterministic evidence for the paused-agent failure: enabled Page + real link are visible.
+rows = [TIEU[:],
+    ["", "", "Enabled", "1111111111111111", "https://www.facebook.com/reel/fixture1", "", "", "", "", "", "", "UP NGAY"],
+    ["", "", "Disabled", "999", "https://www.facebook.com/reel/fixture2"],
+    ["", "", "Missing config", "888", "https://www.facebook.com/reel/fixture3"],
+    ["", "", "Enabled", "1111111111111111", "https://www.facebook.com/reel/fixture4", "", "", "", "", "", "", "UP NGAY"]]
+snapshot = json.dumps(rows)
+proof = ub.kiem_tra_hang_doi(rows, CFG)
+check("preflight không sửa Sheet", json.dumps(rows) == snapshot and proof["chi_doc"])
+check("UP NGAY ưu tiên dòng mới nhất, loại Page tắt/chưa cấu hình", [r["dong"] for r in proof["du_dieu_kien"]] == [5, 2] and len(proof["bo_qua"]) == 2, proof)
+check("bằng chứng Page bật và link media có thật", proof["page_bat"][0]["page_id"] == "1111111111111111" and all(r["co_media"] for r in proof["du_dieu_kien"]))
 
 print("ALL PASS" if ok else "SOME FAILED")
 sys.exit(0 if ok else 1)

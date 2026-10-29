@@ -12,10 +12,10 @@
       '<div class="row"><a class="btn" href="/doi-social/tai-worker.zip">Tải MinMin Worker</a><button class="btn" data-act="pair-local">Tạo mã ghép Chrome máy tính</button><a class="btn" href="#/may">Xem máy đã ghép</a></div><p id="chrome-pair" role="status"></p><div id="chrome-local-machines"></div>' +
       '<div class="fld mt"><label for="chrome-local-machine">Máy tính quản lý profile</label><select class="sel" id="chrome-local-machine"></select></div>' +
       '<div class="row"><input class="inp" id="chrome-local-name" placeholder="Tên profile mới"><button class="btn" data-act="local-create">Tạo profile trên máy tính</button><button class="btn" data-act="local-refresh">Quét profile có sẵn</button><button class="btn" data-act="local-install">Tải Chromium trên máy tính</button></div>' +
-      '<p class="small muted">Lệnh gửi qua Worker, có trạng thái Chờ / Đang chạy / Hoàn tất bên dưới. Tên nhập cạnh mỗi profile chỉ đổi tên trong MinMin.</p><div id="chrome-local-inventory"></div><div id="chrome-local-commands" role="status"></div>' +
+      '<p class="small muted">Lệnh gửi qua Worker, có trạng thái Chờ / Đang chạy / Hoàn tất bên dưới. Tên nhập cạnh mỗi profile chỉ đổi tên trong MinMin.</p><div id="chrome-local-profile-manager"></div><div id="chrome-local-inventory"></div><div id="chrome-local-commands" role="status"></div>' +
       '<p class="small muted">Dùng phiên đã đăng nhập: Chrome 144+ cần bật chrome://inspect/#remote-debugging và duyệt hộp thoại kết nối tại máy tính. Chỉ dùng profile hiện tại do Chrome chọn; mở đúng profile rồi quét lại. Cốc Cốc chỉ dùng nếu bản đang cài hỗ trợ cơ chế này. Không chép cookie, không đóng trình duyệt cá nhân, không chạy ẩn với phiên có sẵn.</p></div>' +
       '<div id="chrome-host"><div class="card"><div id="chrome-status"></div><div class="row mt-s"><button class="btn" data-act="install">Tải lõi Chromium</button><button class="btn btn-pri" data-act="enable">Bật Worker Chrome</button><button class="btn" data-act="disable">Tắt Worker</button></div>' +
-      '<div class="row mt"><input class="inp" id="chrome-name" placeholder="Tên profile, ví dụ HALIMI Facebook"><button class="btn" data-act="create">Tạo profile</button></div><div id="chrome-profiles" class="mt"></div></div>' +
+      '<div class="row mt"><input class="inp" id="chrome-name" placeholder="Tên profile, ví dụ HALIMI Facebook"><button class="btn" data-act="create">Tạo profile</button></div><div id="chrome-profiles" class="mt"></div><div id="chrome-host-profile-manager"></div></div>' +
       '<div id="chrome-screen" class="card mt" hidden><div class="row"><b id="chrome-selected"></b><button class="btn btn-sm" data-act="close">Đóng profile</button></div>' +
       '<p class="small muted">Bấm vào ảnh để đặt con trỏ. Nhập chữ vào ô bên dưới rồi bấm Gõ. Mật khẩu chỉ gửi tới trình duyệt của MinMin. Dừng tác vụ trước khi điều khiển tay.</p>' +
       '<div class="row"><select class="sel" id="chrome-tabs" aria-label="Tab trình duyệt"></select><input class="inp" id="chrome-url" placeholder="https://www.facebook.com"><button class="btn" data-act="goto">Mở địa chỉ</button></div>' +
@@ -24,6 +24,12 @@
       '<div class="row mt-s"><button class="btn" data-act="up">Cuộn lên</button><button class="btn" data-act="down">Cuộn xuống</button></div>' +
       '<p id="chrome-error" class="small muted" role="status"></p><img id="chrome-frame" alt="Màn hình Chrome trên máy MinMin" style="width:100%;height:auto;touch-action:none" draggable="false"></div></div>';
     var base = "/doi-social/chrome";
+    var hostManager = DS.profileManager(el.querySelector("#chrome-host-profile-manager"), function (action, data) {
+      return api("/" + (action === "update-batch" ? "configure-batch" : action), data).then(refresh);
+    }, function (p) { return '<button class="btn btn-sm" data-act="open" data-id="' + esc(p.id) + '">Mở / Đăng nhập</button><button class="btn btn-sm" data-act="view" data-id="' + esc(p.id) + '">Xem màn hình</button>'; });
+    var localManager = DS.profileManager(el.querySelector("#chrome-local-profile-manager"), localCommand, function (p) {
+      return '<button class="btn btn-sm" data-act="local-open" data-id="' + esc(p.id) + '">Mở / Đăng nhập</button><button class="btn btn-sm" data-act="local-close" data-id="' + esc(p.id) + '">Đóng profile</button><button class="btn btn-sm" data-act="local-extensions" data-id="' + esc(p.id) + '">Cài extension</button>';
+    });
     function refreshLocal() {
       return DS.api("GET", "/doi-social/trang-thai").then(function (r) {
         if (!ctx.alive || r.ok === false) return;
@@ -42,13 +48,13 @@
         return DS.api("GET", "/doi-social/chrome-local/" + encodeURIComponent(machineId)).then(function (d) {
           if (!ctx.alive || machineId !== localMachine || d.ok === false) return;
           if (d.updated !== localInventoryStamp) { localInventoryStamp = d.updated; DS.boNho("nick"); }
+          localManager.update(d.profiles || [], d.storage_root);
           var box = el.querySelector("#chrome-local-inventory");
           if (box.contains(document.activeElement) && document.activeElement.matches("input,textarea,select")) return;
           box.innerHTML = '<h3>Profile dùng trong Automation</h3>' + (d.profiles || []).map(function (p) {
             return '<div class="row mt-s"><span class="grow">' + esc(p.name) + ' · ' + esc(p.browser) + ' · ' + (p.kind === "existing" ? "Phiên có sẵn" : "MinMin quản lý") + (p.open ? ' · Đang mở' : '') + '</span>' +
               '<input class="inp" data-name="' + esc(p.id) + '" aria-label="Tên mới của ' + esc(p.name) + '" placeholder="Tên mới">' +
-              '<button class="btn btn-sm" data-act="local-rename" data-id="' + esc(p.id) + '">Đổi tên</button><button class="btn btn-sm" data-act="local-open" data-id="' + esc(p.id) + '">Mở / Đăng nhập</button>' +
-              '<button class="btn btn-sm" data-act="local-extensions" data-id="' + esc(p.id) + '">Cài extension</button><button class="btn btn-sm" data-act="local-close" data-id="' + esc(p.id) + '">Đóng profile</button></div>';
+              '<button class="btn btn-sm" data-act="local-rename" data-id="' + esc(p.id) + '">Đổi tên</button></div>';
           }).join("") + '<h3>Profile Chrome / Cốc Cốc đang có trên máy</h3>' + (d.existing || []).map(function (p) {
             return '<div class="row mt-s"><span class="grow">' + esc(p.browser) + ' · ' + esc(p.name) + ' · ' + (p.active ? 'Profile hiện tại' : 'Mở profile này trên máy trước khi chạy') + '</span>' +
               '<button class="btn btn-sm" data-act="local-use" data-id="' + esc(p.id) + '">Dùng profile này</button></div>';
@@ -105,10 +111,8 @@
         if (!ctx.alive || s.ok === false) return;
         el.querySelector("#chrome-status").textContent = (s.desktop ? "Máy có màn hình" : "Máy chủ / chế độ màn hình web") + " · " +
           (s.installing ? "Đang tải Chromium" : s.installed ? "Đã có Chrome" : "Chưa có Chrome") + " · " + (s.running ? "Worker đang chạy" : "Worker chưa chạy") + (s.install_error ? " · " + s.install_error : "");
-        el.querySelector("#chrome-profiles").innerHTML = s.profiles.map(function (p) {
-          return '<div class="row mt-s"><b class="grow">' + esc(p.ten) + '</b><span class="small muted">' + (p.busy ? "Đang chạy tác vụ" : p.open ? "Đang mở" : "Đã đóng") +
-            '</span><button class="btn btn-sm" data-act="open" data-id="' + p.id + '">Mở / Đăng nhập</button><button class="btn btn-sm" data-act="view" data-id="' + p.id + '">Xem màn hình</button></div>';
-        }).join("");
+        hostManager.update(s.profiles.map(function (p) { return Object.assign({}, p, {name:p.ten}); }), s.storage_root);
+        el.querySelector("#chrome-profiles").innerHTML = "";
         if (selected) DS.api("GET", base + "/profile/" + selected + "/tabs").then(function (r) {
           if (!ctx.alive || !r.ok) return;
           var sel = el.querySelector("#chrome-tabs"), old = sel.value;

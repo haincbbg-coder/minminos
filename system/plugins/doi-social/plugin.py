@@ -126,6 +126,19 @@ async def _up_bai_chay(args, ctx):
             + "\nKết quả từng bài tự gửi về Telegram và ghi ngược vào Sheet.")
 
 
+async def _up_bai_kiem_tra(args, ctx):
+    import routes.up_bai as rub
+    import up_bai
+    error = _check_v2()
+    if error:
+        return error
+    up = rub.may()
+    if not up:
+        return 'Up bài chưa khởi động'
+    sid = up_bai.id_sheet(str(args.get('sheet') or rub.doc_cau_hinh()['sheet_id']))
+    return json.dumps(await up.kiem_tra(sid), ensure_ascii=False)
+
+
 def _up_bai_trang_thai(args, ctx):
     import routes.up_bai as rub
     up = rub.may()
@@ -396,6 +409,12 @@ def register(ctx):
                      "(bỏ qua lịch giờ đăng)."),
         handler=_up_bai_chay, min_mode="full",
         schema={"type": "object", "properties": {"dong": {"type": "integer", "description": "Số dòng trong Sheet"}}},
+    )
+    ctx.register_tool(
+        name="up_bai_kiem_tra",
+        description="Đọc và kiểm tra Sheet UP BÀI bằng mã: Page bật/tắt, dòng đủ điều kiện, lý do bỏ qua. CHỈ ĐỌC, không sửa Sheet và không đăng. Dùng bằng chứng này trước khi kết luận không có bài hoặc Page đang tắt.",
+        handler=_up_bai_kiem_tra, min_mode="readonly", check_fn=_check_v2,
+        schema={"type": "object", "properties": {"sheet": {"type": "string", "description": "Link hoặc id Sheet, bỏ trống dùng cấu hình hiện tại"}}},
     )
     ctx.register_tool(
         name="up_bai_trang_thai",

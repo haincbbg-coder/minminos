@@ -1,8 +1,8 @@
-name: Đội Social (máy nhà + GPM Login)
+name: Đội Social (Chrome + GPM Login)
 slug: doi-social
-version: 1.2.0
+version: 1.3.0
 description: Giao việc cho máy ở nhà - xem nick (profile GPM Login), số liệu tổng quan, giao việc bằng lời thành kế hoạch chờ duyệt trên Telegram, chạy một mẫu tự động cho nhiều nick, tạo bài đăng Facebook như người thật chờ chủ duyệt, và xem kết quả các lượt đăng.
-author: Javis (bundled)
+author: MinMin OS (bundled)
 enabled: true
 min_mode: readonly
 tools:
@@ -13,5 +13,6 @@ tools:
   - social_ke_hoach
   - social_chay_mau
   - up_bai_chay
+  - up_bai_kiem_tra
   - up_bai_trang_thai
 hooks: []

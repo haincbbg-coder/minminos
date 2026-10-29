@@ -11,7 +11,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 import doi_social as ds
 
-ACTIONS = {'install', 'refresh', 'create', 'rename', 'open', 'close', 'extensions', 'use-existing'}
+ACTIONS = {'install', 'refresh', 'create', 'rename', 'open', 'close', 'extensions', 'use-existing', 'create-batch', 'update', 'update-batch', 'storage'}
 
 
 def init(c):
@@ -28,11 +28,20 @@ def machine(c, mid):
 
 
 def enqueue(mid, action, params):
-    if action not in ACTIONS or not isinstance(params, dict):
+    if not isinstance(action, str) or action not in ACTIONS or not isinstance(params, dict):
         raise ValueError('Lệnh profile không hợp lệ')
     p = {k: str(params.get(k) or '').strip()[:200] for k in ('name', 'profile', 'source')}
     if action in ('create', 'rename') and not p['name']:
         raise ValueError('Nhập tên profile')
+    from social_profile_settings import module
+    pc = module('profile_config')
+    for key in ('group', 'note', 'storage_root', 'names', 'count', 'start', 'digits', 'proxy', 'proxy_lines', 'profiles'):
+        if key in params:
+            p[key] = params[key]
+    if action in ('create', 'create-batch'):
+        pc.batch(p)
+    if action in ('update', 'update-batch'):
+        pc.fields(p)
     if action == 'extensions':
         url = str(params.get('url') or 'https://chromewebstore.google.com/').strip()
         u = urlsplit(url)
@@ -47,7 +56,7 @@ def enqueue(mid, action, params):
         if count >= 20:
             raise ValueError('Máy còn nhiều lệnh chưa xử lý; chờ Worker kết nối')
         cur = c.execute('INSERT INTO chrome_control(machine,action,params,state,created) VALUES(?,?,?,?,?)',
-                        (mid, action, json.dumps(p), 'pending', time.time()))
+                        (mid, action, __import__('secrets_store').encrypt_required(json.dumps(p)), 'pending', time.time()))
         return cur.lastrowid
 
 
@@ -73,7 +82,7 @@ def claim(mid):
         except BaseException:
             c.rollback()
             raise
-        return {'id': row['id'], 'action': row['action'], 'params': json.loads(row['params'])} if row else None
+        return {'id': row['id'], 'action': row['action'], 'params': json.loads(__import__('secrets_store').decrypt(row['params']))} if row else None
 
 
 def inventory(data):
@@ -81,9 +90,10 @@ def inventory(data):
         raise ValueError('Danh sách profile không hợp lệ')
     out = {}
     for key in ('profiles', 'existing'):
-        out[key] = [{k: (bool(p.get(k)) if k in ('open', 'active', 'ready') else str(p.get(k) or '')[:200])
-                     for k in ('id', 'name', 'browser', 'kind', 'open', 'active', 'ready')}
+        out[key] = [{k: (bool(p.get(k)) if k in ('open', 'active', 'ready') else str(p.get(k) or '')[:(2000 if k == 'data_dir' else 500 if k == 'note' else 200)])
+                     for k in ('id', 'name', 'browser', 'kind', 'open', 'active', 'ready', 'group', 'note', 'data_dir', 'proxy_label')}
                     for p in (data.get(key) or [])[:100] if isinstance(p, dict)]
+    out['storage_root'] = str(data.get('storage_root') or '')[:2000]
     return out
 
 

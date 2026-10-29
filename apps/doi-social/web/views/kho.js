@@ -163,11 +163,7 @@
       if (!ctx.alive) return;
       var kt = DS.list(a[0], "kien_thuc").filter(function (x) { return (x.loai || "san_pham") === "san_pham"; }), nick = DS.list(a[1], "nick");
       var trangFp = DS.list(a[2]).filter(function (t) { return t.bat !== 0 && t.bat !== false; });
-      if (!kt.length) {
-        body.innerHTML = '<div class="card">' + DS.rong("Chưa có sản phẩm nào", "AI viết bài dựa trên hồ sơ sản phẩm (mô tả, giá, giọng văn). Thêm một sản phẩm trước.", "book",
-          '<a class="btn btn-pri" href="#/kien-thuc">' + ic("plus") + "Thêm sản phẩm</a>") + "</div>";
-        return;
-      }
+      kt.unshift({id: "", ten: "Viết từ ý tưởng / prompt, không cần hồ sơ sản phẩm"});
       var S = {
         sp: String(ctx.q.sp || kt[0].id),
         che_do: ctx.q.che_do === "nick" || ctx.q.che_do === "api" ? ctx.q.che_do : (trangFp.length ? "api" : "nick"),
@@ -186,9 +182,9 @@
       }
 
       body.innerHTML = '<div class="grid g-21 vb"><div class="card"><div class="card-h"><h3>' + ic("spark") + 'Viết bài bằng AI</h3></div>' +
-        buoc(1, "Viết về sản phẩm nào", '<div class="row" style="flex-wrap:nowrap"><select class="sel grow" id="vb-sp">' + kt.map(function (x) {
+        buoc(1, "Chủ đề hoặc hồ sơ tham chiếu", '<div class="row" style="flex-wrap:nowrap"><select class="sel grow" id="vb-sp">' + kt.map(function (x) {
           return '<option value="' + esc(x.id) + '"' + (String(x.id) === S.sp ? " selected" : "") + ">" + esc(x.ten) + (x.trang_thai === "cho_duyet" ? " (chờ duyệt)" : "") + "</option>";
-        }).join("") + '</select><a class="btn btn-ghost btn-sm" href="#/kien-thuc">Sửa hồ sơ</a></div><div class="hint">AI đọc mô tả, giá, tài liệu, giọng văn và lời dặn của sản phẩm này ở Kiến thức cho Agent.</div>') +
+        }).join("") + '</select><a class="btn btn-ghost btn-sm" href="#/kien-thuc">Sửa hồ sơ</a></div><div class="hint">Có thể chỉ nhập prompt ở phần Yêu cầu thêm. Chọn hồ sơ khi muốn AI dùng đúng thông tin sản phẩm.</div>') +
         buoc(2, "Đăng ở đâu", seg("vb-cd", [["api", "Fanpage (máy chủ đăng)"], ["nick", "Nick ở máy nhà"]], S.che_do) +
           '<div class="hint" id="vb-cd-g"></div><div id="vb-dich" class="mt-s"></div>') +
         buoc(3, '<span id="vb-so-td">Số bài</span>', seg("vb-so", [[1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"]], S.so) + '<div class="hint" id="vb-so-g"></div>') +
@@ -313,6 +309,7 @@
         return r;
       }
       function thieu() {
+        if (!S.sp && !q("#vb-yc").value.trim()) return "Nhập ý tưởng/yêu cầu hoặc chọn hồ sơ tham chiếu.";
         if (S.che_do === "api" && !soTrang()) return "Chọn ít nhất một Fanpage ở bước 2.";
         if (S.che_do === "api" && tongBai() > 20) return "Tối đa 20 bài mỗi lần, bớt Trang hoặc bớt số bài mỗi Trang.";
         if (S.che_do === "nick" && S.noi === "fb_trang" && !S.nick) return "Chọn nick quản lý Trang ở bước 2.";
@@ -410,7 +407,7 @@
           S.dich = khac ? q("#vb-nhom-link").value.trim() : t.value; S.dich_ten = khac ? S.dich : (t.options[t.selectedIndex].text || ""); capNhat();
         } else if (t.id === "vb-bd" || t.id === "vb-cach") capNhat();
       });
-      body.addEventListener("input", function (e) { if (e.target.id === "vb-nhom-link") { S.dich = e.target.value.trim(); S.dich_ten = S.dich; capNhat(); } });
+      body.addEventListener("input", function (e) { if (e.target.id === "vb-yc") capNhat(); if (e.target.id === "vb-nhom-link") { S.dich = e.target.value.trim(); S.dich_ten = S.dich; capNhat(); } });
 
       DS.bind(body, {
         "bo-anh": function (b) { S.anh.splice(+b.getAttribute("data-i"), 1); veAnh(); },

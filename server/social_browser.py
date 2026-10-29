@@ -86,8 +86,17 @@ class BrowserHost:
             return full
         return optional_tools._chrome_he_thong()
 
+    def proxy(self, p):
+        return json.loads(secrets_store.decrypt(p['proxy_encrypted'])) if p.get('proxy_encrypted') else None
+
+    def public(self, p):
+        from social_profile_settings import module
+        return {k: v for k, v in p.items() if k not in ('proxy', 'proxy_encrypted')} | {
+            'proxy_label': module('profile_config').public_proxy(self.proxy(p)),
+            'data_dir': p.get('data_dir') or str(self.root / 'profiles' / p['id'])}
+
     def nick_list(self):
-        return [{**p, 'nhom': 'Chrome MinMin', 'trinh_duyet': 'chromium', 'co_proxy': False} for p in self.profiles()]
+        return [{'id': p['id'], 'ten': p['ten'], 'nhom': p.get('group') or 'Chrome MinMin', 'trinh_duyet': 'chromium', 'co_proxy': bool(p.get('proxy_encrypted'))} for p in self.profiles()]
 
     def busy(self, pid):
         with ds._db() as db:
@@ -161,7 +170,8 @@ class BrowserHost:
                 'desktop': desktop_available(), 'running': bool(self.worker and self.worker.returncode is None),
                 'installing': bool(self.install_task and not self.install_task.done()),
                 'install_error': self.install_error,
-                'profiles': [{**p, 'open': p['id'] in self.live, 'busy': bool(self.busy(p['id']))}
+                'storage_root': data.get('storage_root') or str(self.root / 'profiles'),
+                'profiles': [{**self.public(p), 'open': p['id'] in self.live, 'busy': bool(self.busy(p['id']))}
                              for p in self.profiles()]}
 
     async def install(self):
@@ -190,18 +200,60 @@ class BrowserHost:
         self.install_task = asyncio.create_task(run())
 
     async def create(self, name):
-        name = str(name or '').strip()[:80]
-        if not name:
-            raise ValueError('Nhập tên profile')
+        return (await self.create_many({'name': name}))[0]
+
+    async def create_many(self, value):
+        from social_profile_settings import module
+        pc = module('profile_config')
+        batch = pc.batch(value)
         async with self.lock:
             data = self.register_machine()
-            if len(data['profiles']) >= 100:
+            if len(data['profiles']) + len(batch) > 100:
                 raise ValueError('Tối đa 100 profile trên máy này')
-            p = {'id': 'c' + secrets.token_hex(12), 'ten': name}
-            data['profiles'].append(p)
+            base = pc.storage(self.root / 'profiles', value.get('storage_root') or data.get('storage_root', ''))
+            result = []
+            for name, fields in batch:
+                proxy = fields.pop('proxy', None)
+                pid = 'c' + secrets.token_hex(12)
+                p = {'id': pid, 'ten': name, 'data_dir': str(Path(base) / pid), **fields}
+                if proxy:
+                    p['proxy_encrypted'] = secrets_store.encrypt_required(json.dumps(proxy))
+                result.append(p)
+            data['profiles'].extend(result)
             self.write(data)
             self.sync_profiles()
-            return p
+            return result
+
+    async def configure(self, pid, value):
+        return await self.configure_many([pid], value)
+
+    async def configure_many(self, ids, value):
+        from social_profile_settings import module
+        async with self.lock:
+            if not isinstance(ids, list) or not 1 <= len(ids) <= 100:
+                raise ValueError('Chọn từ 1 đến 100 profile')
+            for pid in ids:
+                self.profile(pid)
+                if pid in self.live or self.busy(pid):
+                    raise ValueError('Đóng profile và dừng tác vụ trước khi sửa cấu hình')
+            fields = module('profile_config').fields(value)
+            data = self.read()
+            for p in data['profiles']:
+                if p['id'] not in ids:
+                    continue
+                if 'proxy' in fields:
+                    proxy = fields['proxy']
+                    p['proxy_encrypted'] = secrets_store.encrypt_required(json.dumps(proxy)) if proxy else ''
+                p.update({k: v for k, v in fields.items() if k != 'proxy'})
+            self.write(data)
+            self.sync_profiles()
+
+    async def set_storage(self, value):
+        from social_profile_settings import module
+        async with self.lock:
+            data = self.read()
+            data['storage_root'] = module('profile_config').storage(self.root / 'profiles', value)
+            self.write(data)
 
     async def close(self, pid, manual=True):
         self.profile(pid)
@@ -209,7 +261,11 @@ class BrowserHost:
             raise ValueError('Profile đang chạy tác vụ; dừng tác vụ trước')
         item = self.live.pop(pid, None)
         if item:
-            await item['context'].close()
+            try:
+                await item['context'].close()
+            finally:
+                if item.get('proxy_bridge'):
+                    await asyncio.to_thread(item['proxy_bridge'].close)
 
     async def open(self, pid, hidden=False, manual=True):
         self.profile(pid)
@@ -237,17 +293,34 @@ class BrowserHost:
             from playwright.async_api import async_playwright
             if not self.pw:
                 self.pw = await async_playwright().start()
-            directory = self.root / 'profiles' / pid
+            profile = self.profile(pid)
+            directory = Path(profile.get('data_dir') or self.root / 'profiles' / pid)
             directory.mkdir(parents=True, exist_ok=True, mode=0o700)
             (directory / 'DevToolsActivePort').unlink(missing_ok=True)
-            ctx = await self.pw.chromium.launch_persistent_context(
-                str(directory), executable_path=exe, headless=headless,
-                viewport={'width': 1280, 'height': 800}, accept_downloads=False,
-                args=['--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0'])
+            proxy_bridge = None
+            proxy_value = self.proxy(profile)
+            if proxy_value:
+                from social_profile_settings import module
+                proxy_bridge = module('proxy_bridge').ProxyBridge(proxy_value)
+            try:
+                ctx = await self.pw.chromium.launch_persistent_context(
+                    str(directory), executable_path=exe, headless=headless,
+                    viewport={'width': 1280, 'height': 800}, accept_downloads=False,
+                    proxy={'server': proxy_bridge.url} if proxy_bridge else None,
+                    args=['--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0'])
+            except BaseException:
+                if proxy_bridge:
+                    await asyncio.to_thread(proxy_bridge.close)
+                raise
             # Closing the native window must release its slot too.
-            item = {'context': ctx, 'headless': headless, 'tab': 0, 'directory': directory}
+            item = {'context': ctx, 'headless': headless, 'tab': 0, 'directory': directory, 'proxy_bridge': proxy_bridge}
             self.live[pid] = item
-            ctx.on('close', lambda: self.live.pop(pid, None) if self.live.get(pid) is item else None)
+            def closed():
+                if self.live.get(pid) is item:
+                    self.live.pop(pid, None)
+                    if proxy_bridge:
+                        asyncio.create_task(asyncio.to_thread(proxy_bridge.close))
+            ctx.on('close', closed)
             if not ctx.pages:
                 await ctx.new_page()
             return item
@@ -363,7 +436,13 @@ def register(app, blocked, worker_auth):
             elif operation == 'enable':
                 await HOST.enable(bool(data.get('enabled', True)))
             elif operation == 'profiles':
-                return {'ok': True, 'profile': await HOST.create(data.get('name'))}
+                return {'ok': True, 'profile': HOST.public(await HOST.create(data.get('name')))}
+            elif operation == 'create-batch':
+                return {'ok': True, 'profiles': [HOST.public(p) for p in await HOST.create_many(data)]}
+            elif operation == 'configure-batch':
+                await HOST.configure_many(data.get('profiles'), data)
+            elif operation == 'storage':
+                await HOST.set_storage(data.get('storage_root'))
             else:
                 raise ValueError('Lệnh không hợp lệ')
             return {'ok': True, **HOST.status()}
@@ -380,6 +459,8 @@ def register(app, blocked, worker_auth):
                 await HOST.open(pid, bool(data.get('hidden')))
             elif operation == 'close':
                 await HOST.close(pid)
+            elif operation == 'configure':
+                await HOST.configure(pid, data)
             elif operation == 'action':
                 await HOST.action(pid, data)
             else:

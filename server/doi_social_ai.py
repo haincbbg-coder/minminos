@@ -691,7 +691,7 @@ def tran_bai(noi_dang: str) -> int:
 
 
 def _lam_sach_bai(s: str, noi_dang: str, kt: Optional[dict]) -> str:
-    s = bo_gach_dai(_chu(s)).strip().strip("`").strip()
+    s = bo_gach_dai(_chu(s)).replace("\\r\\n", "\n").replace("\\n", "\n").strip().strip("`").strip()
     s = _loc_link_la(s, kt)
     if noi_dang == "fb_nhom":
         s = _bo_link(_bo_hashtag(s))
@@ -723,12 +723,12 @@ async def viet_bai(kien_thuc: dict, noi_dang: str, so_ban: int, yeu_cau: str, *,
     kt = kien_thuc or None
     tran = tran_bai(noi_dang)
     prompt = (
-        f"Bạn là người viết nội dung mạng xã hội cho một shop Việt Nam. Viết {so_ban} bản "
+        f"Bạn viết nội dung mạng xã hội bằng tiếng Việt theo chủ đề, đối tượng và phong cách chủ yêu cầu. Viết {so_ban} bản "
         f"{NOI_DANG_TEN.get(noi_dang, 'bài đăng mạng xã hội')} KHÁC NHAU (khác góc nhìn, khác câu mở).\n\n"
         + khoi_kien_thuc(kt) + "\nLUẬT:\n" + LUAT_VIET +
         f"- Mỗi bản tối đa {tran} ký tự.\n- {NOI_DANG_GOI_Y.get(noi_dang, 'Giọng tự nhiên, dễ đọc.')}\n"
         + ("- Nếu KIẾN THỨC không có giá thì không nhắc giá.\n")
-        + (f"\nYÊU CẦU THÊM CỦA CHỦ: {_cat(_chu(yeu_cau), 1500)}\n" if _chu(yeu_cau).strip() else "")
+        + (f"\nYÊU CẦU THÊM CỦA CHỦ: {_cat(_chu(yeu_cau), 10000)}\n" if _chu(yeu_cau).strip() else "")
         + "\n" + LUAT_JSON + 'Mẫu: {"ban": ["bản 1", "bản 2"]}'
     )
     tra = await goi_ai(prompt, [])
