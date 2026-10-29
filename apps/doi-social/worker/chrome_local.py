@@ -28,10 +28,6 @@ class FileLock:
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.file = open(self.path, 'a+b')
         self.file.seek(0)
-        if not self.file.read(1):
-            self.file.write(b'0')
-            self.file.flush()
-        self.file.seek(0)
         try:
             if sys.platform == 'win32':
                 import msvcrt
@@ -39,6 +35,9 @@ class FileLock:
             else:
                 import fcntl
                 fcntl.flock(self.file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            if os.fstat(self.file.fileno()).st_size == 0:
+                self.file.write(b'0')
+                self.file.flush()
         except OSError:
             self.release()
             raise LoiGPM('Profile đang mở hoặc đang được sửa; đóng cửa sổ đăng nhập rồi thử lại') from None
@@ -151,18 +150,20 @@ class ChromeLocal:
             if sys.platform not in ('win32', 'darwin') and not os.getenv('DISPLAY'):
                 hidden = True
             args = [exe, '--user-data-dir=' + str(folder), '--remote-debugging-port=0',
-                    '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check']
+                    '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--disable-dev-shm-usage']
             if hidden:
                 args.append('--headless=new')
-            if hasattr(os, 'geteuid') and os.geteuid() == 0:
+            if (hasattr(os, 'geteuid') and os.geteuid() == 0) or os.getenv('MINMIN_CHROME_NO_SANDBOX') == '1':
                 args.append('--no-sandbox')
             args.append('about:blank')
-            child = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Keep startup diagnostics locally; never upload browser stderr to the VPS.
+            with open(folder / 'startup.log', 'wb') as startup_log:
+                child = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=startup_log)
             self.live[pid] = (child, profile_lock, slot)
             deadline = time.monotonic() + 45
             while time.monotonic() < deadline:
                 if child.poll() is not None:
-                    raise LoiGPM('Chrome không mở được; kiểm tra profile có còn cửa sổ cũ không')
+                    raise LoiGPM('Chrome không mở được; đóng cửa sổ cũ và xem chrome-data/profile/startup.log trên máy')
                 try:
                     port = int(port_file.read_text().splitlines()[0])
                     if 0 < port < 65536:

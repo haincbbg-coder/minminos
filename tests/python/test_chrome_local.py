@@ -38,7 +38,7 @@ def metadata():
                'from chrome_local import FileLock; FileLock(Path(sys.argv[2])).acquire()')
         r = subprocess.run([sys.executable, '-c', cmd, str(ROOT / 'apps/doi-social/worker'), str(lockpath)],
                            capture_output=True)
-        assert r.returncode != 0 and b'LoiGPM' in r.stderr
+        assert r.returncode != 0 and b'LoiGPM' in r.stderr, r.stderr.decode('utf-8', errors='replace')
     with cl.FileLock(lockpath):
         pass
     # Capacity and failed launch both release profile locks cleanly.
@@ -81,6 +81,10 @@ def metadata():
 
 
 async def integration():
+    # GitHub's unprivileged Linux runner denies Chrome's namespace sandbox.
+    # Windows/desktop users retain the browser's default sandbox.
+    if os.getenv('CI') and sys.platform == 'linux':
+        os.environ['MINMIN_CHROME_NO_SANDBOX'] = '1'
     from fastapi import FastAPI
     from fastapi.responses import HTMLResponse
     from fastapi.staticfiles import StaticFiles
@@ -136,7 +140,11 @@ async def integration():
         def on_computer():
             local.executable = lambda: exe
             local.for_job({'tham_so': {'chay_an': not bool(os.getenv('DISPLAY')) and sys.platform != 'win32'}})
-            endpoint = local.mo(a['id'])
+            try:
+                endpoint = local.mo(a['id'])
+            except LoiGPM:
+                print((local.root / a['id'] / 'startup.log').read_text(errors='replace'))
+                raise
             try:
                 # A separate manager/worker cannot take over an open profile.
                 duplicate = cl.ChromeLocal(local.root)
