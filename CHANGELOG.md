@@ -4,6 +4,12 @@ Lịch sử phiên bản MinMin OS. Bản mới nhất ở trên cùng. Xem ngay
 
 Số phiên bản đánh theo lịch: `năm.tháng.lần` (26.10.1 = tháng 10 năm 2026, bản thứ nhất). Mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [26.10.284] - 2026-10-29
+### Cải thiện
+- **Telegram hiện MinMin đang xử lý**, giữ nguyên tên tài khoản và lịch sử cũ.
+- **Chatbot có hộp thư chung mới**: chọn nick/Page, lọc ngày và người đang xử lý; có tab Bot, Kênh và Thống kê, giữ công cụ Vận hành.
+- **A.I. tự trả lời, soạn chờ duyệt hoặc người trực trả lời** cho từng cuộc chat. Nháp giữ qua tải lại, chặn gửi lặp/nháp cũ và dừng câu đang chạy khi người trực tiếp quản.
+
 ## [26.10.283] - 2026-10-28
 ### Cải thiện
 - Logo nhà cung cấp trên thẻ kết nối dùng đúng thương hiệu, thay các biểu tượng chung của sàn bán hàng, vận chuyển và dịch vụ.

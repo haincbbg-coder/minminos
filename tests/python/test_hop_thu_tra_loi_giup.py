@@ -85,7 +85,7 @@ for f in (ROOT / "server" / "routes" / "conversations.py", ROOT / "dashboard" / 
     t = f.read_text(encoding="utf-8")
     check(f"không có em dash trong {f.name}", "—" not in t)
 js = (ROOT / "dashboard" / "conversations.js").read_text(encoding="utf-8")
-check("giao diện có nút gợi ý và trả lời giúp", "ht-goiy" in js and "ht-giup" in js and "/tra-loi-giup" in js)
+check("giao diện có nút gợi ý và trả lời giúp", "aiReply(c, ta.value.trim()," in js and "sendDraft(c)" in js and "/ai-reply" in js)
 
 if _fails:
     print(f"\nFAIL: {_fails}"); sys.exit(1)

@@ -648,7 +648,7 @@ class ZaloBot(HangLuot):
                         if meta["chat_type"] != "private":
                             await self._bao_su_kien(meta)
                         if self.chat_ids and chat not in self.chat_ids:
-                            await self._send(client, chat, "Bạn không có quyền dùng bot Javis này.")
+                            await self._send(client, chat, "Bạn không có quyền dùng bot MinMin này.")
                             continue
                         text = str(msg.get("text") or "").strip()
                         if not text:

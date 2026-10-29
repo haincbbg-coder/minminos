@@ -151,6 +151,11 @@ def nhan(kenh: str) -> str:
     return s.nhan if s else str(kenh or "")
 
 
+def nhan_giao_dien(kenh: str) -> str:
+    """Display label shared by the inbox rows and channel registry."""
+    return nhan(kenh)
+
+
 def logo(kenh: str) -> str:
     s = spec(kenh)
     return s.logo if s else ""

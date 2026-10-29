@@ -50,7 +50,7 @@ SLUG_MAX = 64
 _SLUG_CAM = re.compile(r"[/\\\x00-\x1f\x7f]")           # tách đường dẫn + ký tự điều khiển
 # id nhóm Telegram là số ÂM; id cuộc chat Zalo là chuỗi HEX (vd "6ede9afa66b88fe6d6a9"). Một
 # khuôn cho cả hai, vì bản ghi bot chỉ có một trường `groups` và kênh nào cũng đổ vào đó.
-_CHAT_ID_RE = re.compile(r"^(-?\d{1,20}|[0-9a-fA-F]{8,40})$")
+_CHAT_ID_RE = re.compile(r"^(-?\d{1,20}|(?:zgr-)?[0-9a-fA-F]{8,40})$")
 
 # Kênh nhắn tin của bot. Trường này có từ 0.20.0 nhưng ghim cứng "telegram"; 0.26.5 cho nó
 # thành lựa chọn thật; 0.61.0 đọc từ SỔ ĐĂNG KÝ KÊNH (`channels`) thay vì chép ở đây: kênh nào
@@ -396,6 +396,9 @@ def hieu_luc(bot: dict, chat_id: str, chat_type: str = "private") -> tuple:
     """(cfg hiệu lực cho cuộc chat này, nhãn, được_nói). Nhãn: tên nhóm khách | "Người lạ" | "".
     Thứ tự: nhóm khách chứa cuộc chat > cuộc chat đã được cho phép (Hộp thư/ô id) > người lạ.
     Nhóm (group chat) chỉ tính nhóm khách; gate theo danh sách nhóm vẫn ở `_ly_do_im`."""
+    if str(chat_id) in {str(x) for x in (bot.get("chat_on") or [])}:
+        n = nhom_cua(bot, chat_id)
+        return (_ap_pham_vi(bot, n) if n else bot), (n or {}).get("ten", ""), True
     n = nhom_cua(bot, chat_id)
     if n:
         return _ap_pham_vi(bot, n), n["ten"], bool(n.get("bat"))
@@ -509,12 +512,48 @@ def _public(b: dict) -> dict:
     out["channel"] = _clean_kenh(out.get("channel"))
     # Cùng lý do: bot tạo trước bản đa ngôn ngữ không có khoá này.
     out["ngon_ngu"] = _clean_ngon_ngu(out.get("ngon_ngu"))
+    out["blocked"] = _clean_groups(out.get("blocked"))
+    out["chat_on"] = _clean_groups(out.get("chat_on"))
     return out
 
 
 # ============================================================
 # Đọc
 # ============================================================
+def _in_list(ids, chat_id):
+    return bool(str(chat_id or "")) and str(chat_id) in {str(x) for x in (ids or [])}
+
+
+def chat_allowed(bot, chat_type, chat_id, account_id=""):
+    scoped = (bot or {}).get("reply_scopes") or {}
+    key = str(account_id) + ":" + str(chat_id)
+    if account_id and key in scoped:
+        return bool(scoped[key])
+    if not bot or _in_list(bot.get("blocked"), chat_id):
+        return False
+    if _in_list(bot.get("chat_on"), chat_id):
+        return True
+    eff, label, allowed = hieu_luc(bot, str(chat_id), str(chat_type or "private"))
+    if str(chat_type or "private") != "group":
+        return allowed
+    return allowed and (_in_list(bot.get("groups"), chat_id) or bool(nhom_cua(bot, str(chat_id))))
+
+
+def allow_patch(bot, chat_type, chat_id, on, account_id=""):
+    if account_id:
+        rules = dict(bot.get("reply_scopes") or {})
+        rules[str(account_id) + ":" + str(chat_id)] = bool(on)
+        return {"reply_scopes": rules}
+    cid = str(chat_id or "").strip()
+    blocked = [str(x) for x in (bot.get("blocked") or []) if str(x) != cid]
+    allowed = [str(x) for x in (bot.get("chat_on") or []) if str(x) != cid]
+    if on:
+        allowed.append(cid)
+    else:
+        blocked.append(cid)
+    return {"blocked": blocked, "chat_on": allowed}
+
+
 def list_bots() -> List[Dict[str, Any]]:
     with _lock:
         return [_public(b) for b in _load()["bots"]]
@@ -741,7 +780,7 @@ _PATCHABLE = ("name", "icon", "groups", "reply_when", "handoff_to", "rate_limit"
               "agent_slug", "agent_brain", "brain", "bot_username", "token", "enabled",
               "nguon_tra_loi", "muc_quyen", "ngon_ngu", "account_ids",
               "agents_phu", "rieng_pham_vi", "rieng_cho_phep", "gio_truc_tu", "gio_truc_den",
-              "noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi", "nhom_khach", "nguoi_la")
+              "noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi", "nhom_khach", "nguoi_la", "blocked", "chat_on", "nhuong_tay_phut", "reply_scopes")
 # `channel` CỐ Ý đứng ngoài danh sách trắng. Đổi kênh của một bot đã tạo là đổi sang một CON
 # BOT KHÁC: token khác, danh tính khác, khách khác, và cả đống id nhóm đang lưu lập tức vô
 # nghĩa. Cho sửa tại chỗ thì bản ghi còn nguyên tên và lịch sử của con cũ trong khi nó đã là
@@ -784,6 +823,20 @@ def update_bot(bot_id: str, patch: dict) -> tuple[bool, str]:
                         b["name"] = nv
                 elif k == "icon":
                     b["icon"] = _clean_icon(v) or b.get("icon") or "headset"
+                elif k == "reply_scopes":
+                    rules = _json_hoac(v)
+                    if not isinstance(rules, dict) or len(rules) > 1000 or any(not isinstance(x, bool) or len(str(q)) > 500 for q, x in rules.items()):
+                        return False, "Quy tắc trả lời cuộc chat không hợp lệ."
+                    b[k] = dict(rules)
+                elif k in ("blocked", "chat_on"):
+                    b[k] = _clean_groups(v)
+                elif k == "nhuong_tay_phut":
+                    if v in (None, ""):
+                        b[k] = None
+                    elif str(v).isdigit() and 0 <= int(v) <= 240:
+                        b[k] = int(v)
+                    else:
+                        return False, "Thời gian nhường phải từ 0 đến 240 phút."
                 elif k == "groups":
                     b["groups"] = _clean_groups(v)
                 elif k == "reply_when":

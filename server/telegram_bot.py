@@ -60,8 +60,8 @@ BOT_COMMANDS = [
     {"command": "retry", "description": "Gửi lại câu hỏi gần nhất"},
     {"command": "stop", "description": "Dừng câu đang trả lời"},
     {"command": "reset", "description": "Bắt đầu hội thoại mới"},
-    {"command": "cli", "description": "Engine Claude Code (MCP Javis + lệnh máy)"},
-    {"command": "or", "description": "Engine OpenRouter (MCP Javis, không lệnh máy)"},
+    {"command": "cli", "description": "Engine Claude Code (MCP MinMin + lệnh máy)"},
+    {"command": "or", "description": "Engine OpenRouter (MCP MinMin, không lệnh máy)"},
 ]
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -399,7 +399,7 @@ class TelegramBot(HangLuot):
     async def _giu_typing(self, client, chat):
         """Giữ chấm "đang nhập…" sáng suốt cả lượt trả lời (chế độ người thật).
 
-        Đây là thứ THAY THẾ tin "🤔 Javis đang xử lý…": người đang chờ vẫn thấy đầu kia có
+        Đây là thứ THAY THẾ tin "🤔 MinMin đang xử lý…": người đang chờ vẫn thấy đầu kia có
         động tĩnh, nhưng thấy đúng cái một người thật để lại chứ không phải một tin nhắn máy.
         Telegram tự tắt chấm sau ~5 giây nên phải nhắc lại đều.
         """
@@ -412,7 +412,7 @@ class TelegramBot(HangLuot):
         """Gửi 1 tin trạng thái (plain, không markdown) → trả message_id để sửa sau.
 
         `disable_notification` là phần quan trọng chứ không phải chi tiết làm đẹp. Trước đây
-        mỗi lượt hỏi nổ HAI thông báo lên điện thoại: một cái "🤔 Javis đang xử lý…" hoàn toàn
+        mỗi lượt hỏi nổ HAI thông báo lên điện thoại: một cái "🤔 MinMin đang xử lý…" hoàn toàn
         vô nghĩa, rồi mới tới câu trả lời. Tin này chỉ để NHÌN trong lúc chờ, không phải để
         gọi người ta ra xem, nên nó đi im. Sửa tin (`editMessageText`) vốn không nổ thông báo,
         nên cả lượt chỉ còn đúng một tiếng chuông: lúc câu trả lời thật được gửi.
@@ -715,7 +715,7 @@ class TelegramBot(HangLuot):
         if self.giau_trang_thai:
             giu = asyncio.create_task(self._giu_typing(client, chat))
         else:
-            status_mid = await self._send_status(client, chat, "🤔 Javis đang xử lý…")
+            status_mid = await self._send_status(client, chat, "🤔 MinMin đang xử lý…")
         _last = [0.0]
         t0 = time.monotonic()
         tools = []          # tên công cụ đã gọi trong lượt, giữ thứ tự, không trùng
@@ -837,7 +837,7 @@ class TelegramBot(HangLuot):
                         # chuyện phải biết kể cả (nhất là) khi nhóm đó chưa được cho phép.
                         await self._bao_su_kien(msg)
                         if self.chat_ids and chat not in self.chat_ids:
-                            await self._send(client, chat, "Bạn không có quyền dùng bot Javis này.")
+                            await self._send(client, chat, "Bạn không có quyền dùng bot MinMin này.")
                             continue
                         text = (msg.get("text") or "").strip()
                         if not text:

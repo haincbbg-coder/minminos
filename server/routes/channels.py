@@ -10,6 +10,8 @@ một kiểu, Zalo cá nhân một kiểu); trang Chatbot hỏi `/chatbots` đ�
     POST /channels/accounts/{id}/update đổi nhãn / token
     POST /channels/accounts/{id}/watch  bật/tắt ghi vào hộp thư (kênh kind=account)
     POST /channels/accounts/{id}/delete xoá tài khoản token (từ chối khi còn bot trực)
+    POST /channels/accounts/{id}/bot    đổi bot trực tài khoản này (Chatbot v5, tab Kênh)
+    POST /channels/no-bot               đánh dấu "Không cần bot" cho một tài khoản (Chatbot v5)
 
 Id tài khoản trong API này là id THÔ (`acc_...`, `bot_...` di trú, hoặc id kết nối Zalo). Kho
 hội thoại khoá theo `f"{kenh}:{id thô}"`; mỗi bản ghi trả về mang cả hai (`id` và `account_key`).
@@ -26,6 +28,7 @@ import channel_accounts
 import channels
 import chatbot_store
 import conversations
+import localefmt
 
 router = APIRouter()
 
@@ -45,6 +48,8 @@ def _400(msg: str, **them):
 
 
 def _404(msg: str = channel_accounts.LOI_KHONG_CO):
+    if msg == channel_accounts.LOI_KHONG_CO:
+        msg = localefmt.chu(msg, "No channel account with that id")
     return JSONResponse({"ok": False, "error": msg}, status_code=404)
 
 
@@ -140,6 +145,10 @@ def _tai_khoan_thong_nhat(brain: str = "") -> list:
                     "nang_luc": nl, "xoa_duoc": False, "sua_duoc": False,
                 })
         # kind == "webhook": chưa có kênh nào; khi có, module tự liệt kê qua `tai_khoan()`.
+    # Chatbot v5: the owner marked it "No bot needed" (Channels tab), so it is not a job to do.
+    nb = conversations.no_bot_accounts()
+    for a in out:
+        a["no_bot"] = a["account_key"] in nb
     return out
 
 
@@ -182,7 +191,7 @@ def register(app, deps: ChannelsDeps):
         if not ext:
             r = await verify_token(channel, token)
             if isinstance(r, JSONResponse) or not r.get("ok"):
-                return r if isinstance(r, JSONResponse) else _400(r.get("error") or "Token không hợp lệ")
+                return r if isinstance(r, JSONResponse) else _400(r.get("error") or localefmt.chu("Token không hợp lệ", "Invalid token"))
             ext = r.get("username") or ""
             meta = {k: r[k] for k in ("vao_duoc_nhom", "account_type", "bot_name") if k in r}
         aid, loi = channel_accounts.create_account({
@@ -235,8 +244,89 @@ def register(app, deps: ChannelsDeps):
             if r.get("ok"):
                 return r
         if channel_accounts.get_account(account_id):
-            return _400("Tài khoản bot ghi vào hộp thư khi bot đang bật; không có công tắc riêng.")
-        return _404("không có tài khoản kênh nào id đó (hoặc đang tắt ở trang Kết nối)")
+            return _400(localefmt.chu("Tài khoản bot ghi vào hộp thư khi bot đang bật; không có công tắc riêng.",
+                                       "A bot account writes to the inbox while its bot is on; it has no separate switch."))
+        return _404(localefmt.chu("không có tài khoản kênh nào id đó (hoặc đang tắt ở trang Kết nối)",
+                                  "no channel account with that id (or it is off on the Connections page)"))
+
+    @router.post("/channels/accounts/{account_id}/import-history")
+    async def channels_account_import_history(account_id: str, channel: str = Form("")):
+        """Nhập tin cũ của tài khoản kênh vào hộp thư (0.174.0, hiện chỉ Zalo cá nhân). Chủ bấm mới chạy, không tự động."""
+        k = str(channel or "").strip().lower()
+        for s in channels.danh_sach():
+            if k and s.id != k:
+                continue
+            m = channels.module(s.id)
+            fn = getattr(m, "nhap_lich_su", None) if m else None
+            if not callable(fn):
+                continue
+            r = await fn(account_id)
+            if r.get("ok") or k:
+                return r if r.get("ok") else _400(r.get("loi") or "")
+        return _404(localefmt.chu("kênh này không nhập được tin cũ, hoặc không có tài khoản id đó",
+                                  "this channel cannot import old messages, or there is no account with that id"))
+
+    def _go_khoi_bot(account_id: str):
+        """Take the account off every bot that serves it. A bot left with other accounts reloads its poller; a bot left
+        with none is switched off (no token, nothing to serve). Returns (name of the bot switched off, error)."""
+        bot_tat = ""
+        for b in chatbot_store.bots_using_account(account_id):
+            con = [x for x in chatbot_store.account_ids_of(b) if x != account_id]
+            ok, loi = chatbot_store.update_bot(b["id"], {"account_ids": con})
+            if not ok:
+                return bot_tat, loi
+            if con:
+                # Bot còn tài khoản khác: poller đang chạy phải nạp lại, không thì nó vẫn ôm
+                # cái tài khoản vừa bị gỡ cho tới lần khởi động sau.
+                if b.get("enabled") and _DEPS and getattr(_DEPS, "restart_bot", None):
+                    _DEPS.restart_bot(b["id"])
+                continue
+            # Hết sạch tài khoản: bot không có token thì không bật lên được nữa. TẮT HẲN nó cho
+            # cấu hình nói thật, thay vì để một con bot khoe "đang bật" mà không trực gì.
+            chatbot_store.set_enabled(b["id"], False)
+            if _DEPS and getattr(_DEPS, "stop_bot", None):
+                _DEPS.stop_bot(b["id"])
+            bot_tat = b.get("name") or ""
+        return bot_tat, ""
+
+    @router.post("/channels/accounts/{account_id}/bot")
+    async def channels_account_bot(account_id: str, bot_id: str = Form("")):
+        """Chatbot v5 Channels tab: put bot `bot_id` on duty for this account, or no bot (`bot_id` empty). The account
+        leaves the bot that had it first (one bot per account), with the same rules as deleting it from that bot."""
+        if not channel_accounts.get_account(account_id):
+            return _404()
+        moi = chatbot_store.get_bot(bot_id) if bot_id else None
+        if bot_id and not moi:
+            return JSONResponse({"ok": False, "error": localefmt.chu("Không có bot này", "No such bot")}, status_code=404)
+        dang = chatbot_store.bots_using_account(account_id)
+        if moi and [b["id"] for b in dang] == [bot_id]:
+            return {"ok": True, "bot_tat": ""}
+        if moi and len(chatbot_store.account_ids_of(moi)) >= 20:
+            return _400(localefmt.chu("Bot này đã trực đủ 20 tài khoản", "This bot already serves 20 accounts"))
+        bot_tat, loi = _go_khoi_bot(account_id)
+        if loi:
+            return _400(loi)
+        key = f"{(channel_accounts.get_account(account_id) or {}).get('channel') or ''}:{account_id}"
+        conversations.set_account_bot(key, "")
+        if moi:
+            ok, loi = chatbot_store.update_bot(bot_id, {"account_ids": chatbot_store.account_ids_of(moi) + [account_id]})
+            if not ok:
+                return _400(loi)
+            if moi.get("enabled") and _DEPS and getattr(_DEPS, "restart_bot", None):
+                _DEPS.restart_bot(bot_id)
+            conversations.set_account_bot(key, bot_id)
+            conversations.set_no_bot(key, False)
+        return {"ok": True, "bot_tat": bot_tat}
+
+    @router.post("/channels/no-bot")
+    async def channels_no_bot(account_key: str = Form(...), on: str = Form("1")):
+        """Mark a nick or Page "No bot needed" (Chatbot v5): its chats are only logged and it stops counting as a job on
+        the Channels tab. `account_key` is "<channel>:<raw id>" as GET /channels/accounts gives it."""
+        key = str(account_key or "").strip()
+        if not any(a.get("account_key") == key for a in _tai_khoan_thong_nhat()):
+            return _404()
+        conversations.set_no_bot(key, _bat(on))
+        return {"ok": True, "account_key": key, "no_bot": _bat(on)}
 
     @router.post("/channels/accounts/{account_id}/delete")
     async def channels_account_delete(account_id: str, go_khoi_bot: str = Form("")):
@@ -255,29 +345,16 @@ def register(app, deps: ChannelsDeps):
             b = dang[0]
             # Trả kèm dữ liệu để giao diện dựng câu hỏi ĐÚNG (tên bot, brain của nó, có phải
             # tài khoản cuối cùng của bot không) mà không phải hỏi thêm một vòng nữa.
-            return _400(f"Tài khoản đang do bot \"{b.get('name')}\" trực. Gỡ khỏi bot trước "
-                        "(sửa bot, bỏ chọn tài khoản này) rồi mới xoá được.",
+            return _400(localefmt.chu(f"Tài khoản đang do bot \"{b.get('name')}\" trực. Gỡ khỏi bot trước "
+                                      "(sửa bot, bỏ chọn tài khoản này) rồi mới xoá được.",
+                                      f"This account is served by bot \"{b.get('name')}\". Remove it from the bot first "
+                                      "(edit the bot, untick this account) before deleting it."),
                         bot_id=b.get("id") or "", bot_name=b.get("name") or "",
                         bot_brain=b.get("brain") or "",
                         bot_mot_tk=len(chatbot_store.account_ids_of(b)) <= 1)
-        bot_tat = ""
-        for b in dang:
-            con = [x for x in chatbot_store.account_ids_of(b) if x != account_id]
-            ok, loi = chatbot_store.update_bot(b["id"], {"account_ids": con})
-            if not ok:
-                return _400(loi)
-            if con:
-                # Bot còn tài khoản khác: poller đang chạy phải nạp lại, không thì nó vẫn ôm
-                # cái tài khoản vừa bị gỡ cho tới lần khởi động sau.
-                if b.get("enabled") and _DEPS and getattr(_DEPS, "restart_bot", None):
-                    _DEPS.restart_bot(b["id"])
-                continue
-            # Hết sạch tài khoản: bot không có token thì không bật lên được nữa. TẮT HẲN nó cho
-            # cấu hình nói thật, thay vì để một con bot khoe "đang bật" mà không trực gì.
-            chatbot_store.set_enabled(b["id"], False)
-            if _DEPS and getattr(_DEPS, "stop_bot", None):
-                _DEPS.stop_bot(b["id"])
-            bot_tat = b.get("name") or ""
+        bot_tat, loi = _go_khoi_bot(account_id)
+        if loi:
+            return _400(loi)
         ok, loi = channel_accounts.delete_account(account_id)
         return {"ok": True, "bot_tat": bot_tat} if ok else _404(loi)
 
@@ -288,18 +365,23 @@ async def verify_token(channel: str, token: str, account_id: str = "", bot_id: s
     """Dùng chung cho /channels/verify-token và /chatbots/verify-token (đường cũ)."""
     tok = (token or "").strip()
     if not tok:
-        return _400("Thiếu token")
+        return _400(localefmt.chu("Thiếu token", "Missing token"))
     kenh = str(channel or "").strip().lower() or chatbot_store.KENH_DEFAULT
     s = channels.spec(kenh)
     m = channels.module(kenh)
     if not s or s.kind != "bot" or not m or not callable(getattr(m, "verify_token", None)):
-        return _400(f"Kênh '{kenh}' không nhận token bot. Kênh có: " + ", ".join(channels.bot_token_ids()))
+        return _400(localefmt.chu(f"Kênh '{kenh}' không nhận token bot. Kênh có: ",
+                                  f"Channel '{kenh}' does not take a bot token. Available channels: ")
+                    + ", ".join(channels.bot_token_ids()))
     if kenh == "telegram" and _DEPS and _DEPS.main_bot_token() and _DEPS.main_bot_token() == tok:
-        return {"ok": False, "error": "Đây là token bot chính của bạn. Bot chuyên trách phải "
-                                      "dùng một bot Telegram RIÊNG (tạo thêm ở BotFather)."}
+        return {"ok": False, "error": localefmt.chu("Đây là token bot chính của bạn. Bot chuyên trách phải "
+                                                    "dùng một bot Telegram RIÊNG (tạo thêm ở BotFather).",
+                                                    "This is your main bot token. A dedicated bot must use "
+                                                    "a SEPARATE Telegram bot (create another one in BotFather).")}
     r = await m.verify_token(tok)
     if not r.get("ok"):
-        return {"ok": False, "error": r.get("error") or f"Token không hợp lệ ({s.nhan} từ chối)."}
+        return {"ok": False, "error": r.get("error") or localefmt.chu(f"Token không hợp lệ ({s.nhan} từ chối).",
+                                                                  f"Invalid token ({s.nhan} rejected it).")}
     username = r.get("username") or ""
     # Trùng: tài khoản nào đã giữ đúng con bot này (theo kênh). Sửa chính nó thì bỏ qua.
     loai_tru = account_id
@@ -310,10 +392,16 @@ async def verify_token(channel: str, token: str, account_id: str = "", bot_id: s
     if trung:
         bots = chatbot_store.bots_using_account(trung["id"])
         if bots:
-            return {"ok": False, "error": f"Bot {s.nhan} \"{username}\" đã được bot "
-                                          f"\"{bots[0]['name']}\" dùng rồi. Mỗi bot phải một token riêng."}
-        return {"ok": False, "error": f"Bot {s.nhan} \"{username}\" đã là tài khoản "
-                                      f"\"{trung.get('label')}\" ở tab Kênh. Chọn tài khoản đó thay vì dán lại token.",
+            return {"ok": False, "error": localefmt.chu(
+                f"Bot {s.nhan} \"{username}\" đã được bot "
+                f"\"{bots[0]['name']}\" dùng rồi. Mỗi bot phải một token riêng.",
+                f"{s.nhan} bot \"{username}\" is already used by bot "
+                f"\"{bots[0]['name']}\". Each bot needs its own token.")}
+        return {"ok": False, "error": localefmt.chu(
+                    f"Bot {s.nhan} \"{username}\" đã là tài khoản "
+                    f"\"{trung.get('label')}\" ở tab Bot. Chọn tài khoản đó thay vì dán lại token.",
+                    f"{s.nhan} bot \"{username}\" is already account "
+                    f"\"{trung.get('label')}\" in the Bot tab. Pick that account instead of pasting the token again."),
                 "account_id": trung["id"]}
     ra = {"ok": True, "username": username, "bot_name": r.get("bot_name") or "", "channel": kenh}
     for k in ("vao_duoc_nhom", "account_type"):

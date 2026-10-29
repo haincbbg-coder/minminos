@@ -9,7 +9,7 @@ trạng thái của Javis anh không muốn để lộ ra như vậy, anh muốn
 nói chứ ko phải bot."
 
 Bốn chỗ rò, canh cả bốn:
-  1. tin "🤔 Javis đang xử lý…" gửi trước mỗi lượt (và các bản cập nhật "⏳ …" của nó)
+  1. tin "🤔 MinMin đang xử lý…" gửi trước mỗi lượt (và các bản cập nhật "⏳ …" của nó)
   2. câu "⏳ Đang xử lý câu trước. Gửi /stop…" khi có tin tới lúc bot đang bận
   3. "⚠ Lỗi: <TênLớpNgoạiLệ>: …" khi một lượt gãy
   4. "(không có nội dung)" khi câu trả lời rỗng
@@ -112,7 +112,7 @@ async def t_khong_tin_trang_thai():
     await asyncio.sleep(0)
 
     gui = tg.texts()
-    check("khách: KHÔNG có tin '🤔 Javis đang xử lý…'",
+    check("khách: KHÔNG có tin '🤔 MinMin đang xử lý…'",
           not any("đang xử lý" in t.lower() for t in gui))
     check("khách: KHÔNG có tin trạng thái '⏳' nào", not any("⏳" in t for t in gui))
     check("khách: không đụng tới editMessageText/deleteMessage của tin trạng thái",
@@ -125,7 +125,7 @@ async def t_khong_tin_trang_thai():
     tg2 = FakeTelegram()
     await bot_chu(answer)._handle_turn(tg2, "42", "còn hàng không em")
     check("chủ: vẫn gửi tin trạng thái như cũ",
-          any("Javis đang xử lý" in t for t in tg2.texts()))
+          any("MinMin đang xử lý" in t for t in tg2.texts()))
     # Từ 0.26.4 tin trạng thái KHÔNG bị xoá nữa, nó ở lại thành dòng vết công cụ. Chi tiết và
     # lý do ở tests/python/test_tin_trang_thai_telegram.py.
     check("chủ: KHÔNG xoá tin trạng thái nữa", "deleteMessage" not in tg2.methods())
