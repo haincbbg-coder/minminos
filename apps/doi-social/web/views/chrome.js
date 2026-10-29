@@ -4,8 +4,13 @@
   var esc = DS.esc;
   DS.view("chrome", { title: "Chrome MinMin", render: function (el, ctx) {
     var selected = "", drawing = false, pending = false, down = null;
-    el.innerHTML = '<h1>Chrome MinMin</h1><p class="muted">Trình duyệt chạy trên máy cài MinMin. Mỗi profile giữ phiên đăng nhập riêng. VPS dùng màn hình bên dưới; máy local có thể mở cửa sổ Chrome.</p>' +
-      '<div class="card"><div id="chrome-status"></div><div class="row mt-s"><button class="btn" data-act="install">Tải lõi Chromium</button><button class="btn btn-pri" data-act="enable">Bật Worker Chrome</button><button class="btn" data-act="disable">Tắt Worker</button></div>' +
+    el.innerHTML = '<h1>Chrome MinMin</h1><p class="muted">Chọn chạy Chrome trên VPS hoặc trên máy tính đã ghép. Mỗi profile giữ phiên đăng nhập riêng tại máy chạy trình duyệt.</p>' +
+      '<div class="fld"><label for="chrome-location">Nơi chạy Chrome</label><select class="sel" id="chrome-location"><option value="host">Trên VPS / máy đang cài MinMin</option><option value="local">Trên máy tính của tôi (qua Worker)</option></select></div>' +
+      '<div id="chrome-local" class="card" hidden><h3>Chrome trên máy tính của tôi</h3><p>VPS điều phối, Chrome mở trên máy tính đã ghép. Phiên đăng nhập nằm trên máy đó; không cần GPM Login hay mở cổng router.</p>' +
+      '<ol><li>Tải Worker về máy Windows, giải nén và chạy <b>cai-dat.bat</b> một lần.</li><li>Bấm Tạo mã ghép bên dưới. Chạy <b>ghep-chrome.bat</b>, nhập địa chỉ MinMin và mã ghép.</li><li>Chạy <b>chrome-may-tinh.bat</b>: tải Chromium nếu chưa có Chrome, tạo profile rồi mở để đăng nhập Facebook, YouTube, TikTok...</li><li>Đăng nhập xong, nhấn Enter trong cửa sổ quản lý để lưu và đóng Chrome. Chạy <b>chay.bat</b> và giữ máy bật; chọn nick thuộc máy này trong Automation.</li></ol>' +
+      '<p class="small muted">Worker mặc định chạy một việc mỗi lúc, tối đa 3 nếu tăng cấu hình. Máy tắt hoặc mất mạng sẽ không nhận việc mới. Máy có GPM vẫn dùng ghep-may.bat như trước.</p>' +
+      '<div class="row"><a class="btn" href="/doi-social/tai-worker.zip">Tải MinMin Worker</a><button class="btn" data-act="pair-local">Tạo mã ghép Chrome máy tính</button><a class="btn" href="#/may">Xem máy đã ghép</a></div><p id="chrome-pair" role="status"></p><div id="chrome-local-machines"></div></div>' +
+      '<div id="chrome-host"><div class="card"><div id="chrome-status"></div><div class="row mt-s"><button class="btn" data-act="install">Tải lõi Chromium</button><button class="btn btn-pri" data-act="enable">Bật Worker Chrome</button><button class="btn" data-act="disable">Tắt Worker</button></div>' +
       '<div class="row mt"><input class="inp" id="chrome-name" placeholder="Tên profile, ví dụ HALIMI Facebook"><button class="btn" data-act="create">Tạo profile</button></div><div id="chrome-profiles" class="mt"></div></div>' +
       '<div id="chrome-screen" class="card mt" hidden><div class="row"><b id="chrome-selected"></b><button class="btn btn-sm" data-act="close">Đóng profile</button></div>' +
       '<p class="small muted">Bấm vào ảnh để đặt con trỏ. Nhập chữ vào ô bên dưới rồi bấm Gõ. Mật khẩu chỉ gửi tới trình duyệt của MinMin. Dừng tác vụ trước khi điều khiển tay.</p>' +
@@ -13,8 +18,30 @@
       '<div class="row mt-s"><input class="inp" id="chrome-text" type="password" autocomplete="off" placeholder="Chữ / mật khẩu cần gõ"><button class="btn" data-act="text">Gõ</button>' +
       '<button class="btn" data-act="key" data-key="Enter">Enter</button><button class="btn" data-act="key" data-key="Tab">Tab</button><button class="btn" data-act="key" data-key="Backspace">Xoá</button><button class="btn" data-act="key" data-key="Control+A">Chọn hết</button></div>' +
       '<div class="row mt-s"><button class="btn" data-act="up">Cuộn lên</button><button class="btn" data-act="down">Cuộn xuống</button></div>' +
-      '<p id="chrome-error" class="small muted" role="status"></p><img id="chrome-frame" alt="Màn hình Chrome trên máy MinMin" style="width:100%;height:auto;touch-action:none" draggable="false"></div>';
+      '<p id="chrome-error" class="small muted" role="status"></p><img id="chrome-frame" alt="Màn hình Chrome trên máy MinMin" style="width:100%;height:auto;touch-action:none" draggable="false"></div></div>';
     var base = "/doi-social/chrome";
+    function refreshLocal() {
+      return DS.api("GET", "/doi-social/trang-thai").then(function (r) {
+        if (!ctx.alive || r.ok === false) return;
+        var machines = (r.may || []).filter(function (m) { return m.driver === "chrome-local"; });
+        el.querySelector("#chrome-local-machines").innerHTML = machines.length ? machines.map(function (m) {
+          return '<div class="row mt-s"><b>' + esc(m.ten) + '</b><span>' +
+            (m.online ? "Đang bật" : "Ngoại tuyến") + " · " + (m.so_nick || 0) + " nick · " +
+            (m.driver_ok ? "Chrome sẵn sàng" : "Chrome chưa sẵn sàng") + '</span></div>';
+        }).join("") : '<p class="muted">Chưa có máy tính dùng Chrome riêng được ghép.</p>';
+      });
+    }
+    el.querySelector("#chrome-location").onchange = function (e) {
+      var local = e.target.value === "local";
+      el.querySelector("#chrome-local").hidden = !local;
+      el.querySelector("#chrome-host").hidden = local;
+      if (local) {
+        selected = ""; el.querySelector("#chrome-text").value = "";
+        el.querySelector("#chrome-frame").removeAttribute("src");
+        el.querySelector("#chrome-screen").hidden = true;
+        refreshLocal();
+      } else refresh();
+    };
     function api(path, data) { return DS.api("POST", base + path, data || {}); }
     function action(data) {
       if (!selected || pending) return Promise.resolve();
@@ -39,6 +66,7 @@
       }).catch(function (e) { if (ctx.alive) el.querySelector("#chrome-error").textContent = e.message; }).finally(function () { drawing = false; });
     }
     function refresh() {
+      if (el.querySelector("#chrome-location").value === "local") return refreshLocal();
       return DS.api("GET", base + "/status").then(function (s) {
         if (!ctx.alive || s.ok === false) return;
         el.querySelector("#chrome-status").textContent = (s.desktop ? "Máy có màn hình" : "Máy chủ / chế độ màn hình web") + " · " +
@@ -61,6 +89,13 @@
       el.querySelector("#chrome-selected").textContent = "Màn hình Chrome"; frame(); refresh();
     }
     DS.bind(el, {
+      "pair-local": function (b) {
+        b.disabled = true;
+        DS.api("POST", "/doi-social/ma-ghep", {}).then(function (r) {
+          if (ctx.alive && r.ok !== false) el.querySelector("#chrome-pair").textContent =
+            "Địa chỉ: " + location.origin + " · Mã ghép: " + r.ma + " (" + (r.song_phut || 15) + " phút). Nhập trong ghep-chrome.bat trên máy tính.";
+        }).finally(function () { b.disabled = false; });
+      },
       install: function () { api("/install").then(refresh); },
       enable: function () { api("/enable", { enabled: true }).then(refresh); },
       disable: function () { api("/enable", { enabled: false }).then(refresh); },

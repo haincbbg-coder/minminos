@@ -344,7 +344,7 @@ def _goi_worker_zip(bo_cau_hinh: bool = True) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(WORKER_DIR.rglob("*")):
-            if not p.is_file() or "__pycache__" in p.parts or p.suffix == ".pyc":
+            if not p.is_file() or {"__pycache__", ".venv", "chrome-data"}.intersection(p.parts) or p.suffix == ".pyc":
                 continue
             if bo_cau_hinh and p.name in WORKER_BO_QUA:
                 continue

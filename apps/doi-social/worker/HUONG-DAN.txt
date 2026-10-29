@@ -1,6 +1,23 @@
 MINMIN WORKER - máy ở nhà làm việc cho Đội Social
 
-Cần có: Windows 10/11, GPM Login đang mở, Python 3.8 trở lên (khuyên 3.11+).
+Cần có: Windows 10/11, Python 3.10 trở lên (khuyên 3.12).
+
+A. CHROME TRÊN MÁY TÍNH, MINMIN TRÊN VPS (không cần GPM)
+1. Chạy cai-dat.bat để cài thư viện.
+2. Trên MinMin: Kết nối ngoài > Đội Social > Chrome MinMin > chọn "Trên máy tính của tôi".
+   Tạo mã ghép, rồi chạy ghep-chrome.bat trên máy tính; nhập địa chỉ VPS và mã 6 số.
+3. Chạy chrome-may-tinh.bat. Nếu chưa có Chrome, chọn C để tải Chromium.
+   Chọn T để tạo profile, gõ số profile để mở cửa sổ Chrome. Đăng nhập các mạng xã hội trực tiếp.
+   Xong thì quay lại cửa sổ quản lý và nhấn Enter để lưu, đóng trước khi chạy Automation.
+4. Chạy chay.bat, giữ máy bật. Sau tối đa 30 giây, các nick xuất hiện trên VPS để chọn chạy.
+   Chrome mở trên máy tính này khi nhận việc; đóng khi xong và giữ phiên cho lần sau.
+   Mặc định một việc đồng thời; tối đa 3 profile mở kể cả cửa sổ đăng nhập tay.
+
+Phiên đăng nhập ở chrome-data cạnh Worker. Không chia sẻ thư mục này hay worker.json.
+Worker kết nối ra VPS, không cần mở cổng router. Đây là Chrome thường, không giả lập vân tay GPM.
+Giữ mỗi máy / mỗi chế độ trong một thư mục Worker riêng để không ghi đè cấu hình ghép.
+
+B. DÙNG GPM LOGIN (giữ nguyên)
 
 1. GPM Login > Cài đặt > API Gateway: giữ Local API url là http://localhost:9495.
    KHÔNG cần tick "Cho phép remote từ internet" (Worker chạy trên chính máy này).

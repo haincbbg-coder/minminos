@@ -186,3 +186,6 @@ node_modules/
 /server/doi-social/
 /server/concat/
 server/web_watch.sqlite3*
+
+# Local Chrome profiles contain private login sessions
+/apps/doi-social/worker/chrome-data/

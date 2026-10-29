@@ -1,0 +1,199 @@
+"""Standalone local Chrome Worker against production VPS routes. No social accounts."""
+import asyncio
+import io
+import json
+import os
+from pathlib import Path
+import socket
+import subprocess
+import sys
+import tempfile
+from unittest.mock import patch
+import zipfile
+
+os.environ['JAVIS_STATE_DIR'] = tempfile.mkdtemp(prefix='minmin-local-test-')
+from _paths import ROOT
+sys.path.insert(0, str(ROOT / 'apps/doi-social/worker'))
+import chrome_local as cl
+import minmin_worker as mw
+mw.NHAT_KY = Path(tempfile.mkdtemp()) / "worker.log"
+from may_gpm import GPM, LoiGPM
+from playwright.sync_api import sync_playwright
+
+
+def metadata():
+    local = cl.ChromeLocal(Path(tempfile.mkdtemp()))
+    a, b = local.create('Local Facebook'), local.create('Local YouTube')
+    assert a['id'] != b['id']
+    assert cl.ChromeLocal(local.root).profiles() == [a, b]
+    for bad in ('../bad', 'l' + '../' * 8, 'l' + 'a' * 24):
+        try:
+            local.profile(bad)
+            raise AssertionError('accepted invalid profile')
+        except ValueError:
+            pass
+    lockpath = local.root / 'test.lock'
+    with cl.FileLock(lockpath):
+        cmd = ('import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); '
+               'from chrome_local import FileLock; FileLock(Path(sys.argv[2])).acquire()')
+        r = subprocess.run([sys.executable, '-c', cmd, str(ROOT / 'apps/doi-social/worker'), str(lockpath)],
+                           capture_output=True)
+        assert r.returncode != 0 and b'LoiGPM' in r.stderr
+    with cl.FileLock(lockpath):
+        pass
+    # Capacity and failed launch both release profile locks cleanly.
+    local.executable = lambda: '/missing/chrome'
+    slots = [cl.FileLock(local.root / ('slot-' + str(i) + '.lock')).acquire() for i in range(3)]
+    try:
+        try:
+            local.mo(a['id'])
+            raise AssertionError('capacity exceeded')
+        except LoiGPM as exc:
+            assert '3 profile' in str(exc)
+    finally:
+        for slot in slots:
+            slot.release()
+    try:
+        local.mo(a['id'])
+        raise AssertionError('missing executable accepted')
+    except FileNotFoundError:
+        pass
+    with cl.FileLock(local.root / (a['id'] + '.lock')):
+        pass
+    assert isinstance(mw.tao_trinh_duyet({'driver': 'chrome-local'}), cl.ChromeLocal)
+    assert isinstance(mw.tao_trinh_duyet({}), GPM)
+    with patch.object(mw, 'CAU_HINH', local.root / 'worker.json'):
+        with patch.object(mw.MayChu, 'ghep', return_value={'token': 'test', 'may_id': 'mtest', 'ten': 'Local'}) as pair:
+            mw.main(['ghep-chrome', 'https://minmin.example', '123456'])
+            pair.assert_called_once_with('123456', socket.gethostname() + ' (' + __import__('platform').system() + ')', 'chrome-local')
+            assert mw.doc_cau_hinh()['driver'] == 'chrome-local'
+    # Download/update packages must never contain local browser data, even on a local MinMin host.
+    import routes.doi_social as routes
+    worker = Path(tempfile.mkdtemp())
+    (worker / 'chrome-data').mkdir()
+    (worker / 'chrome-data' / 'cookies.txt').write_text('private')
+    (worker / 'worker.json').write_text('private token')
+    (worker / 'minmin_worker.py').write_text('worker')
+    with patch.object(routes, 'WORKER_DIR', worker):
+        with zipfile.ZipFile(io.BytesIO(routes._goi_worker_zip())) as z:
+            assert z.namelist() == ['MinMinWorker/minmin_worker.py']
+    print('PASS local metadata, process locks, pairing driver, download privacy')
+
+
+async def integration():
+    from fastapi import FastAPI
+    from fastapi.responses import HTMLResponse
+    from fastapi.staticfiles import StaticFiles
+    import uvicorn
+    import httpx
+    import doi_social as ds
+    import doi_social_v2 as v2
+    import routes.doi_social as routes
+    from playwright.async_api import async_playwright
+    ds.mo(Path(tempfile.mkdtemp()))
+    routes.ly_do_chan = lambda: None
+    routes.VONG_NEN_BAT = False
+    app = FastAPI()
+    routes.register(app, routes.DoiSocialDeps())
+    @app.get('/fixture')
+    def fixture():
+        return HTMLResponse('<h1>Local worker fixture</h1><input id="draft">')
+    app.mount('/apps/doi-social', StaticFiles(directory=str(ROOT / 'apps/doi-social/web'), html=True))
+    sock = socket.socket()
+    sock.bind(('127.0.0.1', 0))
+    url = 'http://127.0.0.1:' + str(sock.getsockname()[1])
+    server = uvicorn.Server(uvicorn.Config(app, log_level='error', lifespan='off'))
+    serving = asyncio.create_task(server.serve(sockets=[sock]))
+    while not server.started:
+        await asyncio.sleep(.05)
+    try:
+        local = cl.ChromeLocal(Path(tempfile.mkdtemp()))
+        a, b = local.create('Test local Facebook'), local.create('Test local YouTube')
+        async with httpx.AsyncClient(base_url=url, trust_env=False) as http:
+            code = (await http.post('/doi-social/ma-ghep', json={})).json()['ma']
+        remote = mw.MayChu(url)
+        paired = await asyncio.to_thread(remote.ghep, code, 'Local fixture PC', 'chrome-local')
+        remote.token = paired['token']
+        assert ds.may_theo_token(remote.token)['driver'] == 'chrome-local'
+        with patch.object(cl.ChromeLocal, 'executable', return_value='/fake/chrome'):
+            await asyncio.to_thread(remote.nhip, nick=local.ds_profile(), driver_ok=True,
+                                    kich_ban=['fb_dang_tuong_kho'], song_song=1)
+        dot = v2.tao_dot(kich_ban='fb_dang_tuong_kho', nick=[a['id']], tham_so={'kho': 'chung'}, chay_an=True)
+        job = await asyncio.to_thread(remote.lay_viec, 0)
+        assert job['id'] == dot['viec'][0]['id'] and job['nick_id'] == a['id']
+        # An ordinary paired PC can never use the VPS's loopback-only browser APIs.
+        async with httpx.AsyncClient(base_url=url, trust_env=False) as http:
+            denied = await http.get('/doi-social/may/chrome/profiles', headers={'x-minmin-may': remote.token})
+            assert denied.status_code == 403
+        async with async_playwright() as pw:
+            exe = pw.chromium.executable_path
+        if not Path(exe).is_file():
+            if os.getenv('MINMIN_REQUIRE_CHROMIUM') == '1':
+                raise RuntimeError('required Chromium missing')
+            print('PASS real VPS pairing, heartbeat, dispatch and isolation; SKIP real browser: binary unavailable')
+            return
+
+        def on_computer():
+            local.executable = lambda: exe
+            local.for_job({'tham_so': {'chay_an': not bool(os.getenv('DISPLAY')) and sys.platform != 'win32'}})
+            endpoint = local.mo(a['id'])
+            try:
+                # A separate manager/worker cannot take over an open profile.
+                duplicate = cl.ChromeLocal(local.root)
+                duplicate.executable = lambda: exe
+                try:
+                    duplicate.mo(a['id'])
+                    raise AssertionError('manual profile not locked')
+                except LoiGPM:
+                    pass
+                with sync_playwright() as pw:
+                    browser = pw.chromium.connect_over_cdp(endpoint)
+                    context = browser.contexts[0]
+                    context.add_cookies([{'name': 'login_fixture', 'value': 'persisted', 'url': url, 'expires': 2000000000}])
+                    page = context.new_page()
+                    page.goto(url + '/apps/doi-social/#/chrome', wait_until='networkidle')
+                    page.locator('#chrome-location').select_option('local')
+                    page.get_by_text('Local fixture PC', exact=True).wait_for()
+                    assert page.locator('#chrome-host').is_hidden()
+                    page.locator('[data-act=pair-local]').click()
+                    page.wait_for_function("document.querySelector('#chrome-pair').textContent.includes('Mã ghép:')")
+                    for dark in ('light', 'dark'):
+                        page.locator('html').evaluate('(el, theme) => el.setAttribute("data-theme", theme)', dark)
+                        for width in (390, 1280):
+                            page.set_viewport_size({'width': width, 'height': 850})
+                            assert page.locator('#chrome-location').is_visible()
+                            assert page.locator('[data-act=pair-local]').is_visible()
+                    page.close()
+            finally:
+                local.dong(a['id'])
+            assert not local.live
+            def handler(nc):
+                assert any(c['name'] == 'login_fixture' and c['value'] == 'persisted' for c in nc.ctx.cookies())
+                nc.page.goto(url + '/fixture')
+                nc.page.locator('#draft').fill('Automated on local computer')
+                assert nc.page.locator('#draft').input_value() == 'Automated on local computer'
+                return 'Local Chrome completed'
+            # Production dispatcher, transport, browser launch and result upload, no social APIs.
+            mw.NGHI_TRUOC_DONG = 0
+            result = mw.lam_viec(remote, lambda nk: local, job, {'fb_dang_tuong_kho': handler}, toc_do=0)
+            assert result['ok'], result
+            assert not local.live
+            local.mo(b['id'])
+            try:
+                with sync_playwright() as pw:
+                    port = int((local.root / b['id'] / 'DevToolsActivePort').read_text().splitlines()[0])
+                    browser = pw.chromium.connect_over_cdp('http://127.0.0.1:' + str(port))
+                    assert not any(c['name'] == 'login_fixture' for c in browser.contexts[0].cookies())
+            finally:
+                local.dong(b['id'])
+        await asyncio.to_thread(on_computer)
+        assert ds.lay_viec(job['id'])['trang_thai'] == 'xong'
+        print('PASS real local Chromium, session persistence/isolation, VPS result, UI place selection')
+    finally:
+        server.should_exit = True
+        await serving
+
+
+if __name__ == '__main__':
+    metadata()
+    asyncio.run(integration())

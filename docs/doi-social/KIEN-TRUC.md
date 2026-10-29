@@ -292,3 +292,14 @@ Không có giả dấu vân tay hay đảm bảo vượt chặn tự động; ng
 Kiểm chứng: `test_social_browser.py` chạy Chromium thật trên CI cả headless lẫn desktop qua
 Xvfb, kiểm cookie bền, cách ly profile, nhập liệu/ảnh màn hình, khoá tác vụ, quyền máy/profile,
 Worker CDP và đóng profile. Các trang/nội dung thử đều giả lập, không đăng lên tài khoản thật.
+
+### Chrome trên máy tính nhận việc từ VPS (26.10.302)
+Trang Chrome MinMin có lựa chọn nơi chạy: host hiện tại hoặc máy tính qua Worker.
+Chế độ `chrome-local` ghép bằng `ghep-chrome.bat`, không dùng API Chrome nội bộ VPS.
+`chrome_local.py` giữ profile trong `chrome-data`, mở Chromium/Chrome thường bằng CDP
+loopback cổng ngẫu nhiên; không mở HTTP server cho VPS hoặc cho web điều khiển local.
+Người dùng tạo / đăng nhập profile qua `chrome-may-tinh.bat`, đóng trước khi nhận việc.
+Worker long-poll VPS bằng token máy như GPM, dùng cùng điều phối và kỹ năng, đóng profile
+sau mỗi tác vụ. File lock của hệ điều hành chặn trùng profile giữa đăng nhập tay và Worker,
+giới hạn ba profile trên máy. `chrome-data` không nằm trong gói tải / tự cập nhật.
+Máy tính phải bật và chạy Worker; không tự chuyển tác vụ sang VPS nếu máy ngoại tuyến.

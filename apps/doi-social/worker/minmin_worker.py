@@ -1,7 +1,9 @@
-"""MinMin Worker - chạy trên máy Windows có GPM Login, nhận việc từ MinMin và làm bằng trình duyệt.
+"""MinMin Worker - chạy trên máy tính với Chrome riêng hoặc GPM Login, nhận việc từ MinMin và làm bằng trình duyệt.
 
 Cách dùng (xem HUONG-DAN.txt):
     python minmin_worker.py ghep https://minmin.cua-ban.com 123456   # lần đầu, mã lấy ở trang Đội Social
+    python minmin_worker.py ghep-chrome <VPS> <mã>                    # Chrome riêng trên máy tính
+    python minmin_worker.py chrome                                   # tạo profile / đăng nhập tại máy
     python minmin_worker.py chay                                     # chạy mãi, nhận và làm việc
     python minmin_worker.py thu "Tên profile"                        # chỉ mở profile rồi đóng, để kiểm tra
     python minmin_worker.py thu-mau <id mẫu> "Tên profile" [tham số JSON]
@@ -34,7 +36,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PHIEN_BAN = "26.10.301"
+PHIEN_BAN = "26.10.302"
 THU_MUC = Path(__file__).resolve().parent
 CAU_HINH = THU_MUC / "worker.json"
 NHAT_KY = THU_MUC / "worker.log"
@@ -119,9 +121,9 @@ class MayChu:
     def tai_ve(self, duong: str, dich: Path) -> None:
         Path(dich).write_bytes(self._req("GET", duong, timeout=600, tho=True))
 
-    def ghep(self, ma: str, ten: str) -> dict:
+    def ghep(self, ma: str, ten: str, driver: str = "gpm") -> dict:
         return self._req("POST", "/doi-social/may/ghep",
-                         {"ma": ma, "ten": ten, "driver": "gpm", "phien_ban": PHIEN_BAN})
+                         {"ma": ma, "ten": ten, "driver": driver, "phien_ban": PHIEN_BAN})
 
     def nhip(self, **kw) -> dict:
         return self._req("POST", "/doi-social/may/nhip", {"phien_ban": PHIEN_BAN, **kw})
@@ -541,6 +543,17 @@ def _dau_van_ma() -> tuple:
 
 
 # ---------------------------------------------------------------------------- vòng chính
+def tao_trinh_duyet(ch, may_chu=None, nhat_ky=None):
+    if ch.get("driver") == "chrome-local":
+        from chrome_local import ChromeLocal
+        return ChromeLocal(nhat_ky=nhat_ky)
+    if ch.get("driver") == "chromium":
+        from may_chrome import ChromeMinMin
+        return ChromeMinMin(may_chu, nhat_ky=nhat_ky)
+    from may_gpm import GPM
+    return GPM(ch.get("gpm") or "http://127.0.0.1:9495", nhat_ky=nhat_ky)
+
+
 def chay() -> int:
     from may_gpm import GPM, LoiGPM
     ch = doc_cau_hinh()
@@ -561,10 +574,7 @@ def chay() -> int:
         log("Tệp kỹ năng lỗi: " + "; ".join(f"{t} ({l})" for t, l in loi_nap))
 
     def tao_gpm(nk):
-        if ch.get("driver") == "chromium":
-            from may_chrome import ChromeMinMin
-            return ChromeMinMin(may_chu, nhat_ky=nk)
-        return GPM(goc_gpm, nhat_ky=nk)
+        return tao_trinh_duyet(ch, may_chu, nk)
 
     gpm_nhip = tao_gpm(log)
     dp = DieuPhoi(song_song)
@@ -605,7 +615,7 @@ def chay() -> int:
                     kq = may_chu.nhip(nick=ds, driver_ok=True, loi_driver="", **chung)
                 except LoiGPM as e:
                     kq = may_chu.nhip(driver_ok=False, loi_driver=str(e), **chung)
-                    log(f"GPM chưa sẵn sàng: {e}")
+                    log(f"Trình duyệt chưa sẵn sàng: {e}")
                 nhip_cuoi = time.time()
                 pb = str((kq or {}).get("phien_ban_worker") or "")
                 if (pb and so_phien_ban(pb) > so_phien_ban(PHIEN_BAN) and pb != ban_moi
@@ -633,11 +643,11 @@ def chay() -> int:
             time.sleep(cho)
 
 
-def ghep(goc: str, ma: str, ten: str = "") -> int:
+def ghep(goc: str, ma: str, ten: str = "", driver: str = "gpm") -> int:
     ten = ten or f"{socket.gethostname()} ({platform.system()})"
-    kq = MayChu(goc).ghep(ma, ten)
+    kq = MayChu(goc).ghep(ma, ten, driver)
     ch = doc_cau_hinh()
-    ch.update({"may_chu": goc.rstrip("/"), "token": kq["token"], "may_id": kq["may_id"], "ten": kq["ten"]})
+    ch.update({"may_chu": goc.rstrip("/"), "token": kq["token"], "may_id": kq["may_id"], "ten": kq["ten"], "driver": driver})
     ch.setdefault("gpm", "http://127.0.0.1:9495")
     ghi_cau_hinh(ch)
     log(f"Đã ghép máy '{kq['ten']}' với MinMin. Giờ chạy: python minmin_worker.py chay")
@@ -665,10 +675,10 @@ def thu(goi: str) -> int:
     from may_gpm import GPM
     from playwright.sync_api import sync_playwright
     ch = doc_cau_hinh()
-    gpm = GPM(ch.get("gpm") or "http://127.0.0.1:9495", nhat_ky=lambda s: log("[thu] " + s))
+    gpm = tao_trinh_duyet(ch, nhat_ky=lambda s: log("[thu] " + s))
     pf = _tim_profile(gpm, goi)
     if not pf:
-        log(f"[thu] Không thấy profile '{goi}' trong GPM")
+        log(f"[thu] Không thấy profile '{goi}' trong trình duyệt")
         return 1
     log(f"[thu] Thử profile '{pf['ten']}'")
     try:
@@ -691,7 +701,7 @@ def thu(goi: str) -> int:
     finally:
         time.sleep(2)
         gpm.dong(pf["id"])
-    log("[thu] XONG: Worker điều khiển được GPM trên máy này.")
+    log("[thu] XONG: Worker điều khiển được trình duyệt trên máy này.")
     return 0
 
 
@@ -781,9 +791,9 @@ def thu_mau(mau_id: str, goi: str, ts_json: str = "") -> int:
         return 1
     ch = doc_cau_hinh()
     goc_gpm = ch.get("gpm") or "http://127.0.0.1:9495"
-    pf = _tim_profile(GPM(goc_gpm), goi)
+    pf = _tim_profile(tao_trinh_duyet(ch), goi)
     if not pf:
-        log(f"[thu-mau] Không thấy profile '{goi}' trong GPM")
+        log(f"[thu-mau] Không thấy profile '{goi}' trong trình duyệt")
         return 1
     kb, loi = nap_ky_nang()
     for t, l in loi:
@@ -797,13 +807,22 @@ def thu_mau(mau_id: str, goi: str, ts_json: str = "") -> int:
         log("[thu-mau] fb_dang_bai là việc đăng thật, không có chế độ chạy thử - dùng 'thu' để kiểm kết nối")
         return 1
     log(f"[thu-mau] Chạy thử mẫu {mau_id} trên profile '{pf['ten']}' (không đăng gì)")
-    kq = lam_viec(MayChuGia(ts, lambda s: log(s)), lambda nk: GPM(goc_gpm, nhat_ky=nk), viec, kb)
+    kq = lam_viec(MayChuGia(ts, lambda s: log(s)), lambda nk: tao_trinh_duyet(ch, nhat_ky=nk), viec, kb)
     if kq.get("bi_chan"):
         log(f"[thu-mau] Đã chặn {len(kq['bi_chan'])} cú bấm công khai: {', '.join(kq['bi_chan'][:10])}")
     return 0 if kq.get("ok") else 1
 
 
 def main(argv) -> int:
+    if argv and argv[0] == "chrome":
+        from chrome_local import menu
+        return menu()
+    if argv and argv[0] == "ghep-chrome" and len(argv) < 3:
+        goc = input("Địa chỉ MinMin VPS (https://...): ").strip()
+        ma = input("Mã ghép 6 số: ").strip()
+        return ghep(goc, ma, driver="chrome-local")
+    if len(argv) >= 3 and argv[0] == "ghep-chrome":
+        return ghep(argv[1], argv[2], " ".join(argv[3:]), driver="chrome-local")
     if len(argv) >= 3 and argv[0] == "ghep":
         return ghep(argv[1], argv[2], " ".join(argv[3:]))
     if argv and argv[0] == "chay":

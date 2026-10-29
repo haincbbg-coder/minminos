@@ -1,5 +1,11 @@
 # MinMin OS
 
+## [26.10.302] - 2026-10-29
+### Thêm mới
+- Chọn chạy Chrome ngay trên VPS hoặc trên máy tính cá nhân đã ghép. Máy cá nhân dùng Chrome riêng, không cần GPM Login.
+- Tạo profile và đăng nhập trực tiếp trên máy tính; Worker nhận việc từ VPS, đóng Chrome sau mỗi việc và giữ phiên cho lần sau.
+- Hiển thị đúng trạng thái Chrome/GPM của từng máy; mỗi máy mở tối đa 3 profile cùng lúc.
+
 ## [26.10.301] - 2026-10-29
 ### Thêm mới
 - **Chrome MinMin**: tạo profile riêng, đăng nhập và giữ phiên Facebook, YouTube, TikTok ngay trên máy chạy MinMin; có màn hình điều khiển trong web cho VPS.
