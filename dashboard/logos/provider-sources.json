@@ -1,0 +1,267 @@
+{
+  "retrieved": "2026-10-28",
+  "note": "Logos belong to their respective owners and identify the connected service. J&T Express artwork is from Lazada's delivery-partner list. Checksums describe the bundled files.",
+  "providers": {
+    "pancake-pos": {
+      "file": "pancake-pos.svg",
+      "url": "https://pancake.vn/static/images/landing-v2/new_pos_logo.svg",
+      "website": "https://pos.pancake.vn/",
+      "sha256": "df7afd70567e64f91b09a1c3a928fe7f9435c2c911d571f7ac5ebdbcc4e0ae99",
+      "bytes": 500,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "pancake-thong-ke": {
+      "file": "pancake-thong-ke.svg",
+      "url": "https://pancake.vn/static/images/landing-v2/pancake_logo_bold.svg",
+      "website": "https://pancake.vn/",
+      "sha256": "49ec589705502068ddfa24082b6294cd3d18feabf49b6950dd15f43ade11678c",
+      "bytes": 2941,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "composio": {
+      "file": "composio.png",
+      "url": "https://composio.dev/apple-touch-icon.png",
+      "website": "https://composio.dev/",
+      "sha256": "924f588685ca9887ccf937952878404da76837b6297884731bb9b175879e6548",
+      "bytes": 8828,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "google-search-console": {
+      "file": "google-search-console.png",
+      "url": "https://www.gstatic.com/search-console/scfe/favicon.png",
+      "website": "https://search.google.com/search-console/about",
+      "sha256": "07d2941182aa30ebf71476edda87b1db006a9b988d5cc874bbc32ff008883684",
+      "bytes": 599,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "google-workspace": {
+      "file": "google-workspace.png",
+      "url": "https://www.gstatic.com/images/branding/googleg_gradient/2x/googleg_gradient_standard_48dp.png",
+      "website": "https://workspace.google.com/",
+      "sha256": "7909f8134de7b9f6f145c96084a070c7084a70a6ce96ac113cfd37c26d1b29e2",
+      "bytes": 6450,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "google-tasks": {
+      "file": "google-tasks.svg",
+      "url": "https://www.gstatic.com/images/branding/productlogos/tasks_2026/v2/web/192px.svg",
+      "website": "https://tasks.google.com/",
+      "sha256": "5fba48b3fdc8e0290e0d9bd3234885b308b5627c0100a6863bc14f56c79e2b53",
+      "bytes": 1410,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "google-keep": {
+      "file": "google-keep.svg",
+      "url": "https://www.gstatic.com/images/branding/productlogos/keep_2026/v2/web/192px.svg",
+      "website": "https://keep.google.com/",
+      "sha256": "e61844731d298e5acf4e10280fbc2f051ba8b8fccf2ee172ddaa32005c88e004",
+      "bytes": 2515,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "notebooklm": {
+      "file": "notebooklm.svg",
+      "url": "https://notebook.google/_/static/branding/v6/light_mode/favicon/favicon.svg",
+      "website": "https://notebooklm.google/",
+      "sha256": "0e369abeda7894c1d9762e9ae709c07d9007574ecc439fff95c675f9a7adf563",
+      "bytes": 2470,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "shopee": {
+      "file": "shopee.png",
+      "url": "https://deo.shopeemobile.com/shopee/shopee-mobilemall-live-sg/assets/ios_icon_180x180.350d4cdc7ba40b87541691005bda74c5.png",
+      "website": "https://shopee.vn/",
+      "sha256": "3a254dea01a5cba3d1dc44fb0d756c2c802b636a78a95cfaaf5ea37d9f9c2d93",
+      "bytes": 7133,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "tiktok-shop": {
+      "file": "tiktok-shop.png",
+      "url": "https://lf16-scmcdn.oecstatic.com/obj/oec-magellan-sg/i18n/ecom/TTS/normal/tts.ico",
+      "website": "https://seller-vn.tiktok.com/",
+      "sha256": "14fef9d5678fa6385c42e6b85fabfc5f97cbb44902f3f0e846f949190f861d24",
+      "bytes": 1137,
+      "source_kind": "official_site",
+      "conversion": "ICO decoded to PNG; artwork unchanged"
+    },
+    "lazada": {
+      "file": "lazada.png",
+      "url": "https://www.lazada.vn/favicon.ico",
+      "website": "https://www.lazada.vn/",
+      "sha256": "9b2af701cb4f10425aeaecf9175cce3e74d7655ffdead15149a9a2ecc81b3cb2",
+      "bytes": 15156,
+      "source_kind": "official_site",
+      "conversion": "ICO decoded to PNG; artwork unchanged"
+    },
+    "ghn": {
+      "file": "ghn.png",
+      "url": "https://cdn.hstatic.net/themes/200000472237/1001423864/14/favicon.png?v=2927",
+      "website": "https://ghn.vn/",
+      "sha256": "24ac00210e41aa22401d5c5ec2e9747d266ca4a9661f12e1d3ee14e9ea00c052",
+      "bytes": 1357,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "ghtk": {
+      "file": "ghtk.png",
+      "url": "https://ghtk.vn/assets/favicon.ico",
+      "website": "https://ghtk.vn/",
+      "sha256": "3235834be57538824a830befbcee76a5f4a5ef09c0e97e60a6c1804a34715af6",
+      "bytes": 12876,
+      "source_kind": "official_site",
+      "conversion": "ICO decoded to PNG; artwork unchanged"
+    },
+    "sepay": {
+      "file": "sepay.png",
+      "url": "https://sepay.vn/assets/img/logo/favicon.png",
+      "website": "https://sepay.vn/",
+      "sha256": "636547a0103722fc4d214d491686533ddd0e76121b6eb69969cffea0b8a981d7",
+      "bytes": 471,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "casso": {
+      "file": "casso.svg",
+      "url": "https://casso.vn/icon.svg",
+      "website": "https://casso.vn/",
+      "sha256": "e217c7846d7b84a05955950c08a400e3168a8573dfc47db116bdb168d8fb2d5e",
+      "bytes": 5680,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "payos": {
+      "file": "payos.svg",
+      "url": "https://payos.vn/branding/logo.svg",
+      "website": "https://payos.vn/",
+      "sha256": "c2de7e33b493c042aed72925082ea50c98200d97e9c5a5c45d79ae3476eae36e",
+      "bytes": 3636,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "ahamove": {
+      "file": "ahamove.png",
+      "url": "https://ahamove.com/static/favicons/apple-touch-icon.png",
+      "website": "https://www.ahamove.com/",
+      "sha256": "0f12a9b2acb3bea48f95d430cf3b2b440729bc692fa628865edb492883e60047",
+      "bytes": 4095,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "instagram": {
+      "file": "instagram.webp",
+      "url": "https://static.cdninstagram.com/rsrc.php/yr/r/rzWiSjZRxk5.webp",
+      "website": "https://www.instagram.com/",
+      "sha256": "5ea73220ab5bda046e21d3f0cba26eafadeb3cc2bbd07a91978774048c84b6ee",
+      "bytes": 900,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "threads": {
+      "file": "threads.png",
+      "url": "https://static.cdninstagram.com/rsrc.php/yP/r/0Qa-AOmHi0c.ico",
+      "website": "https://www.threads.com/",
+      "sha256": "32a96f46860e5079cafdb8f8cd58f55898ceb34e4b485c31ddfd767eae006e49",
+      "bytes": 5024,
+      "source_kind": "official_site",
+      "conversion": "ICO decoded to PNG; artwork unchanged"
+    },
+    "haravan": {
+      "file": "haravan.png",
+      "url": "https://hstatic.net/0/0/global/design/haravan/h_haravan_home/images/img_commont/favicon.png",
+      "website": "https://www.haravan.com/",
+      "sha256": "25b5624bd06564d25aaec16fb82829db90b5f482be2f209c8fd677fc39b017ad",
+      "bytes": 644,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "sapo": {
+      "file": "sapo.png",
+      "url": "https://www.sapo.vn/favicon.ico?v3",
+      "website": "https://www.sapo.vn/",
+      "sha256": "078b216d9fa547efd0c2ec1caff55415f4170900922aff7614ddf20a7d91f5fc",
+      "bytes": 25461,
+      "source_kind": "official_site",
+      "conversion": "ICO decoded to PNG; artwork unchanged"
+    },
+    "kiotviet": {
+      "file": "kiotviet.png",
+      "url": "https://cdn-kvweb.kiotviet.vn/kiotviet-website/wp-content/uploads/2023/10/31095822/64x64.png",
+      "website": "https://www.kiotviet.vn/",
+      "sha256": "0f011148a02bfd0b2190e9136364f5ce28da6701953c56c459e8e000931706d4",
+      "bytes": 3733,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "nhanh-vn": {
+      "file": "nhanh-vn.png",
+      "url": "https://nhanh.vn/favicon.ico",
+      "website": "https://nhanh.vn/",
+      "sha256": "89768ac39b2b5640c4edd829030292f653fc53c7c1ff66bedb26cd4864a27c78",
+      "bytes": 702,
+      "source_kind": "official_site",
+      "conversion": "ICO decoded to PNG; artwork unchanged"
+    },
+    "tiki": {
+      "file": "tiki.png",
+      "url": "https://salt.tikicdn.com/ts/upload/9f/9b/d0/6ce302126e0a4d958a41d90fed1eb4f6.png",
+      "website": "https://tiki.vn/",
+      "sha256": "896401f2fbb8af722e861e22073665476598dfbf18772231c6bc24831bce7a2d",
+      "bytes": 1803,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "misa-meinvoice": {
+      "file": "misa-meinvoice.svg",
+      "url": "https://www.meinvoice.vn/wp-content/uploads/2026/07/favicon.svg",
+      "website": "https://www.meinvoice.vn/",
+      "sha256": "dbc086846d40fc1f1c05e08daa56c472f441b804623a54b8f7378e8d2b8a309d",
+      "bytes": 1476,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "vieneu": {
+      "file": "vieneu.svg",
+      "url": "https://www.vieneu.io/favicon.svg",
+      "website": "https://vieneu.io/",
+      "sha256": "2d392eddffcab86b9c53bd0a1fc8e050cf2b8b99b044ba4bae89848da317d405",
+      "bytes": 11966,
+      "source_kind": "official_site",
+      "conversion": "original"
+    },
+    "rea": {
+      "file": "rea.svg",
+      "url": "https://raw.githubusercontent.com/morluto/rea/main/website/public/assets/favicon.svg",
+      "website": "https://github.com/morluto/rea",
+      "sha256": "c49dde6b64f94a35f57d0cc589d5720ca04914e66f96893d4869a898f2d186e6",
+      "bytes": 359,
+      "source_kind": "official_repository",
+      "conversion": "original"
+    },
+    "viettel-post": {
+      "file": "viettel-post.png",
+      "url": "https://www.viettelpost.vn/favicon.ico",
+      "website": "https://www.viettelpost.vn/",
+      "sha256": "1f21c16ec291c59120f6580f8b4682184134b46f1d076e4e275421339fe1a72c",
+      "bytes": 1915,
+      "source_kind": "official_site",
+      "conversion": "ICO decoded to PNG; artwork unchanged"
+    },
+    "jt-express": {
+      "file": "jt-express.png",
+      "url": "https://img.lazcdn.com/g/tps/imgextra/i3/O1CN01TmRqKw1hqjKxGAxIf_!!6000000004329-2-tps-96-70.png",
+      "website": "https://www.lazada.vn/",
+      "sha256": "4f501f1608276008430a1f1033cb9f5b146855804c089db7e8c856c634cb5bc1",
+      "bytes": 3273,
+      "source_kind": "official_partner",
+      "conversion": "original"
+    }
+  }
+}

@@ -1238,5 +1238,17 @@
     })();
   }
 
+  document.addEventListener("javis:chatbot-open", function (e) {
+    var id = (e.detail || {}).bot_id;
+    if (!id) return;
+    var lan = 0;
+    (function thu() {
+      var b = _bots.filter(function (x) { return x.id === id; })[0];
+      if (b && _kenhDS.length) return moForm(b);
+      if (lan++ > 20) return b ? moForm(b) : alert(window.t("ib.bot_other_brain"));
+      setTimeout(thu, 150);
+    })();
+  });
+
   window.JavisChatbots = { render: render };
 })();

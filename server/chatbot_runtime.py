@@ -470,11 +470,18 @@ def _ly_do_im(bot_cfg: dict, meta: dict, text: str = "") -> str:
     cho phép" là việc của CHỦ và phải nổi lên trang Chatbot, còn "không ai gọi tên" là hành vi
     đúng và phải im tuyệt đối.
     """
+    scoped = (bot_cfg.get("reply_scopes") or {}).get(str((meta or {}).get("account_id") or "") + ":" + str((meta or {}).get("chat_id") or ""))
+    if scoped is False:
+        return "chat_tat"
+    if scoped is not True and chatbot_store._in_list(bot_cfg.get("blocked"), (meta or {}).get("chat_id")):
+        return "chat_tat"
     loai = str((meta or {}).get("chat_type") or "private")
     cid_ = str((meta or {}).get("chat_id") or "")
     # Nhóm khách (26.10.60): cuộc chat thuộc nhóm nào thì theo phạm vi của nhóm đó; không thuộc
     # nhóm nào thì là người lạ (chat riêng). `eff` là bản cấu hình đã mang phạm vi tương ứng.
     eff, _nhan, duoc = chatbot_store.hieu_luc(bot_cfg, cid_, loai)
+    if scoped is True:
+        duoc = True
     # Từ khoá chủ cấm: chặn bằng code, đứng trước mọi luật khác, áp cả chat riêng lẫn nhóm.
     if str(text or "").strip() and chatbot_store.co_tu_khoa_cam(eff, text):
         return "tu_khoa_cam"
@@ -483,6 +490,8 @@ def _ly_do_im(bot_cfg: dict, meta: dict, text: str = "") -> str:
             return "nhom_khach_tat" if _nhan and _nhan != "Người lạ" else "rieng_chua_cho"
         return ""
     nhom = [str(x) for x in (bot_cfg.get("groups") or [])]
+    if scoped is True or chatbot_store._in_list(bot_cfg.get("chat_on"), cid_):
+        nhom.append(cid_)
     if chatbot_store.nhom_cua(bot_cfg, cid_):
         if not duoc:
             return "nhom_khach_tat"
@@ -959,6 +968,73 @@ async def soan_cau_tra_loi(conv: dict, tin_khach: dict) -> dict:
     return {"ok": True, "text": dap}
 
 
+def inbox_brain_root(brain):
+    resolver = _deps.get("brain_root")
+    if not resolver:
+        raise ValueError("Runtime has not been wired")
+    return resolver(brain)
+
+
+_MANUAL_BUSY = set()
+
+def manual_meta(conv, last):
+    key = str(conv.get("channel_account_id") or "")
+    return {"chat_id": str(conv.get("external_chat_id") or ""), "chat_type": conv.get("chat_type") or "private",
+            "account_id": key.split(":", 1)[-1], "user_name": last.get("sender_name") or "",
+            "user_id": last.get("sender_id") or "", "message_id": last.get("external_message_id") or ""}
+
+async def manual_answer(conv, msgs, draft=False, instruction=""):
+    cfg = chatbot_store.get_bot(str(conv.get("bot_id") or ""))
+    if not cfg:
+        return {"ok": False, "code": "no_bot", "error": "Cuộc chat chưa có bot."}
+    cid = conv.get("id")
+    if cid in _MANUAL_BUSY:
+        return {"ok": False, "code": "busy", "error": "A.I. đang soạn cho cuộc chat này."}
+    last = next((m for m in reversed(msgs or []) if m.get("sender_type") == "customer"), {})
+    text = str(last.get("text") or "").strip()
+    instruction = str(instruction or "").strip()[:500]
+    if not text and not instruction:
+        return {"ok": False, "code": "no_message", "error": "Chưa có tin khách để trả lời."}
+    meta = manual_meta(conv, last)
+    cfg = dict(chatbot_store.hieu_luc(cfg, meta["chat_id"], meta["chat_type"])[0], muc_quyen="suggest")
+    cfg["_kenh_luot"] = str(conv.get("channel") or "")
+    cfg["_ngu_canh_nhom"] = (msgs or [])[-30:]
+    _MANUAL_BUSY.add(cid)
+    try:
+        root = _deps["brain_root"](cfg["brain"])
+        cfg["_tai_lieu"] = await asyncio.to_thread(chatbot_grounding.thu_thap, root, text or instruction)
+        prompt = text
+        if instruction:
+            prompt = "Ghi chú riêng của chủ, khách không thấy: hãy soạn câu trả lời theo yêu cầu sau, không nhắc lại ghi chú: " + instruction + "\nTin khách: " + text
+        import inspect
+        kw = {"channel": cfg["_kenh_luot"], "bot": cfg}
+        sig = inspect.signature(_deps["answer"])
+        if "nhap" in sig.parameters:
+            kw.update(nhap=True, ghi_kho=False)
+        elif "ghi_kho" in sig.parameters:
+            # The existing main callback keys engine sessions by bot id. A dedicated draft identity keeps
+            # unsent suggestions out of the live customer's native/API session; no durable history is written.
+            # It is stable per bot/chat (bounded like the live session map), and the actual account/chat meta stays intact.
+            kw["bot"] = dict(cfg, id=str(cfg["id"]) + ":draft")
+            kw["ghi_kho"] = False
+        out = await _deps["answer"](prompt, meta, None, **kw)
+        if isinstance(out, str):
+            return {"ok": False, "code": "engine", "error": out[:300]}
+        text = str((out or {}).get("text") or "").strip()
+        text = chatbot_thu_vien.tach_lenh(text, "")[0]
+        return {"ok": True, "text": text, "silent": not text or IM_LANG.lower() in text.lower(), "meta": meta}
+    except Exception as e:
+        return {"ok": False, "code": "engine", "error": type(e).__name__}
+    finally:
+        _MANUAL_BUSY.discard(cid)
+
+def manual_done(conv, msgs, text, meta):
+    cfg = chatbot_store.get_bot(str(conv.get("bot_id") or ""))
+    if cfg:
+        ghi_tin_bot(cfg, meta, text)
+    return {"taught": False}
+
+
 async def thu_bot(bot_id: str, cau_hoi: str, chat_type: str = "private", *, max_chars: int = 2000) -> dict:
     """THỬ BOT: chạy đúng đường trả lời thật của bot với một câu hỏi gõ tay, để chủ xem bot sẽ
     nói gì TRƯỚC khi phục vụ khách. Chỉ ĐỌC, không có tác dụng phụ:
@@ -1066,6 +1142,9 @@ def _make_answer_fn(bot_id: str):
         cfg["_tai_lieu"] = tl
         cfg["_kenh_luot"] = kenh_luot
         cfg["_ngu_canh_nhom"] = ngu_canh
+        draft_mode = conversations.che_do(kenh_luot, aid_luot, chat_id) == "draft"
+        if draft_mode:
+            cfg = dict(cfg, muc_quyen="suggest")
         root_tv = ""
         try:
             root_tv = _deps["brain_root"](cfg["brain"])
@@ -1080,6 +1159,8 @@ def _make_answer_fn(bot_id: str):
             out = await _deps["answer"](text_engine, meta, progress, channel=kenh_luot, bot=cfg)
         except Exception as e:
             print(f"[chatbot {bot_id}] {type(e).__name__}: {e}", file=sys.stderr)
+            if draft_mode:
+                return {"text": "", "files": [], "im_lang": True, "error": "draft_engine"}
             xin_loi = "Anh chị đợi em chút xíu để em kiểm tra lại ạ."
             ghi_tin_bot(cfg, meta or {}, xin_loi, loi=f"{type(e).__name__}: {e}")
             return {"text": xin_loi, "files": []}
@@ -1164,6 +1245,16 @@ def _make_answer_fn(bot_id: str):
             # cần biết, người đang hỏi thì không cần.
             "canh_bao": (out or {}).get("canh_bao") or "",
         })
+        # Recheck after the model finishes: an owner takeover or permission change wins over a running reply.
+        current_mode = conversations.che_do(kenh_luot, aid_luot, chat_id)
+        latest = chatbot_store.get_bot(bot_id) or {}
+        if current_mode == "human" or not chatbot_store.chat_allowed(latest, (meta or {}).get("chat_type"), chat_id, aid_luot):
+            return {"text": "", "files": [], "im_lang": True}
+        if draft_mode or current_mode == "draft":
+            cid = conversations.conversation_id_of(kenh_luot, aid_luot, chat_id)
+            if cid and not loi_ky_thuat and str(dap).strip():
+                conversations.save_draft(cid, dap, conversations.last_customer_message_id(cid))
+            return {"text": "", "files": [], "im_lang": True, "draft": True}
         # Câu bot nói (kể cả câu xin lỗi khi gãy) vào Hộp thư hội thoại, cạnh tin khách.
         ghi_tin_bot(cfg, meta or {}, dap, loi=loi_ky_thuat, files=(out or {}).get("files"))
         if goi_nguoi:

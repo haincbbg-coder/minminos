@@ -10,12 +10,12 @@
 // khong test nao khac thay. Chua co DOM gia cho ca trang, nen test nay soi ma nguon.
 const fs = require("fs");
 const path = require("path");
-const { docCss } = require("./_doc_css");  // token design system -> số px thật
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const SRC = fs.readFileSync(path.join(ROOT, "dashboard", "conversations.js"), "utf8");
-const CSS = docCss(fs.readFileSync(path.join(ROOT, "dashboard", "console.css"), "utf8"));
-const SCSS = docCss(fs.readFileSync(path.join(ROOT, "dashboard", "style.css"), "utf8"));
+const KN = fs.readFileSync(path.join(ROOT, "dashboard", "inbox-channels.js"), "utf8");
+const CSS = fs.readFileSync(path.join(ROOT, "dashboard", "console.css"), "utf8");
+const SCSS = fs.readFileSync(path.join(ROOT, "dashboard", "style.css"), "utf8");
 const CB = fs.readFileSync(path.join(ROOT, "dashboard", "chatbots.js"), "utf8");
 // Phia may chu: hai dau kia (ten brain cua bot, va viec go tai khoan khoi bot) phai co that o
 // day chu khong chi la mot chuoi trong giao dien.
@@ -80,15 +80,14 @@ check("khong doan gi theo id kenh: logo va nhan lay tu danh sach server (khong c
 check("tra loi khach tu Hop thu qua /reply, chi khi kenh co nang luc",
       SRC.includes('"/reply", { method: "POST", body: fd({ text: txt })') &&
       SRC.includes('nangLuc(c.channel, "tra_loi_tu_javis")'));
-check("bon tab Hop thu | Kenh | Chatbot | Van hanh, uy quyen dung module",
-      /TABS = \["inbox", "kenh", "chatbot", "ops"\]/.test(SRC) &&
-      SRC.includes("window.JavisChatbots.render") && SRC.includes("window.JavisConversationOps.render(body)"));
+check("bon tab Hoi thoai | Bot | Kenh | Thong ke (Chatbot v5), tab Bot uy quyen cho chatbots.js",
+      /TABS = \["inbox", "bot", "kenh", "thongke"\]/.test(SRC) && SRC.includes("window.JavisChatbots.render"));
 check("dien thoai: mo hoi thoai la them lop thread-on, co nut quay lai",
       SRC.includes('classList.add("thread-on")') && SRC.includes(".ht-back") &&
       /\.ht-wrap\.thread-on \.ht-list \{ display: none; \}/.test(CSS) &&
       /\.ht-back \{ display: inline-flex; \}/.test(CSS));
 check("chu chinh len 16px tren man nhỏ (chuan doc cua chu repo)",
-      /@media \(max-width: 900px\) \{[\s\S]*\.ht-bubble[^}]*font-size: 16px/.test(CSS));
+      /@media \(max-width: 900px\) \{[\s\S]*\.ht-bubble[^}]*font-size: (?:16px|var\(--mm-fs-16\))/.test(CSS));
 check("cau bot ve qua mdToHtml (co loc), tin khach chi escape",
       SRC.includes("window.mdToHtml(t.text") && SRC.includes("than = esc(t.text"));
 check("the bot o trang Chatbot co nut mo hop thu loc theo bot",
@@ -122,21 +121,21 @@ check("kho tai khoan co truong brain rieng, khong suy tu bot",
       SRV.includes('"brain": a.get("brain") or ""') &&
       ACC.includes('def list_accounts(channel: str = "", brain: str = "")'));
 check("tai khoan CHUA gan brain hien o MOI brain (khong co token nao tang hinh)",
-      /_clean_brain\(a\.get\("brain"\)\) not in \(""/.test(ACC));
+      // 0.263.0 (#716): an empty brain (`mine`) still skips the filter, any spelling of the open brain matches.
+      /if br and _clean_brain\(a\.get\("brain"\)\) not in \(\"\", br\)/.test(ACC));
 check("tab goi API kem brain dang mo",
       /api\("\/channels\/accounts\?brain=" \+ encodeURIComponent\(brain\(\)\)/.test(SRC));
 check("co cong tac xem MOI brain, de tim lai tai khoan gan nham cho",
       /_tkMoiBrain \? "&tat_ca=1" : ""/.test(SRC) &&
-      SRC.includes('window.t("ht.tk_xem_moi_brain")') &&
-      SRC.includes('window.t("ht.tk_chi_brain_nay")'));
+      KN.includes('t("ht.tk_xem_moi_brain")') && /class="kn-allbr-cb"/.test(KN));
 check("hang loc noi ro dang xem brain nao (danh sach ngan di phai co ly do)",
-      SRC.includes('window.t("ht.tk_loc_brain", { brain: tenBrain(brain()) })') &&
+      KN.includes('t("ht.tk_loc_brain", { brain: C.brainName() })') && SRC.includes("brainName: function () { return tenBrain(brain()); }") &&
       VI["ht.tk_loc_brain"].includes("{brain}"));
 // Khoa brain that la "brain" hoac mot duong dan tuyet doi. Dan nguyen no len giao dien thi ra
 // "brain brain" hoac mot dong path dai ngoang - da thay tan mat luc chup man hinh 21/09.
 check("nhan brain hien TEN doc duoc, khong phai khoa tho",
       /function tenBrain\(v\)/.test(SRC) &&
-      /o\.dataset && o\.dataset\.brainName/.test(SRC) &&
+      /o\.dataset && \(o\.dataset\.brainLabel \|\| o\.dataset\.brainName\)/.test(SRC) &&   // 0.219.0: tên đã đổi trước
       /replace\(\/\\s\*·\\s\*\\d\+\\\+\?\$\//.test(SRC));
 // Nhan brain tren the chi hien khi CO CHUYEN de noi. Loc theo brain roi ma the nao cung dan
 // ten brain dang mo thi chi la tieng on.

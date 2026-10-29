@@ -1011,7 +1011,7 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 .cat-x:hover { background: var(--danger-bg, #f5dcdc); color: var(--danger-ink, #b3261e); }
 .cat-x svg { width: 14px; height: 14px; }
 .cat-ico { font-size: 30px; height: 34px; display: flex; align-items: center; }
-.ico-img { width: 32px; height: 32px; object-fit: contain; border-radius: var(--mm-r-chip); vertical-align: middle; }
+.ico-img { width: 32px; height: 32px; object-fit: contain; border-radius: 0; vertical-align: middle; }
 .conn-card .conn-ico .ico-img { display: block; margin: 0 auto; }
 .cat-name { font-weight: 600; font-size: var(--mm-fs-14); }
 .cat-desc { font-size: var(--mm-fs-13); opacity: .7; flex: 1; line-height: 1.45; }
@@ -2001,84 +2001,222 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
    Hai cột trên màn rộng (danh sách | lịch sử tin), một cột trên điện thoại (bấm một hội thoại
    là mở lịch sử, có nút quay lại). Chữ chính 16px trên màn nhỏ theo chuẩn đọc của chủ repo. */
 .ht-wrap { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; }
-.ht-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.ht-stat { border: 1px solid var(--border); border-radius: var(--mm-r-btn); padding: 10px 12px; background: var(--surface-1);
-  display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ht-stat b { font-size: var(--mm-fs-20); color: var(--text); line-height: 1.1; }
-.ht-stat span { font-size: var(--mm-fs-13); color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ht-stat.warn b { color: var(--warn-ink); }
-.ht-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.ht-loc { display: flex; flex-wrap: wrap; gap: 6px; }
-.ht-loc-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: var(--mm-r-pill);
-  border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: var(--mm-fs-14); cursor: pointer; }
-.ht-loc-chip:hover { color: var(--text); border-color: var(--accent); }
-.ht-loc-chip.on { color: var(--accent); border-color: var(--accent); background: var(--accent-wash); }
-.ht-bot, .ht-search { padding: 8px 10px; border-radius: var(--mm-r-btn); border: 1px solid var(--border); background: var(--bg3);
-  color: var(--text); font-size: var(--mm-fs-16); min-width: 0; }
-.ht-search { flex: 1 1 200px; }
-.ht-body { display: flex; gap: 12px; flex: 1 1 auto; min-height: 0; height: calc(100vh - 300px); min-height: 420px; }
-.ht-list { width: 320px; flex: none; overflow: auto; display: flex; flex-direction: column; gap: 4px;
-  border: 1px solid var(--border); border-radius: var(--mm-r-btn); padding: 6px; background: var(--surface-1); }
+.ht-search { padding: 8px 10px; border-radius: var(--mm-r-btn); border: 1px solid var(--mm-line); background: var(--mm-field);
+  color: var(--mm-text); font-size: var(--mm-fs-16); min-width: 0; flex: 1 1 200px; }
+/* 0.216.0: kết quả hỏi Zalo khi ô tìm là một số điện thoại. */
+.ht-sdt { margin: 0 4px 6px; padding: 8px 10px; border-radius: var(--mm-r-btn); background: var(--mm-wash); color: var(--mm-text);
+  font-size: var(--mm-fs-16); line-height: 1.45; display: flex; flex-direction: column; gap: 4px; }
+.ht-sdt[hidden] { display: none; }
+.ht-sdt svg { width: 16px; height: 16px; vertical-align: -3px; color: var(--mm-brand); }
+/* 2026-10-25 (owner: "thêm tag khách hàng", Pancake-style chips): the owner's tags, one colour each from a fixed palette
+   (conversations.TAG_COLORS). Tint, ink and border are mixed from one hue so a chip reads in light and dark themes. */
+.ht-tag { --tc: #8b8f98; display: inline-block; vertical-align: middle; min-width: 0; max-width: 140px; padding: 0 8px;
+  border-radius: var(--mm-r-pill); font-size: var(--mm-fs-16); line-height: 1.45; font-weight: 600; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; background: color-mix(in srgb, var(--tc) 16%, transparent);
+  color: color-mix(in srgb, var(--tc) 72%, var(--mm-text)); border: 1px solid color-mix(in srgb, var(--tc) 42%, transparent); }
+.ht-tag[data-c="red"], .ht-sw[data-c="red"] { --tc: #e5484d; }
+.ht-tag[data-c="orange"], .ht-sw[data-c="orange"] { --tc: #f76b15; }
+.ht-tag[data-c="yellow"], .ht-sw[data-c="yellow"] { --tc: #d6a400; }
+.ht-tag[data-c="green"], .ht-sw[data-c="green"] { --tc: #30a46c; }
+.ht-tag[data-c="teal"], .ht-sw[data-c="teal"] { --tc: #12a594; }
+.ht-tag[data-c="blue"], .ht-sw[data-c="blue"] { --tc: #3e7bfa; }
+.ht-tag[data-c="purple"], .ht-sw[data-c="purple"] { --tc: #8e4ec6; }
+.ht-tag[data-c="pink"], .ht-sw[data-c="pink"] { --tc: #d6409f; }
+.ht-item-utags { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; margin-top: 2px; }
+.ht-item-utags .ht-tag { flex: 0 1 auto; }
+.ht-tag-more { flex: none; font-size: var(--mm-fs-16); line-height: 1.45; padding: 0 7px; border-radius: var(--mm-r-pill); color: var(--mm-muted);
+  background: var(--mm-field); border: 1px solid var(--mm-line); }
+.ht-has-contact { flex: none; display: inline-flex; color: var(--mm-ok); }
+.ht-has-contact svg { width: 14px; height: 14px; }
+.ht-item-ava { display: none; }
+/* A chat's tags, the Tag button and its picker (in the Info panel since Chatbot v5). */
+.ht-tagrow { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px;
+  border-bottom: 1px solid var(--mm-line); font-size: var(--mm-fs-16); }
+.ht-tagrow:empty { display: none; }
+.ht-tag-on { display: inline-flex; align-items: center; gap: 2px; max-width: 240px; padding-right: 2px; }
+.ht-tag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ht-tag-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+  border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer; opacity: .7; padding: 0; }
+.ht-tag-x:hover { opacity: 1; background: color-mix(in srgb, var(--tc) 22%, transparent); }
+.ht-tag-x svg { width: 14px; height: 14px; }
+.ht-tag-add { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: var(--mm-r-pill); cursor: pointer;
+  border: 1px dashed var(--mm-line); background: none; color: var(--mm-muted); font-size: var(--mm-fs-16); }
+.ht-tag-add:hover, .ht-tag-add.on { color: var(--mm-brand); border-color: var(--mm-brand); }
+.ht-tag-add svg { width: 15px; height: 15px; }
+.ht-tagpop { position: absolute; top: calc(100% + 4px); left: 12px; z-index: 30; width: min(380px, calc(100% - 24px));
+  max-height: min(70vh, 480px); overflow-y: auto; padding: 10px 12px; border-radius: var(--mm-r-btn); background: var(--mm-panel);
+  border: 1px solid var(--mm-line); box-shadow: 0 10px 30px rgba(0, 0, 0, .18); display: flex; flex-direction: column;
+  gap: 8px; font-size: var(--mm-fs-16); }
+.ht-tagpop-h { display: flex; align-items: center; gap: 6px; }
+.ht-tagpop-h b { color: var(--mm-text); }
+.ht-tag-close { margin-left: auto; display: inline-flex; border: 0; background: none; color: var(--mm-dim); cursor: pointer;
+  padding: 4px; border-radius: var(--mm-r-chip); }
+.ht-tag-close:hover { color: var(--mm-text); background: var(--mm-field); }
+.ht-tagpop .info-body { font-size: var(--mm-fs-16); }
+.ht-tagpop-list { display: flex; flex-direction: column; gap: 2px; }
+.ht-tagpop-row { display: flex; align-items: center; gap: 4px; }
+.ht-tag-pick { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 5px 6px; border: 0;
+  border-radius: var(--mm-r-chip); background: none; cursor: pointer; text-align: left; }
+.ht-tag-pick:hover { background: var(--mm-field); }
+.ht-tag-pick .ht-tag { max-width: 100%; }
+.ht-tag-check { flex: none; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--mm-line); border-radius: var(--mm-r-chip); color: var(--mm-brand); }
+.ht-tag-pick.on .ht-tag-check { border-color: var(--mm-brand); background: var(--mm-wash); }
+.ht-tag-check svg { width: 14px; height: 14px; }
+.ht-tag-edit { flex: none; display: inline-flex; border: 0; background: none; color: var(--mm-dim); cursor: pointer;
+  padding: 6px; border-radius: var(--mm-r-chip); }
+.ht-tag-edit:hover { color: var(--mm-text); background: var(--mm-field); }
+.ht-tag-edit svg { width: 15px; height: 15px; }
+.ht-tagpop-edit, .ht-tagpop-new { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px;
+  border-radius: var(--mm-r-btn); background: var(--mm-panel); border: 1px solid var(--mm-line); }
+.ht-tagpop-new { border-style: dashed; }
+.ht-tagpop-edit input, .ht-tagpop-new input { flex: 1 1 100%; min-width: 0; padding: 7px 10px; border-radius: var(--mm-r-chip);
+  border: 1px solid var(--mm-line); background: var(--mm-field); color: var(--mm-text); font-size: var(--mm-fs-16); }
+.ht-tagpop-eacts { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.ht-tagpop-eacts .s-btn, .ht-tagpop-eacts .s-btn-ghost, .ht-tag-create { font-size: var(--mm-fs-16); }
+.ht-tag-del { margin-left: auto; color: var(--mm-bad); }
+.ht-tagpop-none { color: var(--mm-dim); font-size: var(--mm-fs-16); }
+.ht-tagpop-err { display: flex; align-items: flex-start; gap: 6px; color: var(--mm-bad); font-size: var(--mm-fs-16); }
+.ht-sws { display: inline-flex; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; }
+.ht-sw { --tc: #8b8f98; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; padding: 0; background: var(--tc);
+  border: 2px solid var(--mm-panel); box-shadow: 0 0 0 1px var(--mm-line); }
+.ht-sw.on { box-shadow: 0 0 0 2px var(--mm-text); }
+@media (max-width: 640px) {
+  .ht-search { flex: 1 1 auto; }
+}
+/* Từ 0.65.10 vùng làm việc lấp đầy phần còn lại của khung (trước là calc(100vh - 300px), thấp hơn thật khoảng 90px nên cả trang phải cuộn
+   và khung tin bị đẩy xuống). Cột trái = đầu danh sách + danh sách; danh sách và khung tin tự cuộn bên trong. */
+.ht-body { display: flex; gap: 12px; flex: 1 1 auto; min-height: 260px; }
+.ht-listcol { width: 320px; flex: none; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.ht-list { flex: 1 1 auto; min-height: 0; width: 100%; overflow: auto; display: flex; flex-direction: column; gap: 4px;
+  border: 1px solid var(--mm-line); border-radius: var(--mm-r-btn); padding: 6px; background: var(--mm-panel); }
+/* Tải dần (0.65.11): nút Xem thêm ở cuối danh sách, nút Xem tin cũ hơn ở đầu khung tin. */
+.ht-more { display: flex; justify-content: center; padding: 8px 0 4px; flex: none; }
+.ht-more .s-btn-ghost { font-size: var(--mm-fs-12); }
+.ht-older { align-self: center; flex: none; background: none; border: 1px solid var(--mm-line); border-radius: var(--mm-r-pill);
+  padding: 4px 12px; font-size: var(--mm-fs-12); color: var(--mm-dim); cursor: pointer; }
+.ht-older:hover { color: var(--mm-text); border-color: var(--mm-brand); }
+.ht-older.busy { opacity: .6; cursor: progress; }
 .ht-item { display: flex; align-items: flex-start; gap: 9px; width: 100%; text-align: left; padding: 9px 9px;
-  border-radius: var(--mm-r-btn); border: 1px solid transparent; background: none; color: var(--text2); cursor: pointer; }
-.ht-item:hover { background: var(--surface-2); color: var(--text); }
-.ht-item.on { border-color: var(--accent); background: var(--accent-wash); color: var(--text); }
-.ht-item-ic { flex: none; opacity: .8; margin-top: 2px; }
+  border-radius: var(--mm-r-btn); border: 1px solid transparent; background: none; color: var(--mm-muted); cursor: pointer; }
+.ht-item:hover { background: var(--mm-field); color: var(--mm-text); }
+.ht-item.on { border-color: var(--mm-brand); background: var(--mm-wash); color: var(--mm-text); }
 .ht-item-text { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
 .ht-item-top { display: flex; align-items: baseline; gap: 6px; }
 .ht-item-top strong { flex: 1 1 auto; min-width: 0; font-size: var(--mm-fs-14); font-weight: 600; overflow: hidden;
   white-space: nowrap; text-overflow: ellipsis; }
-.ht-item.unread .ht-item-top strong { color: var(--text); }
-.ht-item-time { flex: none; font-size: var(--mm-fs-12); color: var(--text3); }
+.ht-item.unread .ht-item-top strong { color: var(--mm-text); }
+.ht-item-time { flex: none; font-size: var(--mm-fs-12); color: var(--mm-dim); }
+/* Nút ghim của hòm thư (0.223.0). Since the row menu (2026-10-25) only a PINNED row draws it (click to unpin); pinning
+   an unpinned chat is in the "..." menu, so unpinned rows stay clean. */
+.ht-pin { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  margin: -4px 0; border-radius: var(--mm-r-chip); color: var(--mm-dim); cursor: pointer; }
+.ht-pin svg { width: 14px; height: 14px; }
+.ht-pin:hover { background: var(--mm-field); color: var(--mm-text); }
+.ht-pin.on { color: var(--mm-brand); }
+.ht-item.ghim { box-shadow: inset 3px 0 0 var(--mm-brand); }
+/* Row menu "..." (owner, 2026-10-25, like Zalo's). Touch screens and phones: always shown, after the time. A mouse on a
+   wide screen: it takes the time's place while the row is hovered or focused, or while its menu is open. */
+.ht-item-top { position: relative; }
+.ht-rmore { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 26px;
+  margin: -5px -5px -5px 0; border-radius: var(--mm-r-chip); color: var(--mm-muted); cursor: pointer; }
+.ht-rmore svg { width: 18px; height: 18px; }
+.ht-rmore:hover, .ht-item.menu-on .ht-rmore { background: var(--mm-field); color: var(--mm-text); }
+.ht-rmore:focus-visible { outline: 2px solid var(--mm-brand); outline-offset: 1px; }
+@media (hover: hover) and (min-width: 641px) {
+  .ht-rmore { position: absolute; right: -2px; top: 50%; margin: 0; transform: translateY(-50%); opacity: 0;
+    background: var(--mm-panel); border: 1px solid var(--mm-line); }
+  .ht-item:hover .ht-rmore, .ht-item:focus-within .ht-rmore, .ht-item.menu-on .ht-rmore { opacity: 1; }
+  .ht-item:hover .ht-item-time, .ht-item:focus-within .ht-item-time, .ht-item.menu-on .ht-item-time { visibility: hidden; }
+}
+.ht-item.menu-on { background: var(--mm-field); color: var(--mm-text); }
+.ht-item.hid { opacity: .75; }
+.ht-hid-mark { flex: none; display: inline-flex; color: var(--mm-dim); }
+.ht-hid-mark svg { width: 14px; height: 14px; }
+/* The menu itself: one element on <body> (position: fixed), so the list's scrolling never clips it. */
+.ht-rmenu { position: fixed; z-index: 3150; width: 300px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
+  overflow-y: auto; padding: 6px; border-radius: var(--mm-r-btn); background: var(--mm-panel); border: 1px solid var(--mm-line);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .22); display: flex; flex-direction: column; gap: 1px; font-size: var(--mm-fs-16); outline: none; }
+.ht-rm-it { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 7px 10px; border: 0;
+  border-radius: var(--mm-r-chip); background: none; color: var(--mm-text); font: inherit; font-size: var(--mm-fs-16); text-align: left; cursor: pointer; }
+.ht-rm-it:hover, .ht-rm-it:focus-visible { background: var(--mm-field); outline: none; }
+.ht-rm-ic { flex: none; display: inline-flex; color: var(--mm-muted); }
+.ht-rm-ic svg, .ht-rm-end svg { width: 18px; height: 18px; }
+.ht-rm-t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.ht-rm-t > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ht-rm-t small { font-size: var(--mm-fs-16); line-height: 1.3; color: var(--mm-dim); overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.ht-rm-end { flex: none; display: inline-flex; color: var(--mm-dim); }
+.ht-rm-it.on .ht-rm-end, .ht-rm-it.on .ht-rm-ic { color: var(--mm-brand); }
+.ht-rm-it.done { color: var(--mm-ok); }
+.ht-rm-it.done .ht-rm-ic { color: var(--mm-ok); }
+.ht-rm-tag .ht-tag { max-width: 100%; }
+.ht-rm-sep { height: 1px; margin: 4px 6px; background: var(--mm-line); flex: none; }
+.ht-rm-h { padding: 2px 10px 2px; font-size: var(--mm-fs-16); font-weight: 600; color: var(--mm-dim); }
+.ht-rm-none { padding: 6px 10px; font-size: var(--mm-fs-16); color: var(--mm-dim); }
+.ht-rm-err { display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px; font-size: var(--mm-fs-16); color: var(--mm-bad); }
+.ht-rm-err svg { width: 16px; height: 16px; flex: none; margin-top: 3px; }
+.ht-rm-copy { display: flex; flex-direction: column; gap: 8px; padding: 8px 10px; font-size: var(--mm-fs-16); color: var(--mm-muted); }
+.ht-rm-copyval { width: 100%; padding: 8px 10px; border-radius: var(--mm-r-chip); border: 1px solid var(--mm-brand); background: var(--mm-field);
+  color: var(--mm-text); font-size: var(--mm-fs-16); }
+/* Phones: the same menu as a bottom sheet with large rows, over a dimmed page. */
+.ht-rsheet-bg { position: fixed; inset: 0; z-index: 3140; background: var(--scrim, rgba(0, 0, 0, .45)); }
+.ht-rmenu.ht-rsheet { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-width: none; max-height: 80vh;
+  border-radius: var(--mm-r-field) 16px 0 0; border-bottom: 0; padding: 4px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+.ht-rsheet .ht-rm-it { min-height: 52px; padding: 10px 12px; }
+.ht-rsheet .ht-rm-ic svg, .ht-rsheet .ht-rm-end svg { width: 20px; height: 20px; }
+.ht-rsheet-h { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 12px 8px; font-size: var(--mm-fs-16);
+  color: var(--mm-text); }
+.ht-rsheet-h b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ht-rsheet-grip { width: 40px; height: 4px; border-radius: var(--mm-r-pill); background: var(--mm-line); }
 .ht-item-sub { display: flex; align-items: center; gap: 5px; min-width: 0; }
-.ht-item-sub small { flex: 1 1 auto; min-width: 0; font-size: var(--mm-fs-13); color: var(--text3); overflow: hidden;
+.ht-item-sub small { flex: 1 1 auto; min-width: 0; font-size: var(--mm-fs-12); color: var(--mm-dim); overflow: hidden;
   white-space: nowrap; text-overflow: ellipsis; }
-.ht-item.unread .ht-item-sub small { color: var(--text2); font-weight: 600; }
-.ht-badge { flex: none; min-width: 18px; padding: 0 5px; border-radius: var(--mm-r-pill); background: var(--accent);
+.ht-item.unread .ht-item-sub small { color: var(--mm-muted); font-weight: 600; }
+.ht-badge { flex: none; min-width: 18px; padding: 0 5px; border-radius: var(--mm-r-pill); background: var(--mm-brand);
   color: var(--on-accent); font-size: var(--mm-fs-12); font-weight: 700; text-align: center; line-height: 18px; }
-.ht-mode { flex: none; font-size: var(--mm-fs-badge); padding: 1px 6px; border-radius: var(--mm-r-pill); background: var(--warn-wash);
-  color: var(--warn-ink); font-weight: 600; }
-.ht-thread { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--border);
-  border-radius: var(--mm-r-btn); background: var(--surface-1); overflow: hidden; }
-.ht-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--hairline); }
+/* Tổng số tin của cuộc (0.148.0): viên xám trung tính, tách hẳn số đỏ (cam) của tin chưa đọc. */
+.ht-count { flex: none; font-size: var(--mm-fs-12); line-height: 18px; padding: 0 6px; border-radius: var(--mm-r-pill); border: 1px solid var(--mm-line);
+  color: var(--mm-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ht-thread { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--mm-line);
+  border-radius: var(--mm-r-btn); background: var(--mm-panel); overflow: hidden; }
+.ht-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--mm-line); }
 .ht-head-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.ht-head-text strong { font-size: var(--mm-fs-16); color: var(--text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ht-head-text small { font-size: var(--mm-fs-13); color: var(--text3); display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.ht-head-text strong { font-size: var(--mm-fs-14); color: var(--mm-text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ht-head-text small { font-size: var(--mm-fs-12); color: var(--mm-dim); display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ht-back { display: none; padding: 6px 9px; }
-.ht-mode-btn { flex: none; white-space: nowrap; }
-.ht-mode-btn.on { color: var(--warn-ink); border-color: var(--warn-ink); }
+/* Phones: a long name may push the Info button to its own line. */
+@media (max-width: 640px) {
+  .ht-head { flex-wrap: wrap; }
+}
+.ht-silent { align-self: flex-start; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--mm-fs-12);
+  color: var(--mm-dim); }
+.ht-silent-why { background: none; border: 0; padding: 0; color: var(--mm-brand); font: inherit; cursor: pointer;
+  text-decoration: underline; }
 .ht-chip { display: inline-flex; align-items: center; gap: 4px; }
 .ht-note { padding: 8px 12px; font-size: var(--mm-fs-13); display: flex; align-items: center; gap: 6px; }
-.ht-note.warn { background: var(--warn-wash); color: var(--warn-ink); }
+.ht-note.warn { background: var(--mm-warn-wash); color: var(--mm-warn); }
 .ht-msgs { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 .ht-msg { display: flex; flex-direction: column; max-width: min(78%, 640px); }
 .ht-msg.khach { align-self: flex-start; }
 .ht-msg.bot, .ht-msg.nguoi { align-self: flex-end; align-items: flex-end; }
 .ht-msg.hethong { align-self: center; max-width: 90%; }
-.ht-msg-h { font-size: var(--mm-fs-13); color: var(--text2); margin: 0 4px 5px; }
-.ht-photo { display: flex; align-items: center; justify-content: center; width: min(320px, 60vw); height: 240px; border-radius: var(--mm-r-btn); overflow: hidden; background: var(--surface-2); }
-.ht-photo img { width: 100%; height: 100%; object-fit: contain; }
-.ht-photo-error { display: none; padding: 18px; white-space: normal; }
-.ht-photo.failed img { display: none; }
-.ht-photo.failed .ht-photo-error { display: block; }
-.ht-photo-original { display: block; margin-top: 6px; font-size: var(--mm-fs-12); color: var(--accent); }
-.ht-photo-caption { margin-top: 8px; }
-.ht-photo-dialog { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 96vw; max-height: 94vh; padding: 16px; border-radius: var(--mm-r-field); background: var(--panel-solid); box-shadow: var(--shadow-2); }
-.ht-photo-dialog img { max-width: 90vw; max-height: 72vh; object-fit: contain; }
-.ht-photo-close { align-self: flex-end; }
-.ht-photo-dialog a { color: var(--accent); }
-.ht-bubble { padding: 8px 12px; border-radius: var(--mm-r-field); font-size: var(--mm-fs-14); line-height: 1.5; color: var(--text);
-  background: var(--surface-2); border: 1px solid var(--hairline); white-space: pre-wrap; word-break: break-word; }
-.ht-msg.bot .ht-bubble { background: var(--accent-wash); border-color: var(--accent-line); }
-.ht-msg.nguoi .ht-bubble { background: var(--bg3); }
-.ht-msg.hethong .ht-bubble { background: none; border-style: dashed; color: var(--text3); font-size: var(--mm-fs-13); }
+.ht-msg-h { font-size: var(--mm-fs-12); color: var(--mm-dim); margin: 0 4px 3px; }
+.ht-bubble { padding: 8px 12px; border-radius: var(--mm-r-field); font-size: var(--mm-fs-14); line-height: 1.5; color: var(--mm-text);
+  background: var(--mm-field); border: 1px solid var(--mm-line); white-space: pre-wrap; word-break: break-word; }
+.ht-msg.bot .ht-bubble { background: var(--mm-wash); border-color: var(--mm-brand-line); }
+.ht-msg.nguoi .ht-bubble { background: var(--mm-field); }
+.ht-msg.hethong .ht-bubble { background: none; border-style: dashed; color: var(--mm-dim); font-size: var(--mm-fs-12); }
 .ht-bubble p { margin: 0 0 .5em; } .ht-bubble p:last-child { margin: 0; }
-.ht-loai { display: inline-flex; align-items: center; gap: 4px; font-size: var(--mm-fs-12); color: var(--text3); margin-right: 6px; }
-.ht-msg-loi { font-size: var(--mm-fs-12); color: var(--warn-ink); margin: 3px 4px 0; display: inline-flex; gap: 4px; align-items: center; }
-.ht-foot { padding: 8px 12px; border-top: 1px solid var(--hairline); font-size: var(--mm-fs-13); color: var(--text3); }
-.ht-empty { text-align: center; color: var(--text3); padding: 40px 16px; display: flex; flex-direction: column;
+.ht-loai { display: inline-flex; align-items: center; gap: 4px; font-size: var(--mm-fs-12); color: var(--mm-dim); margin-right: 6px; }
+.ht-react-row { display: inline-flex; align-items: center; gap: 6px; font-size: var(--mm-fs-14); color: var(--mm-dim); line-height: 1.4; }
+.ht-react-emoji { font-size: var(--mm-fs-20); line-height: 1; }
+.ht-react.off .ht-react-emoji { opacity: .45; }
+.ht-msg-loi { font-size: var(--mm-fs-12); color: var(--mm-warn); margin: 3px 4px 0; display: inline-flex; gap: 4px; align-items: center; }
+.ht-foot { padding: 8px 12px; border-top: 1px solid var(--mm-line); font-size: var(--mm-fs-12); color: var(--mm-dim); }
+.ht-empty { text-align: center; color: var(--mm-dim); padding: 40px 16px; display: flex; flex-direction: column;
   align-items: center; gap: 8px; font-size: var(--mm-fs-14); }
-.ht-empty b { color: var(--text); font-size: var(--mm-fs-16); }
+.ht-empty b { color: var(--mm-text); font-size: var(--mm-fs-14); }
 .ht-empty.small { padding: 12px; font-size: var(--mm-fs-13); }
 .ht-thread-empty { margin: auto; }
 .ht-empty svg { width: 34px; height: 34px; opacity: .5; }
@@ -2087,76 +2225,103 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
    body sau - đúng hôm nay, nhưng là thứ hỏng lặng lẽ khi ai đó đổi thứ tự dựng. */
 .ht-modal { position: fixed; inset: 0; z-index: 3210; display: flex; align-items: center; justify-content: center;
   background: var(--scrim, rgba(0, 0, 0, .55)); padding: 24px; }
-.ht-form { width: min(600px, 94vw); max-height: 88vh; overflow-y: auto; padding: 18px 20px; background: var(--bg2);
-  border: 1px solid var(--border); border-radius: var(--mm-r-field); }
-.ht-form h3 { margin: 0 0 8px; color: var(--text); }
-.ht-form h4 { margin: 16px 0 8px; font-size: var(--mm-fs-13); text-transform: uppercase; letter-spacing: .04em; color: var(--text3); }
-.ht-intro { margin: 0 0 8px; font-size: var(--mm-fs-14); color: var(--text2); line-height: 1.55; }
-.ht-src { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--border);
-  border-radius: var(--mm-r-btn); margin-bottom: 6px; background: var(--surface-1); }
+.ht-form { width: min(600px, 94vw); max-height: 88vh; overflow-y: auto; padding: 18px 20px; background: var(--mm-panel);
+  border: 1px solid var(--mm-line); border-radius: var(--mm-r-field); }
+.ht-form h3 { margin: 0 0 8px; color: var(--mm-text); }
+.ht-form h4 { margin: 16px 0 8px; font-size: var(--mm-fs-13); text-transform: uppercase; letter-spacing: .04em; color: var(--mm-dim); }
+.ht-intro { margin: 0 0 8px; font-size: var(--mm-fs-13); color: var(--mm-muted); line-height: 1.55; }
+.ht-src { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--mm-line);
+  border-radius: var(--mm-r-btn); margin-bottom: 6px; background: var(--mm-panel); }
 .ht-src-ic { flex: none; display: inline-flex; }
 .ht-src-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.ht-src-text strong { font-size: var(--mm-fs-14); color: var(--text); }
-.ht-src-text small { font-size: var(--mm-fs-13); color: var(--text3); display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.ht-src-text strong { font-size: var(--mm-fs-14); color: var(--mm-text); }
+.ht-src-text small { font-size: var(--mm-fs-12); color: var(--mm-dim); display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 /* Nút ở cuối hàng kênh giữ nguyên bề ngang của nó. Không có flex:none thì nó bị bóp cho vừa
    chỗ còn thừa và chữ gãy làm hai dòng ("Mở / Kết nối"), trong khi cột chữ bên cạnh mới là
    cái đáng co lại. */
 .ht-src > button { flex: none; white-space: nowrap; }
-.ht-warn { color: var(--warn-ink); }
-.ht-switch { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--mm-fs-13); color: var(--text2); cursor: pointer; }
+.ht-warn { color: var(--mm-warn); }
+.ht-switch { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--mm-fs-13); color: var(--mm-muted); cursor: pointer; }
 .ht-form-acts { display: flex; justify-content: flex-end; margin-top: 14px; }
+/* Drag the list column (2026-10-25), wide screens only: width from --mm-inbox-list-width (col-resize.js), handle in the 12px gap
+   right of the list; snapped into a strip (.ht-mini) the rows show only an initial, with a dot for unread. */
+@media (min-width: 901px) {
+  .ht-listcol { width: var(--mm-inbox-list-width, 320px); position: relative; }
+  .ht-listcol > .col-resize { display: block; position: absolute; top: 0; bottom: 0; right: -10px; width: 8px; z-index: 6;
+    cursor: col-resize; touch-action: none; }
+  .ht-mini .ht-sdt, .ht-mini .ht-item-text, .ht-mini .ht-more { display: none; }
+  .ht-mini .ht-list { padding: 6px 4px; align-items: center; }
+  .ht-mini .ht-item { justify-content: center; padding: 6px 0; width: 52px; }
+  .ht-mini .ht-item-ava { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px;
+    height: 40px; border-radius: 50%; background: var(--mm-wash); color: var(--mm-brand-ink); font-size: var(--mm-fs-16); font-weight: 700; }
+  .ht-mini .ht-item.on .ht-item-ava { box-shadow: 0 0 0 2px var(--mm-brand); }
+  .ht-item-ava-dot { position: absolute; top: 0; right: 0; width: 11px; height: 11px; border-radius: 50%; background: var(--mm-brand);
+    border: 2px solid var(--mm-panel); }
+}
+.ws-mini-tip-ava > .ht-item-ava { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--mm-wash); color: var(--mm-brand-ink); font-weight: 700; }
 @media (max-width: 900px) {
-  .ht-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ht-body { height: auto; min-height: 0; flex: 1 1 auto; }
+  .ht-listcol { width: 100%; }
   .ht-list { width: 100%; }
   .ht-thread { display: none; }
+  .ht-wrap.thread-on .ht-listcol { display: none; }
   .ht-wrap.thread-on .ht-list { display: none; }
   .ht-wrap.thread-on .ht-thread { display: flex; min-height: 70vh; }
   .ht-back { display: inline-flex; }
   .ht-item-top strong, .ht-bubble, .ht-src-text strong { font-size: var(--mm-fs-16); }
-  .ht-item-sub small, .ht-stat span, .ht-head-text small, .ht-foot, .ht-intro, .ht-src-text small, .ht-switch { font-size: var(--mm-fs-14); }
+  .ht-item-sub small, .ht-head-text small, .ht-foot, .ht-intro, .ht-src-text small, .ht-switch, .ht-count { font-size: var(--mm-fs-14); }
   .ht-msg { max-width: 88%; }
 }
 
 /* ---- Trang Hội thoại 0.61.0: ba tab (Hộp thư | Kênh | Chatbot) + thẻ tài khoản kênh + ô trả lời ---- */
 .ht-page { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; }
-.ht-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+/* Tiêu đề và hai tab cùng một hàng (0.65.10); đường kẻ dưới thuộc về hàng, tab đang chọn đè lên nó. */
+.ht-top { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.ht-title { display: inline-flex; align-items: center; gap: 8px; padding: 8px 0; font-family: var(--font); font-size: var(--mm-fs-16);
+  font-weight: 700; letter-spacing: 1px; color: var(--mm-text); }
+.ht-title svg { color: var(--mm-brand); }
+.ht-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+/* Trang Chatbot tự lo đầu trang và chiều cao: ẩn đầu trang chung, thân không cuộn (từng tab tự cuộn), đệm gọn hơn. */
+.cview.cview-hoi-thoai .cview-head { display: none; }
+.cview.cview-hoi-thoai .cview-body { padding: 10px 20px 14px; overflow: hidden; display: flex; flex-direction: column; }
+.cview.cview-hoi-thoai .ht-page { flex: 1 1 auto; height: auto; margin-bottom: 0; }
 .ht-tab { background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer; padding: 8px 12px;
-  font-size: var(--mm-fs-14); color: var(--text3); display: inline-flex; align-items: center; gap: 6px; margin-bottom: -1px; }
-.ht-tab:hover { color: var(--text); }
-.ht-tab.on { color: var(--text); border-bottom-color: var(--accent); }
+  font-size: var(--mm-fs-14); color: var(--mm-dim); display: inline-flex; align-items: center; gap: 6px; margin-bottom: -1px; }
+.ht-tab:hover { color: var(--mm-text); }
+.ht-tab.on { color: var(--mm-text); border-bottom-color: var(--mm-brand); }
 .ht-tab .ht-badge { margin-left: 2px; }
-.ht-tab-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.ht-tab-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 .ht-tab-body > .ht-wrap, .ht-tab-body > .ht-kenh { flex: 1 1 auto; min-height: 0; }
 .ht-kenh { display: flex; flex-direction: column; gap: 12px; }
 .ht-kenh-intro { flex: 1 1 300px; margin: 0; }
 .ht-acc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-.ht-acc { border: 1px solid var(--border); border-radius: var(--mm-r-btn); padding: 12px 14px; background: var(--surface-1);
+.ht-acc { border: 1px solid var(--mm-line); border-radius: var(--mm-r-btn); padding: 12px 14px; background: var(--mm-panel);
   display: flex; flex-direction: column; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
 .ht-acc-head { display: flex; align-items: center; gap: 10px; }
 .ht-acc-logo { width: 38px; height: 38px; border-radius: var(--mm-r-btn); display: inline-flex; align-items: center;
-  justify-content: center; background: var(--surface-2); border: 1px solid var(--hairline); flex: none; }
+  justify-content: center; background: var(--mm-field); border: 1px solid var(--mm-line); flex: none; }
 .ht-acc-title { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.ht-acc-title strong { font-size: var(--mm-fs-16); color: var(--text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ht-acc-title small { font-size: var(--mm-fs-13); color: var(--text3); }
-.ht-acc-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: var(--mm-fs-13); color: var(--text3); }
+.ht-acc-title strong { font-size: var(--mm-fs-14); color: var(--mm-text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ht-acc-title small { font-size: var(--mm-fs-12); color: var(--mm-dim); }
+.ht-acc-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: var(--mm-fs-12); color: var(--mm-dim); }
 .ht-acc-meta span { display: inline-flex; align-items: center; gap: 4px; }
-.ht-acc-meta b { color: var(--text); }
+.ht-acc-meta b { color: var(--mm-text); }
 /* Nhãn brain trên thẻ (0.62.4): một mục riêng của hàng meta, mờ hơn một bậc. Từ bản này nó
    chỉ hiện khi CÓ CHUYỆN để nói (đang xem mọi brain, tài khoản chưa gán chủ, hay bot trực nằm
    ở brain khác), nên nó là một thông tin đứng riêng chứ không còn là đuôi của tên bot. */
-.ht-acc-meta .ht-nhe { color: var(--text3); font-weight: 400; font-style: italic; }
+.ht-acc-meta .ht-nhe { color: var(--mm-dim); font-weight: 400; font-style: italic; }
 /* Hàng cho biết đang lọc theo brain nào + nút đổi. Đứng ngay trên lưới thẻ, vì một danh sách
    ngắn đi mà không nói vì sao thì trông hệt như mất dữ liệu. */
-.ht-tk-loc { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--mm-fs-13);
-  color: var(--text3); padding: 8px 10px; border: 1px solid var(--hairline); border-radius: var(--mm-r-btn);
-  background: var(--bg3); }
+.ht-tk-loc { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--mm-fs-12);
+  color: var(--mm-dim); padding: 8px 10px; border: 1px solid var(--mm-line); border-radius: var(--mm-r-btn);
+  background: var(--mm-field); }
 .ht-tk-loc-txt { display: inline-flex; align-items: center; gap: 5px; flex: 1 1 auto; min-width: 0; }
-.ht-tk-loc .s-btn-ghost { flex: none; font-size: var(--mm-fs-13); padding: 4px 10px; }
+.ht-tk-loc .s-btn-ghost { flex: none; font-size: var(--mm-fs-12); padding: 4px 10px; }
 .ht-acc-nl { display: flex; flex-wrap: wrap; gap: 6px; }
 .ht-acc-nl span { display: inline-flex; align-items: center; gap: 4px; font-size: var(--mm-fs-12); padding: 2px 8px;
-  border-radius: var(--mm-r-pill); background: var(--bg3); color: var(--text2); border: 1px solid var(--hairline); }
-.ht-acc-loi { font-size: var(--mm-fs-13); color: var(--warn-ink); display: flex; gap: 4px; align-items: flex-start; }
+  border-radius: var(--mm-r-pill); background: var(--mm-field); color: var(--mm-muted); border: 1px solid var(--mm-line); }
+.ht-acc-loi { font-size: var(--mm-fs-12); color: var(--mm-warn); display: flex; gap: 4px; align-items: flex-start; }
 /* Cục JSON trong câu lỗi MCP không có lấy một dấu cách, nên trình duyệt không tìm ra chỗ nào
    để xuống dòng và chữ tràn ra đè sang thẻ bên cạnh (chủ repo gặp 2026-09-21). `min-width: 0`
    cho phép flex item co dưới nội dung, `anywhere` cho ngắt giữa chữ khi cần. */
@@ -2165,26 +2330,136 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 .ht-acc-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; padding-top: 4px; }
 .ht-acc-acts .ht-switch { margin-right: auto; }
 .ht-kenh-khac { margin-top: 8px; }
-.ht-form label { display: block; margin: 12px 0 4px; font-size: var(--mm-fs-13); color: var(--text2); font-weight: 600; }
-.ht-form input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: var(--mm-r-btn); border: 1px solid var(--border);
-  background: var(--bg3); color: var(--text); font-size: var(--mm-fs-14); }
+/* Tab Bot (0.65.9): danh sách bot ở trên, mục "Kênh chưa có bot" ngay dưới, gập lại được. */
+.ht-tab-bot { display: flex; flex-direction: column; gap: 18px; }
+.ht-kenh-sec { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--mm-line); padding-top: 14px; }
+.ht-kenh-h { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ht-kenh-tog { background: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 0; margin-right: auto; font-size: var(--mm-fs-14); font-weight: 600; color: var(--mm-text); }
+.ht-kenh-tog svg { transition: transform .15s; }
+.ht-kenh-sec.dong .ht-kenh-tog svg { transform: rotate(-90deg); }
+.ht-kenh-sec.dong .ht-tk-loc { display: none; }
+.ht-kenh-n { font-size: var(--mm-fs-12); font-weight: 400; color: var(--mm-dim); }
+.ht-kenh-het { padding: 16px; }
+@media (max-width: 900px) { .ht-kenh-tog { font-size: var(--mm-fs-16); } }
+.ht-form label { display: block; margin: 12px 0 4px; font-size: var(--mm-fs-13); color: var(--mm-muted); font-weight: 600; }
+.ht-form input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: var(--mm-r-btn); border: 1px solid var(--mm-line);
+  background: var(--mm-field); color: var(--mm-text); font-size: var(--mm-fs-14); }
 .ht-form input:focus { border-color: var(--info-line); outline: none; }
-.ht-form .cb-kenh-o { background: var(--surface-1); }
+.ht-form .cb-kenh-o { background: var(--mm-panel); }
 .ht-form-acts { gap: 8px; }
 /* Ô trả lời khách (0.61.0): chỉ hiện khi kênh gửi được từ Javis. */
-.ht-compose { border-top: 1px solid var(--hairline); padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
-.ht-compose-note { font-size: var(--mm-fs-13); color: var(--text3); display: flex; gap: 5px; align-items: center; }
-.ht-compose-row { display: flex; gap: 8px; align-items: flex-end; }
+.ht-compose { border-top: 1px solid var(--mm-line); padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+.ht-compose-note { font-size: var(--mm-fs-12); color: var(--mm-dim); display: flex; gap: 5px; align-items: center; }
 .ht-compose textarea { flex: 1 1 auto; min-width: 0; resize: vertical; padding: 8px 10px; border-radius: var(--mm-r-btn);
-  border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: var(--mm-fs-14); font-family: inherit; line-height: 1.45; }
+  border: 1px solid var(--mm-line); background: var(--mm-field); color: var(--mm-text); font-size: var(--mm-fs-14); font-family: inherit; line-height: 1.45; }
 .ht-compose textarea:focus { border-color: var(--info-line); outline: none; }
 .ht-send { flex: none; white-space: nowrap; }
 @media (max-width: 900px) {
+  .cview.cview-hoi-thoai .cview-body { padding: 8px 14px 10px; }
+  .ht-title { font-size: var(--mm-fs-16); }
   .ht-tab { font-size: var(--mm-fs-16); padding: 10px 12px; }
   .ht-acc-title strong, .ht-compose textarea, .ht-form input { font-size: var(--mm-fs-16); }
   .ht-acc-meta, .ht-acc-title small, .ht-compose-note, .ht-form label { font-size: var(--mm-fs-14); }
   .ht-acc-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   TRANG CODING (coding.js) - chỉ những gì RIÊNG của nó
+   ============================================================
+   Khung trang dùng lại nguyên bộ lớp `.chatpage*` của trang Trò chuyện (luật xếp khung nằm
+   trong _injectChatCss của console.js), và cột trái là chính module lịch sử `.cside-*`. Nên ở
+   đây chỉ còn hai thứ trang này thật sự đẻ ra: dải chip ngữ cảnh và menu bật lên từ chip.
+   0.159.0: errors sit in their own slot (#cdErr) in the page bar. */
+.cd-err { margin-left: auto; font-size: var(--mm-fs-12); }
+.cd-err:empty { display: none; }
+
+/* Hàng chip ngữ cảnh: nhét vào chính #modelBar đã mượn, đứng TRƯỚC chip Model, nên một hàng
+   đọc từ trái sang là thư mục, nhánh, worktree, điểm hồi, chế độ, rồi model. */
+.cd-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-right: 8px; }
+.cd-chip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--mm-fs-14); line-height: 1;
+  padding: 6px 9px; border-radius: var(--mm-r-pill); border: 1px solid var(--glass-brd);
+  background: var(--mm-field); color: var(--mm-muted); cursor: pointer; white-space: nowrap; }
+.cd-chip:hover { border-color: var(--info-line); color: var(--mm-text); }
+.cd-chip.on { border-color: var(--ok-line); color: var(--mm-text); }
+/* Ba chế độ, ba sắc thái. Plan đọc là "an toàn", Toàn quyền phải NHÌN ra được từ xa vì ở mức
+   đó engine commit, push và deploy được.
+
+   Hai lỗi của bản 0.63.2 sửa ở đây (chủ dự án báo chữ mức quyền bị chìm):
+
+   1. Chữ lấy màu --info-line, mà mấy biến `-line` là màu VIỀN: chúng có alpha 0,35 nên đặt
+      làm màu chữ thì chữ trong mờ, nhìn như đang bị tắt. Bảng màu của dự án tách sẵn ba vai:
+      `-ink` cho chữ, `-line` cho viền, `-wash` cho nền. Nay dùng đúng vai.
+   2. `var(--mm-warn)` KHÔNG hề tồn tại trong bảng màu (chỉ có --mm-warn, --mm-warn-line,
+      --mm-warn-wash). Giá trị sai thì trình duyệt bỏ luôn cả dòng khai báo, nên chip Toàn quyền
+      bấy lâu nay trông y hệt chip thường: đúng cái mức nguy hiểm nhất lại không có tín hiệu
+      nào. Thêm nền `-wash` để phân biệt được cả khi nhìn lướt.
+
+   Chip mặc định lấy --mm-muted cho hợp với hàng chip xung quanh, nhưng chip mức quyền nói một
+   điều người dùng CẦN đọc nên nhấn lên --mm-text. */
+.cd-chip.cd-mq-auto { color: var(--mm-text); }
+.cd-mq-suggest { border-color: var(--info-line); background: var(--info-wash);
+  color: var(--info-ink); }
+.cd-mq-full { border-color: var(--mm-warn-line); background: var(--mm-warn-wash);
+  color: var(--mm-warn); font-weight: 600; }
+/* Giữ màu của chính chip khi rê chuột: luật .cd-chip:hover kéo mọi chip về --mm-text, mà ở đây
+   thì Toàn quyền đang đỏ cam lại nhảy sang màu chữ thường đúng lúc người dùng chỉ vào nó. */
+.cd-chip.cd-mq-suggest:hover { color: var(--info-ink); border-color: var(--info-line); }
+.cd-chip.cd-mq-full:hover { color: var(--mm-warn); border-color: var(--mm-warn-line); }
+
+/* Danh sách thư mục có thể dài, nên menu phải tự cuộn: không chặn chiều cao thì nó tràn
+   khỏi màn hình và đè lên thanh điều hướng (chủ dự án báo 22/09). Chiều cao thật do JS đặt
+   theo chỗ trống quanh chip; luật này chỉ là trần dự phòng. */
+.cd-menu { position: fixed; z-index: 60; min-width: 220px; max-width: 340px; padding: 5px;
+  /* Nền ĐẶC. --mm-panel chỉ là lớp phủ alpha 2,5% dành cho thẻ nằm trên nền trang, dùng cho
+     một menu nổi thì chữ của header phía sau xuyên qua, đọc lẫn vào nhau (chủ repo báo 27/09,
+     kèm ảnh menu thư mục đè lên chip model). */
+  border-radius: var(--mm-r-btn); border: 1px solid var(--mm-line); background: var(--mm-panel);
+  box-shadow: 0 12px 34px var(--shadow-veil); display: flex; flex-direction: column; gap: 2px;
+  max-height: min(60vh, 420px); overflow-y: auto; }
+/* Tên thư mục và đường dẫn ở đây là chữ PHỤ, đọc lướt để chọn, nên để nhỏ gọn cho menu đỡ
+   choán màn hình. Trên điện thoại vẫn kéo về 16px ở khối @media bên dưới. */
+.cd-menu button { text-align: left; background: none; border: 0; color: var(--mm-text); cursor: pointer;
+  font-size: var(--mm-fs-14); padding: 7px 9px; border-radius: var(--mm-r-chip); font-family: inherit; }
+.cd-menu button:hover { background: var(--mm-field); }
+/* Mục đang chọn. Lại đúng cái bẫy đã sửa ở 0.63.6 cho chip mức quyền: --info-line là biến
+   VIỀN, alpha 0,35, nên đặt làm màu CHỮ thì chữ mờ đến khó đọc (chủ dự án báo 22/09). Dùng
+   biến -ink dành cho chữ, kèm in đậm để mắt bắt ngay mục đang chọn. */
+.cd-menu button.on { color: var(--info-ink); font-weight: 600; }
+.cd-menu button.nguy { color: var(--mm-bad); }   /* --danger không có trong bảng màu */
+.cd-menu button small { display: block; font-size: var(--mm-fs-12); color: var(--mm-dim); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Bảng Hoàn tác (0.256.0): danh sách file đổi từ một mốc tự động, xem diff, khôi phục. Chữ 16px
+   kể cả trên máy tính: người dùng đọc tên file và diff để quyết định có trả lại hay không, nên
+   đây là chữ CHÍNH chứ không phải chữ phụ. */
+.cd-undo { position: fixed; inset: 0; z-index: 70; background: var(--shadow-veil);
+  display: flex; align-items: center; justify-content: center; padding: 16px; }
+.cd-undo-box { width: min(720px, 100%); max-height: min(86vh, 900px); overflow-y: auto;
+  background: var(--mm-panel); border: 1px solid var(--mm-line); border-radius: var(--mm-r-field); padding: 16px;
+  font-size: var(--mm-fs-16); line-height: 1.5; color: var(--mm-text); box-shadow: 0 16px 40px var(--shadow-veil); }
+.cd-undo-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 10px; }
+.cd-undo-x { background: none; border: 0; color: var(--mm-muted); cursor: pointer; padding: 6px;
+  border-radius: var(--mm-r-chip); min-width: 40px; min-height: 40px; }
+.cd-undo-x:hover { background: var(--mm-field); }
+.cd-undo-note { color: var(--mm-muted); margin: 0 0 12px; }
+.cd-undo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cd-undo-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cd-undo-row code { font-size: var(--mm-fs-14); word-break: break-all; flex: 1 1 200px; }
+.cd-undo-row button, .cd-undo-go { font: inherit; font-size: var(--mm-fs-16); cursor: pointer; border-radius: var(--mm-r-btn);
+  border: 1px solid var(--mm-line); background: var(--mm-field); color: var(--mm-text); padding: 8px 14px;
+  min-height: 40px; }
+.cd-undo-st { font-size: var(--mm-fs-14); padding: 2px 8px; border-radius: var(--mm-r-pill); border: 1px solid var(--mm-line); }
+.cd-undo-st.st-A { color: var(--ok-ink, var(--mm-text)); border-color: var(--ok-line); }
+.cd-undo-st.st-D { color: var(--mm-bad); }
+.cd-undo-diff { font-size: var(--mm-fs-14); line-height: 1.45; white-space: pre-wrap; word-break: break-word;
+  background: var(--bg); border: 1px solid var(--mm-line); border-radius: var(--mm-r-chip); padding: 10px;
+  margin: 8px 0 0; max-height: 50vh; overflow: auto; }
+.cd-undo-act { margin-top: 14px; display: flex; justify-content: flex-end; }
+.cd-undo-go { border-color: var(--mm-warn-line); color: var(--mm-warn); font-weight: 600; }
+.cd-undo-go:disabled { opacity: .5; cursor: default; }
+.cd-undo-kq { margin-top: 10px; }
 
 /* ============================================================
    TRANG CODING (coding.js) - chỉ những gì RIÊNG của nó
@@ -2271,6 +2546,67 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 .cd-menu button.nguy { color: var(--red); }   /* --danger không có trong bảng màu */
 .cd-menu button small { display: block; font-size: var(--mm-fs-12); color: var(--text3); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Không có kiểu dáng riêng cho hộp "thêm thư mục": nó là JavisFolderPicker, mặc bộ lớp
+   .folder-modal/.fm-* có sẵn trong style.css. */
+
+/* Hàng chip RIÊNG của màn hẹp. Trên máy tính nó rỗng và không chiếm chỗ (không có chip nào
+   được nhét vào), nên không cần ẩn bằng media query. */
+.cd-chips-hep:empty { display: none; }
+.cd-chips-hep { flex: none; padding: 0 0 8px; }
+
+@media (max-width: 900px) {
+  .cd-chip { font-size: var(--mm-fs-16); padding: 7px 10px; }
+  .cd-chips { flex-wrap: nowrap; overflow-x: auto; }
+  /* Vuốt ngang được, và không nuốt mất chip cuối: hàng này hay dài hơn bề ngang điện thoại. */
+  .cd-chips-hep .cd-chips { margin-right: 0; padding-bottom: 2px; }
+  /* Ngón tay bấm chứ không phải con trỏ, và màn hẹp thì chữ nhỏ đọc rất mệt. */
+  .cd-menu button { font-size: var(--mm-fs-16); padding: 9px 10px; }
+  .cd-menu button small { font-size: var(--mm-fs-14); }
+}
+
+/* ChatGPT Live: ô chọn giọng và nút nghe thử mẫu nằm cùng một hàng (0.65.17). */
+.v2-voice-row { display: flex; gap: 8px; align-items: center; }
+.v2-voice-row select { flex: 1; min-width: 0; }
+/* Nút Nghe thử chỉ rộng theo chữ: .gcard-btn trong thẻ cài đặt mặc định tràn ngang, đứng cạnh ô
+   chọn thì nó nuốt hết chỗ của ô chọn giọng. */
+.v2-voice-row > .gcard-btn { flex: none; width: auto; white-space: nowrap; margin-top: 0; }
+/* Owner screenshot 25/10/2026: "Nghe thử" sat lower than the voice select and was a different height. The
+   button kept the stacked-card margin-top: 14px and the select kept the form margin-bottom: 4px. In a row
+   both drop those margins and share --ctl-h, so they line up top and bottom. */
+.v2-voice-row > select, .v2-voice-row > .js-input { margin: 0; min-height: var(--ctl-h); }
+/* Thẻ Giọng nói ẩn/hiện từng hàng bằng thuộc tính hidden theo đường gọi (renderVoiceCard), nhưng
+   .qs-field và .gcard-btn tự đặt display nên đè mất hidden; luật này trả lại nghĩa cho hidden. */
+#voiceCard [hidden] { display: none !important; }
+/* 0.298.0: what you will hear, stated up front, and each field saying what it is for. The "saved" mark sits
+   right beside the field that changed (it used to be one line at the bottom of the card, out of sight). */
+#voiceCard .vc-now {
+  display: flex; flex-direction: column; gap: 4px; margin: 8px 0 12px; padding: 10px 12px;
+  border-radius: var(--mm-r-btn); background: var(--mm-panel); border: 1px solid var(--mm-line);
+  font-size: var(--mm-fs-14); line-height: 1.45; color: var(--mm-text);
+}
+#voiceCard .vc-now:empty { display: none; }
+#voiceCard .vc-now .vc-now-why { font-size: var(--mm-fs-13); color: var(--mm-dim); }
+#voiceCard .vc-field { align-items: flex-start; }
+#voiceCard .vc-lblcol { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 8px; }
+#voiceCard .vc-lblcol .qs-lbl { font-weight: 600; color: var(--mm-text); }
+#voiceCard .vc-sub { font-size: var(--mm-fs-13); line-height: 1.4; color: var(--mm-dim); }
+#voiceCard .vc-sub:empty { display: none; }
+#voiceCard .vc-field > .v2-voice-row { flex-wrap: wrap; }
+#voiceCard .vc-saved {
+  flex-basis: 100%; min-height: 18px; font-size: var(--mm-fs-13); color: var(--mm-ok);
+  opacity: 0; transition: opacity .2s;
+}
+#voiceCard .vc-saved:not(.on) { display: none; }
+#voiceCard .vc-saved.on { opacity: 1; }
+#voiceCard .vc-saved.bad { color: var(--mm-bad); }
+#voiceCard .vc-mismatch {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 10px; padding: 10px 12px;
+  border-radius: var(--mm-r-btn); border: 1px solid var(--mm-warn-line); background: var(--mm-warn-wash); color: var(--mm-warn);
+  font-size: var(--mm-fs-14); line-height: 1.45;
+}
+#voiceCard .vc-mismatch .gcard-btn { width: auto; flex: none; }
+@media (prefers-reduced-motion: reduce) { #voiceCard .vc-saved { transition: none; } }
 
 /* Không có kiểu dáng riêng cho hộp "thêm thư mục": nó là JavisFolderPicker, mặc bộ lớp
    .folder-modal/.fm-* có sẵn trong style.css. */
@@ -2577,3 +2913,6 @@ details.h2-sec[open] > summary.h2-h { margin-bottom: 6px; }
   .knn-hs { flex-direction: row; align-items: center; gap: 8px; }
   .knn-hb { margin-left: auto; }
 }
+
+.cview-hoi-thoai .cview-head { display: none; }
+.cview-hoi-thoai .cview-body { overflow: hidden; padding: 0 var(--mm-sp-4) var(--mm-sp-4); }
