@@ -94,6 +94,22 @@ def register(app: FastAPI, deps: up_bai.Deps, state_dir: Path) -> None:
         return {"ok": True, "cau_hinh": doc_cau_hinh(), "lan_cuoi": up.lan_cuoi if up else {},
                 "nhat_ky": list(reversed(up.nhat_ky_vong[-30:])) if up else []}
 
+    @app.post("/up-bai/kiem-tra")
+    async def ub_kiem_tra(request: Request):
+        c = _chan()
+        if c:
+            return c
+        try:
+            data = await request.json()
+            sid = up_bai.id_sheet(str(data.get('sheet') or doc_cau_hinh()['sheet_id']))
+            if not may():
+                raise ValueError('Up bài chưa khởi động')
+            return {'ok': True, **await may().kiem_tra(sid)}
+        except ValueError as exc:
+            return JSONResponse({'ok': False, 'error': str(exc)}, status_code=400)
+        except Exception:
+            return JSONResponse({'ok': False, 'error': 'Chưa đọc được Google Sheet; kiểm tra kết nối Google Sheets'}, status_code=502)
+
     @app.post("/up-bai/cau-hinh")
     async def ub_cau_hinh(request: Request):
         c = _chan()

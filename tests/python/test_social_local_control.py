@@ -53,6 +53,14 @@ def run():
         c.execute('UPDATE chrome_control SET created=0 WHERE id=?', (cid,))
     assert control.claim(mid) is None
     assert control.state(mid)['commands'][0]['state'] == 'error'
+    bulk = control.enqueue(mid, 'create-batch', {'name': 'Shop {n}', 'count': 2, 'group': 'Shop', 'proxy_lines': 'localhost:8080:fixture-user:fixture-password'})
+    with ds._db() as c:
+        stored = c.execute('SELECT params FROM chrome_control WHERE id=?', (bulk,)).fetchone()[0]
+    assert 'fixture-password' not in stored and 'fixture-user' not in stored
+    assert 'fixture-password' not in json.dumps(control.state(mid))
+    queued = control.claim(mid)
+    assert 'fixture-password' in queued['params']['proxy_lines']
+    control.finish(mid, bulk, True, 'done', {'profiles': [], 'existing': []})
 
     folder = Path(tempfile.mkdtemp())
     (folder / 'Default').mkdir()

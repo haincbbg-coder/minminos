@@ -33,6 +33,8 @@ jobs:
       - run: python tests/python/test_social_browser.py
       - run: python tests/python/test_chrome_local.py
       - run: python tests/python/test_social_local_control.py
+      - run: python tests/python/test_social_profile_config.py
+      - run: python tests/python/test_social_campaign_ui.py
 
   social-browser:
     name: Đội Social trên Chromium thật
@@ -55,6 +57,8 @@ jobs:
           xvfb-run -a python tests/python/test_social_browser.py
           python tests/python/test_chrome_local.py
           xvfb-run -a python tests/python/test_chrome_local.py
+          python tests/python/test_social_profile_config.py
+          python tests/python/test_social_campaign_ui.py
 
   test:
     runs-on: ubuntu-latest

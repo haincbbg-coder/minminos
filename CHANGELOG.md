@@ -1,5 +1,11 @@
 # MinMin OS
 
+## [26.10.303] - 2026-10-30
+### Thêm mới
+- Quản lý profile theo nhóm, proxy, vị trí lưu và tạo hàng loạt.
+- Chiến dịch nội dung đa nền tảng từ prompt, có ảnh và lịch đăng.
+- Rà soát trạng thái tác vụ, không lặp bài để lấp số lượng AI viết thiếu.
+
 ## [26.10.302] - 2026-10-29
 ### Thêm mới
 - Chọn chạy Chrome ngay trên VPS hoặc trên máy tính cá nhân đã ghép. Máy cá nhân dùng Chrome riêng, không cần GPM Login.

@@ -141,12 +141,13 @@ def tao_bang(c) -> None:
     import sqlite3
     # Cột THÊM so với hợp đồng (chỉ thêm, không đổi tên): đề xuất hành động của quy tắc cho bình luận
     # đang chờ duyệt ('tra_loi' | 'an' | 'an_va_tra_loi' | 'tra_loi_ai').
-    for bang, cot in (("fp_binh_luan", "de_xuat TEXT DEFAULT ''"),):
+    for bang, cot in (("fp_binh_luan", "de_xuat TEXT DEFAULT ''"), ("fp_bai", "campaign_key TEXT DEFAULT ''")):
         try:
             c.execute(f"ALTER TABLE {bang} ADD COLUMN {cot}")
         except sqlite3.OperationalError:
             pass
 
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS fp_campaign_key ON fp_bai(campaign_key) WHERE campaign_key!=''")
 
 def _now() -> float:
     return ds._bay_gio()
@@ -1351,6 +1352,11 @@ def don_tep(sau_ngay: int, now: Optional[float] = None) -> int:
                 xoa.update(ms)
             else:
                 giu.update(ms)
+        if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='social_campaign'").fetchone():
+            for row in c.execute("SELECT settings FROM social_campaign WHERE state IN ('planning','active','paused','error')"):
+                giu.update((_j(row[0], {}).get('image') or {}).get('media') or [])
+            for row in c.execute("SELECT data FROM social_campaign_run WHERE state IN ('new','writing','generating','waiting_media')"):
+                giu.update(_j(row[0], {}).get('media') or [])
     so = 0
     for t in xoa - giu:
         p = duong_media(t)
@@ -1558,13 +1564,18 @@ def _kiem_media_loai(loai: str, media: list) -> None:
 def tao_bai(*, trang_ids=None, nhom_id=None, loai: str = "chu", noi_dung=None, kho_id=None, media=None,
             chia: str = "", binh_luan=None, kho_binh_luan_id=None, story=None, ig=None, hen="tu_dong",
             chay_thu: bool = False, nguon: str = "tay", link: str = "", so_bai: int = 1, rnd=None,
-            now: Optional[float] = None, ep_duyet: bool = False) -> dict:
+            now: Optional[float] = None, ep_duyet: bool = False, idempotency_key: str = "") -> dict:
     """Tạo bài hàng loạt (mục 8 hợp đồng). Raise ValueError tiếng Việt.
 
     `hen`: 'tu_dong' (lịch nhóm/Trang) | 'ngay' | mốc epoch | {"bat_dau": epoch, "cach_phut": n}
     (26.10.200: bài thứ k, đếm qua mọi Trang theo thứ tự tạo, đăng lúc bat_dau + k*cach_phut).
     `ep_duyet`: luôn vào chờ duyệt dù nhóm tắt duyet_truoc (bài AI viết)."""
     import random
+    if idempotency_key and not chay_thu:
+        with ds._db() as db:
+            old = db.execute("SELECT id FROM fp_bai WHERE campaign_key=?", (idempotency_key,)).fetchone()
+        if old:
+            return {"so": 1, "muc": [lay_bai(old[0])], "bo_trung": 0, "xem_truoc": None}
     rnd = rnd or random
     now = _now() if now is None else now
     if loai not in LOAI_BAI:
@@ -1701,14 +1712,20 @@ def tao_bai(*, trang_ids=None, nhom_id=None, loai: str = "chu", noi_dung=None, k
     if chay_thu:
         return {"so": len(bai_moi), "muc": [], "bo_trung": bo_trung, "xem_truoc": bai_moi}
     ra = []
+    if idempotency_key and len(bai_moi) > 1:
+        raise ValueError('Mỗi khóa chiến dịch chỉ tạo một bài')
     with ds._khoa, ds._db() as c:
+        if idempotency_key:
+            old = c.execute("SELECT id FROM fp_bai WHERE campaign_key=?", (idempotency_key,)).fetchone()
+            if old:
+                return {"so": 1, "muc": [lay_bai(old[0])], "bo_trung": 0, "xem_truoc": None}
         for b in bai_moi:
             bid = c.execute(
                 "INSERT INTO fp_bai(trang_id, nhom_id, loai, noi_dung, media, link, binh_luan, story, ig, hen_luc, "
-                "cach_hen, trang_thai, nguon, khoa_trung, tao_luc) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "cach_hen, trang_thai, nguon, khoa_trung, tao_luc,campaign_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (b["trang_id"], b["nhom_id"], b["loai"], b["noi_dung"], _dj(b["media"]), b["link"], b["binh_luan"],
                  b["story"], b["ig"], b["hen_luc"], b["cach_hen"], b["trang_thai"], b["nguon"], b["khoa_trung"],
-                 now)).lastrowid
+                 now, idempotency_key)).lastrowid
             ra.append(bid)
     ghi_con_tro(con_tro)
     if ra:

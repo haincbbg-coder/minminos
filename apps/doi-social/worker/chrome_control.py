@@ -31,8 +31,11 @@ class Control:
                 except LoiGPM:
                     opened = True
             profiles.append({'id': p['id'], 'name': p['ten'], 'browser': p.get('browser', 'Chromium'),
-                             'kind': p.get('kind', 'managed'), 'open': opened})
-        return {'profiles': profiles, 'existing': chrome_existing.public()}
+                             'kind': p.get('kind', 'managed'), 'open': opened, 'group': p.get('group', ''),
+                             'note': p.get('note', ''), 'data_dir': p.get('data_dir') or ('' if p.get('kind') == 'existing' else str(self.chrome.root / p['id'])),
+                             'proxy_label': __import__('profile_config').public_proxy(p.get('proxy'))})
+        return {'profiles': profiles, 'existing': chrome_existing.public(),
+                'storage_root': self.chrome.settings().get('storage_root') or str(self.chrome.root)}
 
     def execute(self, command):
         action, p = command['action'], command.get('params') or {}
@@ -43,8 +46,20 @@ class Control:
         if action == 'install':
             self.chrome.install()
             return 'Đã tải Chromium trên máy tính'
+        if action == 'storage':
+            self.chrome.storage(p.get('storage_root'))
+            return 'Đã đặt thư mục cho profile tạo mới. Profile cũ giữ nguyên vị trí.'
+        if action == 'create-batch':
+            result = self.chrome.create_many(p)
+            return f'Đã tạo {len(result)} profile trên máy tính'
+        if action == 'update-batch':
+            self.chrome.update_many(p.get('profiles'), p)
+            return 'Đã cập nhật các profile đã chọn'
+        if action == 'update':
+            self.chrome.update(pid, p)
+            return 'Đã lưu nhóm, proxy và ghi chú'
         if action == 'create':
-            self.chrome.create(p.get('name'))
+            self.chrome.create_many(p)
             return 'Đã tạo profile trên máy tính'
         if action == 'rename':
             self.chrome.rename(pid, p.get('name'))
@@ -78,7 +93,7 @@ class Control:
             from playwright.sync_api import sync_playwright
             from chrome_existing import endpoint
             with sync_playwright() as pw:
-                browser = pw.chromium.connect_over_cdp(endpoint(self.chrome.root / pid))
+                browser = pw.chromium.connect_over_cdp(endpoint(self.chrome.profile(pid).get('data_dir') or self.chrome.root / pid))
                 page = browser.contexts[0].new_page()
                 page.goto(url, wait_until='domcontentloaded')
             return 'Đã mở Chrome Web Store trên máy tính; người dùng chọn extension và duyệt quyền cài đặt.'

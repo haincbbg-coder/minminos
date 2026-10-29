@@ -63,6 +63,7 @@ class ChromeLocal:
         self.root = Path(root or ROOT)
         self.live = {}
         self.job = {}
+        self.bridges = {}
 
     def profiles(self):
         p = self.root / 'profiles.json'
@@ -71,25 +72,69 @@ class ChromeLocal:
     def ds_profile(self):
         if not self.executable() and not any(p.get('kind') == 'existing' for p in self.profiles()):
             raise LoiGPM('Chưa có Chrome. Chạy chrome-may-tinh.bat và chọn Tải Chromium')
-        return [{'id': p['id'], 'ten': p['ten'], 'nhom': 'Chrome trên máy tính',
-                 'trinh_duyet': 'chrome-existing' if p.get('kind') == 'existing' else 'chromium', 'co_proxy': False}
+        return [{'id': p['id'], 'ten': p['ten'], 'nhom': p.get('group') or 'Chrome trên máy tính',
+                 'trinh_duyet': 'chrome-existing' if p.get('kind') == 'existing' else 'chromium', 'co_proxy': bool(p.get('proxy'))}
                 for p in self.profiles()]
 
     def create(self, name):
-        name = str(name or '').strip()[:80]
-        if not name:
-            raise ValueError('Nhập tên profile')
+        return self.create_many({'name': name})[0]
+
+    def settings(self):
+        p = self.root / 'settings.json'
+        return json.loads(p.read_text()) if p.exists() else {}
+
+    def storage(self, requested):
+        import profile_config as pc
+        base = pc.storage(self.root, requested)
+        with FileLock(self.root / 'metadata.lock'):
+            p = self.root / 'settings.json'
+            p.write_text(json.dumps({'storage_root': base}), encoding='utf-8')
+            os.chmod(p, 0o600)
+        return base
+
+    def create_many(self, data):
+        import profile_config as pc
+        batch = pc.batch(data)
+        base = pc.storage(self.root, data.get('storage_root') or self.settings().get('storage_root', ''))
         with FileLock(self.root / 'metadata.lock'):
             profiles = self.profiles()
-            if len(profiles) >= 100:
+            if len(profiles) + len(batch) > 100:
                 raise ValueError('Tối đa 100 profile trên máy này')
-            p = {'id': 'l' + secrets.token_hex(12), 'ten': name}
-            profiles.append(p)
-            tmp = self.root / 'profiles.tmp'
-            tmp.write_text(json.dumps(profiles, ensure_ascii=False), encoding='utf-8')
-            os.chmod(tmp, 0o600)
-            os.replace(tmp, self.root / 'profiles.json')
-            return p
+            result = []
+            for name, fields in batch:
+                pid = 'l' + secrets.token_hex(12)
+                result.append({'id': pid, 'ten': name, 'data_dir': str(Path(base) / pid), **fields})
+            profiles.extend(result)
+            self.save(profiles)
+            return result
+
+    def update(self, pid, data):
+        return self.update_many([pid], data)
+
+    def update_many(self, ids, data):
+        from contextlib import ExitStack
+        import profile_config as pc
+        fields = pc.fields(data)
+        if not isinstance(ids, list) or not 1 <= len(ids) <= 100:
+            raise ValueError('Chọn từ 1 đến 100 profile')
+        for pid in ids:
+            original = self.profile(pid)
+            if original.get('kind') == 'existing' and 'proxy' in fields:
+                raise ValueError('Proxy chỉ áp dụng cho profile do MinMin quản lý; không đổi proxy trình duyệt cá nhân')
+        with ExitStack() as locks:
+            for pid in sorted(set(ids)):
+                locks.enter_context(FileLock(self.root / (pid + '.lock')))
+            locks.enter_context(FileLock(self.root / 'metadata.lock'))
+            profiles = self.profiles()
+            for p in profiles:
+                if p['id'] in ids:
+                    p.update(fields)
+                    if 'name' in data:
+                        name = str(data['name'] or '').strip()[:80]
+                        if not name:
+                            raise ValueError('Nhập tên profile')
+                        p['ten'] = name
+            self.save(profiles)
 
     def rename(self, pid, name):
         self.profile(pid)
@@ -180,7 +225,7 @@ class ChromeLocal:
                 endpoint = chrome_existing.connect(profile['source'])
                 self.live[pid] = (None, profile_lock, slot)
                 return endpoint
-            folder = (self.root / pid).resolve()
+            folder = Path(profile.get('data_dir') or self.root / pid).resolve()
             folder.mkdir(parents=True, exist_ok=True, mode=0o700)
             port_file = folder / 'DevToolsActivePort'
             port_file.unlink(missing_ok=True)
@@ -192,6 +237,11 @@ class ChromeLocal:
                     '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--disable-dev-shm-usage']
             if hidden:
                 args.append('--headless=new')
+            if profile.get('proxy'):
+                from proxy_bridge import ProxyBridge
+                bridge = ProxyBridge(profile['proxy'])
+                self.bridges[pid] = bridge
+                args.append('--proxy-server=' + bridge.url)
             if (hasattr(os, 'geteuid') and os.geteuid() == 0) or os.getenv('MINMIN_CHROME_NO_SANDBOX') == '1':
                 args.append('--no-sandbox')
             args.append('about:blank')
@@ -218,6 +268,8 @@ class ChromeLocal:
                 profile_lock.release()
                 if slot:
                     slot.release()
+                if pid in self.bridges:
+                    self.bridges.pop(pid).close()
             raise
 
     def dong(self, pid):
@@ -230,7 +282,8 @@ class ChromeLocal:
                 # Graceful Browser.close flushes cookies before any fallback termination.
                 try:
                     from playwright.sync_api import sync_playwright
-                    port = int((self.root / pid / 'DevToolsActivePort').read_text().splitlines()[0])
+                    folder = Path(self.profile(pid).get('data_dir') or self.root / pid)
+                    port = int((folder / 'DevToolsActivePort').read_text().splitlines()[0])
                     with sync_playwright() as pw:
                         browser = pw.chromium.connect_over_cdp('http://127.0.0.1:' + str(port), timeout=5000)
                         browser.new_browser_cdp_session().send('Browser.close')
@@ -246,6 +299,8 @@ class ChromeLocal:
                         child.kill()
                         child.wait()
         finally:
+            if pid in self.bridges:
+                self.bridges.pop(pid).close()
             lock.release()
             slot.release()
 

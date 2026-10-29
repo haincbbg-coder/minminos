@@ -5,7 +5,7 @@
 
   function theUpBai(u) {
     var c = (u && u.cau_hinh) || {}, lc = (u && u.lan_cuoi) || {};
-    var h = '<div class="card"><div class="card-h"><h3>' + ic("file") + 'Up bài từ Google Sheet</h3><button class="btn btn-sm btn-soft" data-act="ub-chay">' + ic("play") + "Chạy ngay</button></div>" +
+    var h = '<div class="card"><div class="card-h"><h3>' + ic("file") + 'Up bài từ Google Sheet</h3><button class="btn btn-sm" data-act="ub-kiem-tra">Kiểm tra Sheet (không đăng)</button><button class="btn btn-sm btn-soft" data-act="ub-chay">' + ic("play") + "Chạy ngay</button></div>" +
       '<p class="small muted" style="margin:0 0 12px">Mỗi dòng ở tab HÀNG ĐỢI UP BÀI: Tên Page, Page ID, Link video (TikTok, Facebook, Instagram...), Giá, Mã. MinMin tự tải video, AI nhận diện đồ và viết nội dung, gửi Telegram để bạn duyệt, rồi đăng Reels đúng giờ theo tab CẤU HÌNH PAGE.</p>' +
       '<div class="fld"><label for="ub-sheet">Link Google Sheet UP BÀI</label><input class="inp" id="ub-sheet" placeholder="https://docs.google.com/spreadsheets/d/..." value="' +
       esc(c.sheet_id ? "https://docs.google.com/spreadsheets/d/" + c.sheet_id + "/edit" : "") + '"></div>' +
@@ -137,6 +137,12 @@
         "ub-luu": function () {
           DS.api("POST", "/up-bai/cau-hinh", { sheet: el.querySelector("#ub-sheet").value, bat: el.querySelector("#ub-bat").checked, tu_duyet: el.querySelector("#ub-tu").checked })
             .then(function (d) { if (d.ok !== false) { DS.toast("Đã lưu", "ok"); nap(); } });
+        },
+        "ub-kiem-tra": function () {
+          DS.api("POST", "/up-bai/kiem-tra", {sheet: el.querySelector("#ub-sheet").value}).then(function (r) {
+            if (r.ok === false) return;
+            DS.modal({title: "Kiểm tra Sheet · Chỉ đọc", wide: true, body: '<p>Page đang bật: ' + r.page_bat.length + ' · dòng đủ điều kiện: ' + r.du_dieu_kien.length + '</p><pre class="logbox">' + esc(JSON.stringify(r, null, 2)) + '</pre>'});
+          });
         },
         "ub-chay": function (b) {
           b.disabled = true; DS.toast("Đang chạy một lượt Sheet, tải video và AI viết bài có thể mất vài phút...", "info");

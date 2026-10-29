@@ -191,11 +191,47 @@ def viec_can_lam(row: List[str], cot: Dict[str, str]) -> Optional[str]:
     link, tt, duyet = o(row, cot, "link"), _bo_dau(o(row, cot, "trang_thai")), _bo_dau(o(row, cot, "duyet"))
     if not la_link_video(link):
         return None
-    if tt in ("", "cho"):
+    if tt in ("", "cho", "up ngay"):
         return "xu_ly"
     if tt in (_bo_dau(TT_CHO_DUYET), _bo_dau(TT_CHO_DANG)) and duyet == _bo_dau(DA_DUYET) and o(row, cot, "content"):
         return "dang"
     return None
+
+
+def kiem_tra_hang_doi(rows, cfg_rows):
+    """Read-only deterministic Sheet evidence; no AI interpretation or publication."""
+    cfgs = doc_cau_hinh_page(cfg_rows)
+    header, columns = tim_tieu_de(rows)
+    if header is None:
+        raise ValueError("Không tìm thấy hàng tiêu đề Link video")
+    ready, ignored = [], []
+    for index, row in enumerate(rows[header+1:], header+2):
+        if not any(str(x or '').strip() for x in row):
+            continue
+        pid = re.sub(r'\D', '', o(row, columns, 'page_id'))
+        status = o(row, columns, 'trang_thai')
+        entry = {'dong': index, 'page_id': pid, 'trang_thai': status, 'co_media': bool(o(row, columns, 'link'))}
+        config = cfgs.get(pid)
+        if not pid:
+            reason = 'Thiếu Page ID'
+        elif not config:
+            reason = 'Page chưa có trong cấu hình'
+        elif not config.bat:
+            reason = 'Page đang tắt'
+        elif not o(row, columns, 'link'):
+            reason = 'Thiếu link media'
+        else:
+            action = viec_can_lam(row, columns)
+            if action:
+                ready.append({**entry, 'hanh_dong': action, 'uu_tien': _bo_dau(status) == 'up ngay'})
+                continue
+            reason = ('Có link media nhưng luồng video chưa nhận diện được nguồn; cần kiểm tra ảnh/tệp, không kết luận thiếu media'
+                      if _bo_dau(status) in ('', 'cho', 'up ngay') else
+                      'Chờ hậu kiểm, đã xử lý hoặc chưa đủ điều kiện duyệt; không đăng lại')
+        ignored.append({**entry, 'ly_do': reason})
+    ready.sort(key=lambda r: (not r['uu_tien'], -r['dong'] if r['uu_tien'] else r['dong']))
+    return {'page_bat': [{'page_id': p.page_id, 'ten': p.ten} for p in cfgs.values() if p.bat],
+            'du_dieu_kien': ready, 'bo_qua': ignored, 'chi_doc': True}
 
 
 def prompt_content(cfg: Optional[CauHinhPage], ma: str, gia: str, mau: List[str], ghi_chu: str = "") -> str:
@@ -434,7 +470,10 @@ class UpBai:
                         except ValueError:
                             da_dang.setdefault(pid, []).append(bay_gio())
             xu_ly_con, dang_con = 2, 1
-            for i, r in enumerate(rows[tieu + 1:], start=tieu + 2):
+            plan = kiem_tra_hang_doi(rows, cfg_rows)
+            for entry in plan['du_dieu_kien']:
+                i = entry['dong']
+                r = rows[i-1]
                 if chi_dong and i != chi_dong:
                     continue
                 viec = viec_can_lam(r, cot)
@@ -456,6 +495,14 @@ class UpBai:
                         kq["dang"] += 1
             self.lan_cuoi = {"luc": bay_gio().strftime("%d/%m %H:%M"), **kq}
             return kq
+
+    async def kiem_tra(self, sheet_id=""):
+        sid = sheet_id or self.sheet_id
+        if not sid:
+            raise ValueError("Chưa chọn Google Sheet UP BÀI")
+        rows = await self.d.doc_sheet(sid, TAB_HANG_DOI)
+        configs = await self.d.doc_sheet(sid, TAB_CAU_HINH)
+        return kiem_tra_hang_doi(rows, configs)
 
     async def _xu_ly(self, so_dong: int, r: List[str], cot, cfgs, mau) -> None:
         link, pid = o(r, cot, "link"), re.sub(r"\D", "", o(r, cot, "page_id"))

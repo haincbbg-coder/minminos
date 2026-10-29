@@ -23,7 +23,7 @@ import doi_social_fanpage as fp  # noqa: E402
 ds.mo(Path(tempfile.mkdtemp()) / "kho")
 A = ds.ghep(ds.tao_ma_ghep(), "PC A")
 MA = A["may_id"]
-ds.nhip(MA, [{"id": "n1", "ten": "Hán Ngọc Nhi", "trinh_duyet": "chrome"}, {"id": "n2", "ten": "Nick 2", "trinh_duyet": "chrome"}],
+ds.nhip(MA, [{"id": "n1", "ten": "Fixture Nick", "trinh_duyet": "chrome"}, {"id": "n2", "ten": "Nick 2", "trinh_duyet": "chrome"}],
         kich_ban=["dang_ban_nhap", "quet_tai_khoan"], song_song=3)
 v2.dat_gioi_han_v2({"chung": {"nghi_phut": [0, 0]}})
 for i, ten in ((111111, "Trang Một"), (222222, "Trang Hai"), (333333, "Trang Ba"), (444444, "Trang Bốn"), (555555, "Trang Năm")):
@@ -31,10 +31,10 @@ for i, ten in ((111111, "Trang Một"), (222222, "Trang Hai"), (333333, "Trang B
 q = v2.tao_quet_tai_khoan(["n1"], ["facebook"])
 g = ds.nhan_viec(MA)
 v2.ghi_dich_den(g["id"], MA, ["facebook"], [
-    {"nen_tang": "facebook", "loai": "trang", "ten": "HALIMI Store", "link": "https://www.facebook.com/halimi.store"},
-    {"nen_tang": "facebook", "loai": "trang", "ten": "MeiMei Design", "link": "https://www.facebook.com/meimei"}])
+    {"nen_tang": "facebook", "loai": "trang", "ten": "Fixture Store", "link": "https://www.facebook.com/fixture.store"},
+    {"nen_tang": "facebook", "loai": "trang", "ten": "Fixture Design", "link": "https://www.facebook.com/fixture.design"}])
 ds.ghi_ket_qua(g["id"], MA, True, "ok", [])
-k = v2.tao_kien_thuc({"loai": "san_pham", "ten": "Váy lụa HALIMI", "mo_ta": "Váy lụa tơ tằm dáng suông"})
+k = v2.tao_kien_thuc({"loai": "san_pham", "ten": "Váy lụa Fixture", "mo_ta": "Váy lụa tơ tằm dáng suông"})
 
 from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -93,17 +93,17 @@ check("Trang FB qua nick: thiếu nick bị chặn", r["ok"] is False and "nick"
 r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "noi_dang": "fb_trang", "nick_id": "n1", "so_ban": 2, "xem_truoc": True}).json()
 check("Trang FB qua nick: thiếu Trang bị chặn", r["ok"] is False and "Trang" in r["error"])
 r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "noi_dang": "fb_trang", "nick_id": "n1", "so_ban": 2,
-                                          "dich": "https://www.facebook.com/meimei", "lich": "gio", "bat_dau": now + 600,
+                                          "dich": "https://www.facebook.com/fixture.design", "lich": "gio", "bat_dau": now + 600,
                                           "cach_phut": 120, "xem_truoc": True}).json()
-check("kế hoạch nick: tên Trang lấy từ danh sách đã quét", r["ok"] and r["ke_hoach"][0]["dich_ten"] == "MeiMei Design", r)
+check("kế hoạch nick: tên Trang lấy từ danh sách đã quét", r["ok"] and r["ke_hoach"][0]["dich_ten"] == "Fixture Design", r)
 check("kế hoạch nick: hai giờ cách 2 tiếng", abs(r["ke_hoach"][1]["hen_luc"] - r["ke_hoach"][0]["hen_luc"] - 7200) < 1)
 r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "san_pham_id": k["id"], "noi_dang": "fb_trang", "nick_id": "n1",
-                                          "so_ban": 2, "dich": "https://www.facebook.com/meimei", "lich": "gio",
+                                          "so_ban": 2, "dich": "https://www.facebook.com/fixture.design", "lich": "gio",
                                           "bat_dau": now + 600, "cach_phut": 120}).json()
 check("viết thật qua nick: 2 nháp", r["ok"] and r["so"] == 2, r)
 n0 = r["muc"][0]
-check("nháp mang link Trang + tên Trang + giờ đăng", n0["nhom"] == "https://www.facebook.com/meimei"
-      and n0["muc_tieu"]["dich_ten"] == "MeiMei Design" and abs(n0["hen_luc"] - (now + 600)) < 2)
+check("nháp mang link Trang + tên Trang + giờ đăng", n0["nhom"] == "https://www.facebook.com/fixture.design"
+      and n0["muc_tieu"]["dich_ten"] == "Fixture Design" and abs(n0["hen_luc"] - (now + 600)) < 2)
 check("nháp hẹn xa không hết hạn trước giờ đăng", r["muc"][1]["het_han"] > r["muc"][1]["hen_luc"])
 d = v2.duyet_ban_nhap(n0["id"], True)
 vc = ds.lay_viec(d["viec_id"])
@@ -112,7 +112,7 @@ check("việc chưa tới giờ thì máy chưa nhận", ds.nhan_viec(MA) is Non
 ds._db().execute("UPDATE viec SET chay_sau=? WHERE id=?", (time.time() - 1, vc["id"]))
 gv = ds.nhan_viec(MA)
 check("tới giờ thì máy nhận việc đăng nháp", gv and gv["id"] == vc["id"]
-      and gv["tham_so"]["tham_so"]["nhom"] == "https://www.facebook.com/meimei")
+      and gv["tham_so"]["tham_so"]["nhom"] == "https://www.facebook.com/fixture.design")
 r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "noi_dang": "fb_tuong", "so_ban": 1, "lich": "nhom", "xem_truoc": True}).json()
 check("lịch nhóm Trang không dùng cho nick", r["ok"] is False)
 r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "noi_dang": "instagram", "so_ban": 1, "xem_truoc": True}).json()
@@ -155,6 +155,22 @@ if "youtube" in v2.NOI_DANG:
     r = cl.post("/doi-social/viet-bai", json={"che_do": "nick", "noi_dang": "youtube", "nick_id": "n1", "so_ban": 1,
                                               "media": [AN], "xem_truoc": True}).json()
     check("YouTube cần video (ảnh không đủ)", r["ok"] is False and "video" in r["error"])
+
+# Prompt-only content is valid with no product selected.
+r = cl.post("/doi-social/viet-bai", json={"che_do": "api", "trang_ids": ["111111"], "so_ban": 1,
+    "yeu_cau": "Viết mẹo chăm cây ban công, không bán sản phẩm", "lich": "duyet"}).json()
+check("viết từ prompt không bắt chọn sản phẩm", r.get("ok") and r.get("so") == 1, r)
+from unittest.mock import patch
+async def repeated(*args, **kwargs):
+    return ["Một bài duy nhất về cây xanh, không được nhân bản để lấp bài thiếu."]
+before = len(fp.ds_bai()["muc"])
+with patch("doi_social_ai.viet_bai", repeated):
+    res = cl.post("/doi-social/viet-bai", json={"che_do": "api", "trang_ids": ["111111"], "so_ban": 3,
+        "yeu_cau": "Viết ba nội dung khác nhau về cây xanh", "lich": "duyet"})
+check("AI thiếu biến thể: báo 422 và không tạo nháp", res.status_code == 422 and len(fp.ds_bai()["muc"]) == before, res.text)
+import doi_social_ai as writer_ai
+clean = writer_ai._lam_sach_bai(r"Tiêu đề cây xanh\n\nChăm cây mỗi sáng cho ban công rực rỡ.", "fb_tuong", None)
+check("xuống dòng thật thay vì ký tự slash-n", "\n" in clean and r"\n" not in clean, clean)
 
 print("ALL PASS" if ok else "CÓ LỖI")
 raise SystemExit(0 if ok else 1)

@@ -1393,9 +1393,18 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             kieu_anh = str(d.get("kieu_anh") or ("album" if len(media) > 1 else "mot_anh"))
             kt = None
             if not xem_truoc:
-                kt = _kt_ai(d.get("san_pham_id"), yeu_cau)
-                if not kt:
-                    raise ValueError("chọn sản phẩm/chủ đề trong Kiến thức cho Agent")
+                if d.get("san_pham_id"):
+                    kt = _kt_ai(d.get("san_pham_id"), yeu_cau)
+                    if not kt:
+                        raise ValueError("không tìm thấy sản phẩm/chủ đề đã chọn")
+                elif yeu_cau.strip():
+                    import doi_social_ai
+                    kt = {"id": "", "loai": "chu_de", "ten": "Yêu cầu trực tiếp", "mo_ta": yeu_cau,
+                          "gia": "; ".join(str(x)+"đ" for x in doi_social_ai.gia_trong(yeu_cau)),
+                          "link": "\n".join(doi_social_ai.tim_link(yeu_cau))}
+                    kt = doi_social_bo_nao.bo_sung(kt, yeu_cau)
+                else:
+                    raise ValueError("nhập ý tưởng/yêu cầu hoặc chọn hồ sơ sản phẩm")
             if che_do == "api":
                 ids = [str(x) for x in (d.get("trang_ids") or []) if str(x or "").strip()]
                 if not ids and d.get("nhom_id"):
@@ -1490,8 +1499,8 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
                 return _loi(f"AI lỗi: {type(e).__name__}: {str(e)[:300]}", 502)
         if not bai:
             return _loi("AI không trả về bài nào, thử lại", 502)
-        while len(bai) < can:                   # AI viết thiếu: xoay vòng các bản đã có, có ghi chú
-            bai.append(bai[len(bai) % max(1, len(bai))])
+        if len(bai) < can:
+            return _loi(f"AI chỉ viết được {len(bai)}/{can} bài khác nhau. Chưa tạo nháp; giảm số lượng hoặc đổi yêu cầu.", 422)
         if che_do == "api":
             try:
                 kq = fp.tao_bai(**tham, noi_dung=bai[:can])
@@ -1948,6 +1957,8 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
     social_browser.register(app, ly_do_chan, _may)
     import social_local_control
     social_local_control.register(app, ly_do_chan, _may)
+    import social_campaigns
+    social_campaigns.register(app, ly_do_chan, lambda: _goi_ai_vai('viet_bai') or deps.goi_ai, _kt_ai, enabled=VONG_NEN_BAT)
 
 
 # ---------------------------------------------------------------- 26.10.194: Fanpage qua Graph API
