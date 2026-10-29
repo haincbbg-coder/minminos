@@ -87,6 +87,11 @@ async def run():
             await page.locator('#cp-list [data-cmd="pause"]').click()
             await page.locator('#cp-list').get_by_text('Tạm dừng · Chờ duyệt', exact=False).wait_for()
             assert cp.list_all()[0]['state'] == 'paused'
+            async with page.expect_response(lambda r: r.url.endswith('/doi-social/campaigns') and r.request.method == 'GET', timeout=20000) as refreshed_campaign:
+                await page.locator('#cp-list details summary').click()
+            await refreshed_campaign.value
+            await page.wait_for_load_state('networkidle')
+            assert await page.locator('#cp-list details').get_attribute('open') is not None
             for theme in ('light', 'dark'):
                 await page.locator('html').evaluate('(el, value) => el.setAttribute("data-theme", value)', theme)
                 for width in (390, 1280):
