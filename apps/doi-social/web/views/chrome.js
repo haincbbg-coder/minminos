@@ -25,11 +25,12 @@
     function frame() {
       if (!selected || drawing || !ctx.alive) return;
       drawing = true;
-      fetch(base + "/profile/" + selected + "/frame", { credentials: "same-origin", cache: "no-store" }).then(function (r) {
+      var profileId = selected;
+      fetch(base + "/profile/" + profileId + "/frame", { credentials: "same-origin", cache: "no-store" }).then(function (r) {
         if (!r.ok) throw new Error("Profile đang đóng hoặc chưa mở. Bấm Mở lại để tiếp tục.");
         return r.blob();
       }).then(function (blob) {
-        if (!ctx.alive) return;
+        if (!ctx.alive || selected !== profileId) return;
         var img = el.querySelector("#chrome-frame"), url = URL.createObjectURL(blob), old = img.src;
         img.onload = function () { URL.revokeObjectURL(url); };
         img.src = url;
@@ -55,7 +56,8 @@
       });
     }
     function select(id) {
-      selected = id; el.querySelector("#chrome-screen").hidden = false;
+      selected = id; el.querySelector("#chrome-frame").removeAttribute("src");
+      el.querySelector("#chrome-text").value = ""; el.querySelector("#chrome-screen").hidden = false;
       el.querySelector("#chrome-selected").textContent = "Màn hình Chrome"; frame(); refresh();
     }
     DS.bind(el, {

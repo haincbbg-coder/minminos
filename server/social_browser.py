@@ -269,7 +269,7 @@ class BrowserHost:
         return pages[min(item['tab'], len(pages) - 1)]
 
     async def action(self, pid, data):
-        if self.busy(pid):
+        if self.busy(pid) and data.get('action') != 'tab':
             raise ValueError('Đang chạy tác vụ; dừng tác vụ trước khi điều khiển tay')
         page = self.page(pid)
         action = data.get('action')

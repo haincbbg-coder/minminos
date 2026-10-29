@@ -49,7 +49,10 @@ async def run():
             from fastapi.responses import JSONResponse
             return None, JSONResponse({'error': 'unauthorized'}, status_code=401)
         return m, None
-    sb.register(app, lambda: None, auth)
+    import routes.doi_social as social_routes
+    social_routes.ly_do_chan = lambda: None
+    social_routes.VONG_NEN_BAT = False
+    social_routes.register(app, social_routes.DoiSocialDeps())
     from fastapi.staticfiles import StaticFiles
     app.mount('/apps/doi-social', StaticFiles(directory=str(ROOT / 'apps/doi-social/web'), html=True), name='social-ui')
     sock = socket.socket()
