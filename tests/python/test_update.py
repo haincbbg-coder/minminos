@@ -358,7 +358,11 @@ _bad_url = next((x for x in _anns if x["id"] == "tin-url-xau"), {})
 check("announcement chặn javascript URL", not (_bad_url.get("cta") or {}).get("url"))
 
 main._NOTIFICATION_CACHE.update({"at": 0.0, "data": None})
-_notifications = _aio.run(main.notifications_info())
+from unittest.mock import patch, AsyncMock
+with patch.object(main, "changelog_index", AsyncMock(return_value={
+    "current": "26.10.300", "latest": None, "releases": []
+})):
+    _notifications = _aio.run(main.notifications_info())
 check("/notifications hợp nhất dữ liệu", _notifications.get("unified") is True)
 check("/notifications có tin cộng đồng local", any(
     x.get("id") == "community-notification-inbox-launch"
