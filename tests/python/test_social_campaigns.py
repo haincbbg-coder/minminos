@@ -65,6 +65,15 @@ async def run():
         await engine.tick()
     assert cp.read(paused)['state'] == 'paused'
     assert len(fp.ds_bai()['muc']) == before, 'pause during awaited AI must prevent new queue writes'
+    cp.command(paused, 'resume')
+    assert cp.read(paused)['next_at'] is None
+    await engine.tick()
+    await engine.tick()
+    assert len(runs(paused)) == 1 and runs(paused)[0]['state'] == 'queued', 'resume once must not create another paid generation slot'
+    pending = cp.create(request(client_key='pause-planning'))
+    cp.command(pending, 'pause'); cp.command(pending, 'resume')
+    assert cp.read(pending)['state'] == 'planning'
+    cp.command(pending, 'pause')
 
     # A disabled/deleted target is caught before expensive media generation.
     disabled = cp.create(request(client_key='disabled', image={'mode': 'mcp', 'generate_tool': 'fake'}))

@@ -250,9 +250,11 @@ def command(cid, action):
             c.execute("UPDATE social_campaign SET state='paused',updated=? WHERE id=?", (now, cid))
         elif action == 'resume':
             if not row['plan']:
-                raise ValueError('Chiến dịch chưa có kế hoạch hợp lệ')
-            c.execute("UPDATE social_campaign SET state='active',errors=0,next_at=?,updated=? WHERE id=?",
-                      (now if row['plan']['kind'] == 'once' else schedule(row['plan'], now), now, cid))
+                c.execute("UPDATE social_campaign SET state='planning',errors=0,message='',updated=? WHERE id=?", (now, cid))
+            else:
+                existing = c.execute('SELECT 1 FROM social_campaign_run WHERE campaign=? LIMIT 1', (cid,)).fetchone()
+                next_at = (None if existing else max(now, row['plan'].get('at') or now)) if row['plan']['kind'] == 'once' else schedule(row['plan'], now)
+                c.execute("UPDATE social_campaign SET state='active',errors=0,next_at=?,updated=? WHERE id=?", (next_at, now, cid))
         elif action == 'run':
             if row['state'] != 'active':
                 raise ValueError('Chỉ chạy ngay khi chiến dịch đang bật')
