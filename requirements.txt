@@ -34,6 +34,7 @@
 # sách riêng nên vẫn CHẠY, chỉ kêu DeprecationWarning. Chuyển sang lifespan là việc riêng:
 # nó gộp 7 hàm vào một chỗ và thứ tự chạy giữa chúng là phần dễ làm sai nhất.
 fastapi==0.141.1
+tzdata>=2024.1  # IANA zones for campaign schedules on Windows as well as Linux
 uvicorn[standard]==0.51.0
 httpx==0.27.2
 claude-agent-sdk==0.2.116

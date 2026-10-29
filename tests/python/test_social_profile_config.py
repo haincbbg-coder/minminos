@@ -21,7 +21,7 @@ base = str(Path(tempfile.mkdtemp()) / 'profiles')
 batch = local.create_many({'name': 'Shop {n}', 'count': 3, 'start': 8, 'digits': 3, 'group': 'Shop', 'storage_root': base,
                            'proxy_lines': '127.0.0.1:8080:fixture-user:fixture-password'})
 assert [p['ten'] for p in batch] == ['Shop 008', 'Shop 009', 'Shop 010']
-assert all(Path(p['data_dir']).parent == Path(base) for p in batch)
+assert all(Path(p['data_dir']).parent == Path(base).resolve() for p in batch)
 assert 'fixture-password' not in pc.public_proxy(batch[0]['proxy'])
 assert 'fixture-password' not in pc.public_proxy({'server': 'http://fixture-user:fixture-password@localhost:8080'})
 old = local.create('Old folder')
