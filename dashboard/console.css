@@ -2162,7 +2162,7 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 /* Phones: the same menu as a bottom sheet with large rows, over a dimmed page. */
 .ht-rsheet-bg { position: fixed; inset: 0; z-index: 3140; background: var(--scrim, rgba(0, 0, 0, .45)); }
 .ht-rmenu.ht-rsheet { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-width: none; max-height: 80vh;
-  border-radius: var(--mm-r-field) 16px 0 0; border-bottom: 0; padding: 4px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  border-radius: var(--mm-r-field) var(--mm-r-field) 0 0; border-bottom: 0; padding: 4px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
 .ht-rsheet .ht-rm-it { min-height: 52px; padding: 10px 12px; }
 .ht-rsheet .ht-rm-ic svg, .ht-rsheet .ht-rm-end svg { width: 20px; height: 20px; }
 .ht-rsheet-h { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 12px 8px; font-size: var(--mm-fs-16);
@@ -2369,103 +2369,6 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
    ============================================================
    Khung trang dùng lại nguyên bộ lớp `.chatpage*` của trang Trò chuyện (luật xếp khung nằm
    trong _injectChatCss của console.js), và cột trái là chính module lịch sử `.cside-*`. Nên ở
-   đây chỉ còn hai thứ trang này thật sự đẻ ra: dải chip ngữ cảnh và menu bật lên từ chip.
-   0.159.0: errors sit in their own slot (#cdErr) in the page bar. */
-.cd-err { margin-left: auto; font-size: var(--mm-fs-12); }
-.cd-err:empty { display: none; }
-
-/* Hàng chip ngữ cảnh: nhét vào chính #modelBar đã mượn, đứng TRƯỚC chip Model, nên một hàng
-   đọc từ trái sang là thư mục, nhánh, worktree, điểm hồi, chế độ, rồi model. */
-.cd-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-right: 8px; }
-.cd-chip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--mm-fs-14); line-height: 1;
-  padding: 6px 9px; border-radius: var(--mm-r-pill); border: 1px solid var(--glass-brd);
-  background: var(--mm-field); color: var(--mm-muted); cursor: pointer; white-space: nowrap; }
-.cd-chip:hover { border-color: var(--info-line); color: var(--mm-text); }
-.cd-chip.on { border-color: var(--ok-line); color: var(--mm-text); }
-/* Ba chế độ, ba sắc thái. Plan đọc là "an toàn", Toàn quyền phải NHÌN ra được từ xa vì ở mức
-   đó engine commit, push và deploy được.
-
-   Hai lỗi của bản 0.63.2 sửa ở đây (chủ dự án báo chữ mức quyền bị chìm):
-
-   1. Chữ lấy màu --info-line, mà mấy biến `-line` là màu VIỀN: chúng có alpha 0,35 nên đặt
-      làm màu chữ thì chữ trong mờ, nhìn như đang bị tắt. Bảng màu của dự án tách sẵn ba vai:
-      `-ink` cho chữ, `-line` cho viền, `-wash` cho nền. Nay dùng đúng vai.
-   2. `var(--mm-warn)` KHÔNG hề tồn tại trong bảng màu (chỉ có --mm-warn, --mm-warn-line,
-      --mm-warn-wash). Giá trị sai thì trình duyệt bỏ luôn cả dòng khai báo, nên chip Toàn quyền
-      bấy lâu nay trông y hệt chip thường: đúng cái mức nguy hiểm nhất lại không có tín hiệu
-      nào. Thêm nền `-wash` để phân biệt được cả khi nhìn lướt.
-
-   Chip mặc định lấy --mm-muted cho hợp với hàng chip xung quanh, nhưng chip mức quyền nói một
-   điều người dùng CẦN đọc nên nhấn lên --mm-text. */
-.cd-chip.cd-mq-auto { color: var(--mm-text); }
-.cd-mq-suggest { border-color: var(--info-line); background: var(--info-wash);
-  color: var(--info-ink); }
-.cd-mq-full { border-color: var(--mm-warn-line); background: var(--mm-warn-wash);
-  color: var(--mm-warn); font-weight: 600; }
-/* Giữ màu của chính chip khi rê chuột: luật .cd-chip:hover kéo mọi chip về --mm-text, mà ở đây
-   thì Toàn quyền đang đỏ cam lại nhảy sang màu chữ thường đúng lúc người dùng chỉ vào nó. */
-.cd-chip.cd-mq-suggest:hover { color: var(--info-ink); border-color: var(--info-line); }
-.cd-chip.cd-mq-full:hover { color: var(--mm-warn); border-color: var(--mm-warn-line); }
-
-/* Danh sách thư mục có thể dài, nên menu phải tự cuộn: không chặn chiều cao thì nó tràn
-   khỏi màn hình và đè lên thanh điều hướng (chủ dự án báo 22/09). Chiều cao thật do JS đặt
-   theo chỗ trống quanh chip; luật này chỉ là trần dự phòng. */
-.cd-menu { position: fixed; z-index: 60; min-width: 220px; max-width: 340px; padding: 5px;
-  /* Nền ĐẶC. --mm-panel chỉ là lớp phủ alpha 2,5% dành cho thẻ nằm trên nền trang, dùng cho
-     một menu nổi thì chữ của header phía sau xuyên qua, đọc lẫn vào nhau (chủ repo báo 27/09,
-     kèm ảnh menu thư mục đè lên chip model). */
-  border-radius: var(--mm-r-btn); border: 1px solid var(--mm-line); background: var(--mm-panel);
-  box-shadow: 0 12px 34px var(--shadow-veil); display: flex; flex-direction: column; gap: 2px;
-  max-height: min(60vh, 420px); overflow-y: auto; }
-/* Tên thư mục và đường dẫn ở đây là chữ PHỤ, đọc lướt để chọn, nên để nhỏ gọn cho menu đỡ
-   choán màn hình. Trên điện thoại vẫn kéo về 16px ở khối @media bên dưới. */
-.cd-menu button { text-align: left; background: none; border: 0; color: var(--mm-text); cursor: pointer;
-  font-size: var(--mm-fs-14); padding: 7px 9px; border-radius: var(--mm-r-chip); font-family: inherit; }
-.cd-menu button:hover { background: var(--mm-field); }
-/* Mục đang chọn. Lại đúng cái bẫy đã sửa ở 0.63.6 cho chip mức quyền: --info-line là biến
-   VIỀN, alpha 0,35, nên đặt làm màu CHỮ thì chữ mờ đến khó đọc (chủ dự án báo 22/09). Dùng
-   biến -ink dành cho chữ, kèm in đậm để mắt bắt ngay mục đang chọn. */
-.cd-menu button.on { color: var(--info-ink); font-weight: 600; }
-.cd-menu button.nguy { color: var(--mm-bad); }   /* --danger không có trong bảng màu */
-.cd-menu button small { display: block; font-size: var(--mm-fs-12); color: var(--mm-dim); margin-top: 2px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Bảng Hoàn tác (0.256.0): danh sách file đổi từ một mốc tự động, xem diff, khôi phục. Chữ 16px
-   kể cả trên máy tính: người dùng đọc tên file và diff để quyết định có trả lại hay không, nên
-   đây là chữ CHÍNH chứ không phải chữ phụ. */
-.cd-undo { position: fixed; inset: 0; z-index: 70; background: var(--shadow-veil);
-  display: flex; align-items: center; justify-content: center; padding: 16px; }
-.cd-undo-box { width: min(720px, 100%); max-height: min(86vh, 900px); overflow-y: auto;
-  background: var(--mm-panel); border: 1px solid var(--mm-line); border-radius: var(--mm-r-field); padding: 16px;
-  font-size: var(--mm-fs-16); line-height: 1.5; color: var(--mm-text); box-shadow: 0 16px 40px var(--shadow-veil); }
-.cd-undo-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  margin-bottom: 10px; }
-.cd-undo-x { background: none; border: 0; color: var(--mm-muted); cursor: pointer; padding: 6px;
-  border-radius: var(--mm-r-chip); min-width: 40px; min-height: 40px; }
-.cd-undo-x:hover { background: var(--mm-field); }
-.cd-undo-note { color: var(--mm-muted); margin: 0 0 12px; }
-.cd-undo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.cd-undo-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cd-undo-row code { font-size: var(--mm-fs-14); word-break: break-all; flex: 1 1 200px; }
-.cd-undo-row button, .cd-undo-go { font: inherit; font-size: var(--mm-fs-16); cursor: pointer; border-radius: var(--mm-r-btn);
-  border: 1px solid var(--mm-line); background: var(--mm-field); color: var(--mm-text); padding: 8px 14px;
-  min-height: 40px; }
-.cd-undo-st { font-size: var(--mm-fs-14); padding: 2px 8px; border-radius: var(--mm-r-pill); border: 1px solid var(--mm-line); }
-.cd-undo-st.st-A { color: var(--ok-ink, var(--mm-text)); border-color: var(--ok-line); }
-.cd-undo-st.st-D { color: var(--mm-bad); }
-.cd-undo-diff { font-size: var(--mm-fs-14); line-height: 1.45; white-space: pre-wrap; word-break: break-word;
-  background: var(--bg); border: 1px solid var(--mm-line); border-radius: var(--mm-r-chip); padding: 10px;
-  margin: 8px 0 0; max-height: 50vh; overflow: auto; }
-.cd-undo-act { margin-top: 14px; display: flex; justify-content: flex-end; }
-.cd-undo-go { border-color: var(--mm-warn-line); color: var(--mm-warn); font-weight: 600; }
-.cd-undo-go:disabled { opacity: .5; cursor: default; }
-.cd-undo-kq { margin-top: 10px; }
-
-/* ============================================================
-   TRANG CODING (coding.js) - chỉ những gì RIÊNG của nó
-   ============================================================
-   Khung trang dùng lại nguyên bộ lớp `.chatpage*` của trang Trò chuyện (luật xếp khung nằm
-   trong _injectChatCss của console.js), và cột trái là chính module lịch sử `.cside-*`. Nên ở
    đây chỉ còn ba thứ trang này thật sự đẻ ra: dải chip ngữ cảnh, menu bật lên từ chip, và
    tấm thêm thư mục. */
 .cd-id { flex: 1 1 auto; min-width: 0; font-size: var(--mm-fs-14); color: var(--text3);
@@ -2546,67 +2449,6 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 .cd-menu button.nguy { color: var(--red); }   /* --danger không có trong bảng màu */
 .cd-menu button small { display: block; font-size: var(--mm-fs-12); color: var(--text3); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Không có kiểu dáng riêng cho hộp "thêm thư mục": nó là JavisFolderPicker, mặc bộ lớp
-   .folder-modal/.fm-* có sẵn trong style.css. */
-
-/* Hàng chip RIÊNG của màn hẹp. Trên máy tính nó rỗng và không chiếm chỗ (không có chip nào
-   được nhét vào), nên không cần ẩn bằng media query. */
-.cd-chips-hep:empty { display: none; }
-.cd-chips-hep { flex: none; padding: 0 0 8px; }
-
-@media (max-width: 900px) {
-  .cd-chip { font-size: var(--mm-fs-16); padding: 7px 10px; }
-  .cd-chips { flex-wrap: nowrap; overflow-x: auto; }
-  /* Vuốt ngang được, và không nuốt mất chip cuối: hàng này hay dài hơn bề ngang điện thoại. */
-  .cd-chips-hep .cd-chips { margin-right: 0; padding-bottom: 2px; }
-  /* Ngón tay bấm chứ không phải con trỏ, và màn hẹp thì chữ nhỏ đọc rất mệt. */
-  .cd-menu button { font-size: var(--mm-fs-16); padding: 9px 10px; }
-  .cd-menu button small { font-size: var(--mm-fs-14); }
-}
-
-/* ChatGPT Live: ô chọn giọng và nút nghe thử mẫu nằm cùng một hàng (0.65.17). */
-.v2-voice-row { display: flex; gap: 8px; align-items: center; }
-.v2-voice-row select { flex: 1; min-width: 0; }
-/* Nút Nghe thử chỉ rộng theo chữ: .gcard-btn trong thẻ cài đặt mặc định tràn ngang, đứng cạnh ô
-   chọn thì nó nuốt hết chỗ của ô chọn giọng. */
-.v2-voice-row > .gcard-btn { flex: none; width: auto; white-space: nowrap; margin-top: 0; }
-/* Owner screenshot 25/10/2026: "Nghe thử" sat lower than the voice select and was a different height. The
-   button kept the stacked-card margin-top: 14px and the select kept the form margin-bottom: 4px. In a row
-   both drop those margins and share --ctl-h, so they line up top and bottom. */
-.v2-voice-row > select, .v2-voice-row > .js-input { margin: 0; min-height: var(--ctl-h); }
-/* Thẻ Giọng nói ẩn/hiện từng hàng bằng thuộc tính hidden theo đường gọi (renderVoiceCard), nhưng
-   .qs-field và .gcard-btn tự đặt display nên đè mất hidden; luật này trả lại nghĩa cho hidden. */
-#voiceCard [hidden] { display: none !important; }
-/* 0.298.0: what you will hear, stated up front, and each field saying what it is for. The "saved" mark sits
-   right beside the field that changed (it used to be one line at the bottom of the card, out of sight). */
-#voiceCard .vc-now {
-  display: flex; flex-direction: column; gap: 4px; margin: 8px 0 12px; padding: 10px 12px;
-  border-radius: var(--mm-r-btn); background: var(--mm-panel); border: 1px solid var(--mm-line);
-  font-size: var(--mm-fs-14); line-height: 1.45; color: var(--mm-text);
-}
-#voiceCard .vc-now:empty { display: none; }
-#voiceCard .vc-now .vc-now-why { font-size: var(--mm-fs-13); color: var(--mm-dim); }
-#voiceCard .vc-field { align-items: flex-start; }
-#voiceCard .vc-lblcol { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 8px; }
-#voiceCard .vc-lblcol .qs-lbl { font-weight: 600; color: var(--mm-text); }
-#voiceCard .vc-sub { font-size: var(--mm-fs-13); line-height: 1.4; color: var(--mm-dim); }
-#voiceCard .vc-sub:empty { display: none; }
-#voiceCard .vc-field > .v2-voice-row { flex-wrap: wrap; }
-#voiceCard .vc-saved {
-  flex-basis: 100%; min-height: 18px; font-size: var(--mm-fs-13); color: var(--mm-ok);
-  opacity: 0; transition: opacity .2s;
-}
-#voiceCard .vc-saved:not(.on) { display: none; }
-#voiceCard .vc-saved.on { opacity: 1; }
-#voiceCard .vc-saved.bad { color: var(--mm-bad); }
-#voiceCard .vc-mismatch {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 10px; padding: 10px 12px;
-  border-radius: var(--mm-r-btn); border: 1px solid var(--mm-warn-line); background: var(--mm-warn-wash); color: var(--mm-warn);
-  font-size: var(--mm-fs-14); line-height: 1.45;
-}
-#voiceCard .vc-mismatch .gcard-btn { width: auto; flex: none; }
-@media (prefers-reduced-motion: reduce) { #voiceCard .vc-saved { transition: none; } }
 
 /* Không có kiểu dáng riêng cho hộp "thêm thư mục": nó là JavisFolderPicker, mặc bộ lớp
    .folder-modal/.fm-* có sẵn trong style.css. */
@@ -2913,6 +2755,3 @@ details.h2-sec[open] > summary.h2-h { margin-bottom: 6px; }
   .knn-hs { flex-direction: row; align-items: center; gap: 8px; }
   .knn-hb { margin-left: auto; }
 }
-
-.cview-hoi-thoai .cview-head { display: none; }
-.cview-hoi-thoai .cview-body { overflow: hidden; padding: 0 var(--mm-sp-4) var(--mm-sp-4); }

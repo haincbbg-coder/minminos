@@ -8,6 +8,6 @@ def check(ten, cond):
     print(("PASS " if cond else "FAIL ") + ten); ok = ok and cond
 check("không còn so JSON.stringify(undefined) với 'null' để quyết định vẽ lại",
       "JSON.stringify((_px.items[0] || {}).id)" not in src)
-check("vẽ lại chỉ khi chữ ký đổi", "chuKyBot() !== chuKyTruoc" in src)
-check("chữ ký luôn là chuỗi, không bao giờ undefined", '.join("|")' in src)
+check("vẽ lại chỉ khi chữ ký đổi", "var sig = metaSig()" in src and "sig !== _vetMeta" in src)
+check("chữ ký luôn là chuỗi, không bao giờ undefined", 'return JSON.stringify([c.id' in src)
 sys.exit(0 if ok else 1)

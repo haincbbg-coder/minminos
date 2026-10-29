@@ -173,6 +173,7 @@ def _conn() -> sqlite3.Connection:
         db.executescript(_SCHEMA)
         _nang_cap(db)
         db.commit()
+        _cat_nhom_lan_dau(db, path)
         _db, _db_path = db, path
         return db
 
@@ -338,6 +339,11 @@ def ghi_su_kien(ev: dict, dem_chua_doc: bool = True) -> dict:
     ts = e["created_at"]
     tk_id = _tai_khoan_id(e["channel"], e["account_id"])
     try:
+        import trich_tin
+        tr = trich_tin.gan_vao_tin(e)
+    except Exception:
+        tr = {}
+    try:
         with _lock:
             db = _conn()
             db.execute("BEGIN IMMEDIATE")
@@ -409,13 +415,13 @@ def ghi_su_kien(ev: dict, dem_chua_doc: bool = True) -> dict:
 
                 # 5. Cập nhật hội thoại: tin cuối, số tin, chưa đọc (chỉ đếm tin KHÁCH)
                 tom = e["text"].strip().replace("\n", " ")[:200] or f"[{e['message_type']}]"
-                them_chua_doc = 1 if e["sender_type"] == "customer" and dem_chua_doc else 0
+                them_chua_doc = 1 if e["sender_type"] == "customer" and dem_chua_doc and not ev.get("khong_chua_doc") else 0
                 # A phone number or email in the CUSTOMER's own words marks the conversation for the "has phone/email" filter.
                 contact = find_contact(e["text"]) if e["sender_type"] == "customer" else ""
                 # A NEW customer message brings a hidden conversation back into the inbox (owner's rule for "Hide
                 # conversation": a customer is never missed). Old messages imported from history (dem_chua_doc=False)
                 # and messages from the bot or the owner leave it hidden.
-                unhide = 1 if e["sender_type"] == "customer" and dem_chua_doc else 0
+                unhide = 1 if e["sender_type"] == "customer" and dem_chua_doc and not ev.get("khong_chua_doc") else 0
                 db.execute(
                     "UPDATE conversations SET last_message=?, last_message_at=?, last_sender_type=?,"
                     " unread_count=unread_count+?, message_count=message_count+1, updated_at=?,"
@@ -431,6 +437,12 @@ def ghi_su_kien(ev: dict, dem_chua_doc: bool = True) -> dict:
             except Exception:
                 db.execute("ROLLBACK")
                 raise
+        if tr.get("gap"):
+            try:
+                import trich_tin
+                trich_tin.bao_gap(e, tr, conv_id)
+            except Exception:
+                pass
         return {"ok": True, "trung": False, "conversation_id": conv_id, "message_id": msg_id,
                 "customer_id": customer_id}
     except Exception as ex:
@@ -1846,3 +1858,81 @@ def thong_ke_khach(days: int = 7, channel: str = "") -> dict:
         "theo_tag": dict(sorted(theo_tag.items(), key=lambda x: -x[1])),
         "cho_tra_loi": len(cho_tra_loi(0, MAX_DANH_SACH)),
     }
+
+
+GIU_SAO_LUU_NGAY = 14
+_KHOA_DA_CAT = "cat_nhom_%d_v1" % GIU_TIN_NHOM
+_TIEN_TO_SAO_LUU = "customer_conversations-truoc-cat-nhom-"
+
+def _thu_muc_sao_luu(path: Path) -> Path:
+    return Path(path).parent / "backups"
+
+def _cat_mot_nhom(db: sqlite3.Connection, conv_id: int) -> int:
+    """Xoá mọi tin cũ hơn GIU_TIN_NHOM tin mới nhất của MỘT hội thoại. Trả số tin đã xoá.
+
+    Tìm ranh giới bằng chỉ mục (conversation_id, id) rồi xoá một khoảng, nên rẻ dù gọi mỗi lần
+    ghi. Người gọi lo giao dịch."""
+    r = db.execute("SELECT id FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 1 OFFSET ?",
+                   (int(conv_id), GIU_TIN_NHOM)).fetchone()
+    if not r:
+        return 0
+    cur = db.execute("DELETE FROM messages WHERE conversation_id=? AND id<=?", (int(conv_id), int(r[0])))
+    return int(cur.rowcount or 0)
+
+def _don_sao_luu(path: Path) -> None:
+    """Xoá bản sao lưu trước-khi-cắt đã quá GIU_SAO_LUU_NGAY ngày."""
+    try:
+        thu_muc = _thu_muc_sao_luu(path)
+        if not thu_muc.is_dir():
+            return
+        han = _now() - GIU_SAO_LUU_NGAY * 86400
+        for f in thu_muc.glob(_TIEN_TO_SAO_LUU + "*.sqlite3"):
+            try:
+                if f.stat().st_mtime < han:
+                    f.unlink()
+            except OSError:
+                pass
+    except Exception as ex:
+        print(f"[conversations] dọn sao lưu lỗi: {ex}", file=sys.stderr)
+
+def _cat_nhom_lan_dau(db: sqlite3.Connection, path: Path) -> None:
+    """Chạy MỘT lần cho mỗi kho: cắt các nhóm đã phình từ trước bản 0.64.97.
+
+    Có nhóm nào vượt ngưỡng thì SAO LƯU nguyên file kho trước (API backup của SQLite, chép
+    nhất quán kể cả khi đang WAL), rồi mới xoá. Xong ghi khoá vào `sync_state` để lần khởi
+    động sau không làm lại. Mọi lỗi nuốt vào stderr: kho vẫn mở được như thường, lần sau thử lại.
+    """
+    try:
+        _don_sao_luu(path)
+        if db.execute("SELECT 1 FROM sync_state WHERE key=?", (_KHOA_DA_CAT,)).fetchone():
+            return
+        nhom = [int(r[0]) for r in db.execute(
+            "SELECT c.id FROM conversations c WHERE c.chat_type='group' AND"
+            " (SELECT COUNT(*) FROM messages m WHERE m.conversation_id=c.id) > ?",
+            (GIU_TIN_NHOM,)).fetchall()]
+        if nhom:
+            thu_muc = _thu_muc_sao_luu(path)
+            thu_muc.mkdir(parents=True, exist_ok=True)
+            dich = thu_muc / (_TIEN_TO_SAO_LUU + datetime.now().strftime("%Y%m%d-%H%M%S") + ".sqlite3")
+            bk = sqlite3.connect(str(dich))
+            try:
+                db.backup(bk)
+            finally:
+                bk.close()
+            xoa = 0
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                for cid in nhom:
+                    xoa += _cat_mot_nhom(db, cid)
+                db.execute("COMMIT")
+            except Exception:
+                db.execute("ROLLBACK")
+                raise
+            print(f"[conversations] cắt {len(nhom)} nhóm về {GIU_TIN_NHOM} tin gần nhất, xoá {xoa} tin cũ."
+                  f" Sao lưu trước khi cắt: {dich.name} (tự xoá sau {GIU_SAO_LUU_NGAY} ngày)", file=sys.stderr)
+        db.execute("INSERT INTO sync_state(key, value, updated_at) VALUES(?,?,?)"
+                   " ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                   (_KHOA_DA_CAT, str(len(nhom)), _now()))
+        db.commit()
+    except Exception as ex:
+        print(f"[conversations] cắt nhóm lần đầu lỗi: {type(ex).__name__}: {ex}", file=sys.stderr)

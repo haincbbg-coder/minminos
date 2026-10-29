@@ -166,6 +166,20 @@
       "palette",
       "type",
       "pin"
+    ],
+    "chatbot_v5": [
+      "at-sign",
+      "bell-off",
+      "cookie",
+      "ellipsis",
+      "eye-off",
+      "file-up",
+      "mail-open",
+      "phone",
+      "pin-off",
+      "reply",
+      "square",
+      "thumbs-up"
     ]
   }
 }

@@ -164,7 +164,7 @@
         '<div class="ht-top">' +
           '<div class="ht-title">' + ic("messages-square") + ' <span>' + esc(window.t("page.conversations.label")) + '</span></div>' +
           '<div class="ht-tabs"></div>' +
-          '<button type="button" class="s-btn-ghost mm-ops-open">' + ic("clipboard-list") + ' ' + esc(window.t("mm.inbox.ops")) + '</button>' +
+          '<button type="button" class="s-btn-ghost mm-ops-open">' + ic("clipboard-check") + ' ' + esc(window.t("mm.inbox.ops")) + '</button>' +
         '</div>' +
         '<div class="ht-tab-body"></div>' +
       '</div>';
@@ -182,7 +182,7 @@
     var ops = _host.querySelector(".mm-ops-open");
     if (ops) { ops.classList.toggle("on", _tab === "ops"); ops.setAttribute("aria-pressed", String(_tab === "ops")); }
     var NHAN = { inbox: ["ib.tab_inbox", "messages-square"], bot: ["ht.tab_bot", "headset"], kenh: ["ib.tab_kenh", "plug"],
-                 thongke: ["ib.tab_stats", "chart-column"], ops: ["mm.inbox.ops", "clipboard-list"] };
+                 thongke: ["ib.tab_stats", "chart-column"], ops: ["mm.inbox.ops", "clipboard-check"] };
     b.innerHTML = TABS.map(function (t) {
       // The Conversations tab counts the chats that need you (Chatbot v5), not unread ones: unread is what the A.I. already handles.
       var canBan = t === "inbox" && _whoCounts ? (_whoCounts.you_total != null ? _whoCounts.you_total : _whoCounts.you) : 0;

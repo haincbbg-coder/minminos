@@ -68,6 +68,49 @@ def _404(msg: str = ""):
     return JSONResponse({"ok": False, "error": msg}, status_code=404)
 
 
+async def _gui_cho_khach(c: dict, txt: str):
+    """Gửi một câu tới khách của hội thoại `c` qua kênh trong sổ. (ok, lỗi, raw account id)."""
+    kenh = str(c.get("channel") or "")
+    key = str(c.get("channel_account_id") or "")
+    raw = key.split(":", 1)[1] if ":" in key else key
+    s = channels.spec(kenh)
+    if not s:
+        return False, f"kênh '{kenh}' không có trong sổ đăng ký", raw
+    tk = {"id": raw, "channel": kenh}
+    if s.kind == "bot":
+        a = channel_accounts.get_account(raw) or {}
+        tk.update({k: a.get(k) for k in ("label", "external_id")})
+        tk["token"] = channel_accounts.get_token(raw)
+    ok, loi = await channels.gui(kenh, tk, str(c.get("external_chat_id") or ""), txt,
+                                 str(c.get("chat_type") or "private"))
+    return ok, loi, raw
+
+
+_LOI_SOAN = {
+    "khong_co_bot": "Cuộc chat này chưa gắn với bot nào nên không có ai để soạn câu trả lời.",
+    "khong_co_tin_khach": "Chưa có tin nào của khách để trả lời.",
+    "loi_engine": "Bộ não AI của bot đang lỗi hoặc không chạy được lượt này. Kiểm tra trang Bộ não AI.",
+    "bot_chon_im": "Bot đọc tin này và chọn không trả lời (nó viết [IM_LANG]). Bố tự gõ câu trả lời ở ô bên dưới.",
+    "gui_loi": "Soạn được câu trả lời nhưng gửi qua kênh bị lỗi.",
+}
+
+
+def _loi_soan(r: dict, status: int = 400):
+    """Trả lỗi có CÂU TIẾNG VIỆT trong `error`: giao diện chỉ hiện trường đó, thiếu nó là chủ
+    chỉ thấy "Lỗi 400" mà không biết bot im, bot hỏng hay chưa gắn bot."""
+    r = dict(r)
+    ct = str(r.get("chi_tiet") or "")
+    r["error"] = _LOI_SOAN.get(r.get("ly_do"), "Không soạn được câu trả lời.") + (f" ({ct})" if ct else "")
+    return JSONResponse(r, status_code=status)
+
+
+def _tin_khach_cuoi(conv_id: int) -> dict:
+    for m in reversed(conversations.tin_nhan(conv_id, limit=60)):
+        if m.get("sender_type") == "customer" and str(m.get("text") or "").strip():
+            return m
+    return {}
+
+
 def register(app, deps: ConversationsDeps):
     global _DEPS
     # Defaults use the existing runtime contract; callers/tests may still provide explicit dependencies.
