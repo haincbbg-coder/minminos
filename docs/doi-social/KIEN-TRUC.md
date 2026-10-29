@@ -270,3 +270,25 @@ def boi_canh_tro_ly() -> dict
 `bao_su_kien: Callable[[str, str], Awaitable] | None` (tiêu đề, nội dung → hòm thư + Telegram; dùng cho "đợt chạy xong", "nick bị đăng xuất", "N nháp chờ duyệt").
 Hàm dùng chung trong `routes.doi_social`: `tao_dot_va_chay(**kw)` (tạo đợt + đánh thức máy), `duyet_ke_hoach_va_chay(kid, dong_y)`,
 `async tro_ly_tra_loi(tin, phien, nguon='web', chat_id='') -> dict` (gọi AI, lưu lịch sử, lưu kế hoạch, báo Telegram nếu nguon=telegram).
+
+## Chrome MinMin (26.10.301)
+
+Ngoài Worker GPM, máy chạy MinMin có Worker Chromium tích hợp. Trang `#/chrome` tải Chromium,
+tạo profile, bật/tắt Worker, mở cửa sổ trên desktop hoặc điều khiển qua ảnh màn hình trên VPS.
+Dữ liệu nằm trong `STATE_DIR/social-chrome`; mỗi profile một thư mục riêng, không dùng profile
+Chrome mặc định của người dùng. Cookie được giữ qua đóng trình duyệt và cập nhật MinMin.
+Không tự nhập cookie/profile GPM; người dùng đăng nhập lại trong profile mới.
+
+`server/social_browser.py` quản lý context, giới hạn 3 profile mở đồng thời, tự khởi động lại
+Worker đã bật. Worker dùng `may_chrome.py` để lấy CDP qua API loopback. Các endpoint `/chrome/*`
+được cổng đăng nhập/CSRF của main bảo vệ và kiểm mở khoá app. Endpoint `/may/chrome/*` cần token
+máy tích hợp, IP loopback và tác vụ đang chạy thuộc đúng profile. Token lưu mã hoá, không trả
+về UI. CDP chỉ nghe loopback, không đưa cổng điều khiển ra Internet.
+
+Trong tác vụ, UI chỉ xem màn hình; không gõ/đóng profile đang chạy. Chạy ẩn có tác dụng với
+Chrome tích hợp (desktop chuyển sang headless; VPS luôn headless). Worker GPM cũ vẫn độc lập.
+Không có giả dấu vân tay hay đảm bảo vượt chặn tự động; người dùng tự đăng nhập, xử lý xác minh.
+
+Kiểm chứng: `test_social_browser.py` chạy Chromium thật trên CI cả headless lẫn desktop qua
+Xvfb, kiểm cookie bền, cách ly profile, nhập liệu/ảnh màn hình, khoá tác vụ, quyền máy/profile,
+Worker CDP và đóng profile. Các trang/nội dung thử đều giả lập, không đăng lên tài khoản thật.

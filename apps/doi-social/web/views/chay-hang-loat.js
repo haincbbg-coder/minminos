@@ -119,7 +119,7 @@
           '<div class="sec"><div class="sec-t">Cách chạy</div><div class="fgrid"><div class="fld"><label>Chạy song song mỗi máy</label><div class="seg" data-seg="_song">' +
           [1, 2, 3].map(function (n) { return '<button type="button" data-v="' + n + '" class="' + (S.song_song === n ? "on" : "") + '">' + n + " nick</button>"; }).join("") +
           '</div><div class="hint">Mỗi nick một cửa sổ. Máy yếu nên để 1.</div></div>' +
-          '<div class="fld"><label>Tuỳ chọn</label><div class="swrow"><label for="chl-an" style="font-weight:500">Chạy ẩn (không hiện cửa sổ trình duyệt)</label>' + DS.sw('id="chl-an"', S.chay_an) + "</div></div></div>" +
+          '<div class="fld"><label>Tuỳ chọn</label><div class="swrow"><label for="chl-an" style="font-weight:500">Chạy ẩn (profile Chrome MinMin)</label>' + DS.sw('id="chl-an"', S.chay_an) + "</div></div></div>" +
           '<div class="fld" style="margin-top:14px"><label>Chế độ</label><div class="seg" data-seg="_chedo"><button type="button" data-v="ngay" class="' + (S.che_do === "ngay" ? "on" : "") + '">' + ic("play") +
           ' Chạy ngay</button><button type="button" data-v="hen" class="' + (S.che_do === "hen" ? "on" : "") + '">' + ic("calendar") + " Hẹn lịch</button></div></div>" +
           '<div id="chl-lich"></div></div>' +

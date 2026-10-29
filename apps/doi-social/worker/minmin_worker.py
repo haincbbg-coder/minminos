@@ -34,7 +34,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PHIEN_BAN = "26.10.300"
+PHIEN_BAN = "26.10.301"
 THU_MUC = Path(__file__).resolve().parent
 CAU_HINH = THU_MUC / "worker.json"
 NHAT_KY = THU_MUC / "worker.log"
@@ -68,6 +68,10 @@ def log(*a) -> None:
 
 
 def doc_cau_hinh() -> dict:
+    if os.getenv("MINMIN_NATIVE_TOKEN"):
+        return {"token": os.environ["MINMIN_NATIVE_TOKEN"], "may_chu": os.environ["MINMIN_NATIVE_URL"],
+                "may_id": os.environ["MINMIN_NATIVE_MACHINE"], "ten": "Chrome MinMin",
+                "driver": "chromium", "song_song": 3}
     if CAU_HINH.is_file():
         return json.loads(CAU_HINH.read_text(encoding="utf-8"))
     return {}
@@ -369,8 +373,10 @@ def lam_viec(may_chu, tao_gpm, viec: dict, kb: dict = None, day_buoc=None, toc_d
             tep_cuc_bo = _tai_tep_viec(may_chu, viec, Path(td))
             if tep_cuc_bo:
                 nhat_ky(f"Đã tải {len(tep_cuc_bo)} tệp từ MinMin")
-            nhat_ky("Mở profile trong GPM Login")
+            nhat_ky("Mở profile trình duyệt")
             gpm = tao_gpm(nhat_ky)
+            if hasattr(gpm, "for_job"):
+                gpm.for_job(viec)
             cdp = gpm.mo(viec["nick_id"])
             nhat_ky(f"Đã kết nối được trình duyệt ({cdp.split('/')[-1] if cdp.startswith('ws') else cdp})")
         except Exception as e:
@@ -555,9 +561,12 @@ def chay() -> int:
         log("Tệp kỹ năng lỗi: " + "; ".join(f"{t} ({l})" for t, l in loi_nap))
 
     def tao_gpm(nk):
+        if ch.get("driver") == "chromium":
+            from may_chrome import ChromeMinMin
+            return ChromeMinMin(may_chu, nhat_ky=nk)
         return GPM(goc_gpm, nhat_ky=nk)
 
-    gpm_nhip = GPM(goc_gpm)
+    gpm_nhip = tao_gpm(log)
     dp = DieuPhoi(song_song)
     luong: dict = {}
     day_buoc = DayBuoc(may_chu)

@@ -1944,6 +1944,8 @@ def register(app: FastAPI, deps: DoiSocialDeps) -> None:
             return _loi(e)
 
     _dang_ky_fanpage(app, _chan, _than)
+    import social_browser
+    social_browser.register(app, ly_do_chan, _may)
 
 
 # ---------------------------------------------------------------- 26.10.194: Fanpage qua Graph API
