@@ -121,5 +121,5 @@ out=asyncio.run(runtime._make_answer_fn(b)('Câu tiếp theo',{'chat_id':'333','
 assert not out.get('text') and not any(m['sender_type']=='ai' for m in inbox.tin_nhan(live))
 # Brand regression is the actual message sent to Telegram, not a renamed protocol key.
 src=(ROOT/'server/telegram_bot.py').read_text(encoding='utf-8')
-assert '"🤔 MinMin đang xử lý…"' in src and '"🤔 Javis đang xử lý…"' not in src
+assert '"✍ MinMin đang soạn tin…"' in src and '"🤔 Javis đang xử lý…"' not in src
 print('PASS: MinMin brand, custom scopes, account isolation, persisted drafts, handoff, stale drafts and exactly-once draft claims')

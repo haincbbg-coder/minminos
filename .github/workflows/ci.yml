@@ -18,6 +18,23 @@ on:
   workflow_dispatch:
 
 jobs:
+  social-browser:
+    name: Đội Social trên Chromium thật
+    runs-on: ubuntu-latest
+    env:
+      MINMIN_REQUIRE_CHROMIUM: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cài Chromium và thư viện kiểm thử
+        run: |
+          python -m pip install -r requirements.txt playwright==1.64.1
+          python -m playwright install --with-deps chromium
+      - name: Kiểm thử Worker trên trang mô phỏng, không đăng mạng xã hội thật
+        run: python tests/python/test_doi_social_worker.py
+
   test:
     runs-on: ubuntu-latest
     steps:

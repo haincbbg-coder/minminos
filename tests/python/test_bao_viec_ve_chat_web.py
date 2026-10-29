@@ -138,7 +138,7 @@ check("chỉ đường thay thế: giao thêm việc tổng hợp bằng deps", 
 
 # Không có mã phiên (đường gọi cũ) thì không được vỡ, chỉ là thiếu khối đó.
 blk0 = channel_context.build_channel_block("dashboard", port=7777)
-check("thiếu mã phiên vẫn dựng được khối kênh, không nổ", "Dashboard web Javis" in blk0)
+check("thiếu mã phiên vẫn dựng được khối kênh, không nổ", "Dashboard web MinMin" in blk0)
 check("thiếu mã phiên thì không bịa ra hướng dẫn web:", "web:" not in blk0)
 
 # Telegram giữ nguyên đường cũ.

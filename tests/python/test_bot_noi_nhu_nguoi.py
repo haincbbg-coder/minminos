@@ -125,7 +125,7 @@ async def t_khong_tin_trang_thai():
     tg2 = FakeTelegram()
     await bot_chu(answer)._handle_turn(tg2, "42", "còn hàng không em")
     check("chủ: vẫn gửi tin trạng thái như cũ",
-          any("MinMin đang xử lý" in t for t in tg2.texts()))
+          any("MinMin đang soạn tin" in t for t in tg2.texts()))
     # Từ 0.26.4 tin trạng thái KHÔNG bị xoá nữa, nó ở lại thành dòng vết công cụ. Chi tiết và
     # lý do ở tests/python/test_tin_trang_thai_telegram.py.
     check("chủ: KHÔNG xoá tin trạng thái nữa", "deleteMessage" not in tg2.methods())

@@ -103,7 +103,7 @@ tat_ca = " ".join(sua) + " ".join((p.get("text") or "") for m, p in c.calls if m
 check("không tin nào chứa câu lệnh shell", "/bin/sh" not in tat_ca and "sed -n" not in tat_ca, sua)
 check("dòng vết cuối liệt kê nhãn ngắn",
       bool(sua) and sua[-1].startswith("⚙ Chạy lệnh · pos_statistics · "), sua[-1] if sua else None)
-check("trạng thái tạm lúc chạy hiện nhãn", any(s.startswith("⏳ ⚙ Chạy lệnh") for s in sua), sua)
+check("trạng thái tạm lúc chạy hiện nhãn", any(s.startswith("✍ MinMin đang soạn tin… ⚙ Chạy lệnh") for s in sua), sua)
 
 
 # ---- 4. Gốc: CodexCLI đặt tên theo loại việc, câu lệnh vẫn nằm trong item ----

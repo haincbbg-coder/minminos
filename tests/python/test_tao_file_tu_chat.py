@@ -179,7 +179,7 @@ check("engine: id chết bị bỏ ngay trong vòng đọc sự kiện",
       (ROOT / "server" / "claude_sdk_engine.py").read_text(encoding="utf-8"))
 check("dashboard: mất mạch thì mồi lại từ kho phiên (cùng cách Codex)",
       "_resume_failed = await _consume_claude(" in MAIN
-      and "Javis đang khôi phục ngữ cảnh từ lịch sử đã lưu" in MAIN)
+      and "MinMin đang khôi phục ngữ cảnh từ lịch sử đã lưu" in MAIN)
 check("telegram: mất mạch thì mồi lại", "_rf = await _chay_claude(_cli_prompt)" in MAIN)
 
 # ============================================================

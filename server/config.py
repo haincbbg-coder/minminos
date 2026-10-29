@@ -792,6 +792,11 @@ def read_settings():
             _deep_merge(cfg, data or {})
     except Exception:
         pass
+    # Migrate legacy product defaults without overwriting custom workspace names.
+    if str(cfg.get("workspace_name") or "").strip().casefold() in {
+        "javis", "javis os", "jarvis", "jarvis os", "min min", "min min os"
+    }:
+        cfg["workspace_name"] = "MinMin OS"
     _nan_provider_da_go(cfg)
     _no_rong_pham_vi_bo_nao(cfg)
     _ap_muc_mac_dinh(cfg)

@@ -166,8 +166,10 @@ def md_to_mdv2(text: str) -> str:
 class TelegramBot(HangLuot):
     def __init__(self, token, chat_id, answer_fn, command_fn=None, callback_fn=None,
                  download_dir=None, commands=None, precheck_fn=None, event_fn=None,
-                 giau_trang_thai=False, stt_fn=None):
+                 giau_trang_thai=False, stt_fn=None, display_name=""):
         self.token = token
+        self.display_name = str(display_name or "")[:64]
+        self.loi_ten_hien_thi = ""
         # Giấu MỌI tin trạng thái/kỹ thuật của Javis, để cuộc trò chuyện đọc như người thật.
         # Bot của CHỦ để False (chủ cần thấy "đang gọi công cụ…", cần lệnh /stop); bot chuyên
         # trách nói với khách thì True. Xem khối chú thích ở đầu file.
@@ -399,7 +401,7 @@ class TelegramBot(HangLuot):
     async def _giu_typing(self, client, chat):
         """Giữ chấm "đang nhập…" sáng suốt cả lượt trả lời (chế độ người thật).
 
-        Đây là thứ THAY THẾ tin "🤔 MinMin đang xử lý…": người đang chờ vẫn thấy đầu kia có
+        Đây là thứ THAY THẾ tin "✍ MinMin đang soạn tin…": người đang chờ vẫn thấy đầu kia có
         động tĩnh, nhưng thấy đúng cái một người thật để lại chứ không phải một tin nhắn máy.
         Telegram tự tắt chấm sau ~5 giây nên phải nhắc lại đều.
         """
@@ -412,7 +414,7 @@ class TelegramBot(HangLuot):
         """Gửi 1 tin trạng thái (plain, không markdown) → trả message_id để sửa sau.
 
         `disable_notification` là phần quan trọng chứ không phải chi tiết làm đẹp. Trước đây
-        mỗi lượt hỏi nổ HAI thông báo lên điện thoại: một cái "🤔 MinMin đang xử lý…" hoàn toàn
+        mỗi lượt hỏi nổ HAI thông báo lên điện thoại: một cái "✍ MinMin đang soạn tin…" hoàn toàn
         vô nghĩa, rồi mới tới câu trả lời. Tin này chỉ để NHÌN trong lúc chờ, không phải để
         gọi người ta ra xem, nên nó đi im. Sửa tin (`editMessageText`) vốn không nổ thông báo,
         nên cả lượt chỉ còn đúng một tiếng chuông: lúc câu trả lời thật được gửi.
@@ -510,6 +512,25 @@ class TelegramBot(HangLuot):
         """
         rep = msg.get("reply_to_message") or {}
         return bool(self.bot_id) and (rep.get("from") or {}).get("id") == self.bot_id
+
+    async def _dong_bo_ten(self, client):
+        """Owner display name only; customer bots leave display_name empty.
+
+        API: https://core.telegram.org/bots/api#setmyname (does not change @username).
+        """
+        name = getattr(self, "display_name", "")
+        if not name:
+            return
+        errors = []
+        for lang in ("", "vi", "en"):
+            try:
+                response = await client.post(self._url("setMyName"),
+                                             json={"name": name, "language_code": lang})
+                if not (response.json() or {}).get("ok"):
+                    errors.append(lang or "default")
+            except Exception as exc:
+                errors.append(type(exc).__name__)
+        self.loi_ten_hien_thi = ", ".join(errors)
 
     async def _hoi_danh_tinh(self, client, lan=3):
         """getMe: bot phải biết @username và id của CHÍNH NÓ. Hỏng cái này là điếc trong nhóm.
@@ -715,7 +736,7 @@ class TelegramBot(HangLuot):
         if self.giau_trang_thai:
             giu = asyncio.create_task(self._giu_typing(client, chat))
         else:
-            status_mid = await self._send_status(client, chat, "🤔 MinMin đang xử lý…")
+            status_mid = await self._send_status(client, chat, "✍ MinMin đang soạn tin…")
         _last = [0.0]
         t0 = time.monotonic()
         tools = []          # tên công cụ đã gọi trong lượt, giữ thứ tự, không trùng
@@ -737,7 +758,7 @@ class TelegramBot(HangLuot):
             # Chuỗi nói về công cụ thì hiện NHÃN đã rút gọn, không hiện nguyên chuỗi engine gửi
             # (Codex từng gửi cả câu lệnh shell dài vài dòng làm "tên").
             await self._edit_status(client, chat, status_mid,
-                                    "⏳ " + (f"⚙ {ten}…" if ten else (txt or "Đang xử lý…")))
+                                    "✍ MinMin đang soạn tin… " + (f"⚙ {ten}…" if ten else (txt or "")))
 
         try:
             try:
@@ -797,6 +818,7 @@ class TelegramBot(HangLuot):
                 await client.post(self._url("deleteWebhook"))
             except Exception as e:
                 print(f"[telegram deleteWebhook] {e}", file=sys.stderr)
+            await self._dong_bo_ten(client)
             await self._hoi_danh_tinh(client)
             await self._day_menu_lenh(client)
             print(f"[telegram] bot started (chat_id={','.join(self.chat_ids) or 'mọi người'})", file=sys.stderr)

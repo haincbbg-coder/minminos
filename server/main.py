@@ -1,5 +1,5 @@
 """
-Javis OS - Backend
+MinMin OS - Backend
 Kiến trúc: Voice (browser) ⇄ FastAPI WebSocket ⇄ Claude Code CLI subprocess
 
 Javis KHÔNG gọi Anthropic API trực tiếp. Mọi reasoning + tool calling đi qua
@@ -56,6 +56,7 @@ _record_boot_version = update_state.record_boot_version
 _update_outcome = update_state.update_outcome
 import git_brain
 import engine
+import turn_continuity
 import openai_oauth
 import claude_update   # tự chạy `claude update` hằng ngày để model mới hiện ra
 import claude_models   # model Claude LIVE cho provider anthropic-cli (hỏi bằng API key, nếu có)
@@ -185,7 +186,7 @@ import voice_ear     # tai nghe lại: model đa ngôn ngữ nghe âm thanh rồ
 import codex_realtime  # ChatGPT Live: một Codex app-server sống lâu, realtime trên gói ChatGPT (0.65.17)
 import voice_call     # nút mic là gọi Javis: tự chọn ChatGPT Live / Live API / Cơ bản (0.65.18)
 
-app = FastAPI(title="Javis OS")
+app = FastAPI(title="MinMin OS")
 _CHAT_RUNTIME = ChatRuntime()
 ui_bridge.attach(_CHAT_RUNTIME)
 _CONTEXT_RUNTIME = context_runtime.get_runtime()
@@ -1206,7 +1207,7 @@ def log_conversation(brain: str, user_msg: str, javis_msg: str):
     except Exception as e:
         print(f"[memory log error] {e}", file=__import__('sys').stderr)
 
-# Working directory cho Claude CLI - mặc định là root project Javis OS
+# Working directory cho Claude CLI - mặc định là root project MinMin OS
 # để Claude đọc được CLAUDE.md và truy cập MCPs cài globally
 CLAUDE_CWD = os.getenv("CLAUDE_CWD", str(Path(__file__).parent.parent))
 
@@ -1510,7 +1511,7 @@ def _doi_phien_that(request: Request):
 
 
 def _ten_hien_thi(cfg=None) -> str:
-    """Tên NGƯỜI để hiện trong app Authenticator, sau tên workspace: "Javis OS: Minh Quý".
+    """Tên NGƯỜI để hiện trong app Authenticator, sau tên workspace: "MinMin OS: Minh Quý".
 
     Thứ tự ưu tiên có lý do: `USER_NAME` là tên người dùng tự đặt cho chính mình, còn
     `auth.username` là tên ĐĂNG NHẬP - thường là "admin", đúng về kỹ thuật nhưng vô nghĩa khi
@@ -2752,6 +2753,15 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
     # Phase 0-1: chỉ đo metadata payload sau khi đã biết tool schema thật. Không lưu content,
     # không chặn quota và không thay danh sách tool. ContextVar giữ trace riêng từng asyncio task.
     _trace = context_runtime.current_trace()
+    _receipt_store = turn_continuity.ReceiptStore()
+    _receipt_scope = _receipt_store.scope(
+        _brain_root(brain) if brain else None, getattr(_trace, "session_id", ""))
+    try:
+        _receipts = _receipt_store.recent(_receipt_scope)
+    except Exception as _exc:
+        _receipts = []
+        print(f"[tool receipts] {type(_exc).__name__}", file=__import__('sys').stderr)
+    messages = turn_continuity.prepare(messages, tools, _receipts)
     if _trace:
         _CONTEXT_RUNTIME.set_route(_trace, prov, model or "?")
         _CONTEXT_RUNTIME.observe_payload(
@@ -2792,8 +2802,9 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
 
         if prov in ("openrouter", "openai", "anthropic-api", "gemini", "groq", "xai", "meta", "ollama", "openai-compat",
                 "deepseek", "qwen", "glm", "minimax"):
-            return engine.thu_lai_khi_tam_thoi(_vong_tool, nhan=f"{prov}/{model or 'mặc định'}+tool",
-                                               xoay=_xoay)
+            return turn_continuity.track(
+                engine.thu_lai_khi_tam_thoi(_vong_tool, nhan=f"{prov}/{model or 'mặc định'}+tool",
+                                           xoay=_xoay), _receipt_store, _receipt_scope)
     return _api_stream(prov, key, model, messages, reasoning)
 
 
@@ -6514,7 +6525,7 @@ def _check_structure(root: Path):
     return items
 
 JAVIS_README = (
-    "# Javis\n\nLớp điều phối của Javis OS trong vault này.\n\n"
+    "# Javis\n\nLớp điều phối của MinMin OS trong vault này.\n\n"
     "- `agents/` - các Agent (vai trò + skills + bộ nhớ riêng)\n"
     "- `workflows/` - quy trình nhiều agent (status active/off)\n"
     "- Skills dùng chung ở `skills/` (tự mirror sang `.claude/skills` cho Claude Code native)\n"
@@ -6540,7 +6551,7 @@ TASKINBOX_SEED = (
 )
 SCHEMA_SEED = (
     "# AGENTS.md - Vault Schema (Javis)\n\n"
-    "> Vault này hoạt động với Javis OS. Cấu trúc:\n\n"
+    "> Vault này hoạt động với MinMin OS. Cấu trúc:\n\n"
     "- `01 - Daily Log/` → `04 - Future Log/` - bộ sổ bullet journal (nhật ký ngày/tuần/tháng/tương lai, chứa task `- [ ]`; khối dataview kéo việc từ đây)\n"
     "- `06 - Sources/` - ghi chú thô (source of truth)\n"
     "- `07 - Wiki/` - tri thức đã chưng cất, có `[[wikilink]]`\n"
@@ -8607,7 +8618,7 @@ async def save_skill(name: str = Form(...), description: str = Form(""), group: 
 @app.post("/skills/delete")
 async def delete_skill(slug: str = Form(...), brain: str = Form("brain")):
     if system_sync.is_system_skill(slug):
-        return JSONResponse({"error": "Skill hệ thống của Javis OS - không xoá được (đi theo "
+        return JSONResponse({"error": "Skill hệ thống của MinMin OS - không xoá được (đi theo "
                              "phiên bản app, xoá cũng tự cài lại khi cập nhật). Muốn ngừng dùng "
                              "thì TẮT skill (bỏ tích)."}, status_code=400)
     if not skill_router.valid_slug(slug):
@@ -9254,7 +9265,7 @@ async def files_raw(brain: str = Query("brain"), path: str = Query(...), dl: int
 def _share_chan(ban) -> str:
     """Dòng chân trang: nói rõ đây là file được chia sẻ, để người xem biết mình đang xem gì."""
     ten = os.path.basename(str(ban.get("path") or "")) or "file"
-    return share_render.esc(ten) + " · được chia sẻ từ Javis OS"
+    return share_render.esc(ten) + " · được chia sẻ từ MinMin OS"
 
 
 def _share_file(ban):
@@ -15235,8 +15246,8 @@ async def notifications_info():
         releases.append({
             "id": f"release:{rel.get('version')}",
             "kind": "update",
-            "title": f"Javis OS v{rel.get('version')}",
-            "summary": bullets[0] if bullets else "Bản cập nhật Javis OS mới.",
+            "title": f"MinMin OS v{rel.get('version')}",
+            "summary": bullets[0] if bullets else "Bản cập nhật MinMin OS mới.",
             "body": "\n".join(f"• {item}" for item in bullets[1:5]),
             "published_at": rel.get("date") or "",
             "priority": "high" if (is_current or (is_new and is_latest)) else "normal",
@@ -17455,7 +17466,7 @@ async def websocket_endpoint(ws: WebSocket):
                         # tạo thread mới từ transcript SQLite, lưu ID mới, rồi các lượt sau resume nó.
                         await ws.send_text(json.dumps({
                             "type": "system",
-                            "content": "Phiên Codex cũ không còn trên máy - Javis đang khôi phục ngữ cảnh từ lịch sử đã lưu."
+                            "content": "Phiên Codex cũ không còn trên máy - MinMin đang khôi phục ngữ cảnh từ lịch sử đã lưu."
                         }))
                         ccli.session_id = None
                         _fallback = compaction.bootstrap_prompt(
@@ -17745,6 +17756,10 @@ async def websocket_endpoint(ws: WebSocket):
                                     }))
                                 elif ev["type"] == "tool_result":
                                     _ng_kq.append(str(ev.get("content") or ""))
+                                    await ws.send_text(json.dumps({
+                                        "type": "tool_result", "tool": ev.get("name", ""),
+                                        "content": "Đã nhận phản hồi công cụ.",
+                                    }))
                                 elif ev["type"] == "text":
                                     final_text += ev["content"]
                                     await ws.send_text(json.dumps({
@@ -17946,7 +17961,7 @@ async def websocket_endpoint(ws: WebSocket):
                     # SQLite rồi chạy lại, lượt sau resume mạch mới. Cùng cách nhánh Codex.
                     await ws.send_text(json.dumps({
                         "type": "system",
-                        "content": "Phiên Claude cũ không còn trên máy - Javis đang khôi phục ngữ cảnh từ lịch sử đã lưu."
+                        "content": "Phiên Claude cũ không còn trên máy - MinMin đang khôi phục ngữ cảnh từ lịch sử đã lưu."
                     }))
                     cli.session_id = None
                     _cli_raw2 = [{"role": _m["role"], "content": _m["content"]}
@@ -18258,7 +18273,7 @@ async def websocket_endpoint(ws: WebSocket):
 
             async def _giu_cau_goc():
                 await send_raw({"type": "status", "session_id": conv_sid,
-                                "content": "Javis đang kiểm tra lại câu vừa nghe..."})
+                                "content": "MinMin đang kiểm tra lại câu vừa nghe..."})
                 # Kho phiên và bong bóng giữ câu gốc; chỉ lời gửi bộ não chính kèm ghi chú để
                 # nó tự hiểu từ nghe nhầm mà không giải thích ra (voice_brain.GHI_CHU_CAU_NGHE).
                 await run_turn(conv_sid, original_message + "\n\n" + voice_brain.GHI_CHU_CAU_NGHE,
@@ -18310,7 +18325,7 @@ async def websocket_endpoint(ws: WebSocket):
 
             try:
                 brain_obj = await voice_brain.get_brain(conv_sid, conf)
-                await send_raw({"type": "status", "content": "Javis đang trả lời nhanh...", "session_id": conv_sid})
+                await send_raw({"type": "status", "content": "MinMin đang trả lời nhanh...", "session_id": conv_sid})
                 # Đang có việc nền thì dặn bộ não giọng (V3): kết quả tự hiện, đừng bịa, đừng giao lại.
                 _dan = [x for x in (voice_brain.pending_note(conv_sid),
                                     voice_brain.GHI_CHU_TAT_LOC)
@@ -22764,7 +22779,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
 
 async def _tg_help_text(brain):
     return (
-        "🤖 Javis Telegram\n\n"
+        "🤖 MinMin OS · Telegram\n\n"
         "Lệnh:\n"
         "/status - engine, model, vault, trạng thái\n"
         "/skills - liệt kê skill\n"
@@ -23495,7 +23510,7 @@ async def zalo_bot_test():
             for cid in ids:
                 try:
                     r = await c.post(url, json={"chat_id": cid,
-                                                "text": "Javis Zalo đã kết nối. Nhắn câu hỏi bất kỳ nhé."})
+                                                "text": "MinMin OS đã kết nối Zalo. Nhắn câu hỏi bất kỳ nhé."})
                     d = r.json() if r.content else {}
                     if d.get("ok"):
                         sent += 1
@@ -23543,7 +23558,7 @@ def restart_telegram():
     _TG_SESS.clear()   # xoá mọi phiên hội thoại cũ khi khởi động lại bot
     if t.get("enabled") and t.get("token"):
         _TG_BOT = TelegramBot(t["token"], t.get("chat_id", ""), _tg_answer, _tg_command, _tg_callback,
-                              download_dir=_tg_inbox_dir, stt_fn=_stt_nghe)
+                              download_dir=_tg_inbox_dir, stt_fn=_stt_nghe, display_name="MinMin OS")
         _TG_BOT.start()
         return True
     return False
@@ -23560,7 +23575,8 @@ async def telegram_status():
             "last_error": (_TG_BOT.last_error if _TG_BOT else ""),
             # Menu lệnh "/" đặt hụt: bot vẫn chạy, chỉ là gõ "/" không sổ ra danh sách. Tách
             # khỏi last_error vì vòng poll xoá last_error sau mỗi lượt thành công.
-            "loi_menu_lenh": (getattr(_TG_BOT, "loi_menu_lenh", "") if _TG_BOT else "")}
+            "loi_menu_lenh": (getattr(_TG_BOT, "loi_menu_lenh", "") if _TG_BOT else ""),
+            "loi_ten_hien_thi": (getattr(_TG_BOT, "loi_ten_hien_thi", "") if _TG_BOT else "")}
 
 
 @app.post("/telegram/restart")
@@ -24038,7 +24054,7 @@ async def telegram_test():
             for cid in ids:
                 try:
                     r = await c.post(f"https://api.telegram.org/bot{t['token']}/sendMessage",
-                                     json={"chat_id": cid, "text": "✅ Javis Telegram đã kết nối. Nhắn câu hỏi bất kỳ nhé."})
+                                     json={"chat_id": cid, "text": "✅ MinMin OS đã kết nối Telegram. Nhắn câu hỏi bất kỳ nhé."})
                     d = r.json()
                     if d.get("ok"):
                         sent += 1

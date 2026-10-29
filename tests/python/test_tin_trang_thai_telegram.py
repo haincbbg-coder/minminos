@@ -124,7 +124,7 @@ gui = c.goi("sendMessage")
 check("tin trạng thái gửi IM LẶNG", bool(gui) and gui[0].get("disable_notification") is True,
       gui[0] if gui else None)
 check("tin trạng thái mở đầu bằng 'đang xử lý'",
-      bool(gui) and "đang xử lý" in (gui[0].get("text") or "").lower(), gui[0] if gui else None)
+      bool(gui) and "MinMin đang soạn tin" in (gui[0].get("text") or ""), gui[0] if gui else None)
 
 check("câu trả lời là tin MỚI, không phải sửa tin cũ", len(gui) == 2, len(gui))
 check("tin cuối cùng chính là câu trả lời",
