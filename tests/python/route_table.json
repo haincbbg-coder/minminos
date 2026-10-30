@@ -8868,5 +8868,53 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 890,
+  "type": "_IncludedRouter",
+  "path": null,
+  "name": null,
+  "methods": [],
+  "trong": null
+ },
+ {
+  "order": 891,
+  "type": "APIRoute",
+  "path": "/zalo-oa/webhook",
+  "name": "zalo_oa_webhook",
+  "methods": [
+   "POST"
+  ],
+  "trong": 890
+ },
+ {
+  "order": 892,
+  "type": "APIRoute",
+  "path": "/zalo-oa/webhook-info",
+  "name": "zalo_oa_webhook_info",
+  "methods": [
+   "GET"
+  ],
+  "trong": 890
+ },
+ {
+  "order": 893,
+  "type": "APIRoute",
+  "path": "/zalo-oa/xac-thuc",
+  "name": "zalo_oa_xac_thuc",
+  "methods": [
+   "POST"
+  ],
+  "trong": 890
+ },
+ {
+  "order": 894,
+  "type": "APIRoute",
+  "path": "/zalo_verifier{ma}.html",
+  "name": "zalo_oa_file_xac_thuc",
+  "methods": [
+   "GET"
+  ],
+  "trong": 890
  }
 ]

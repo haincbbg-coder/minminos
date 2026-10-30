@@ -531,7 +531,10 @@ def co_bot(conn_id: str) -> bool:
 
 
 def _chuan(text: str) -> str:
-    return " ".join(str(text or "").split())
+    # So theo đúng chữ Zalo hiện (26.10.314): câu gửi đi là "**85.000đ**" thì tiếng vọng về là "85.000đ" kèm kiểu đậm,
+    # vẫn phải nhận ra là câu của chính MinMin, không thì bot tưởng chủ tự nhắn và im.
+    import zalo_dinh_dang
+    return " ".join(zalo_dinh_dang.bo_dinh_dang(str(text or "")).split())
 
 
 def ghi_da_gui(conn_id: str, thread: str, text: str) -> None:

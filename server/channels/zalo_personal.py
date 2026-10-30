@@ -38,6 +38,20 @@ def trang_thai() -> dict:
 
 
 async def gui(tk: dict, chat_id: str, text: str, chat_type: str = "private"):
+    """Gửi một tin từ Hộp thư. Markdown (thường do A.I. soạn) thành định dạng Zalo ở chat riêng, chữ trơn ở nhóm
+    (26.10.314); không có dấu nào thì đi thẳng MCP như cũ."""
+    import zalo_dinh_dang
+    tron, kieu = zalo_dinh_dang.sang_zalo(str(text or ""))
+    if tron != str(text or "") or kieu:
+        if kieu and str(chat_type or "") != "group":
+            kq = await gui_dinh_dang(str(tk.get("id") or tk.get("external_id") or ""), str(chat_id), tron, kieu)
+            if kq is not None:
+                return kq
+        text = tron
+    return await _gui_mcp(tk, chat_id, text, chat_type)
+
+
+async def _gui_mcp(tk: dict, chat_id: str, text: str, chat_type: str = "private"):
     """Gửi qua MCP: tham số theo mcp-guide của zalo-agent-cli (threadId, text, type 0|1)."""
     import zalo_personal_channel
     conn = zalo_personal_channel.ket_noi_theo_id(str(tk.get("id") or tk.get("external_id") or ""))
@@ -129,6 +143,87 @@ async def gui_tep(conn_id: str, thread: str, path: str, loai_chat: str = "privat
         return True, ""
     except Exception as ex:
         return False, f"{type(ex).__name__}: {ex}"[:200]
+
+
+async def gui_dinh_dang(conn_id: str, thread: str, cau: str, styles: list):
+    """Gửi MỘT tin chat riêng KÈM định dạng Zalo (đậm, nghiêng, màu...) bằng lệnh `msg send --style` của
+    chính zalo-agent-cli (tool MCP `zalo_send_message` chỉ nhận chữ trơn). 26.10.314.
+
+    Trả `(ok, lỗi)` khi đã có kết cục, hoặc None khi CHƯA gửi gì và người gọi nên gửi chữ trơn qua MCP.
+    Hết giờ là kết cục KHÔNG RÕ (CLI có thể đã gửi xong mới bị giết): không gửi lại, kẻo khách nhận hai tin."""
+    import zalo_dinh_dang
+    import zalo_personal_channel as zc
+    them = zalo_dinh_dang.tham_so_style(styles)
+    if not them or time.time() < float(_CLI_NGHI.get(conn_id) or 0):
+        return None
+    try:
+        conn = zc.ket_noi_theo_id(conn_id)
+        argv = lenh_cli(conn, "msg", "send", str(thread), str(cau), "-t", "0", *them)
+        if not argv:
+            return None
+        import os
+        env = dict(os.environ)
+        env.update({k: str(v) for k, v in (conn.get("env") or {}).items()})
+        import winproc
+        proc = await asyncio.create_subprocess_exec(
+            *argv, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
+            **winproc.kwargs_no_window())
+    except Exception as e:
+        print(f"[zalo-personal] không chạy được lệnh gửi có định dạng, gửi chữ thường: {e}", file=sys.stderr)
+        return None
+    try:
+        await asyncio.wait_for(proc.communicate(), timeout=25)
+    except asyncio.TimeoutError:
+        proc.kill()
+        return False, "không rõ tin có định dạng đã tới khách chưa (lệnh gửi quá 25 giây)"
+    if proc.returncode != 0:
+        # Lỗi thật (phiên bản CLI, đăng nhập): nghỉ đường này một lúc, tin vẫn đi bằng chữ thường.
+        _CLI_NGHI[conn_id] = time.time() + CLI_NGHI_GIAY
+        print(f"[zalo-personal] gửi có định dạng thoát mã {proc.returncode}, gửi chữ thường", file=sys.stderr)
+        return None
+    return True, ""
+
+
+CLI_NGHI_GIAY = 600         # gửi có định dạng hỏng thì nghỉ đường CLI chừng này giây
+_CLI_NGHI: dict = {}        # conn_id -> giờ được thử lại đường CLI
+
+# "Đang soạn tin" trong lúc bot viết câu trả lời chat riêng (26.10.314, theo Javis 0.413). Cần tool MCP
+# `zalo_send_typing`; zalo-agent-cli 1.6.2 (bản mới nhất đang có) CHƯA có tool này, nên lần thử đầu báo lỗi và
+# kết nối đó nghỉ GO_NGHI giây. Câu trả lời không bao giờ phải chờ dòng này.
+GO_TOOL = "zalo_send_typing"
+GO_TRE = 1.5                # giây: lượt xong nhanh (im lặng, chủ tiếp quản) thì không hiện gì
+GO_NHIP = 4.0               # Zalo tự tắt dòng "đang soạn tin" sau vài giây
+GO_NGHI = 3600
+_GO_NGHI: dict = {}         # conn_id -> giờ được thử lại
+
+
+async def bao_dang_soan(conn_id: str, thread: str) -> bool:
+    """Hiện "đang soạn tin" ở một chat riêng. True khi Zalo nhận. Không bao giờ ném lỗi."""
+    import zalo_personal_channel as zc
+    cid = str(conn_id or "")
+    if time.time() < float(_GO_NGHI.get(cid) or 0):
+        return False
+    conn = zc.ket_noi_theo_id(cid)
+    if not conn:
+        return False
+    try:
+        d = await zc._goi(conn, GO_TOOL, {"threadId": str(thread), "threadType": 0, "type": 0})
+    except Exception as e:      # bản cũ: "Tool zalo_send_typing not found"
+        _GO_NGHI[cid] = time.time() + GO_NGHI
+        print(f"[zalo-personal] chưa bật được \"đang soạn tin\" ({str(e)[:120]}), thử lại sau "
+              f"{GO_NGHI // 60} phút", file=sys.stderr)
+        return False
+    if isinstance(d, dict) and d.get("success") is False:
+        _GO_NGHI[cid] = time.time() + GO_NGHI
+        return False
+    return True
+
+
+async def giu_dang_soan(conn_id: str, thread: str) -> None:
+    """Chạy suốt lúc bot viết; người gọi huỷ khi xong. Dừng hẳn ngay lần đầu Zalo không nhận."""
+    await asyncio.sleep(GO_TRE)
+    while await bao_dang_soan(conn_id, thread):
+        await asyncio.sleep(GO_NHIP)
 
 
 GIOI_HAN_TIN = 1800   # ký tự mỗi tin: Zalo từ chối tin quá dài, khách chẳng nhận được gì
@@ -345,7 +440,14 @@ class Transport:
                         if cau:
                             await self._gui(thread, cau)
                         return
-                out = await self.answer_fn(text, meta, None)
+                # "Đang soạn tin" chỉ ở chat riêng: trong nhóm phần lớn lượt kết thúc bằng im lặng, hiện dòng đó
+                # rồi không nói gì trông như người đổi ý.
+                go = None if nhom else asyncio.get_running_loop().create_task(giu_dang_soan(self.conn_id, thread))
+                try:
+                    out = await self.answer_fn(text, meta, None)
+                finally:
+                    if go is not None:
+                        go.cancel()
                 if isinstance(out, dict):
                     if out.get("im_lang"):
                         return
@@ -392,8 +494,12 @@ class Transport:
     async def _gui(self, thread: str, cau: str, meta=None):
         import zalo_personal_channel as zc
         import zalo_nhom, conversations
+        import zalo_dinh_dang
         specs = []
-        if meta and meta.get("chat_type") == "group":
+        nhom = bool(meta and meta.get("chat_type") == "group")
+        if nhom:
+            # Tin nhóm đi bằng tag thật, vị trí tag tính trên chữ trơn: bỏ dấu Markdown TRƯỚC khi gắn tag.
+            cau = zalo_dinh_dang.bo_dinh_dang(cau)
             # Tag người vừa hỏi, và đổi "@Tên" khác thành tag thật khi khớp đúng một thành viên.
             try:
                 tv = zalo_nhom.thanh_vien(conversations.tin_gan_day("zalo_personal", self.conn_id, thread, 60))
@@ -404,12 +510,16 @@ class Transport:
         # Câu dài thì cắt thành nhiều tin gửi lần lượt; trong nhóm chỉ tin đầu mới kèm tag.
         manh = chia_tin(cau) or [cau]
         for i, m in enumerate(manh):
-            # Nhớ TRƯỚC khi gửi: tiếng vọng có thể về vòng đọc ngay trong nhịp kế tiếp.
-            zc.ghi_da_gui(self.conn_id, thread, m)
-            if meta and meta.get("chat_type") == "group":
+            if nhom:
+                # Nhớ TRƯỚC khi gửi: tiếng vọng có thể về vòng đọc ngay trong nhịp kế tiếp.
+                zc.ghi_da_gui(self.conn_id, thread, m)
                 ok, loi = await gui_co_tag(self.conn_id, thread, m, specs if i == 0 else [])
             else:
-                ok, loi = await gui({"id": self.conn_id}, thread, m, "private")
+                # Chat riêng: Markdown thành chữ đậm/màu của Zalo; tiếng vọng về là chữ trơn nên nhớ bản trơn.
+                tron, kieu = zalo_dinh_dang.sang_zalo(m)
+                zc.ghi_da_gui(self.conn_id, thread, tron)
+                kq = await gui_dinh_dang(self.conn_id, thread, tron, kieu) if kieu else None
+                ok, loi = kq if kq is not None else await gui({"id": self.conn_id}, thread, tron, "private")
             if not ok:
                 self.last_error = f"Gửi Zalo lỗi: {loi}"[:300]
                 print(f"[zalo-personal bot {self.conn_id}] {self.last_error}", file=sys.stderr)

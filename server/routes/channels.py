@@ -152,6 +152,20 @@ def _tai_khoan_thong_nhat(brain: str = "") -> list:
     return out
 
 
+def _token_luu(kenh: str, token: str, external_id: str = ""):
+    """(chuỗi lưu, lỗi). Kênh khai `token_luu` (Zalo OA) đổi thứ chủ dán thành chuỗi lưu (id kết nối, không có bí
+    mật); kênh khác lưu nguyên token như cũ."""
+    m = channels.module(kenh)
+    fn = getattr(m, "token_luu", None) if m else None
+    if not callable(fn):
+        return token, ""
+    luu = fn(token, external_id)
+    if not luu:
+        return "", localefmt.chu("Chưa liên kết được tài khoản này. Bấm Kiểm tra trước rồi mới Lưu.",
+                                 "This account is not linked yet. Press Check before Save.")
+    return luu, ""
+
+
 def register(app, deps: ChannelsDeps):
     global _DEPS
     _DEPS = deps
@@ -194,6 +208,9 @@ def register(app, deps: ChannelsDeps):
                 return r if isinstance(r, JSONResponse) else _400(r.get("error") or localefmt.chu("Token không hợp lệ", "Invalid token"))
             ext = r.get("username") or ""
             meta = {k: r[k] for k in ("vao_duoc_nhom", "account_type", "bot_name") if k in r}
+        token, loi = _token_luu(channel, token, ext)
+        if loi:
+            return _400(loi)
         aid, loi = channel_accounts.create_account({
             "channel": channel, "token": token, "label": label, "external_id": ext, "meta": meta,
             # Thêm từ brain nào thì thuộc brain đó (0.62.4). Không truyền = chưa gán chủ, thẻ
@@ -214,7 +231,11 @@ def register(app, deps: ChannelsDeps):
         if isinstance(brain, str):
             patch["brain"] = brain.strip()
         if token.strip():
-            patch["token"] = token
+            kenh = (channel_accounts.get_account(account_id) or {}).get("channel") or ""
+            luu, loi = _token_luu(kenh, token, bot_username.strip())
+            if loi:
+                return _400(loi)
+            patch["token"] = luu
             if bot_username.strip():
                 patch["external_id"] = bot_username
         ok, loi = channel_accounts.update_account(account_id, patch)

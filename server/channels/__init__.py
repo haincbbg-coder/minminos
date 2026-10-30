@@ -30,7 +30,9 @@ Ba LOẠI kênh (`kind`), khác nhau ở cách có tài khoản chứ không ở
                `channel_accounts`, long-poll bằng `Transport`.
     account  - tài khoản là một PHIÊN đăng nhập sẵn có ở nơi khác (Zalo cá nhân qua MCP). Module
                tự liệt kê qua `tai_khoan()`, có công tắc ghi.
-    webhook  - nền tảng GỌI NGƯỢC vào Javis (Zalo OA, Facebook Messenger: chưa có, chừa chỗ).
+    webhook  - nền tảng GỌI NGƯỢC vào Javis (chừa chỗ). Zalo OA (26.10.314) cũng nhận tin qua webhook
+               nhưng khai kind "bot": tài khoản vẫn ở kho tài khoản kênh; module khai thêm `WEBHOOK_PATH`
+               và `token_luu(token, external_id)` (đổi chuỗi chủ dán thành chuỗi lưu, rỗng = chưa liên kết).
 
 Thêm một kênh = thêm một file ở đây + một dòng trong `_MODULES` + một logo trong icons.js.
 Không sửa gì khác.
@@ -75,7 +77,7 @@ class KenhSpec:
 
 # Thứ tự ở đây là thứ tự hiện trên giao diện. KHÔNG có kênh nào "chính": Zalo đứng đầu vì
 # khách Việt Nam dùng nhiều nhất, không phải vì nó được ưu ái trong mã.
-_MODULES = ("channels.zalo_bot", "channels.zalo_personal", "channels.telegram")
+_MODULES = ("channels.zalo_bot", "channels.zalo_personal", "channels.zalo_oa", "channels.telegram")
 
 _DS: Optional[Dict[str, KenhSpec]] = None
 _MOD: Dict[str, object] = {}
@@ -178,6 +180,8 @@ def cho_giao_dien() -> List[dict]:
             # 26.10.53 Zalo cá nhân cũng đứng được trong nhóm (nhóm phải được chủ bật, im nếu
             # chưa bật), nên tính cả kênh này.
             "co_nhom": s.nl("nhom") and (s.kind == "bot" or s.id == "zalo_personal"), "gui_tai_lieu": s.nl("gui_file"),
+            # Kênh nhận tin bằng webhook (Zalo OA): form Thêm kênh hiện địa chỉ cần dán sang nền tảng.
+            "webhook": bool(getattr(_MOD.get(s.id), "WEBHOOK_PATH", "")),
         })
     return out
 

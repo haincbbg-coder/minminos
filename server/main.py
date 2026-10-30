@@ -268,6 +268,11 @@ _BIEN_DONG_CONG_KHAI_RE = re.compile(_BIEN_DONG_CONG_KHAI[0])
 # Webhook vào (26.10.167): hệ thống ngoài POST /hook/<mã>. Endpoint tự kiểm mã băm.
 _HOOK_CONG_KHAI = (r"/hook/[A-Za-z0-9_-]{20,80}", "POST")
 _HOOK_CONG_KHAI_RE = re.compile(_HOOK_CONG_KHAI[0])
+# Zalo OA (26.10.314, routes/zalo_oa.py): Zalo POST tin khách vào webhook, không cookie; route tự kiểm chữ ký
+# X-ZEvent-Signature bằng OA secret key. Zalo tải /zalo_verifier<mã>.html để xác thực tên miền; route chỉ trả
+# các mã chủ đã lưu, mã lạ 404. GET webhook, các đường /zalo-oa khác vẫn phải đăng nhập.
+_ZALO_OA_CONG_KHAI = (("/zalo-oa/webhook", "POST"),)
+_ZALO_OA_XAC_THUC_RE = re.compile(r"/zalo_verifier[A-Za-z0-9_-]{6,80}\.html")
 
 
 def duong_dan_router(request) -> str:
@@ -350,7 +355,9 @@ async def _auth_guard(request: Request, call_next):
                   or (request.method == _BIEN_DONG_CONG_KHAI[1]
                       and _BIEN_DONG_CONG_KHAI_RE.fullmatch(path) is not None)
                   or (request.method == _HOOK_CONG_KHAI[1]
-                      and _HOOK_CONG_KHAI_RE.fullmatch(path) is not None))
+                      and _HOOK_CONG_KHAI_RE.fullmatch(path) is not None)
+                  or (path, request.method) in _ZALO_OA_CONG_KHAI
+                  or (request.method in ("GET", "HEAD") and _ZALO_OA_XAC_THUC_RE.fullmatch(path) is not None))
         if not public and not cfgmod.valid_session(request.cookies.get("javis_session", "")):
             # Client ngoài trình duyệt (CLI, script, cron) không có cookie. Nhánh token là
             # đường DUY NHẤT của chúng - xem docs/dev/2026-08-cli-spec.md. Đặt SAU nhánh
@@ -24845,6 +24852,10 @@ async def _meta_ads_duyet_callback(data: str, chat_key: str):
 
 meta_ads_duyet.dat_gui_telegram(_meta_ads_gui_tg)
 meta_fb_routes.register(app)
+
+# Zalo OA trong Chatbot (26.10.314): webhook công khai, xác thực tên miền. Xem routes/zalo_oa.py.
+import routes.zalo_oa as zalo_oa_routes   # noqa: E402
+zalo_oa_routes.register(app)
 
 if __name__ == "__main__":
     import uvicorn

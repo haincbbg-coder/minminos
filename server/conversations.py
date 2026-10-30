@@ -57,7 +57,8 @@ CHE_DO = ("ai", "human", "waiting", "closed", "draft")
 CHE_DO_DEFAULT = "ai"
 
 MAX_CHU = 8_000          # trần độ dài một tin lưu lại
-GIU_TIN_NHOM = 100       # 0.65.12: mỗi NHÓM chỉ giữ chừng này tin gần nhất. Chat riêng với khách vẫn lưu hết (chủ chốt 30/09/2026).
+GIU_TIN_NHOM = 1000      # 0.65.12: mỗi NHÓM chỉ giữ chừng này tin gần nhất. Chat riêng với khách vẫn lưu hết (chủ chốt 30/09/2026).
+                         # 26.10.314: nâng từ 100 lên 1000 (theo Javis 0.396), nhóm đông vẫn đọc lại được ngữ cảnh.
 NGAY_GIU_SAO_LUU = 14    # bản sao lưu trước khi cắt nhóm cũ tự xoá sau chừng này ngày: giữ mãi thì lời của người lạ vẫn nằm đó, trái mục đích cắt
 MAX_TEN = 120
 MAX_DANH_SACH = 200      # trần một trang danh sách hội thoại
