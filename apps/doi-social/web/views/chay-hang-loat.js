@@ -48,7 +48,7 @@
 
   var GOI_Y_CHE_DO = {
     chay_thu: "Agent chỉ đọc và viết nháp vào Duyệt nội dung, không đăng hay bấm gì công khai.",
-    duyet_truoc: "AI viết nháp, bạn bấm Duyệt thì máy ở nhà mới đăng.",
+    duyet_truoc: "AI viết nháp, bạn bấm Duyệt thì máy chạy mới đăng.",
     dang_luon: "AI viết xong đăng ngay. Bạn tự chịu trách nhiệm nội dung."
   };
 

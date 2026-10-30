@@ -19,7 +19,7 @@
     render: function (el, ctx) {
       var F = { trang_thai: TABS.some(function (t) { return t[0] === ctx.q.tt; }) ? ctx.q.tt : "cho_duyet", noi_dang: "", san_pham: "", trang: 1 };
       var chon = {}, ds = [], KT = {}, sua = {};
-      el.innerHTML = DS.ph("Duyệt nội dung", "Bình luận và bài AI viết nằm đây chờ bạn. Duyệt thì máy ở nhà mới đăng.",
+      el.innerHTML = DS.ph("Duyệt nội dung", "Bình luận và bài AI viết nằm đây chờ bạn. Duyệt thì máy chạy (máy ở nhà hoặc Chrome MinMin) mới đăng.",
         '<a class="btn btn-pri" href="#/kho?tab=viet">' + ic("spark") + "Viết bài AI</a>") + '<div id="dy-tabs"></div><div id="dy-loc"></div><div id="dy-ds">' + DS.skel(6) + "</div>";
 
       DS.layKienThuc().then(function (d) { DS.list(d, "kien_thuc").forEach(function (k) { KT[k.id] = k; }); nap(); });
