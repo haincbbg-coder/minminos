@@ -2755,3 +2755,36 @@ details.h2-sec[open] > summary.h2-h { margin-bottom: 6px; }
   .knn-hs { flex-direction: row; align-items: center; gap: 8px; }
   .knn-hb { margin-left: auto; }
 }
+
+/* Chợ MinMin dạng dòng gọn (26.10.305) */
+#pkGrid { grid-template-columns: 1fr; gap: 6px; max-width: none; }
+#pkGrid .kho-the { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "av ten st" "av desc nut" "av meta nut"; column-gap: 12px; row-gap: 2px; align-items: center; padding: 8px 12px; }
+#pkGrid .kho-dau { grid-area: av; align-self: center; }
+#pkGrid .kho-nhom, #pkGrid .kho-goc { display: none; }
+#pkGrid .kho-ten { grid-area: ten; font-size: var(--mm-fs-14); }
+#pkGrid .kho-the .cat-desc { grid-area: desc; font-size: var(--mm-fs-12); opacity: .75; display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+#pkGrid .kho-the .prov-meta { grid-area: meta; font-size: var(--mm-fs-12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pkGrid .kho-daicai { grid-area: st; justify-self: end; font-size: var(--mm-fs-12); white-space: nowrap; }
+#pkGrid .kho-nut { grid-area: nut; justify-self: end; }
+#pkGrid .kho-btn { flex: none; padding: 6px 14px; font-size: var(--mm-fs-13); }
+@media (max-width: 640px) {
+  #pkGrid .kho-the { grid-template-columns: 44px minmax(0, 1fr); grid-template-areas: "av ten" "av desc" "av meta" "st st" "nut nut"; }
+  #pkGrid .kho-daicai, #pkGrid .kho-nut { justify-self: start; }
+}
+
+/* Nguồn dữ liệu: danh sách dịch vụ sẵn có thành dòng gọn (26.10.305) */
+#catGrid { grid-template-columns: 1fr; gap: 6px; max-width: none; }
+#catGrid .cat-card { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto; grid-template-areas: "ico name doc btn" "ico desc doc btn"; column-gap: 10px; row-gap: 0; align-items: center; padding: 8px 12px; }
+#catGrid .cat-ico { grid-area: ico; height: auto; font-size: var(--mm-fs-20); }
+#catGrid .cat-ico .ico-img { width: 28px; height: 28px; }
+#catGrid .cat-name { grid-area: name; font-size: var(--mm-fs-14); }
+#catGrid .cat-desc { grid-area: desc; font-size: var(--mm-fs-12); display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+#catGrid .cat-doc { grid-area: doc; white-space: nowrap; }
+#catGrid .gcard-btn { grid-area: btn; width: auto; flex: none; padding: 6px 14px; margin: 0; }
+#catGrid .cat-x { top: 4px; right: 4px; }
+@media (max-width: 640px) {
+  #catGrid .cat-card { grid-template-columns: 38px minmax(0, 1fr); grid-template-areas: "ico name" "ico desc" "doc doc" "btn btn"; }
+  #catGrid .gcard-btn { justify-self: start; margin-top: 6px; }
+}
+details.kn-gt > summary { cursor: pointer; font-size: var(--mm-fs-12); color: var(--text3); }
+details#hdWrap > summary { cursor: pointer; }
