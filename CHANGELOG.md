@@ -1,6 +1,11 @@
 # MinMin OS
 
 ## [26.10.306] - 2026-10-30
+### Thêm mới
+- **Bot Zalo đọc được file PDF, Word, Excel khách gửi.** Trong nhóm, khách gửi file rồi mới gọi bot vẫn được.
+- **Chat riêng gặp câu khó** (giảm giá, hoàn tiền, khiếu nại) thì bot im và báo bố ở chuông, ghi rõ khách nhắn gì và vì sao bot không tự trả lời. Bot cũng biết tự tách câu dài thành vài tin ngắn.
+- **Bot đọc tag Zalo của cuộc chat**: form bot có ô "Không trả lời các cuộc chat có tag Zalo" (ví dụ Gia đình).
+- **Tin bot gửi mà Zalo không nhận** thì Hộp thư ghi "chưa gửi được" và chuông báo bố, không còn hiện như đã gửi.
 ### Cải thiện
 - **Webhook bền hơn**: mỗi sự kiện Pancake, chuyển khoản gửi tới đều được lưu lại trước khi xử lý, máy khởi động lại cũng không mất, gửi trùng thì tự bỏ.
 - Trang Webhook có thêm phần **Sự kiện** và **Tình trạng**: bố xem từng sự kiện đi tới đâu, lỗi gì, bấm chạy lại được.

@@ -23700,7 +23700,8 @@ async def chatbots_create(name: str = Form(...), agent_slug: str = Form(...),
                           rieng_pham_vi: str = Form(""), rieng_cho_phep: str = Form(""),
                           noi_duoc: str = Form(""), noi_cam: str = Form(""),
                           cam_tu_khoa: str = Form(""), ngoai_pham_vi: str = Form(""),
-                          nhom_khach: str = Form(""), nguoi_la: str = Form("")):
+                          nhom_khach: str = Form(""), nguoi_la: str = Form(""),
+                          bo_qua_tag: str = Form("")):
     # Bot sống TRONG một brain: Agent nó dùng và tài liệu nó đọc là cùng một chỗ. Nhận cả hai
     # tên tham số và tự bù cho nhau, nên người gọi chỉ cần gửi một cái.
     br = (brain or agent_brain or "").strip()
@@ -23724,6 +23725,7 @@ async def chatbots_create(name: str = Form(...), agent_slug: str = Form(...),
         "agents_phu": agents_phu, "rieng_pham_vi": rieng_pham_vi, "rieng_cho_phep": rieng_cho_phep,
         "noi_duoc": noi_duoc, "noi_cam": noi_cam, "cam_tu_khoa": cam_tu_khoa,
         "ngoai_pham_vi": ngoai_pham_vi, "nhom_khach": nhom_khach, "nguoi_la": nguoi_la,
+        "bo_qua_tag": bo_qua_tag,
     })
     if err:
         return JSONResponse({"ok": False, "error": err}, status_code=400)
@@ -24845,6 +24847,10 @@ async def _meta_ads_duyet_callback(data: str, chat_key: str):
 
 meta_ads_duyet.dat_gui_telegram(_meta_ads_gui_tg)
 meta_fb_routes.register(app)
+
+# Tag Zalo cho form bot (26.10.306). Đăng ký ở ĐUÔI để không đẩy thứ tự route cũ (plans/LESSONS.md).
+import routes.zalo_tag as zalo_tag_routes   # noqa: E402
+zalo_tag_routes.register(app)
 
 if __name__ == "__main__":
     import uvicorn

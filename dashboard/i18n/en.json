@@ -4826,5 +4826,10 @@
   "mm.inbox.load_error": "Could not load data.",
   "mm.inbox.no_judgments": "No decisions yet.",
   "mm.inbox.did_reply": "Replied",
-  "mm.inbox.did_wait": "Waited"
+  "mm.inbox.did_wait": "Waited",
+  "cb.lb_bo_qua_tag": "Never answer chats with these Zalo tags",
+  "cb.ph_bo_qua_tag": "Family, Friends",
+  "cb.hint_bo_qua_tag": "Tags you set in the Zalo app. The bot stays silent in chats with one of these tags, except chats you allowed by hand in the inbox.",
+  "cb.tag_zalo_co": "Tags in your Zalo:",
+  "cb.thu_bao_chu": "The bot would stay silent and alert you"
 }

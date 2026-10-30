@@ -4826,5 +4826,10 @@
   "mm.inbox.load_error": "Không tải được dữ liệu.",
   "mm.inbox.no_judgments": "Chưa có quyết định nào.",
   "mm.inbox.did_reply": "Đã trả lời",
-  "mm.inbox.did_wait": "Đã chờ"
+  "mm.inbox.did_wait": "Đã chờ",
+  "cb.lb_bo_qua_tag": "Không trả lời các cuộc chat có tag Zalo",
+  "cb.ph_bo_qua_tag": "Gia đình, Bạn bè",
+  "cb.hint_bo_qua_tag": "Tag bố gắn trong app Zalo. Cuộc chat mang một tag này thì bot im hẳn, trừ cuộc bố đã tự cho phép ở Hộp thư.",
+  "cb.tag_zalo_co": "Tag đang có trong Zalo:",
+  "cb.thu_bao_chu": "Bot sẽ im và báo bố ở chuông"
 }

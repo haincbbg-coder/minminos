@@ -8868,5 +8868,23 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 890,
+  "type": "_IncludedRouter",
+  "path": null,
+  "name": null,
+  "methods": [],
+  "trong": null
+ },
+ {
+  "order": 891,
+  "type": "APIRoute",
+  "path": "/zalo-tag",
+  "name": "zalo_tag",
+  "methods": [
+   "GET"
+  ],
+  "trong": 890
  }
 ]

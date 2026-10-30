@@ -55,6 +55,11 @@ async def gui(tk: dict, chat_id: str, text: str, chat_type: str = "private"):
         return False, str(e)[:300]
     if isinstance(d, dict) and d.get("success") is False:
         return False, str(d.get("error") or d.get("message") or "Zalo từ chối")[:300]
+    # 26.10.306 (học Javis 0.282): Zalo báo "thành công" mà không có id tin nghĩa là tin không đi
+    # (phiên vừa bị nơi khác giành). Báo hỏng để Hộp thư không hiện như đã gửi trong khi khách
+    # không thấy gì. Chỉ xét khi MCP CÓ trả khoá messageId (bản cũ không trả thì giữ như trước).
+    if isinstance(d, dict) and d.get("success") is True and "messageId" in d and not d.get("messageId"):
+        return False, "Zalo không xác nhận tin đã gửi (có thể nick đang mở ở nơi khác giành kết nối)"
     return True, ""
 
 
@@ -239,6 +244,8 @@ class Transport:
         if not nhom and (ev.get("chat_type") != "private" or loai not in ("text", "image", "file")):
             return
         if nhom and not zalo_nhom.la_chu_thich(loai, text):
+            if loai == "file":
+                zc.xu_ly_tep_nhom(self.conn_id, ev)
             return
         if not thread or (not text and (nhom or loai == "text")):
             return
@@ -251,12 +258,20 @@ class Transport:
             md = ev.get("metadata") or {}
             meta["mentioned"] = zalo_nhom.co_goi_ten(text, md.get("mentions"), self._ten_goi())
             meta["reply_to_bot"] = zc.la_tra_loi_bot(self.conn_id, thread, md.get("replyTo"))
+            # File trong nhóm (26.10.306): file kèm lời gọi bot thì đọc luôn; người vừa gửi file
+            # trơn (xem `xu_ly_tep_nhom`) rồi gọi bot thì bot nhận lại đúng file đó.
+            tep = zc.tep_cua_tin(ev)
+            if meta["mentioned"] or meta["reply_to_bot"]:
+                tep = tep or (zc.lay_tep_tron(self.conn_id, thread, str(ev.get("sender_id") or "")) or [None])[-1]
+                if tep:
+                    meta["tep_url"], meta["tep_ten"] = tep["url"], tep["ten"]
             await self._tra_loi(thread, text, meta, True)
             return
         # Chat riêng: gom các tin khách nhắn liền nhau rồi trả lời MỘT lần (xem _gom).
         self._gom(thread, ev)
 
     def _meta(self, ev: dict, thread: str, nhom: bool) -> dict:
+        import zalo_personal_channel as zc
         return {
             "chat_id": thread, "chat_type": "group" if nhom else "private",
             "chat_title": str(ev.get("chat_title") or "") if nhom else "",
@@ -264,6 +279,9 @@ class Transport:
             "user_name": str(ev.get("sender_name") or ""), "username": "",
             "message_id": str(ev.get("external_message_id") or ""),
             "account_id": self.conn_id,
+            # Tag Zalo chủ gắn cho cuộc chat này (Gia đình, Khách...), 26.10.306. Đọc bộ nhớ đệm,
+            # không chờ mạng: chưa có thì để trống, lượt không bị giữ lại vì nó.
+            "zalo_labels": zc.nhan_cua_chat(self.conn_id, thread),
         }
 
     # ---- gom tin chat riêng ----------------------------------------------------------
@@ -308,8 +326,10 @@ class Transport:
             print(f"[zalo-personal bot {self.conn_id}] gom tin hỏng: {self.last_error}", file=sys.stderr)
 
     async def _tra_loi_gom(self, thread: str, evs: list):
+        import zalo_personal_channel as zc
         dong = []
         anh = ""
+        tep = None
         for e in evs:
             loai = str(e.get("message_type") or "text")
             t = str(e.get("text") or "").strip()
@@ -317,8 +337,13 @@ class Transport:
                 anh = str((e.get("metadata") or {}).get("image_url") or anh)
                 dong.append(t or "[Khách gửi một ảnh]")
             elif loai == "file":
-                ten = str((e.get("metadata") or {}).get("fileName") or "")
-                dong.append((t + " " if t else "") + f"[Khách gửi file{': ' + ten if ten else ''}. Bot chưa mở được file, hãy nói rõ và hỏi khách cần gì]")
+                # 26.10.306: file có link tải thì bot đọc được (PDF, Word, Excel, chữ trơn), xem
+                # `chatbot_runtime.tep_cho_bot`. Không có link thì nói thật là chưa mở được.
+                tep = zc.tep_cua_tin(e) or tep
+                ten = (tep or {}).get("ten") or str((e.get("metadata") or {}).get("fileName") or "")
+                nhan = f"[Khách gửi file{': ' + ten if ten else ''}]" if tep else \
+                    f"[Khách gửi file{': ' + ten if ten else ''}. Bot chưa mở được file, hãy nói rõ và hỏi khách cần gì]"
+                dong.append(nhan if not t or t.startswith("[") else t + " " + nhan)
             else:
                 dong.append(t)
         text = "\n".join(x for x in dong if x).strip()
@@ -329,6 +354,8 @@ class Transport:
             meta["co_anh"] = True
             # 0.74.1: the photo's link, so the bot can actually look at it (see `chatbot_runtime.anh_cho_bot`).
             meta["image_url"] = anh
+        if tep:
+            meta["tep_url"], meta["tep_ten"] = tep["url"], tep["ten"]
         await self._tra_loi(thread, text, meta, False)
 
     async def _tra_loi(self, thread: str, text: str, meta: dict, nhom: bool):
@@ -401,8 +428,10 @@ class Transport:
                 tv = {}
             cau, specs = zalo_nhom.gan_tag(cau, str(meta.get("user_id") or ""),
                                            str(meta.get("user_name") or ""), tv)
-        # Câu dài thì cắt thành nhiều tin gửi lần lượt; trong nhóm chỉ tin đầu mới kèm tag.
-        manh = chia_tin(cau) or [cau]
+        # Bot tự tách câu thành vài tin ngắn bằng [TACH_TIN] (26.10.306); phần nào còn dài quá thì
+        # vẫn cắt tiếp. Trong nhóm chỉ tin đầu mới kèm tag.
+        import bot_dau_hieu
+        manh = [x for p in (bot_dau_hieu.cac_tin(cau) or [cau]) for x in (chia_tin(p) or [p])] or [cau]
         for i, m in enumerate(manh):
             # Nhớ TRƯỚC khi gửi: tiếng vọng có thể về vòng đọc ngay trong nhịp kế tiếp.
             zc.ghi_da_gui(self.conn_id, thread, m)
@@ -413,6 +442,8 @@ class Transport:
             if not ok:
                 self.last_error = f"Gửi Zalo lỗi: {loi}"[:300]
                 print(f"[zalo-personal bot {self.conn_id}] {self.last_error}", file=sys.stderr)
+                zc.bao_gui_hong(self.conn_id, thread, m, loi,
+                                "group" if meta and meta.get("chat_type") == "group" else "private")
                 return
             if i + 1 < len(manh):
                 await asyncio.sleep(0.8)
