@@ -3562,6 +3562,19 @@ chatInput.addEventListener("input", () => {
     ? Math.round(window.innerHeight * 0.4) : 200;
   chatInput.style.height = Math.min(chatInput.scrollHeight, _cap) + "px";
 });
+// 26.10.313: bắt đầu gõ là báo máy chủ mở sẵn tiến trình engine của cuộc chat này (nếu nó đã
+// đóng vì nghỉ lâu), để tin sắp gửi khỏi chờ khởi động. Mỗi cuộc chat nhắc nhiều nhất 1 lần/phút.
+const _humNongLuc = {};
+chatInput.addEventListener("input", () => {
+  const sid = savedSessionId;
+  if (!sid || isProcessing || !chatInput.value) return;
+  const now = Date.now();
+  if (now - (_humNongLuc[sid] || 0) < 60000) return;
+  _humNongLuc[sid] = now;
+  fetch("/chat/hum-nong", { method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sid }) })
+    .catch(() => { /* chỉ là phỏng đoán, hụt cũng không sao */ });
+});
 // Bộ gõ tiếng Việt/IME có thể phát keydown Enter trước compositionend. Nếu gửi và xoá
 // textarea ở thời điểm đó, trình duyệt sẽ chốt phần chữ đang ghép vào ô vừa xoá, làm sót
 // lại ký tự hoặc từ cuối. Giữ cờ riêng cho các trình duyệt báo isComposing không ổn định.

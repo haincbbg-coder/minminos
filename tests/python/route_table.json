@@ -8868,5 +8868,25 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 890,
+  "type": "APIRoute",
+  "path": "/chat/hum-nong",
+  "name": "chat_hum_nong",
+  "methods": [
+   "POST"
+  ],
+  "trong": null
+ },
+ {
+  "order": 891,
+  "type": "APIRoute",
+  "path": "/chat/giu-am",
+  "name": "chat_giu_am",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]

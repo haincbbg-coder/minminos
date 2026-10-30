@@ -78,6 +78,8 @@ for _tenFile in ("users.json", ".member_sessions.json"):
     except OSError:
         pass
 import claude_auth     # gói Claude Code xác thực bằng gì: phiên subscription hay API key
+import giu_am          # 26.10.313: giữ tiến trình engine sống giữa các tin của một cuộc chat
+import claude_giu_am   # 26.10.313: lượt chat Claude Code chạy trên tiến trình giữ ấm
 import aux_engine   # engine việc nền: Claude / Codex / API rẻ
 import mcp_store
 import mcp_client
@@ -4606,6 +4608,7 @@ def antigravity_login_poll():
 
 @app.post("/claude/login")
 def claude_login():
+    giu_am.HO.bo_loai("claude")
     return claude_auth_login()
 
 
@@ -4623,12 +4626,14 @@ def claude_login_code(code: str = Form("")):
         # Vừa đăng nhập xong: đèn báo não phải xanh NGAY, không chờ vòng probe 10 phút
         # (banner 'chưa kết nối Model AI' treo sau khi đã kết nối là lỗi khách báo 27/08).
         connect_health.engine_reconnected("claude")
+        giu_am.HO.bo_loai("claude")   # tiến trình ấm đang chạy bằng tài khoản cũ
     return d
 
 
 @app.post("/claude/logout")
 def claude_logout():
     d = claude_auth_logout()
+    giu_am.HO.bo_loai("claude")
     try:
         connect_health.probe_engines()   # ngắt chủ động → đèn phải đổi ngay, khỏi chờ vòng quét
     except Exception:
@@ -17911,7 +17916,8 @@ async def websocket_endpoint(ws: WebSocket):
                     """Một lần gọi `claude`. Trả True nếu mạch cũ không còn (resume trượt)."""
                     nonlocal final_text, _streamed, _cli_sid, _cost, _ctx_in, _ctx_cache
                     resume_failed = False
-                    async for event in cli.query(prompt):
+                    # 26.10.313: chạy trên tiến trình `claude` giữ ấm của cuộc chat này nếu có.
+                    async for event in claude_giu_am.query(cli, prompt, conv_sid):
                         etype = event["type"]
                         if etype == "tool_call":
                             _ng_calls.append({"name": event.get("name", ""), "input": event.get("input") or {}})
@@ -19520,6 +19526,7 @@ async def sessions_delete(session_id: str):
     await asyncio.to_thread(github_repos.forget_session, session_id)
     await asyncio.to_thread(github_store.store().delete_session, session_id)
     get_store().delete(session_id)
+    giu_am.HO.quen(session_id)
     # Phase 8 state is a disposable projection; purge it with the source transcript.
     if _ADAPTIVE_CONTEXT is not None:
         try:
@@ -24705,6 +24712,10 @@ async def _shutdown_mcp_pool():
         await mcp_client.pool.close_all()
     except Exception:
         pass
+    try:
+        await giu_am.HO.dong_het()   # tiến trình `claude` giữ ấm không được sống sót server
+    except Exception:
+        pass
     # Shell của tab Code chạy trong process group RIÊNG (setsid), nên nó KHÔNG chết theo server
     # - tắt Javis mà bỏ quên là để lại một đàn shell mồ côi giữ cổng và file.
     try:
@@ -24854,3 +24865,15 @@ if __name__ == "__main__":
     port = int(os.getenv("JAVIS_PORT", "7777"))
     uvicorn.run("main:app", host=host, port=port, reload=False)
 
+@app.post("/chat/hum-nong")
+async def chat_hum_nong(body: dict = Body(None)):
+    """Bố bắt đầu gõ trong một cuộc chat (26.10.313): mở sẵn tiến trình engine của cuộc chat đó nếu
+    nó đã được đóng vì nghỉ lâu, để tin sắp gửi khỏi chờ khởi động. Không có gì để mở thì thôi."""
+    sid = str((body or {}).get("session_id") or "").strip()[:80]
+    return {"ok": True, "hum": giu_am.HO.hum_nong(sid) if sid else False}
+
+
+@app.get("/chat/giu-am")
+async def chat_giu_am():
+    """Tình trạng hồ giữ ấm: bao nhiêu tiến trình đang giữ, trúng/trượt bao nhiêu lần."""
+    return giu_am.HO.trang_thai()

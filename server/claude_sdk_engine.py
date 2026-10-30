@@ -552,6 +552,9 @@ class ClaudeSDK:
         # JSON settings đưa cho Claude Code qua `--settings` (26.10.270): bỏ CLAUDE.md của repo
         # khỏi phần nó tự nạp và tự gom gọn mạch ở ~180k. `claude_cli.claude_engine` đặt.
         self.settings_json = None
+        # Lượt chat của chủ chạy trên tiến trình được giữ ấm (26.10.313): claude_giu_am.Luot gắn
+        # vào đây cho đúng một lượt rồi gỡ. None = mở và đóng tiến trình như mọi khi.
+        self.giu_am = None
 
     def _on_stderr(self, line):
         """Nhận từng dòng stderr của tiến trình `claude`.
@@ -914,8 +917,16 @@ class ClaudeSDK:
         self._stderr_tail.clear()   # chỉ giữ dòng của lượt này
         loop = asyncio.get_running_loop()
         options = self._options()
+        am = self.giu_am
+        if am is not None:
+            options = am.chuan_bi(self, options)
         completion = _CompletionWatch(RESULT_IDLE if getattr(options, "include_hook_events", False) else None)
-        client = ClaudeSDKClient(options=options)
+        client = (am.client(options) if am is not None else None) or ClaudeSDKClient(options=options)
+        if am is not None:
+            am.ghi_client(client)
+        dung_am = am is not None and am.am   # gửi thẳng vào tiến trình ấm, không connect lại
+        sach = False        # lượt về tới kết quả tốt, không còn việc nền: tiến trình giữ lại được
+        dua_token = False
         started = time.time()
         tools_running = 0   # số tool đã gọi mà CHƯA thấy kết quả về
         da_co_chu = False   # đã nhận được sự kiện đầu tiên chưa (quyết định dùng trần nào)
@@ -930,10 +941,17 @@ class ClaudeSDK:
                     print(f"[claude token] xếp hàng làm mới: {nhan}", file=sys.stderr)
             except Exception:
                 pass
-            await client.connect()
+            if not dung_am:
+                await client.connect()
             with _LOCK:
                 _ACTIVE[client] = (self.tag, loop)
-            await client.query(prompt)
+            try:
+                await client.query(prompt)
+            except Exception as e:
+                if dung_am:
+                    import claude_giu_am
+                    raise claude_giu_am.AmHong(f"{type(e).__name__}: {e}") from e
+                raise
             agen = client.receive_response().__aiter__()
             while True:
                 # Watchdog parity với CLI: idle-timeout + trần wall-clock cho fork nền.
@@ -1001,6 +1019,8 @@ class ClaudeSDK:
                             pass
                     self.session_id = sid
                 for ev in events:
+                    if ev.get("dua_token") or ev.get("auth_refresh_race"):
+                        dua_token = True   # tiến trình khác vừa tiêu refresh token: lượt sau mở mới
                     if ev["type"] == "tool_call":
                         tools_running += 1
                     elif ev["type"] == "tool_result":
@@ -1010,8 +1030,13 @@ class ClaudeSDK:
                     yield ev
                 completion.observe(msg, tools_running, loop.time())
                 if isinstance(msg, ResultMessage):
+                    sach = (getattr(msg, "subtype", "") == "success" and not getattr(msg, "is_error", False)
+                            and bool(self.session_id) and not dua_token
+                            and not completion.tasks and not completion.untracked_work)
                     break
         except Exception as e:
+            if am is not None and type(e).__name__ == "AmHong":
+                raise
             chan_doan = None
             if "Control request timeout: initialize" in str(e):
                 # Hết giờ khởi động: lấy bằng chứng (claude có gọi tới hub không, nó in gì) để câu
@@ -1023,8 +1048,9 @@ class ClaudeSDK:
         finally:
             with _LOCK:
                 _ACTIVE.pop(client, None)
-            try:
-                await client.disconnect()
-            except Exception:
-                pass
+            if not (am is not None and am.xong(self, client, sach)):
+                try:
+                    await client.disconnect()
+                except Exception:
+                    pass
             self._cleanup_tmp()   # xoá file system prompt tạm của lượt này
