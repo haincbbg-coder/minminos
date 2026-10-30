@@ -137,7 +137,7 @@ MAU = [
        "Mỗi nhóm có một nick phụ trách (Kho group FB). AI đọc chữ và ảnh của bài, chấm mức đúng nhu cầu, bỏ bài "
        "đối thủ và bài đã có nick khác trong đội bình luận. Link (nếu có) để ở trả lời con, không để ở bình luận "
        "đầu. Chạy thử = chỉ tạo nháp kèm 'Vì sao AI chọn'.",
-       ["binh_luan_nhom"], [_sp(), _so("so_bai_quet", "Quét bao nhiêu bài mỗi nhóm", 15, 5, 50),
+       ["binh_luan_nhom", "vao_nhom"], [_sp(), _so("so_bai_quet", "Quét bao nhiêu bài mỗi nhóm", 15, 5, 50),
                             _so("toi_da", "Tối đa bình luận mỗi nick", 3, 1, 20), CHE_DO], "Bình luận group", ai=True),
     _m("fb_binh_luan_nhom_link", "facebook", "tuong_tac", "Bình luận nhóm theo link",
        "Dán link nhóm, AI quét bài mới và bình luận vào bài đúng nhu cầu sản phẩm.",

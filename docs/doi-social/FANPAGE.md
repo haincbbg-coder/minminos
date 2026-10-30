@@ -169,9 +169,9 @@ GRAPH = `https://graph.facebook.com/v26.0`, video `https://graph-video.facebook.
   ghi `fp_binh_luan` (la_cua_trang khi from.id == trang_id). `tra_loi(cid, chu)` POST
   `/{cid}/comments`; `an(cid, True|False)` POST `/{cid}` {is_hidden}.
 - Insights (cố gắng hết sức, metric nào lỗi thì bỏ qua): Trang `followers_count,fan_count` +
-  `/{page}/insights?metric=page_impressions_unique,page_post_engagements,page_views_total&period=day`;
+  `/{page}/insights?metric=page_total_media_view_unique,page_post_engagements,page_media_view&period=day&date_preset=yesterday (26.10.311: Meta bỏ page_impressions*, ghi vào dòng hôm qua)`;
   bài `reactions.summary(true),comments.summary(true),shares` +
-  `/{post}/insights?metric=post_impressions_unique,post_clicks` → `fp_bai.so_lieu`, `fp_so_lieu` theo ngày.
+  `/{post}/insights?metric=post_total_media_view_unique,post_clicks` → `fp_bai.so_lieu`, `fp_so_lieu` theo ngày.
 - Đổi info: tiểu sử POST `/{page}` {about}; ảnh đại diện POST `/{page}/picture` multipart `source`;
   ảnh bìa: POST `/{page}/photos` published=false → POST `/{page}` {cover: photo_id}.
 - Kênh nguồn: `yt_dlp` (đã có trong image, xem `up_bai.tai_video`). Liệt kê kênh `extract_flat`,

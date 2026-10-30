@@ -2,7 +2,16 @@
 
 ## [26.10.311] - 2026-10-30
 ### Sửa lỗi
-- Đang làm: kiểm tra toàn bộ Đội Social.
+- **Chiến dịch AI kèm ảnh/video từ kho:** trước đây tệp bị chuyển khỏi kho sang nháp đầu tiên, nên đích thứ hai trở đi và các lượt sau hỏng ("Media không còn trong kho"). Giờ chỉ chép, kho giữ nguyên.
+- **Bảng CSV của các mẫu quét** chạy được bằng Chrome MinMin trên VPS (trước báo "Permission denied").
+- **Báo cáo Fanpage:** tiếp cận và tương tác không còn luôn bằng 0. Meta đã bỏ chỉ số cũ; MinMin dùng chỉ số mới, lấy số của ngày hôm qua và ghi đúng ngày. Facebook không trả số thì ghi rõ lỗi vào nhật ký.
+- **Nháp video TikTok/YouTube đã duyệt** tính vào hạn mức đăng video mỗi ngày.
+- **Duyệt nhiều bài cùng lúc cho một nick** không còn đăng dồn liền nhau: các bài cách nhau theo thời gian nghỉ của Giới hạn nick.
+- **Trần vào nhóm mỗi giờ** (Giới hạn nick) giờ có hiệu lực; mẫu "Bình luận nhóm theo sản phẩm" cũng tính lượt vào nhóm.
+- Worker GPM không còn đóng ngang cửa sổ profile bạn đang tự mở: chỉ dọn trình duyệt do Worker mở lần trước. Mở profile lỗi giữa chừng thì đóng lại, lượt sau khỏi kẹt.
+- Chrome MinMin trên VPS đóng được profile của việc bị treo quá giờ.
+- Câu báo nick bị đăng xuất / checkpoint đúng cho cả Chrome MinMin, không chỉ GPM. Chữ ở Duyệt nội dung, Tài khoản cập nhật theo.
+- Lỗi chiến dịch AI ghi rõ nguyên nhân thay vì "Tác vụ chưa hoàn tất".
 
 ## [26.10.317] - 2026-10-31
 ### Thêm mới
