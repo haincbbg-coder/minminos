@@ -1,5 +1,12 @@
 # MinMin OS
 
+## [26.10.314] - 2026-10-31
+### Thêm mới
+- Chatbot nối được **Zalo OA** (trang Zalo chính thức của shop): bố dán App ID, khoá bí mật và Refresh token, MinMin tự gia hạn mã truy cập, tin khách vào chung hộp thư.
+- Bot Zalo cá nhân hiện **"đang soạn tin"** khi A.I. đang nghĩ và gửi được chữ **in đậm**, chữ màu.
+- Thống kê có khối **A.I. giúp bố được gì** (số tin A.I. trả lời, giờ tiết kiệm, khách mới, tốc độ trả lời A.I. so với người), giờ đông khách và tách theo từng tài khoản.
+- Trên điện thoại mở chat là toàn màn hình, Enter xuống dòng, bộ lọc nhanh gom vào một nút; nhóm chat giữ 1000 tin gần nhất.
+
 ## [26.10.304] - 2026-10-30
 ### Sửa lỗi
 - Tìm kiếm/lọc đích đăng và giữ lựa chọn, phong cách khi chuyển bộ lọc trong chiến dịch AI.
