@@ -207,9 +207,12 @@ class GPM:
                 time.sleep(3)
                 if not da_dong_han and time.monotonic() - bat_dau > 12:
                     da_dong_han = True
-                    pids = sorted({pp for pp, _ in tien_trinh_profile(profile_id)})
+                    # 26.10.311: chỉ đóng chrome do WORKER mở (có cờ cổng điều khiển). Cửa sổ bạn tự mở
+                    # trong GPM không có cờ này nên không bị giết ngang (đang đăng nhập, đang gõ dở...).
+                    pids = sorted({pp for pp, cmd in tien_trinh_profile(profile_id)
+                                   if "--remote-debugging-port" in (cmd or "")})
                     if pids:
-                        self.nhat_ky(f"Profile vẫn bận: đóng {len(pids)} tiến trình chrome của profile này")
+                        self.nhat_ky(f"Profile vẫn bận: đóng {len(pids)} tiến trình chrome Worker mở lần trước")
                         for pp in pids:
                             _chay(["taskkill", "/PID", str(pp), "/T"])
                         time.sleep(3)
@@ -293,12 +296,14 @@ class GPM:
         # -> lượt sau GPM báo cổng cũ / ProfileInUse. Dọn nốt các tiến trình của đúng profile này.
         try:
             time.sleep(2)
-            con = sorted({pp for pp, _ in tien_trinh_profile(profile_id)})
+            con = sorted({pp for pp, cmd in tien_trinh_profile(profile_id)
+                          if "--remote-debugging-port" in (cmd or "")})
             if con:
                 for pp in con:
                     _chay(["taskkill", "/PID", str(pp), "/T"])
                 time.sleep(3)
-                for pp in sorted({pp for pp, _ in tien_trinh_profile(profile_id)}):
+                for pp in sorted({pp for pp, cmd in tien_trinh_profile(profile_id)
+                                  if "--remote-debugging-port" in (cmd or "")}):
                     _chay(["taskkill", "/PID", str(pp), "/T", "/F"])
         except Exception:
             pass

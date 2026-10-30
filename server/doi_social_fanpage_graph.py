@@ -806,9 +806,13 @@ async def cap_nhat_so_lieu(trang_id: str = "", now: Optional[float] = None) -> d
                     loi_m.append(f"{m}: {str((_loi(d1) or {}).get('message', ''))[:80]}")
                 else:
                     ds_m += d1.get("data") or []
+        kw_hq = {}
         for m in ds_m:
             if m.get("name") in metric and _gia_tri_cuoi(m) is not None:
-                kw[metric[m["name"]]] = _gia_tri_cuoi(m)
+                kw_hq[metric[m["name"]]] = _gia_tri_cuoi(m)
+        if kw_hq:      # chỉ số của ngày hôm qua ghi vào dòng hôm qua; người theo dõi là số của hôm nay
+            fp.ghi_so_lieu_trang(tid, fp._ngay_str(now - 86400), **kw_hq)
+            so_trang += 0 if kw else 1
         if loi_m and len(loi_m) == len(metric):
             loi_insights.append(f"{tid}: " + "; ".join(loi_m))
         if kw:

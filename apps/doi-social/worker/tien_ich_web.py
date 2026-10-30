@@ -707,7 +707,8 @@ def dang_ban_nhap_chung(nc, nen_tang: str, ham: Dict[str, Callable[[dict], str]]
     p = tham_so_ban_nhap(nc)
     bid = p.get("ban_nhap_id")
     loai = str(p.get("loai") or "binh_luan")
-    hd = {"bai_dang": "dang_tuong", "tra_loi": "tra_loi_binh_luan"}.get(loai, "binh_luan")
+    hd = {"bai_dang": "dang_video" if nen_tang in ("tiktok", "youtube") else "dang_tuong",
+          "tra_loi": "tra_loi_binh_luan"}.get(loai, "binh_luan")
     dem = Dem()
     f = ham.get(loai)
     if not f:
