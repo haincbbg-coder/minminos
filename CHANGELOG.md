@@ -1,6 +1,6 @@
 # MinMin OS
 
-## [26.10.306] - 2026-10-30
+## [26.10.307] - 2026-10-30
 ### Thêm mới
 - **Bot Zalo đọc được file PDF, Word, Excel khách gửi.** Trong nhóm, khách gửi file rồi mới gọi bot vẫn được.
 - **Chat riêng gặp câu khó** (giảm giá, hoàn tiền, khiếu nại) thì bot im và báo bố ở chuông, ghi rõ khách nhắn gì và vì sao bot không tự trả lời. Bot cũng biết tự tách câu dài thành vài tin ngắn.
