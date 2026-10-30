@@ -101,6 +101,7 @@ import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API c�
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
 import inbox         # hòm thư: mọi kết quả chạy nền để lại một mẩu thư bền ở server
+import muc_thong_bao  # 26.10.312: bộ chỉ huy thông báo (nhóm, mức, tin nào được kêu)
 import webpush       # thông báo đẩy trình duyệt (Web Push, tự mã hoá - không thêm thư viện)
 import stt            # nghe tin thoại (Whisper qua Groq) -> chữ, cho kênh Telegram/Zalo
 import luot_dang_chay # sổ lượt chat đang chạy theo brain: tool giao việc tự biết khung chat nào hỏi
@@ -10522,7 +10523,8 @@ async def _kiem_ngan_sach(nhac: bool = True) -> dict:
                 # kind="system": Javis TỰ nói, không phải trả lời câu ai hỏi. Đúng nhãn mà
                 # inbox.py đặt tên sẵn cho ca này ("cảnh báo hết hạn mức"), và nhãn đó là thứ
                 # người dùng đọc trên thẻ thư để biết tin này từ đâu ra.
-                await _notify_owner("", tin, kind="system")
+                await _notify_owner("", tin, kind="system", source="cost",
+                                    level="urgent" if ns["muc_do"] == "het" else "important")
             except Exception:  # noqa: BLE001 - không gửi được thì thôi, đừng làm hỏng vòng lặp
                 pass
     return ns
@@ -11812,7 +11814,7 @@ def huy_viec_nen_giong(conv_sid: str) -> int:
 
 
 async def _bo_vao_hom_thu(owner_chat, text, *, kind="answer", label="", source="",
-                          quiet=False) -> bool:
+                          quiet=False, level="", group="", viec=None, decision=None) -> bool:
     """Để lại MỘT mẩu thư cho mọi kết quả chạy nền, rồi rung chuông đẩy nếu có đăng ký.
 
     Vì sao đặt ở đây chứ không ở từng nơi sinh việc: `_notify_owner` là CỬA DUY NHẤT mà
@@ -11823,8 +11825,17 @@ async def _bo_vao_hom_thu(owner_chat, text, *, kind="answer", label="", source="
     Hòm thư ghi BẤT KỂ tin đi bằng kênh nào: kênh (chat web / Telegram / Zalo / push) là
     chuông cửa, hụt cũng không sao; hòm thư là bản ghi bền. Đó cũng là lý do hàm này nuốt
     mọi lỗi - hòm thư hỏng thì cùng lắm mất một mẩu thư, không được phép làm hỏng việc BÁO.
+
+    26.10.312: `muc_thong_bao` (hoặc `decision` mà `_notify_owner` đã lấy) nói tin này KÊU (chấm
+    đỏ + thông báo đẩy), bị LỌC (vào chuông ở dạng đã đọc, ngăn "Đã lọc", không đẩy), hay BỎ (bố
+    đã tắt cả nhóm của nó).
     """
     try:
+        dec = decision or muc_thong_bao.safe_decide(inbox._tieu_de(text), source=source, kind=kind,
+                                                     quiet=quiet, level=level, group=group, viec=viec)
+        if dec.get("verdict") == "drop":
+            return True     # bố tắt nhóm này: không có gì để giữ, và đó không phải lỗi
+        quiet = dec.get("verdict") != "loud"
         cid = str(owner_chat or "").strip()
         sid = cid[len(WEB_CHAT_PREFIX):] if cid.startswith(WEB_CHAT_PREFIX) else ""
         # KÊNH của hội thoại đích, đọc từ chính kho phiên. Dashboard cần nó để bấm vào mẩu thư
@@ -11841,7 +11852,9 @@ async def _bo_vao_hom_thu(owner_chat, text, *, kind="answer", label="", source="
                 print(f"[inbox] không đọc được kênh của phiên {sid[:8]}: "
                       f"{type(e).__name__}: {e}", file=sys.stderr)
         item = inbox.add(text, kind=kind, session_id=sid, source=source, label=label,
-                         read=bool(quiet), channel=kenh)
+                         read=bool(quiet), channel=kenh, group=dec.get("group") or "other",
+                         level=dec.get("level") or "", sig=dec.get("sig") or "",
+                         filtered=bool(quiet), why=dec.get("why") or "")
     except Exception as e:
         print(f"[inbox] bỏ thư lỗi: {type(e).__name__}: {e}", file=sys.stderr)
         return False
@@ -11885,7 +11898,7 @@ _HOP_VIEC = viec_hang_ngay.HopViec(
 
 
 async def _notify_owner(owner_chat, text, *, kind="answer", label="", source="",
-                        quiet=False, ngan="", viec=None, web="") -> tuple:
+                        quiet=False, ngan="", viec=None, web="", level="", group="") -> tuple:
     """Báo cáo cho NGƯỜI YÊU CẦU loop/task (mặc định của Javis). Quy tắc:
       - owner_chat dạng "web:<sid>" → đẩy thẳng vào ĐÚNG khung chat web đã giao việc.
       - owner_chat dạng "zalo:<id>" → gửi qua bot Zalo cho ĐÚNG người đó.
@@ -11920,9 +11933,17 @@ async def _notify_owner(owner_chat, text, *, kind="answer", label="", source="",
     Từ 26.10.259, tin việc nền (Bảng việc, loop, nhắc hẹn, theo dõi web) đang về khung chat web
     được chuyển sang hội thoại của mục Việc Hàng Ngày TRƯỚC khi bỏ hòm thư, để bấm mẩu thư cũng
     mở đúng hội thoại đó."""
+    # 26.10.312: bộ chỉ huy thông báo quyết TRƯỚC (`level`/`group` để nơi gửi nói rõ khi cần).
+    # Tin bị lọc mà không ai đích danh giao việc thì chỉ nằm trong chuông: không rơi sang
+    # Telegram của chủ theo đường mặc định. Khung chat hay kênh đã giao việc thì vẫn nhận đủ.
+    goc = str(owner_chat or "").strip()
+    dec = muc_thong_bao.safe_decide(inbox._tieu_de(text), source=source, kind=kind, quiet=quiet,
+                                    level=level, group=group, viec=viec)
     owner_chat = await asyncio.to_thread(_HOP_VIEC.doi_dich, owner_chat, viec)
     vao_hom = await _bo_vao_hom_thu(owner_chat, text, kind=kind, label=label, source=source,
-                                    quiet=quiet)
+                                    quiet=quiet, decision=dec)
+    if not goc and dec.get("verdict") != "loud":
+        return bool(vao_hom), ("" if vao_hom else "Không bỏ được thư vào hòm")
     ok, err = await _gui_qua_kenh(owner_chat, text, ngan=ngan, viec=viec, web=web)
     if ok or not vao_hom:
         return ok, ("" if ok else err)
@@ -12105,7 +12126,8 @@ async def _notify_gate(job_view, gate_task=None) -> tuple:
         text = _gate_soan_tin(jv, gate_task)
         # GATE là tin của Bảng việc: về hội thoại "Bảng Việc" trong mục Việc Hàng Ngày (26.10.259).
         chat = await asyncio.to_thread(_HOP_VIEC.doi_dich, chat, None, "bang")
-        await _bo_vao_hom_thu(chat, text, kind="report", label="Đội AI · GATE", source="gate")
+        await _bo_vao_hom_thu(chat, text, kind="report", label="Đội AI · GATE", source="gate",
+                              group="question", level="urgent")   # GATE đứng chờ bố duyệt
         if chat.startswith(WEB_CHAT_PREFIX) or chat.startswith(ZALO_CHAT_PREFIX):
             # Không có nút: chỉ đường về chỗ bấm được.
             return await _gui_qua_kenh(chat, text + "\n\nMở Bảng việc để Duyệt, Sửa lại hoặc Từ chối.")
@@ -12376,7 +12398,12 @@ import web_watch
 
 async def _watch_send(chat_id, text, viec=None, web="", brain="", dedup=""):
     # Hook báo của MinMin chưa nhận `brain`/`dedup` (Javis 0.186), nên bỏ hai tham số đó.
-    return await _notify_owner(chat_id, text, kind="report", source="watch", viec=viec, web=web)
+    # 26.10.312: thứ bố đặt canh để được nghe là tin khẩn (như nhắc lịch); một lượt canh hỏng
+    # (mất đăng nhập, tạm dừng) là tin kết nối đáng chú ý.
+    hong = str((viec or {}).get("status") or "") == "blocked"
+    return await _notify_owner(chat_id, text, kind="report", source="watch", viec=viec, web=web,
+                               group="connection" if hong else "job",
+                               level="important" if hong else "urgent")
 
 
 async def _watch_summarize(prompt: str) -> str:
@@ -24355,7 +24382,8 @@ office_routes.register(app)
 import routes.mat_nha as mat_nha_routes   # noqa: E402
 async def _mat_nha_bao_chu(text: str):
     """Cảnh báo canh rào của Mắt Nhà: vào hòm thư (chuông + thông báo đẩy) và Telegram chủ."""
-    await _notify_owner("", text, kind="system", label="Mắt Nhà", source="mat-nha")
+    # Canh rào ở nhà là tin KHẨN: bộ chỉ huy thông báo không được lọc nó theo mặc định.
+    await _notify_owner("", text, kind="system", label="Mắt Nhà", source="mat-nha", level="urgent")
 
 
 mat_nha_routes.register(app, mat_nha_routes.MatNhaDeps(dashboard_dir=Path(DASHBOARD_PATH),
@@ -24845,6 +24873,61 @@ async def _meta_ads_duyet_callback(data: str, chat_key: str):
 
 meta_ads_duyet.dat_gui_telegram(_meta_ads_gui_tg)
 meta_fb_routes.register(app)
+
+
+# ============================================
+# 26.10.312: BỘ CHỈ HUY THÔNG BÁO (muc_thong_bao.py). Đăng ký ở đuôi để không xô thứ tự route
+# có sẵn (tests/python/route_table.json khoá thứ tự).
+# ============================================
+@app.post("/inbox/react")
+async def inbox_react(payload: dict = Body(None)):
+    """Bố phản hồi một tin trong chuông: "not_needed" (Không cần báo) hoặc "needed" (Nên báo, trên
+    tin đã lọc). MinMin nhớ loại tin đó cho lần sau, và trả câu nói rõ đã nhớ gì."""
+    p = payload or {}
+    axis = str(p.get("axis") or "").strip()
+    if axis not in ("needed", "not_needed"):
+        return JSONResponse({"ok": False, "error": "Lựa chọn không hợp lệ"}, status_code=400)
+    item = inbox.phan_hoi(str(p.get("id") or ""), axis)
+    if not item:
+        return JSONResponse({"ok": False, "error": "Thông báo này không còn"}, status_code=404)
+    c = muc_thong_bao.react(item, axis)
+    return {"ok": True, "change": c, "message": muc_thong_bao.describe(c) if c else "",
+            "unread": inbox.so_chua_doc()}
+
+
+@app.get("/thong-bao/muc")
+async def thong_bao_muc_get():
+    return {"ok": True, **muc_thong_bao.status()}
+
+
+@app.post("/thong-bao/muc/nhom")
+async def thong_bao_muc_nhom(payload: dict = Body(None)):
+    p = payload or {}
+    g, m = str(p.get("group") or ""), str(p.get("mode") or "")
+    if g not in muc_thong_bao.GROUPS or m not in muc_thong_bao.MODES:
+        return JSONResponse({"ok": False, "error": "Nhóm hoặc chế độ không hợp lệ"}, status_code=400)
+    c = muc_thong_bao.set_mode(g, m, reason="Bố chọn.")
+    return {"ok": True, "change": c, **muc_thong_bao.status()}
+
+
+@app.post("/thong-bao/muc/luat")
+async def thong_bao_muc_luat(payload: dict = Body(None)):
+    """Gỡ (rule rỗng) hoặc đặt ("mute" / "always") luật riêng của một loại tin (`key` = nhóm|dáng)."""
+    p = payload or {}
+    rule = str(p.get("rule") or "") or None
+    if rule not in (None, "mute", "always"):
+        return JSONResponse({"ok": False, "error": "Luật không hợp lệ"}, status_code=400)
+    g, _, sig = str(p.get("key") or "").partition("|")
+    c = muc_thong_bao.set_rule(g, sig, rule, label=str(p.get("label") or ""), reason="Bố chọn.")
+    return {"ok": True, "change": c, **muc_thong_bao.status()}
+
+
+@app.post("/thong-bao/muc/hoan-tac")
+async def thong_bao_muc_hoan_tac(payload: dict = Body(None)):
+    c = muc_thong_bao.undo(str((payload or {}).get("id") or ""))
+    if c is None:
+        return JSONResponse({"ok": False, "error": "Không hoàn tác được thay đổi này"}, status_code=404)
+    return {"ok": True, "change": c, **muc_thong_bao.status()}
 
 if __name__ == "__main__":
     import uvicorn
