@@ -4826,5 +4826,6 @@
   "mm.inbox.load_error": "Could not load data.",
   "mm.inbox.no_judgments": "No decisions yet.",
   "mm.inbox.did_reply": "Replied",
-  "mm.inbox.did_wait": "Waited"
+  "mm.inbox.did_wait": "Waited",
+  "net.reconnecting": "Reconnecting to the server…"
 }

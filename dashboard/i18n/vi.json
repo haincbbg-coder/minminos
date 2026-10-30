@@ -4826,5 +4826,6 @@
   "mm.inbox.load_error": "Không tải được dữ liệu.",
   "mm.inbox.no_judgments": "Chưa có quyết định nào.",
   "mm.inbox.did_reply": "Đã trả lời",
-  "mm.inbox.did_wait": "Đã chờ"
+  "mm.inbox.did_wait": "Đã chờ",
+  "net.reconnecting": "Đang kết nối lại máy chủ…"
 }

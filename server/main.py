@@ -78,6 +78,7 @@ for _tenFile in ("users.json", ".member_sessions.json"):
     except OSError:
         pass
 import claude_auth     # gói Claude Code xác thực bằng gì: phiên subscription hay API key
+import nen_gon         # 26.10.313: JS/CSS dashboard gửi đi ở bản bỏ chú thích (giữ số dòng)
 import giu_am          # 26.10.313: giữ tiến trình engine sống giữa các tin của một cuộc chat
 import claude_giu_am   # 26.10.313: lượt chat Claude Code chạy trên tiến trình giữ ấm
 import aux_engine   # engine việc nền: Claude / Codex / API rẻ
@@ -430,6 +431,42 @@ class _NenTinh:
         await self.app(scope, receive, send)
 
 
+class _GonTinh:
+    """Phục vụ .js/.css của dashboard ở bản đã nén gọn (server/nen_gon.py, 26.10.313).
+
+    Đứng TRONG _NenTinh nên bản gọn vẫn được gzip. Chỉ nhận GET tới file có thật nằm trong
+    dashboard/; mọi thứ khác (HEAD, file lạ, đường trèo ra ngoài) đi tiếp xuống StaticFiles như cũ.
+    ETag là crc32 của chính bản gửi đi, trình duyệt hỏi lại thì trả 304."""
+
+    def __init__(self, app):
+        self.app = app
+        self._goc = DASHBOARD_PATH.resolve()
+
+    async def __call__(self, scope, receive, send):
+        duong = scope.get("path", "") if scope.get("type") == "http" else ""
+        if (scope.get("method") == "GET" and duong.startswith("/static/") and nen_gon.bat()
+                and nen_gon.nen_duoc(duong[len("/static/"):])):
+            try:
+                f = (self._goc / duong[len("/static/"):]).resolve()
+                f.relative_to(self._goc)
+                if f.is_file():
+                    data, crc = await asyncio.to_thread(nen_gon.ban_phuc_vu, f, duong[len("/static/"):])
+                    etag = f'"g{crc}-{len(data)}"'
+                    hoi = dict(scope.get("headers") or []).get(b"if-none-match", b"").decode("latin-1")
+                    kieu = "text/css; charset=utf-8" if f.suffix.lower() == ".css" \
+                        else "text/javascript; charset=utf-8"
+                    if etag in hoi:
+                        resp = Response(status_code=304, headers={"ETag": etag})
+                    else:
+                        resp = Response(content=data, media_type=kieu, headers={"ETag": etag})
+                    await resp(scope, receive, send)
+                    return
+            except (OSError, ValueError):
+                pass
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(_GonTinh)
 app.add_middleware(_NenTinh, minimum_size=1024)
 
 
@@ -464,6 +501,10 @@ async def _static_cache_headers(request: Request, call_next):
         resp.headers["Cache-Control"] = "no-cache"
     elif duong.startswith("/static/") and request.query_params.get("v"):
         resp.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+    elif duong.startswith("/static/fonts/") and duong.endswith(".woff2"):
+        # Font tự lưu (26.10.313) được fonts.css gọi KHÔNG kèm ?v=. Chữ gần như không bao giờ đổi:
+        # cho giữ 30 ngày, khỏi hỏi lại máy chủ mỗi lần mở trang.
+        resp.headers.setdefault("Cache-Control", "public, max-age=2592000")
     elif duong.startswith("/static/hud/"):
         # Module con của HUD (vision.js, voice.js...) được import KHÔNG kèm `?v=`: phải hỏi lại
         # mỗi lần, kẻo bản cập nhật chạy hud.js mới với vision.js cũ (0.64.87).
@@ -1262,8 +1303,9 @@ def _asset_fp_one(rel: str) -> str:
         ent = _ASSET_FP.get(rel)
         if ent and ent["khoa"] == khoa:
             return ent["crc"]
-        import zlib
-        crc = format(zlib.crc32(f.read_bytes()) & 0xFFFFFFFF, "08x")
+        # 26.10.313: băm ĐÚNG thứ trình duyệt nhận (bản đã nén gọn), không phải file trên đĩa -
+        # freshness.js băm lại bản nó tải về và so với con số này.
+        crc = nen_gon.ban_phuc_vu(f, rel)[1]
         _ASSET_FP[rel] = {"khoa": khoa, "crc": crc}
         return crc
     except OSError:

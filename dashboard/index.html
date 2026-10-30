@@ -26,9 +26,8 @@
        nên trước đây chỉ mobile chạy dạng app, desktop không bao giờ có nút cài). Nút
        "Mở như app" trên thanh trạng thái + icon cài trong thanh địa chỉ ăn theo file này. -->
   <link rel="manifest" href="/static/manifest.json?v=5">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Montserrat:wght@400;500;600;700&amp;display=swap">
+  <!-- Font tự lưu trên máy chủ (26.10.313): không còn hỏi sang Google Fonts lúc mở trang. -->
+  <link rel="stylesheet" href="/static/fonts/fonts.css?v=1">
   <!-- Biến --ic-* cho icon dùng trong content: của CSS. Phải đứng TRƯỚC style.css
        vì style.css tham chiếu các biến này. -->
   <link rel="stylesheet" href="/static/vendor/lucide-icons.css?v=1">
@@ -869,6 +868,7 @@
   <!-- Người gác cổng bản cũ. Nạp KHÔNG kèm `?v=` và được đóng dấu no-cache, vì nó phải
        LUÔN mới: một người gác cổng cũ theo thì không gác được gì. Đứng ngay đây để
        bắt được cả trường hợp một file phía dưới hỏng vì đang chạy bản cũ. -->
+  <script src="/static/mang-ben.js?v=1"></script>
   <script src="/static/freshness.js"></script>
   <script src="/static/i18n/index.js?v=2"></script>
   <script src="/static/vendor/lucide-icons.js?v=19"></script>
