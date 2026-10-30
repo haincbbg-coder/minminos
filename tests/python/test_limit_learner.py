@@ -218,6 +218,11 @@ check("có trần thời gian chờ, không treo vô hạn",
 check("chỉ chờ MỘT lần mỗi lượt, không chờ chồng",
       "not waited_for_window" in _eng)
 
+# 26.10.312: "You're out of extra usage" của Claude Code là hết lượt gói, không phải báo cáo việc.
+_x = ll.parse_subscription_limit("You're out of extra usage · resets 3pm (Asia/Saigon)", engine_hint="claude-code")
+check("nhận 'out of extra usage' là hết lượt gói", _x is not None and _x.engine == "claude-code")
+check("'out of extra usage' chiếm output thì tính", ll.subscription_dominates("You're out of extra usage · resets 3pm"))
+
 print()
 if _fails:
     print(f"THẤT BẠI {len(_fails)}: {_fails}")

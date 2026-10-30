@@ -171,6 +171,20 @@ check("final rỗng không phải lỗi auth", not aux_engine.final_loi_dang_nha
 check("nội dung dài không bị nghi oan",
       not aux_engine.final_loi_dang_nhap("bao cao " * 100 + "please run /login"))
 
+# --- 26.10.312: final cắm cờ is_error (Claude Code hết lượt) là mắt hỏng, chưa làm gì thì sang mắt sau ---
+claude_het = FakeEngine([{"type": "final", "content": "You're out of extra usage · resets 3pm", "is_error": True}])
+codex = FakeEngine([FINAL("codex cứu")])
+evs = run(collect(FB([claude_het, codex])))
+check("final is_error: chạy mắt sau", codex.ran == 1 and evs[-1] == FINAL("codex cứu"))
+check("final is_error: không đẩy câu lỗi ra như kết quả",
+      not any(e.get("is_error") for e in evs))
+claude_het = FakeEngine([{"type": "tool_call", "name": "zalo_send_message"},
+                         {"type": "final", "content": "API Error: 529", "is_error": True}])
+codex = FakeEngine([FINAL("codex chạy lại")])
+evs = run(collect(FB([claude_het, codex])))
+check("final is_error sau khi đã gọi công cụ: KHÔNG chạy lại ở mắt sau", codex.ran == 0)
+check("final is_error sau khi đã gọi công cụ: trả lỗi", evs[-1] == ERR("API Error: 529"))
+
 print()
 if _fails:
     print(f"FAIL {len(_fails)} test: " + ", ".join(_fails)); sys.exit(1)

@@ -759,6 +759,12 @@ class TasksFeature:
                     gom.nap(event)
                 if kind == "final":
                     final = str(event.get("content") or "") or final
+                    # Final cắm cờ `is_error` (hết lượt gói, API 429, hỏng giữa chừng): chữ của nó là
+                    # câu báo lỗi của nhà cung cấp, không phải báo cáo việc. Đọc như kết quả là việc
+                    # đi thẳng sang Xong mỗi khi câu chữ lạ với limit_learner (26.10.312).
+                    if event.get("is_error"):
+                        error = error or (final.strip()
+                                          or f"engine error ({event.get('subtype') or 'final'})")
                 elif kind == "text":
                     narration.append(str(event.get("content") or ""))
                 elif kind == "tool_call":
