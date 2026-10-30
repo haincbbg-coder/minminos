@@ -769,9 +769,29 @@ def dang_ai_da_duyet(nc, noi_dang: str, hd: str, so_bai: int, ten: str,
 # --------------------------------------------------------------------------- CSV
 
 def ghi_csv(ten_tep: str, cot: Sequence[str], dong: Sequence[dict]) -> Path:
-    """Ghi CSV UTF-8 có BOM (Excel đọc đúng tiếng Việt) vào thư mục quet/ cạnh worker."""
-    tm = THU_MUC / "quet"
-    tm.mkdir(parents=True, exist_ok=True)
+    """Ghi CSV UTF-8 có BOM (Excel đọc đúng tiếng Việt) vào thư mục quet/ cạnh worker.
+
+    26.10.311: Worker Chrome tích hợp trên VPS chạy trong /app chỉ đọc -> ghi vào thư mục dữ liệu
+    (JAVIS_STATE_DIR) hoặc thư mục tạm. Bên gọi vẫn gửi tệp về MinMin như cũ."""
+    import os
+    import tempfile
+    ung_vien = [THU_MUC / "quet"]
+    if os.environ.get("JAVIS_STATE_DIR"):
+        ung_vien.append(Path(os.environ["JAVIS_STATE_DIR"]) / "doi-social-quet")
+    ung_vien.append(Path(tempfile.gettempdir()) / "minmin-quet")
+    tm = None
+    for d in ung_vien:
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+            thu = d / ".ghi-thu"
+            thu.write_text("1")
+            thu.unlink()
+            tm = d
+            break
+        except OSError:
+            continue
+    if tm is None:
+        raise OSError("không có thư mục ghi được để lưu bảng CSV")
     p = tm / ten_tep
     with open(p, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(cot), extrasaction="ignore")

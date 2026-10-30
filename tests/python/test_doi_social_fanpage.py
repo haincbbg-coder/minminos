@@ -91,11 +91,13 @@ class GraphGia:
             pg = path.split("/")[0]
             return {"data": [{"id": f"{pg}_900", "comments": {"data": self.bl.get(pg, [])}}]}
         if method == "GET" and "/insights" in path:
+            if "impressions" in str(params.get("metric")):
+                return {"error": {"message": "(#100) The value must be a valid insights metric", "code": 100}}
             if path.startswith(P1 + "/"):
-                return {"data": [{"name": "page_impressions_unique", "values": [{"value": 50}, {"value": 70}]},
+                return {"data": [{"name": "page_total_media_view_unique", "values": [{"value": 50}, {"value": 70}]},
                                  {"name": "page_post_engagements", "values": [{"value": 9}]},
-                                 {"name": "page_views_total", "values": [{"value": 4}]}]}
-            return {"data": [{"name": "post_impressions_unique", "values": [{"value": 33}]},
+                                 {"name": "page_media_view", "values": [{"value": 4}]}]}
+            return {"data": [{"name": "post_total_media_view_unique", "values": [{"value": 33}]},
                              {"name": "post_clicks", "values": [{"value": 2}]}]}
         if method == "GET" and params.get("fields") == "followers_count,fan_count":
             return {"followers_count": 1250}

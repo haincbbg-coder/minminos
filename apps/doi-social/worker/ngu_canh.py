@@ -98,8 +98,8 @@ BANG_NHAN_BIET: Dict[str, list] = {
     ] + _CAPTCHA_CHUNG,
 }
 THONG_DIEP_MA = {
-    "dang_xuat": "nick đã bị đăng xuất {nt} - mở profile trong GPM đăng nhập lại",
-    "checkpoint": "nick đang bị {nt} kiểm tra bảo mật (checkpoint) - mở profile trong GPM xử lý tay",
+    "dang_xuat": "nick đã bị đăng xuất {nt} - mở profile của nick (GPM hoặc Chrome MinMin) đăng nhập lại",
+    "checkpoint": "nick đang bị {nt} kiểm tra bảo mật (checkpoint) - mở profile của nick (GPM hoặc Chrome MinMin) xử lý tay",
     "captcha": "{nt} đòi giải captcha - dừng nick này, mở profile giải tay",
     "qua_nhanh": "{nt} báo thao tác quá nhanh / tạm chặn - dừng nick này, để nghỉ vài giờ",
 }
