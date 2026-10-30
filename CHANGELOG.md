@@ -5,6 +5,7 @@
 - **Webhook bền hơn**: mỗi sự kiện Pancake, chuyển khoản gửi tới đều được lưu lại trước khi xử lý, máy khởi động lại cũng không mất, gửi trùng thì tự bỏ.
 - Trang Webhook có thêm phần **Sự kiện** và **Tình trạng**: bố xem từng sự kiện đi tới đâu, lỗi gì, bấm chạy lại được.
 - Lỗi tạm thời (kể cả bị chặn vì gửi quá nhanh) tự thử lại; khoá bí mật và mã nhân viên không bao giờ hiện ra màn hình.
+
 ## [26.10.305] - 2026-10-30
 ### Cải thiện
 - **Tinh gọn đợt 3**: Chợ MinMin và danh sách dịch vụ sẵn có đổi từ thẻ to sang từng dòng gọn.
