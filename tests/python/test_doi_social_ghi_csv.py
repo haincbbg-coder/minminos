@@ -18,6 +18,7 @@ def check(ten, cond, extra=""):
 
 
 goc = Path(tempfile.mkdtemp())
+w.THU_MUC = goc            # không ghi bảng thử vào thư mục mã nguồn
 p = w.ghi_csv("thu.csv", ["a", "b"], [{"a": "Váy", "b": 1}])
 check("ghi được ở chỗ mặc định", p.exists() and "Váy" in p.read_text(encoding="utf-8-sig"))
 
