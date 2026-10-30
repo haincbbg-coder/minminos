@@ -1,5 +1,9 @@
 # MinMin OS
 
+## [26.10.311] - 2026-10-30
+### Sửa lỗi
+- Đang làm: kiểm tra toàn bộ Đội Social.
+
 ## [26.10.317] - 2026-10-31
 ### Thêm mới
 - **Kế Hoạch tài chính** tại Kết Nối Ngoài: kế hoạch bán/nhập hàng, P&L, hòa vốn, công nợ và dòng tiền 12 tháng liên thông.
