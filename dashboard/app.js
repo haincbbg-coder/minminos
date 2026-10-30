@@ -1251,7 +1251,26 @@ function handleMessage(data) {
     }
   } else if (data.type === "resume") {
     // Trạng thái lịch tự chạy lại (hẹn / tắt / đang chạy / huỷ) - thẻ tự vẽ lại.
+    // 26.10.309: "partial" = hết lượt giữa câu trả lời; thẻ "Chạy lại ngay" gắn dưới chính câu dở đó.
+    try {
+      if (window.JavisResume && data.reason === "partial" && isActive) {
+        const _dos = chatArea.querySelectorAll(".msg-javis");
+        const _cuoi = (t && t.bubble) || _dos[_dos.length - 1];
+        if (_cuoi) window.JavisResume.attach(_cuoi, sid, { engine: data.engine || "" });
+      }
+    } catch (e) {}
     try { if (window.JavisResume) window.JavisResume.onFrame(data); } catch (e) {}
+  } else if (data.type === "reroute") {
+    // 26.10.309: đường đang chạy hết lượt TRƯỚC khi viết chữ hay gọi công cụ nào, server chạy lại đúng
+    // lượt này bằng đường kế tiếp của Thứ tự dùng. Bỏ những gì lần đầu lỡ vẽ (câu "hết lượt" stream ra),
+    // để lại một dòng nói vì sao đổi đường, rồi chờ câu trả lời mới như một lượt thường.
+    if (t) { t.text = ""; t.limit = null; t.errored = false; t.spoke = false; }
+    if (isActive) {
+      if (t && t.bubble) { try { t.bubble.remove(); } catch (e) {} t.bubble = null; }
+      cum.reset();
+      ghiDoiDuong(data.content || "");
+      showActivity(escapeHtml(data.content || ""));
+    }
   } else if (data.type === "wf_event") {
     // Tiến độ từng bước của một lần chạy quy trình (trang Cộng sự vẽ ở cột phải). Khung chat
     // không vẽ gì: chip trạng thái đã đi bằng khung status riêng.
@@ -1717,6 +1736,16 @@ function ghiChuThoang(text) {
   chatAppend(el);
   scrollBottom();
   setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, GHI_CHU_MS);
+}
+// 26.10.309: một dòng lặng chỗ lượt chuyển sang đường kế tiếp ("Đang dùng ChatGPT vì Claude Code hết
+// lượt."). Khác ghiChuThoang: dòng này ở lại để sau còn biết câu trả lời đi đường nào và vì sao.
+function ghiDoiDuong(text) {
+  if (!text) return;
+  const el = document.createElement("div");
+  el.className = "msg msg-ghichu msg-doiduong";
+  el.textContent = text;
+  chatAppend(el);
+  scrollBottom();
 }
 function recordTurn(role, text, atts, ask, buoc) {
   convo.push({ role, text: text || "", atts: atts || [], ask: ask || null, ts: Date.now(),

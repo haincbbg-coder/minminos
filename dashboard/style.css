@@ -1312,6 +1312,8 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
   text-align: center; color: var(--text3); font-size: var(--mm-fs-12); font-family: var(--font);
   padding: 2px 12px; opacity: 0.85;
 }
+/* 26.10.309: lượt chuyển sang đường kế tiếp vì hết lượt. Ở lại trong khung chat, đủ to để đọc trên điện thoại. */
+.msg-ghichu.msg-doiduong { font-size: var(--mm-fs-14); color: var(--mm-muted); opacity: 1; padding: var(--mm-sp-1) var(--mm-sp-3); }
 @keyframes spin { to { transform: rotate(360deg); } }   /* vẫn dùng cho .rs-spin */
 
 .mem-count {

@@ -81,7 +81,7 @@ _DEFAULT = {
         "main": {"provider": "", "model": ""},
         # Model phụ cho việc NỀN (loop/metrics/ingest) - alias Claude qua CLI. "" = dùng mặc định
         # (không đổi). Đặt model rẻ (vd haiku) để tiết kiệm khi chạy nền nhiều.
-        "auxiliary": {"model": ""},
+        "auxiliary": {"model": "", "reasoning": "off"},
         # Model RIÊNG cho kênh Telegram. provider rỗng = THEO model chính (mặc định, không đổi
         # gì cho người đang dùng). Đặt provider = GHIM: đổi model trên web không kéo Telegram
         # theo nữa, và /model trên Telegram sửa ô này chứ không sửa model chính. Ra đời 02/09:
@@ -123,6 +123,11 @@ _DEFAULT = {
         # Bể khoá xoay vòng (26.10.161): {"openrouter": ["sk-..", ...], ...} - khoá DỰ PHÒNG
         # chính chủ cho nhà API; khoá chính ở các field *_key vẫn đứng đầu. Vấp 429/401 là đổi.
         "be_khoa": {},
+        # 26.10.309: chất liệu khoá của danh sách đánh số ({id: key}), mã hoá như mọi secret.
+        "be_khoa_ma": {},
+        # Thứ tự dùng (server/thu_tu_dung.py): [0] là MAIN; "the" = model + Effort từng thẻ.
+        "thu_tu": [],
+        "the": {},
         "anthropic_api_key": "",               # provider Anthropic API (P2)
         "openai_api_key": "",                  # provider OpenAI (ChatGPT API)
         "gemini_api_key": "",                  # provider Google Gemini (endpoint OpenAI-compat)
@@ -520,6 +525,8 @@ _SECRET_PATHS = (
     "model.openrouter_key", "model.anthropic_api_key", "model.openai_api_key", "model.gemini_api_key",
     "model.groq_api_key", "model.xai_api_key", "model.meta_api_key", "model.ollama_key", "model.ollama_local_key", "model.openai_compat_key",
     *("model." + kf for kf in nha_api_rieng.KEY_FIELDS),   # deepseek/qwen/glm/minimax_api_key
+    # 26.10.309: mọi khoá trong danh sách khoá đánh số của các thẻ API (id do máy sinh).
+    "model.be_khoa_ma.*",
     "model.openai_oauth.access_token", "model.openai_oauth.refresh_token", "model.openai_oauth.id_token",
     # Gemini CLI (đăng nhập Google ngay trên dashboard). Refresh token ở đây mở được cả gói
     # Code Assist của tài khoản Google, nên nó ngang hàng mọi secret khác trong danh sách.

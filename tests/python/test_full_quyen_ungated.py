@@ -91,24 +91,23 @@ class _FakeCli:
 
 _S_OR = {"model": {"openrouter_key": "sk-or", "auxiliary": {"provider": "anthropic-cli", "model": ""}}}
 
+# 26.10.309: mức full nay CÓ chuỗi dự phòng theo Thứ tự dùng, vì chuỗi đã có luật dừng: mắt
+# nào gọi công cụ rồi mới gãy thì không chạy lại bằng engine khác (test_aux_fallback canh luật đó).
 _out_full = aux_engine.swap(_FakeCli(), mode="full", tag="reminder", settings=_S_OR)
-check("CANARY: mức full KHÔNG dựng chuỗi dự phòng, dù có sẵn key OpenRouter",
-      not isinstance(_out_full, aux_engine._FallbackChain))
+check("mức full đi theo Thứ tự dùng (có dự phòng)", isinstance(_out_full, aux_engine._FallbackChain))
+_src_fb = (SERVER / "aux_engine.py").read_text(encoding="utf-8")
+check("CANARY: chuỗi dừng khi mắt đã gọi công cụ rồi mới gãy",
+      "if da_lam:" in _src_fb and 'if t == "tool_call":\n                        da_lam = True' in _src_fb)
 
-# Ở mức auto/suggest thì chuỗi dự phòng vẫn là thứ tốt: việc chỉ đọc/ghi vault chạy được trên
-# engine nào cũng xong, và "việc nền phải chạy chứ không chết" vẫn đúng ở đó.
 _out_auto = aux_engine.swap(_FakeCli(), mode="auto", tag="loop", settings=_S_OR)
 check("mức auto VẪN có chuỗi dự phòng (việc nhẹ thì chạy được là hơn)",
       isinstance(_out_auto, aux_engine._FallbackChain))
 
-# User chọn hẳn một provider API cho việc nền thì tôn trọng, nhưng vẫn KHÔNG nối thêm mắt sau.
 _S_API = {"model": {"openrouter_key": "sk-or", "groq_api_key": "sk-groq",
                     "auxiliary": {"provider": "groq", "model": "llama"}}}
 _out_api = aux_engine.swap(_FakeCli(), mode="full", tag="reminder", settings=_S_API)
-check("full + user chọn provider API -> dùng đúng provider đó",
+check("full + user chọn provider API -> mắt đầu là đúng provider đó",
       getattr(_out_api, "provider", None) == "groq")
-check("full + provider API -> vẫn KHÔNG có chuỗi dự phòng",
-      not isinstance(_out_api, aux_engine._FallbackChain))
 
 # Provider chưa có key thì lui về Claude chứ không chết - hành vi cũ, giữ nguyên ở mức full.
 _S_THIEU = {"model": {"auxiliary": {"provider": "groq", "model": "llama"}}}

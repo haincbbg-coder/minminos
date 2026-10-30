@@ -588,9 +588,11 @@ class _FallbackChain:
                 if not e.is_available():
                     fail = f"{self._name(e)} không sẵn sàng"
                     continue
-                got_final, got_error = False, None
+                got_final, got_error, da_lam = False, None, False
                 async for ev in e.query(prompt):
                     t = (ev or {}).get("type")
+                    if t == "tool_call":
+                        da_lam = True
                     if t == "error":
                         got_error = ev.get("content") or f"{self._name(e)} trả error"
                         break
@@ -613,8 +615,18 @@ class _FallbackChain:
                     if t == "final":
                         got_final = True
                 if got_final:
+                    _ghi_duong_nen(self._all(), e, dau)
                     return                                       # mắt này chạy ngon → xong
                 fail = got_error or f"{self._name(e)} kết thúc mà không có final"
+                _ghi_het_luot_nen(e, fail)
+                if da_lam:
+                    # 26.10.309: mắt này ĐÃ gọi công cụ rồi mới gãy. Chạy lại nguyên prompt bằng engine
+                    # khác có thể gửi tin, đăng bài lần hai, nên chuỗi dừng ở đây và nói rõ vì sao.
+                    # Nhờ luật này việc mức full cũng có dự phòng được.
+                    print(f"[aux router] {self._name(e)} hỏng SAU khi đã gọi công cụ - dừng, không chạy "
+                          "lại bằng engine khác.", file=sys.stderr)
+                    yield {"type": "error", "content": str(fail) + (f" | {dau}" if dau and dau != str(fail) else "")}
+                    return
             except Exception as exc:
                 fail = f"{self._name(e)}: {type(exc).__name__}: {exc}"
             print(f"[aux router] {self._name(e)} lỗi → thử mắt xích kế tiếp. Lý do: {str(fail)[:300]}",
@@ -910,157 +922,130 @@ def apply(deps, cli, mode: str = None, tag: str = None):
     return cli
 
 
-def _main_fallback_engine(cli, mode, tag, settings, exclude, codex_profile=None):
-    """Mắt dự phòng dựng từ BỘ NÃO CHÍNH của người dùng, hoặc None nếu không dựng được.
+def _ghi_duong_nen(chuoi, e, loi_dau) -> None:
+    """Việc nền xong bằng mắt nào: mắt đầu thì xoá dòng "chạy tạm", mắt sau thì ghi lại để trang Bộ
+    não AI nói "mô hình nền đang hết lượt, việc nền chạy tạm bằng X" (26.10.309)."""
+    try:
+        import thu_tu_dung
+        if chuoi and e is chuoi[0]:
+            thu_tu_dung.ghi_nen_tam("")
+        else:
+            thu_tu_dung.ghi_nen_tam(getattr(e, "provider", "") or ("anthropic-cli" if type(e).__name__ == "ClaudeSDK" else type(e).__name__),
+                                    getattr(e, "model", "") or "", loi_dau)
+    except Exception:  # noqa: BLE001
+        pass
 
-    exclude = tập provider đã có mặt trong chuỗi (aux + Claude) - trùng thì khỏi thêm.
-    Provider không có builder nền (ollama, antigravity-cli) trả None, chuỗi còn lại lo.
-    """
-    sp = main_spec(settings)
-    prov = sp.get("provider") or ""
-    if not prov or prov == CLAUDE or prov in (exclude or set()):
-        return None
-    ok, _why = availability(sp, settings)
+
+def _ghi_het_luot_nen(e, loi) -> None:
+    """Mắt gói thuê bao gãy vì hết lượt: ghi cho Thứ tự dùng để chat cũng né nhà đó tới giờ mở lại."""
+    try:
+        import limit_learner
+        import thu_tu_dung
+        prov = getattr(e, "provider", "") if isinstance(getattr(e, "provider", ""), str) else ""
+        prov = prov or ("openai-oauth" if type(e).__name__ == "CodexCLI" else "anthropic-cli")
+        hint = limit_learner.ENGINE_HINT_BY_PROVIDER.get(prov)
+        if not hint:
+            return
+        lim = limit_learner.parse_subscription_limit(str(loi or ""), engine_hint=hint)
+        if lim:
+            thu_tu_dung.ghi_het_luot(prov, float(getattr(lim, "reset_epoch", 0) or 0))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+# Gói thuê bao: hạn mức tính theo TÀI KHOẢN chứ không theo model, nên mỗi nhà chỉ một bước.
+_MOT_LAN = (CLAUDE, CODEX, GROK_CLI, MUSE_CLI, COPILOT_CLI, KIMI_CLI, ANTIGRAVITY, *NAO_CLI_MOI)
+# Mức Effort của MinMin -> cờ `--effort` của Claude Code (cùng bảng main._CLI_EFFORT).
+_CLI_EFFORT = {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh", "ultra": "max"}
+
+
+def _mat_cho_buoc(buoc: dict, cli, mode, tag, codex_profile, settings, da_dung_claude: list):
+    """Engine cho MỘT bước của chuỗi việc nền, hoặc None khi bước đó không chạy được trên máy này."""
+    prov = buoc.get("provider") or CLAUDE
+    sp = {"provider": prov, "model": buoc.get("model") or ""}
+    muc = buoc.get("reasoning") or "off"
+    if prov == CLAUDE:
+        if da_dung_claude:
+            return None
+        da_dung_claude.append(cli)
+        cli.model = sp["model"] or None
+        eff = _CLI_EFFORT.get(muc)
+        if eff and buoc.get("buoc") == "nen":
+            try:
+                import claude_cli
+                if claude_cli.co_co("--effort"):
+                    cli.effort = eff
+            except Exception:  # noqa: BLE001 - CLI cũ không có cờ thì chạy như Off
+                pass
+        return cli
+    ok, why = availability(sp, settings)
     if not ok:
+        print(f"[aux] {why} → bỏ bước {prov}.", file=sys.stderr)
         return None
-    t = (tag or getattr(cli, "tag", "aux")) + "-main"
     try:
         if prov == CODEX:
-            return _build_codex(sp, cli, mode, t, codex_profile)
+            return _build_codex(sp, cli, mode, tag, codex_profile)
         if prov == GROK_CLI:
-            return _build_grok(sp, cli, mode, t)
+            return _build_grok(sp, cli, mode, tag)
         if prov == MUSE_CLI:
-            return _build_muse(sp, cli, mode, t)
+            return _build_muse(sp, cli, mode, tag)
         if prov == COPILOT_CLI:
-            return _build_copilot(sp, cli, mode, t)
+            return _build_copilot(sp, cli, mode, tag)
         if prov in NAO_CLI_MOI:
-            return _build_nao_cli(sp, cli, mode, t)
+            return _build_nao_cli(sp, cli, mode, tag)
         if prov == KIMI_CLI:
-            return _build_kimi(sp, cli, mode, t)
+            return _build_kimi(sp, cli, mode, tag)
+        if prov == ANTIGRAVITY:
+            return _build_antigravity(sp, cli, mode, tag)
         if prov in API_PROVIDERS:
-            return _build_api(sp, cli, mode, t)
-    except Exception as e:
-        print(f"[aux router] không dựng được mắt não-chính ({prov}): {e}", file=sys.stderr)
+            e = _build_api(sp, cli, mode, tag)
+            e.reasoning = muc
+            return e
+    except Exception as exc:  # noqa: BLE001 - một bước hỏng không được kéo các bước khác chết theo
+        print(f"[aux router] không dựng được bước {prov}: {type(exc).__name__}: {exc}", file=sys.stderr)
     return None
-
-
-def _co_mat_orfree(chain) -> bool:
-    """Chuỗi đã chứa một mắt OpenRouter model trống (= tự chọn free) chưa - có rồi thì
-    mắt or_free cuối trùng hệt, khỏi thêm."""
-    return any(getattr(e, "provider", "") == "openrouter"
-               and not (getattr(e, "model", "") or "").strip() for e in chain)
-
-
-def _openrouter_free_engine(cli, mode, tag, settings):
-    """Mắt xích CUỐI của router: OpenRouter model free (model '' = tự chọn free mạnh nhất
-    lúc chạy, xem _ApiAuxEngine.query). Chưa có key OpenRouter thì không có mắt này."""
-    if not api_key_for("openrouter", settings):
-        return None
-    return _ApiAuxEngine(
-        provider="openrouter",
-        model="",
-        system_prompt=getattr(cli, "system_prompt", None),
-        vault_root=getattr(cli, "javis_vault", None),
-        mode=mode or getattr(cli, "javis_mode", None) or "full",
-        tag=(tag or getattr(cli, "tag", "aux")) + "-orfree",
-    )
 
 
 def swap(cli, mode: str = None, tag: str = None, spec: dict = None,
          codex_profile=None, settings: dict = None):
-    """Engine Claude đã dựng -> ROUTER việc nền theo model phụ người dùng chọn.
+    """Engine Claude đã dựng -> ROUTER việc nền theo Thứ tự dùng (26.10.309).
 
-    Chuỗi fallback (mắt trước chết lúc chạy thì mắt sau tiếp quản, xem _FallbackChain):
-      engine phụ user chọn → Claude → BỘ NÃO CHÍNH đang chat (nếu khác hai mắt trước)
-      → OpenRouter model free mạnh nhất (nếu có key).
-    Mắt não-chính là để máy KHÔNG đăng nhập Claude (chỉ chạy Gemini/OpenAI/Groq...) vẫn
-    tự học và chạy việc nền được bằng đúng bộ não người dùng đang dùng, thay vì chết lặng
-    với "Not logged in". Mặc định Claude + không dựng được mắt nào khác thì trả NGUYÊN
-    engine Claude như xưa; hỏng cấu hình kiểu gì việc nền cũng phải chạy được chứ không chết.
+    Thứ tự: mô hình việc nền (hoặc `spec`, ví dụ model riêng của trợ lý) -> Dự phòng 1, 2... của
+    trang Bộ não AI, mỗi bước chạy cấu hình mặc định của nhà đó -> MAIN sau cùng. Gói thuê bao chỉ
+    một bước mỗi nhà. Không tự chen Claude hay OpenRouter free vào khi chúng không có trong thứ tự.
+
+    Mọi mức quyền dùng cùng chuỗi: mắt nào ĐÃ gọi công cụ rồi mới gãy thì chuỗi DỪNG (xem
+    `_FallbackChain.query`), nên không việc nào bị làm hai lần. Trước bản này mức full không có
+    dự phòng vì lý do đó.
+
+    Hỏng cấu hình kiểu gì cũng giữ việc nền sống: không dựng được mắt nào thì trả engine Claude.
     """
     try:
-        sp = spec if spec is not None else read_spec(settings)
-        prov = sp.get("provider", CLAUDE)
-        # MỨC FULL KHÔNG CÓ CHUỖI DỰ PHÒNG. Đây là quyết định có chủ ý, không phải bỏ sót.
-        #
-        # Việc ở mức full thường là hành động RA NGOÀI: đăng bài, gửi tin, tạo đơn, đặt lịch.
-        # Ba lý do khiến rơi engine ở đây tệ hơn là chết hẳn:
-        #   1. Engine dự phòng (API) không có tool NATIVE, nên không gọi được connector ambient
-        #      của tài khoản Claude. Việc cần Google Drive/Gmail sẽ dừng giữa chừng.
-        #   2. Model không biết mình vừa bị đổi engine, nên nó suy ra một lý do nghe hợp lý mà
-        #      sai - ca thật: nhắc hẹn đăng Fanpage báo "phiên này bị chặn quyền" trong khi
-        #      user đã bật Toàn quyền, làm người ta đi tìm nhầm chỗ.
-        #   3. Mắt trước có thể đã làm xong MỘT PHẦN việc (đăng được 1 trong 3 bài) rồi mới
-        #      gãy. Chạy lại nguyên prompt bằng engine khác là đăng lại từ đầu.
-        # Thà dừng và nói đúng "Claude gãy vì X" để chủ xử lý, hơn là làm nửa vời trong im lặng.
-        if str(mode or "").strip().lower() == "full":
-            if prov == CLAUDE:
-                cli.model = sp.get("model") or None
-                return cli
-            ok, why = availability(sp, settings)
-            if not ok:
-                print(f"[aux] {why} → việc full tạm dùng lại Claude.", file=sys.stderr)
-                return cli
-            if prov == CODEX:
-                return _build_codex(sp, cli, mode, tag, codex_profile)
-            if prov == GROK_CLI:
-                return _build_grok(sp, cli, mode, tag)
-            if prov == MUSE_CLI:
-                return _build_muse(sp, cli, mode, tag)
-            if prov == COPILOT_CLI:
-                return _build_copilot(sp, cli, mode, tag)
-            if prov in NAO_CLI_MOI:
-                return _build_nao_cli(sp, cli, mode, tag)
-            if prov == KIMI_CLI:
-                return _build_kimi(sp, cli, mode, tag)
-            if prov == ANTIGRAVITY:
-                return _build_antigravity(sp, cli, mode, tag)
-            if prov in API_PROVIDERS:
-                return _build_api(sp, cli, mode, tag)
+        import thu_tu_dung
+        s = settings if settings is not None else cfgmod.read_settings()
+        m = s.get("model", {}) or {}
+        sp = spec if spec is not None else read_spec(s)
+        dau = {"provider": sp.get("provider") or CLAUDE, "model": sp.get("model") or "",
+               "reasoning": (sp.get("reasoning") if sp.get("reasoning") in thu_tu_dung.MUC
+                             else thu_tu_dung.nen(m)["reasoning"] if spec is None else "off")}
+        # Cài đặt chưa có Thứ tự dùng: MAIN + mọi thẻ API đang có khoá (đúng thứ chuyển đổi sẽ lưu).
+        ket_noi = None
+        if not thu_tu_dung.da_luu(m):
+            ket_noi = [main_spec(s)["provider"]] + [p for p in API_PROVIDERS if api_key_for(p, s)]
+        cat = m.get("catalog") or {}
+        mac_dinh = {}
+        for p in thu_tu_dung.thu_tu(m, ket_noi):
+            if p in API_PROVIDERS:
+                mdl = thu_tu_dung.the(m, p).get("model") or ((cat.get(p) or [""])[0] if p != "openrouter" else "")
+                mac_dinh[p] = {"model": mdl}
+        chuoi, da_dung_claude = [], []
+        for b in thu_tu_dung.chuoi_nen(m, ket_noi, dau=dau, mac_dinh=mac_dinh, mot_lan=_MOT_LAN):
+            e = _mat_cho_buoc(b, cli, mode, tag, codex_profile, s, da_dung_claude)
+            if e is not None:
+                chuoi.append(e)
+        if not chuoi:
             return cli
-        if prov == CLAUDE:
-            cli.model = sp.get("model") or None
-            # Máy có thể CHƯA đăng nhập Claude (người dùng chỉ chạy Gemini/OpenAI...):
-            # thêm bộ não CHÍNH làm mắt kế để việc nền đi theo đúng bộ não đang sống.
-            chain = [cli]
-            mn = _main_fallback_engine(cli, mode, tag, settings, {CLAUDE}, codex_profile)
-            if mn:
-                chain.append(mn)
-            or_free = _openrouter_free_engine(cli, mode, tag, settings)
-            if or_free and not _co_mat_orfree(chain):
-                chain.append(or_free)
-            return _FallbackChain(chain) if len(chain) > 1 else cli
-        ok, why = availability(sp, settings)
-        if not ok:
-            print(f"[aux] {why} → việc nền tạm dùng lại Claude.", file=sys.stderr)
-            return cli
-        if prov == CODEX:
-            primary = _build_codex(sp, cli, mode, tag, codex_profile)
-        elif prov == GROK_CLI:
-            primary = _build_grok(sp, cli, mode, tag)
-        elif prov == MUSE_CLI:
-            primary = _build_muse(sp, cli, mode, tag)
-        elif prov == COPILOT_CLI:
-            primary = _build_copilot(sp, cli, mode, tag)
-        elif prov in NAO_CLI_MOI:
-            primary = _build_nao_cli(sp, cli, mode, tag)
-        elif prov == KIMI_CLI:
-            primary = _build_kimi(sp, cli, mode, tag)
-        elif prov == ANTIGRAVITY:
-            primary = _build_antigravity(sp, cli, mode, tag)
-        elif prov in API_PROVIDERS:
-            primary = _build_api(sp, cli, mode, tag)
-        else:
-            return cli
-        chain = [primary, cli]
-        mn = _main_fallback_engine(cli, mode, tag, settings, {CLAUDE, prov}, codex_profile)
-        if mn:
-            chain.append(mn)
-        or_free = _openrouter_free_engine(cli, mode, tag, settings)
-        # Chuỗi đã có mắt openrouter model trống (tự chọn free) thì or_free trùng hệt → khỏi thêm.
-        if or_free and not _co_mat_orfree(chain):
-            chain.append(or_free)
-        return _FallbackChain(chain)
+        return chuoi[0] if len(chuoi) == 1 else _FallbackChain(chuoi)
     except Exception as e:
         print(f"[aux swap] {e} → giữ engine Claude.", file=sys.stderr)
     return cli

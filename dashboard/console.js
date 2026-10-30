@@ -4236,6 +4236,13 @@
     // cột provider, tự nạp model live) - đúng cái đang dùng cho model chính ngay phía trên.
     const auxProvDef = providers.find(p => p.id === auxProv) || {};
     const auxReady = auxProv === "anthropic-cli" || auxProvDef.configured;
+    // 26.10.309: Thứ tự dùng do server tính (model.thu_tu_view). Mô hình nền hết lượt thì một
+    // dòng nói việc nền đang chạy tạm bằng gì.
+    const ttv = m.thu_tu_view || {};
+    const ttNenTam = (ttv.nen_tam && ttv.nen_tam.provider)
+      ? t("models.tt_nen_tam", { model: aux || (auxProvDef.label || auxProv),
+          thay: ((providers.find(p => p.id === ttv.nen_tam.provider) || {}).label || ttv.nen_tam.provider)
+            + (ttv.nen_tam.model ? " · " + ttv.nen_tam.model : "") }) : "";
     // Model RIÊNG cho Telegram. provider rỗng = theo model chính (mặc định). Ghim thì đổi
     // model trên web không kéo Telegram theo - chủ repo đổi model liên tục để thử, mỗi lần
     // thử là điện thoại của cả nhà bị kéo theo (02/09).
@@ -4245,19 +4252,10 @@
     const tgModel = tgPinned ? (tgCfg.model || "") : (main.model || "");
     const tgProvDef = providers.find(p => p.id === tgProv) || {};
     const tgReady = !tgPinned || tgProv === "anthropic-cli" || tgProvDef.configured;
-    const reasoning = m.reasoning || "off";
     const arCfg = m.auto_router || {};
     // Khoá i18n viết TĨNH (test_i18n.mjs quét chuỗi), không ghép "models.bac_" + b.
     const BAC_T = { nang: t("models.bac_nang"), vua: t("models.bac_vua"), nhe: t("models.bac_nhe") };
     const bacNhan = (b) => BAC_T[b] || b;
-    // Thang này phải KHỚP engine.REASONING_LEVELS bên server và EFFORT trong model-picker.js.
-    // Mỗi nấc kèm một dòng RẤT ngắn nói nó đánh đổi gì - đủ để chọn, không phải đọc bài.
-    const REASON = [["off", t("models.r_off"), t("models.r_off_d")], ["low", t("models.r_low"), t("models.r_low_d")],
-                    ["medium", t("models.r_med"), t("models.r_med_d")], ["high", t("models.r_high"), t("models.r_high_d")],
-                    ["xhigh", t("models.r_xhigh"), t("models.r_xhigh_d")], ["ultra", t("models.r_ultra"), t("models.r_ultra_d")]];
-    const reasonChips = REASON.map(([v, l, d]) =>
-      `<button class="seg-btn ${reasoning === v ? "sel" : ""}" data-reason="${v}" title="${esc(d)}">` +
-      `<span class="seg-lb">${esc(l)}</span><span class="seg-d">${esc(d)}</span></button>`).join("");
 
     const KEYFIELD = { "openrouter": "openrouter_key", "anthropic-api": "anthropic_api_key", "openai": "openai_api_key", "gemini": "gemini_api_key", "groq": "groq_api_key", "xai": "xai_api_key", "meta": "meta_api_key", "ollama": "ollama_key", "openai-compat": "openai_compat_key",
       // Bốn thẻ API riêng (26.10.212). Server cũng gửi p.rieng.key_field; giữ tên ở đây cho dễ tra.
@@ -4571,36 +4569,21 @@
           </div>
         </div>`;
       }
-      // Bể khoá xoay vòng (26.10.161): khoá DỰ PHÒNG chính chủ cho nhà API, vấp 429/401 là đổi.
-      // Không có ở thẻ CLI/OAuth: xoay tài khoản thuê bao là vi phạm điều khoản.
-      // 26.10.166: là một NÚT rõ ràng trên hàng nút của thẻ (chủ repo không tìm thấy mục này
-      // 18/10 khi nó là dòng chữ xám gập lại), bấm thì mở khung dưới.
-      const beKhoa = (p.needs_key && on && p.kind === "api")
-        ? `<div class="prov-bekhoa" data-bekhoa="${p.id}" hidden>
-             <div class="prov-note">${esc(t("models.bk_note"))}</div>
-             <textarea class="js-input" id="bk-${p.id}" rows="3" spellcheck="false" placeholder="${esc(t("models.bk_ph"))}"></textarea>
-             <div class="prov-action"><button class="gcard-btn" data-bk-save="${p.id}">${esc(t("models.bk_save"))}</button><span class="gcard-meta" id="bk-msg-${p.id}"></span></div>
-           </div>`
-        : "";
-      const nutBeKhoa = (p.needs_key && on && p.kind === "api")
-        ? `<button class="gcard-btn ghost" data-bk-mo="${p.id}">${esc(t("models.bk_title"))} <span id="bk-st-${p.id}"></span></button>`
-        : "";
+      // 26.10.309: khoá dự phòng nay là danh sách key đánh số trong thẻ ở Thứ tự dùng (thu-tu-dung.js).
       return `<div class="prov-card ${p.is_main ? "main" : ""}">
         ${provHead(p, on, p.kind === "cli" ? "MCP/skill" : "MCP MinMin", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model")}
         ${p.needs_key
-          ? `<div class="prov-action"><input class="js-input" id="pk-${p.id}" type="password" placeholder="${on ? esc(t("models.key_change_ph", { duoi: masked })) : esc(t("models.key_ph"))}"><button class="gcard-btn" data-pk="${p.id}">${on ? esc(t("models.key_change")) : esc(t("models.connect"))}</button>${on ? `<button class="gcard-btn ghost" data-disc="${p.id}">${esc(t("models.disconnect"))}</button>` : ""}${nutBeKhoa}</div>`
+          ? `<div class="prov-action"><input class="js-input" id="pk-${p.id}" type="password" placeholder="${on ? esc(t("models.key_change_ph", { duoi: masked })) : esc(t("models.key_ph"))}"><button class="gcard-btn" data-pk="${p.id}">${on ? esc(t("models.key_change")) : esc(t("models.connect"))}</button>${on ? `<button class="gcard-btn ghost" data-disc="${p.id}">${esc(t("models.disconnect"))}</button>` : ""}</div>`
           : `<div class="prov-note">${esc(t("models.no_key_note"))}</div>`}
         ${riengBox(p, on)}
-        ${beKhoa}
       </div>`;
     };
 
     el.innerHTML = `
       <div class="cview-section">
-        <h3>◆ Main Model <span style="opacity:.5">${esc(t("models.h_main_sub"))}</span></h3>
-        <div class="gcard current" style="max-width:540px">
-          <div class="gcard-top"><span class="gcard-name">${esc(main.model || "-")}</span><span class="gcard-tag">${esc(mainP.label || main.provider || "")}</span></div>
-          <div class="gcard-meta">${esc(mainP.id === "grok-cli" ? t("models.main_grok")
+        <h3>◆ ${esc(t("models.tt_h"))} <span style="opacity:.5">${esc(t("models.tt_sub"))}</span></h3>
+        <div id="ttBox" class="tt-box"></div>
+        <div class="tt-note">${esc(mainP.id === "grok-cli" ? t("models.main_grok")
             : mainP.id === "muse-cli" ? t("models.main_muse")
             : mainP.id === "copilot-cli" ? t("models.main_copilot")
             : mainP.nao_cli ? t("models.main_nao", { ten: mainP.nao_cli.ten || mainP.label })
@@ -4609,12 +4592,6 @@
             : mainP.kind === "cli" ? t("models.main_cli")
             : mainP.kind === "oauth" ? t("models.main_codex")
             : mainP.kind === "api" ? t("models.main_api") : "")}</div>
-          <button class="gcard-btn" id="mdChange">${esc(t("models.change_model"))}</button>
-        </div>
-      </div>
-      <div class="cview-section">
-        <h3>◆ Providers <span style="opacity:.5">${esc(t("models.h_prov_sub"))}</span></h3>
-        <div class="prov-list">${provList.map(provCard).join("")}</div>
       </div>
       <div class="cview-section">
         <h3>◆ ${esc(t("models.h_aux"))} <span style="opacity:.5">${esc(t("models.h_aux_sub"))}</span></h3>
@@ -4626,13 +4603,19 @@
               <div class="aux-now-prov">${aux ? esc(auxProvDef.label || auxProv) : esc(t("models.aux_default_sub"))}</div>
             </div>
             <div class="aux-now-act">
+              <button type="button" class="tt-chip" id="auxEffort">${esc(t("models.tt_effort"))}: ${esc(window.MinMinThuTu ? window.MinMinThuTu.effortNhan(auxCfg.reasoning || "off") : (auxCfg.reasoning || "off"))}</button>
               ${aux ? `<button class="gcard-btn ghost" id="auxReset">${esc(t("models.aux_reset"))}</button>` : ""}
               <button class="gcard-btn" id="auxChange">${esc(t("models.change_model"))}</button>
             </div>
           </div>
+          ${ttNenTam ? `<div class="aux-note warn">${WARN_ICON} ${esc(ttNenTam)}</div>` : ""}
           ${auxReady ? "" : `<div class="aux-note warn">${WARN_ICON} ${esc(t("models.aux_warn"))}</div>`}
           <div class="aux-note">${esc(t("models.aux_note"))}</div>
         </div>
+      </div>
+      <div class="cview-section">
+        <h3>◆ Providers <span style="opacity:.5">${esc(t("models.h_prov_sub"))}</span></h3>
+        <div class="prov-list">${provList.map(provCard).join("")}</div>
       </div>
       <div class="cview-section">
         <h3>◆ ${esc(t("models.h_tg"))} <span style="opacity:.5">${esc(t("models.h_tg_sub"))}</span></h3>
@@ -4650,14 +4633,6 @@
           </div>
           ${tgReady ? "" : `<div class="aux-note warn">${WARN_ICON} ${esc(t("models.tg_warn"))}</div>`}
           <div class="aux-note">${esc(t("models.tg_note"))}</div>
-        </div>
-      </div>
-      <div class="cview-section">
-        <h3>◆ ${esc(t("models.h_reason"))} <span style="opacity:.5">${esc(t("models.h_reason_sub"))}</span></h3>
-        <div class="gcard aux-card">
-          <div class="gcard-meta">${esc(t("models.reason_meta"))}</div>
-          <div class="seg">${reasonChips}</div>
-          <div class="aux-note">${esc(t("models.reason_note"))}</div>
         </div>
       </div>
       <div class="cview-section">
@@ -4719,6 +4694,22 @@
         </div>
       </div>`;
     gonTheNhaCungCap(el.querySelector(".prov-list"));
+    // Thứ tự dùng (26.10.309): danh sách thẻ, kéo thả, Đảo, chip model/Effort, key đánh số.
+    const ttBox = el.querySelector("#ttBox");
+    if (ttBox && window.MinMinThuTu) window.MinMinThuTu.ve(ttBox, {
+      providers, view: ttv,
+      save: async (patch) => { await saveSetting("model", patch); renderModelsCloudTab(el); },
+      moModel: (pid, cur, luu) => (pid === main.provider
+        ? openModelPicker(provList, main, () => renderModelsCloudTab(el),
+            { onlyProv: pid, title: t("models.tt_model_title", { ten: (providers.find(p => p.id === pid) || {}).label || pid }),
+              save: (prov, mod) => luu(mod) })
+        : openModelPicker(provList, { provider: pid, model: cur }, () => renderModelsCloudTab(el),
+            { onlyProv: pid, title: t("models.tt_model_title", { ten: (providers.find(p => p.id === pid) || {}).label || pid }),
+              save: (prov, mod) => luu(mod) })),
+    });
+    const auxEff = document.getElementById("auxEffort");
+    if (auxEff && window.MinMinThuTu) auxEff.onclick = () => window.MinMinThuTu.menuEffort(auxEff, t("models.h_aux"),
+      auxCfg.reasoning || "off", async (r) => { await saveSetting("model", { auxiliary: { reasoning: r } }); renderModelsCloudTab(el); });
     // Tool nóng kèm tên kết nối: cùng pos_order trên hai shop thì tên ngắn trùng nhau, nhìn
     // như bị lặp. Chỉ ghi kết nối khi tên ngắn xuất hiện hơn một lần, cho gọn.
     const tkNongHtml = (d) => {
@@ -4822,6 +4813,7 @@
     });
     const auxChg = document.getElementById("auxChange");
     if (auxChg) auxChg.onclick = () => openModelPicker(provList, { provider: auxProv, model: aux }, () => renderModelsCloudTab(el), {
+      onlyConnected: true,
       title: t("models.aux_title"),
       note: t("models.aux_note2"),
       save: (prov, mod) => saveSetting("model", { auxiliary: { provider: prov, model: mod } }),
@@ -4842,10 +4834,6 @@
       await saveSetting("model", { telegram: { provider: "", model: "" } });
       renderModelsCloudTab(el);
     };
-    el.querySelectorAll("[data-reason]").forEach(b => b.onclick = async () => {
-      await saveSetting("model", { reasoning: b.dataset.reason });
-      renderModelsCloudTab(el);
-    });
     // Não để chấm: mặc định là model chính; nút "Chọn não" mở đúng hộp chọn model (đủ mọi
     // nhà, kể cả Claude Code/ChatGPT) nhưng chỉ ghi vào biến này, KHÔNG đổi model chính.
     let evalNao = { provider: main.provider || "", model: main.model || "" };
@@ -4955,44 +4943,6 @@
     };
     if (bStop) bStop.onclick = async () => { bStop.disabled = true; await postJson("/danh-gia/loat/huy", {}); bStop.disabled = false; };
     pollBatch();   // vào trang thấy ngay lượt đang/vừa chạy, kể cả sau khi tải lại trang
-    // Bể khoá: nạp trạng thái (số khoá, khoá đang nghỉ) và lưu danh sách khoá dự phòng.
-    (async () => {
-      let d; try { d = await (await fetch("/be-khoa")).json(); } catch (e) { return; }
-      if (!d || !d.ok) return;
-      el.querySelectorAll("[data-bekhoa]").forEach(det => {
-        const pid = det.dataset.bekhoa;
-        const st = document.getElementById("bk-st-" + pid);
-        const nha = (d.nha || {})[pid];
-        const n = (d.da_khai || {})[pid] || 0;
-        if (st) {
-          if (!nha) { st.textContent = n ? "(" + n + ")" : ""; return; }
-          const nghi = (nha.khoa || []).filter(k => k.nghi_con_giay > 0);
-          st.textContent = "(" + t("models.bk_status", { n: nha.so_khoa, nghi: nghi.length })
-            + (nghi.length ? ": " + nghi.map(k => k.nhan + " " + k.nghi_con_giay + "s").join(", ") : "") + ")";
-        }
-      });
-    })();
-    el.querySelectorAll(".gcard-btn[data-bk-mo]").forEach(b => {
-      b.onclick = () => {
-        const box = el.querySelector(`[data-bekhoa="${b.dataset.bkMo}"]`);
-        if (!box) return;
-        box.hidden = !box.hidden;
-        if (!box.hidden) { const ta = box.querySelector("textarea"); if (ta) ta.focus(); }
-      };
-    });
-    el.querySelectorAll(".gcard-btn[data-bk-save]").forEach(b => {
-      b.onclick = async () => {
-        const pid = b.dataset.bkSave;
-        const ta = document.getElementById("bk-" + pid);
-        const msg = document.getElementById("bk-msg-" + pid);
-        const keys = (ta && ta.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean);
-        b.disabled = true;
-        const r = await postJson("/be-khoa", { prov: pid, keys });
-        b.disabled = false;
-        if (msg) msg.textContent = r && r.ok ? t("models.bk_saved", { n: r.so_khoa_du_phong }) : (r && r.error) || t("common.net_err");
-        if (ta && r && r.ok) ta.value = "";
-      };
-    });
     el.querySelectorAll(".gcard-btn[data-pk]").forEach(b => {
       b.onclick = async () => {
         const pid = b.dataset.pk;
@@ -6035,6 +5985,10 @@
     // opts (tuỳ chọn) để dùng lại hộp này cho MODEL VIỆC NỀN, không chỉ model chính:
     //   {title, note, save(provider, model)}. Thiếu opts = hành vi cũ (đổi model chính).
     opts = opts || {};
+    // 26.10.309: bảng chọn của Thứ tự dùng chỉ liệt kê nhà đã kết nối (onlyConnected), hoặc đúng
+    // một nhà (onlyProv: chip model của một thẻ).
+    if (opts.onlyProv) providers = providers.filter(p => p.id === opts.onlyProv);
+    else if (opts.onlyConnected) providers = providers.filter(p => p.configured || p.id === main.provider);
     const SAVE = opts.save || ((prov, mod) => saveSetting("model", { main: { provider: prov, model: mod } }));
     let filterQ = "";   // giữ chữ đang lọc qua mỗi lần vẽ lại (bấm provider là draw() dựng lại DOM)
     let modal = document.getElementById("modelPicker");

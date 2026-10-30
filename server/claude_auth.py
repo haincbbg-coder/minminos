@@ -32,17 +32,18 @@ API_KEY = "api_key"
 
 # Nguyên văn dán ở trang Models và trả kèm khi đặt việc nền chạy bằng gói subscription.
 # Đừng rút gọn: người đọc cần đủ ba thứ - điều bị cấm, cái gì làm mình giống bot, và lối ra.
+# 26.10.309 (chủ repo): giọng nhẹ hơn nhưng vẫn nói thật - có nguy cơ, kèm lối ra; không hứa suông
+# là "chắc không sao" (CLAUDE.md cấm trấn an rỗng).
 CANH_BAO_SUBSCRIPTION = (
-    "Gói Claude Pro/Max chỉ được Anthropic tính cho việc dùng cá nhân thông thường của "
-    "Claude Code. Chạy nền liên tục (loop, nhắc hẹn, việc Kanban, chatbot), chạy trên VPS, "
-    "hoặc nhiều người dùng chung một tài khoản đều nằm NGOÀI phạm vi đó và đã có người bị "
-    "khoá tài khoản vì lý do này. Muốn chạy nền yên tâm thì đổi sang API key ở trang Models, "
-    "hoặc trỏ 'model việc nền' sang một provider khác."
+    "Gói Claude Pro/Max được Anthropic tính cho việc dùng cá nhân thông thường của Claude Code. "
+    "Chạy nền liên tục (loop, nhắc hẹn, việc Kanban, chatbot), chạy trên VPS, hoặc nhiều người dùng "
+    "chung một tài khoản nằm ngoài phạm vi đó, nên có nguy cơ bị khoá tài khoản. Muốn chạy nền yên "
+    "tâm hơn thì có thể đổi sang API key ở trang Bộ não AI, hoặc chọn một nhà khác làm mô hình việc nền."
 )
 
 # Câu ngắn cho chỗ chật (badge, tooltip, dòng trạng thái).
-CANH_BAO_NGAN = ("Chạy nền bằng gói subscription có thể bị Anthropic khoá tài khoản. "
-                 "Dùng API key cho việc nền là an toàn nhất.")
+CANH_BAO_NGAN = ("Chạy nền bằng gói Pro/Max có nguy cơ bị khoá tài khoản. "
+                 "Dùng API key cho việc nền là yên tâm nhất.")
 
 
 def che_do(settings: dict = None) -> str:

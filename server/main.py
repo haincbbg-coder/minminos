@@ -95,6 +95,7 @@ import nguon         # dẫn nguồn + neo số liệu dưới câu trả lời 
 import hanh_dong     # sổ hành động ra ngoài + quyền theo loại việc (Trụ 4, 26.10.139)
 import tiet_kiem        # nén JSON không mất số + đệm tool đọc + tool nóng (Lớp 6, 26.10.154)
 import be_khoa          # bể khoá xoay vòng cho nhà API (26.10.161)
+import thu_tu_dung      # Thứ tự dùng mô hình: MAIN, Dự phòng 1, 2... (26.10.309)
 import nha_api_rieng    # bảng bốn bộ não API key riêng DeepSeek/Qwen/GLM/MiniMax (26.10.212)
 import tiem_lenh        # quét tiêm lệnh trong dữ liệu vào (26.10.164)
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
@@ -2046,6 +2047,9 @@ def _set_main_model(cfg, provider, model):
         usage_saving.ghi_moc("model", f"{provider}/{model}",
                              f"{_cu.get('provider') or ''}/{_cu.get('model') or ''}",
                              f"Đổi bộ não sang {model or provider}")
+    # 26.10.309: MAIN là thẻ đầu của Thứ tự dùng. Chọn nhà này ở khung chat (hay Telegram, hay
+    # nút ngắt kết nối) đưa thẻ của nó lên đầu; các thẻ khác giữ thứ tự tương đối.
+    thu_tu_dung.len_dau(m, provider, model)
     m["main"] = {"provider": provider, "model": model}
     if provider == "openrouter":
         m["engine"] = "openrouter"; m["openrouter_model"] = model
@@ -2083,6 +2087,59 @@ def _set_main_model(cfg, provider, model):
         m["engine"] = provider
     else:  # anthropic-cli
         m["engine"] = "cli"; m["claude_model"] = model
+
+def _dong_bo_engine_cu(m) -> None:
+    """Sau khi Thứ tự dùng đổi MAIN: ghi lại các trường engine cũ theo MAIN mới (26.10.309)."""
+    mn = m.get("main") or {}
+    if mn.get("provider") and _provider_def(mn["provider"]):
+        _set_main_model({"model": m}, mn["provider"], mn.get("model") or "")
+
+
+# Thẻ API chỉ có MỘT khoá theo địa chỉ, không có danh sách khoá (26.10.309).
+_TT_MOT_KHOA = ("openai-compat", "ollama-local")
+
+
+def _tt_truong_khoa() -> dict:
+    """{prov: trường khoá cũ} của các thẻ API có danh sách khoá đánh số."""
+    return {p["id"]: p["key_field"] for p in PROVIDER_DEFS
+            if p.get("key_field") and p["id"] not in _TT_MOT_KHOA and p["id"] in be_khoa.API_CO_BE}
+
+
+def _tt_ket_noi(cfg) -> list:
+    """Nhà đang đăng nhập / kết nối, theo thứ tự PROVIDER_DEFS. Thẻ gói thuê bao thiếu binary
+    không tính (nó không chạy nổi một lượt). Lỗi thì trả rỗng: không được chặn server."""
+    try:
+        return [p["id"] for p in _providers_view(cfg)
+                if p.get("configured") and p.get("cli_found") is not False]
+    except Exception as e:  # noqa: BLE001
+        print(f"[thu tu dung] dò nhà kết nối: {type(e).__name__}: {e}", file=sys.stderr)
+        return []
+
+
+def _tt_chuyen_doi(cfg) -> bool:
+    """Chuyển cài đặt cũ sang Thứ tự dùng + danh sách khoá đánh số, một lần. True khi có đổi."""
+    m = cfg.setdefault("model", {})
+    doi = be_khoa.chuyen_doi(m, _tt_truong_khoa())
+    if int(m.get("thu_tu_ver") or 0) < thu_tu_dung.PHIEN_BAN:
+        doi = thu_tu_dung.chuyen_doi(m, _tt_ket_noi(cfg)) or doi
+    return doi
+
+
+def _tt_luu_khoa_cu(m, kf) -> None:
+    """Một khoá vừa dán vào ô khoá cũ của thẻ (Kết nối, Đổi key): nó thành khoá 1 của danh sách
+    (thay khoá 1 cũ), và nhà vừa kết nối vào CUỐI Thứ tự dùng."""
+    d = next((p for p in PROVIDER_DEFS if p.get("key_field") == kf), None)
+    if not d:
+        return
+    if d["id"] in _tt_truong_khoa():
+        ds = be_khoa.muc(m, d["id"], kf)
+        if ds:
+            ds[0] = dict(ds[0], khoa=m[kf], bat=True)
+        else:
+            ds = [{"id": be_khoa.id_moi(), "ten": "", "bat": True, "khoa": m[kf]}]
+        be_khoa.luu_muc(m, d["id"], ds, kf)
+    thu_tu_dung.them_cuoi(m, d["id"])
+
 
 def _aux_model():
     """Model việc nền khi provider là Claude. '' = không đổi (mặc định CLI).
@@ -2156,13 +2213,60 @@ def _provider_key(mcfg, d):
         if not (mcfg.get("openai_compat_base") or "").strip():
             return ""
         return (mcfg.get("openai_compat_key") or "").strip() or "none"
-    return mcfg.get(d["key_field"], "") if d.get("key_field") else ""
+    if not d.get("key_field"):
+        return ""
+    k = mcfg.get(d["key_field"], "") or ""
+    # 26.10.309: nhiều khoá theo thứ tự - khoá 1 đang nghỉ vì hết lượt thì lượt này đi khoá 2.
+    if d["id"] in be_khoa.API_CO_BE and k:
+        ds = be_khoa.danh_sach(d["id"], mcfg, k)
+        if len(ds) > 1:
+            return next((x for x in ds if not be_khoa.nghi_den(d["id"], x)), k)
+    return k
+
+
+def _route_ready(mcfg, prov) -> bool:
+    """Thẻ này nhận được một lượt chat ngay lúc này không: thẻ API cần một khoá không nghỉ, thẻ
+    gói thuê bao không đang biết là hết lượt. Không biết thì coi như được (lượt tự báo lỗi thật)."""
+    d = _provider_def(prov)
+    if not d:
+        return False
+    if d.get("kind") == "api":
+        k = _provider_key(mcfg, d)
+        if not k:
+            return False
+        if prov in be_khoa.API_CO_BE:
+            return be_khoa.con_khoa_dung_duoc(prov, mcfg, mcfg.get(d.get("key_field") or "", "") or k)
+        return True
+    return not thu_tu_dung.het_luot_den(prov)
+
+
+def _the_model(mcfg, prov) -> str:
+    """Model thẻ `prov` chạy cho chat (MAIN thì theo model chính hiệu lực)."""
+    if prov == thu_tu_dung.main_cua(mcfg):
+        mdl = _effective_main({"model": mcfg}).get("model") or ""
+    else:
+        mdl = thu_tu_dung.the(mcfg, prov).get("model") or ""
+    if prov == "openrouter":
+        mdl = mdl or mcfg.get("openrouter_model")
+    return mdl
 
 
 def _chat_provider(mcfg):
-    """Provider dùng cho chat (id, kind, key, model) - từ model chính hiệu lực."""
+    """Provider dùng cho chat (id, kind, key, model) - từ model chính hiệu lực.
+
+    26.10.309: MAIN đang biết là hết lượt (mọi khoá đang nghỉ, gói báo hết lượt) thì lượt này bắt
+    đầu luôn ở thẻ kế tiếp còn lượt trong Thứ tự dùng, với model của thẻ đó. Không sửa gì đã lưu:
+    lượt sau lại thử MAIN trước."""
     em = _effective_main({"model": mcfg})
     prov, model = em["provider"], em["model"]
+    if not _route_ready(mcfg, prov) and thu_tu_dung.da_luu(mcfg):
+        try:
+            kn = _tt_ket_noi(cfgmod.read_settings())
+        except Exception:  # noqa: BLE001
+            kn = None
+        ke = thu_tu_dung.duong_ke(mcfg, kn, lambda p: _route_ready(mcfg, p), da_thu=(prov,))
+        if ke:
+            prov, model = ke, _the_model(mcfg, ke)
     d = _provider_def(prov) or {}
     kind = d.get("kind", "cli")
     key = _provider_key(mcfg, d)
@@ -2220,6 +2324,8 @@ def _chat_provider_for_session(mcfg, row):
     key = _provider_key(mcfg, d)
     if kind == "api" and not key:
         return _chat_provider(mcfg)   # key đã bị gỡ sau khi ghim → đừng chạy vào tường
+    if not _route_ready(mcfg, pprov):
+        return _chat_provider(mcfg)   # 26.10.309: nhà ghim đang hết lượt → đi theo Thứ tự dùng
     model = ((row or {}).get("pinned_model") or "").strip()
     if pprov == "openrouter":
         model = model or mcfg.get("openrouter_model")
@@ -3633,6 +3739,14 @@ def _reasoning_level(mcfg):
     r = (mcfg or {}).get("reasoning", "off")
     return r if r in engine.REASONING_LEVELS else "off"
 
+
+def _chat_reasoning(mcfg, prov):
+    """Effort của thẻ mà lượt chat đang chạy (26.10.309: mỗi thẻ có Effort riêng; MAIN = `reasoning`)."""
+    if prov == thu_tu_dung.main_cua(mcfg or {}):
+        return _reasoning_level(mcfg)
+    r = thu_tu_dung.the(mcfg or {}, prov).get("reasoning")
+    return r if r in engine.REASONING_LEVELS else "off"
+
 # Từ khoá kích hoạt extended thinking của Claude Code (engine cli không có flag chuẩn).
 # Bộ từ khoá suy nghĩ của Claude Code. ĐƯỜNG DỰ PHÒNG từ 0.55.40: bản CLI có cờ `--effort`
 # thì đi bằng cờ đó (xem `_cli_do_sau`), vì hai mức trên cùng ở bảng này ra CÙNG một từ khoá
@@ -4136,6 +4250,20 @@ async def _cap_nhat_claude(ly_do: str) -> dict:
 async def claude_update_now():
     """Nút "Cập nhật Claude Code" trên trang Models: chạy ngay, không chờ vòng hằng ngày."""
     return await _cap_nhat_claude("tay")
+
+
+@app.on_event("startup")
+async def _thu_tu_dung_chuyen_doi():
+    """26.10.309: chuyển cài đặt sang Thứ tự dùng + danh sách khoá đánh số, một lần."""
+    def _chay():
+        cfg = cfgmod.read_settings()
+        if _tt_chuyen_doi(cfg):
+            cfgmod.write_settings(cfg)
+            print("[thu tu dung] đã chuyển cài đặt sang Thứ tự dùng", file=sys.stderr)
+    try:
+        await asyncio.to_thread(_chay)
+    except Exception as e:  # noqa: BLE001 - chưa chuyển thì trường cũ vẫn chạy như trước
+        print(f"[thu tu dung] chuyển đổi hỏng: {type(e).__name__}: {e}", file=sys.stderr)
 
 
 @app.on_event("startup")
@@ -5258,7 +5386,52 @@ def settings_get():
     safe["backup"]["token_set"] = bool(bt)
     safe["model"]["providers"] = _providers_view(cfg)   # danh sách provider + trạng thái + model
     safe["model"]["main"] = _effective_main(cfg)         # model chính hiệu lực (suy từ legacy nếu cần)
+    # 26.10.309: khoá trong danh sách khoá KHÔNG BAO GIỜ rời máy chủ (cả bể khoá kiểu cũ, vốn là
+    # danh sách chuỗi khoá trần). Trang chỉ nhận 4 ký tự cuối qua thu_tu_view.
+    safe["model"].pop("be_khoa_ma", None)
+    safe["model"].pop("be_khoa", None)
+    safe["model"]["thu_tu_view"] = _thu_tu_view(cfg, safe["model"]["providers"])
     return safe
+
+
+def _thu_tu_view(cfg, providers) -> dict:
+    """Dữ liệu cho phần Thứ tự dùng của trang Bộ não AI (server tính, trang không tự suy).
+
+    thu_tu: các nhà ĐÃ KẾT NỐI theo thứ tự ([0] là MAIN); the: model + Effort từng thẻ; dang_dung:
+    nhà chat đang thật sự dùng (khác MAIN khi MAIN hết lượt); het_luot: {prov: epoch mở lại};
+    khoa: danh sách khoá đánh số của thẻ API (chỉ 4 ký tự cuối); nen_tam: việc nền đang chạy tạm
+    bằng gì khi mô hình nền hết lượt."""
+    m = cfg.get("model") or {}
+    kn = [p["id"] for p in providers if p.get("configured") and p.get("cli_found") is not False]
+    o = thu_tu_dung.thu_tu(m, kn)
+    the = {p: thu_tu_dung.the(m, p) for p in o}
+    if o:
+        the[o[0]] = {"model": _effective_main(cfg).get("model") or "", "reasoning": _reasoning_level(m)}
+    try:
+        dang = _chat_provider(m)[0]
+    except Exception:  # noqa: BLE001
+        dang = o[0] if o else ""
+    het = {}
+    for p in o:
+        d = _provider_def(p) or {}
+        if d.get("kind") != "api":
+            u = thu_tu_dung.het_luot_den(p)
+            if u:
+                het[p] = u
+        elif not _route_ready(m, p) and _provider_key(m, d):
+            het[p] = max([be_khoa.nghi_den(p, k) for k in be_khoa.danh_sach(p, m, m.get(d.get("key_field") or "", ""))] or [0])
+    khoa = {}
+    for p, kf in _tt_truong_khoa().items():
+        ds = be_khoa.muc(m, p, kf)
+        if not ds:
+            continue
+        dung = be_khoa.dang_dung(p, be_khoa.danh_sach(p, m, m.get(kf, "")))
+        khoa[p] = [{"id": a["id"], "ten": a["ten"], "bat": a["bat"], "duoi": be_khoa.nhan(a["khoa"]),
+                    "nghi_den": be_khoa.nghi_den(p, a["khoa"]), "dang_dung": bool(dung) and a["khoa"] == dung}
+                   for a in ds]
+    nen = thu_tu_dung.nen(m)
+    return {"thu_tu": o, "the": the, "dang_dung": dang, "het_luot": het, "khoa": khoa,
+            "nen": nen, "nen_tam": thu_tu_dung.doc_nen_tam()}
 
 
 @app.post("/settings")
@@ -5304,6 +5477,7 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         for kf in _PROVIDER_KEY_FIELDS:
             if patch.get(kf) and not str(patch[kf]).startswith("••••"):
                 m[kf] = str(patch[kf]).strip()
+                _tt_luu_khoa_cu(m, kf)
         if "openai_compat_base" in patch:
             new_base = str(patch["openai_compat_base"] or "").strip().rstrip("/")
             if new_base != (m.get("openai_compat_base") or "") and not (
@@ -5330,6 +5504,11 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
             d = _provider_def(patch["clear_key"])
             if d and d.get("key_field"):
                 m[d["key_field"]] = ""
+                # 26.10.309: gỡ mọi khoá của thẻ, và thẻ rời Thứ tự dùng (thẻ kế lên làm MAIN).
+                if d["id"] in _tt_truong_khoa():
+                    be_khoa.luu_muc(m, d["id"], [], d["key_field"])
+                thu_tu_dung.bo_ra(m, d["id"])
+                _dong_bo_engine_cu(m)
                 if patch["clear_key"] == "openai-compat":
                     m["openai_compat_base"] = ""
                     _PROV_MODELS_CACHE.pop("openai-compat", None)
@@ -5345,10 +5524,14 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         if "auxiliary" in patch:   # model phụ cho việc nền (provider + model)
             aux_patch = patch["auxiliary"] or {}
             aux = m.setdefault("auxiliary", {})
-            aux["model"] = aux_patch.get("model", "")
-            # Thiếu provider (client cũ) = Claude, đúng hành vi trước khi mở nhiều provider.
-            prov = aux_patch.get("provider") or aux_engine.CLAUDE
-            aux["provider"] = prov if _provider_def(prov) else aux_engine.CLAUDE
+            if "model" in aux_patch or "provider" in aux_patch:
+                aux["model"] = aux_patch.get("model", "")
+                # Thiếu provider (client cũ) = Claude, đúng hành vi trước khi mở nhiều provider.
+                prov = aux_patch.get("provider") or aux_engine.CLAUDE
+                aux["provider"] = prov if _provider_def(prov) else aux_engine.CLAUDE
+            if "reasoning" in aux_patch:   # 26.10.309: mô hình việc nền có Effort riêng
+                r = aux_patch["reasoning"]
+                aux["reasoning"] = r if r in engine.REASONING_LEVELS else "off"
         if "telegram" in patch:   # model riêng cho kênh Telegram; provider rỗng = theo model chính
             tg_patch = patch["telegram"] or {}
             tg = m.setdefault("telegram", {})
@@ -5361,6 +5544,49 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         if "reasoning" in patch:
             r = patch["reasoning"]
             m["reasoning"] = r if r in engine.REASONING_LEVELS else "off"
+            # 26.10.309: chip Effort ở khung chat là Effort của thẻ MAIN.
+            thu_tu_dung.dat_the(m, thu_tu_dung.main_cua(m), reasoning=m["reasoning"])
+        # 26.10.309 - Thứ tự dùng: đổi thứ tự (kéo thả, Đảo), model/Effort của một thẻ, khoá của một thẻ.
+        if isinstance(patch.get("thu_tu"), list):
+            ids = [str(p or "") for p in patch["thu_tu"] if _provider_def(str(p or ""))]
+            if ids:
+                thu_tu_dung.dat_thu_tu(m, ids)
+                _dong_bo_engine_cu(m)
+        if isinstance(patch.get("the"), dict):
+            tp = patch["the"]
+            pid = str(tp.get("provider") or "")
+            if _provider_def(pid):
+                r = tp.get("reasoning")
+                thu_tu_dung.dat_the(m, pid, model=tp.get("model") if "model" in tp else None,
+                                    reasoning=(r if r in engine.REASONING_LEVELS else "off") if "reasoning" in tp else None)
+                if thu_tu_dung.main_cua(m) == pid:
+                    _dong_bo_engine_cu(m)
+        if isinstance(patch.get("khoa"), dict):
+            kp = patch["khoa"]
+            pid = str(kp.get("provider") or "")
+            kf = _tt_truong_khoa().get(pid)
+            if kf and isinstance(kp.get("items"), list):
+                cu = {a["id"] for a in be_khoa.muc(m, pid, kf)}
+                ds = []
+                for it in kp["items"]:
+                    if not isinstance(it, dict):
+                        continue
+                    aid = str(it.get("id") or "") or be_khoa.id_moi()
+                    k = str(it.get("khoa") or "").strip()
+                    if k.startswith("••••"):
+                        k = ""
+                    if not k and aid not in cu:
+                        continue                  # khoá mới phải có chất liệu khoá
+                    ds.append({"id": aid, "ten": str(it.get("ten") or ""), "bat": it.get("bat") is not False, "khoa": k})
+                if kp["items"] and not ds:
+                    ds = None                     # danh sách gửi lên toàn mục hỏng: đừng xoá sạch thẻ vì thế
+                if ds is not None:
+                    be_khoa.luu_muc(m, pid, ds, kf)
+                    if ds:
+                        thu_tu_dung.them_cuoi(m, pid)
+                    else:
+                        thu_tu_dung.bo_ra(m, pid)
+                        _dong_bo_engine_cu(m)
         # Legacy trực tiếp (tương thích ngược)
         for k in ("engine", "claude_model", "openrouter_model"):
             if k in patch:
@@ -14531,13 +14757,15 @@ async def be_khoa_luu(req: Request):
             keys.append(k)
     cfg = cfgmod.read_settings()
     m = cfg.setdefault("model", {})
-    be = m.setdefault("be_khoa", {}) if isinstance(m.get("be_khoa"), dict) or m.get("be_khoa") is None else {}
-    if not isinstance(m.get("be_khoa"), dict):
-        m["be_khoa"] = be
-    if keys:
-        be[prov] = keys
-    else:
-        be.pop(prov, None)
+    # 26.10.309: bể khoá là danh sách đánh số; đường cũ này giữ khoá 1 rồi thay phần dự phòng.
+    kf = _tt_truong_khoa().get(prov, "")
+    ds = be_khoa.muc(m, prov, kf)[:1]
+    da = {a["khoa"] for a in ds}
+    for k in keys:
+        if k not in da:
+            ds.append({"id": be_khoa.id_moi(), "ten": "", "bat": True, "khoa": k})
+            da.add(k)
+    be_khoa.luu_muc(m, prov, ds, kf)
     cfgmod.write_settings(cfg)
     be_khoa.xoa_trang_thai()
     return {"ok": True, "prov": prov, "so_khoa_du_phong": len(keys)}
@@ -16616,6 +16844,24 @@ async def websocket_endpoint(ws: WebSocket):
         def __init__(self, sid, runtime_trace=None):
             self._sid = sid
             self._runtime_trace = runtime_trace
+            # 26.10.309: lượt đã nhả gì ra chưa, để biết có chạy lại bằng đường kế tiếp được không.
+            self.acted = False      # model đã gọi công cụ (trừ dòng dọn dẹp của chính MinMin)
+            self.said = ""          # chữ đã stream, 2000 ký tự đầu
+            self.can_hold = False   # _do_turn bật khi còn đường khác có thể nhận lượt
+            self._held = None       # khung giữ lại sau một lỗi khi chưa nhả gì
+
+        def untouched(self) -> bool:
+            """Chưa có gì để mất: chưa gọi công cụ, chưa viết chữ nào (một câu "hết lượt" lỡ
+            stream ra không phải chữ của câu trả lời)."""
+            return not self.acted and (not self.said.strip() or _het_luot_ap_dao(self.said))
+
+        async def flush(self):
+            held, self._held = self._held, None
+            for o in held or ():
+                await _CHAT_RUNTIME.publish(voice_turn_protocol.frame(o))
+
+        def drop(self):
+            self._held = None
 
         async def send_text(self, txt):
             try:
@@ -16626,11 +16872,28 @@ async def websocket_endpoint(ws: WebSocket):
                     _CONTEXT_RUNTIME.note_error(self._runtime_trace, "engine_error_event")
             except Exception:
                 return
+            t = o.get("type")
+            that = ((t == "tool_call" and o.get("tool") not in _DOI_DUONG_CONG_CU_LANG)
+                    or (t == "stream" and str(o.get("content") or "").strip()))
+            if t == "tool_call" and that:
+                self.acted = True
+            elif t == "stream":
+                self.said = (self.said + str(o.get("content") or ""))[:2000]
+            if self._held is not None:
+                if not that and t in ("error", "response", "status", "system"):
+                    self._held.append(o)
+                    return
+                await self.flush()      # engine vẫn chạy tiếp: hiện hết, đúng thứ tự
+            elif self.can_hold and t == "error" and self.untouched():
+                self._held = [o]
+                return
             await _CHAT_RUNTIME.publish(voice_turn_protocol.frame(o))
 
     try:
         async def _do_turn(conv_sid, user_message, brain, turn_tag, runtime_trace=None,
-                           has_attachments=False, resume_attempt=0):
+                           has_attachments=False, resume_attempt=0, _route=None, _tried=(), _hops_left=0):
+            # `_route`, `_tried`, `_hops_left` (26.10.309): run_turn chạy lại lượt bằng đường kế tiếp
+            # khi đường này hết lượt TRƯỚC khi nhả chữ hay gọi công cụ nào; 0 = không chuyển nữa.
             ws = _SendProxy(conv_sid, runtime_trace)  # các nhánh engine bên dưới dùng ws proxy này
             _cfg_all = cfgmod.read_settings()
             mcfg = _cfg_all.get("model", {})
@@ -16647,7 +16910,10 @@ async def websocket_endpoint(ws: WebSocket):
                     _CONTEXT_RUNTIME.record_runtime_event(
                         runtime_trace, "subscription.limit_reached",
                         {"engine": engine_hint, "model": model or ""})
-                    _limit_state.update(notice=noi, limit=lim)
+                    _limit_state.update(notice=noi, limit=lim, quota=True)
+                    # 26.10.309: nhà này nghỉ tới giờ mở lại, chat và lượt sau đi đường kế tiếp.
+                    thu_tu_dung.ghi_het_luot(_NHA_THEO_ENGINE.get(lim.engine or engine_hint, engine_hint),
+                                             float(lim.reset_epoch or 0))
                     frame["limit"] = {"engine": lim.engine, "scope": lim.scope,
                                       "reset_epoch": float(lim.reset_epoch or 0)}
                 return json.dumps(frame)
@@ -16675,8 +16941,8 @@ async def websocket_endpoint(ws: WebSocket):
                 await ws.send_text(json.dumps({"type": "error",
                     "content": f"Trợ lý '{_persona[1]}' không còn trong brain này. Mở trang Cộng sự để chọn trợ lý khác."}))
                 return ""
-            prov, kind, api_key, api_model = _chat_provider_for_session(mcfg, _row0)
-            reasoning = _reasoning_level(mcfg)
+            prov, kind, api_key, api_model = _route or _chat_provider_for_session(mcfg, _row0)
+            reasoning = _chat_reasoning(mcfg, prov)   # 26.10.309: Effort của thẻ lượt này chạy
             _CONTEXT_RUNTIME.set_route(
                 runtime_trace,
                 "codex" if prov == "openai-oauth" else prov,
@@ -16708,6 +16974,7 @@ async def websocket_endpoint(ws: WebSocket):
             cli = claude_engine(system_prompt=SYSTEM_PROMPT, cwd=_cwd_luot_chat(_row0, brain), tag=turn_tag)
             cli.session_id = _row0.get("cli_session_id") or None    # --resume đúng mạch phiên này
             final_text = ""
+            ws.can_hold = _hops_left > 0      # 26.10.309: giữ lỗi hết lượt lại khi đường khác còn nhận được
             used_fast_path = False
 
             await ws.send_text(json.dumps({
@@ -17770,6 +18037,10 @@ async def websocket_endpoint(ws: WebSocket):
                                         await ws.send_text(json.dumps({
                                             "type": "error", "content": ev["content"],
                                         }))
+                                        # 26.10.309: khoá hết lượt thì nghỉ; lượt có thể sang đường kế.
+                                        if not final_text and _la_het_luot_api(ev):
+                                            _limit_state["quota"] = True
+                                            _nghi_khoa_api(mcfg, prov, api_key, ev)
                             if not _limit_hit or _attempt == 2:
                                 break
                             # Thử lại chỉ có nghĩa khi việc cần làm là CO NHỎ. Hết hạn mức
@@ -17803,6 +18074,10 @@ async def websocket_endpoint(ws: WebSocket):
                                             f"đang rút gọn ngữ cảnh xuống {_target:,} token rồi thử lại..."),
                             }))
                             or_messages = _shrink_messages(or_messages, _target)
+                        if _limit_hit and not final_text and str(_limit_hit.get("remedy") or "") != "shrink":
+                            # 26.10.309: hết hạn mức (không phải yêu cầu quá to): khoá nghỉ, đường kế có thể nhận.
+                            _limit_state["quota"] = True
+                            _nghi_khoa_api(mcfg, prov, api_key, {"ma": 429, "content": str(_limit_hit.get("raw") or "quota")})
                         if _limit_hit:
                             final_text = final_text or _limit_autoshrink_message(
                                 prov, actual_model, _limit_hit)
@@ -18034,6 +18309,20 @@ async def websocket_endpoint(ws: WebSocket):
                 except Exception as _e:
                     print(f"[last_input_tokens] {type(_e).__name__}: {_e}", file=sys.stderr)
 
+            # 26.10.309: hết lượt TRƯỚC khi viết chữ hay gọi công cụ nào -> run_turn chạy lại ngay lượt
+            # này bằng đường kế tiếp (khoá kế của thẻ đã tự xoay trong be_khoa, nên đây là thẻ kế).
+            # Không giữ, không hiện gì của lần chạy này.
+            if (_limit_state.get("quota") and _hops_left > 0 and ws.untouched()
+                    and (not final_text or (kind == "api" and not ws.said.strip()))):
+                _ke = _chat_duong_ke(mcfg, prov, list(_tried) + [prov])
+                if _ke:
+                    ws.drop()
+                    _CONTEXT_RUNTIME.record_runtime_event(runtime_trace, "routing.reroute",
+                                                          {"from": prov, "to": _ke["route"][0]})
+                    _ra = _DoiDuong("")
+                    _ra.doi_duong = _ke
+                    return _ra
+            await ws.flush()
             # Vấp hạn mức gói thuê bao mà KHÔNG có câu trả lời nào: lưu câu báo vào kho phiên
             # (để F5 còn thấy, đi thẳng vào kho chứ không qua _persist_turn: một câu báo lỗi
             # không đáng vào nhật ký Memory hay hàng đợi tự học), rồi hẹn chạy lại đúng lượt
@@ -18079,6 +18368,22 @@ async def websocket_endpoint(ws: WebSocket):
             # Đường lưu DÙNG CHUNG với Telegram (_persist_turn) - nó tự bóc khối điều khiển.
             if final_text:
                 await _persist_turn(store, conv_sid, brain, user_message, final_text)
+                if _limit_state.get("quota") and not ws.untouched():
+                    # 26.10.309: hết lượt GIỮA CHỪNG (đã viết chữ hoặc đã gọi công cụ): dừng ở đoạn
+                    # đã viết, KHÔNG tự chạy lại (công cụ có thể đã gửi tin, đăng bài). Thẻ "Chạy lại
+                    # ngay" dưới câu dở hỏi lại bằng đường còn lượt, thay cho câu dở này.
+                    try:
+                        _cuoi = (store.get_messages(conv_sid) or [{}])[-1]
+                        _do = (_cuoi.get("content") or "") if _cuoi.get("role") == "assistant" else None
+                        _muc = limit_resume.REGISTRY.schedule(
+                            conv_sid, 0,
+                            lambda attempt, _n=_do: _start_resumed_turn(
+                                conv_sid, user_message, brain, attempt, _n),
+                            engine=_NHA_SANG_ENGINE.get(prov, prov),
+                            attempt=int(resume_attempt or 0), auto_default=False, partial=True)
+                        await ws.send_text(json.dumps({"type": "resume", "state": "off", **_muc.payload()}))
+                    except Exception as _e:  # noqa: BLE001
+                        print(f"[limit resume] câu dở: {type(_e).__name__}: {_e}", file=sys.stderr)
                 # Engine bỏ lại lệnh chạy ngầm (render, build...) → Javis nhận theo dõi và nói ra
                 # ngay. PHẢI chạy trước cảnh báo hứa suông: có việc được theo dõi thì lời hứa
                 # "xong em gửi" đã có cơ chế thật đứng sau, không còn là hứa suông.
@@ -18130,8 +18435,25 @@ async def websocket_endpoint(ws: WebSocket):
             try:
                 final_text = await _do_turn(
                     conv_sid, user_message, brain, turn_tag, runtime_trace, has_attachments,
-                    resume_attempt=resume_attempt,
+                    resume_attempt=resume_attempt, _hops_left=DOI_DUONG_TOI_DA,
                 )
+                # 26.10.309: đường đang chạy hết lượt trước khi viết gì -> chạy lại ĐÚNG lượt này bằng
+                # đường kế tiếp, kèm một dòng nói vì sao. Tối đa DOI_DUONG_TOI_DA lần.
+                _buoc = 0
+                while getattr(final_text, "doi_duong", None):
+                    _buoc += 1
+                    _ke = final_text.doi_duong
+                    try:
+                        store.clear_native_threads(conv_sid, keep=_nhan_engine(*_ke["route"][:3]))
+                    except Exception:  # noqa: BLE001
+                        pass
+                    await send_raw({"type": "reroute", "content": _ke["status"], "session_id": conv_sid,
+                                    **context_runtime.event_fields(runtime_trace)})
+                    final_text = await _do_turn(
+                        conv_sid, user_message, brain, turn_tag, runtime_trace, has_attachments,
+                        resume_attempt=resume_attempt, _route=_ke["route"], _tried=_ke["tried"],
+                        _hops_left=DOI_DUONG_TOI_DA - _buoc,
+                    )
                 # Phiên TRỢ LÝ mở từ một lệnh "/" gõ ở khung Trò chuyện: câu trả lời quay về
                 # đúng khung đó, kèm link mở lại cuộc hội thoại (cùng luật với quy trình).
                 if goc_chat:
@@ -20624,6 +20946,76 @@ def _configured_api_providers() -> tuple:
     return tuple(out)
 
 
+# ---- 26.10.309: chat đổi đường khi hết lượt ----------------------------------------------
+DOI_DUONG_TOI_DA = 3
+# Dòng MinMin tự ghi vào danh sách bước, không phải công cụ model gọi.
+_DOI_DUONG_CONG_CU_LANG = ("javis_nen_mach", "javis_autoshrink")
+# Tên engine trong câu hết lượt -> id nhà ở Thứ tự dùng.
+_NHA_THEO_ENGINE = {v: k for k, v in limit_learner.ENGINE_HINT_BY_PROVIDER.items()}
+_TEN_NGAN = {"anthropic-cli": "Claude Code", "openai-oauth": "ChatGPT", "grok-cli": "Grok Build",
+             "antigravity-cli": "Antigravity"}
+
+
+class _DoiDuong(str):
+    """Thứ `_do_turn` trả khi lượt phải chạy lại bằng đường khác: không có câu trả lời, kèm nơi tới."""
+    doi_duong = None
+
+
+def _ten_duong(prov: str) -> str:
+    return _TEN_NGAN.get(prov) or (_provider_def(prov) or {}).get("label") or prov
+
+
+def _nhan_engine(prov, kind, key) -> str:
+    """Nhãn engine của một đường (cùng luật nhãn ở chỗ nhận tin chat)."""
+    return ("codex" if prov == "openai-oauth"
+            else prov if prov in ("grok-cli", "muse-cli", "copilot-cli", "kimi-cli", "antigravity-cli")
+            or cli_nao_chung.la_nao(prov)
+            else prov if ((kind == "api" and key) or kind == "oauth")
+            else "cli")
+
+
+def _la_het_luot_api(ev) -> bool:
+    """Lỗi của đường API là hết lượt / hết tiền (429, 402, quota), không phải lỗi khác."""
+    try:
+        ma = int((ev or {}).get("ma") or 0)
+    except (TypeError, ValueError):
+        ma = 0
+    chu = str((ev or {}).get("content") or "").lower()
+    return ma in (402, 429) or "quota" in chu or "insufficient" in chu or "rate limit" in chu
+
+
+def _nghi_khoa_api(mcfg, prov, key, ev) -> None:
+    """Cho khoá vừa hết lượt nghỉ. Thẻ có nhiều khoá thì be_khoa.Xoay đã ghi rồi (ghi lại là nhân
+    đôi thời gian nghỉ), nên ở đây chỉ ghi cho thẻ một khoá."""
+    try:
+        d = _provider_def(prov) or {}
+        if prov in be_khoa.API_CO_BE and key and len(be_khoa.danh_sach(prov, mcfg or {}, (mcfg or {}).get(d.get("key_field") or "", "") or key)) <= 1:
+            be_khoa.bao_loi(prov, key, int((ev or {}).get("ma") or 429),
+                            ly_do=str((ev or {}).get("content") or "quota")[:120])
+    except Exception as e:  # noqa: BLE001
+        print(f"[thu tu dung] nghỉ khoá {prov}: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+def _chat_duong_ke(mcfg, hong: str, da_thu=()) -> dict:
+    """Đường kế tiếp cho một lượt chat vừa hết lượt, hoặc {} khi không còn đường nào.
+
+    Nhà vừa hỏng đã được ghi nghỉ (`_limit_frame`, `_nghi_khoa_api`) nên `_route_ready` tự bỏ qua
+    nó. Trả {'route': (prov, kind, key, model), 'status': câu một dòng, 'tried': [...]}. Không sửa
+    gì đã lưu."""
+    da_thu = list(dict.fromkeys(list(da_thu or ()) + [hong]))
+    try:
+        kn = _tt_ket_noi(cfgmod.read_settings())
+    except Exception:  # noqa: BLE001
+        kn = None
+    ke = thu_tu_dung.duong_ke(mcfg, kn, lambda p: _route_ready(mcfg, p), da_thu=da_thu)
+    if not ke:
+        return {}
+    d = _provider_def(ke) or {}
+    return {"route": (ke, d.get("kind", "cli"), _provider_key(mcfg, d), _the_model(mcfg, ke)),
+            "status": f"Đang dùng {_ten_duong(ke)} vì {_ten_duong(hong)} hết lượt.",
+            "tried": da_thu}
+
+
 def _subscription_limit_event(raw: str, engine_hint: str):
     """(câu người dùng hiểu, SubscriptionLimit) cho lỗi "gói thuê bao hết lượt"; ("", None) nếu
     không phải loại lỗi này. Khung chat cần cả hai: câu chữ để hiện, mốc reset để hẹn chạy lại."""
@@ -20702,7 +21094,15 @@ def _subscription_limit_message(raw: str, engine_hint: str) -> str:
     tài khoản khác, có khi mất tiền thật - đó là quyết định của người dùng. Việc của câu này
     là nói rõ hết lượt tới bao giờ và bộ não nào đang sẵn sàng.
     """
-    return _subscription_limit_event(raw, engine_hint)[0]
+    noi, lim = _subscription_limit_event(raw, engine_hint)
+    if noi:
+        # 26.10.309: nhà này hết lượt -> chat và Telegram né nó tới giờ mở lại (Thứ tự dùng).
+        try:
+            thu_tu_dung.ghi_het_luot(_NHA_THEO_ENGINE.get(getattr(lim, "engine", "") or engine_hint, engine_hint),
+                                     float(getattr(lim, "reset_epoch", 0) or 0))
+        except Exception:  # noqa: BLE001
+            pass
+    return noi
 
 
 def _canary_keys() -> set:
@@ -21628,10 +22028,50 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
                                api_model or mcfg.get("claude_model") or "mặc định")
     _trace_token = context_runtime.bind_trace(runtime_trace)
     try:
+        _da_lam = [False]
+
+        async def _tien_do(x):
+            # 26.10.309: dòng "⚙" là một lần gọi công cụ; sau đó hết lượt KHÔNG chạy lại ở đường khác.
+            if str(x or "").startswith("⚙"):
+                _da_lam[0] = True
+            if progress:
+                await progress(x)
+
+        _truoc = thu_tu_dung.het_luot_den(prov)
         out = await _tg_answer_engine(
-            text, meta, progress, chat_id=chat_id, sess=sess, brain=brain, mcfg=mcfg,
+            text, meta, _tien_do, chat_id=chat_id, sess=sess, brain=brain, mcfg=mcfg,
             prov=prov, kind=kind, api_key=api_key, api_model=api_model,
             store=store, conv_sid=conv_sid, channel=channel, bot=bot)
+        # 26.10.309: hết lượt trước khi gọi công cụ nào -> hỏi lại đúng tin đó bằng đường kế tiếp của
+        # Thứ tự dùng, kèm một dòng tiến độ nói vì sao. Bot chuyên trách giữ model riêng, không đổi.
+        _da_thu = []
+        while (isinstance(out, str) and not bot and not _da_lam[0] and len(_da_thu) < DOI_DUONG_TOI_DA):
+            if kind == "api":
+                if not _la_het_luot_api({"content": out}):
+                    break
+                _nghi_khoa_api(mcfg, prov, api_key, {"ma": 429, "content": out})
+            else:
+                if thu_tu_dung.het_luot_den(prov) <= _truoc and _het_luot_ap_dao(out):
+                    _subscription_limit_message(out, _NHA_SANG_ENGINE.get(prov, prov))   # ghi nghỉ nếu đúng là hết lượt
+                if thu_tu_dung.het_luot_den(prov) <= _truoc:
+                    break
+            _ke = _chat_duong_ke(mcfg, prov, _da_thu)
+            if not _ke:
+                break
+            _da_thu = _ke["tried"]
+            prov, kind, api_key, api_model = _ke["route"]
+            _tg_ngat_mach(sess, tru=_nhan_engine(prov, kind, api_key))
+            _CONTEXT_RUNTIME.set_route(runtime_trace, prov, api_model or mcfg.get("claude_model") or "mặc định")
+            if progress:
+                try:
+                    await progress("↻ " + _ke["status"])
+                except Exception:  # noqa: BLE001
+                    pass
+            _truoc = thu_tu_dung.het_luot_den(prov)
+            out = await _tg_answer_engine(
+                text, meta, _tien_do, chat_id=chat_id, sess=sess, brain=brain, mcfg=mcfg,
+                prov=prov, kind=kind, api_key=api_key, api_model=api_model,
+                store=store, conv_sid=conv_sid, channel=channel, bot=bot)
 
         # Cùng luật với dashboard: hứa "xong em báo" mà không có việc nền nào thì nói thẳng.
         # Ở kênh này tin nhắn CHƯA gửi đi nên nối luôn vào cuối, khỏi phải bắn thêm một tin.
@@ -22077,7 +22517,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
     trả CHUỖI khi là thông báo lỗi (vỏ `_tg_answer` dựa vào đó để biết lượt nào đáng lưu)."""
     sess["last"] = text
     sess["sent"] = set()    # lượt mới → reset dedupe (endpoint /telegram/send-file add vào đây)
-    reasoning = _reasoning_level(mcfg)
+    reasoning = _chat_reasoning(mcfg, prov)   # 26.10.309: Effort của thẻ lượt này chạy
     if channel == "cli" and str(chat_id).startswith("voice:"):
         reasoning = {"fast": "low", "thorough": "high"}.get((meta or {}).get("voice_response_mode"), reasoning)
     runtime_trace = context_runtime.current_trace()

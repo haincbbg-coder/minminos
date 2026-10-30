@@ -1,5 +1,12 @@
 # MinMin OS
 
+## [26.10.309] - 2026-10-30
+### Thêm mới
+- **Thứ tự dùng** trên trang Bộ não AI: chỉ hiện các nhà bố đã kết nối, thẻ trên cùng là MAIN, sau đó Dự phòng 1, 2. Kéo thẻ (điện thoại thì giữ nút sáu chấm) hoặc bấm **Đảo** để đổi. Mỗi thẻ có chip model và Effort riêng; chat, việc nền và Telegram dùng chung thứ tự này.
+- **Hết lượt thì tự sang thẻ kế.** Mô hình đang chạy báo hết lượt trước khi viết chữ nào thì MinMin hỏi lại ngay bằng thẻ kế, kèm một dòng "Đang dùng ... vì ... hết lượt". Hết giữa chừng thì giữ đoạn đã viết và có nút **Chạy lại ngay**; đã gọi công cụ thì không bao giờ tự chạy lại.
+- **Nhiều API key cho một nhà**, hiện thành danh sách đánh số: thêm, đổi tên, lên xuống, tắt, đổi key, gỡ. Key đang dùng được tô màu, key hết lượt ghi giờ mở lại. Gói thuê bao vẫn chỉ một tài khoản như cũ.
+- **Mô hình việc nền** nằm ngay dưới, có Effort riêng; trên điện thoại bảng chọn trượt từ đáy lên, có nút đóng.
+
 ## [26.10.305] - 2026-10-30
 ### Cải thiện
 - **Tinh gọn đợt 3**: Chợ MinMin và danh sách dịch vụ sẵn có đổi từ thẻ to sang từng dòng gọn.
