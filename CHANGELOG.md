@@ -1,6 +1,6 @@
 # MinMin OS
 
-## [26.10.305] - 2026-10-30
+## [26.10.310] - 2026-10-30
 ### Thêm mới
 - **Tua lại hội thoại**: dưới mỗi câu hỏi của bố có nút Tua lại, bấm là xoá câu đó và mọi thứ sau nó, câu hỏi quay về ô gõ để sửa rồi gửi lại. MinMin cũng quên luôn phần đã tua.
 - **Thanh mục tiêu** trên ô chat: chạy nhiều mục tiêu `/goal` cùng lúc, bấm Dừng thì mục tiêu tạm dừng chứ không mất. Menu "/" gọn, thẳng hàng, lệnh gõ vào được tô màu.

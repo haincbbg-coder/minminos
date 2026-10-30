@@ -1,4 +1,4 @@
-"""Nút Tua lại dưới câu hỏi trong khung chat (26.10.274).
+"""Nút Tua lại dưới câu hỏi trong khung chat (26.10.310).
 
 Bố bấm Tua lại dưới một câu hỏi cũ: câu đó cùng mọi thứ bên dưới bị xoá, câu hỏi quay về ô gõ để sửa
 rồi gửi lại, hội thoại đi tiếp từ chỗ đó. Bong bóng chỉ biết CHỮ bố gõ, còn bản lưu trên server có thể

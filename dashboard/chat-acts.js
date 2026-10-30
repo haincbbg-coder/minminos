@@ -76,7 +76,7 @@
       : "";
     var send = "";
     if (canResend !== false && role === "user") {
-      // 26.10.274: "Gui lai" va "Sua lai" gop thanh MOT nut Tua lai: xoa cau nay cung moi thu ben duoi,
+      // 26.10.310: "Gui lai" va "Sua lai" gop thanh MOT nut Tua lai: xoa cau nay cung moi thu ben duoi,
       // dua cau hoi ve o go de sua hoac gui lai, hoi thoai di tiep tu do.
       send = '<button class="msg-act" type="button" data-act="rewind" title="' + esc(tw("cact.rewind")) + '">↺</button>';
     }

@@ -1,4 +1,4 @@
-"""Tự soi Node.js của máy: thiếu bản vá bảo mật mới nhất thì nhắc trong chuông Tin tức (26.10.274).
+"""Tự soi Node.js của máy: thiếu bản vá bảo mật mới nhất thì nhắc trong chuông Tin tức (26.10.310).
 
 Claude Code, Codex và mọi MCP chạy bằng npx đều chạy trên Node.js của chính máy, nên một lỗ hổng
 Node.js chạm tới tất cả. Ảnh Docker ghim sẵn một bản đã vá; cài thẳng trên máy (Windows, Mac, VPS

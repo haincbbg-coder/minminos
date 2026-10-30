@@ -1,4 +1,4 @@
-// Thanh mục tiêu và lệnh /goal (26.10.274): phần thuần của dashboard/chat-goal.js, phần /goal của chat-slash.js,
+// Thanh mục tiêu và lệnh /goal (26.10.310): phần thuần của dashboard/chat-goal.js, phần /goal của chat-slash.js,
 // và chỗ app.js nối vào. Chạy: node tests/js/test_chat_goal.js
 const path = require("path");
 const fs = require("fs");

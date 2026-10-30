@@ -1,4 +1,4 @@
-"""Vá Node.js tháng 10/2026 (26.10.274): ảnh Docker ghim bản đã vá, bộ cài lấy bản vá, MinMin tự soi Node.js.
+"""Vá Node.js tháng 10/2026 (26.10.310): ảnh Docker ghim bản đã vá, bộ cài lấy bản vá, MinMin tự soi Node.js.
 
     python tests/run.py kiem_node      (không cần mạng)
 
@@ -87,7 +87,7 @@ async def _ann():
 
 
 async def _cl():
-    return {"releases": [], "current": "26.10.274", "latest": "26.10.274"}
+    return {"releases": [], "current": "26.10.310", "latest": "26.10.310"}
 
 _goc = (main._load_community_announcements, main.changelog_index, kn.phien_ban_node)
 try:

@@ -170,7 +170,7 @@ import channels          # sổ đăng ký kênh của Hộp thư hội thoại 
 import conversations     # Hộp thư hội thoại khách: kho khách -> hội thoại -> tin (Chatbot V2)
 import zalo_personal_channel   # Hộp thư hội thoại: đọc tin Zalo cá nhân từ MCP theo cursor
 import deploy_info              # Javis đang đứng ở đâu (docker/native) - xem _deploy_mode
-import kiem_node                # Node.js của máy thiếu bản vá bảo mật thì nhắc trong chuông (26.10.274)
+import kiem_node                # Node.js của máy thiếu bản vá bảo mật thì nhắc trong chuông (26.10.310)
 import ollama_catalog           # danh mục model để gợi ý + tìm kiếm
 import ollama_local             # dò/tải/gỡ model trên máy chạy Ollama
 import sessions                  # PROJECT_INSTRUCTIONS_MAX cho khối project trong system prompt
@@ -2022,7 +2022,7 @@ def _providers_view(cfg):
     return out
 
 def _tg_dat_model(cfg, provider, model, chat_key):
-    """Model chọn TỪ một cuộc trò chuyện Telegram chỉ ghim cho ĐÚNG cuộc đó (26.10.274): không đổi model
+    """Model chọn TỪ một cuộc trò chuyện Telegram chỉ ghim cho ĐÚNG cuộc đó (26.10.310): không đổi model
     chính, không đổi web, các cuộc Telegram khác vẫn như cũ. provider rỗng = gỡ ghim của cuộc này.
 
     Trước bản này /model trên Telegram ghi thẳng vào model chính (chưa ghim) hoặc ô ghim chung, nên đổi
@@ -4151,7 +4151,7 @@ async def claude_update_now():
 
 @app.on_event("startup")
 async def _tu_soi_node():
-    """Lúc khởi động soi Node.js của máy một lần (26.10.274): thiếu bản vá thì ghi một dòng nhật ký.
+    """Lúc khởi động soi Node.js của máy một lần (26.10.310): thiếu bản vá thì ghi một dòng nhật ký.
     Chạy trong luồng phụ để không chặn khởi động; chuông Tin tức tự hiện tin nhắc ở lần tải sau."""
     async def _chay():
         try:
@@ -15256,7 +15256,7 @@ async def notifications_info():
         changelog_task, announcements_task, node_task
     )
     # Tin phát chung trong ANNOUNCEMENTS.json dành cho bản cũ chưa biết tự soi. Ở đây Node.js THẬT của
-    # máy quyết định, nên máy đã vá không bị nhắc vá (26.10.274).
+    # máy quyết định, nên máy đã vá không bị nhắc vá (26.10.310).
     announcements = [a for a in announcements if not str(a.get("id") or "").startswith(kiem_node.DOT_VA_ID)]
     _tin_node = kiem_node.tin_canh_bao(node_ban, deploy_info.deploy_mode())
     if _tin_node:
@@ -23230,7 +23230,7 @@ async def _tg_command(cmd, arg, chat=None, meta=None):
     if cmd == "model":
         s = cfgmod.read_settings(); m = s["model"]
         a = arg.strip()
-        # 26.10.274: mọi ghim gõ ở đây là của RIÊNG cuộc trò chuyện này.
+        # 26.10.310: mọi ghim gõ ở đây là của RIÊNG cuộc trò chuyện này.
         # /model ghim: khoá cuộc này vào model nó ĐANG chạy, từ đó web đổi gì cũng mặc.
         # /model theo: gỡ ghim riêng, cuộc này lại theo ghim chung trên web (nếu có) hoặc model chính.
         if a.lower() in ("ghim", "pin"):
@@ -24885,7 +24885,7 @@ async def _meta_ads_duyet_callback(data: str, chat_key: str):
 meta_ads_duyet.dat_gui_telegram(_meta_ads_gui_tg)
 meta_fb_routes.register(app)
 
-# Nút Tua lại dưới câu hỏi trong khung chat (26.10.274): POST /sessions/{id}/rewind, server/tua_lai.py.
+# Nút Tua lại dưới câu hỏi trong khung chat (26.10.310): POST /sessions/{id}/rewind, server/tua_lai.py.
 # Đăng ký ở đuôi cho bảng route.
 import tua_lai as tua_lai_mod   # noqa: E402
 tua_lai_mod.register(app, lambda: get_store(), dang_chay=lambda s: bool(_CHAT_RUNTIME.get_job(s)),

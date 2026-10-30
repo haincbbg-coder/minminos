@@ -2580,7 +2580,7 @@ body.ne-full-on .cview { z-index: 250; }
   mask: var(--ic-check) center/contain no-repeat;
 }
 
-/* Menu lệnh / (chat-slash.js). 26.10.274: một dòng mỗi lệnh, cột lệnh chung một bề rộng (--slash-cmdw do JS
+/* Menu lệnh / (chat-slash.js). 26.10.310: một dòng mỗi lệnh, cột lệnh chung một bề rộng (--slash-cmdw do JS
    tính theo lệnh dài nhất, font đơn cách) nên mô tả thẳng hàng; có tiêu đề nhóm nhỏ khi chưa gõ chữ lọc. */
 .slash-menu {
   position: fixed;
@@ -2643,7 +2643,7 @@ body.ne-full-on .cview { z-index: 250; }
 .voice-input.has-cmd { position: relative; color: transparent; caret-color: var(--text); background: transparent; }
 .voice-input.has-cmd::selection { color: transparent; background: var(--mm-wash); }
 
-/* ===== Thanh MỤC TIÊU của /goal ngay trên ô gõ (chat-goal.js, 26.10.274) =====
+/* ===== Thanh MỤC TIÊU của /goal ngay trên ô gõ (chat-goal.js, 26.10.310) =====
    Một dòng: biểu tượng, nhãn trạng thái, mục tiêu (cắt "..."), đồng hồ, xoá, tạm dừng/chạy tiếp, chi tiết.
    Nhiều mục tiêu thì có ô số ở đầu, bấm xổ danh sách lên trên. */
 .goal-bar {

@@ -1471,7 +1471,7 @@ async function sendMessage(text, opts) {
     });
     return;
   }
-  if (_slash.type === "goal") {   // 26.10.274: /goal chạy ở chat-goal.js, nó gọi lại sendMessage kèm khối mục tiêu
+  if (_slash.type === "goal") {   // 26.10.310: /goal chạy ở chat-goal.js, nó gọi lại sendMessage kèm khối mục tiêu
     chatInput.value = ""; chatInput.style.height = "auto";
     if (window.MinMinGoals && window.MinMinGoals.lenh) window.MinMinGoals.lenh(_slash.arg);
     return;
@@ -2423,7 +2423,7 @@ function datVaoONhap(text) {
   chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + "px";
   try { chatInput.focus(); chatInput.setSelectionRange(text.length, text.length); } catch (e) {}
 }
-// 26.10.274 Tua lại: xoá câu này cùng mọi thứ bên dưới trên server (mạch engine cũng bỏ), dựng lại khung chat
+// 26.10.310 Tua lại: xoá câu này cùng mọi thứ bên dưới trên server (mạch engine cũng bỏ), dựng lại khung chat
 // từ phần còn lại rồi đưa câu hỏi về ô gõ. Thay cho hai nút "Gửi lại" và "Sửa lại": gửi nguyên câu là gửi lại.
 // Xoá không hoàn tác được nên hỏi trước, và không tua khi MinMin đang trả lời.
 async function tuaLai(msgEl, text) {

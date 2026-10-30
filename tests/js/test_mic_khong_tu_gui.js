@@ -77,7 +77,7 @@ check("onTranscript vẫn gửi thẳng, không qua bước xác nhận",
 // Chỗ thứ 10 (0.65.28) VẪN là hoãn: trong cuộc gọi, câu nói lúc Javis đang trả lời không dừng
 // lượt cũ nữa mà xếp hàng, gửi khi lượt xong và loa đọc xong (guiCauChoLuot).
 const goiGui = (app.match(/(?<!function )\bsendMessage\(/g) || []).length;
-// 26.10.274: nút "Gửi lại câu này" nhường chỗ cho nút Tua lại (chỉ đưa câu hỏi về ô gõ, bớt một chỗ), và vòng
+// 26.10.310: nút "Gửi lại câu này" nhường chỗ cho nút Tua lại (chỉ đưa câu hỏi về ô gõ, bớt một chỗ), và vòng
 // tự động của /goal đi qua MinMinChat.send (thêm một chỗ, chỉ chạy khi bố đã gõ /goal).
 check("có 10 chỗ gọi sendMessage (giọng nói, Enter, nút gửi, sau khi tải file xong, sau khi dừng lượt cũ, sau khi nối lại mạng, sau khi mở agent/workflow, adaptive commit, câu chờ lượt trong cuộc gọi, vòng /goal)",
   goiGui === 10, goiGui);

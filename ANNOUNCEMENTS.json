@@ -6,7 +6,7 @@
       "kind": "security",
       "title": "Cập nhật Node.js: lỗ hổng bảo mật nghiêm trọng",
       "summary": "Ngày 21/10/2026 Node.js vá 10 lỗ hổng, trong đó có lỗi Brotli cho phép chạy mã từ xa. Claude Code, Codex và các MCP chạy bằng npx đều dùng Node.js trên máy.",
-      "body": "Docker hoặc VPS: cập nhật MinMin lên 26.10.274 trở lên, ảnh mới đã có Node.js 22.23.4. Cài thẳng trên máy: cài Node.js 22.23.4, 24.22.1, 26.12.1 hoặc mới hơn (Windows: winget upgrade OpenJS.NodeJS.LTS; Mac: brew upgrade node), rồi khởi động lại MinMin. Node.js 20 trở xuống đã hết hỗ trợ, không có bản vá. Từ 26.10.274 MinMin tự soi và chỉ nhắc khi máy còn thiếu bản vá.",
+      "body": "Docker hoặc VPS: cập nhật MinMin lên 26.10.310 trở lên, ảnh mới đã có Node.js 22.23.4. Cài thẳng trên máy: cài Node.js 22.23.4, 24.22.1, 26.12.1 hoặc mới hơn (Windows: winget upgrade OpenJS.NodeJS.LTS; Mac: brew upgrade node), rồi khởi động lại MinMin. Node.js 20 trở xuống đã hết hỗ trợ, không có bản vá. Từ 26.10.310 MinMin tự soi và chỉ nhắc khi máy còn thiếu bản vá.",
       "published_at": "2026-10-28",
       "expires_at": "2027-01-31",
       "priority": "high",

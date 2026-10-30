@@ -1,4 +1,4 @@
-// chat-goal.js - lệnh /goal và THANH MỤC TIÊU ngay trên ô gõ (26.10.274).
+// chat-goal.js - lệnh /goal và THANH MỤC TIÊU ngay trên ô gõ (26.10.310).
 //
 // Bố gõ "/goal <điều kiện>": MinMin làm, tự kiểm, chưa đạt thì tự nhắc mình làm tiếp vòng sau, tối đa
 // TOI_DA vòng. Mỗi hội thoại giữ một mục tiêu, nhiều hội thoại thì nhiều mục tiêu cùng lúc. Thanh trên ô gõ

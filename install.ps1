@@ -99,7 +99,7 @@ if ($SkipCli) {
       Refresh-Path
     }
   } elseif (Have "node") {
-    # 26.10.274: Node.js co dot va bao mat 21/10/2026 (CVE-2026-111497 Brotli RCE). Node 22 chua va thi
+    # 26.10.310: Node.js co dot va bao mat 21/10/2026 (CVE-2026-111497 Brotli RCE). Node 22 chua va thi
     # nang bang winget; dong 24/26 tu cai thi chi nhac. Giu khop BAN_VA trong server/kiem_node.py.
     $nv = ((& node --version) -replace '^v', '').Trim()
     $san = @{ 22 = [version]"22.23.4"; 24 = [version]"24.22.1"; 26 = [version]"26.12.1" }

@@ -1,4 +1,4 @@
-"""Nút Tua lại dưới câu hỏi trong khung chat (26.10.274).
+"""Nút Tua lại dưới câu hỏi trong khung chat (26.10.310).
 
     python tests/run.py tua_lai_chat      (không cần mạng)
 

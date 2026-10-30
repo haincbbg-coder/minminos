@@ -1,4 +1,4 @@
-"""Ghim model cho Telegram: ghim chung của kênh (web) và ghim riêng từng cuộc trò chuyện (26.10.274).
+"""Ghim model cho Telegram: ghim chung của kênh (web) và ghim riêng từng cuộc trò chuyện (26.10.310).
 
     python tests/run.py ghim_model_telegram      (KHÔNG mạng)
 
@@ -80,7 +80,7 @@ m = _dat("anthropic-cli", "opus", "gemini-cli", "gemini-2.5-pro")
 check("CANARY: provider đã gỡ khỏi app thì ô ghim tự về rỗng lúc đọc settings",
       not (cfgmod.read_settings()["model"]["telegram"] or {}).get("provider"))
 
-# ---- 4. 26.10.274: ghim gõ trên Telegram là của RIÊNG cuộc trò chuyện đó -----------
+# ---- 4. 26.10.310: ghim gõ trên Telegram là của RIÊNG cuộc trò chuyện đó -----------
 # Học từ Javis 0.350.0: /model trong một cuộc trò chuyện chỉ ghim cuộc đó, không đổi model chính
 # hay web, các cuộc khác vẫn như cũ. Ghim chung trên trang Models (thẻ Model Telegram) vẫn giữ,
 # là lớp sau ghim riêng.

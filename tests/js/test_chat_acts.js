@@ -29,7 +29,7 @@ check("không có ts: hàng nút không có ô giờ", !has(A.actsHtml("user", 0
 check("không có ts: vẫn còn các nút", has(A.actsHtml("user", 0), 'data-act="rewind"'));
 
 // ---- 3. Tin của người dùng: giờ + tua lại + copy ----
-// 26.10.274: "Gửi lại" và "Sửa lại" gộp thành một nút Tua lại.
+// 26.10.310: "Gửi lại" và "Sửa lại" gộp thành một nút Tua lại.
 let h = A.actsHtml("user", TS);
 check("tin user: có ô giờ", has(h, '<span class="msg-time"') && has(h, ">06:38</span>"));
 check("tin user: giờ đầy đủ nằm ở title", has(h, "27/07/2026 06:38"));

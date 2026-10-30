@@ -87,7 +87,7 @@ check("CANARY: thả Space KHÔNG tắt loa", !/JavisTts/.test(keyup));
 // 6 từ 0.57.17: chỗ thứ 6 cũng là HOÃN - câu nói chen ngang gửi lại sau khi lượt cũ dừng hẳn.
 // 7 từ 0.58.2: chỗ thứ 7 cũng HOÃN - câu gửi lúc mất WebSocket, gửi lại khi nối lại được.
 // 10 từ 0.65.28: chỗ thứ 10 cũng HOÃN - câu nói lúc Javis đang trả lời trong cuộc gọi, gửi khi lượt xong.
-// 26.10.274: nút "Gửi lại câu này" thành nút Tua lại (chỉ đưa câu hỏi về ô gõ, bớt một chỗ), và thêm
+// 26.10.310: nút "Gửi lại câu này" thành nút Tua lại (chỉ đưa câu hỏi về ô gõ, bớt một chỗ), và thêm
 // MinMinChat.send cho vòng tự động của /goal (chat-goal.js, thêm một chỗ): vẫn 10.
 check("có 10 chỗ (bớt nút Gửi lại, thêm vòng /goal) gọi sendMessage", (app.match(/(?<!function )\bsendMessage\(/g) || []).length === 10,
   (app.match(/(?<!function )\bsendMessage\(/g) || []).length);

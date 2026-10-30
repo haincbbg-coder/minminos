@@ -2,7 +2,7 @@
 // phan menu DOM o cuoi file chi chay trong trinh duyet. Pattern giong chat-ask.js.
 (function () {
   var SESSION_COMMANDS = ["new", "reset", "stop"];
-  // Lenh HE THONG chay o trinh duyet (26.10.274): /goal (chat-goal.js). Chi nhan o DAU tin.
+  // Lenh HE THONG chay o trinh duyet (26.10.310): /goal (chat-goal.js). Chi nhan o DAU tin.
   var SYSTEM_COMMANDS = ["goal"];
 
   // Chu hien ra lay tu tu dien. Trong trinh duyet la window.t (i18n/index.js nap dau tien);
@@ -75,7 +75,7 @@
     return SYSTEM_COMMANDS.indexOf(cmd) !== -1 ? "system" : "skill";
   }
 
-  // Vung lenh de TO MAU trong o go (26.10.274): {start, end} cua dung token ma route() se dung, hoac null.
+  // Vung lenh de TO MAU trong o go (26.10.310): {start, end} cua dung token ma route() se dung, hoac null.
   // O dau tin chi to lenh co that (lenh phien, lenh he thong, skill, cong su): dang go do "/go" thi chua
   // phai lenh nao, to len la noi doi. Giua cau thi nhu parseSlashAnywhere: skill/cong su co that, lan cuoi.
   function laCongSu(cmd) { return knownPartners.some(function (x) { return x.cmd === String(cmd || "").toLowerCase(); }); }
@@ -270,7 +270,7 @@
       });
     }
 
-    // 26.10.274: mot dong moi lenh, cot lenh chung be rong (cotLenh) nen mo ta thang hang; ten roi mo ta mo
+    // 26.10.310: mot dong moi lenh, cot lenh chung be rong (cotLenh) nen mo ta thang hang; ten roi mo ta mo
     // noi tiep tren cung dong, tran thi "...". Chua go chu loc thi chia nhom co tieu de nho; dang loc thi ket
     // qua xep theo do khop nen bo tieu de, nhan nhom nam cuoi dong.
     function tenNhom(g) {
@@ -359,7 +359,7 @@
       else if (e.key === "Escape") { e.preventDefault(); hide(); }
     }
 
-    // ===== To mau lenh da go trong o go (26.10.274) =====
+    // ===== To mau lenh da go trong o go (26.10.310) =====
     // <textarea> khong to mau tung chu duoc, nen dat mot lop GUONG ngay duoi no: cung font, cung le, cung be
     // rong, chu y het, rieng token lenh boc trong <mark>. Co lenh thi chu cua o go trong suot (con tro van hien)
     // va mat thay chu cua guong. Khong co lenh thi guong an. app.js hay gan thang gia tri o go (gui xong thi

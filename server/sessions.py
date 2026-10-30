@@ -224,7 +224,7 @@ _KHOI_GHIM = re.compile(r"^\s*\[FILE ĐANG MỞ[^\]]*\]\s*")
 # Khối ngữ cảnh giao diện (Voice V1, dashboard/ui-context.js): trang đang mở, đoạn đang bôi
 # đen, câu Javis bị ngắt lời. Cùng loại với hai khối trên và cũng đi TRƯỚC câu của user.
 _KHOI_NGU_CANH_UI = re.compile(r"^\s*\[NGỮ CẢNH GIAO DIỆN:[^\]]*\]\s*")
-# Khối chỉ dẫn của /goal (dashboard/chat-goal.js, 26.10.274): cùng loại, đi TRƯỚC câu của user.
+# Khối chỉ dẫn của /goal (dashboard/chat-goal.js, 26.10.310): cùng loại, đi TRƯỚC câu của user.
 _KHOI_MUC_TIEU = re.compile(r"^\s*\[MỤC TIÊU:[^\]]*\]\s*")
 # Câu dashboard tự điền khi user đính kèm file mà KHÔNG gõ gì - không mang thông tin gì.
 _CAU_TU_DIEN = "Hãy đọc (các) file trên và phản hồi / tóm tắt nội dung chính."
@@ -677,7 +677,7 @@ class SessionStore:
         return bool(self._write(_do))
 
     def cat_tu_tin(self, session_id: str, message_id: int) -> int:
-        """Nút Tua lại (26.10.274): xoá tin NGƯỜI DÙNG `message_id` cùng MỌI tin sau nó (theo thứ tự hiển
+        """Nút Tua lại (26.10.310): xoá tin NGƯỜI DÙNG `message_id` cùng MỌI tin sau nó (theo thứ tự hiển
         thị `ts, id`), sửa lại msg_count. Trả số tin đã xoá; 0 khi đó không phải tin người dùng của phiên này.
         Chỗ gọi tự dọn mạch native của engine, vì mạch vẫn còn giữ các lượt vừa xoá."""
         def _do(conn):
