@@ -1,5 +1,10 @@
 # MinMin OS
 
+## [26.10.305] - 2026-10-30
+### Cải thiện
+- **Tinh gọn đợt 3**: Chợ MinMin và danh sách dịch vụ sẵn có đổi từ thẻ to sang từng dòng gọn.
+- Sổ hành động, và phần giải thích của Việc 1 lần thu gọn, bấm mới mở.
+
 ## [26.10.304] - 2026-10-30
 ### Sửa lỗi
 - Tìm kiếm/lọc đích đăng và giữ lựa chọn, phong cách khi chuyển bộ lọc trong chiến dịch AI.

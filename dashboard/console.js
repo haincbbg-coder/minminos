@@ -3149,7 +3149,7 @@
       <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
         <div>
           <div style="font-size:16px;color:var(--text);font-weight:650"><span class="kn-dot off" id="knLiveDot"></span><span id="knLiveText">Dispatcher</span></div>
-          <p style="color:var(--text3);font-size:13px;max-width:680px;margin:6px 0 0">${esc(t("kanban.intro"))}</p>
+          <details class="kn-gt"><summary>${esc(t("knn.giai_thich"))}</summary><p style="color:var(--text3);font-size:13px;max-width:680px;margin:6px 0 0">${esc(t("kanban.intro"))}</p></details>
         </div>
         <div class="si-actions" style="margin:0">
           <button class="s-btn" id="knAdd">${esc(t("kanban.add"))}</button>
@@ -7092,7 +7092,7 @@
       + '<div id="mcpTabDaNoi"' + (_mcpTab === "danoi" ? "" : " hidden") + '>'
       + '<div id="mcpGithub"></div>'
       // Trụ 4 (26.10.139): sổ hành động ra ngoài + quyền theo loại việc. Vẽ khung, dữ liệu nạp sau.
-      + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.hd_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.hd_sub")) + '</span></h3>'
+      + '<details class="cview-section" id="hdWrap"><summary><h3 style="display:inline">◆ ' + esc(window.t("cs.hd_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.hd_sub")) + '</span></h3></summary>'
       + '<div class="gcard aux-card"><div class="gcard-meta">' + esc(window.t("cs.hd_meta")) + '</div>'
       + '<div id="hdChinhSach" class="aux-now-act" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:6px"></div>'
       + '<div id="hdChoDuyet" class="aux-note" style="margin-top:8px"></div>'
@@ -7100,7 +7100,7 @@
       + '<select id="hdLoc" class="mp-filter" style="margin:0;padding:6px 10px"><option value="">' + esc(window.t("cs.hd_all")) + '</option></select>'
       + '<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" id="hdChiLoi"> ' + esc(window.t("cs.hd_only_err")) + '</label>'
       + '<button class="gcard-btn ghost" id="hdTai">' + esc(window.t("cs.hd_refresh")) + '</button></div>'
-      + '<div id="hdSo" class="aux-note" style="margin-top:6px"></div></div></div>'
+      + '<div id="hdSo" class="aux-note" style="margin-top:6px"></div></div></details>'
       + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.cn_connected_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.cn_account_n", { so: conns.length })) + '</span></h3>'
       + '<div class="gcard-meta" style="max-width:740px">' + esc(window.t("cs.cn_intro"))
       + '<label style="margin-left:8px;cursor:pointer"><input type="checkbox" id="mcpStrict" ' + (d.strict ? "checked" : "") + '> ' + esc(window.t("cs.cn_strict")) + '</label></div>'
