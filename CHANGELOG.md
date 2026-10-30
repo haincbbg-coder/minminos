@@ -1,5 +1,11 @@
 # MinMin OS
 
+## [26.10.314] - 2026-10-31
+### Thêm mới
+- **Pancake vào hộp thư Chatbot**: mỗi Fanpage trong Pancake là một tài khoản, tin khách đồng bộ dần về trang Hội thoại, không trùng tin.
+- Nhân viên trả lời trong Pancake thì cuộc chat tự chuyển sang **Bạn đang xử lý**, A.I. nhường lời.
+- Mặc định A.I. chỉ soạn nháp chờ bố duyệt; **A.I. tự trả lời** phải bật riêng từng Page và có cảnh báo nhân viên cũng đang trả lời.
+
 ## [26.10.304] - 2026-10-30
 ### Sửa lỗi
 - Tìm kiếm/lọc đích đăng và giữ lựa chọn, phong cách khi chuyển bộ lọc trong chiến dịch AI.
