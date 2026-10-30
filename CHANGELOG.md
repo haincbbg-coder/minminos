@@ -1,5 +1,9 @@
 # MinMin OS
 
+## [26.10.316] - 2026-10-30
+### Cải thiện
+- **Font nằm sẵn trong app**: Be Vietnam Pro, JetBrains Mono và Montserrat không còn tải từ Google Fonts nữa mà nằm sẵn trong MinMin. Trang mở nhanh hơn và chữ hiện đúng kiểu ngay, kể cả khi máy chạy MinMin vào Google chập chờn hay bị chặn.
+
 ## [26.10.305] - 2026-10-30
 ### Cải thiện
 - **Tinh gọn đợt 3**: Chợ MinMin và danh sách dịch vụ sẵn có đổi từ thẻ to sang từng dòng gọn.
