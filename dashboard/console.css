@@ -2755,3 +2755,18 @@ details.h2-sec[open] > summary.h2-h { margin-bottom: 6px; }
   .knn-hs { flex-direction: row; align-items: center; gap: 8px; }
   .knn-hb { margin-left: auto; }
 }
+
+/* ---- Học từ trò chuyện (26.10.308, hoc-tu-chat.js) - chỉ token --mm-* ---- */
+.htc-h { font-size: var(--mm-fs-16); color: var(--mm-text); margin: 0 0 var(--mm-sp-1); }
+.htc-p { color: var(--mm-muted); font-size: var(--mm-fs-14); max-width: 680px; margin: 0 0 var(--mm-sp-3); }
+.htc-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mm-sp-2); margin-bottom: var(--mm-sp-3); }
+.htc-dim, .htc-stat, .htc-open { color: var(--mm-dim); font-size: var(--mm-fs-13); }
+.htc-stat { margin-bottom: var(--mm-sp-1); }
+.htc-open { margin-bottom: var(--mm-sp-3); }
+.htc-chip { display: inline-block; padding: 0 var(--mm-sp-2); border-radius: var(--mm-r-chip); background: var(--mm-wash); color: var(--mm-text); }
+.htc-tag { font-size: var(--mm-fs-12); padding: 0 var(--mm-sp-2); border-radius: var(--mm-r-pill); background: var(--mm-wash); color: var(--mm-brand); }
+.htc-ly { color: var(--mm-muted); font-size: var(--mm-fs-13); margin-top: var(--mm-sp-1); }
+.htc-nut { display: flex; gap: var(--mm-sp-2); margin-top: var(--mm-sp-2); flex-wrap: wrap; }
+.htc-ban summary { cursor: pointer; color: var(--mm-link); font-size: var(--mm-fs-13); margin-top: var(--mm-sp-1); }
+.htc-ban pre { white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; font-size: var(--mm-fs-12);
+  background: var(--mm-field); box-shadow: var(--mm-in-sm); border-radius: var(--mm-r-field); padding: var(--mm-sp-3); }

@@ -8144,6 +8144,19 @@ def _agent_memory(brain, slug):
 _KINH_NGHIEM_TRAN = 6000
 
 
+def _agent_quy_trinh_hoc_block(brain, slug) -> str:
+    """Quy trình trợ lý học được từ trò chuyện (26.10.308, hoc_tu_chat.py). File riêng của máy, không phải lời dặn
+    chủ viết trong agents/<slug>.md, nên tự học ghi được mà không đụng chữ của chủ."""
+    f = _brain_memory_dir(brain) / "agents" / slug / "quy-trinh-hoc.md"
+    try:
+        txt = hoc_tu_chat.doc_quy_trinh(f.read_text(encoding="utf-8")) if f.is_file() else ""
+    except Exception:
+        return ""
+    if not txt:
+        return ""
+    return f"\n# Quy trình đã học (file: {f}):\n{txt[:_KINH_NGHIEM_TRAN]}\n"
+
+
 def _agent_kinh_nghiem_block(brain, slug) -> str:
     f = _brain_memory_dir(brain) / "agents" / slug / "kinh-nghiem.md"
     try:
@@ -10912,6 +10925,7 @@ def _workflow_agent_helpers(brain, tools, wf_mode="full"):
             + _agent_assets_block(brain, ameta)
             + f"\n# Bộ nhớ của bạn (file: {mem_path}):\n{amem or '(chưa có ký ức nào)'}\n"
             + _agent_kinh_nghiem_block(brain, aslug)
+            + _agent_quy_trinh_hoc_block(brain, aslug)
             + "\n# Tự bồi đắp lúc dùng: nếu cuối nhiệm vụ rút ra được bài học TÁI DÙNG cho vai này "
               "(cách làm tốt hơn, lỗi cần tránh, ngữ cảnh riêng đã học được), KẾT THÚC câu trả lời "
               "bằng tối đa 2 dòng riêng, mỗi dòng đúng dạng `JAVIS_LESSON: <bài học một câu>`. "
@@ -11368,6 +11382,11 @@ async def _ghi_lich_su(gen, *, brain, slug, name, input, source, session_id, run
             elif t == "done":
                 ket = "done"
                 st.ket_thuc(rid, "done", output=str(ev.get("result") or ""))
+                try:   # 26.10.308: lần chạy chủ tự bấm là một lượt để tự học từ trò chuyện chấm sau
+                    await asyncio.to_thread(_htc().ghi_quy_trinh, _brain_key(brain), slug, rid, input or "",
+                                            str(ev.get("result") or ""), session_id or "", source or "")
+                except Exception as _e:
+                    print(f"[hoc-tu-chat quy trinh] {type(_e).__name__}: {_e}", file=sys.stderr)
             yield ev
     finally:
         office_bus.emit("run_end", brain, run=rid, ok=(ket in ("done", "waiting")))
@@ -12307,7 +12326,176 @@ harness2_feature = harness2_noi.register(app, harness2_noi.Deps(
     ten_tool_that=lambda ev: _dg_tool_that(ev),
     hub_url=mcp_hub.hub_url,
     hub_token=mcp_hub.hub_token,
+    tam_dung=lambda b: _hoc_tu_chat_tam_dung(b),
 ))
+
+
+# ============================================================
+# TỰ HỌC TỪ TRÒ CHUYỆN (26.10.308) - hoc_tu_chat.py. Cổng ý tưởng Javis 0.341/0.343/0.330, viết lại.
+# Skill, trợ lý, quy trình học từ lỗi THẬT chủ nhắn sửa: chấm bằng mô hình nền, học khi đủ 3 lỗi, so đối
+# chứng có niêm phong, chỉ giữ khi thắng rõ. Trần cứng mỗi ngày, có Hoàn tác, có Tạm dừng theo bộ não.
+# Chữ chủ viết tay (skill, quy trình không mang dấu tự học, lời dặn trợ lý) chỉ nhận ĐỀ XUẤT, không tự ghi.
+# ============================================================
+import hoc_tu_chat
+
+_HTC = [None]
+_HTC_KHOA = __import__("threading").Lock()
+_HTC_BAN = [False]
+_HTC_TRAN_GIAY = 300
+
+
+def _htc_engine_chu(system: str, tag: str):
+    """Engine Claude KHÔNG tool nào, thư mục rỗng, MCP rỗng: cùng khuôn với soi gói và tóm tắt web."""
+    import tempfile as _tf
+    trong = _tf.mkdtemp(prefix="minmin-hoc-")
+    cli = claude_engine(system_prompt=system, cwd=trong, tag=tag, allowed_tools=["__khong_co_tool__"])
+    mcpf = _empty_mcp_file()
+    if mcpf:
+        cli.mcp_config = mcpf
+        cli.mcp_strict = True
+    cli.disallowed_tools = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "LS", "WebFetch",
+                            "WebSearch", "Task", "NotebookEdit", "TodoWrite"]
+    try:
+        cli.setting_sources = []
+    except Exception:
+        pass
+    return cli, trong
+
+
+async def _htc_chay(cli, trong, prompt: str) -> str:
+    import shutil as _sh
+    cli.khong_tool = True       # engine API: không xin tool nào từ hub
+    try:
+        cli.profile = None      # Codex: không nạp profile MCP
+    except Exception:
+        pass
+    try:
+        if not cli.is_available():
+            raise RuntimeError("engine chưa sẵn sàng")
+        final, loi = "", ""
+
+        async def _doc():
+            nonlocal final, loi
+            async for ev in cli.query(prompt):
+                if ev.get("type") == "final":
+                    final = ev.get("content", "") or ""
+                elif ev.get("type") == "error":
+                    loi = str(ev.get("content") or "")[:200]
+        await asyncio.wait_for(_doc(), timeout=_HTC_TRAN_GIAY)
+        if not final:
+            raise RuntimeError(loi or "không có câu trả lời")
+        return final
+    finally:
+        _sh.rmtree(trong, ignore_errors=True)
+
+
+async def _htc_goi_nen(system: str, prompt: str) -> str:
+    """Mô hình nền (trang Model, ô việc nền): chấm, soạn câu thử, chấm điểm, viết bản sửa. Rẻ."""
+    cli, trong = _htc_engine_chu(system, "hoc-tu-chat")
+    cli = _aux_swap(cli, mode="suggest", tag="hoc-tu-chat")
+    return await _htc_chay(cli, trong, prompt)
+
+
+async def _htc_goi_chinh(system: str, prompt: str) -> str:
+    """Bộ não chính làm BÀI THỬ, để kết luận đo đúng model đang trả lời chủ. Bộ não không chạy chỉ-chữ an toàn
+    được (CLI ngoài Claude) thì làm bài bằng mô hình nền luôn."""
+    spec = _effective_main(cfgmod.read_settings() or {})
+    prov = spec.get("provider") or aux_engine.CLAUDE
+    if prov != aux_engine.CLAUDE and prov not in aux_engine.API_PROVIDERS:
+        return await _htc_goi_nen(system, prompt)
+    cli, trong = _htc_engine_chu(system, "hoc-tu-chat-thu")
+    try:
+        cli = aux_engine.dung_rieng(spec, cli, "suggest", "hoc-tu-chat-thu")
+    except ValueError:
+        import shutil as _sh
+        _sh.rmtree(trong, ignore_errors=True)
+        return await _htc_goi_nen(system, prompt)
+    return await _htc_chay(cli, trong, prompt)
+
+
+def _htc_cai_dat(brain: str) -> dict:
+    """Trang Tự học điều khiển: Bật tự học, chế độ ghi, và ba công tắc Kỹ năng / Vai / Chuỗi bước."""
+    cfg = learn_feature.read_config()
+    caps = cfg.get("capabilities") or {}
+    return {"bat": bool(cfg.get("enabled")), "che_do": str(cfg.get("mode") or "dry-run"),
+            "loai": {k for k in ("skill", "agent", "workflow") if caps.get(k)}}
+
+
+def _htc_commit(root: str, paths: list, msg: str):
+    if not git_brain.is_git_checkout(root):
+        return None
+    return git_brain.commit_paths(root, paths, msg)
+
+
+async def _htc_bao(brain: str, chu: str):
+    return await _bo_vao_hom_thu("", chu, kind="report", label="Tự học từ trò chuyện", source="hoc-tu-chat")
+
+
+def _htc_lan_chay(run_id: str):
+    import workflow_runs
+    return workflow_runs.get_store().lay(run_id) if run_id else None
+
+
+def _htc():
+    with _HTC_KHOA:
+        if _HTC[0] is None:
+            goc = Path(cfgmod.STATE_DIR) / "hoc-tu-chat"
+            may = hoc_tu_chat.May(
+                goi_nen=_htc_goi_nen, goi_chinh=_htc_goi_chinh,
+                brain_root=lambda b: Path(_brain_root(b)), cai_dat=_htc_cai_dat,
+                la_skill_he_thong=lambda s: system_sync.is_system_skill(s),
+                lan_chay_quy_trinh=_htc_lan_chay, bao=_htc_bao, sao_luu=goc / "sao-luu",
+                commit=_htc_commit, nhat_ky=lambda b, t, body: learn_feature._log(b, "hoc-tu-chat", t, body),
+                thu_muc_nho=lambda b: _brain_memory_dir(b))
+            _HTC[0] = hoc_tu_chat.BoHoc(hoc_tu_chat.Kho(goc / "hoc_tu_chat.sqlite3"), may)
+        return _HTC[0]
+
+
+def _hoc_tu_chat_tam_dung(brain) -> bool:
+    """Công tắc "Tạm dừng mọi cải tiến" của bộ não: tự học từ chat, mẻ học Tự học, cải tiến có đối chứng."""
+    try:
+        return _htc().tam_dung(_brain_key(brain))
+    except Exception as _e:
+        print(f"[hoc-tu-chat tam dung] {type(_e).__name__}: {_e}", file=sys.stderr)
+        return False
+
+
+def _htc_dung_skill_hub(vault_root, slug: str) -> None:
+    """Hub vừa nạp skill qua javis_use_skill: gắn vào đúng khung chat web DUY NHẤT đang chạy trên brain này
+    (sổ luot_dang_chay). Không chắc là khung nào thì bỏ qua, không đoán."""
+    import che_do_thu
+    if che_do_thu.dang_bat():
+        return
+    chat = luot_dang_chay.doan_chat_id(vault_root)
+    if chat.startswith(WEB_CHAT_PREFIX):
+        _htc().ghi_dung_skill(_brain_key(str(vault_root)), chat[len(WEB_CHAT_PREFIX):], slug)
+
+
+hoc_tu_chat.MOC_DUNG_SKILL[0] = _htc_dung_skill_hub
+learn_feature.deps.tam_dung = _hoc_tu_chat_tam_dung
+
+
+def _htc_ghi_tool(brain, conv_sid, event) -> None:
+    """Claude Code nạp skill NATIVE (tool Skill, hay đọc SKILL.md): không đi qua hub nên ghi ở đây."""
+    try:
+        slug = hoc_tu_chat.skill_tu_tool(event.get("name") or "", event.get("input") or {})
+        if slug:
+            _htc().ghi_dung_skill(_brain_key(brain), conv_sid, slug)
+    except Exception as _e:
+        print(f"[hoc-tu-chat tool] {type(_e).__name__}: {_e}", file=sys.stderr)
+
+
+async def _htc_nhip():
+    """Lịch 30 giây: một phần việc (chấm vài lượt, hoặc một lần học). Cờ bận riêng, trần cứng nằm trong module."""
+    if _HTC_BAN[0] or os.environ.get("MINMIN_HOC_TU_CHAT_TAT") == "1":
+        return
+    _HTC_BAN[0] = True
+    try:
+        await _htc().nhip()
+    except Exception as _e:
+        print(f"[hoc-tu-chat nhip] {type(_e).__name__}: {_e}", file=sys.stderr)
+    finally:
+        _HTC_BAN[0] = False
 
 
 # ============================================================
@@ -13512,6 +13700,9 @@ async def _start_scheduler():
                     await learn_feature.curator_tick()
                 except Exception as le:
                     print(f"[learn tick] {type(le).__name__}: {le}", file=__import__('sys').stderr)
+                # 2b) Tự học từ trò chuyện (26.10.308): tác vụ riêng, cờ bận riêng, trần ngày trong module.
+                if not _HTC_BAN[0]:
+                    asyncio.create_task(_htc_nhip())
                 # 3) Kanban: chỉ đánh thức dispatcher riêng. Không await model run tại đây.
                 try:
                     await tasks_feature.tick()
@@ -16483,14 +16674,14 @@ async def _luot_quy_trinh(store, conv_sid, user_message, brain, slug, emit, resu
         loi = kq["loi"] or {}
         text = workflow_chat.tin_loi(loi.get("i"), loi.get("agent", ""), loi.get("content", ""))
     await emit({"type": "stream", "content": text})
-    await _persist_turn(store, conv_sid, brain, user_message, text)
+    await _persist_turn(store, conv_sid, brain, user_message, text, turn_started=t0)
     return text
 
 
 # ============================================
 # Lưu MỘT lượt hội thoại - đường DUY NHẤT, dùng chung cho mọi kênh (dashboard, Telegram)
 # ============================================
-async def _persist_turn(store, conv_sid, brain, user_message, final_text):
+async def _persist_turn(store, conv_sid, brain, user_message, final_text, turn_started: float = 0):
     """Lưu lượt vừa xong: kho phiên + tiêu đề + nhật ký Memory + hàng đợi tự học.
 
     Bóc khối điều khiển (`<!-- JAVIS_ASK ... -->`) TRƯỚC khi lưu. Dashboard vẽ nút từ sự kiện
@@ -16523,6 +16714,13 @@ async def _persist_turn(store, conv_sid, brain, user_message, final_text):
     task = asyncio.create_task(github_work.after_turn(str(conv_sid), brain, user_message))
     _PUSH_TASKS.add(task)
     task.add_done_callback(_PUSH_TASKS.discard)
+    # Tự học từ trò chuyện (26.10.308): chỉ GHI lượt (rẻ, không gọi model); chấm và học chạy ở lịch nền.
+    try:
+        _row = store.get_session(conv_sid) or {}
+        await asyncio.to_thread(_htc().ghi_luot, _brain_key(brain), conv_sid, _row.get("channel") or "",
+                                user_message, clean, turn_started)
+    except Exception as _e:
+        print(f"[hoc-tu-chat ghi luot] {type(_e).__name__}: {_e}", file=sys.stderr)
     return clean
 
 
@@ -17915,6 +18113,7 @@ async def websocket_endpoint(ws: WebSocket):
                         etype = event["type"]
                         if etype == "tool_call":
                             _ng_calls.append({"name": event.get("name", ""), "input": event.get("input") or {}})
+                            _htc_ghi_tool(brain, conv_sid, event)
                             await ws.send_text(json.dumps({"type": "tool_call", "tool": event["name"], "detail": tool_label.chi_tiet(event), "content": f"⚙ Đang gọi: {event['name']}"}))
                             # Nhặt mọi thứ trông giống đường dẫn trong tham số tool (Write/Edit có
                             # file_path, Bash thì lẫn trong lệnh). Lọc "có thật + vừa đổi" ở dưới.
@@ -24845,6 +25044,9 @@ async def _meta_ads_duyet_callback(data: str, chat_key: str):
 
 meta_ads_duyet.dat_gui_telegram(_meta_ads_gui_tg)
 meta_fb_routes.register(app)
+
+# Tự học từ trò chuyện (26.10.308): đăng ký ở ĐUÔI để bảng route cũ giữ nguyên thứ tự.
+app.include_router(hoc_tu_chat.router(_htc, _brain_key))
 
 if __name__ == "__main__":
     import uvicorn

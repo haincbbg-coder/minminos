@@ -2875,6 +2875,7 @@
         </div>
       </div>
       <div class="si-status" id="lnMetrics"></div>
+      <div class="si-log" id="lnHocTuChat"></div>
 
       <div class="si-log" id="lnBackupBox">
         <h3 style="font-size:15px;color:var(--text)">⇅ ${esc(window.t("cs.bk_head"))}</h3>
@@ -3112,7 +3113,9 @@
       el.querySelector("#bkStatus").innerHTML = `${esc(window.t("cs.bk_last"))} ${esc(when)}${s.last_status ? " · " + esc(s.last_status) : ""}${brainsNote}${gitNote}`;
     }
 
-    function loadAll() { loadMetrics(); loadDigest(); loadFacts(); loadReview(); loadLog(); loadBackup(); }
+    // Học từ trò chuyện (26.10.308): khối riêng ở hoc-tu-chat.js, tự tải và tự vẽ lại sau mỗi nút.
+    function loadHocTuChat() { const h = el.querySelector("#lnHocTuChat"); if (h && window.MinMinHocTuChat) window.MinMinHocTuChat.mount(h, fbrain); }
+    function loadAll() { loadMetrics(); loadHocTuChat(); loadDigest(); loadFacts(); loadReview(); loadLog(); loadBackup(); }
     loadAll();
   }
 

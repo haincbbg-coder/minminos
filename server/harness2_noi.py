@@ -85,6 +85,9 @@ class Deps:
     hub_url: Callable[[], str] = lambda: ""
     hub_token: Callable[[], str] = lambda: ""
     song_song: int = 2
+    # Công tắc "Tạm dừng mọi cải tiến" của bộ não (26.10.308, hoc_tu_chat). Bật thì không chạy, không áp dụng;
+    # hoàn tác vẫn được.
+    tam_dung: Callable[[str], bool] = lambda brain: False
 
 
 # ─────────────────────────── tiện ích ───────────────────────────
@@ -779,6 +782,8 @@ class Harness2Feature:
             return {"ok": False, "error": f"Lần chạy đang ở trạng thái '{ket.get('trang_thai')}', không áp dụng được."}
         if ket.get("giu_nguyen"):
             return {"ok": False, "error": "Lần này kết luận giữ nguyên, không có gì để áp dụng."}
+        if self.deps.tam_dung(ket["brain"]):
+            return {"ok": False, "error": "Bố đang tạm dừng mọi cải tiến của bộ não này (trang Tự học). Bật lại rồi áp dụng."}
         root = Path(self.deps.brain_root(ket["brain"]))
         slug = ket["slug"]
         try:
@@ -1029,6 +1034,9 @@ class Harness2Feature:
                 return {"ok": False, "error": "Đang có một lượt cải tiến chạy dở. Chờ xong hoặc bấm Bỏ.",
                         "run_id": self.dang["run_id"]}
             data = await _body(request)
+            if self.deps.tam_dung(str(data.get("brain") or "brain")):
+                return {"ok": False, "error": "Bố đang tạm dừng mọi cải tiến của bộ não này (trang Tự học). "
+                                              "Bật lại rồi chạy."}
             try:
                 cb = await asyncio.to_thread(self.chuan_bi, data)
             except h2.LoiH2 as e:

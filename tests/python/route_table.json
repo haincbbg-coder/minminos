@@ -8868,5 +8868,63 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 890,
+  "type": "_IncludedRouter",
+  "path": null,
+  "name": null,
+  "methods": [],
+  "trong": null
+ },
+ {
+  "order": 891,
+  "type": "APIRoute",
+  "path": "/hoc-tu-chat/tong-quan",
+  "name": "htc_tong_quan",
+  "methods": [
+   "GET"
+  ],
+  "trong": 890
+ },
+ {
+  "order": 892,
+  "type": "APIRoute",
+  "path": "/hoc-tu-chat/tam-dung",
+  "name": "htc_tam_dung",
+  "methods": [
+   "POST"
+  ],
+  "trong": 890
+ },
+ {
+  "order": 893,
+  "type": "APIRoute",
+  "path": "/hoc-tu-chat/ap-dung",
+  "name": "htc_ap_dung",
+  "methods": [
+   "POST"
+  ],
+  "trong": 890
+ },
+ {
+  "order": 894,
+  "type": "APIRoute",
+  "path": "/hoc-tu-chat/bo",
+  "name": "htc_bo",
+  "methods": [
+   "POST"
+  ],
+  "trong": 890
+ },
+ {
+  "order": 895,
+  "type": "APIRoute",
+  "path": "/hoc-tu-chat/hoan-tac",
+  "name": "htc_hoan_tac",
+  "methods": [
+   "POST"
+  ],
+  "trong": 890
  }
 ]

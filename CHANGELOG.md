@@ -1,5 +1,11 @@
 # MinMin OS
 
+## [26.10.308] - 2026-10-30
+### Thêm mới
+- **MinMin tự học từ những lần bố trò chuyện.** Khi một skill, trợ lý hay quy trình làm sai và bố nhắn sửa (ví dụ "sai rồi, quên VAT"), MinMin ghi nhận lỗi đó. Cùng một lỗi lặp lại ba lần thì MinMin tự soạn bộ câu thử, sửa phần hướng dẫn, so với bản cũ và chỉ giữ khi bản mới tốt hơn rõ ràng.
+- **Có giới hạn và hoàn tác được.** Chạy bằng mô hình nền cho rẻ, mỗi ngày tối đa 40 lượt chấm và một lần sửa, dừng sớm khi kết quả đã rõ. Skill bố tự viết thì MinMin chỉ gửi đề xuất để bố duyệt, không tự ghi.
+- Xem những gì MinMin đã học, Áp dụng, Hoàn tác và nút **Tạm dừng mọi cải tiến** của bộ não ở trang Tự học.
+
 ## [26.10.304] - 2026-10-30
 ### Sửa lỗi
 - Tìm kiếm/lọc đích đăng và giữ lựa chọn, phong cách khi chuyển bộ lọc trong chiến dịch AI.
