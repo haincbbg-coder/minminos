@@ -1,5 +1,11 @@
 # MinMin OS
 
+## [26.10.313] - 2026-10-31
+### Nhanh hơn
+- Trò chuyện liên tiếp nhanh hơn: MinMin giữ sẵn Claude Code và Codex giữa các tin của cùng một cuộc chat, và hâm nóng ngay khi bố bắt đầu gõ.
+- Trang mở nhanh hơn trên 4G: file gọn hơn, font tự lưu trên máy chủ, trang con chỉ tải khi mở; mất mạng hoặc máy chủ đang khởi động lại thì hiện trang chờ rồi tự vào lại.
+- Phóng to, thu nhỏ và kéo xem sơ đồ, hình SVG và ảnh bằng con lăn chuột hoặc hai ngón tay.
+
 ## [26.10.304] - 2026-10-30
 ### Sửa lỗi
 - Tìm kiếm/lọc đích đăng và giữ lựa chọn, phong cách khi chuyển bộ lọc trong chiến dịch AI.
