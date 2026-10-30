@@ -29,7 +29,7 @@ import ket_noi_api as k
 HOST = "https://openapi.zalo.me"
 OAUTH = "https://oauth.zaloapp.com/v4/oa"
 TEN = "Zalo OA"
-BI_MAT = ("app_secret", "access_token", "refresh_token", "auth_code", "code_verifier")
+BI_MAT = ("app_secret", "access_token", "refresh_token", "auth_code", "code_verifier", "oa_secret")
 LOI_TOKEN = (-216, -124)
 TIN_TOI_DA = 2000
 

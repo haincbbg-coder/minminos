@@ -35,10 +35,30 @@ check("wait in words: seconds, minutes, hours, nothing yet", S.fmtWait(42.4) ===
 check("change vs the period before: more A.I. answers is good, a longer wait is bad", S.delta(12, 10).text === "+20%" && S.delta(12, 10).good === true &&
   S.delta(120, 60, true).good === false && S.delta(30, 60, true).good === true);
 check("no change, nothing before, or something new", S.delta(5, 5).text === "ib.st_same" && S.delta(0, 0).text === "" && S.delta(3, 0).text === "ib.st_new");
-const tiles = S.tilesHtml({ now: { ai: 12, human: 3, wait_avg: 90 }, before: { ai: 10, human: 3, wait_avg: 120 }, needs_you: 4 }, (n) => "[" + n + "]");
-check("four tiles: A.I. answered, you answered, average wait, waiting for you", (tiles.match(/class="st-tile/g) || []).length === 4 &&
-  /ib\.st_ai<\/span><span class="st-v">12/.test(tiles) && /ib\.st_wait<\/span><span class="st-v">ib\.st_min#2/.test(tiles) && /st-v">4</.test(tiles));
-check("a shorter wait shows as good news, more A.I. answers too", /st-d up">ib\.st_vs#\+20%/.test(tiles) && /st-d up">ib\.st_vs#-25%/.test(tiles));
+const D = { now: { ai: 120, human: 40, ai_rest: 30, chats: 25, new_chats: 6, wait_ai: 20, wait_human: 900, hours: [] },
+  before: { ai: 100, human: 20 }, needs_you: 4 };
+const tiles = S.tilesHtml(D, (n) => "[" + n + "]");
+check("four tiles: customers served (new ones), first-answer speed A.I. vs people, hand replies, waiting for you",
+  (tiles.match(/class="st-tile/g) || []).length === 4 && /ib\.st_chats<\/span><span class="st-v">25/.test(tiles) && /ib\.st_new_chats#6/.test(tiles) &&
+  /ib\.st_speed_ai#ib\.st_sec#20/.test(tiles) && /ib\.st_speed_you#ib\.st_min#15/.test(tiles) && /st-v">4</.test(tiles));
+const hero = S.heroHtml(D, (n) => "[" + n + "]");
+check("hero: A.I. answers vs before, share of answers, time saved, answers while resting",
+  /ib\.st_hero#120/.test(hero) && /st-d up">ib\.st_vs#\+20%/.test(hero) && /<b>75%<\/b>/.test(hero) &&
+  /ib\.st_hour#2/.test(hero) && /<b>30<\/b>/.test(hero));
+check("time saved: one minute per answer", S.savedText(45) === "ib.st_min#45" && S.savedText(90) === "ib.st_hour#1.5");
+const hrs = Array(24).fill(0); hrs[20] = 10; hrs[2] = 5;
+const hh = S.hoursHtml(hrs);
+check("hours: 24 columns, rest hours marked, busiest hour named", (hh.match(/class="st-col[ "]/g) || []).length === 24 &&
+  /ib\.st_peak#20,21/.test(hh) && /st-col rest" title="ib\.st_hour_t#2,5"/.test(hh) && /st-col peak"/.test(hh) && /height:100%/.test(hh));
+check("hours: nothing yet says so", /ib-hint">ib\.st_empty/.test(S.hoursHtml([])));
+const ac = S.accountsHtml([{ label: "Nick <A>", ai: 30, human: 10 }, { label: "Page B", ai: 0, human: 20 }]);
+check("per account: A.I. and hand replies in one bar, A.I. share each, names escaped", /<b>75%<\/b>/.test(ac) && /<b>0%<\/b>/.test(ac) &&
+  /st-fill" style="width:75%"/.test(ac) && /st-fill hu" style="width:25%"/.test(ac) && ac.indexOf("<A>") < 0);
+check("account picker: hidden with one account, 'every account' first",
+  S.accountPickerHtml([{ id: "a" }], "") === "" && /^<option value="">ib\.st_acc_all/.test(S.accountPickerHtml([{ id: "a" }, { id: "b", name: "B" }], "b")) &&
+  /value="b" selected/.test(S.accountPickerHtml([{ id: "a" }, { id: "b", name: "B" }], "b")));
+check("the picked account is sent and remembered; a gone account falls back to all", /"&account=" \+ encodeURIComponent\(_acc\)/.test(ST) &&
+  /localStorage\.setItem\(ACC_KEY, _acc\)/.test(ST) && /_data\.account !== _acc/.test(ST));
 check("'waiting for you' opens the Needs you list, by mouse or keyboard", /role="button" tabindex="0" data-go="you"/.test(tiles) &&
   /C\.goWho\(g\.dataset\.go\)/.test(ST) && /e\.key === "Enter" \|\| e\.key === " "/.test(ST));
 const bars = S.barsHtml("By channel", [{ label: "<Zalo>", value: 10 }, { label: "Telegram", value: 5 }, { label: "Slack", value: 0 }], "none");
@@ -60,8 +80,8 @@ check("Save posts the bot to the account, and the 'No bot needed' mark when ther
   /\/channels\/accounts\/" \+ encodeURIComponent\(a\.id\) \+ "\/bot"/.test(DUTY) && /\/channels\/no-bot"/.test(DUTY) && /val === "__none" \? "1" : "0"/.test(DUTY));
 check("Save has Undo back to the bot before, and says when the old bot was switched off", /ib\.kn_saved_off/.test(KN) &&
   /duty\(a, before\)\.then\(after\)/.test(KN));
-check("per-chat switch: role=switch with its state, disabled without a bot, POST /ai, Undo", /role="switch" aria-checked="' \+ on/.test(KN) &&
-  /\(a\.bot_id \? "" : " disabled"\)/.test(KN) && /\/conversations\/" \+ id \+ "\/ai"/.test(KN) && /on \? "0" : "1"/.test(KN));
+check("per-chat switch: role=switch with its state, dimmed without a bot (pressing it says to pick one), POST /ai, Undo", /role="switch" aria-checked="' \+ on/.test(KN) &&
+  /\(a\.bot_id \? "" : ' aria-disabled="true"'\)/.test(KN) && /ib\.kn_need_bot/.test(KN) && /\/conversations\/" \+ id \+ "\/ai"/.test(KN) && /on \? "0" : "1"/.test(KN));
 check("Allow appears when someone called the A.I. in a chat not allowed", /c\.ai_pending && !on && a\.bot_id/.test(KN));
 check("'Put an A.I. on several' ticks the places without a bot, one request each, says how many worked", /\(a\.bot_id \? "" : " checked"\)/.test(KN) &&
   /for \(var i = 0; i < ids\.length; i\+\+\)/.test(KN) && /ib\.kn_bulk_done/.test(KN) && /ib\.kn_bulk_some/.test(KN));

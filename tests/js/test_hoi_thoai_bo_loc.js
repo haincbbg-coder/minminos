@@ -113,7 +113,7 @@ check("the popovers redraw only on the owner's own actions, never on the 5-secon
   /function paintPops\(\)/.test(CV) && !/function tai\(im\)[\s\S]*?paintPops\(\)[\s\S]*?\n  }\n/.test(CV.slice(CV.indexOf("async function tai(im)"), CV.indexOf("async function taiThem"))));
 check("a quick filter, a picker tick, a menu choice or a chip x saves the filters and reloads",
   /function onFilterChange\(\) \{ saveFilters\(\); paintHead\(\); tai\(\); \}/.test(CV) &&
-  /_who = b\.dataset\.who \|\| "";\s*onFilterChange\(\)/.test(CV) && /dropFilter\(b\.dataset\.k, b\.dataset\.v\);\s*onFilterChange\(\)/.test(CV) &&
+  /_who = b\.dataset\.who \|\| "";\s*setPop\(""\);\s*focusOpener\("\.ib-who"\);\s*onFilterChange\(\)/.test(CV) && /dropFilter\(b\.dataset\.k, b\.dataset\.v\);\s*onFilterChange\(\)/.test(CV) &&
   (CV.match(/onFilterChange\(\);\n\s*paintPops\(\);/g) || []).length >= 1 && /clearMenuFilters\(\);\n\s*paintPops\(\);/.test(CV));
 check("ticking a channel ticks every nick or Page of it, not only the ones the search shows",
   /accList\(\)\.filter\(function \(a\) \{ return a\.channel === t\.dataset\.ch; \}\)/.test(CV));
@@ -131,8 +131,8 @@ check("index.html nạp module lọc và inbox-v5 TRƯỚC conversations.js, kè
   HTML.indexOf("conversations-filters.js") < HTML.indexOf("/static/conversations.js") &&
   HTML.indexOf("/static/inbox-v5.js") > 0 && HTML.indexOf("/static/inbox-v5.js") < HTML.indexOf("/static/conversations.js") &&
   HTML.indexOf("/static/inbox-v5.css") > 0);
-check("CSS: popovers hide for real with [hidden]; phones scroll the quick filters sideways",
-  /\.ib-pop\[hidden\] \{ display: none; \}/.test(CSS) && /\.ib-quick \{ flex-wrap: nowrap; overflow-x: auto;/.test(CSS));
+check("CSS: popovers hide for real with [hidden]; the who dropdown opens under its button",
+  /\.ib-pop\[hidden\] \{ display: none; \}/.test(CSS) && /\.ib-wm \{ top: calc\(100% \+ 6px\);/.test(CSS));
 
 // ---- 3. từ điển ----
 const used = new Set();

@@ -389,7 +389,7 @@ def register(app, deps: ConversationsDeps):
 
     @router.get("/conversations/insights")
     async def conversations_insights(days: int = 7, date_from: str = Query("", alias="from"),
-                                     date_to: str = Query("", alias="to")):
+                                     date_to: str = Query("", alias="to"), account: str = ""):
         """The Stats tab (Chatbot v5): this period against the one of the same length right before it, plus "needs you"
         right now and the bot names. The period is `from`..`to` (days included, the date range picker), or else the
         last `days` (1, 7 or 30) counted from midnight of the server's day."""
@@ -403,13 +403,18 @@ def register(app, deps: ConversationsDeps):
             lt = time.localtime()
             midnight = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
             since, until = midnight - (n - 1) * 86400, now
-        cur = conversations.insights(since, until)
-        prev = conversations.insights(since - n * 86400, since)
+        # `account` (26.10.314): một tài khoản hộp thư "<kênh>:<id>"; tài khoản không còn thì về mọi tài khoản.
+        accounts = conversations.stats_accounts()
+        account = account if any(a["id"] == account for a in accounts) else ""
+        cur = conversations.insights(since, until, account)
+        prev = conversations.insights(since - n * 86400, since, account)
         ctx = _StateCtx(_hesitant())
-        you = sum(1 for r in conversations.state_rows(hesitant=ctx.hesitant, hidden="exclude") if ctx.of(r)["who"] == "you")
+        you = sum(1 for r in conversations.state_rows(hesitant=ctx.hesitant, hidden="exclude",
+                                                      account_ids=[account] if account else None)
+                  if ctx.of(r)["who"] == "you")
         names = {bid: _ten_bot(bid) for bid in set(cur["by_bot"]) | set(prev["by_bot"])}
         return {"ok": True, "days": n, "since": since, "until": until, "now": cur, "before": prev, "needs_you": you, "bot_names": names,
-                "channels": channels.cho_giao_dien()}
+                "channels": channels.cho_giao_dien(), "accounts": accounts, "account": account}
 
     @router.get("/conversations/stats")
     async def conversations_stats(bot_id: str = "", channel: str = "", account_id: str = ""):

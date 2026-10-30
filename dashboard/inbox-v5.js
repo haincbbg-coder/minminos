@@ -30,17 +30,32 @@
     return tt("ib.wc_" + (known.indexOf(code) >= 0 ? code : "not_allowed"));
   }
 
-  // Quick filters above the list: Needs you, A.I. is handling, You are handling, All. `counts` = server who_counts.
-  function quickHtml(current, counts, icon) {
-    var I = icon || noIcon, n = counts || {};
-    var all = ["you", "ai", "owner", "log"].reduce(function (s, k) { return s + (Number(n[k]) || 0); }, 0);
-    return [["you", "you"], ["ai", "ai"], ["owner", "owner"], ["", ""]].map(function (q) {
-      var on = (current || "") === q[0];
-      var mark = q[0] ? '<span class="ib-dot w-' + q[1] + '"></span>' : I("inbox");
-      var num = q[0] ? (Number(n[q[0]]) || 0) : all;
-      return '<button type="button" class="ib-q' + (on ? " on" : "") + '" data-who="' + q[0] + '" aria-pressed="' + on + '">' + mark +
-        '<span>' + esc(q[0] ? whoLabel(q[0]) : tt("ib.who_all")) + '</span>' + (counts ? '<span class="ib-qn">' + num + '</span>' : "") +
-        '</button>';
+  // The "who" view of the list (26.10.314, theo Javis 0.397): ONE dropdown instead of four chips that wrapped onto two
+  // lines (and scrolled sideways on a phone). The button keeps the current view and its count in sight, so "Cần bạn 4"
+  // is always readable; the menu says what each view means. `counts` = server who_counts, null on the first paint.
+  var WHO_VIEWS = ["you", "ai", "owner", ""];
+  function whoCount(w, counts) {
+    var n = counts || {};
+    if (w) return Number(n[w]) || 0;
+    return ["you", "ai", "owner", "log"].reduce(function (s, k) { return s + (Number(n[k]) || 0); }, 0);
+  }
+  function whoMark(w, I) { return w ? '<span class="ib-dot w-' + w + '"></span>' : I("inbox"); }
+  function whoButtonHtml(current, counts, icon) {
+    var I = icon || noIcon, w = WHO_VIEWS.indexOf(current || "") >= 0 ? current || "" : "";
+    var youN = whoCount("you", counts);
+    return whoMark(w, I) + '<span class="ib-who-t">' + esc(tt("ib.wq_" + (w || "all"))) + '</span>' +
+      (counts ? '<span class="ib-qn">' + whoCount(w, counts) + '</span>' : "") +
+      // Not on "Cần bạn" but someone waits: a red count stays on the button, so the view never hides a waiting customer.
+      (counts && w !== "you" && youN ? '<span class="ib-who-you" title="' + esc(tt("ib.wq_you")) + '">' + youN + '</span>' : "") + I("chevron-down");
+  }
+  function whoMenuHtml(current, counts, icon) {
+    var I = icon || noIcon;
+    return WHO_VIEWS.map(function (w) {
+      var on = (current || "") === w;
+      return '<button type="button" class="ib-wm-o' + (on ? " on" : "") + '" role="menuitemradio" aria-checked="' + on +
+        '" data-who="' + w + '">' + whoMark(w, I) + '<span class="ib-wm-t"><b>' + esc(tt("ib.wq_" + (w || "all"))) + '</b><small>' +
+        esc(tt("ib.wq_" + (w || "all") + "_d")) + '</small></span>' + (counts ? '<span class="ib-qn">' + whoCount(w, counts) + '</span>' : "") +
+        '<span class="ib-wm-ck">' + (on ? I("check") : "") + '</span></button>';
     }).join("");
   }
 
@@ -219,7 +234,7 @@
   }
 
   window.JavisInboxV5 = {
-    WHO: WHO, whoLabel: whoLabel, whoSentence: whoSentence, quickHtml: quickHtml, pickerSummary: pickerSummary, pickerHtml: pickerHtml,
+    WHO: WHO, whoLabel: whoLabel, whoSentence: whoSentence, whoButtonHtml: whoButtonHtml, whoMenuHtml: whoMenuHtml, whoCount: whoCount, pickerSummary: pickerSummary, pickerHtml: pickerHtml,
     filterCats: filterCats, filterMenuHtml: filterMenuHtml, activeChips: activeChips, modeBarHtml: modeBarHtml, draftHtml: draftHtml,
   };
 })();

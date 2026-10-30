@@ -39,8 +39,8 @@ async def verify_token(token: str) -> dict:
     r = await zalo_oa_kenh.lien_ket(token)
     if not r.get("ok"):
         return {"ok": False, "error": r.get("error") or "Không liên kết được Zalo OA"}
-    return {"ok": True, "username": r["oa_id"], "bot_name": r.get("ten") or "", "vao_duoc_nhom": False,
-            "account_type": "oa"}
+    # Không trả `vao_duoc_nhom`: form sẽ hiện cảnh báo "gói Zalo Bot không vào nhóm", không đúng với OA.
+    return {"ok": True, "username": r["oa_id"], "bot_name": r.get("ten") or "", "account_type": "oa"}
 
 
 def token_luu(token: str, external_id: str = "") -> str:
