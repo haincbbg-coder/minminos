@@ -200,7 +200,10 @@
     return '<span class="ib-mode-l">' + esc(tt("ib.ai_lbl")) + '</span><span class="ib-mode" role="group" aria-label="' + esc(tt("ib.ai_lbl")) + '">' +
       [["ai", "sparkles"], ["draft", "pen-line"], ["human", "hand"]].map(function (m) {
         var on = m[0] === mode;
-        return '<button type="button" class="ib-m m-' + m[0] + (on ? " on" : "") + '" data-m="' + m[0] + '" aria-pressed="' + on + '">' + I(m[1]) +
+        // 26.10.315: `auto_ok === false` = this account allows "A.I. replies" only after the owner switches it on (Pancake).
+        var lock = m[0] === "ai" && x.auto_ok === false && !on;
+        return '<button type="button" class="ib-m m-' + m[0] + (on ? " on" : "") + '" data-m="' + m[0] + '" aria-pressed="' + on + '"' +
+          (lock ? ' disabled title="' + esc(tt("ib.m_ai_khoa")) + '"' : "") + '>' + I(m[1]) +
           '<span class="ib-l-long">' + esc(tt("ib.m_" + m[0])) + '</span><span class="ib-l-short">' + esc(tt("ib.m_" + m[0] + "_s")) + '</span></button>';
       }).join("") + '</span>';
   }

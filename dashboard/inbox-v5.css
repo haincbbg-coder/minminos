@@ -294,6 +294,8 @@
 .kn-unsaved { color: var(--mm-warn); font-weight: 600; }
 .kn-card { padding: 12px 16px 0; }
 .kn-card .ht-acc { margin: 0; }
+.kn-auto { margin-top: var(--mm-sp-3); padding: var(--mm-sp-3); border: 1px solid var(--mm-line); border-radius: var(--mm-r-card); font-size: var(--mm-fs-16); }
+.kn-auto p { margin: 4px 0 8px; }
 .kn-ch { padding: 12px 0 0; }
 .kn-chh { display: flex; gap: 10px; align-items: center; padding: 0 16px; flex-wrap: wrap; }
 .kn-chh b { font-size: var(--mm-fs-16); }

@@ -247,6 +247,9 @@ def register(app, deps: ConversationsDeps):
             it.update(who=st["who"], who_code=st["who_code"], ai_allowed=st["ai_allowed"], ai_pending=st["pending"],
                       draft=st["draft"], reply_when=str(bot.get("reply_when") or ""),
                       yield_min=yield_min if isinstance(yield_min, int) else None)
+            # 26.10.315: a channel that gates "A.I. replies" per account says whether it is allowed here (None = no gate).
+            gate = getattr(channels.module(str(it.get("channel") or "")), "tu_tra_loi", None)
+            it["auto_ok"] = bool(gate(inbox_state.raw_account(it))) if callable(gate) else None
 
     def _day_range(date_from: str, date_to: str) -> tuple:
         """("YYYY-MM-DD", "YYYY-MM-DD"), both days included, in the server's time zone -> (since, until) timestamps.
@@ -635,6 +638,14 @@ def register(app, deps: ConversationsDeps):
         """ai | human | waiting | closed | draft. `human` = người thật tiếp quản, bot im ở cuộc chat đó. `draft` (Chatbot v5)
         = the bot writes its reply and waits for the owner. A draft still waiting stays when the mode changes (the owner
         may still send it, and Undo puts the old mode back with its draft); /reply and /draft clear it."""
+        # A channel may refuse a mode for one account (26.10.315: Pancake allows "A.I. replies" only on a Page the owner
+        # switched on, because staff also answer there). The module says why; nothing changes.
+        c = conversations.chi_tiet(conv_id)
+        hook = getattr(channels.module(str((c or {}).get("channel") or "")), "cho_che_do", None)
+        if c and callable(hook):
+            cho, why = hook(inbox_state.raw_account(c), str(mode or "").strip().lower())
+            if not cho:
+                return JSONResponse({"ok": False, "code": "mode_blocked", "error": why}, status_code=409)
         ok, err = conversations.dat_che_do(conv_id, mode)
         if not ok:
             # Chế độ hợp lệ mà vẫn hỏng thì chỉ có thể là không có hội thoại đó. Không dò chữ

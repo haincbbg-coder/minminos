@@ -1,6 +1,6 @@
 # MinMin OS
 
-## [26.10.314] - 2026-10-31
+## [26.10.315] - 2026-10-31
 ### Thêm mới
 - **Pancake vào hộp thư Chatbot**: mỗi Fanpage trong Pancake là một tài khoản, tin khách đồng bộ dần về trang Hội thoại, không trùng tin.
 - Nhân viên trả lời trong Pancake thì cuộc chat tự chuyển sang **Bạn đang xử lý**, A.I. nhường lời.

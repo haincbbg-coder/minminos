@@ -13656,6 +13656,11 @@ async def _start_scheduler():
         zalo_personal_channel.start()
     except Exception as e:
         print(f"[zalo-personal start] {type(e).__name__}: {e}", file=__import__('sys').stderr)
+    try:
+        import pancake_inbox   # 26.10.315: Fanpage qua Pancake vào Hộp thư (nhẹ khi chưa bật Page nào)
+        pancake_inbox.start()
+    except Exception as e:
+        print(f"[pancake-inbox start] {type(e).__name__}: {e}", file=__import__('sys').stderr)
 
 
 _BROWSE_MD_CAP = 500        # trần đếm .md cho mỗi thư mục con
@@ -23736,7 +23741,7 @@ async def chatbots_danh_ba(account_id: str = "", q: str = "", loai: str = ""):
     import channel_accounts
     import zalo_personal_channel
     # Chỉ tài khoản ẢO (Zalo cá nhân): get_token của tài khoản thường trả token thật.
-    if account_id not in {a["id"] for a in channel_accounts.tai_khoan_ao()}:
+    if account_id not in {a["id"] for a in channel_accounts.tai_khoan_ao() if a.get("channel") == "zalo_personal"}:
         return JSONResponse({"ok": False, "error": "Chỉ dùng được với tài khoản Zalo cá nhân."}, status_code=400)
     cid = account_id
     if loai not in ("", "private", "group"):
@@ -24699,6 +24704,11 @@ async def _shutdown_mcp_pool():
         print(f"[kanban shutdown] {e}", file=__import__('sys').stderr)
     try:
         zalo_personal_channel.stop()
+    except Exception:
+        pass
+    try:
+        import pancake_inbox
+        pancake_inbox.stop()
     except Exception:
         pass
     try:

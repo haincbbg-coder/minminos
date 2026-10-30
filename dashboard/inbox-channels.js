@@ -49,7 +49,8 @@
   // ---- helpers ----
   function accs() { return C.accounts().filter(function (a) { return a && a.account_key; }); }
   function acc(key) { return accs().filter(function (a) { return a.account_key === key; })[0] || null; }
-  function unit(ch) { return t(C.channel(ch).kind === "account" ? "ib.kn_unit_nick" : "ib.kn_unit_page"); }
+  // A personal nick (Zalo) vs a Page: an "account" channel that joins groups is a nick; Pancake Pages are Pages.
+  function unit(ch) { var k = C.channel(ch) || {}; return t(k.kind === "account" && (k.nang_luc || {}).nhom !== false ? "ib.kn_unit_nick" : "ib.kn_unit_page"); }
   function current(a) { return a.bot_id || (a.no_bot ? "__none" : ""); }
   // Something to do on this account: an error, or no bot and the owner did not say none is needed.
   function needsWork(a) { return !!a.loi || (!a.bot_id && !a.no_bot); }
@@ -153,6 +154,15 @@
     q.value = _chatQ;
     var card = C.accountCard(a);
     if (card) box.querySelector(".kn-card").appendChild(card);
+    // 26.10.315: a channel that gates "A.I. replies" per account (Pancake Pages) sends `auto_reply` true/false.
+    if (a.auto_reply === true || a.auto_reply === false) {
+      var au = document.createElement("div");
+      au.className = "kn-auto";
+      au.innerHTML = '<b>' + esc(t("ib.pc_auto_t")) + '</b><p class="ib-hint">' + esc(t(a.auto_reply ? "ib.pc_auto_on" : "ib.pc_auto_off")) + '</p>' +
+        '<button type="button" class="' + (a.auto_reply ? "s-btn-ghost" : "s-btn") + ' kn-auto-b">' + ic(a.auto_reply ? "pen-line" : "sparkles") + ' ' +
+        esc(t(a.auto_reply ? "ib.pc_auto_tat" : "ib.pc_auto_bat")) + '</button>';
+      box.querySelector(".kn-card").appendChild(au);
+    }
     if (_chatsFor !== a.account_key) loadChats(a.account_key, _page);
   }
 
@@ -226,6 +236,7 @@
     if (b.classList.contains("kn-bulk")) return openBulk(b.dataset.ch);
     if (b.classList.contains("kn-cancel")) { _pend = null; paintPane(); return; }
     if (b.classList.contains("kn-save")) return saveDuty();
+    if (b.classList.contains("kn-auto-b")) return toggleAuto(acc(_sel));
     if (b.classList.contains("kn-botset")) { var a = acc(_sel); if (a) C.openBot(a.bot_id); return; }
     if (b.classList.contains("kn-open")) return C.openChat(parseInt(b.dataset.id, 10));
     if (b.classList.contains("kn-allow")) return setAi(parseInt(b.dataset.id, 10), true);
@@ -285,6 +296,21 @@
   function after() {
     _chatsFor = "";
     C.reloadAccounts().then(paint, paint);
+  }
+
+  // Per-Page "A.I. replies" (Pancake): switching on needs the owner to accept the warning that staff also answer there.
+  async function toggleAuto(a) {
+    if (!a || _busy) return;
+    var on = !a.auto_reply;
+    if (on && !confirm(t("ib.pc_auto_warn"))) return;
+    _busy = true;
+    try {
+      var r = await C.api("/channels/accounts/" + encodeURIComponent(a.id) + "/auto-reply",
+                          { method: "POST", body: C.fd({ on: on ? "1" : "0", xac_nhan: on ? "1" : "", channel: a.channel }) });
+      C.toast(on ? t("ib.pc_auto_da_bat") : t("ib.pc_auto_da_tat", { n: r.doi_ve_nhap || 0 }));
+    } catch (e) { C.toast(t("ht.act_fail", { err: e.message })); }
+    _busy = false;
+    after();
   }
 
   async function setAi(id, on) {

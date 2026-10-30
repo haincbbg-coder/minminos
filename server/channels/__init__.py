@@ -75,7 +75,8 @@ class KenhSpec:
 
 # Thứ tự ở đây là thứ tự hiện trên giao diện. KHÔNG có kênh nào "chính": Zalo đứng đầu vì
 # khách Việt Nam dùng nhiều nhất, không phải vì nó được ưu ái trong mã.
-_MODULES = ("channels.zalo_bot", "channels.zalo_personal", "channels.telegram")
+_MODULES = ("channels.zalo_bot", "channels.zalo_personal", "channels.telegram",
+            "channels.pancake")   # 26.10.315: Fanpage qua Pancake
 
 _DS: Optional[Dict[str, KenhSpec]] = None
 _MOD: Dict[str, object] = {}
