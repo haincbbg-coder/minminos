@@ -1,6 +1,6 @@
 # MinMin OS
 
-## [26.10.307] - 2026-10-30
+## [26.10.306] - 2026-10-30
 ### Cải thiện
 - **Webhook bền hơn**: mỗi sự kiện Pancake, chuyển khoản gửi tới đều được lưu lại trước khi xử lý, máy khởi động lại cũng không mất, gửi trùng thì tự bỏ.
 - Trang Webhook có thêm phần **Sự kiện** và **Tình trạng**: bố xem từng sự kiện đi tới đâu, lỗi gì, bấm chạy lại được.
