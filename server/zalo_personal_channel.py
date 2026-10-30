@@ -780,13 +780,24 @@ def bao_gui_hong(conn_id: str, thread: str, cau: str, loi: str, chat_type: str =
     """Zalo từ chối câu bot vừa soạn: ghi một dòng hệ thống vào đúng cuộc chat trong Hộp thư (để
     chủ thấy khách CHƯA nhận được gì) và báo chuông, không lặng lẽ như đã gửi."""
     try:
-        conversations.ghi_su_kien({
+        cid = conversations.conversation_id_of(KENH, str(conn_id), str(thread))
+        truoc = (conversations.chi_tiet(cid) or {}).get("last_sender_type") if cid else ""
+        kq = conversations.ghi_su_kien({
             "channel": KENH, "account_id": str(conn_id), "external_chat_id": str(thread),
             "chat_type": chat_type or "private", "sender_type": "system", "message_type": "text",
             "text": "Bot soạn được câu trả lời nhưng Zalo không gửi đi, khách chưa nhận được: "
                     + " ".join(str(cau or "").split())[:300],
             "metadata": {"loi": str(loi or "")[:300], "gui_hong": True},
         })
+        # Khách vẫn CHƯA được trả lời: giữ cuộc chat ở "Cần trả lời" của hộp thư (26.10.284 xét
+        # last_sender_type='customer'). Câu bot đã ghi vào kho TRƯỚC khi gửi (tin "ai" cuối) không
+        # tới khách, nên nó và dòng hệ thống này không được làm cuộc chat trông như đã đáp.
+        if truoc in ("customer", "ai") and kq.get("conversation_id"):
+            with conversations._lock:
+                db = conversations._conn()
+                db.execute("UPDATE conversations SET last_sender_type='customer' WHERE id=?",
+                           (int(kq["conversation_id"]),))
+                db.commit()
     except Exception as e:      # noqa: BLE001
         print(f"[zalo-personal] ghi gửi hỏng lỗi: {e}", file=sys.stderr)
     now = time.time()

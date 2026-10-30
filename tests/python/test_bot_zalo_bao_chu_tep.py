@@ -220,6 +220,8 @@ async def chay():
     check("Zalo không xác nhận tin: Hộp thư có dòng 'chưa gửi được'",
           he and he[0]["metadata"].get("gui_hong") and "khách chưa nhận" in he[0]["text"], he)
     check("và chuông báo chủ", any("gửi tin không được" in str(c.get("title")) for c in CHUONG), CHUONG)
+    check("cuộc chat vẫn ở 'Cần trả lời' (khách chưa nhận được gì)",
+          conversations.chi_tiet(cid3)["last_sender_type"] == "customer", conversations.chi_tiet(cid3))
     GUI_KQ["v"] = {"success": True, "messageId": "m-ok"}
     chatbot_runtime.stop_bot(bid)
 
