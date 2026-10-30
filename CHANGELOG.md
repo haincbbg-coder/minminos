@@ -1,5 +1,12 @@
 # MinMin OS
 
+## [26.10.312] - 2026-10-31
+### Thêm mới
+- **Thông báo gọn hơn**: mỗi thông báo có nhóm và mức (bình thường, đáng chú ý, khẩn). Chỉ tin khẩn mới đổ chuông và gửi Telegram, còn lại nằm trong ngăn "Đã lọc".
+- Chuông chỉ hiện tin chưa đọc; "Đọc tất cả" là sạch chuông, bấm X để xoá từng tin, "Không cần báo" thì lần sau MinMin tự bỏ qua loại đó.
+- Trang Công việc yên hơn: "Cần bố xử lý" chỉ còn câu hỏi, xin quyền và kết quả chờ duyệt. Việc xong có nút Đã kiểm / Kiểm lại, việc nào cũng "Nhắn thêm" được để làm tiếp.
+- Việc hỏng vì hết lượt hay lỗi máy không còn bị đánh dấu Xong; việc bố tạo tay lặp lại 3 lần sẽ được gợi ý thành việc hàng ngày.
+
 ## [26.10.304] - 2026-10-30
 ### Sửa lỗi
 - Tìm kiếm/lọc đích đăng và giữ lựa chọn, phong cách khi chuyển bộ lọc trong chiến dịch AI.
