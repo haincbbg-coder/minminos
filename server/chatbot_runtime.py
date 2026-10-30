@@ -778,7 +778,7 @@ def _bao_chu_khieu_nai(cfg: dict, meta: dict, text: str) -> None:
         inbox.add(f"{ten} trong nhóm {nhom} có vẻ đang bức xúc:\n\n\"{str(text)[:400]}\"\n\n"
                   f"Bot \"{cfg.get('name')}\" đã im để chủ xử lý. Mở Hộp thư hội thoại để trả lời "
                   f"hoặc bấm Trả lời giúp.",
-                  kind="system", title=f"Khách bức xúc ở {nhom}", source="chatbot",
+                  kind="system", title=f"Khách bức xúc ở {nhom}", source="chatbot", tu_phan_loai=True,
                   channel=str((meta or {}).get("channel") or ""))
     except Exception as e:
         print(f"[chatbot khiếu nại] hòm thư lỗi: {e}", file=sys.stderr)

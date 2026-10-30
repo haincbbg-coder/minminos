@@ -115,7 +115,7 @@ def _tieu_de(text: str) -> str:
 def add(text: str, *, kind: str = "answer", session_id: str = "", brain: str = "",
         source: str = "", label: str = "", title: str = "", read: bool = False,
         channel: str = "", group: str = "", level: str = "", sig: str = "",
-        filtered: bool = False, why: str = "") -> dict:
+        filtered: bool = False, why: str = "", tu_phan_loai: bool = False) -> dict:
     """Bỏ MỘT mẩu thư vào hòm. Trả về thư vừa tạo.
 
     `text` là nguyên văn nội dung đã gửi cho người dùng; hòm thư chỉ giữ bản cắt ngắn để
@@ -148,8 +148,8 @@ def add(text: str, *, kind: str = "answer", session_id: str = "", brain: str = "
     }
     # 26.10.312 (muc_thong_bao): nhóm, mức, dáng tiêu đề, và tin có bị bộ chỉ huy LỌC không. Nơi
     # gọi qua `_bo_vao_hom_thu` đã quyết rồi và truyền `group`; nơi bỏ thư THẲNG vào đây (chatbot,
-    # Zalo, xưởng video...) thì quyết ở đây, để mọi tin trong chuông theo cùng một luật.
-    if not group:
+    # Zalo, xưởng video...) truyền `tu_phan_loai=True` để quyết ở đây, cùng một luật với mọi tin.
+    if not group and tu_phan_loai:
         try:
             import muc_thong_bao
             dec = muc_thong_bao.safe_decide(item["title"], source=source, kind=item["kind"],

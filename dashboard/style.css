@@ -420,6 +420,36 @@ button, input, select, textarea { font-family: inherit; }
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--accent); color: #fff; font-size: var(--mm-fs-badge); font-weight: 700;
 }
+/* 26.10.312: bộ chỉ huy thông báo. Nút X từng tin, Không cần báo / Nên báo, ngăn Đã lọc. */
+.noti-card-top .noti-time { margin-left: auto; }
+.noti-x {
+  flex: 0 0 auto; width: 28px; height: 28px; margin: -6px -6px -6px 0; border: 0; border-radius: var(--mm-r-chip);
+  color: var(--text3); background: transparent; font-size: var(--mm-fs-20); line-height: 1; cursor: pointer;
+}
+.noti-x:hover { color: var(--text-hi); background: var(--surface-3); }
+.noti-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.noti-mini {
+  margin-top: 9px; padding: 4px 9px; border: 1px solid var(--hairline); border-radius: var(--mm-r-chip);
+  color: var(--text2); background: transparent; font: 600 var(--mm-fs-12) var(--font); cursor: pointer;
+}
+.noti-mini:hover { color: var(--text-hi); border-color: var(--accent-line); }
+.noti-card.urgent .noti-kind { color: var(--danger); background: var(--danger-wash); }
+.noti-learned {
+  margin: 0 0 8px; padding: 9px 12px; border-radius: var(--mm-r-btn);
+  color: var(--text2); background: var(--surface-2); font-size: var(--mm-fs-12); line-height: 1.5;
+}
+.noti-filtered { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--hairline); }
+.noti-filtered-note { margin: 0 4px 8px; color: var(--text3); font-size: var(--mm-fs-12); line-height: 1.5; }
+.noti-policy-h { margin: 12px 4px 6px; color: var(--text3); font-size: var(--mm-fs-12); font-weight: 700; }
+.noti-policy-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 4px; color: var(--text2); font-size: var(--mm-fs-13);
+}
+.noti-policy-row .noti-mini { margin-top: 0; }
+.noti-policy-row select {
+  max-width: 55%; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: var(--mm-r-chip);
+  color: var(--text); background: var(--surface-1); font: var(--mm-fs-16) var(--font);
+}
 /* Công tắc thông báo đẩy - nằm ngay trên chân panel, thấy được lúc đang đọc thư. */
 .noti-push {
   flex: 0 0 auto; display: flex; align-items: center; gap: 8px;

@@ -431,7 +431,7 @@ def bao_tin_bo_lo(conn: dict, ten: list) -> None:
         inbox.add(f"Có {len(ten)} tin khách nhắn lúc Zalo \"{conn.get('label') or conn.get('id')}\" "
                   f"chưa đọc được (mất kết nối hoặc MinMin vừa khởi động lại): {ds}. "
                   f"Bot không tự trả lời vì tin đã quá cũ. Mở Hộp thư hội thoại để xem và trả lời.",
-                  kind="system", title="Có khách nhắn lúc bot vắng", source="zalo_personal")
+                  kind="system", title="Có khách nhắn lúc bot vắng", source="zalo_personal", tu_phan_loai=True)
     except Exception as e:
         print(f"[zalo-personal] báo tin bỏ lỡ lỗi: {e}", file=sys.stderr)
 

@@ -117,11 +117,15 @@ async def _run():
     check("nội dung vẫn rơi vào ĐÚNG khung chat đã giao việc",
           any("Lấy bảng giá" in (m.get("content") or "") for m in store.get_messages(SID)))
 
-    # Ngược lại: mặc định (việc kẹt / chờ duyệt) phải KÊU như cũ. Đây là vế dễ mất nhất khi
-    # ai đó sau này đổi mặc định của `quiet` cho gọn.
+    # Ngược lại: việc ĐANG CHỜ BỐ (hỏi, xin quyền, chờ duyệt) phải KÊU. 26.10.312: tin thường
+    # không nói mức thì theo bộ chỉ huy thông báo (mặc định chỉ tin khẩn kêu) nên vào Đã lọc.
     truoc2 = inbox_mod.so_chua_doc()
-    await main._notify_owner(main.WEB_CHAT_PREFIX + SID, "⚠ Việc 'Ramp ngân sách' bị chặn.")
-    check("việc kẹt VẪN cộng số chưa đọc (vẫn kêu)", inbox_mod.so_chua_doc() == truoc2 + 1)
+    await main._notify_owner(main.WEB_CHAT_PREFIX + SID, "❓ Việc 'Ramp ngân sách' cần bạn trả lời.",
+                             viec={"kind": "task", "status": "hoi", "title": "Ramp ngân sách", "id": "t1"})
+    check("việc đang hỏi bố VẪN cộng số chưa đọc (vẫn kêu)", inbox_mod.so_chua_doc() == truoc2 + 1)
+    truoc3 = inbox_mod.so_chua_doc()
+    await main._notify_owner(main.WEB_CHAT_PREFIX + SID, "Việc 'Dọn file' tạm dừng, MinMin tự xử lý.")
+    check("tin thường không khẩn: vào Đã lọc, không cộng chưa đọc", inbox_mod.so_chua_doc() == truoc3)
 
 
 asyncio.run(_run())
