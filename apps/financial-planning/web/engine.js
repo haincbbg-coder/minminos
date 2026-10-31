@@ -16,7 +16,10 @@ function validate(p){
  if(!['draft','submitted','approved'].includes(p.status))throw Error('Trạng thái không hợp lệ.');return p;
 }
 function calculate(plan,shock={}){
- const p=validate(copy(plan)), inventories=p.products.map(s=>s.opening), rows=[];
+ const p=validate(copy(plan));
+ if(shock.fixed!==undefined){if(!Number.isFinite(shock.fixed)||shock.fixed< -100)throw Error('Định phí mô phỏng không hợp lệ.');p.months.forEach(m=>m.fixed*=1+shock.fixed/100);}
+ if(shock.collectionLag!==undefined)p.collectionLag=shock.collectionLag;
+ validate(p);const inventories=p.products.map(s=>s.opening),rows=[];
  const priceFactor=1+(shock.price||0)/100,volumeFactor=1+(shock.volume||0)/100,costFactor=1+(shock.cost||0)/100;
  if([priceFactor,volumeFactor,costFactor].some(v=>!Number.isFinite(v)||v<0))throw Error('Kịch bản không hợp lệ.');
  let cash=p.openingCash,ar=p.openingAR,ap=p.openingAP,workingCapitalOpening=ar+sum(p.products.map(s=>s.opening*s.cost*costFactor))-ap;
@@ -44,5 +47,6 @@ function calculate(plan,shock={}){
 }
 function forecast(history,periods=12){if(!Array.isArray(history)||!history.length||history.some(n=>!Number.isFinite(n)||n<0))throw Error('Lịch sử bán không hợp lệ.');const mean=sum(history.slice(-3))/Math.min(3,history.length);return Array.from({length:periods},()=>Math.round(mean));}
 function accuracy(actual,predicted){if(actual.length!==predicted.length||!actual.length)throw Error('Hai chuỗi phải cùng độ dài.');const denom=sum(actual);return {wape:denom?sum(actual.map((v,i)=>Math.abs(v-predicted[i])))/denom:null};}
-const api={blank,validate,calculate,forecast,accuracy,copy};if(typeof module!=='undefined')module.exports=api;root.FinancialPlan=api;
+function scenario(plan,shock={}){const p=copy(plan);p.products.forEach(s=>{s.price*=1+(shock.price||0)/100;s.cost*=1+(shock.cost||0)/100;s.units=s.units.map(v=>v*(1+(shock.volume||0)/100));});p.months.forEach(m=>{m.fixed*=1+(shock.fixed||0)/100;m.locked=false;});if(shock.collectionLag!==undefined)p.collectionLag=shock.collectionLag;p.status='draft';return validate(p);}
+const api={blank,validate,calculate,scenario,forecast,accuracy,copy};if(typeof module!=='undefined')module.exports=api;root.FinancialPlan=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
