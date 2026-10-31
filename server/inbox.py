@@ -114,7 +114,8 @@ def _tieu_de(text: str) -> str:
 
 def add(text: str, *, kind: str = "answer", session_id: str = "", brain: str = "",
         source: str = "", label: str = "", title: str = "", read: bool = False,
-        channel: str = "") -> dict:
+        channel: str = "", group: str = "", level: str = "", sig: str = "",
+        filtered: bool = False, why: str = "", tu_phan_loai: bool = False) -> dict:
     """Bỏ MỘT mẩu thư vào hòm. Trả về thư vừa tạo.
 
     `text` là nguyên văn nội dung đã gửi cho người dùng; hòm thư chỉ giữ bản cắt ngắn để
@@ -145,6 +146,34 @@ def add(text: str, *, kind: str = "answer", session_id: str = "", brain: str = "
         # (đúng lỗi bản 0.59.15 đã chữa cho đường rời trang).
         "channel": str(channel or ""),
     }
+    # 26.10.312 (muc_thong_bao): nhóm, mức, dáng tiêu đề, và tin có bị bộ chỉ huy LỌC không. Nơi
+    # gọi qua `_bo_vao_hom_thu` đã quyết rồi và truyền `group`; nơi bỏ thư THẲNG vào đây (chatbot,
+    # Zalo, xưởng video...) truyền `tu_phan_loai=True` để quyết ở đây, cùng một luật với mọi tin.
+    if not group and tu_phan_loai:
+        try:
+            import muc_thong_bao
+            dec = muc_thong_bao.safe_decide(item["title"], source=source, kind=item["kind"],
+                                            quiet=bool(read), level=level)
+        except Exception as e:  # noqa: BLE001 - luật hỏng thì thư vẫn vào như trước
+            print(f"[inbox] không phân loại được: {type(e).__name__}: {e}", file=sys.stderr)
+            dec = {}
+        if dec.get("verdict") == "drop":
+            return dict(item, dropped=True)
+        group, level, sig = dec.get("group") or "", dec.get("level") or "", dec.get("sig") or ""
+        filtered = bool(dec) and dec.get("verdict") != "loud"
+        why = dec.get("why") or ""
+    if group:
+        item["group"] = str(group)[:20]
+    if level:
+        item["level"] = str(level)[:12]
+    if sig:
+        item["sig"] = str(sig)[:100]
+    if filtered:
+        # Đã lọc: vẫn giữ để xem lại trong ngăn "Đã lọc", nhưng không tính chưa đọc.
+        item["filtered"] = True
+        item["read"] = True
+        if why:
+            item["why"] = str(why)[:12]
     with _LOCK:
         d = _load()
         d["items"].append(item)
@@ -223,6 +252,26 @@ def doc_theo_phien(session_id: str) -> int:
         if n:
             _save(d)
         return n
+
+
+def lay(item_id: str) -> dict:
+    """Một thư theo id, {} khi đã mất."""
+    with _LOCK:
+        return dict(next((x for x in (_load().get("items") or []) if str(x.get("id")) == str(item_id)), {}) or {})
+
+
+def phan_hoi(item_id: str, axis: str) -> dict:
+    """Ghi phản hồi của bố lên một thư ("needed" / "not_needed") và đánh dấu đã đọc: "Không cần
+    báo" xong thì thư rời danh sách chưa đọc luôn. Trả thư đã lưu, {} khi đã mất."""
+    with _LOCK:
+        d = _load()
+        for it in d.get("items") or []:
+            if str(it.get("id")) == str(item_id):
+                it["reaction"] = {"axis": str(axis or ""), "ts": time.time()}
+                it["read"] = True
+                _save(d)
+                return dict(it)
+    return {}
 
 
 def xoa(item_id: str) -> bool:

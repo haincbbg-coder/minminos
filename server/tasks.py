@@ -49,6 +49,9 @@ HEARTBEAT_SECONDS = 20
 DISPATCH_INTERVAL_SECONDS = 5
 MAX_RESULT_CHARS = 20_000
 SPECIFIER_TIMEOUT_SECONDS = 180
+# "Kiểm lại" một việc đã xong (26.10.312): một lượt AI chỉ đọc, đủ ngắn để bố bấm rồi đợi được.
+VERIFY_TIMEOUT_SECONDS = 240
+READONLY_TOOLS = ["Read", "Glob", "Grep", "LS"]
 WORKER_TIMEOUT_SECONDS = 900
 # Việc đã kết thúc (done/cancelled) quá số ngày này tự chuyển archived (rời bảng, còn tra được).
 ARCHIVE_TERMINAL_AFTER_DAYS = 3.0
@@ -759,6 +762,12 @@ class TasksFeature:
                     gom.nap(event)
                 if kind == "final":
                     final = str(event.get("content") or "") or final
+                    # Final cắm cờ `is_error` (hết lượt gói, API 429, hỏng giữa chừng): chữ của nó là
+                    # câu báo lỗi của nhà cung cấp, không phải báo cáo việc. Đọc như kết quả là việc
+                    # đi thẳng sang Xong mỗi khi câu chữ lạ với limit_learner (26.10.312).
+                    if event.get("is_error"):
+                        error = error or (final.strip()
+                                          or f"engine error ({event.get('subtype') or 'final'})")
                 elif kind == "text":
                     narration.append(str(event.get("content") or ""))
                 elif kind == "tool_call":
@@ -959,6 +968,10 @@ nói rõ đã được phép tự hành động; nếu không thì để auto đ
             return ""
         dong = ["HỎI ĐÁP VỚI CHỦ (câu trả lời là dữ kiện chủ đã chốt, dùng luôn, KHÔNG hỏi lại):"]
         for i, x in enumerate(qa, 1):
+            if x.get("kind") == "followup":
+                # "Nhắn thêm" (26.10.312): lời dặn MỚI NHẤT của chủ cho việc này, làm theo nó.
+                dong.append(f"{i}. Chủ nhắn thêm (yêu cầu mới, làm theo): {x.get('a') or ''}")
+                continue
             dong.append(f"{i}. Hỏi: {x.get('q') or ''}\n   Chủ trả lời: {x.get('a') or ''}")
         tien_do = str(qa[-1].get("progress") or "").strip()
         if tien_do:
@@ -1205,15 +1218,22 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
         Gom theo TỪNG người nhận: hai việc của hai kênh khác nhau không được trộn vào một tin.
         """
         chat_id = str(task.get("chat_id") or "")
-        self._ro_bao.setdefault(chat_id, []).append({
+        # 26.10.312: hai rổ cho mỗi người nhận. Việc CHỈ bố gỡ được (xin quyền) kêu; việc dừng vì
+        # lý do kỹ thuật thì MinMin tự lo, báo lặng kèm một câu dễ hiểu.
+        can_bo = TaskStore.waits_for_owner(task)
+        key = chat_id + ("\x00bo" if can_bo else "\x00tu")
+        self._ro_bao.setdefault(key, []).append({
             "title": str(task.get("title") or ""),
             "id": str(task.get("id") or ""),
             "reason": str(task.get("block_reason") or task.get("block_kind") or "").strip(),
+            "calm": self._calm(task),
+            "chat_id": chat_id,
+            "can_bo": can_bo,
         })
-        cu = self._hen_bao.get(chat_id)
+        cu = self._hen_bao.get(key)
         if cu and not cu.done():
             return       # đã có hẹn cho rổ này - việc vừa rơi vào sẽ đi chung chuyến đó
-        self._hen_bao[chat_id] = asyncio.ensure_future(self._xa_bao_sau(chat_id))
+        self._hen_bao[key] = asyncio.ensure_future(self._xa_bao_sau(key))
 
     async def _xa_bao_sau(self, chat_id: str) -> None:
         try:
@@ -1222,33 +1242,53 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             pass
         await self._xa_bao(chat_id)
 
-    async def _xa_bao(self, chat_id: str) -> None:
-        """Bắn rổ đã gom. MỘT việc thì giữ nguyên câu cũ - đừng biến nó thành danh sách một dòng."""
-        items = self._ro_bao.pop(chat_id, [])
-        self._hen_bao.pop(chat_id, None)
+    async def _xa_bao(self, key: str) -> None:
+        """Bắn rổ đã gom. MỘT việc thì giữ một câu - đừng biến nó thành danh sách một dòng.
+
+        26.10.312: rổ "can_bo" (xin quyền) kêu và nói rõ bấm gì; rổ việc tự lo thì báo LẶNG,
+        nói trước là bố không cần làm gì, chi tiết kỹ thuật để cuối."""
+        items = self._ro_bao.pop(key, [])
+        self._hen_bao.pop(key, None)
         if not items or not self.deps.report:
             return
-        if len(items) == 1:
-            parts = [f"⚠ Việc '{items[0]['title']}' bị chặn, cần bạn xem.",
-                     "Lý do: " + (items[0]["reason"][:240] or "không rõ"),
-                     "Xem chi tiết ở trang Việc."]
-        else:
-            dong = [f"⚠ {len(items)} việc đang chờ bạn xử lý:"]
+        chat_id = str(items[0].get("chat_id") if "chat_id" in items[0] else key.split("\x00", 1)[0])
+        can_bo = bool(items[0].get("can_bo"))
+        if can_bo and len(items) == 1:
+            parts = [f"🔐 Việc '{items[0]['title']}' cần bố cho phép mới làm tiếp.",
+                     "Bấm \"Cho phép chạy thật\" ở việc này trên trang Công việc. "
+                     "Không cần thì cứ để đó, việc sẽ không tự làm gì ra ngoài.",
+                     "Chi tiết: " + (items[0]["reason"][:240] or "không rõ")]
+        elif can_bo:
+            dong = [f"🔐 {len(items)} việc cần bố cho phép mới làm tiếp:"]
             for it in items[:BAO_GOM_LIET_KE]:
-                dong.append(f"- {it['title']}: " + (it["reason"][:120] or "không rõ lý do"))
+                dong.append(f"- {it['title']}")
             con = len(items) - BAO_GOM_LIET_KE
             if con > 0:
                 dong.append(f"…và {con} việc nữa.")
-            dong.append("Xem chi tiết ở trang Việc.")
+            dong.append("Bấm \"Cho phép chạy thật\" ở từng việc trên trang Công việc, hoặc cứ để đó nếu không cần.")
+            parts = dong
+        elif len(items) == 1:
+            parts = [f"⏳ Việc '{items[0]['title']}' đang tạm dừng, MinMin tự xử lý.",
+                     items[0]["calm"],
+                     "Chi tiết kỹ thuật: " + (items[0]["reason"][:240] or "không rõ")]
+        else:
+            dong = [f"⏳ {len(items)} việc đang tạm dừng, MinMin tự xử lý, bố không cần làm gì:"]
+            for it in items[:BAO_GOM_LIET_KE]:
+                dong.append(f"- {it['title']}: " + (it["calm"][:140] or "đang chờ chạy lại"))
+            con = len(items) - BAO_GOM_LIET_KE
+            if con > 0:
+                dong.append(f"…và {con} việc nữa.")
             parts = dong
         try:
             # `viec` để bản báo gộp cũng thành thẻ việc và đi về hội thoại "Bảng Việc" của mục
             # Việc Hàng Ngày như mọi tin khác của Bảng việc (26.10.259), không lọt vào khung đang chat.
-            ten = items[0]["title"] if len(items) == 1 else f"{len(items)} việc đang chờ bạn"
+            ten = items[0]["title"] if len(items) == 1 else (
+                f"{len(items)} việc chờ bố cho phép" if can_bo else f"{len(items)} việc đang tạm dừng")
             await self.deps.report(
-                chat_id, channel_context.strip_control_blocks("\n\n".join(parts)), quiet=False,
-                viec={"kind": "task", "status": "blocked", "title": str(ten)[:160],
-                      "id": str(items[0].get("id") or "") if len(items) == 1 else ""})
+                chat_id, channel_context.strip_control_blocks("\n\n".join(parts)), quiet=not can_bo,
+                viec={"kind": "task", "status": "cho_quyen" if can_bo else "blocked", "title": str(ten)[:160],
+                      "id": str(items[0].get("id") or "") if len(items) == 1 else ""},
+                **({"level": "urgent", "group": "question"} if can_bo else {}))
         except Exception as e:
             print(f"[kanban] báo gộp việc kẹt lỗi: {type(e).__name__}: {e}", file=sys.stderr)
 
@@ -1365,6 +1405,11 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
         if status == "blocked":
             await self._gom_bao(task)
             return
+        if status == "review":
+            # Kết quả chờ duyệt là một việc đang đứng chờ bố: nhóm Câu hỏi chờ bố, mức khẩn.
+            muc = {"level": "urgent", "group": "question"}
+        else:
+            muc = {}
         labels = {
             "review": "đã làm xong, cần duyệt ngoại lệ",
             "done": "đã hoàn thành",
@@ -1420,6 +1465,7 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
                 viec={"kind": "task", "status": status, "title": str(task.get("title") or ""),
                       "id": str(task.get("id") or "")},
                 web=channel_context.strip_control_blocks(web),
+                **muc,
             )
         except Exception as e:
             # KHÔNG nuốt im: đây là đường DUY NHẤT để kết quả việc nền quay về với người dùng,
@@ -1867,7 +1913,15 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             if self._worker_brains.get(tid) == root
         ]
         health = self.store.health(root)
-        attention = columns["blocked"] + columns["review"]
+        # 26.10.312: "Cần bố xử lý" chỉ giữ việc CHỈ bố gỡ được (câu hỏi, xin quyền, kết quả chờ
+        # duyệt). Việc dừng vì lý do kỹ thuật vào khu riêng "MinMin đang tự xử lý".
+        for task in columns["blocked"] + columns["review"] + columns["ready"]:
+            calm = self._calm(task)
+            if calm:
+                task["calm"] = calm
+        stopped = columns["review"] + columns["blocked"]
+        attention = [x for x in stopped if TaskStore.waits_for_owner(x)]
+        handled = [x for x in stopped if not TaskStore.waits_for_owner(x)]
         queue = columns["triage"] + columns["todo"] + columns["ready"]
         active = columns["running"]
         history = columns["done"] + columns["cancelled"]
@@ -1884,14 +1938,124 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             "operations": {
                 "active": active,
                 "attention": attention,
+                "handled": handled,
                 "queue": queue,
                 "history": history,
             },
+            "hints": self._hints(root),
             "columns": columns,
             "counts": counts,
             "completed_24h": health["completed_24h"],
             "running": bool(workers),
         }
+
+    # ------------------------------------------------------------------
+    # 26.10.312: trang Công việc yên hơn và thông minh hơn
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _calm(task: dict) -> str:
+        """MỘT câu dễ hiểu cho việc đang dừng hay đang đợi, "" khi việc không dừng.
+
+        Thẻ việc và ngăn chi tiết hiện câu này thay cho dòng lỗi kỹ thuật màu đỏ. Lỗi gốc vẫn
+        còn, nằm trong mục "Chi tiết kỹ thuật" thu gọn, cho ai cần đi tra."""
+        st = str(task.get("status") or "")
+        kind = str(task.get("block_kind") or "")
+        if st == "review":
+            return "Việc đã làm xong, đang chờ bố xem và duyệt kết quả."
+        if st == "ready" and float(task.get("not_before") or 0) > time.time():
+            try:
+                gio = datetime.fromtimestamp(float(task["not_before"]), localefmt.tz()).strftime("%H:%M ngày %d/%m")
+            except Exception:
+                gio = ""
+            return ("Gói AI đang tạm hết lượt. MinMin tự chạy lại" + (f" lúc {gio}" if gio else " khi gói mở lại")
+                    + ", bố không cần làm gì.")
+        if st != "blocked":
+            return ""
+        if kind == "needs_input":
+            return "MinMin cần bố trả lời một câu để làm tiếp."
+        if kind == "capability":
+            return ("Việc cần thao tác thật ra ngoài (gửi, đăng, tạo đơn). Bố bấm Cho phép chạy thật "
+                    "nếu đồng ý, không thì cứ để đó.")
+        if kind == "limit":
+            return "Gói AI đang hết lượt. Khi gói mở lại MinMin chạy tiếp, hoặc bố bấm Thử lại."
+        if kind == "engine":
+            return "Bộ não AI cho việc này chưa sẵn sàng. MinMin sẽ chạy lại khi bộ não dùng được."
+        if kind == "gate":
+            return "Bước này chờ bố duyệt ở khu Đội AI phía trên."
+        return "Việc gặp trục trặc kỹ thuật và đang tạm dừng. MinMin tự xử lý, bố không cần làm gì."
+
+    def _hints(self, root: str) -> list:
+        try:
+            return self.store.repeat_hints(root)
+        except Exception as e:  # noqa: BLE001 - gợi ý là phụ, không được làm hỏng bảng việc
+            print(f"[kanban] gợi ý việc lặp lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+            return []
+
+    async def followup(self, task_id: str, text: str, brain: str = "", by: str = "owner") -> dict:
+        """"Nhắn thêm" cho một việc: việc quay về hàng đợi và làm tiếp từ kết quả lần trước."""
+        task = self.store.get_task(task_id)
+        if not task or (brain and task.get("brain_root") != self._ensure(brain)):
+            return {"ok": False, "error": "Không tìm thấy việc"}
+        done, err = self.store.followup(task_id, text, by=by)
+        if not done:
+            return {"ok": False, "error": {
+                "empty": "Lời nhắn đang trống",
+                "running": "Việc đang chạy, đợi nó xong rồi nhắn thêm",
+                "waiting": "Việc đang chờ bố trả lời, gõ vào ô trả lời của việc",
+                "gate": "Bước GATE duyệt ở khu Đội AI",
+            }.get(err, "Không tìm thấy việc")}
+        await self._asnapshot(str(done["brain_root"]))
+        self.wake()
+        return {"ok": True, "status": done["status"],
+                "orchestration": self.store.board_mode(str(done["brain_root"]))}
+
+    async def verify(self, task_id: str, brain: str = "") -> dict:
+        """"Kiểm lại" một việc đã xong: một lượt AI chỉ đọc so kết quả với mục tiêu và điều kiện
+        hoàn thành. Đạt thì thẻ ghi Đã kiểm; chưa đạt thì việc sang Cần bố xử lý với lý do làm câu
+        hỏi; lượt kiểm không chạy nổi thì việc vẫn Xong, chỉ là Chưa kiểm."""
+        task = self.store.get_task(task_id)
+        if not task or (brain and task.get("brain_root") != self._ensure(brain)):
+            return {"ok": False, "error": "Không tìm thấy việc"}
+        if task.get("status") not in ("done", "review"):
+            return {"ok": False, "error": "Chỉ kiểm được việc đã xong"}
+        if not str(task.get("result") or "").strip():
+            return {"ok": False, "error": "Việc không có kết quả để kiểm"}
+        self.store.set_check(task_id, "dang_kiem")
+        acceptance = (task.get("metadata") or {}).get("acceptance") or []
+        prompt = f"""Bạn là người KIỂM việc của MinMin. Chỉ đọc, không làm lại việc, không sửa file.
+So KẾT QUẢ dưới đây với MỤC TIÊU và ĐIỀU KIỆN HOÀN THÀNH. Được đọc file trong brain để đối chiếu.
+
+MỤC TIÊU:
+{str(task.get("intent") or task.get("title") or "")[:3000]}
+
+ĐIỀU KIỆN HOÀN THÀNH:
+{json.dumps(acceptance, ensure_ascii=False)}
+
+KẾT QUẢ ĐÃ BÁO:
+{str(task.get("result") or "")[:6000]}
+
+Trả về DUY NHẤT một JSON: {{"dat": true|false, "ly_do": "một câu tiếng Việt, nói chỗ chưa đạt nếu có"}}"""
+        try:
+            cli = self._base_cli(task, READONLY_TOOLS, "suggest", "verify")
+            try:
+                cli.disallowed_tools = ["Bash", "Write", "Edit", "WebFetch", "WebSearch", "Task"]
+            except Exception:
+                pass
+            out, error, _tools = await asyncio.wait_for(self._query(cli, prompt), timeout=VERIFY_TIMEOUT_SECONDS)
+        except Exception as e:  # noqa: BLE001
+            out, error = "", f"{type(e).__name__}: {e}"
+        parsed = self._extract_json(out) if not error else None
+        if not isinstance(parsed, dict) or "dat" not in parsed:
+            why = (error or "Lượt kiểm không trả lời đúng dạng")[:300]
+            self.store.set_check(task_id, "loi", why)
+            await self._asnapshot(str(task["brain_root"]))
+            return {"ok": True, "state": "loi", "why": why}
+        dat = parsed.get("dat") is True or str(parsed.get("dat")).lower() in ("true", "1", "yes")
+        why = str(parsed.get("ly_do") or "").strip()[:500]
+        after = self.store.set_check(task_id, "dat" if dat else "chua_dat", why)
+        await self._asnapshot(str(task["brain_root"]))
+        return {"ok": True, "state": "dat" if dat else "chua_dat", "why": why,
+                "status": (after or {}).get("status")}
 
     async def answer(self, task_id: str, text: str, brain: str = "", by: str = "owner") -> dict:
         """Chủ trả lời câu hỏi của một việc đang chờ: việc về hàng đợi và chạy tiếp với câu trả lời.
@@ -1952,6 +2116,7 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             return {
                 "ok": True,
                 "task": task,
+                "calm": self._calm(task),
                 "events": self.store.list_events(id, 100),
                 "runs": self.store.list_runs(id, 20),
             }
@@ -2110,12 +2275,14 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
             root = self._ensure(brain)
             khu = str(panel or "").strip().lower()
             if khu == "attention":
-                removed = self.store.archive_by_status(root, ("blocked", "review"))
+                removed = self.store.archive_stopped(root, owner=True)
+            elif khu == "handled":
+                removed = self.store.archive_stopped(root, owner=False)
             elif khu == "history":
                 removed = self.store.purge_terminal(
                     root, statuses=("archived", "cancelled", "done"))
             else:
-                return {"ok": False, "error": "panel phải là 'attention' hoặc 'history'"}
+                return {"ok": False, "error": "panel phải là 'attention', 'handled' hoặc 'history'"}
             await self._asnapshot(root)
             return {"ok": True, "removed": removed}
 
@@ -2221,6 +2388,22 @@ gì, dữ liệu/file/artifact nào được tạo và cách đã kiểm chứng
                 cancelled += 1
             await self._asnapshot(root)
             return {"ok": True, "orchestration": "off", "cancelled": cancelled}
+
+        # 26.10.312: Nhắn thêm, Kiểm lại, bỏ qua gợi ý việc lặp.
+        @router.post("/kanban/task/followup")
+        async def kanban_followup(id: str = Form(...), text: str = Form(""), brain: str = Form("")):
+            return await self.followup(id, text, brain=brain)
+
+        @router.post("/kanban/task/verify")
+        async def kanban_verify(id: str = Form(...), brain: str = Form("brain")):
+            return await self.verify(id, brain=brain)
+
+        @router.post("/kanban/hint/dismiss")
+        async def kanban_hint_dismiss(key: str = Form(...), brain: str = Form("brain")):
+            if not str(key or "").strip():
+                return {"ok": False, "error": "Thiếu gợi ý"}
+            self.store.dismiss_hint(self._ensure(brain), key)
+            return {"ok": True}
 
         return router
 

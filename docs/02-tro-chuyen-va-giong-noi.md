@@ -132,6 +132,18 @@ Ba lệnh phiên đứng đầu danh sách:
 
 Trên bản web, `/new` và `/reset` cùng mở một hội thoại mới.
 
+Menu chia nhóm (Lệnh, Agent, Workflow, Skill), mỗi lệnh một dòng, mô tả thẳng một cột. Lệnh gõ vào ô được **tô màu** khi nó là lệnh có thật, nhìn là biết MinMin sẽ hiểu nó thành lệnh.
+
+### Lệnh `/goal`: làm tới khi đạt
+
+Gõ `/goal <điều kiện>`, ví dụ `/goal mọi đơn hôm nay đã đối soát xong`. MinMin làm, tự kiểm bằng dữ liệu thật, chưa đạt thì tự làm tiếp vòng sau, tối đa 5 vòng. Hai vòng liền không tiến triển, thiếu quyền hay thiếu kết nối, hoặc MinMin cần hỏi lại thì nó dừng và nói lý do.
+
+Thanh mục tiêu hiện ngay trên ô gõ: mục tiêu, đồng hồ, nút xoá, tạm dừng hoặc chạy tiếp, nút xem chi tiết.
+
+- Mỗi hội thoại một mục tiêu; nhiều hội thoại thì nhiều mục tiêu cùng lúc. Có từ hai mục tiêu, ô số ở đầu thanh xổ ra danh sách.
+- Bấm **Dừng** hay gõ chen một câu thì mục tiêu **tạm dừng**, không mất. Rời sang chat khác thì nó chờ, mở lại chat là chạy tiếp. Tải lại trang thì nó tạm dừng.
+- `/goal` không kèm chữ để xem trạng thái, `/goal clear` để tắt.
+
 Bên dưới ba lệnh đó là **toàn bộ skill của brain đang chọn**, mỗi dòng gồm `/slug`, tên skill và một dòng mô tả.
 
 Cách điều khiển menu:
@@ -273,14 +285,13 @@ Rê chuột vào một tin nhắn (của bạn hay của Minmin đều được)
 | Nút | Gợi ý khi rê chuột | Làm gì |
 |---|---|---|
 | Giờ gửi | Ngày đầy đủ, ví dụ "Thứ tư, 29/07/2026 14:05" | Chỉ để xem |
-| ↻ | "Gửi lại câu này" (tin của bạn) hoặc "Trả lời lại câu hỏi phía trên" (tin của Minmin) | Gửi lại đúng chữ gốc thành một lượt MỚI ở cuối hội thoại, không xoá gì của lượt cũ |
-| ✎ | "Sửa lại rồi gửi" | Chỉ có ở tin của bạn. Đổ chữ gốc vào ô nhập để bạn sửa; **không** tự gửi |
+| ↺ | "Tua lại từ câu này" | Chỉ có ở tin của bạn. Hỏi xác nhận, rồi xoá câu đó cùng mọi thứ bên dưới, đưa câu hỏi về ô gõ để sửa hoặc gửi lại (**không** tự gửi). MinMin quên luôn phần đã xoá, kể cả khi đang chạy Claude Code hay Codex |
 | ⧉ | "Sao chép nội dung" | Copy cả tin nhắn, nút đổi thành "✓ Đã copy" trong giây lát |
 
 Vài điểm hay gặp:
 
-- Đang chạy một lượt thì nút ↻ mờ đi và không bấm được, tránh chồng lượt.
-- Tin chỉ có ảnh mà không kèm chữ thì không có nút ↻ và ✎ (không có gì để gửi lại).
+- Đang chạy một lượt thì nút ↺ mờ đi và không bấm được: bấm Dừng trước rồi mới tua lại.
+- Tin chỉ có ảnh mà không kèm chữ thì không có nút ↺ (không có chữ để đưa về ô gõ).
 - Tin lưu từ trước bản có mốc giờ thì phần giờ được ẩn đi chứ không lấy giờ hiện tại đắp vào.
 - Tin **dài** của bạn (trên 10 dòng hoặc trên 900 ký tự) được thu gọn, có nút **Xem thêm** / **Thu gọn** để mở ra đóng lại.
 - Mỗi khối code có nút **⧉ Copy** riêng ở góc.
@@ -445,7 +456,7 @@ Phím tắt:
 - Đưa nhiều ảnh chụp màn hình cùng lúc bằng cách kéo - thả tất cả vào cửa sổ, Minmin xử lý từng cái.
 - Nếu bạn quen nói tiếng Anh, đổi "Ngôn ngữ nghe" sang Tiếng Anh để nhận diện chính xác hơn.
 - Dán nguyên một bài dài vào ô chat cứ dán thoải mái: Minmin tự biến thành file `.txt` đính kèm, khung chat vẫn gọn.
-- Hỏi lại một câu đã hỏi mà muốn đổi vài chữ: bấm **✎** trên tin cũ, sửa trong ô nhập rồi gửi, khỏi gõ lại từ đầu.
+- Hỏi lại một câu đã hỏi mà muốn đổi vài chữ: bấm **↺** trên tin cũ, câu đó cùng phần bên dưới bị xoá và câu hỏi về ô gõ, sửa rồi gửi.
 - Nút **⛶** trên mục HỘI THOẠI và mục **Trò chuyện** trong nhóm Trợ lý dẫn tới cùng một chỗ, dùng đường nào tiện hơn thì dùng.
 
 ## Sự cố thường gặp

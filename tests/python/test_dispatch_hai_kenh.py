@@ -410,7 +410,11 @@ if do_turn is not None:
     vong = [n for n in ast.walk(do_turn)
             if isinstance(n, ast.AsyncFor) and isinstance(n.iter, ast.Call)
             and isinstance(n.iter.func, ast.Attribute) and n.iter.func.attr == "query"
-            and isinstance(n.iter.func.value, ast.Name) and n.iter.func.value.id == "cli"]
+            and isinstance(n.iter.func.value, ast.Name)
+            and (n.iter.func.value.id == "cli"
+                 # 26.10.313: lượt chat Claude chạy qua lớp giữ ấm, claude_giu_am.query(cli, ...)
+                 or (n.iter.func.value.id == "claude_giu_am" and n.iter.args
+                     and isinstance(n.iter.args[0], ast.Name) and n.iter.args[0].id == "cli"))]
     check("(8) tìm thấy vòng lặp sự kiện của nhánh Claude", len(vong) == 1)
     if len(vong) == 1:
         chuoi = [n.value for n in ast.walk(vong[0])

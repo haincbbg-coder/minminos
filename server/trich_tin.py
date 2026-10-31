@@ -86,7 +86,7 @@ def bao_gap(e: dict, tr: dict, conv_id: int, now: float = None) -> bool:
         ten = str(e.get("sender_name") or e.get("chat_title") or "Một khách")
         inbox.add(f"{ten} vừa nhắn có vẻ gấp ({', '.join(tr['gap'])}):\n\n\"{str(e.get('text') or '')[:400]}\"\n\n"
                   f"Mở Hộp thư hội thoại để xem và trả lời.",
-                  kind="system", title=f"Tin gấp từ {ten}", source="trich-tin",
+                  kind="system", title=f"Tin gấp từ {ten}", source="trich-tin", tu_phan_loai=True,
                   channel=str(e.get("channel") or ""))
         return True
     except Exception as ex:

@@ -91,6 +91,9 @@ server/once_ledger.sqlite3*
 # kanban.sqlite3* trên - test không đặt JAVIS_STATE_DIR sẽ ghi rơi vào server/ vì
 # execute_workflow giờ luôn chạm workflow_runs.get_store().
 server/workflow_runs.sqlite3*
+# hoc-tu-chat/: kho của Tự học từ trò chuyện (26.10.308, hoc_tu_chat.py): lượt, lỗi, lần học, bản sao
+# lưu để hoàn tác. Thiếu JAVIS_STATE_DIR thì rơi vào server/ như kanban.sqlite3.
+server/hoc-tu-chat/
 server/tg_brain.json
 server/update_state.json
 server/logs/

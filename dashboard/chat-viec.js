@@ -26,7 +26,8 @@
   var DU_PHONG = {
     "viec.st_done": "Việc nền xong",
     "viec.st_review": "Việc nền xong, chờ duyệt",
-    "viec.st_blocked": "Việc nền bị chặn",
+    "viec.st_blocked": "Việc nền tạm dừng, MinMin đang lo",
+    "viec.st_cho_quyen": "Việc nền chờ bố cho phép",
     "viec.st_failed": "Việc nền lỗi",
     "viec.st_timeout": "Việc nền quá giờ",
     "viec.st_cancelled": "Việc nền đã dừng",
@@ -78,7 +79,8 @@
   var TRANG_THAI = {
     done: { ic: "circle-check", nhan: "viec.st_done" },
     review: { ic: "clipboard-check", nhan: "viec.st_review" },
-    blocked: { ic: "triangle-alert", nhan: "viec.st_blocked" },
+    blocked: { ic: "hourglass", nhan: "viec.st_blocked" },
+    cho_quyen: { ic: "lock", nhan: "viec.st_cho_quyen" },
     hoi: { ic: "circle-help", nhan: "viec.st_hoi" },
     failed: { ic: "circle-x", nhan: "viec.st_failed" },
     timeout: { ic: "hourglass", nhan: "viec.st_timeout" },

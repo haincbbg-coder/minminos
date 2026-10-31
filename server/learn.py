@@ -395,6 +395,9 @@ class LearnDeps:
     # Đổi engine việc nền theo model phụ người dùng chọn (Claude / Codex / API rẻ).
     # None = giữ nguyên Claude như trước (test dựng deps tối giản không cần tiêm).
     aux_swap: Optional[Callable] = None
+    # Công tắc "Tạm dừng mọi cải tiến" của bộ não (26.10.308): bật thì mẻ học tự động không chạy trên bộ não đó.
+    # Bấm "Học ngay" thì vẫn chạy (chủ tự bấm là chủ quyết). None = không có công tắc.
+    tam_dung: Optional[Callable[[str], bool]] = None
 
 
 ALLOWED_WRITE_PREFIXES = ["memory", "Memory", "Wiki", "skills", ".claude/skills", "Javis",
@@ -629,6 +632,14 @@ class LearnFeature:
                 if self._should_fire(cfg, p):
                     target = brain
                     break
+        if target and self.deps.tam_dung:
+            try:
+                if self.deps.tam_dung(target):
+                    async with self._pending_lock:
+                        self._pending.pop(target, None)   # bỏ hàng chờ: tạm dừng nghĩa là không học
+                    return
+            except Exception:
+                pass
         if target:
             await self.run_once(target, reason="auto")
 

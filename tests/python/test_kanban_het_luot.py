@@ -205,6 +205,30 @@ def test_worker_moc_qua_xa_thi_chan_han_kem_ly_do(tmp_path, monkeypatch):
     feature.store.close()
 
 
+class _CliHongCuoi:
+    """Engine giả kết thúc lượt bằng một final cắm cờ is_error (ca Claude Code hết lượt, 26.10.312)."""
+
+    def __init__(self, content):
+        self.content = content
+
+    def is_available(self):
+        return True
+
+    async def query(self, prompt):
+        yield {"type": "final", "content": self.content, "is_error": True, "subtype": "error"}
+
+
+def test_final_is_error_la_loi_khong_phai_ket_qua(tmp_path):
+    brain = tmp_path / "brain"; brain.mkdir()
+    feat = _feature(tmp_path, brain)
+    out, err, _tools = asyncio.run(feat._query(_CliHongCuoi("You're out of extra usage · resets 3pm"), "p"))
+    assert err, "final is_error phải thành lỗi, không được đi tiếp sang complete()"
+    assert feat._het_luot(err, "") is not None, "câu out of extra usage phải được nhận là hết lượt gói"
+    # Câu lỗi lạ (không phải hết lượt) vẫn là lỗi, để việc bị dừng chứ không bị chấm Xong.
+    out, err, _tools = asyncio.run(feat._query(_CliHongCuoi("API Error: 529 overloaded"), "p"))
+    assert "529" in err
+
+
 if __name__ == "__main__":
     # CI chạy TỪNG FILE như script (`python tests/python/test_x.py`), không gọi pytest.
     import sys

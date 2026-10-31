@@ -72,8 +72,14 @@ check("chuỗi 3 mắt: hai mắt đầu chết, OpenRouter free cứu", evs[-1]
 check("chuỗi 3 mắt: cả 3 đều được thử", codex.ran == 1 and claude.ran == 1 and orfree.ran == 1)
 
 # --- mắt câm (không final) / unavailable đều coi là chết ---
-evs = run(collect(FB([FakeEngine([{"type": "tool_call", "name": "y"}]), FakeEngine([FINAL("co final")])])))
+evs = run(collect(FB([FakeEngine([{"type": "status"}]), FakeEngine([FINAL("co final")])])))
 check("mắt câm: mắt sau cứu", evs[-1]["content"] == "co final")
+# 26.10.309: mắt ĐÃ gọi công cụ rồi mới gãy -> chuỗi DỪNG, không chạy lại bằng engine khác
+# (tránh gửi tin, đăng bài hai lần). Đây là luật cho mọi mức quyền.
+_sau = FakeEngine([FINAL("khong duoc chay")])
+evs = run(collect(FB([FakeEngine([{"type": "tool_call", "name": "y"}, ERR("het luot")]), _sau])))
+check("đã gọi công cụ rồi gãy: dừng, báo lỗi", evs[-1]["type"] == "error")
+check("đã gọi công cụ rồi gãy: KHÔNG chạy mắt sau", _sau.ran == 0)
 silent = FakeEngine(available=False)
 evs = run(collect(FB([silent, FakeEngine([FINAL("truc tiep")])])))
 check("mắt unavailable: nhảy thẳng mắt sau, không chạy mắt chết", evs[-1]["content"] == "truc tiep" and silent.ran == 0)
@@ -170,6 +176,20 @@ check("bắt câu OAuth hết hạn", aux_engine.final_loi_dang_nhap(
 check("final rỗng không phải lỗi auth", not aux_engine.final_loi_dang_nhap(""))
 check("nội dung dài không bị nghi oan",
       not aux_engine.final_loi_dang_nhap("bao cao " * 100 + "please run /login"))
+
+# --- 26.10.312: final cắm cờ is_error (Claude Code hết lượt) là mắt hỏng, chưa làm gì thì sang mắt sau ---
+claude_het = FakeEngine([{"type": "final", "content": "You're out of extra usage · resets 3pm", "is_error": True}])
+codex = FakeEngine([FINAL("codex cứu")])
+evs = run(collect(FB([claude_het, codex])))
+check("final is_error: chạy mắt sau", codex.ran == 1 and evs[-1] == FINAL("codex cứu"))
+check("final is_error: không đẩy câu lỗi ra như kết quả",
+      not any(e.get("is_error") for e in evs))
+claude_het = FakeEngine([{"type": "tool_call", "name": "zalo_send_message"},
+                         {"type": "final", "content": "API Error: 529", "is_error": True}])
+codex = FakeEngine([FINAL("codex chạy lại")])
+evs = run(collect(FB([claude_het, codex])))
+check("final is_error sau khi đã gọi công cụ: KHÔNG chạy lại ở mắt sau", codex.ran == 0)
+check("final is_error sau khi đã gọi công cụ: trả lỗi", evs[-1] == ERR("API Error: 529"))
 
 print()
 if _fails:

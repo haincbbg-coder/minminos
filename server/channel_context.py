@@ -615,6 +615,26 @@ def _ask_to_text(payload: str) -> str:
     return "\n".join(lines)
 
 
+SILENT_MARK = "[SILENT]"
+
+
+def is_silent_report(text: str) -> bool:
+    """True khi một câu trả lời chạy nền mang cờ [SILENT]: "không có gì để báo, đừng làm phiền".
+
+    Cờ tính khi nó MỞ ĐẦU hoặc KẾT THÚC câu trả lời (26.10.312). Model được dặn "không có gì thì
+    mở đầu bằng [SILENT]" hay viết một câu trước rồi mới đặt cờ ở cuối ("Đã kiểm, không có đơn mới.
+    [SILENT]"), và câu đó lọt vào chuông như một báo cáo. Cờ nằm giữa đoạn văn là model đang giải
+    thích gì đó nên không tính. Bỏ qua khối điều khiển, khoảng trắng, dấu nháy và dấu nhấn markdown
+    quanh cờ."""
+    def _sach(dong: str) -> str:
+        return dong.strip().strip("`*_>\"'").strip()
+
+    dong = [d for d in (_sach(x) for x in strip_control_blocks(text or "").splitlines()) if d]
+    if not dong:
+        return False
+    return dong[0].upper().startswith(SILENT_MARK) or dong[-1].upper().endswith(SILENT_MARK)
+
+
 def strip_control_blocks(text: str) -> str:
     """Bóc mọi khối <!-- JAVIS_*: ... --> khỏi text.
 

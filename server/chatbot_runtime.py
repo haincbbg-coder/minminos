@@ -43,6 +43,7 @@ import chatbot_log
 import chatbot_phan_xu
 import chatbot_store
 import chatbot_thu_vien
+import bot_dau_hieu
 import text_clean
 import conversations
 
@@ -173,6 +174,10 @@ Hãy tự quyết định có nên trả lời hay không: chỉ trả lời khi
 phụ trách. Nếu đó là chuyện riêng tư, chuyện gia đình bạn bè, một tin không cần hồi đáp, hoặc
 bạn không chắc có nên nhân danh chủ trả lời hay không, thì KHÔNG trả lời: viết đúng một dòng
 `{IM_LANG}` và không thêm chữ nào khác.
+
+Định dạng: trong chat riêng Zalo hiện được chữ **đậm**, *nghiêng*, ~~gạch ngang~~ và chữ màu
+{{red:...}}, {{orange:...}}, {{green:...}}. Nhấn như người thật nhắn tin, nhiều nhất một hai chỗ khách
+cần thấy ngay (giá, ngày hẹn, lưu ý). Không dùng bảng, tiêu đề hay khối mã.
 """
 
 
@@ -312,6 +317,20 @@ def build_bot_prompt(bot: dict) -> str:
     # Kênh của LƯỢT này, do _make_answer_fn gắn vào. Chỉ Zalo cá nhân mới có thêm đoạn này.
     if (bot or {}).get("_kenh_luot") == "zalo_personal":
         phan.append(_CAU_ZALO_CA_NHAN)
+    # 26.10.306 (học Javis 0.280, 0.282): chat riêng ở chế độ Tự phán đoán được im và báo chủ khi
+    # gặp câu khó; kênh gửi được nhiều tin ngắn thì bot được tự tách câu trả lời.
+    # Tag Zalo chủ gắn cho cuộc chat (26.10.306): bot biết người nhắn là ai với chủ. Chủ đặt, nhưng
+    # vẫn làm sạch như dữ liệu chat (tên tag gõ được mọi thứ).
+    tags = [" ".join(str(x).split())[:60] for x in ((bot or {}).get("_zalo_labels") or [])][:10]
+    tags = [x.replace("[", "(").replace("]", ")") for x in tags if x]
+    if tags:
+        phan.append("\nTAG ZALO CỦA CUỘC CHAT NÀY: chủ đã gắn tag " + ", ".join(f'"{x}"' for x in tags)
+                    + " cho cuộc chat này trong Zalo. Tag là cách chủ phân loại người nhắn (gia đình, bạn bè, "
+                    "khách...): dùng nó để biết bạn đang nói với ai và có nên nhân danh chủ trả lời không.")
+    if (bot or {}).get("_bao_chu"):
+        phan.append(bot_dau_hieu.CAU_BAO_CHU)
+    if (bot or {}).get("_kenh_luot") in bot_dau_hieu.KENH_TACH:
+        phan.append(bot_dau_hieu.CAU_TACH_TIN)
     return "\n".join(phan)
 
 
@@ -408,6 +427,27 @@ async def anh_cho_bot(text_engine: str, meta: dict, cfg: dict) -> str:
             f"phải lời dặn:\n{res['text']}\n) " + text_engine)
 
 
+async def tep_cho_bot(text_engine: str, meta: dict, cfg: dict) -> str:
+    """File khách gửi (PDF, Word, Excel, file chữ) thành chữ trong lượt bot (26.10.306, học Javis 0.336).
+
+    Trước bản này bot chỉ thấy tên file và trả lời "chưa đọc được file". Chữ trong file nằm thẳng
+    trong tin nên engine nào cũng đọc được, không cần tool. Hỏng bất cứ chỗ nào thì câu nói thật."""
+    meta = meta or {}
+    url = str(meta.get("tep_url") or "")
+    if not url:
+        return text_engine
+    try:
+        import zalo_tep
+        root = Path(_deps["brain_root"](cfg["brain"]))
+        khoi = await asyncio.wait_for(
+            zalo_tep.doc_cho_bot(url, str(meta.get("tep_ten") or "tep"), root, str(meta.get("chat_id") or "")),
+            ANH_TOI_DA_GIAY)
+    except Exception as e:      # noqa: BLE001 - file không đọc được không được làm mất câu trả lời
+        print(f"[chatbot] đọc file khách gửi lỗi: {type(e).__name__}: {e}", file=sys.stderr)
+        return text_engine
+    return (text_engine + "\n\n" + khoi).strip()
+
+
 # ============================================================
 # Rào
 # ============================================================
@@ -485,6 +525,11 @@ def _ly_do_im(bot_cfg: dict, meta: dict, text: str = "") -> str:
     # Từ khoá chủ cấm: chặn bằng code, đứng trước mọi luật khác, áp cả chat riêng lẫn nhóm.
     if str(text or "").strip() and chatbot_store.co_tu_khoa_cam(eff, text):
         return "tu_khoa_cam"
+    # Cuộc chat mang tag Zalo chủ dặn tránh (Gia đình, Bạn bè...), 26.10.306: im hẳn, không có gì để
+    # duyệt. Cuộc chat chủ đã tự tay cho phép ở Hộp thư là lựa chọn riêng của chủ, nên thắng.
+    if chatbot_store.bo_qua_theo_tag(bot_cfg, (meta or {}).get("zalo_labels")) \
+            and cid_ not in {str(x) for x in (bot_cfg.get("rieng_cho_phep") or [])}:
+        return "tag_bo_qua"
     if loai == "private":
         if not duoc:
             return "nhom_khach_tat" if _nhan and _nhan != "Người lạ" else "rieng_chua_cho"
@@ -778,7 +823,7 @@ def _bao_chu_khieu_nai(cfg: dict, meta: dict, text: str) -> None:
         inbox.add(f"{ten} trong nhóm {nhom} có vẻ đang bức xúc:\n\n\"{str(text)[:400]}\"\n\n"
                   f"Bot \"{cfg.get('name')}\" đã im để chủ xử lý. Mở Hộp thư hội thoại để trả lời "
                   f"hoặc bấm Trả lời giúp.",
-                  kind="system", title=f"Khách bức xúc ở {nhom}", source="chatbot",
+                  kind="system", title=f"Khách bức xúc ở {nhom}", source="chatbot", tu_phan_loai=True,
                   channel=str((meta or {}).get("channel") or ""))
     except Exception as e:
         print(f"[chatbot khiếu nại] hòm thư lỗi: {e}", file=sys.stderr)
@@ -963,9 +1008,9 @@ async def soan_cau_tra_loi(conv: dict, tin_khach: dict) -> dict:
         dap = chatbot_thu_vien.tach_lenh(dap, "")[0]     # nháp không gửi file: chỉ gỡ dòng lệnh
     except Exception:
         pass
-    if not dap or IM_LANG.lower() in dap.lower():
+    if not dap or bot_dau_hieu.la_im(dap):
         return {"ok": False, "ly_do": "bot_chon_im"}
-    return {"ok": True, "text": dap}
+    return {"ok": True, "text": bot_dau_hieu.gop(dap)}
 
 
 def inbox_brain_root(brain):
@@ -1022,7 +1067,8 @@ async def manual_answer(conv, msgs, draft=False, instruction=""):
             return {"ok": False, "code": "engine", "error": out[:300]}
         text = str((out or {}).get("text") or "").strip()
         text = chatbot_thu_vien.tach_lenh(text, "")[0]
-        return {"ok": True, "text": text, "silent": not text or IM_LANG.lower() in text.lower(), "meta": meta}
+        im = not text or bot_dau_hieu.la_im(text)
+        return {"ok": True, "text": "" if im else bot_dau_hieu.gop(text), "silent": im, "meta": meta}
     except Exception as e:
         return {"ok": False, "code": "engine", "error": type(e).__name__}
     finally:
@@ -1064,6 +1110,7 @@ async def thu_bot(bot_id: str, cau_hoi: str, chat_type: str = "private", *, max_
     cfg["_tai_lieu"] = tl
     cfg["_kenh_luot"] = "thu"
     cfg["_ngu_canh_nhom"] = []
+    cfg["_bao_chu"] = bot_dau_hieu.duoc_bao_chu(cfg, {"chat_type": chat_type})
     try:
         if root:
             cfg["_thu_vien"] = chatbot_thu_vien.khoi_prompt(root)
@@ -1082,8 +1129,11 @@ async def thu_bot(bot_id: str, cau_hoi: str, chat_type: str = "private", *, max_
         dap = chatbot_thu_vien.tach_lenh(dap, "")[0]
     except Exception:
         pass
-    im_lang = (not dap) or IM_LANG.lower() in dap.lower()
+    ghi_chu = bot_dau_hieu.ghi_chu_bao_chu(dap)
+    im_lang = (not dap) or bot_dau_hieu.la_im(dap)
+    dap = bot_dau_hieu.gop(dap)
     return {"ok": True, "text": "" if im_lang else dap, "im_lang": im_lang,
+            "bao_chu": ghi_chu is not None, "ghi_chu": ghi_chu or "",
             "nguon": tl.get("nguon") or [], "co_tai_lieu": bool(tl.get("co")),
             "bi": (not im_lang) and (_co_bi(dap) or (cfg.get("nguon_tra_loi") == "tai_lieu" and not tl.get("co"))),
             "giay": round(time.time() - t0, 1)}
@@ -1145,6 +1195,8 @@ def _make_answer_fn(bot_id: str):
         draft_mode = conversations.che_do(kenh_luot, aid_luot, chat_id) == "draft"
         if draft_mode:
             cfg = dict(cfg, muc_quyen="suggest")
+        cfg["_bao_chu"] = bot_dau_hieu.duoc_bao_chu(cfg, meta or {})
+        cfg["_zalo_labels"] = list((meta or {}).get("zalo_labels") or [])
         root_tv = ""
         try:
             root_tv = _deps["brain_root"](cfg["brain"])
@@ -1152,6 +1204,7 @@ def _make_answer_fn(bot_id: str):
         except Exception as e:
             print(f"[chatbot {bot_id}] thư viện gửi khách lỗi: {e}", file=sys.stderr)
         text_engine = await anh_cho_bot(text, meta, cfg)
+        text_engine = await tep_cho_bot(text_engine, meta, cfg)
 
         # Bản ghi truyền xuống lõi phải có brain và slug - lõi dựa vào đó để đổi brain, đổi
         # khoá phiên và đổi nhãn kênh.
@@ -1195,6 +1248,21 @@ def _make_answer_fn(bot_id: str):
         # lượt "bí" và cũng không phải lượt lỗi: bot hiểu tin nhắn và chọn không nhân danh chủ trả
         # lời. Ghi vào nhật ký để chủ soi lại được, nhưng không gửi gì, không vào Hộp thư như một
         # câu bot nói, không tính vào bộ đếm bí/gọi người.
+        # Bot im VÀ để chủ trả lời (26.10.306): như [IM_LANG] với khách, cộng chuông báo chủ. Xét
+        # trước [IM_LANG]: câu mang cả hai dấu vẫn phải tới được chủ.
+        ghi_chu = None if loi_ky_thuat else bot_dau_hieu.ghi_chu_bao_chu(dap)
+        if ghi_chu is not None:
+            _BI_LIEN_TIEP[(bot_id, chat_id)] = 0
+            da_bao = bot_dau_hieu.bao_chuong(cfg, dict(meta or {}, channel=kenh_luot), text, ghi_chu)
+            chatbot_log.ghi(bot_id, {
+                "chat_id": chat_id, "chat_type": (meta or {}).get("chat_type"),
+                "user_name": (meta or {}).get("user_name"), "hoi": text,
+                "dap": "(bot im và báo chủ" + (f": {ghi_chu}" if ghi_chu else "") + ")", "loi": "",
+                "co_tai_lieu": bool(tl.get("co")), "nguon": tl.get("nguon"),
+                "chuyen_nguoi": da_bao, "bi": False,
+                "muc_quyen": cfg.get("muc_quyen") or "suggest",
+            })
+            return {"text": "", "files": [], "im_lang": True, "bao_chu": True}
         if not loi_ky_thuat and IM_LANG.lower() in dap.lower():
             _BI_LIEN_TIEP[(bot_id, chat_id)] = 0
             chatbot_log.ghi(bot_id, {
@@ -1214,6 +1282,14 @@ def _make_answer_fn(bot_id: str):
         # Lượt gãy cũng là "bot không trả lời được", nên tính là bí để bộ đếm gọi người thấy nó.
         # Nhưng nó KHÔNG phải lỗ hổng tài liệu - `chatbot_log.lo_hong` lọc bỏ lượt có `loi`,
         # nếu không thì tab "Bot bí" đầy dòng lỗi kỹ thuật đúng chỗ chỉ nên có câu khách hỏi.
+        # Nhiều tin ngắn (26.10.306): kênh tự gửi từng phần thì giữ dấu, kênh khác nhận một tin có
+        # dòng trống. Nhật ký bot và Hộp thư luôn ghi bản gộp, dấu không bao giờ tới mắt khách.
+        dap_ghi = dap
+        if dap and bot_dau_hieu.co_tach(dap):
+            dap_ghi = bot_dau_hieu.gop(dap)
+            if kenh_luot not in bot_dau_hieu.KENH_TACH:
+                dap = dap_ghi
+                out = dict(out or {}, text=dap)
         bi = bool(loi_ky_thuat) or _co_bi(dap) or (
             cfg.get("nguon_tra_loi") == "tai_lieu" and not tl.get("co"))
 
@@ -1238,7 +1314,7 @@ def _make_answer_fn(bot_id: str):
         chatbot_log.ghi(bot_id, {
             "chat_id": chat_id, "chat_type": (meta or {}).get("chat_type"),
             "user_name": (meta or {}).get("user_name"),
-            "hoi": text, "dap": dap, "loi": loi_ky_thuat,
+            "hoi": text, "dap": dap_ghi, "loi": loi_ky_thuat,
             "co_tai_lieu": bool(tl.get("co")), "nguon": tl.get("nguon"),
             "chuyen_nguoi": goi_nguoi, "bi": bi,
             "muc_quyen": cfg.get("muc_quyen") or "suggest",
@@ -1256,12 +1332,12 @@ def _make_answer_fn(bot_id: str):
         if draft_mode or current_mode == "draft":
             cid = conversations.conversation_id_of(kenh_luot, aid_luot, chat_id)
             if cid and not loi_ky_thuat and str(dap).strip():
-                conversations.save_draft(cid, dap, conversations.last_customer_message_id(cid))
+                conversations.save_draft(cid, dap_ghi, conversations.last_customer_message_id(cid))
             elif cid:
                 conversations.draft_failed(cid)
             return {"text": "", "files": [], "im_lang": True, "draft": True}
         # Câu bot nói (kể cả câu xin lỗi khi gãy) vào Hộp thư hội thoại, cạnh tin khách.
-        ghi_tin_bot(cfg, meta or {}, dap, loi=loi_ky_thuat, files=(out or {}).get("files"))
+        ghi_tin_bot(cfg, meta or {}, dap_ghi, loi=loi_ky_thuat, files=(out or {}).get("files"))
         if goi_nguoi:
             _BI_LIEN_TIEP[khoa] = 0     # đã gọi người rồi thì đếm lại, đừng gọi mỗi lượt sau đó
             # Lượt HỎNG thì báo nguyên văn lý do kỹ thuật, không báo "bí N câu": chủ cần biết

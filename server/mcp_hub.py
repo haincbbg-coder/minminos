@@ -903,6 +903,11 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
         # loop (WebSocket/telegram poller/loop scheduler đều chạy chung loop này).
         # bump tự nuốt lỗi → sidecar hỏng không bao giờ làm gãy việc nạp skill.
         await asyncio.to_thread(skill_usage.bump, vault_root, f.parent.name)
+        try:   # 26.10.308: tự học từ trò chuyện nhớ lượt chat này đã dùng skill nào (không bao giờ làm gãy việc nạp)
+            import hoc_tu_chat
+            await asyncio.to_thread(hoc_tu_chat.ghi_dung_skill_hub, vault_root, f.parent.name)
+        except Exception:
+            pass
         return text
 
     add("javis_read_file", "Đọc 1 file trong vault (Second Brain). path tương đối so với gốc vault; "

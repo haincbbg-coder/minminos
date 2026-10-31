@@ -27,7 +27,8 @@ check("nhan: 4 ký tự cuối", bk.nhan("sk-ABCD1234") == "…1234")
 # xoay vòng đều
 bk.xoa_trang_thai()
 thu = [bk.chon("openrouter", ks, now=100.0) for _ in range(4)]
-check("chon: xoay vòng A B C A", thu == ["sk-A", "sk-B", "sk-C", "sk-A"], thu)
+# 26.10.309: dùng theo THỨ TỰ - khoá 1 tới khi hết lượt mới sang khoá 2, không chia đều từng câu.
+check("chon: dùng khoá 1 khi nó còn lượt", thu == ["sk-A"] * 4, thu)
 
 # 429 -> nghỉ, chọn khoá khác
 bk.xoa_trang_thai()

@@ -396,9 +396,24 @@ def test_report_ngan_va_khong_lap_lai(tmp_path):
     assert "Tôi sẽ lần theo" not in msg
     # lý do chỉ xuất hiện đúng một lần
     assert msg.count("Cần anh chốt bonus") == 1
-    # Việc KẸT thì phải KÊU: đây là thứ cần người dùng ra tay, nên vẫn nổi chấm đỏ trên
-    # chuông và vẫn rung thông báo đẩy.
-    assert kw.get("quiet") is False, kw
+    # 26.10.312: việc dừng vì lý do kỹ thuật (không phải câu hỏi, không phải xin quyền) là việc
+    # MinMin tự lo, nên báo LẶNG. Việc chỉ bố gỡ được (xin quyền) thì vẫn KÊU, ở mức khẩn.
+    assert kw.get("quiet") is True, kw
+    sent.clear()
+    asyncio.run(
+        feature._report(
+            {
+                "title": "Đăng bài Facebook",
+                "status": "blocked",
+                "block_kind": "capability",
+                "block_reason": "Việc này cần thao tác THẬT ra ngoài.",
+                "chat_id": "1",
+            }
+        )
+    )
+    msg, kw = sent[0]
+    assert kw.get("quiet") is False and kw.get("level") == "urgent", kw
+    assert "Cho phép chạy thật" in msg
 
 
 def test_report_done_gui_du_ket_qua_va_kem_ban_ngan(tmp_path):
