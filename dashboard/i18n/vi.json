@@ -4319,6 +4319,8 @@
   "knn.mo_ta": "Mô tả",
   "knn.han_dung": "Hạn dùng",
   "knn.khach": "Khách",
+  "knn.app.financial_planning.ten": "Kế Hoạch tài chính",
+  "knn.app.financial_planning.mo_ta": "Lập kế hoạch bán hàng, cung ứng, P&L và dòng tiền 12 tháng. Hòa vốn, kịch bản, thực tế, khóa kỳ và báo cáo. Lưu trên máy chủ MinMin, có phiên bản và xuất bản sao.",
   "knn.app.business_finance.ten": "Bảng tính kinh doanh",
   "knn.app.business_finance.mo_ta": "Tính doanh thu, chi phí, lợi nhuận cho thương mại, sản xuất và dịch vụ. Dashboard, hòa vốn và độ nhạy. Dữ liệu chỉ lưu trên trình duyệt, chưa đồng bộ MinMin.",
   "gh.menu": "Repo GitHub",

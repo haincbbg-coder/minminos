@@ -1,5 +1,11 @@
 # MinMin OS
 
+## [26.10.317] - 2026-10-31
+### Thêm mới
+- **Kế Hoạch tài chính** tại Kết Nối Ngoài: kế hoạch bán/nhập hàng, P&L, hòa vốn, công nợ và dòng tiền 12 tháng liên thông.
+- So sánh kịch bản, đối soát lợi nhuận với tiền, nhập thực tế, khóa kỳ, lưu 30 phiên bản và xuất bản sao/báo cáo.
+- Bản xem trước: chưa đồng bộ dữ liệu sàn/Bảng tính kinh doanh; nhận xét theo quy tắc, chưa có AI offline. Giá trị nhập chưa gồm VAT, thuế là giả định do người dùng đặt.
+
 ## [26.10.306] - 2026-10-30
 ### Cải thiện
 - **Webhook bền hơn**: mỗi sự kiện Pancake, chuyển khoản gửi tới đều được lưu lại trước khi xử lý, máy khởi động lại cũng không mất, gửi trùng thì tự bỏ.

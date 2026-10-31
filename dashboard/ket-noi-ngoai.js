@@ -120,6 +120,7 @@
     xuong_video: ["knn.app.xuong_video.ten", "knn.app.xuong_video.mo_ta"],
     doi_social: ["knn.app.doi_social.ten", "knn.app.doi_social.mo_ta"],
     business_finance: ["knn.app.business_finance.ten", "knn.app.business_finance.mo_ta"],
+    financial_planning: ["knn.app.financial_planning.ten", "knn.app.financial_planning.mo_ta"],
     concat: ["knn.app.concat.ten", "knn.app.concat.mo_ta"],
     dieu_khien_may: ["knn.app.dieu_khien_may.ten", "knn.app.dieu_khien_may.mo_ta"],
   };

@@ -62,6 +62,8 @@ def trang_thai_dieu_khoan() -> dict:
 
 
 def register(app: FastAPI, dashboard_dir: Path) -> None:
+    from financial_planning import register as register_financial_planning
+    register_financial_planning(app, dashboard_dir, da_dong_y)
     van_ban = Path(dashboard_dir) / "legal" / "dieu-khoan-su-dung.md"
 
     @app.get("/ket-noi-ngoai")

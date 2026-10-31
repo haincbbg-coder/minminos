@@ -4319,6 +4319,8 @@
   "knn.mo_ta": "About",
   "knn.han_dung": "Valid until",
   "knn.khach": "Customer",
+  "knn.app.financial_planning.ten": "Financial Planning",
+  "knn.app.financial_planning.mo_ta": "Linked 12-month sales, procurement, P&L and cash planning. Break-even, scenarios, actuals, period locks and reports. MinMin server storage with versioned backups.",
   "knn.app.business_finance.ten": "Business Finance",
   "knn.app.business_finance.mo_ta": "Revenue, cost and profit planning for commerce, manufacturing and services. Dashboard, break-even and sensitivity. Browser-only storage; no MinMin data sync.",
   "gh.menu": "GitHub repo",

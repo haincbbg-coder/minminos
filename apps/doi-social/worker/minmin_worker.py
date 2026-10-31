@@ -36,7 +36,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PHIEN_BAN = "26.10.306"
+PHIEN_BAN = "26.10.317"
 THU_MUC = Path(__file__).resolve().parent
 CAU_HINH = THU_MUC / "worker.json"
 NHAT_KY = THU_MUC / "worker.log"
