@@ -79,6 +79,8 @@ UNG_DUNG = (
      "duong_dan": "/apps/concat/"},
     {"id": "business_finance", "icon": "calculator", "san_sang": True, "dieu_khoan_rieng": "",
      "duong_dan": "/apps/business-finance/#calculator"},
+    {"id": "financial_planning", "icon": "chart-no-axes-combined", "san_sang": True, "dieu_khoan_rieng": "",
+     "duong_dan": "/apps/financial-planning/"},
     {"id": "dieu_khien_may", "icon": "hand", "san_sang": False, "dieu_khoan_rieng": "dieu_khien"},
 )
 ID_UNG_DUNG = tuple(u["id"] for u in UNG_DUNG)

@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict');
+const E=require('../../apps/financial-planning/web/engine.js');
+const p=E.blank();p.openingCash=1000;p.openingAR=100;p.openingAP=50;p.collectionLag=1;p.paymentLag=1;
+p.products=[{id:'A',name:'A',price:100,cost:40,opening:5,safety:2,lot:5,moq:5,lead:1,units:Array(12).fill(10)}];
+p.months.forEach(m=>Object.assign(m,{fixed:100,variableRate:10,depreciation:20,interest:10,capex:30,principal:40,financing:50}));
+const r=E.calculate(p),a=r.rows[0];
+assert.equal(a.revenue,1000);assert.equal(a.cogs,400);assert.equal(a.purchases,400);assert.equal(a.supply[0].closing,5);
+assert.equal(a.profit,370);assert.equal(a.receipts,100);assert.equal(a.supplierPaid,50);assert.equal(a.cash,820);
+assert.equal(a.ar,1000);assert.equal(a.ap,400);assert.equal(a.breakEven,260);
+// Opening receivables/payables collected exactly once; last-month invoices stay outstanding.
+assert.equal(r.rows.at(-1).ar,1000);assert.equal(r.rows.at(-1).ap,400);
+assert.equal(r.rows.reduce((s,x)=>s+x.receipts,0)+r.rows.at(-1).ar,p.openingAR+r.revenue);
+assert.equal(r.rows.reduce((s,x)=>s+x.supplierPaid,0)+r.rows.at(-1).ap,p.openingAP+r.rows.reduce((s,x)=>s+x.purchases,0));
+assert.equal(a.revenueVariance,null);p.months[0].actualRevenue=0;assert.equal(E.calculate(p).rows[0].revenueVariance,-1000);
+// Cash vs earnings bridge: NI + D&A - delta working capital - CAPEX - principal + financing.
+const openingWC=p.openingAR+p.products[0].opening*40-p.openingAP;
+assert.equal(a.cash-p.openingCash,a.profit+20-(a.workingCapital-openingWC)-30-40+50);
+const immediate=E.copy(p);immediate.collectionLag=0;immediate.paymentLag=0;
+assert.equal(E.calculate(immediate).rows[0].receipts,1100);assert.equal(E.calculate(immediate).rows[0].supplierPaid,450);
+const z=E.blank();assert.equal(E.calculate(z).netMargin,null);assert.equal(E.calculate(z).rows[0].breakEven,null);
+z.products=E.copy(p.products);z.products[0].price=20;assert.equal(E.calculate(z).rows[0].breakEven,null);
+const zero=E.calculate(p,{volume:-100});assert.equal(zero.revenue,0);assert.equal(zero.rows[0].purchases,0);
+assert.notEqual(E.calculate(p,{volume:100}).rows[0].purchases,a.purchases);assert.equal(p.products[0].units[0],10);
+assert.deepEqual(E.forecast([100,120,110]),Array(12).fill(110));assert.equal(E.accuracy([0],[0]).wape,null);
+assert.throws(()=>E.validate({...p,taxRate:NaN}));assert.throws(()=>E.validate({...p,collectionLag:1.5}));
+console.log('OK financial planning: cash/earnings bridge, lag schedules, inventory, MOQ, zero denominators, actual blanks, shocks, validation');
