@@ -105,14 +105,130 @@ def register(app, dashboard_dir, terms_check):
             return JSONResponse({"error": "Kế Hoạch tài chính chưa được mở khóa tại Kết Nối Ngoài."}, status_code=403)
         if not terms_check("chung"):
             return JSONResponse({"error": "Cần đồng ý điều khoản MinMin."}, status_code=403)
+    import financial_workspaces as store
     def db():
-        path = Path(giay_phep.STATE_DIR) / "financial-planning"
-        path.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(path / "plans.sqlite3", timeout=15)
-        conn.execute("CREATE TABLE IF NOT EXISTS versions (revision INTEGER PRIMARY KEY, saved_at TEXT NOT NULL, plan TEXT NOT NULL)")
-        return conn
+        return store.connect()
+    def missing(conn, key):
+        return conn.execute('SELECT 1 FROM workspaces WHERE id=?', (key,)).fetchone() is None
     def snapshot(row):
         return {"revision": row[0], "savedAt": row[1], "plan": json.loads(row[2])} if row else {"revision": 0, "plan": None}
+
+    async def read_json(request):
+        raw = bytearray()
+        async for chunk in request.stream():
+            raw.extend(chunk)
+            if len(raw) > 2_000_000:
+                raise ValueError('Hồ sơ tối đa 2 MB.')
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            raise ValueError('Dữ liệu không hợp lệ.')
+        return data
+
+    @app.get('/api/financial-planning/workspaces')
+    def financial_workspaces_list():
+        denied = guard()
+        if denied is not None:
+            return denied
+        conn = db()
+        try:
+            return {'workspaces': [store.workspace(conn, row[0]) for row in conn.execute('SELECT id FROM workspaces ORDER BY rowid')]}
+        finally:
+            conn.close()
+
+    @app.post('/api/financial-planning/workspaces')
+    async def financial_workspace_create(request: Request):
+        denied = guard()
+        if denied is not None:
+            return denied
+        conn = db()
+        try:
+            data = await read_json(request)
+            plan = data.get('plan')
+            if data.get('copyFrom'):
+                plan = store.latest(conn, data['copyFrom'])['plan']
+            if plan is not None:
+                plan = json.loads(json.dumps(plan))
+                plan['name'] = data.get('name', plan.get('name', ''))
+                plan['status'] = 'draft'
+                for m in plan.get('months', []):
+                    m['locked'] = False
+                validate(plan)
+            return {'workspace': store.create(conn, data, plan)}
+        except (ValueError, TypeError, KeyError):
+            return JSONResponse({'error': 'Tên, nguồn hoặc nội dung phương án không hợp lệ.'}, status_code=400)
+        finally:
+            conn.close()
+
+    @app.put('/api/financial-planning/workspaces/{key}')
+    async def financial_workspace_settings(key: str, request: Request):
+        denied = guard()
+        if denied is not None:
+            return denied
+        conn = db()
+        try:
+            data = await read_json(request)
+            s = store.settings(data)
+            conn.execute('BEGIN IMMEDIATE')
+            old = store.workspace(conn, key)
+            if data.get('configRevision') != old['configRevision']:
+                return JSONResponse({'error': 'Cấu hình đã đổi ở cửa sổ khác. Hãy tải lại.'}, status_code=409)
+            conn.execute('UPDATE workspaces SET settings=?, config_revision=config_revision+1 WHERE id=?', (json.dumps(s, ensure_ascii=False), key))
+            conn.commit()
+            return {'workspace': store.workspace(conn, key)}
+        except (ValueError, TypeError, KeyError):
+            return JSONResponse({'error': 'Phương án hoặc cấu hình không hợp lệ.'}, status_code=400)
+        finally:
+            conn.close()
+
+    @app.get('/api/financial-planning/pos/sources')
+    def financial_pos_sources():
+        denied = guard()
+        if denied is not None:
+            return denied
+        import financial_pos
+        return {'sources': financial_pos.sources()}
+
+    @app.get('/api/financial-planning/pos/capabilities')
+    async def financial_pos_capabilities(connection: str):
+        denied = guard()
+        if denied is not None:
+            return denied
+        import financial_pos
+        try:
+            specs, _ = await financial_pos.selected(connection)
+            return {'tools': [{'name': s['name'], 'schema': s['schema']} for s in specs if s['name'].startswith('pos_')]}
+        except ValueError as e:
+            return JSONResponse({'error': str(e)}, status_code=400)
+
+    @app.get('/api/financial-planning/pos/shops')
+    async def financial_pos_shops(connection: str):
+        denied = guard()
+        if denied is not None:
+            return denied
+        import financial_pos
+        try:
+            return {'shops': await financial_pos.shops(connection)}
+        except ValueError as e:
+            return JSONResponse({'error': str(e)}, status_code=400)
+
+    @app.post('/api/financial-planning/pos/preview')
+    async def financial_pos_preview(request: Request, workspace: str = 'default'):
+        denied = guard()
+        if denied is not None:
+            return denied
+        import financial_pos
+        conn = db()
+        try:
+            data = await read_json(request)
+            w = store.workspace(conn, workspace)
+            if w['mode'] != 'pos' or not w['connectionId'] or not w['shopId']:
+                raise ValueError('Lưu cấu hình phương án POS với đúng kết nối và cửa hàng trước.')
+            result = await financial_pos.preview(w['connectionId'], w['shopId'], data.get('page', 1))
+            return dict(result, workspace=workspace, configRevision=w['configRevision'])
+        except (ValueError, KeyError) as e:
+            return JSONResponse({'error': str(e)}, status_code=400)
+        finally:
+            conn.close()
 
     @app.get("/apps/financial-planning")
     def financial_planning_redirect():
@@ -130,23 +246,25 @@ def register(app, dashboard_dir, terms_check):
         denied = guard()
         if denied is not None:
             return denied
-        if name not in {"index.html", "style.css", "engine.js", "app.js"} or not (directory / name).is_file():
+        if name not in {"index.html", "style.css", "engine.js", "app.js", "simulator.js", "workspaces.js", "planning-extra.css"} or not (directory / name).is_file():
             return JSONResponse({"error": "Không có tệp này."}, status_code=404)
         return FileResponse(directory / name, headers={"Cache-Control": "no-cache"})
 
     @app.get("/api/financial-planning")
-    def financial_planning_get():
+    def financial_planning_get(workspace: str = "default"):
         denied = guard()
         if denied is not None:
             return denied
         conn = db()
         try:
-            return snapshot(conn.execute("SELECT * FROM versions ORDER BY revision DESC LIMIT 1").fetchone())
+            if missing(conn, workspace):
+                return JSONResponse({"error": "Không có phương án này."}, status_code=404)
+            return store.latest(conn, workspace)
         finally:
             conn.close()
 
     @app.put("/api/financial-planning")
-    async def financial_planning_put(request: Request):
+    async def financial_planning_put(request: Request, workspace: str = "default"):
         denied = guard()
         if denied is not None:
             return denied
@@ -166,7 +284,11 @@ def register(app, dashboard_dir, terms_check):
         conn = db()
         try:
             conn.execute("BEGIN IMMEDIATE")
-            old = snapshot(conn.execute("SELECT * FROM versions ORDER BY revision DESC LIMIT 1").fetchone())
+            if missing(conn, workspace):
+                return JSONResponse({"error": "Không có phương án này."}, status_code=404)
+            old = store.latest(conn, workspace)
+            if 'workspaceRevision' in data and data['workspaceRevision'] != store.workspace(conn, workspace)['configRevision']:
+                return JSONResponse({'error': 'Cấu hình nguồn đã đổi. Tải lại phương án trước khi lưu.'}, status_code=409)
             if old["revision"] != data["revision"]:
                 return JSONResponse({"error": "Có phiên bản mới trên máy chủ. Xuất bản sao thay đổi trước khi tải lại trang."}, status_code=409)
             if old["plan"]:
@@ -175,8 +297,8 @@ def register(app, dashboard_dir, terms_check):
                 raise ValueError("Cần trình duyệt trước khi duyệt.")
             revision = old["revision"] + 1
             saved = datetime.now(timezone.utc).isoformat()
-            conn.execute("INSERT INTO versions VALUES (?,?,?)", (revision, saved, json.dumps(plan, ensure_ascii=False, allow_nan=False)))
-            conn.execute("DELETE FROM versions WHERE revision <= ?", (revision - 30,))
+            conn.execute("INSERT INTO workspace_versions VALUES (?,?,?,?)", (workspace, revision, saved, json.dumps(plan, ensure_ascii=False, allow_nan=False)))
+            conn.execute("DELETE FROM workspace_versions WHERE workspace=? AND revision <= ?", (workspace, revision - 30))
             conn.commit()
             return {"revision": revision, "savedAt": saved}
         except ValueError as e:
@@ -185,24 +307,26 @@ def register(app, dashboard_dir, terms_check):
             conn.close()
 
     @app.get("/api/financial-planning/history")
-    def financial_planning_history():
+    def financial_planning_history(workspace: str = "default"):
         denied = guard()
         if denied is not None:
             return denied
         conn = db()
         try:
-            return {"versions": [{"revision": r[0], "savedAt": r[1]} for r in conn.execute("SELECT revision,saved_at FROM versions ORDER BY revision DESC")]}
+            if missing(conn, workspace):
+                return JSONResponse({"error": "Không có phương án này."}, status_code=404)
+            return {"versions": [{"revision": r[0], "savedAt": r[1]} for r in conn.execute("SELECT revision,saved_at FROM workspace_versions WHERE workspace=? ORDER BY revision DESC", (workspace,))]}
         finally:
             conn.close()
 
     @app.get("/api/financial-planning/history/{revision}")
-    def financial_planning_version(revision: int):
+    def financial_planning_version(revision: int, workspace: str = "default"):
         denied = guard()
         if denied is not None:
             return denied
         conn = db()
         try:
-            row = conn.execute("SELECT * FROM versions WHERE revision=?", (revision,)).fetchone()
+            row = conn.execute("SELECT revision,saved_at,plan FROM workspace_versions WHERE workspace=? AND revision=?", (workspace,revision)).fetchone()
             return snapshot(row) if row else JSONResponse({"error": "Không còn phiên bản này."}, status_code=404)
         finally:
             conn.close()

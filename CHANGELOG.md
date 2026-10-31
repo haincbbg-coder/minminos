@@ -1,5 +1,10 @@
 # MinMin OS
 
+## [26.10.321] - 2026-10-31
+### Thêm mới
+- Mô phỏng kế hoạch bằng thanh kéo, xem biểu đồ và số liệu liên thông khi các giả định thay đổi.
+- Quản lý nhiều phương án theo cửa hàng/công ty, chọn nhập tay hoặc lấy dữ liệu POS có xem trước trước khi áp dụng.
+
 ## [26.10.320] - 2026-10-31
 ### Cải thiện
 - **Tinh gọn đợt 4**: danh sách Agent thành dòng gọn có icon, tên, vai trò, model; xem được 2 đến 3 agent mỗi hàng.

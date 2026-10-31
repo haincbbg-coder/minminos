@@ -24,3 +24,10 @@ assert.notEqual(E.calculate(p,{volume:100}).rows[0].purchases,a.purchases);asser
 assert.deepEqual(E.forecast([100,120,110]),Array(12).fill(110));assert.equal(E.accuracy([0],[0]).wape,null);
 assert.throws(()=>E.validate({...p,taxRate:NaN}));assert.throws(()=>E.validate({...p,collectionLag:1.5}));
 console.log('OK financial planning: cash/earnings bridge, lag schedules, inventory, MOQ, zero denominators, actual blanks, shocks, validation');
+const before=JSON.stringify(p),shock={price:10,volume:-20,cost:15,fixed:20,collectionLag:3};
+const simulated=E.calculate(p,shock),applied=E.calculate(E.scenario(p,shock));
+assert.equal(simulated.revenue,applied.revenue);assert.equal(simulated.profit,applied.profit);assert.equal(simulated.cash,applied.cash);
+assert.equal(JSON.stringify(p),before);assert.equal(simulated.rows[0].receipts,p.openingAR);
+assert.ok(simulated.rows.every(r=>Math.abs(r.cashBridgeDifference)<1e-6));
+assert.throws(()=>E.calculate(p,{collectionLag:1.5}));assert.throws(()=>E.calculate(p,{fixed:-101}));
+console.log('OK simulator: all sliders use the same engine, delayed receipts, unchanged baseline and cash bridge');
