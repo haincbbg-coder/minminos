@@ -59,6 +59,35 @@ def tim_nut(pham_vi, nhan: List[str], timeout_ms: int = 8000, chinh_xac: bool = 
     return dau_tien_thay(cands, timeout_ms)
 
 
+def nut_kem_so(pham_vi, nhan: List[str], timeout_ms: int = 3000):
+    """Nút mà Facebook gắn thêm số đếm vào nhãn, vd trình xem thước phim (reel): 'Thích, 116 reactions',
+    'Chia sẻ, 0 lượt chia sẻ'. Trình xem có nhiều reel xếp chồng nên chọn nút nằm trong khung nhìn, gần giữa nhất
+    (đúng reel đang phát), không lấy nút của reel kế tiếp."""
+    rx = re.compile(r"^\s*(" + "|".join(re.escape(n) for n in nhan) + r")\s*,", re.I)
+    loc = pham_vi.get_by_role("button", name=rx)
+    han = time.monotonic() + ms(timeout_ms) / 1000
+    while True:
+        try:
+            trang = loc.page if hasattr(loc, "page") else None
+            cao = ((trang.viewport_size or {}).get("height") if trang else None) or 900
+            tot, kc = None, None
+            for i in range(min(loc.count(), 8)):
+                n = loc.nth(i)
+                if not n.is_visible():
+                    continue
+                b = n.bounding_box() or {}
+                y = b.get("y", -1) + b.get("height", 0) / 2
+                if 0 <= y <= cao and (kc is None or abs(y - cao / 2) < kc):
+                    tot, kc = n, abs(y - cao / 2)
+            if tot is not None:
+                return tot
+        except Exception:
+            pass
+        if time.monotonic() >= han:
+            return None
+        time.sleep(0.3)
+
+
 def bam_cong_khai(nc, loc, mo_ta: str, hanh_dong: str = "") -> bool:
     """Bấm một nút làm thay đổi thứ người khác thấy. Chạy thử → không bấm, trả False."""
     if not nc.duoc_bam_cong_khai(mo_ta, hanh_dong):
@@ -312,7 +341,7 @@ def tha_cam_xuc(nc, pham_vi, cam_xuc: str = "thich") -> str:
         cam_xuc = nc.rng.choice(["thich", "thich", "yeu_thich", "yeu_thich", "thuong_thuong", "haha", "wow"])
     if da_tha_cam_xuc(pham_vi):
         return "da_co"
-    nut = tim_nut(pham_vi, _THICH_CHUA, 6000)
+    nut = tim_nut(pham_vi, _THICH_CHUA, 6000) or nut_kem_so(pham_vi, _THICH_CHUA)
     if not nut:
         chan_doan_nut(nc, pham_vi, "Thích")
         return "khong_thay"
@@ -436,7 +465,7 @@ _DA_CHIA_SE = re.compile(r"(Đã chia sẻ|đã được chia sẻ|Shared to you
 
 def chia_se(nc, pham_vi) -> str:
     """Chia sẻ bài lên tường (Chia sẻ ngay). Trả 'thanh_cong' | 'chay_thu' | 'khong_thay' | 'khong_chac'."""
-    nut = tim_nut(pham_vi, _NUT_CHIA_SE, 6000)
+    nut = tim_nut(pham_vi, _NUT_CHIA_SE, 6000) or nut_kem_so(pham_vi, ["Chia sẻ", "Share"])
     if not nut:
         chan_doan_nut(nc, pham_vi, "Chia sẻ")
         return "khong_thay"
