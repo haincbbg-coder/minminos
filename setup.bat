@@ -47,7 +47,7 @@ if errorlevel 1 (
 REM ---- BON bo nao CLI chay bang GOI DANG DANG NHAP (khong can mua API key) ----
 REM Bon engine nay can binary tren may moi hien o trang Models, va trong app KHONG cai ho duoc.
 REM Hai cai dau cai bang npm, hai cai sau bang script cua nha cung cap.
-REM BEST-EFFORT het: chua co Node thi bo qua hai cai dau, Javis van chay bang engine dung API key.
+REM BEST-EFFORT het: chua co Node thi bo qua hai cai dau, MinMin van chay bang engine dung API key.
 echo [3/4] Kiem tra cac bo nao CLI...
 where npm >nul 2>&1
 if errorlevel 1 (
@@ -121,6 +121,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "try { irm %3 -UseBasicPa
 if errorlevel 1 (
   echo       [!] Chua cai duoc. Cai tay: irm %3 ^| iex
 ) else (
-  echo       Da chay script cai. Neu trang Models van bao chua cai thi khoi dong lai Javis.
+  echo       Da chay script cai. Neu trang Models van bao chua cai thi khoi dong lai MinMin.
 )
 goto :eof

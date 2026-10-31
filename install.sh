@@ -150,7 +150,7 @@ ok "Claude CLI $(claude --version 2>/dev/null || echo installed)"
 
 # --- 4b. Codex CLI (gói ChatGPT) ---
 #
-# BEST-EFFORT, cố ý khác Claude ở trên: thiếu Claude thì Javis không còn bộ não mặc định nào
+# BEST-EFFORT, cố ý khác Claude ở trên: thiếu Claude thì MinMin không còn bộ não mặc định nào
 # để chạy, còn thiếu cái này chỉ mất đúng một engine. Nên lỗi ở đây chỉ cảnh báo chứ không cho
 # `set -e` giết cả lần cài.
 #
@@ -173,13 +173,13 @@ cai_them_cli @openai/codex@latest codex "Codex CLI"
 # --- 4c. agy (Antigravity CLI, đường Google) + grok (Grok Build, đường xAI) ---
 #
 # Hai engine này KHÔNG cài bằng npm: mỗi nhà một script tải về chạy thẳng. Trước 0.59.13 cài
-# xong Javis là người dùng còn phải tự mở terminal gõ hai dòng của hai nhà khác nhau, và chủ
+# xong MinMin là người dùng còn phải tự mở terminal gõ hai dòng của hai nhà khác nhau, và chủ
 # dự án báo đúng chỗ đó làm người không quen kỹ thuật tắc ở màn Models với hai thẻ "CLI chưa
 # cài" (16/09). Nay cài luôn một lượt.
 #
 # BEST-EFFORT tuyệt đối: chạy script của nhà thứ ba nên hỏng là chuyện bình thường (mạng, máy
 # lạ, nhà cung cấp đổi URL) - hỏng thì nói một dòng rồi đi tiếp, không được giết lần cài.
-# ĐĂNG NHẬP thì vẫn là việc của người dùng, làm ở trang Models sau khi Javis chạy.
+# ĐĂNG NHẬP thì vẫn là việc của người dùng, làm ở trang Models sau khi MinMin chạy.
 cai_cli_script() {   # <tên binary> <tên hiển thị> <URL script cài>
   if command -v "$1" >/dev/null 2>&1; then ok "$2 da co san"; return 0; fi
   log "Installing $2 (best-effort, script cua nha cung cap)..."
@@ -222,7 +222,7 @@ grep -q '^JAVIS_HOST=' .env || echo "JAVIS_HOST=127.0.0.1" >> .env
 
 # --- 7b. Tài khoản quản trị: ĐẶT SẴN ngay lúc cài ---
 #
-# Trước đây bước này không tồn tại, nên ai mở Javis ra công khai đều đụng "MÃ THIẾT LẬP":
+# Trước đây bước này không tồn tại, nên ai mở MinMin ra công khai đều đụng "MÃ THIẾT LẬP":
 # server in một chuỗi ngẫu nhiên vào log lúc khởi động, và người dùng phải SSH vào VPS đọc log
 # rồi dán vào trình duyệt mới tạo được tài khoản. Cái mã đó có lý do tồn tại - nó chặn người
 # lạ chỉ-có-URL chiếm quyền admin lần đầu - nhưng bắt người ta đi đọc log là một trải nghiệm
@@ -271,7 +271,7 @@ else
   ADMIN_PW=""
   if [ -t 0 ]; then
     echo ""
-    log "Tài khoản quản trị của Javis (Claude chạy full quyền nên bắt buộc có):"
+    log "Tài khoản quản trị của MinMin (Claude chạy full quyền nên bắt buộc có):"
     read -rp "  Tên đăng nhập [admin]: " AU || true
     [ -n "${AU:-}" ] && ADMIN_USER="$AU"
     while :; do
