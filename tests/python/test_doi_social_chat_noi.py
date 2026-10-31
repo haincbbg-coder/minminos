@@ -41,8 +41,23 @@ except Exception as e:      # noqa: BLE001
     print("SKIP không có playwright", e)
     raise SystemExit(0)
 
+from pathlib import Path  # noqa: E402
+
+
+def _mo_trinh(pw):
+    try:
+        return pw.chromium.launch(headless=True)
+    except Exception:
+        goc = Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"])
+        exe = sorted(goc.glob("chromium-*/chrome-linux*/chrome"))
+        return pw.chromium.launch(headless=True, executable_path=str(exe[-1])) if exe else None
+
+
 with sync_playwright() as p:
-    b = p.chromium.launch()
+    b = _mo_trinh(p)
+    if b is None:
+        print("SKIP không có Chromium trên máy này")
+        raise SystemExit(0)
     page = b.new_page()
     page.set_content(HTML)
     check("ten_trang bỏ 'Đoạn chat', lấy h1 vùng chính", f.ten_trang(page) == "Hội Váy Đẹp Hà Nội", f.ten_trang(page))
