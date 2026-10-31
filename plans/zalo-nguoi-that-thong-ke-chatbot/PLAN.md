@@ -58,3 +58,16 @@ Branch: feature/zalo-nguoi-that-thong-ke-chatbot
 
 ## Thiết kế UI (tính năng B)
 Trang Thống kê chatbot bám design-system MinMin (phương án "Nổi mềm tinh gọn", chỉ --mm-*), mô phỏng bố cục trang Thống kê/Mức dùng hiện có: khối lợi ích đầu trang + các ô số + 1-2 biểu đồ. Con làm mockup cho bố xem ở đầu Phase 02 nếu bố muốn chọn bố cục trước.
+
+## Kết quả Phase 02 - Trang UI (ĐÃ NGHIỆM THU ✅)
+- Phát hiện MinMin ĐÃ có tab Thống kê chatbot (dashboard/inbox-stats.js, v5). Không làm trang mới mà THÊM khối "Lợi ích A.I." lên đầu tab đó, tái dùng class st-tile/st-panel + hàm barsHtml (bám design-system, 0 CSS mới).
+- Khối lợi ích ăn GET /api/chatbot/stats (API Phase 01), dùng chung bộ chọn kỳ sẵn có: % AI lo, giờ rảnh ước tính, tin trả lúc 21h-7h, khách phục vụ (+ mới), tốc độ trả lời đầu (AI vs tay), top giờ khách nhắn nhiều - đều so kỳ trước. Lỗi API chỉ ẩn khối này, không hỏng phần cũ.
+- Thêm 13 key i18n vào CẢ vi.json + en.json. Bump inbox-stats.js ?v=2 -> v=3.
+- Kiểm: JSON hợp lệ, cú pháp JS, test_i18n xanh, test_inbox_tabs xanh, unit test beneHtml (dữ liệu giả) ra đúng mọi số.
+
+## 🚧 GATE - bố test tay (khi bố rảnh)
+Mọi phase xong trên nhánh feature/, đã push. CHƯA merge, CHƯA đụng VPS. Bố test:
+1. Mở Chatbot -> tab Thống kê: thấy khối "Lợi ích A.I." ở đầu (giờ rảnh, % AI lo, khách phục vụ, tốc độ, giờ bận). Đổi kỳ -> số đổi theo.
+2. (Zalo chữ màu) Bảo một bot Zalo cá nhân trả lời khách một câu có `{red:Giảm 50%}` hoặc `**đậm**` -> khách thấy đúng màu/đậm, KHÔNG thấy dấu.
+3. Xác nhận nhận tin Zalo vẫn bình thường (không nâng gói nên không ảnh hưởng).
+Bố "ok" thì con làm phase cuối: bump VERSION + CHANGELOG, mở PR, rồi bố cho phép mới deploy lên VPS.

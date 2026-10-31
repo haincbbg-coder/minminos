@@ -10,7 +10,7 @@
 (function () {
   "use strict";
 
-  var C = null, _body = null, _data = null, _err = "";
+  var C = null, _body = null, _data = null, _err = "", _bene = null, _beneErr = "";
   // The period: a quick range ({preset}) or days picked on the calendar ({from, to}), date-range.js. Remembered in this
   // browser so the tab opens on the period the owner last looked at.
   var KEY = "javis.stats.range", _range = { preset: "d7" };
@@ -66,6 +66,43 @@
     }).join("") : '<p class="ib-hint">' + esc(empty) + '</p>') + '</section>';
   }
 
+  // Khối "Lợi ích A.I." (học từ Javis 0.399): A.I. đỡ cho bạn được gì. Ăn JSON của
+  // GET /api/chatbot/stats (chatbot_stats.py): current / previous / delta. Tái dùng st-tile và
+  // barsHtml cho đúng design-system, không thêm class/CSS mới.
+  function beneHtml(bene) {
+    if (!bene || !bene.current) return "";
+    var c = bene.current, p = bene.previous || {}, I = C.ic || noIcon;
+    var fr = c.first_response_sec || {};
+    var tiles = [
+      ["bar-chart", "ib.be_pct", (c.ai_reply_pct == null ? "-" : c.ai_reply_pct + "%"),
+       delta(c.ai_reply_pct, p.ai_reply_pct, false), ""],
+      ["clock", "ib.be_free", t("ib.st_hour", { n: c.ai_free_hours || 0 }),
+       delta(c.ai_free_hours, p.ai_free_hours, false), ""],
+      ["moon", "ib.be_night", String(c.ai_night_reply_count || 0),
+       delta(c.ai_night_reply_count, p.ai_night_reply_count, false), ""],
+      ["users", "ib.be_served", String(c.customers_served || 0),
+       { text: c.new_customers ? t("ib.be_new", { n: c.new_customers }) : "", good: null }, ""],
+    ];
+    var tilesH = tiles.map(function (x) {
+      var cls = x[3].good === true ? " up" : x[3].good === false ? " down" : "";
+      return '<div class="st-tile"><span class="st-k">' + I(x[0]) + ' ' + esc(t(x[1])) + '</span>' +
+        '<span class="st-v">' + esc(x[2]) + '</span>' +
+        (x[3].text ? '<span class="st-d' + cls + '">' + esc(x[3].text) + '</span>' : "") + '</div>';
+    }).join("");
+    // Tốc độ trả lời đầu: A.I. vs tay (trung vị).
+    var speed = t("ib.be_speed") + ": " +
+      t("ib.be_speed_ai", { t: fr.ai_median == null ? "-" : fmtWait(fr.ai_median) }) + " · " +
+      t("ib.be_speed_you", { t: fr.owner_median == null ? "-" : fmtWait(fr.owner_median) });
+    // Giờ khách nhắn nhiều: top 5 giờ, tái dùng barsHtml.
+    var hrs = (c.customer_msgs_by_hour || []).map(function (v, h) { return { label: t("ib.be_peak_h", { h: h }), value: v || 0 }; })
+      .filter(function (r) { return r.value > 0; }).sort(function (a, b) { return b.value - a.value; }).slice(0, 5);
+    return '<section class="st-panel"><h3>' + esc(t("ib.be_title")) + '</h3>' +
+      '<div class="st-tiles">' + tilesH + '</div>' +
+      '<p class="ib-hint">' + esc(speed) + '</p>' +
+      (hrs.length ? barsHtml(t("ib.be_peak"), hrs, t("ib.be_empty")) : "") +
+      '<p class="ib-hint">' + esc(t("ib.be_note", { m: bene.mins_per_reply || 2 })) + '</p></section>';
+  }
+
   function render(body, ctx) {
     C = ctx; _body = body;
     body.innerHTML = '<div class="ib-v5 st-wrap"><div class="st-bar"><button type="button" class="st-range" aria-haspopup="dialog" aria-label="' +
@@ -96,6 +133,9 @@
     if (sd) sd.textContent = d && _range.preset ? DR.label({ from: d.from, to: d.to }) : "";
     try { _data = await C.api("/conversations/insights?" + (d ? "from=" + d.from + "&to=" + d.to : "days=7")); _err = ""; }
     catch (e) { _err = e.message; }
+    // Khối lợi ích dùng API riêng; lỗi thì chỉ ẩn khối đó, không làm hỏng phần ô/bar cũ.
+    try { _bene = await C.api("/api/chatbot/stats?" + (d ? "period=custom&from=" + d.from + "&to=" + d.to : "period=7d")); _beneErr = ""; }
+    catch (e) { _beneErr = e.message; _bene = null; }
     paint();
   }
 
@@ -112,10 +152,11 @@
     var bots = Object.keys(n.by_bot || {}).map(function (k) {
       return { label: (d.bot_names || {})[k] || k, value: n.by_bot[k], title: t("ib.st_bot_t", { n: n.by_bot[k], b: (b.by_bot || {})[k] || 0 }) };
     }).sort(function (x, y) { return y.value - x.value; });
-    box.innerHTML = '<div class="st-tiles">' + tilesHtml(d, C.ic) + '</div>' +
+    box.innerHTML = (_bene ? beneHtml(_bene) : "") +
+      '<div class="st-tiles">' + tilesHtml(d, C.ic) + '</div>' +
       '<div class="st-panels">' + barsHtml(t("ib.st_by_ch"), ch, t("ib.st_empty")) + barsHtml(t("ib.st_by_bot"), bots, t("ib.st_empty")) + '</div>' +
       '<p class="ib-hint">' + esc(t("ib.st_note")) + '</p>';
   }
 
-  window.JavisInboxStats = { render: render, tilesHtml: tilesHtml, barsHtml: barsHtml, fmtWait: fmtWait, delta: delta };
+  window.JavisInboxStats = { render: render, tilesHtml: tilesHtml, barsHtml: barsHtml, fmtWait: fmtWait, delta: delta, beneHtml: beneHtml };
 })();
