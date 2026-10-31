@@ -1,6 +1,6 @@
 # MinMin OS
 
-## [26.10.311] - 2026-10-30
+## [26.10.319] - 2026-10-31
 ### Sửa lỗi
 - **Chiến dịch AI kèm ảnh/video từ kho:** trước đây tệp bị chuyển khỏi kho sang nháp đầu tiên, nên đích thứ hai trở đi và các lượt sau hỏng ("Media không còn trong kho"). Giờ chỉ chép, kho giữ nguyên.
 - **Bảng CSV của các mẫu quét** chạy được bằng Chrome MinMin trên VPS (trước báo "Permission denied").
