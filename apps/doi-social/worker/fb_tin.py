@@ -6,7 +6,7 @@ import time
 import urllib.parse
 
 from fb_chung import (FB, chuan_link, dau_tien_thay, doc_bai, ds_binh_luan, mo_va_kiem, ms, pham_vi_bai,
-                      phai_dung, thay_chu, tra_loi_binh_luan)
+                      phai_dung, thay_chu, tim_nut, tra_loi_binh_luan)
 from ngu_canh import LoiKyNang
 from nguoi import chon_cau
 
@@ -120,15 +120,40 @@ _CHUA_DOC = re.compile(r"(chưa đọc|Unread|tin nhắn mới|new message)", re
 _NHOM_CHAT = re.compile(r"(\d+\s*(thành viên|members)|Thêm người|Add people|nhóm chat|group chat)", re.I)
 
 
-def _kiem_pin(nc) -> None:
+# Chỉ đóng hộp, KHÔNG bấm "Không khôi phục tin nhắn" (Facebook cảnh báo mất lịch sử chat).
+_BO_PIN = ["Đóng", "Close", "Bỏ qua", "Skip", "Để sau", "Not now", "Không phải bây giờ", "Lúc khác", "Maybe later"]
+
+
+def _co_pin(nc) -> bool:
     try:
-        if nc.page.get_by_text(_PIN).count():
-            raise LoiKyNang("Messenger đòi mã PIN tin nhắn mã hoá: Worker không đụng vào, mở profile nhập PIN bằng tay",
-                            ma="ma_pin")
-    except LoiKyNang:
-        raise
+        loc = nc.page.get_by_text(_PIN)
+        return loc.count() > 0 and loc.first.is_visible()
     except Exception:
-        pass
+        return False
+
+
+def _kiem_pin(nc) -> None:
+    """Messenger hiện hộp đòi mã PIN khôi phục tin nhắn mã hoá: Worker KHÔNG nhập PIN, chỉ đóng hộp/bỏ qua
+    rồi làm tiếp (tin nhắn mới vẫn gửi, đọc được). Không đóng được thì vẫn làm tiếp, chỉ ghi nhật ký."""
+    if not _co_pin(nc):
+        return
+    page = nc.page
+    for _ in range(3):
+        hop = page.get_by_role("dialog").filter(has_text=_PIN)
+        pham_vi = hop.first if hop.count() else page
+        nut = tim_nut(pham_vi, _BO_PIN, 1500) or tim_nut(pham_vi, ["Đóng", "Close"], 800, chinh_xac=False)
+        try:
+            if nut:
+                nc.tay.bam(nut)
+            else:
+                nc.tay.phim("Escape")
+        except Exception:
+            pass
+        nc.tay.nghi(0.8, 1.6)
+        if not _co_pin(nc):
+            nc.nhat_ky("Messenger đòi mã PIN: đã bỏ qua hộp PIN (không nhập mã), làm tiếp")
+            return
+    nc.nhat_ky("Messenger vẫn hiện yêu cầu mã PIN; không nhập mã, thử làm tiếp với tin nhắn mới")
 
 
 def o_tin_nhan(page, timeout_ms: int = 10000):

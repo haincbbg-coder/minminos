@@ -3,6 +3,7 @@
 ## [26.10.323] - 2026-10-31
 ### Sửa lỗi
 - **Đội Social, Facebook**: khung chat Messenger còn nổi từ lần nhắn tin trước làm Worker không thấy nút Thích, Chia sẻ trên bài và đọc nhầm tên nhóm thành "Đoạn chat". Worker giờ tự đóng khung chat khi mở trang và chỉ lấy tên trong vùng chính.
+- **Messenger đòi mã PIN**: Worker không dừng nữa, tự đóng hộp PIN (không nhập mã, không bấm "Không khôi phục") rồi trả lời tin nhắn tiếp.
 - **Tham gia nhóm theo sản phẩm**: khi không có nhóm nào để xin vào, báo rõ lý do (kho hết nhóm, tìm từ khoá thấy bao nhiêu, AI chọn bao nhiêu) thay vì chỉ "xem 0 nhóm".
 
 ## [26.10.321] - 2026-10-31
