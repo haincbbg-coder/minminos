@@ -1,6 +1,6 @@
 # MinMin OS
 
-## [26.10.307] - 2026-10-31
+## [26.10.317] - 2026-10-31
 ### Thêm mới
 - **Kế Hoạch tài chính** tại Kết Nối Ngoài: kế hoạch bán/nhập hàng, P&L, hòa vốn, công nợ và dòng tiền 12 tháng liên thông.
 - So sánh kịch bản, đối soát lợi nhuận với tiền, nhập thực tế, khóa kỳ, lưu 30 phiên bản và xuất bản sao/báo cáo.
