@@ -82,3 +82,30 @@ with patch('mcp_hub._guard',guarded):
 assert seen==[('readonly','suggest')]
 assert routes['p__pos_shop']['conn']['perm']=='full'
 print('OK POS bridge uses the existing hub read-only ceiling even for a full-permission connection')
+
+# Live POS exposes only the action enum initially; list is TAGS, not products.
+live_specs=[
+ {'name':'pos_describe','fn':'p__describe','schema':{}},
+ {'name':'pos_product','fn':'p__products','schema':{'properties':{'action':{'enum':['list','list_products_variations'],'description':'- list: Product tags'}}}}
+]
+live_routes={s['fn']:{'tool':s['name'],'conn':{'id':'c1','connector_id':'pancake-pos','perm':'full'}} for s in live_specs}
+live_calls=[]
+def live_guard(entry,fn,mode):
+    assert entry['conn']['perm']=='readonly' and mode=='suggest'
+    async def call(args):
+        live_calls.append((entry['tool'],args))
+        if entry['tool']=='pos_describe':
+            assert args=={'tool':'pos_product','action':'list_products_variations'}
+            return {'inputSchema':{'type':'object','properties':{'shop_id':{'type':'integer'},'page':{'type':'integer'},'page_size':{'type':'integer','maximum':100}},'required':['shop_id']}}
+        assert args=={'action':'list_products_variations','shop_id':123,'page':2,'page_size':50}
+        return {'data':[]}
+    return call
+with patch('mcp_hub._guard',live_guard):
+    assert asyncio.run(pos.read_tool(live_specs,live_routes,'pos_product','123',2))=={'data':[]}
+assert len(live_calls)==2
+flat=[{'id':'v1','product_id':'p1','product':{'name':'Áo'},'custom_id':'S-ĐỎ','retail_price':500000}]
+assert pos.normalize_products(flat,'c1','s1')[0][0]['id']==products[0]['id']
+assert pos.rows({'data':{'variations':flat}},'products')==flat
+assert pos.rows('Shop information\n```json\n{"shops":[{"id":123,"name":"Shop"}]}\n```','shops')==[{'id':123,'name':'Shop'}]
+assert pos.described_schema('Action input\n```json\n{"inputSchema":{"properties":{"shop_id":{"type":"integer"}}}}\n```')['properties']['shop_id']['type']=='integer'
+print('OK live POS contract expansion, product action rather than tags, pagination and flat variation identity')
