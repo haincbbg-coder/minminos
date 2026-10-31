@@ -1,5 +1,10 @@
 # MinMin OS
 
+## [26.10.320] - 2026-10-31
+### Cải thiện
+- **Tinh gọn đợt 4**: danh sách Agent thành dòng gọn có icon, tên, vai trò, model; xem được 2 đến 3 agent mỗi hàng.
+- Bấm **Chi tiết** để mở ngăn bên phải xem skill, nhóm và sửa, xuất, xoá. Trên điện thoại ngăn trượt lên từ dưới.
+
 ## [26.10.319] - 2026-10-31
 ### Sửa lỗi
 - **Chiến dịch AI kèm ảnh/video từ kho:** trước đây tệp bị chuyển khỏi kho sang nháp đầu tiên, nên đích thứ hai trở đi và các lượt sau hỏng ("Media không còn trong kho"). Giờ chỉ chép, kho giữ nguyên.
