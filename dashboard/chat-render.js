@@ -808,7 +808,20 @@
       return;
     }
     if (art.type === "svg") {
+      // 26.10.313: hien SVG bang <img> (trinh duyet KHONG chay script va khong tai gi ngoai trong
+      // anh SVG) de phong to / keo duoc. Khong co MinMinZoom thi giu khung cach ly nhu cu.
       elBody.innerHTML = "";
+      if (window.MinMinZoom) {
+        var hop = document.createElement("div");
+        hop.className = "jv-ap-zoom";
+        var anh = document.createElement("img");
+        anh.alt = "SVG";
+        anh.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(art.code);
+        hop.appendChild(anh);
+        elBody.appendChild(hop);
+        window.MinMinZoom.gan(hop, anh);
+        return;
+      }
       elBody.appendChild(frame("",   // sandbox rong = KHONG chay script trong svg
         '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;display:flex;' +
         "align-items:center;justify-content:center;background:#fff}svg{max-width:100%;max-height:100%}</style>" + art.code));
@@ -893,7 +906,12 @@
       }
       var id = "jvmm" + (++mmSeq);
       try {
-        window.mermaid.render(id, code).then(function (res) { host.innerHTML = res.svg; })
+        window.mermaid.render(id, code).then(function (res) {
+          host.innerHTML = res.svg;
+          // 26.10.313: so do rong phong to / keo duoc (chuot, hai ngon, nut + - Vua khung)
+          var svg = host.querySelector("svg");
+          if (svg && window.MinMinZoom) { host.classList.add("jv-ap-zoom"); window.MinMinZoom.gan(host, svg); }
+        })
           .catch(function () { host.innerHTML = '<div class="jv-ap-note">' + esc(tw("crender.mm_bad")) + '</div><pre class="code-block">' + esc(code) + "</pre>"; });
       } catch (e) {
         host.innerHTML = '<div class="jv-ap-note">' + esc(tw("crender.mm_bad")) + '</div><pre class="code-block">' + esc(code) + "</pre>";

@@ -134,7 +134,7 @@
       ".jvfe-prev table{border-collapse:collapse}.jvfe-prev th,.jvfe-prev td{border:1px solid var(--border);padding:5px 9px}" +
       ".jvfe-note{padding:18px;color:var(--text3);font-size:14px;line-height:1.6}" +
       ".jvfe-note a{color:var(--accent)}" +
-      ".jvfe-img{padding:16px;text-align:center;overflow:auto}" +
+      ".jvfe-img{padding:16px;text-align:center;overflow:auto;height:100%;min-height:240px;box-sizing:border-box}" +
       ".jvfe-img img{max-width:100%;height:auto;border-radius:8px}" +
       ".jvfe-frame{width:100%;height:72vh;border:0;background:#fff}";
     document.head.appendChild(s);
@@ -256,6 +256,9 @@
   function renderImage(b, ceil, brainRel) {
     elActions.appendChild(shareBtn(b, ceil)); elActions.appendChild(openLink(b, ceil)); elActions.appendChild(dlLink(b, ceil)); elActions.appendChild(closeBtn());
     elBody.innerHTML = '<div class="jvfe-img"><img src="' + esc(rawUrl(b, ceil)) + '" alt="' + esc(baseOf(brainRel)) + '"></div>';
+    // 26.10.313: lăn chuột / chụm hai ngón để phóng to, kéo để xem chỗ khác.
+    var khung = elBody.querySelector(".jvfe-img");
+    if (window.MinMinZoom && khung) window.MinMinZoom.gan(khung, khung.querySelector("img"));
   }
   function renderPdf(b, ceil, brainRel) {
     elActions.appendChild(openLink(b, ceil)); elActions.appendChild(dlLink(b, ceil)); elActions.appendChild(closeBtn());

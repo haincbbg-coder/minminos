@@ -4827,5 +4827,8 @@
   "mm.inbox.no_judgments": "Chưa có quyết định nào.",
   "mm.inbox.did_reply": "Đã trả lời",
   "mm.inbox.did_wait": "Đã chờ",
-  "net.reconnecting": "Đang kết nối lại máy chủ…"
+  "net.reconnecting": "Đang kết nối lại máy chủ…",
+  "zoom.in": "Phóng to",
+  "zoom.out": "Thu nhỏ",
+  "zoom.fit": "Vừa khung"
 }

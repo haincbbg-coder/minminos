@@ -622,6 +622,10 @@
   function nhip(now) {
     raf = 0;
     if (!el || el.hidden) return;
+    // 26.10.313: lúc nghỉ không cần 60 khung/giây. Không ai rê chuột và đang rảnh thì 30 khung,
+    // ngủ gật thì 15; mắt nhìn không khác, máy điện thoại đỡ nóng. Có động tĩnh là đủ 60 ngay.
+    var nhipNghi = nguGat ? 66 : ((state === "idle" && !vuiDen && now - chuotLuc > 1600) ? 33 : 0);
+    if (nhipNghi && truoc && now - truoc < nhipNghi - 4) { raf = requestAnimationFrame(nhip); return; }
     var dt = Math.min((now - (truoc || now)) / 1000, 0.05);
     truoc = now;
 

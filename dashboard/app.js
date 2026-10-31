@@ -2914,7 +2914,12 @@ function pumpAudioLevel() {
     if (turn.speaking && !voice.isSpeaking() && !voice.isPaused()) runActions(turn.ttsEnd());
     if (_cauChoLuot.length) guiCauChoLuot();   // 0.65.28: lưới cho câu chờ lượt khi sự kiện loa bị nuốt
   }
-  requestAnimationFrame(pumpAudioLevel);
+  // 26.10.313: lúc im hẳn (không giọng, không đọc, không chữ theo lời, tab ẩn) thì không cần chạy
+  // mỗi khung hình: ~6 nhịp/giây đủ cho nút dừng, đỡ việc cho điện thoại lúc để yên.
+  const _imHan = document.hidden || (!_theoLoi && !turn.speaking && !isProcessing && voice.getLevel() < 0.01
+    && !voice.isSpeaking());
+  if (_imHan) { _stopBtnTick = Math.ceil(_stopBtnTick / 10) * 10; setTimeout(pumpAudioLevel, 160); }
+  else requestAnimationFrame(pumpAudioLevel);
 }
 stopBtn.addEventListener("click", stopCurrent);
 
@@ -2999,9 +3004,16 @@ function initStarfield() {
   window.addEventListener("javis-theme-change", e => syncSky(!!(e && e.detail && e.detail.light)));
   syncSky(document.documentElement.getAttribute("data-theme") === "light");
 
+  // 26.10.313: nền sao bị trang khác che hoặc ẩn hẳn thì thôi vẽ (IntersectionObserver báo lúc nó
+  // không còn diện tích trên màn hình). Trình duyệt quá cũ không có IO thì vẽ như trước.
+  let _troiThay = true;
+  try {
+    new IntersectionObserver((es) => { _troiThay = es.some((e) => e.isIntersecting); }).observe(cv);
+  } catch (e) { _troiThay = true; }
+
   function draw(now) {
     requestAnimationFrame(draw);
-    if (document.hidden) return;
+    if (document.hidden || !_troiThay) return;
     // Nền 2D từng tự dựng gradient + grid ở 60 FPS dù não đứng yên. 15 FPS lúc nghỉ vẫn
     // đủ cho sao nhấp nháy chậm; khi có giọng/đang nghĩ nâng lên 30 FPS.
     const lvl = voice.getLevel();

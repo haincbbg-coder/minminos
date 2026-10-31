@@ -81,9 +81,10 @@
     bar.setAttribute("role", "status");
     bar.textContent = chu();
     bar.style.cssText = "position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);" +
-      "z-index:99998;padding:6px 14px;border-radius:999px;font:500 14px/1.4 system-ui,sans-serif;" +
-      "background:var(--mm-surface-2,#1f2430);color:var(--mm-text,#e8eaf0);" +
-      "border:1px solid var(--mm-border,#39405180);box-shadow:0 6px 20px rgba(0,0,0,.3);pointer-events:none";
+      "z-index:99998;padding:6px 14px;border-radius:var(--mm-r-pill,999px);" +
+      "font:500 var(--mm-fs-14,14px)/1.4 var(--mm-font,system-ui,sans-serif);" +
+      "background:var(--mm-panel,#1f2430);color:var(--mm-text,#e8eaf0);" +
+      "border:1px solid var(--mm-line,#39405180);box-shadow:var(--mm-out-sm,0 6px 20px rgba(0,0,0,.3));pointer-events:none";
     document.body.appendChild(bar);
   }
   function anDai() {
@@ -159,6 +160,18 @@
     }, function () { delete dangBay[khoa]; });
     return p.then(function (r) { return r.clone(); });
   };
+
+  /* Đăng ký service worker ở MỌI lần mở (không chỉ khi bật thông báo đẩy) để trang chờ "Đang kết nối
+   * lại máy chủ…" có mặt cả khi bố tải lại trang đúng lúc máy chủ đang khởi động lại. Cùng /sw.js và
+   * scope với push.js nên vẫn là một đăng ký. Chỉ có ở https/localhost (luật trình duyệt). */
+  function dangKyTrangCho() {
+    try {
+      if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () { /* noop */ });
+    } catch (e) { /* noop */ }
+  }
+  if (document.readyState === "complete") setTimeout(dangKyTrangCho, 3000);
+  else window.addEventListener && window.addEventListener("load", function () { setTimeout(dangKyTrangCho, 3000); });
 
   window.MinMinMang = { dem: dem, docBen: docBen };
 })();

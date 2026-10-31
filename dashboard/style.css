@@ -2327,6 +2327,9 @@ body.jv-artpanel-open { overflow: hidden; }
 .jv-ap-mermaid { min-height: 100%; display: flex; align-items: center; justify-content: center;
   padding: 16px; background: var(--bg); color: var(--text2); }
 .jv-ap-mermaid svg { max-width: 100%; height: auto; }
+/* 26.10.313: khung xem so do / SVG phong to - keo duoc (zoom-keo.js lo phan con lai) */
+.jv-ap-zoom { height: 100%; min-height: 240px; padding: 0; background: var(--mm-panel); }
+.jv-ap-mermaid.jv-ap-zoom { display: block; }
 /* MẶC ĐỊNH XUỐNG DÒNG. `overflow-wrap: anywhere` để một chuỗi dài không có dấu cách (URL,
    chuỗi base64, đường dẫn) cũng ngắt được - thiếu nó thì "xuống dòng" vẫn đẩy ngang một dòng
    duy nhất ra ngoài hộp. Không còn nút tắt (bỏ 0.64.79): chủ repo không hiểu nó để làm gì. */

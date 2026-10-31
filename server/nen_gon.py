@@ -83,17 +83,17 @@ def nen_js(src: str) -> str:
     def doc_template(k: int) -> tuple:
         """Từ dấu ` mở (hoặc `}` đóng một `${`) ở vị trí k: lấy trọn đoạn chữ tới ` đóng hoặc `${`.
         Trả (đoạn, vị trí kế, đoạn có mở `${` không)."""
-        j = k + 1
-        while j < n:
-            c = src[j]
+        m = k + 1
+        while m < n:
+            c = src[m]
             if c == "\\":
-                j += 2
+                m += 2
                 continue
             if c == "`":
-                return src[k:j + 1], j + 1, False
-            if c == "$" and j + 1 < n and src[j + 1] == "{":
-                return src[k:j + 2], j + 2, True
-            j += 1
+                return src[k:m + 1], m + 1, False
+            if c == "$" and m + 1 < n and src[m + 1] == "{":
+                return src[k:m + 2], m + 2, True
+            m += 1
         raise ValueError("template không đóng")
 
     def ghi_template(k: int) -> int:
