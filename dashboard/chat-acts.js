@@ -1,6 +1,6 @@
 /* chat-acts.js - hang nut duoi moi tin nhan trong khung chat Javis.
 
-   Moi bong bong co mot hang nho ben duoi. Tin cua NGUOI DUNG: gio gui, gui lai, sua lai,
+   Moi bong bong co mot hang nho ben duoi. Tin cua NGUOI DUNG: gio gui, tua lai,
    sao chep. Tin cua JAVIS: chi gio gui + sao chep. Hang nay AN san (opacity 0), chi hien khi
    hover tren may tinh hoac khi cham vao tin tren dien thoai (.acts-on).
 
@@ -64,10 +64,10 @@
   // (chu repo yeu cau 01/09): no nam ngay canh nut sao chep, ma sao chep la thao tac
   // hay dung nhat duoi mot cau tra loi - bam truot mot ly la Javis chay lai ca luot,
   // ton tien va de mat cau tra loi dang doc. Ai muon hoi lai thi go lai cau hoi, hoac
-  // bam "Gui lai cau nay" ngay tren bong bong cau hoi cua chinh minh - van con day.
+  // bam "Tua lai" ngay tren bong bong cau hoi cua chinh minh - van con day.
   //
   // canResend=false khi khong co CHU de gui lai (tin chi co anh, khong kem loi nhan).
-  // Khi do bo han nut gui lai + sua lai thay vi de nut bam vao khong ra gi. Bo trong
+  // Khi do bo han nut tua lai thay vi de nut bam vao khong ra gi. Bo trong
   // tham so nay thi mac dinh van co nut, de cac cho goi cu khong doi hanh vi.
   function actsHtml(role, ts, canResend) {
     var t = fmtTime(ts);
@@ -76,8 +76,9 @@
       : "";
     var send = "";
     if (canResend !== false && role === "user") {
-      send = '<button class="msg-act" type="button" data-act="retry" title="' + esc(tw("cact.retry")) + '">↻</button>' +
-        '<button class="msg-act" type="button" data-act="edit" title="' + esc(tw("cact.edit")) + '">' + ic("pencil") + '</button>';
+      // 26.10.310: "Gui lai" va "Sua lai" gop thanh MOT nut Tua lai: xoa cau nay cung moi thu ben duoi,
+      // dua cau hoi ve o go de sua hoac gui lai, hoi thoai di tiep tu do.
+      send = '<button class="msg-act" type="button" data-act="rewind" title="' + esc(tw("cact.rewind")) + '">↺</button>';
     }
     return '<div class="msg-acts">' + time + send +
       '<button class="msg-act" type="button" data-act="copy" title="' + esc(tw("cact.copy")) + '">⧉</button>' +

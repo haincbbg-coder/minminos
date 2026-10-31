@@ -420,6 +420,36 @@ button, input, select, textarea { font-family: inherit; }
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--accent); color: #fff; font-size: var(--mm-fs-badge); font-weight: 700;
 }
+/* 26.10.312: bộ chỉ huy thông báo. Nút X từng tin, Không cần báo / Nên báo, ngăn Đã lọc. */
+.noti-card-top .noti-time { margin-left: auto; }
+.noti-x {
+  flex: 0 0 auto; width: 28px; height: 28px; margin: -6px -6px -6px 0; border: 0; border-radius: var(--mm-r-chip);
+  color: var(--text3); background: transparent; font-size: var(--mm-fs-20); line-height: 1; cursor: pointer;
+}
+.noti-x:hover { color: var(--text-hi); background: var(--surface-3); }
+.noti-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.noti-mini {
+  margin-top: 9px; padding: 4px 9px; border: 1px solid var(--hairline); border-radius: var(--mm-r-chip);
+  color: var(--text2); background: transparent; font: 600 var(--mm-fs-12) var(--font); cursor: pointer;
+}
+.noti-mini:hover { color: var(--text-hi); border-color: var(--accent-line); }
+.noti-card.urgent .noti-kind { color: var(--danger); background: var(--danger-wash); }
+.noti-learned {
+  margin: 0 0 8px; padding: 9px 12px; border-radius: var(--mm-r-btn);
+  color: var(--text2); background: var(--surface-2); font-size: var(--mm-fs-12); line-height: 1.5;
+}
+.noti-filtered { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--hairline); }
+.noti-filtered-note { margin: 0 4px 8px; color: var(--text3); font-size: var(--mm-fs-12); line-height: 1.5; }
+.noti-policy-h { margin: 12px 4px 6px; color: var(--text3); font-size: var(--mm-fs-12); font-weight: 700; }
+.noti-policy-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 4px; color: var(--text2); font-size: var(--mm-fs-13);
+}
+.noti-policy-row .noti-mini { margin-top: 0; }
+.noti-policy-row select {
+  max-width: 55%; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: var(--mm-r-chip);
+  color: var(--text); background: var(--surface-1); font: var(--mm-fs-16) var(--font);
+}
 /* Công tắc thông báo đẩy - nằm ngay trên chân panel, thấy được lúc đang đọc thư. */
 .noti-push {
   flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
@@ -1077,7 +1107,7 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
   border-radius: var(--mm-r-chip); cursor: pointer; font-size: var(--mm-fs-13); line-height: 1; padding: 3px 6px; }
 .msg-act:hover { color: var(--text-hi); border-color: var(--border); }
 /* Đang chạy một lượt thì không cho bấm gửi lại (app.js gắn .busy vào #chatArea) */
-.transcript.busy .msg-act[data-act="retry"] { opacity: 0.35; pointer-events: none; }
+.transcript.busy .msg-act[data-act="rewind"] { opacity: 0.35; pointer-events: none; }
 
 /* Copy code block (nút nổi góc phải khối code) */
 .code-wrap { position: relative; }
@@ -1312,6 +1342,8 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
   text-align: center; color: var(--text3); font-size: var(--mm-fs-12); font-family: var(--font);
   padding: 2px 12px; opacity: 0.85;
 }
+/* 26.10.309: lượt chuyển sang đường kế tiếp vì hết lượt. Ở lại trong khung chat, đủ to để đọc trên điện thoại. */
+.msg-ghichu.msg-doiduong { font-size: var(--mm-fs-14); color: var(--mm-muted); opacity: 1; padding: var(--mm-sp-1) var(--mm-sp-3); }
 @keyframes spin { to { transform: rotate(360deg); } }   /* vẫn dùng cho .rs-spin */
 
 .mem-count {
@@ -2327,6 +2359,9 @@ body.jv-artpanel-open { overflow: hidden; }
 .jv-ap-mermaid { min-height: 100%; display: flex; align-items: center; justify-content: center;
   padding: 16px; background: var(--bg); color: var(--text2); }
 .jv-ap-mermaid svg { max-width: 100%; height: auto; }
+/* 26.10.313: khung xem so do / SVG phong to - keo duoc (zoom-keo.js lo phan con lai) */
+.jv-ap-zoom { height: 100%; min-height: 240px; padding: 0; background: var(--mm-panel); }
+.jv-ap-mermaid.jv-ap-zoom { display: block; }
 /* MẶC ĐỊNH XUỐNG DÒNG. `overflow-wrap: anywhere` để một chuỗi dài không có dấu cách (URL,
    chuỗi base64, đường dẫn) cũng ngắt được - thiếu nó thì "xuống dòng" vẫn đẩy ngang một dòng
    duy nhất ra ngoài hộp. Không còn nút tắt (bỏ 0.64.79): chủ repo không hiểu nó để làm gì. */
@@ -2580,32 +2615,153 @@ body.ne-full-on .cview { z-index: 250; }
   mask: var(--ic-check) center/contain no-repeat;
 }
 
-/* Menu lệnh / (chat-slash.js) */
+/* Menu lệnh / (chat-slash.js). 26.10.310: một dòng mỗi lệnh, cột lệnh chung một bề rộng (--slash-cmdw do JS
+   tính theo lệnh dài nhất, font đơn cách) nên mô tả thẳng hàng; có tiêu đề nhóm nhỏ khi chưa gõ chữ lọc. */
 .slash-menu {
   position: fixed;
   z-index: 999;
-  max-height: 280px;
+  max-height: min(320px, 50vh);
   overflow-y: auto;
-  background: var(--bg2);
-  border: 1px solid var(--border);
+  background: var(--mm-panel);
+  border: 1px solid var(--mm-line);
   border-radius: var(--mm-r-btn);
-  box-shadow: var(--shadow-2);
-  padding: 4px;
+  box-shadow: var(--mm-out);
+  padding: var(--mm-sp-1);
+  font-size: var(--mm-fs-14);
+  --slash-cmdw: 9ch;
 }
+:root[data-theme="light"] .slash-menu { border: 0; }
+.slash-head {
+  padding: var(--mm-sp-2) var(--mm-sp-3) 2px; font-size: var(--mm-fs-12); font-weight: 600;
+  color: var(--mm-dim); text-transform: uppercase; letter-spacing: .02em;
+}
+.slash-head:first-child { padding-top: var(--mm-sp-1); }
 .slash-item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: "cmd name" "cmd desc";
-  gap: 0 10px;
-  padding: 6px 10px;
+  display: flex; align-items: center; gap: var(--mm-sp-3);
+  min-height: 32px; padding: var(--mm-sp-1) var(--mm-sp-3);
   border-radius: var(--mm-r-chip);
   cursor: pointer;
 }
-.slash-item.active, .slash-item:hover { background: var(--bg3); }
-.slash-cmd { grid-area: cmd; align-self: center; font-weight: 600; color: var(--accent); white-space: nowrap; }
-/* name + desc: mỗi cái CẮT 1 DÒNG, tràn thì "..." (min-width:0 để ellipsis chạy trong grid) */
-.slash-name { grid-area: name; font-size: var(--mm-fs-13); color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.slash-desc { grid-area: desc; font-size: var(--mm-fs-12); color: var(--text3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slash-item.active, .slash-item:hover { background: var(--mm-wash); }
+.slash-cmd {
+  flex: none; width: var(--slash-cmdw); font-family: var(--mono); font-size: var(--mm-fs-13); font-weight: 600;
+  color: var(--mm-link); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Tên và mô tả nối tiếp trên CÙNG một dòng, tràn thì "..." (min-width:0 để ellipsis chạy trong flex). */
+.slash-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.35; }
+.slash-name { font-size: var(--mm-fs-13); color: var(--mm-text); }
+.slash-desc { font-size: var(--mm-fs-12); color: var(--mm-dim); margin-left: var(--mm-sp-2); }
+.slash-kind {
+  flex: none; font-size: var(--mm-fs-12); color: var(--mm-muted); padding: 1px var(--mm-sp-2);
+  border-radius: var(--mm-r-pill); background: var(--mm-panel); box-shadow: var(--mm-out-xs);
+}
+@media (max-width: 520px) {
+  /* Điện thoại hẹp: mô tả xuống dòng dưới tên thay vì bị cắt còn vài chữ. */
+  .slash-item { align-items: flex-start; }
+  .slash-cmd { padding-top: 1px; width: min(var(--slash-cmdw), 12ch); }
+  .slash-text { white-space: normal; }
+  .slash-name, .slash-desc { display: block; margin-left: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Lệnh đã gõ trong ô gõ được tô màu (chat-slash.js syncHl): lớp gương .ci-hl nằm DƯỚI ô gõ, chữ y hệt,
+   riêng token lệnh bọc <mark>. Lúc đó chữ của ô gõ trong suốt, chỉ còn con trỏ. Nền của mark nới bằng
+   box-shadow chứ không bằng padding: padding làm chữ gương lệch khỏi chữ thật. */
+.ci-hl {
+  position: absolute; margin: 0; border: 0; box-sizing: border-box; overflow: hidden; pointer-events: none;
+  white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; color: var(--text);
+}
+.ci-hl[hidden] { display: none; }
+.ci-hl .ci-cmd {
+  color: var(--mm-link); background: var(--mm-wash); box-shadow: 0 0 0 2px var(--mm-wash);
+  border-radius: 4px; font-weight: inherit;
+}
+.voice-input.has-cmd { position: relative; color: transparent; caret-color: var(--text); background: transparent; }
+.voice-input.has-cmd::selection { color: transparent; background: var(--mm-wash); }
+
+/* ===== Thanh MỤC TIÊU của /goal ngay trên ô gõ (chat-goal.js, 26.10.310) =====
+   Một dòng: biểu tượng, nhãn trạng thái, mục tiêu (cắt "..."), đồng hồ, xoá, tạm dừng/chạy tiếp, chi tiết.
+   Nhiều mục tiêu thì có ô số ở đầu, bấm xổ danh sách lên trên. */
+.goal-bar {
+  position: relative; flex: none; margin: 0 16px 6px; min-width: 0;
+  background: var(--mm-panel); color: var(--mm-muted);
+  border: 1px solid var(--mm-line); border-radius: var(--mm-r-btn); box-shadow: var(--mm-out-sm);
+  font-size: var(--mm-fs-13);
+}
+:root[data-theme="light"] .goal-bar { border: 0; }
+.goal-bar[hidden] { display: none; }
+/* Trang Trò chuyện đang mở trình sửa (console.js, lưới 6 hàng): thanh nằm chung hàng 4 với dải đính kèm,
+   chiếm trọn bề ngang và đứng trên nó (dải đính kèm rỗng thì cao 0). */
+.chatpage-main.edit-on > .chatpage-slot > .goal-bar { grid-row: 4; grid-column: 1 / -1; align-self: start; }
+.gb-row { display: flex; align-items: center; gap: var(--mm-sp-1); min-height: 40px; padding: 2px var(--mm-sp-1) 2px var(--mm-sp-2); min-width: 0; }
+.gb-ic { flex: none; display: inline-flex; color: var(--mm-brand); }
+.gb-paused .gb-ic, .gb-waiting .gb-ic { color: var(--mm-dim); }
+.gb-main {
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: var(--mm-sp-2); padding: var(--mm-sp-1) 2px;
+  background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.gb-lbl { flex: none; color: var(--mm-dim); }
+.gb-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mm-text); }
+.gb-time { flex: none; font-variant-numeric: tabular-nums; color: var(--mm-dim); font-size: var(--mm-fs-12); padding: 0 var(--mm-sp-1); }
+.gb-btn {
+  flex: none; width: 32px; height: 32px; border-radius: var(--mm-r-chip); padding: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; color: var(--mm-muted);
+}
+.gb-btn:hover { background: var(--mm-row); color: var(--mm-link); }
+.gb-del:hover { color: var(--mm-bad); }
+.gb-exp svg { transform: rotate(180deg); transition: transform .15s; }
+.gb-exp[aria-expanded="true"] svg { transform: none; }
+.goal-bar :focus-visible { outline: 2px solid var(--mm-link); outline-offset: 1px; }
+.gb-count {
+  flex: none; min-width: 26px; height: 26px; padding: 0 var(--mm-sp-2); border-radius: var(--mm-r-pill); cursor: pointer;
+  border: 0; background: var(--mm-wash); color: var(--mm-link);
+  font: inherit; font-size: var(--mm-fs-12); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.gb-count[aria-expanded="true"] { background: var(--mm-primary); color: var(--mm-on-brand); }
+.gb-detail { padding: 2px var(--mm-sp-4) var(--mm-sp-3) 36px; display: flex; flex-direction: column; gap: var(--mm-sp-1); }
+.gb-full { color: var(--mm-text); font-size: var(--mm-fs-14); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.gb-meta { color: var(--mm-muted); font-size: var(--mm-fs-13); line-height: 1.4; }
+.gb-open {
+  align-self: flex-start; margin-top: var(--mm-sp-1); padding: var(--mm-sp-1) var(--mm-sp-3); min-height: 32px;
+  border-radius: var(--mm-r-btn); cursor: pointer; border: 1px solid var(--mm-line);
+  background: var(--mm-panel); box-shadow: var(--mm-out-sm); color: var(--mm-muted); font: inherit; font-size: var(--mm-fs-13);
+}
+:root[data-theme="light"] .gb-open { border: 0; }
+.gb-open:hover { color: var(--mm-link); }
+/* Danh sách nhiều mục tiêu: bật lên PHÍA TRÊN thanh, không đẩy khung chat. */
+.gb-pop {
+  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 60;
+  width: min(460px, calc(100vw - 32px)); max-height: min(55vh, 420px); overflow: auto;
+  background: var(--mm-panel); border: 1px solid var(--mm-line); border-radius: var(--mm-r-btn);
+  box-shadow: var(--mm-out); padding: var(--mm-sp-1);
+}
+:root[data-theme="light"] .gb-pop { border: 0; }
+.gb-pop-head { padding: var(--mm-sp-2); font-weight: 600; color: var(--mm-text); font-size: var(--mm-fs-14); }
+.gb-item { display: flex; align-items: center; gap: var(--mm-sp-1); padding: 2px var(--mm-sp-1) 2px var(--mm-sp-3); border-radius: var(--mm-r-chip); }
+.gb-item:hover { background: var(--mm-row); }
+.gb-item.gb-cur { background: var(--mm-wash); }
+.gb-dot { flex: none; width: 8px; height: 8px; border-radius: var(--mm-r-pill); background: var(--mm-dim); }
+.gb-item.gb-running .gb-dot { background: var(--mm-ok); }
+.gb-item.gb-waiting .gb-dot { background: var(--mm-warn); }
+.gb-item-main {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: var(--mm-sp-1) 2px;
+  background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.gb-item-txt { color: var(--mm-text); font-size: var(--mm-fs-13); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gb-item-meta { color: var(--mm-dim); font-size: var(--mm-fs-12); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .gb-exp svg { transition: none; } }
+@media (max-width: 860px) {
+  .goal-bar { margin: 0 10px 6px; }
+  .gb-btn { width: 36px; height: 36px; }
+  /* Điện thoại: bỏ nhãn trạng thái nhường chỗ cho chữ mục tiêu; màu biểu tượng và nút đã nói trạng thái. */
+  .gb-lbl { display: none; }
+  .gb-detail { padding-left: var(--mm-sp-4); }
+  /* Nút tròn của kệ file (file-shelf.css) nổi cố định ở góc phải ngay trên ô gõ: chừa chỗ cho nó để nút
+     tạm dừng và xoá không nằm dưới. Bấm chữ mục tiêu đã mở chi tiết nên bỏ nút mũi tên cho gọn. */
+  body:has(.mm-shelf-launch) .goal-bar { margin-right: 88px; }
+  body:has(.mm-shelf-launch) .chatpage-slot > .goal-bar { width: auto; margin-left: 0; margin-right: 88px; }
+  .gb-exp { display: none; }
+}
 
 /* ==========================================================================
    ICON (Lucide) - dashboard/icons.js dựng thẻ <svg class="ic">

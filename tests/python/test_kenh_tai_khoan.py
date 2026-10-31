@@ -57,14 +57,14 @@ def check(name, cond):
 # ============================================================
 # 1. Sổ đăng ký kênh
 # ============================================================
-check("sổ có ba kênh đầu: Zalo Bot, Zalo cá nhân, Telegram",
-      set(channels.ids()) == {"zalo", "zalo_personal", "telegram"})
+check("sổ có năm kênh: Zalo Bot, Zalo cá nhân, Zalo OA, Telegram, Pancake (26.10.319)",
+      set(channels.ids()) == {"zalo", "zalo_personal", "zalo_oa", "telegram", "pancake"})
 # 0.64.80: Zalo cá nhân có Transport (bot tự trả lời) nhưng không có token, nên `bot_ids` có ba
 # kênh còn `bot_token_ids` (kênh tạo tài khoản bằng token) vẫn hai.
 check("kênh gắn được bot = kênh có Transport",
-      set(channels.bot_ids()) == {"zalo", "zalo_personal", "telegram"})
-check("kênh tạo tài khoản bằng token vẫn chỉ Zalo Bot và Telegram",
-      set(channels.bot_token_ids()) == {"zalo", "telegram"})
+      set(channels.bot_ids()) == {"zalo", "zalo_personal", "zalo_oa", "telegram", "pancake"})
+check("kênh tạo tài khoản ở kho tài khoản: Zalo Bot, Zalo OA, Telegram",
+      set(channels.bot_token_ids()) == {"zalo", "zalo_oa", "telegram"})
 check("kho bot, kho hội thoại đọc CÙNG sổ",
       set(chatbot_store.KENH) == set(channels.bot_ids()) and set(conversations.KENH) == set(channels.ids()))
 check("mặc định kênh bot vẫn là Telegram (bản ghi cũ không có channel là bot Telegram)",

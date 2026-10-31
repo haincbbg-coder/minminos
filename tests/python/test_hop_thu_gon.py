@@ -70,8 +70,11 @@ db = conversations._conn()
 dem = lambda cid: conversations._conn().execute("SELECT COUNT(*) FROM messages WHERE conversation_id=?", (cid,)).fetchone()[0]
 check(f"nhóm chỉ giữ {N} tin gần nhất", dem(nhom_id) == N)
 tin = conversations.tin_nhan(nhom_id, limit=500)
+# 26.10.314: N = 1000 lớn hơn trần một trang (500), nên tin CŨ nhất còn giữ đọc thẳng từ kho.
+cu_nhat = db.execute("SELECT text FROM messages WHERE conversation_id=? ORDER BY created_at, id LIMIT 1", (nhom_id,)).fetchone()[0]
 check("tin còn lại là tin MỚI nhất (tin cuối là tin vừa ghi)",
-      tin[-1]["text"] == f"tin {N + 29}" and tin[0]["text"] == "tin 30")
+      tin[-1]["text"] == f"tin {N + 29}" and cu_nhat == "tin 30")
+check("nhóm giữ 1000 tin (26.10.314)", N == 1000)
 check("chat riêng với khách giữ HẾT", dem(rieng_id) == N + 30)
 check("số tin cộng dồn của hội thoại vẫn đếm mọi tin đã từng tới",
       conversations.chi_tiet(nhom_id)["message_count"] == N + 30)

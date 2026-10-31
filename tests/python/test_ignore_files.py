@@ -94,6 +94,7 @@ CHAY = [
     "server/kanban.sqlite3", "server/tg_brain.json", "server/update_state.json",
     "server/logs/x.jsonl", "server/brain-trash/x/y.md", "server/plugins/p/plugin.py",
     "server/connector-home/x", "server/usage.json", "server/javis.log",
+    "server/hoc-tu-chat/hoc_tu_chat.sqlite3", "server/hoc-tu-chat/sao-luu/hc_x.bak",
 ]
 NANG = [
     "server/brains-backup/.git/objects/x", "server/.staging/sach.txt", ".staging/x",

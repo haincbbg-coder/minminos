@@ -17,9 +17,18 @@ Cách dùng:
   - Trạng thái nghỉ nằm trong process (dict có khoá), kèm thống kê để trang Models hiện.
 
 Thuần stdlib. Không bao giờ in khoá ra log: mọi nơi chỉ dùng `nhan()` = 4 ký tự cuối.
+
+26.10.270 (Thứ tự dùng): bể khoá thành DANH SÁCH ĐÁNH SỐ hiện trên thẻ ở trang Bộ não AI.
+  - `model.be_khoa[prov]` = [{"id", "ten", "bat"}] theo thứ tự dùng, gồm cả khoá 1.
+  - Chất liệu khoá nằm ở `model.be_khoa_ma[id]` (mã hoá như mọi secret, xem config._SECRET_PATHS).
+  - Trường cũ (`openrouter_key`...) luôn bằng khoá BẬT đầu tiên, để giọng nói, team, Lark... vẫn
+    đọc trường cũ như trước.
+  - Cài đặt cũ (danh sách chuỗi) được `chuyen_doi` đổi một lần, chạy lại không nhân đôi.
+  - Chọn khoá theo THỨ TỰ: dùng khoá 1 tới khi hết lượt mới sang khoá 2, khoá 1 hồi thì quay lại.
 """
 from __future__ import annotations
 
+import hashlib
 import threading
 import time
 from typing import Iterable, Optional
@@ -42,7 +51,8 @@ NGHI_TOI_DA = 6 * 3600
 _LOCK = threading.Lock()
 # (prov, key) -> {"nghi_den": ts, "loi": n, "dung": n, "ly_do": str}
 _TRANG_THAI: dict = {}
-_LUOT: dict = {}     # prov -> con trỏ xoay vòng
+_LUOT: dict = {}     # (giữ tên cho mã cũ; từ 26.10.270 không còn xoay vòng đều)
+_DANG_DUNG: dict = {}   # prov -> khoá vừa được chọn, để thẻ tô "đang dùng"
 
 
 def nhan(key: str) -> str:
@@ -51,12 +61,103 @@ def nhan(key: str) -> str:
     return ("…" + k[-4:]) if len(k) >= 4 else "…"
 
 
-def danh_sach(prov: str, mcfg: dict, khoa_chinh: str = "") -> list:
-    """Khoá chính + khoá dự phòng trong settings, bỏ trùng và rỗng, giữ thứ tự."""
-    ra = []
-    for k in [khoa_chinh] + list(((mcfg or {}).get("be_khoa") or {}).get(prov) or []):
+def _ma_id(prov: str, so: int) -> str:
+    """Id ổn định cho khoá thứ `so` của một nhà lúc chuyển đổi (chạy lại ra cùng id)."""
+    return "k_" + hashlib.sha1(f"{prov}#{so}".encode("utf-8")).hexdigest()[:10]
+
+
+def id_moi() -> str:
+    return "k_" + hashlib.sha1(f"{time.time_ns()}".encode("utf-8")).hexdigest()[:10]
+
+
+def _la_dang_cu(lst) -> bool:
+    return isinstance(lst, list) and any(isinstance(x, str) for x in lst)
+
+
+def muc(mcfg: dict, prov: str, key_field: str = "") -> list:
+    """Danh sách khoá ĐÁNH SỐ của một nhà: [{"id", "ten", "bat", "khoa"}] theo thứ tự dùng.
+
+    Cài đặt chưa chuyển đổi vẫn đọc ra đúng: khoá ở trường cũ là khoá 1, các chuỗi trong bể cũ
+    là khoá 2, 3... (cùng id mà `chuyen_doi` sẽ ghi, nên trang không nhảy khi file được đổi)."""
+    m = mcfg or {}
+    lst = (m.get("be_khoa") or {}).get(prov)
+    if isinstance(lst, list) and lst and not _la_dang_cu(lst):
+        ma = m.get("be_khoa_ma") or {}
+        ra = []
+        for a in lst:
+            if isinstance(a, dict) and a.get("id"):
+                ra.append({"id": str(a["id"]), "ten": str(a.get("ten") or ""),
+                           "bat": a.get("bat") is not False, "khoa": str(ma.get(a["id"]) or "")})
+        return ra
+    ra, thay = [], []
+    for k in [m.get(key_field) if key_field else ""] + list(lst or []):
         k = str(k or "").strip()
-        if k and k not in ra and k not in ("local", "none"):
+        if k and k not in thay and k not in ("local", "none"):
+            thay.append(k)
+            ra.append({"id": _ma_id(prov, len(ra)), "ten": "", "bat": True, "khoa": k})
+    return ra
+
+
+def luu_muc(mcfg: dict, prov: str, ds: list, key_field: str = "") -> None:
+    """Ghi danh sách khoá của một nhà (thứ tự, tên, bật/tắt, khoá) và đồng bộ trường cũ = khoá bật
+    đầu tiên. Khoá của mục bị gỡ cũng bị xoá khỏi kho mã."""
+    ma = mcfg.setdefault("be_khoa_ma", {})
+    truoc = {a["id"]: a["khoa"] for a in muc(mcfg, prov, key_field)}
+    sach = []
+    for a in ds or []:
+        if not isinstance(a, dict) or not a.get("id"):
+            continue
+        aid = str(a["id"])
+        k = str(a.get("khoa") or "").strip() or truoc.get(aid, "")
+        if not k:
+            continue
+        sach.append({"id": aid, "ten": str(a.get("ten") or "")[:40], "bat": a.get("bat") is not False})
+        ma[aid] = k
+    be = mcfg.get("be_khoa")
+    if not isinstance(be, dict):
+        be = mcfg["be_khoa"] = {}
+    be[prov] = sach
+    for gone in set(truoc) - {a["id"] for a in sach}:
+        ma.pop(gone, None)
+        with _LOCK:
+            _TRANG_THAI.pop((prov, truoc[gone]), None)
+    if key_field:
+        dau = next((a for a in sach if a["bat"]), None)
+        mcfg[key_field] = ma[dau["id"]] if dau else ""
+
+
+def chuyen_doi(mcfg: dict, key_fields: dict) -> bool:
+    """Đổi bể khoá kiểu cũ (danh sách chuỗi, khoá chính để riêng) sang danh sách đánh số.
+    Chạy lại an toàn: nhà đã ở dạng mới thì không đụng. Trả True khi có đổi."""
+    doi = False
+    for prov, kf in (key_fields or {}).items():
+        lst = (mcfg.get("be_khoa") or {}).get(prov)
+        if isinstance(lst, list) and lst and not _la_dang_cu(lst):
+            continue
+        if not lst and not (kf and mcfg.get(kf)):
+            continue
+        luu_muc(mcfg, prov, muc(mcfg, prov, kf), kf)
+        doi = True
+    return doi
+
+
+def danh_sach(prov: str, mcfg: dict, khoa_chinh: str = "") -> list:
+    """Các khoá ĐANG BẬT theo thứ tự dùng, bỏ trùng và rỗng. Khoá chính (trường cũ) đứng đầu
+    khi danh sách chưa có nó - với cài đặt mới thì nó chính là khoá bật đầu tiên."""
+    ra = []
+    m = mcfg or {}
+    lst = (m.get("be_khoa") or {}).get(prov)
+    if isinstance(lst, list) and lst and not _la_dang_cu(lst):
+        ma = m.get("be_khoa_ma") or {}
+        tat = {str(ma.get(a.get("id")) or "") for a in lst if isinstance(a, dict) and a.get("bat") is False}
+        nguon = [khoa_chinh] + [ma.get(a.get("id")) for a in lst
+                                if isinstance(a, dict) and a.get("bat") is not False]
+    else:
+        tat = set()
+        nguon = [khoa_chinh] + list(lst or [])
+    for k in nguon:
+        k = str(k or "").strip()
+        if k and k not in ra and k not in tat and k not in ("local", "none"):
             ra.append(k)
     return ra
 
@@ -72,29 +173,50 @@ def dang_nghi(prov: str, key: str, now: Optional[float] = None) -> bool:
 
 
 def chon(prov: str, keys: Iterable[str], tranh: Iterable[str] = (), now: Optional[float] = None) -> str:
-    """Khoá nên dùng lúc này: đang không nghỉ, xoay vòng cho đều; tất cả đều nghỉ thì lấy khoá
-    hết nghỉ sớm nhất (vẫn còn hơn không gọi)."""
+    """Khoá nên dùng lúc này: khoá ĐẦU TIÊN theo thứ tự đang không nghỉ (26.10.270: dùng khoá 1 tới
+    khi hết lượt mới sang khoá 2, không chia đều từng câu); tất cả đều nghỉ thì lấy khoá hết nghỉ
+    sớm nhất (vẫn còn hơn không gọi)."""
     keys = [k for k in keys if k]
     if not keys:
         return ""
-    if len(keys) == 1:
-        return keys[0]
     now = time.time() if now is None else now
     tranh = set(tranh or ())
     with _LOCK:
-        bat_dau = _LUOT.get(prov, 0) % len(keys)
-        thu_tu = keys[bat_dau:] + keys[:bat_dau]
-        for k in thu_tu:
-            if k in tranh:
-                continue
-            if _tt(prov, k)["nghi_den"] <= now:
-                _LUOT[prov] = (keys.index(k) + 1) % len(keys)
-                _tt(prov, k)["dung"] += 1
-                return k
-        # tất cả đang nghỉ (hoặc bị tránh): chọn khoá hết nghỉ sớm nhất
-        k = min(keys, key=lambda x: _tt(prov, x)["nghi_den"])
+        k = next((x for x in keys if x not in tranh and _tt(prov, x)["nghi_den"] <= now), None)
+        if k is None:
+            # tất cả đang nghỉ (hoặc bị tránh): chọn khoá hết nghỉ sớm nhất
+            k = min(keys, key=lambda x: _tt(prov, x)["nghi_den"])
         _tt(prov, k)["dung"] += 1
+        _DANG_DUNG[prov] = k
         return k
+
+
+def con_khoa_dung_duoc(prov: str, mcfg: dict, khoa_chinh: str = "", now: Optional[float] = None) -> bool:
+    """Nhà này còn ít nhất một khoá bật mà không nghỉ không (chat dùng để né nhà hết lượt)."""
+    now = time.time() if now is None else now
+    keys = danh_sach(prov, mcfg, khoa_chinh)
+    with _LOCK:
+        return any(_tt(prov, k)["nghi_den"] <= now for k in keys)
+
+
+def nghi_den(prov: str, key: str) -> float:
+    """Epoch khoá này được thử lại (0 = đang không nghỉ)."""
+    with _LOCK:
+        t = _TRANG_THAI.get((prov, key))
+        until = float(t["nghi_den"]) if t else 0.0
+    return until if until > time.time() else 0.0
+
+
+def dang_dung(prov: str, keys: Iterable[str]) -> str:
+    """Khoá được chọn gần nhất nếu còn trong danh sách; chưa gọi lần nào thì khoá chat sẽ chọn."""
+    keys = [k for k in keys if k]
+    with _LOCK:
+        k = _DANG_DUNG.get(prov)
+    if k in keys and not nghi_den(prov, k):
+        return k
+    now = time.time()
+    with _LOCK:
+        return next((x for x in keys if _tt(prov, x)["nghi_den"] <= now), "")
 
 
 def bao_loi(prov: str, key: str, ma: Optional[int] = None, cho: Optional[float] = None,
@@ -126,7 +248,9 @@ def bao_loi(prov: str, key: str, ma: Optional[int] = None, cho: Optional[float] 
 def bao_ok(prov: str, key: str) -> None:
     """Gọi thành công: xoá đếm lỗi để lần vấp sau không bị nghỉ dài oan."""
     with _LOCK:
-        _tt(prov, key)["loi"] = 0
+        t = _tt(prov, key)
+        t["loi"] = 0
+        t["nghi_den"] = 0.0    # vừa gọi được thì chắc chắn không còn nghỉ
 
 
 class Xoay:
@@ -174,7 +298,7 @@ def thong_ke(mcfg: dict, khoa_chinh_cua=None) -> dict:
         except Exception:
             chinh = ""
         keys = danh_sach(prov, mcfg, chinh)
-        if len(keys) <= 1 and not ((mcfg or {}).get("be_khoa") or {}).get(prov):
+        if len(keys) <= 1 and len(((mcfg or {}).get("be_khoa") or {}).get(prov) or []) <= 1:
             continue
         with _LOCK:
             dong = []
@@ -190,3 +314,4 @@ def xoa_trang_thai() -> None:
     with _LOCK:
         _TRANG_THAI.clear()
         _LUOT.clear()
+        _DANG_DUNG.clear()

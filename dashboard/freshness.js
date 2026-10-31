@@ -161,10 +161,21 @@
   var daThu = false;
   try { daThu = sessionStorage.getItem(KHOA_DA_TAI) === "1"; } catch (e) { /* noop */ }
 
+  /* 26.10.313: mỗi BỘ file chỉ kiểm MỘT lần trên mỗi máy. Trước đây lần mở nào cũng đọc lại hơn
+   * 100 file từ cache rồi băm từng byte (trên điện thoại là cả giây CPU). Vân tay của cả bộ đổi
+   * khi có bản cập nhật hay một file bất kỳ đổi nội dung, nên kiểm lại đúng lúc cần kiểm. */
+  var KHOA_DA_KIEM = "minmin-fresh-ok";
+  var vanTayBo = crc32(new TextEncoder().encode(JSON.stringify(m.assets || {}) + "|" + (m.version || "")));
+  function daKiemBoNay() {
+    try { return localStorage.getItem(KHOA_DA_KIEM) === vanTayBo; } catch (e) { return false; }
+  }
+
   function kiemNoiDung() {
+    if (daKiemBoNay()) return;
     doLech(m).then(function (ds) {
       if (!ds.length) {
         try { sessionStorage.removeItem(KHOA_DA_TAI); } catch (e) { /* noop */ }
+        try { localStorage.setItem(KHOA_DA_KIEM, vanTayBo); } catch (e) { /* noop */ }
         return;
       }
       console.warn("[javis fresh] đang chạy bản cũ của:", ds.join(", "));

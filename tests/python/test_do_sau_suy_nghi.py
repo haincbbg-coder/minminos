@@ -274,7 +274,8 @@ check("config None -> off", srv._reasoning_level(None) == "off")
 
 # ---- 8. Giao diện phải khớp server ----
 for f, ten in ((ROOT / "dashboard" / "model-picker.js", "thanh chat"),
-               (ROOT / "dashboard" / "console.js", "trang Models")):
+               # 26.10.309: thang Effort của trang Bộ não AI nằm ở thu-tu-dung.js (chip Effort từng thẻ).
+               (ROOT / "dashboard" / "thu-tu-dung.js", "trang Models")):
     txt = f.read_text(encoding="utf-8")
     thieu = [r for r in engine.REASONING_LEVELS if '"%s"' % r not in txt]
     check("%s có đủ mọi nấc của server" % ten, not thieu, thieu)

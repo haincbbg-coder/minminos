@@ -75,7 +75,7 @@ check("tên việc được escape", m._bubble._html.indexOf("<b>tên</b>") === 
 check("có nút mở trang Việc bấm được", /class="viec-mo"/.test(m._bubble._html) && typeof m._nut._nghe.click === "function");
 m = msgGia("x");
 V.ve(m, { status: "blocked", title: "a" });
-check("việc bị chặn: lớp viec-blocked + nhãn bị chặn", m.classList.contains("viec-blocked") && m._bubble._html.indexOf("bị chặn") !== -1);
+check("việc tạm dừng: lớp viec-blocked + nhãn tạm dừng (26.10.312)", m.classList.contains("viec-blocked") && m._bubble._html.indexOf("tạm dừng") !== -1);
 
 // ---- 3. ve: dòng đã giao (giọng nói) nằm DƯỚI bong bóng, không biến bong bóng thành thẻ ----
 m = msgGia("Ừ, để xem ngay.");

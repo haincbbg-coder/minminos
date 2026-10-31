@@ -29,7 +29,7 @@ import ket_noi_api as k
 HOST = "https://openapi.zalo.me"
 OAUTH = "https://oauth.zaloapp.com/v4/oa"
 TEN = "Zalo OA"
-BI_MAT = ("app_secret", "access_token", "refresh_token", "auth_code", "code_verifier")
+BI_MAT = ("app_secret", "access_token", "refresh_token", "auth_code", "code_verifier", "oa_secret")
 LOI_TOKEN = (-216, -124)
 TIN_TOI_DA = 2000
 
@@ -116,12 +116,32 @@ async def _lam_moi(spec):
     return await _doi_token(spec, {"grant_type": "refresh_token", "refresh_token": rt})
 
 
+def _nap_lai(spec):
+    """Đọc lại bí mật của kết nối từ kho NGAY trong khoá (26.10.314).
+
+    Một OA giờ có hai người dùng chung một kho token: công cụ MCP `zalo_oa_*` và kênh Chatbot Zalo OA
+    (`zalo_oa_kenh`). Mỗi bên cầm một bản `spec` chụp lúc tạo; bên kia vừa xoay token thì bản chụp này còn
+    refresh token CŨ đã chết. Khoá theo id kết nối là chung, nên đọc lại ở đây là đủ để không bao giờ đem
+    refresh token đã dùng đi đổi lần hai."""
+    cid = (spec or {}).get("key")
+    if not cid or not isinstance(cid, str):
+        return
+    try:
+        import mcp_store
+        moi = mcp_store.connection_secrets(cid)
+    except Exception:
+        return
+    if moi:
+        spec.setdefault("secrets", {}).update(moi)
+
+
 async def dam_bao_token(spec, tok_hong=None):
     """Trả None khi có access token dùng được, hoặc câu lỗi.
 
     `tok_hong`: token vừa bị Zalo từ chối (-216/-124). Chỉ làm mới nếu token hiện tại VẪN là nó;
     lượt song song khác đã làm mới rồi thì dùng luôn token mới, không đốt refresh token lần hai."""
     async with k.khoa(spec):
+        _nap_lai(spec)
         sec = k.bi_mat(spec)
         code = str(sec.get("auth_code") or "").strip()
         if code and code != str(sec.get("auth_code_da_dung") or ""):

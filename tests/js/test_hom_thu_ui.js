@@ -115,7 +115,12 @@ check("sw.js có handler push + notificationclick",
 check("CANARY: bấm thông báo thì FOCUS tab Javis đang mở, không đẻ tab thứ hai",
   sw.indexOf("c.focus()") !== -1 && sw.indexOf("matchAll") !== -1);
 check("sw.js KHÔNG cache gì (tránh phục vụ bản cũ sau khi cập nhật)",
-  sw.indexOf("caches.open") === -1 && sw.indexOf('addEventListener("fetch"') === -1);
+  sw.indexOf("caches.") === -1 && sw.indexOf("cache.put") === -1);
+// 26.10.313: handler fetch duy nhất chỉ bắt việc MỞ TRANG để hiện trang chờ viết sẵn khi máy chủ
+// chưa lên; mọi yêu cầu khác đi thẳng mạng.
+check("handler fetch của sw.js chỉ bắt navigate, trả trang chờ viết sẵn",
+  sw.indexOf('addEventListener("fetch"') === -1
+  || (/req\.mode !== "navigate"/.test(sw) && sw.indexOf("TRANG_CHO") !== -1));
 
 // ---- 7. Đường về từ thông báo hệ điều hành ----
 check("push mang tham số mo_thu để về đúng mẩu thư", main.indexOf("mo_thu=") !== -1);

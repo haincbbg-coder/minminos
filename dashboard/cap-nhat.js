@@ -159,6 +159,11 @@
       var moi = null;
       try { moi = await (await fetch("/version", { cache: "no-store" })).json(); } catch (e) {}
       if (moi && moi.current && moi.current !== cu) {
+        // 26.10.313: chờ trang chính thật sự phục vụ được rồi mới tải lại. /version trả lời được
+        // nhưng trang còn lỗi (proxy chưa nối lại xong) thì tải lại là ra trang trắng.
+        var sanSang = false;
+        try { sanSang = (await fetch("/", { cache: "no-store" })).ok; } catch (e) { sanSang = false; }
+        if (!sanSang && lan < 60) return;
         clearInterval(hen);
         thanHop(o, '<p>' + esc(t("capnhat.xong", { ban: moi.current })) + '</p>', []);
         setTimeout(function () { location.reload(); }, 1500);

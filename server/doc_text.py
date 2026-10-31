@@ -14,9 +14,10 @@ import zipfile
 from html import unescape
 from pathlib import Path
 
-SUFFIXES = (".pdf", ".docx")
+SUFFIXES = (".pdf", ".docx", ".xlsx")
 MAX_PDF_PAGES = 300
 MAX_DOCX_XML_BYTES = 20 * 1024 * 1024
+MAX_XLSX_ROWS = 2000          # mỗi trang tính; bảng giá, đơn hàng khách gửi hiếm khi dài hơn
 
 
 def extract(path) -> str:
@@ -25,6 +26,8 @@ def extract(path) -> str:
     try:
         if p.suffix.lower() == ".pdf":
             return _pdf(p)
+        if p.suffix.lower() == ".xlsx":
+            return _xlsx(p)
         return _docx(p)
     except Exception as e:      # noqa: BLE001 - file hỏng hay lạ: nói thẳng, đừng làm sập lượt chat
         return f"ERROR: không bóc được chữ từ '{p.name}': {type(e).__name__}: {e}"
@@ -63,3 +66,35 @@ def _docx(p: Path) -> str:
     xml = re.sub(r"<w:(tab|br)\b[^>]*/>", lambda m: "\t" if m.group(1) == "tab" else "\n", xml)
     text = unescape(re.sub(r"<[^>]+>", "", xml))
     return "\n".join(ln.rstrip() for ln in text.splitlines()).strip()
+
+
+def _xlsx(p: Path) -> str:
+    """Excel (.xlsx) thành chữ: mỗi trang tính một khối, mỗi dòng các ô cách nhau bằng tab (26.10.306,
+    cho bot Zalo đọc bảng khách gửi). Chỉ đọc giá trị, không chạy công thức hay macro."""
+    with zipfile.ZipFile(p) as z:
+        tong = sum(i.file_size for i in z.infolist() if i.filename.startswith("xl/"))
+    if tong > MAX_DOCX_XML_BYTES * 3:
+        return f"ERROR: nội dung '{p.name}' quá lớn để đọc ({tong // (1024 * 1024)} MB khi giải nén)."
+    try:
+        import openpyxl
+    except ImportError:
+        return "ERROR: máy chủ MinMin thiếu thư viện openpyxl nên chưa đọc được Excel."
+    wb = openpyxl.load_workbook(str(p), read_only=True, data_only=True)
+    try:
+        khoi = []
+        for ws in wb.worksheets:
+            dong = []
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                if i >= MAX_XLSX_ROWS:
+                    dong.append(f"(trang này còn nữa, chỉ đọc {MAX_XLSX_ROWS} dòng đầu)")
+                    break
+                o = ["" if v is None else str(v) for v in row]
+                while o and not o[-1]:
+                    o.pop()
+                if o:
+                    dong.append("\t".join(o))
+            if dong:
+                khoi.append(f"## {ws.title}\n" + "\n".join(dong))
+        return "\n\n".join(khoi)
+    finally:
+        wb.close()

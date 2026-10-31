@@ -170,6 +170,17 @@
         ' 5.35 0 9.4-3.5 9.4-7.9S17.35 2.6 12 2.6z"/>' +
         '<path fill="#fff" d="M8.5 7.9h7.05v1.6l-4.7 4.75h4.8v1.7H8.3v-1.6l4.7-4.75H8.5z"/>',
     },
+    // Pancake (26.10.315): chồng bánh trắng trên nền cam, giọt mật ở đỉnh.
+    pancake: {
+      nhan: "Pancake",
+      mau: "#F26B21",
+      than:
+        '<rect width="24" height="24" rx="7" fill="#F26B21"/>' +
+        '<ellipse cx="12" cy="16.4" rx="6.6" ry="2" fill="#fff"/>' +
+        '<ellipse cx="12" cy="13.1" rx="6.1" ry="1.9" fill="#fff"/>' +
+        '<ellipse cx="12" cy="9.9" rx="5.6" ry="1.8" fill="#fff"/>' +
+        '<path fill="#FFD27A" d="M9.6 9.4c0-.9 1.1-1.3 2.4-1.3s2.4.4 2.4 1.3c0 .5-.4.8-.9.8-.2.9-.5 1.6-.5 1.6s-.3-.9-.5-1.5H9.9c-.2 0-.3-.4-.3-.9z"/>',
+    },
   };
 
   // kenh(id, opts) -> chuỗi SVG dấu hiệu nền tảng. opts.size (mặc định 1.15em), opts.cls.

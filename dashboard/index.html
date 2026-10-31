@@ -26,14 +26,13 @@
        nên trước đây chỉ mobile chạy dạng app, desktop không bao giờ có nút cài). Nút
        "Mở như app" trên thanh trạng thái + icon cài trong thanh địa chỉ ăn theo file này. -->
   <link rel="manifest" href="/static/manifest.json?v=5">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Montserrat:wght@400;500;600;700&amp;display=swap">
+  <!-- Font tự lưu trên máy chủ (26.10.313): không còn hỏi sang Google Fonts lúc mở trang. -->
+  <link rel="stylesheet" href="/static/fonts/fonts.css?v=323">
   <!-- Biến --ic-* cho icon dùng trong content: của CSS. Phải đứng TRƯỚC style.css
        vì style.css tham chiếu các biến này. -->
   <link rel="stylesheet" href="/static/vendor/lucide-icons.css?v=1">
-  <link rel="stylesheet" href="/static/style.css?v=115">
-  <link rel="stylesheet" href="/static/console.css?v=285-96">
+  <link rel="stylesheet" href="/static/style.css?v=323">
+  <link rel="stylesheet" href="/static/console.css?v=323">
   <link rel="stylesheet" href="/static/minmin-galaxy.css?v=4">
   <link rel="stylesheet" href="/static/office3d.css?v=11">
   <link rel="stylesheet" href="/static/noi-mem.css?v=26.10.238">
@@ -531,6 +530,11 @@
          là nó đi theo, không bị bỏ lại như thanh #toolBar cũ. -->
     <div class="bg-strip" id="bgStrip" hidden></div>
 
+    <!-- Thanh MỤC TIÊU của /goal (chat-goal.js, 26.10.310): mục tiêu đang theo đuổi, đồng hồ, xoá, tạm dừng,
+         chi tiết; nhiều mục tiêu thì có ô số ở đầu, bấm xổ danh sách. Ẩn khi không có mục tiêu. Nằm trong
+         CHAT_NODE_IDS (console.js) nên sang trang Trò chuyện là đi theo khung chat. -->
+    <div class="goal-bar" id="goalBar" hidden></div>
+
     <!-- Attachment chips -->
     <div class="attach-bar" id="attachBar"></div>
 
@@ -869,11 +873,12 @@
   <!-- Người gác cổng bản cũ. Nạp KHÔNG kèm `?v=` và được đóng dấu no-cache, vì nó phải
        LUÔN mới: một người gác cổng cũ theo thì không gác được gì. Đứng ngay đây để
        bắt được cả trường hợp một file phía dưới hỏng vì đang chạy bản cũ. -->
+  <script src="/static/mang-ben.js?v=323"></script>
   <script src="/static/freshness.js"></script>
   <script src="/static/i18n/index.js?v=2"></script>
   <script src="/static/vendor/lucide-icons.js?v=19"></script>
   <script src="/static/minmin-icons.js?v=1"></script>
-  <script src="/static/icons.js?v=2"></script>
+  <script src="/static/icons.js?v=320"></script>
 
   <!-- theme.js phải nạp TRƯỚC mọi file khác: graph.js / app.js đăng ký
        hàm vẽ lại theo tông ngay lúc parse, nếu window.javisTheme chưa có thì chúng
@@ -891,7 +896,8 @@
   <script src="/static/minmin-galaxy.js?v=3"></script>
   <script src="/static/minmin-galaxy3d.js?v=5"></script>
   <script src="/static/office3d.js?v=28"></script>
-  <script src="/static/chat-render.js?v=19"></script>
+  <script src="/static/zoom-keo.js?v=323"></script>
+  <script src="/static/chat-render.js?v=323"></script>
   <script src="/static/code-hl.js?v=1"></script>
   <script src="/static/dataview.js?v=2"></script>
   <!-- window.JavisCopy: chép một chuỗi vào bảng nhớ tạm, có đường lui cho http trần. Đứng
@@ -903,18 +909,19 @@
   <script src="/static/editor-cmds.js?v=1"></script>
   <!-- Đếm từ + ký tự cho trình sửa file (0.65.32). Thuần, console.js dùng qua window.JavisWordCount. -->
   <script src="/static/word-count.js?v=1"></script>
-  <script src="/static/file-editor.js?v=14"></script>
+  <script src="/static/file-editor.js?v=323"></script>
   <script src="/static/chat-ask.js?v=2"></script>
   <script src="/static/chat-card.js?v=2"></script>
   <script src="/static/duyet-ads.js?v=1"></script>
-  <script src="/static/limit-resume.js?v=1"></script>
-  <script src="/static/chat-slash.js?v=3"></script>
-  <script src="/static/chat-acts.js?v=2"></script>
+  <script src="/static/limit-resume.js?v=323"></script>
+  <script src="/static/chat-slash.js?v=320"></script>
+  <script src="/static/chat-goal.js?v=320"></script>
+  <script src="/static/chat-acts.js?v=320"></script>
   <script src="/static/chat-marks.js?v=3"></script>
   <!-- Khối tiến trình từng bước trong khung chat: phải đứng TRƯỚC app.js vì app.js gọi
        window.JavisSteps ngay khi khung tool_call đầu tiên về. -->
   <script src="/static/chat-steps.js?v=2"></script>
-  <script src="/static/chat-viec.js?v=4"></script>
+  <script src="/static/chat-viec.js?v=320"></script>
   <!-- Voice V1: khối ngữ cảnh giao diện + bộ nhận lệnh ui_action, nạp TRƯỚC app.js. -->
   <script src="/static/ui-context.js?v=1"></script>
   <script src="/static/ui-actions.js?v=5"></script>
@@ -925,7 +932,7 @@
   <script src="/static/dictation.js?v=2"></script>
   <script src="/static/minmin-workspace.js?v=4"></script>
   <script src="/static/call-bar.js?v=3"></script>
-  <script src="/static/app.js?v=209"></script>
+  <script src="/static/app.js?v=323"></script>
   <script src="/static/hud-launch.js?v=3"></script>
   <!-- Sau app.js: dải việc nền đọc window.JavisSessions (app.js dựng) để biết phiên + brain. -->
   <script src="/static/background-strip.js?v=3"></script>
@@ -945,7 +952,7 @@
   <script src="/static/harness2.js?v=1"></script>
   <script src="/static/workspace.js?v=17"></script>
   <script src="/static/packs.js?v=3"></script>
-  <script src="/static/chatbots.js?v=25"></script>
+  <script src="/static/chatbots.js?v=320"></script>
   <!-- Trang Hội thoại (hộp thư khách): nạp TRƯỚC console.js để renderConversations uỷ quyền được. -->
   <link rel="stylesheet" href="/static/conversation-ops.css?v=26.10.238">
   <script src="/static/conversation-ops.js?v=26.10.195"></script>
@@ -953,12 +960,12 @@
   <script src="/static/conversations-filters.js?v=6"></script>
   <script src="/static/date-range.js?v=1"></script>
   <script src="/static/chatbots-reply-policy.js?v=1"></script>
-  <script src="/static/inbox-v5.js?v=3"></script>
-  <script src="/static/inbox-channels.js?v=3"></script>
-  <script src="/static/inbox-stats.js?v=2"></script>
-  <link rel="stylesheet" href="/static/inbox-v5.css?v=8">
+  <script src="/static/inbox-v5.js?v=320"></script>
+  <script src="/static/inbox-channels.js?v=320"></script>
+  <script src="/static/inbox-stats.js?v=320"></script>
+  <link rel="stylesheet" href="/static/inbox-v5.css?v=320">
   <script src="/static/ht-media.js?v=3"></script>
-  <script src="/static/conversations.js?v=26.10.284"></script>
+  <script src="/static/conversations.js?v=320"></script>
   <!-- Dashboard Token (trang Mức dùng nâng cấp): nạp TRƯỚC console.js để renderUsage ủy quyền được. -->
   <script src="/static/usage.js?v=1"></script>
   <!-- Trang Code (terminal): nạp TRƯỚC console.js để renderCode ủy quyền được. File này CHỈ có
@@ -973,11 +980,13 @@
   <!-- Phần đọc cấu hình của form "Tự thêm MCP" (thuần, có test node). Nạp TRƯỚC console.js. -->
   <script src="/static/mcp-form-parse.js?v=1"></script>
   <script src="/static/web-watch.js?v=2"></script>
+  <script src="/static/hoc-tu-chat.js?v=320"></script>
   <link rel="stylesheet" href="/static/github-minmin.css?v=26.10.279">
   <script src="/static/github-minmin.js?v=26.10.279"></script>
   <script src="/static/github-connect.js?v=26.10.279"></script>
-  <script src="/static/console.js?v=242"></script>
-  <script src="/static/cap-nhat.js?v=1"></script>
+  <script src="/static/thu-tu-dung.js?v=323"></script>
+  <script src="/static/console.js?v=323"></script>
+  <script src="/static/cap-nhat.js?v=323"></script>
   <script src="/static/ket-noi-ngoai.js?v=3"></script>
   <!-- Trang Tổng quan (26.10.242): trang mở đầu, gom việc cần bạn duyệt và số chính trong ngày. -->
   <script src="/static/tong-quan.js?v=1"></script>
@@ -990,10 +999,10 @@
   <script src="/static/minmin-dashboard.js?v=4"></script>
   <script src="/static/push.js?v=2"></script>
   <script src="/static/install-nudge.js?v=1"></script>
-  <script src="/static/notifications.js?v=3"></script>
+  <script src="/static/notifications.js?v=320"></script>
   <!-- Linh vật ở mép màn hình. Nạp SAU app.js vì nó chỉ được app.js gọi vào
        (setOrbState -> JavisPet.setState), và sau console.js để trang Cài đặt vẽ được thẻ chọn. -->
-  <script src="/static/pet.js?v=26.10.183"></script>
+  <script src="/static/pet.js?v=323"></script>
   <script src="/static/agent-avatar.js?v=2"></script>
   <!-- (Nút đổi tông TỐI ↔ SÁNG: theme.js đã nạp ở đầu khối script phía trên) -->
   <!-- Alpine self-host (dashboard/vendor): bản unpkg đo được 2.1s lúc first load + chết khi offline -->

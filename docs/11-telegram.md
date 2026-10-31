@@ -204,12 +204,13 @@ Chi tiết cách gõ `/model`:
 - Gõ thẳng tên cũng được: tên có dấu `/` (vd `openai/gpt-4o`) là model OpenRouter; `gpt-...` hoặc `...-codex` là model ChatGPT (cần đã kết nối OAuth); còn lại (vd `opus`, `sonnet`, `fable`) là model Claude.
 - Từ 0.33.7, bảng nút hiện **đủ 10 nhà cung cấp** như trang Models trên dashboard, gồm cả **Antigravity CLI** - trước đó nó là một danh sách chép tay 5 dòng nên mấy nhà thêm sau không đổi được từ điện thoại. Nhà nào chưa liệt kê được model nào (hay gặp: CLI đã cài nhưng chưa đăng nhập) thì ẩn đi cho gọn, trừ nhà đang dùng.
 - Gõ thẳng `/model <tên model>` thì Minmin dò tên đó trong danh sách thật của các nhà đã kết nối rồi chuyển đúng nhà. Tên có ở nhiều nhà mà không nhà nào đang dùng thì nó hỏi lại thay vì đoán, vì đoán trượt là âm thầm đổi cả đường tiền (gói thuê bao so với API tính theo lượt gọi).
+- **Từ 26.10.310, đổi model trên Telegram chỉ ghim cho ĐÚNG cuộc trò chuyện đó** (chat riêng hay từng nhóm). Nó không đổi model chính trên web, và các cuộc trò chuyện Telegram khác vẫn như cũ. `/model ghim` khoá cuộc này vào model nó đang chạy, `/model theo` gỡ ghim riêng. Thẻ Model Telegram trên trang Models vẫn là ghim chung cho mọi cuộc chưa ghim riêng. `/status` nói cuộc này đang ghim riêng, theo ghim chung hay theo model chính.
 
 ## MCP và skill qua Telegram
 
 - **Mọi engine đều dùng được MCP của Minmin qua Telegram**, vì công cụ đi qua MCP Hub chứ không gắn cứng vào một engine. Chính text `/help` của bot cũng ghi: "ChatGPT/Codex và OpenRouter đều dùng được MCP của Minmin." Bạn thấy nó chạy thật khi tin trạng thái hiện dòng "⚙ Đang gọi công cụ: ...".
 - Gọi skill bằng cú pháp `/tên-skill`. Cửa này CÓ chặn một trường hợp: đang ở engine OpenRouter mà gõ `/tên-skill` thì bot nhắc "⚠ Skill cần engine Claude CLI. Gửi /cli để đổi, rồi /tên-skill lại."
-- Đổi engine ngay trong Telegram: gõ `/cli` để về Claude (bot đáp "✅ Provider: Anthropic (Claude Code) - đầy đủ MCP, hỏi POS/Ads/vault được."), `/or` để sang OpenRouter (bot đáp "✅ Provider: OpenRouter (`<model>`) - chat + MCP đa-model."). Đổi ở đây cũng đổi luôn cho toàn hệ Minmin (dashboard và bot dùng chung một cấu hình model).
+- Đổi engine ngay trong Telegram: gõ `/cli` để về Claude (bot đáp "✅ Provider: Anthropic (Claude Code) - đầy đủ MCP, hỏi POS/Ads/vault được."), `/or` để sang OpenRouter (bot đáp "✅ Provider: OpenRouter (`<model>`) - chat + MCP đa-model."). Từ 26.10.310 hai lệnh này chỉ ghim cho cuộc trò chuyện đang gõ, không đổi model trên dashboard.
 - Muốn dùng `/or` thì cần đã đặt OpenRouter key trong trang [Models & engine](10-models-va-engine.md); chưa có key bot sẽ nhắc "⚠ Chưa có OpenRouter key - đặt trong Models trên dashboard trước."
 
 ## Giới hạn quyền: chỉ mình bạn dùng bot

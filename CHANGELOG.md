@@ -1,5 +1,25 @@
 # MinMin OS
 
+## [26.10.326] - 2026-10-31
+### Thêm mới
+- **Thứ tự dùng mô hình** trên trang Bộ não AI: thẻ MAIN rồi Dự phòng 1, 2, kéo hoặc bấm Đảo để đổi. Hết lượt trước khi kịp trả lời thì MinMin tự hỏi lại bằng thẻ kế; hết giữa chừng có nút **Chạy lại ngay**. Đã gọi công cụ thì không bao giờ tự chạy lại.
+- **Nhiều API key cho một nhà**: danh sách đánh số, dùng lần lượt, key hết lượt ghi giờ mở lại.
+### Cải thiện
+- **Nhanh hơn**: Claude Code được giữ sẵn giữa các tin của một cuộc chat. Mở lại trang chỉ tải khoảng 96 KB thay vì 294 KB, font nằm sẵn trong app, máy chủ đang khởi động lại thì trang tự chờ rồi vào lại.
+- Sơ đồ, hình và ảnh phóng to, kéo được bằng con lăn hoặc hai ngón tay.
+
+## [26.10.325] - 2026-10-31
+### Thêm mới
+- **Fanpage qua Pancake vào hộp thư Chatbot**: mỗi Page là một tài khoản. Nhân viên trả lời trên Pancake thì A.I. tự nhường. Mặc định A.I. chỉ soạn nháp chờ bố duyệt, muốn tự trả lời phải bật riêng từng Page.
+- **Kênh Zalo OA** trong Chatbot, MinMin tự làm mới token. Bot Zalo cá nhân nhắn được chữ đậm, chữ màu, đọc được file PDF, Word, Excel khách gửi. Gặp câu khó ở chat riêng thì bot im và báo bố.
+- **Thống kê "A.I. giúp bố được gì"**, tách theo từng nick/Page. Trên điện thoại, mở chat là toàn màn hình và Enter là xuống dòng.
+- **Tua lại hội thoại** từ một câu hỏi cũ, **thanh mục tiêu** `/goal`, Telegram ghim model theo từng cuộc trò chuyện.
+### Cải thiện
+- **Chuông chỉ kêu tin khẩn**: thông báo có nhóm và mức, tin khác vào ngăn Đã lọc. Trang Công việc chỉ hỏi bố khi thật sự cần, có Đã kiểm / Chưa kiểm. Việc hết lượt không còn bị ghi là Xong.
+- **MinMin tự học từ trò chuyện**, có giới hạn mỗi ngày, hoàn tác được và có nút Tạm dừng mọi cải tiến.
+### Bảo mật
+- Vá Node.js tháng 10/2026.
+
 ## [26.10.323] - 2026-10-31
 ### Sửa lỗi
 - **Đội Social, Facebook**: khung chat Messenger còn nổi từ lần nhắn tin trước làm Worker không thấy nút Thích, Chia sẻ trên bài và đọc nhầm tên nhóm thành "Đoạn chat". Worker giờ tự đóng khung chat khi mở trang và chỉ lấy tên trong vùng chính.

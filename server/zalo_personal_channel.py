@@ -279,8 +279,23 @@ def chuan_hoa_tin(conn: dict, msg: dict, ten: Dict[str, dict]) -> Optional[dict]
         "created_at": _ts(_lay(msg, "ts", "timestamp", "time", mac_dinh=0)),
         "metadata": dict({k: msg.get(k) for k in ("replyTo", "mentions", "mediaUrl", "url", "fileName")
                           if msg.get(k) not in (None, "")},
-                         **({"image_url": _link_anh(msg)} if loai == "image" and _link_anh(msg) else {})),
+                         **({"image_url": _link_anh(msg)} if loai == "image" and _link_anh(msg) else {}),
+                         **(_tep_md(msg) if loai == "file" else {})),
     }
+
+
+def _tep_md(msg: dict) -> dict:
+    """Link tải và tên của một tin file (26.10.306): MCP đưa ở `attachment.url` / `.description`
+    (zalo-agent-cli 1.6.2, `normalizeMessage`). Không có thì {}: bot nói thật là chưa mở được."""
+    att = msg.get("attachment") if isinstance(msg.get("attachment"), dict) else {}
+    out = {}
+    url = str(att.get("url") or msg.get("mediaUrl") or msg.get("url") or "").strip()
+    if url.startswith("https://"):
+        out["file_url"] = url
+    ten = str(msg.get("fileName") or att.get("description") or "").strip()
+    if ten and not msg.get("fileName"):
+        out["fileName"] = ten[:200]
+    return out
 
 
 # ============================================================
@@ -431,7 +446,7 @@ def bao_tin_bo_lo(conn: dict, ten: list) -> None:
         inbox.add(f"Có {len(ten)} tin khách nhắn lúc Zalo \"{conn.get('label') or conn.get('id')}\" "
                   f"chưa đọc được (mất kết nối hoặc MinMin vừa khởi động lại): {ds}. "
                   f"Bot không tự trả lời vì tin đã quá cũ. Mở Hộp thư hội thoại để xem và trả lời.",
-                  kind="system", title="Có khách nhắn lúc bot vắng", source="zalo_personal")
+                  kind="system", title="Có khách nhắn lúc bot vắng", source="zalo_personal", tu_phan_loai=True)
     except Exception as e:
         print(f"[zalo-personal] báo tin bỏ lỡ lỗi: {e}", file=sys.stderr)
 
@@ -531,7 +546,10 @@ def co_bot(conn_id: str) -> bool:
 
 
 def _chuan(text: str) -> str:
-    return " ".join(str(text or "").split())
+    # So theo đúng chữ Zalo hiện (26.10.314): câu gửi đi là "**85.000đ**" thì tiếng vọng về là "85.000đ" kèm kiểu đậm,
+    # vẫn phải nhận ra là câu của chính MinMin, không thì bot tưởng chủ tự nhắn và im.
+    import zalo_dinh_dang
+    return " ".join(zalo_dinh_dang.bo_dinh_dang(str(text or "")).split())
 
 
 def ghi_da_gui(conn_id: str, thread: str, text: str) -> None:
@@ -628,3 +646,173 @@ def _giao_cho_bot(conn: dict, ev: dict) -> None:
     t = loop.create_task(tb.xu_ly(ev))
     _VIEC.add(t)
     t.add_done_callback(_VIEC.discard)
+
+
+# ============================================================
+# File khách gửi (26.10.306) - phần đọc file ở `zalo_tep`
+# ============================================================
+def tep_cua_tin(ev: dict) -> Optional[dict]:
+    import zalo_tep
+    return zalo_tep.tep_cua_tin(ev)
+
+
+def xu_ly_tep_nhom(conn_id: str, ev: dict) -> None:
+    """File trơn trong nhóm (không ai gọi bot): nhớ link cho người gửi, không tải gì."""
+    import zalo_tep
+    tep = zalo_tep.tep_cua_tin(ev)
+    if tep and ev.get("sender_type") == "customer":
+        zalo_tep.nho_tep_tron(conn_id, str(ev.get("external_chat_id") or ""), str(ev.get("sender_id") or ""),
+                              tep, float(ev.get("created_at") or 0))
+
+
+def lay_tep_tron(conn_id: str, thread: str, nguoi: str) -> list:
+    import zalo_tep
+    return zalo_tep.lay_tep_tron(conn_id, thread, nguoi)
+
+
+# ============================================================
+# Tag Zalo của cuộc chat (26.10.306, học Javis 0.282)
+# ============================================================
+# Tag chủ gắn trong app Zalo (Gia đình, Bạn bè, Khách...) cho bot biết người nhắn là ai với chủ,
+# và form bot có ô "không trả lời các chat mang tag này". zalo-agent-cli 1.6.2 không có tool MCP
+# đọc tag, nhưng CLI của chính gói đã ghim có `label list` (cùng thư mục đăng nhập). Đọc NỀN và
+# giữ trong bộ nhớ: một lượt bot không bao giờ chờ Zalo chỉ để biết chat có tag hay không.
+NHAN_TTL = 600            # giây giữ bảng tag trước khi đọc lại
+NHAN_THU_LAI = 1800       # đọc hỏng (CLI lỗi, chưa có Node) thì nghỉ lâu hơn
+_NHAN: Dict[str, dict] = {}     # conn_id -> {"luc", "ok", "ten": [...], "theo_chat": {thread: [tên]}}
+_NHAN_DANG_DOC: set = set()
+
+
+def bang_nhan(data: Any) -> dict:
+    """Kết quả `label list --json` -> {"ten": [tên tag theo thứ tự], "theo_chat": {threadId: [tên]}}.
+
+    Bản ghi của zca-js: `{labelData: [{id, text, conversations: ["<id>" | "g<id>"], ...}]}`. Id nhóm
+    có tiền tố "g"; bỏ đi để khớp threadId của kho."""
+    ten, theo_chat = [], {}
+    ds = data.get("labelData") if isinstance(data, dict) else data
+    for lb in ds if isinstance(ds, list) else []:
+        if not isinstance(lb, dict):
+            continue
+        t = " ".join(str(lb.get("text") or lb.get("name") or "").split())[:60]
+        if not t:
+            continue
+        if t not in ten:
+            ten.append(t)
+        for c in lb.get("conversations") or []:
+            cid = str(c or "").strip()
+            if cid[:1] in ("g", "u") and cid[1:].isdigit():
+                cid = cid[1:]
+            if cid:
+                ds_t = theo_chat.setdefault(cid, [])
+                if t not in ds_t:
+                    ds_t.append(t)
+    return {"ten": ten, "theo_chat": theo_chat}
+
+
+async def _doc_nhan(conn_id: str) -> None:
+    import os
+    import shutil
+    from channels import zalo_personal as zp
+    now = time.time()
+    try:
+        conn = ket_noi_theo_id(conn_id)
+        argv = zp.lenh_cli(conn, "--json", "label", "list") if conn else None
+        if not argv or not shutil.which("npx"):
+            raise RuntimeError("không dựng được lệnh CLI")
+        env = dict(os.environ)
+        env.update({k: str(v) for k, v in ((conn or {}).get("env") or {}).items()})
+        import winproc
+        proc = await asyncio.create_subprocess_exec(
+            *argv, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.DEVNULL, env=env, **winproc.kwargs_no_window())
+        try:
+            out, _e = await asyncio.wait_for(proc.communicate(), timeout=40)
+        except asyncio.TimeoutError:
+            proc.kill()
+            raise RuntimeError("CLI quá hạn")
+        if proc.returncode != 0:
+            raise RuntimeError(f"CLI thoát mã {proc.returncode}")
+        _NHAN[conn_id] = dict(bang_nhan(_json_cua(out.decode("utf-8", "replace"))), luc=now, ok=True)
+    except Exception as e:      # noqa: BLE001 - tag chỉ là gợi ý cho bot; thiếu thì bot chạy như cũ
+        cu = _NHAN.get(conn_id) or {"ten": [], "theo_chat": {}}
+        _NHAN[conn_id] = dict(cu, luc=now, ok=False)
+        print(f"[zalo-personal {conn_id}] đọc tag Zalo lỗi: {type(e).__name__}: {str(e)[:160]}", file=sys.stderr)
+    finally:
+        _NHAN_DANG_DOC.discard(conn_id)
+
+
+def _lam_moi_nhan(conn_id: str) -> None:
+    c = _NHAN.get(conn_id)
+    if c and time.time() - float(c.get("luc") or 0) < (NHAN_TTL if c.get("ok") else NHAN_THU_LAI):
+        return
+    if conn_id in _NHAN_DANG_DOC:
+        return
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    _NHAN_DANG_DOC.add(conn_id)
+    t = loop.create_task(_doc_nhan(conn_id))
+    _VIEC.add(t)
+    t.add_done_callback(_VIEC.discard)
+
+
+def nhan_cua_chat(conn_id: str, thread: str) -> List[str]:
+    """Tên tag Zalo trên một cuộc chat (vd ["Gia đình"]), [] khi không có hoặc chưa đọc được.
+    Không chờ: đọc bảng đang có, bảng cũ thì đọc lại ở nền cho lượt sau."""
+    cid = str(conn_id or "")
+    _lam_moi_nhan(cid)
+    return list(((_NHAN.get(cid) or {}).get("theo_chat") or {}).get(str(thread or ""), []))
+
+
+def ten_nhan(conn_id: str) -> List[str]:
+    """Mọi tên tag của một tài khoản (cho form bot). Có thể rỗng ở lần hỏi đầu, lần sau sẽ có."""
+    cid = str(conn_id or "")
+    _lam_moi_nhan(cid)
+    return list((_NHAN.get(cid) or {}).get("ten") or [])
+
+
+# ============================================================
+# Câu bot gửi không tới khách (26.10.306, học Javis 0.282)
+# ============================================================
+GUI_HONG_CHUONG = 1800      # giây: mỗi tài khoản báo chuông nhiều nhất một lần mỗi 30 phút
+_GUI_HONG: Dict[str, float] = {}
+
+
+def bao_gui_hong(conn_id: str, thread: str, cau: str, loi: str, chat_type: str = "") -> None:
+    """Zalo từ chối câu bot vừa soạn: ghi một dòng hệ thống vào đúng cuộc chat trong Hộp thư (để
+    chủ thấy khách CHƯA nhận được gì) và báo chuông, không lặng lẽ như đã gửi."""
+    try:
+        cid = conversations.conversation_id_of(KENH, str(conn_id), str(thread))
+        truoc = (conversations.chi_tiet(cid) or {}).get("last_sender_type") if cid else ""
+        kq = conversations.ghi_su_kien({
+            "channel": KENH, "account_id": str(conn_id), "external_chat_id": str(thread),
+            "chat_type": chat_type or "private", "sender_type": "system", "message_type": "text",
+            "text": "Bot soạn được câu trả lời nhưng Zalo không gửi đi, khách chưa nhận được: "
+                    + " ".join(str(cau or "").split())[:300],
+            "metadata": {"loi": str(loi or "")[:300], "gui_hong": True},
+        })
+        # Khách vẫn CHƯA được trả lời: giữ cuộc chat ở "Cần trả lời" của hộp thư (26.10.284 xét
+        # last_sender_type='customer'). Câu bot đã ghi vào kho TRƯỚC khi gửi (tin "ai" cuối) không
+        # tới khách, nên nó và dòng hệ thống này không được làm cuộc chat trông như đã đáp.
+        if truoc in ("customer", "ai") and kq.get("conversation_id"):
+            with conversations._lock:
+                db = conversations._conn()
+                db.execute("UPDATE conversations SET last_sender_type='customer' WHERE id=?",
+                           (int(kq["conversation_id"]),))
+                db.commit()
+    except Exception as e:      # noqa: BLE001
+        print(f"[zalo-personal] ghi gửi hỏng lỗi: {e}", file=sys.stderr)
+    now = time.time()
+    if now - _GUI_HONG.get(str(conn_id), 0) < GUI_HONG_CHUONG:
+        return
+    _GUI_HONG[str(conn_id)] = now
+    try:
+        import inbox
+        c = ket_noi_theo_id(conn_id) or {}
+        inbox.add(f"Bot trên Zalo \"{c.get('label') or conn_id}\" soạn được câu trả lời nhưng Zalo không gửi đi: "
+                  f"{str(loi or '')[:200]}. Thường là nick đang mở ở nơi khác (Zalo Web, máy khác) giành kết nối. "
+                  f"Mở trang Khách để xem khách nào chưa nhận được tin.",
+                  kind="system", title="Bot Zalo gửi tin không được", source="zalo_personal")
+    except Exception as e:      # noqa: BLE001
+        print(f"[zalo-personal] báo gửi hỏng lỗi: {e}", file=sys.stderr)

@@ -247,6 +247,9 @@ def register(app, deps: ConversationsDeps):
             it.update(who=st["who"], who_code=st["who_code"], ai_allowed=st["ai_allowed"], ai_pending=st["pending"],
                       draft=st["draft"], reply_when=str(bot.get("reply_when") or ""),
                       yield_min=yield_min if isinstance(yield_min, int) else None)
+            # 26.10.315: a channel that gates "A.I. replies" per account says whether it is allowed here (None = no gate).
+            gate = getattr(channels.module(str(it.get("channel") or "")), "tu_tra_loi", None)
+            it["auto_ok"] = bool(gate(inbox_state.raw_account(it))) if callable(gate) else None
 
     def _day_range(date_from: str, date_to: str) -> tuple:
         """("YYYY-MM-DD", "YYYY-MM-DD"), both days included, in the server's time zone -> (since, until) timestamps.
@@ -389,7 +392,7 @@ def register(app, deps: ConversationsDeps):
 
     @router.get("/conversations/insights")
     async def conversations_insights(days: int = 7, date_from: str = Query("", alias="from"),
-                                     date_to: str = Query("", alias="to")):
+                                     date_to: str = Query("", alias="to"), account: str = ""):
         """The Stats tab (Chatbot v5): this period against the one of the same length right before it, plus "needs you"
         right now and the bot names. The period is `from`..`to` (days included, the date range picker), or else the
         last `days` (1, 7 or 30) counted from midnight of the server's day."""
@@ -403,13 +406,18 @@ def register(app, deps: ConversationsDeps):
             lt = time.localtime()
             midnight = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
             since, until = midnight - (n - 1) * 86400, now
-        cur = conversations.insights(since, until)
-        prev = conversations.insights(since - n * 86400, since)
+        # `account` (26.10.314): một tài khoản hộp thư "<kênh>:<id>"; tài khoản không còn thì về mọi tài khoản.
+        accounts = conversations.stats_accounts()
+        account = account if any(a["id"] == account for a in accounts) else ""
+        cur = conversations.insights(since, until, account)
+        prev = conversations.insights(since - n * 86400, since, account)
         ctx = _StateCtx(_hesitant())
-        you = sum(1 for r in conversations.state_rows(hesitant=ctx.hesitant, hidden="exclude") if ctx.of(r)["who"] == "you")
+        you = sum(1 for r in conversations.state_rows(hesitant=ctx.hesitant, hidden="exclude",
+                                                      account_ids=[account] if account else None)
+                  if ctx.of(r)["who"] == "you")
         names = {bid: _ten_bot(bid) for bid in set(cur["by_bot"]) | set(prev["by_bot"])}
         return {"ok": True, "days": n, "since": since, "until": until, "now": cur, "before": prev, "needs_you": you, "bot_names": names,
-                "channels": channels.cho_giao_dien()}
+                "channels": channels.cho_giao_dien(), "accounts": accounts, "account": account}
 
     @router.get("/conversations/stats")
     async def conversations_stats(bot_id: str = "", channel: str = "", account_id: str = ""):
@@ -635,6 +643,14 @@ def register(app, deps: ConversationsDeps):
         """ai | human | waiting | closed | draft. `human` = người thật tiếp quản, bot im ở cuộc chat đó. `draft` (Chatbot v5)
         = the bot writes its reply and waits for the owner. A draft still waiting stays when the mode changes (the owner
         may still send it, and Undo puts the old mode back with its draft); /reply and /draft clear it."""
+        # A channel may refuse a mode for one account (26.10.315: Pancake allows "A.I. replies" only on a Page the owner
+        # switched on, because staff also answer there). The module says why; nothing changes.
+        c = conversations.chi_tiet(conv_id)
+        hook = getattr(channels.module(str((c or {}).get("channel") or "")), "cho_che_do", None)
+        if c and callable(hook):
+            cho, why = hook(inbox_state.raw_account(c), str(mode or "").strip().lower())
+            if not cho:
+                return JSONResponse({"ok": False, "code": "mode_blocked", "error": why}, status_code=409)
         ok, err = conversations.dat_che_do(conv_id, mode)
         if not ok:
             # Chế độ hợp lệ mà vẫn hỏng thì chỉ có thể là không có hội thoại đó. Không dò chữ

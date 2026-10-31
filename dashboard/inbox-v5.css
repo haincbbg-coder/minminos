@@ -33,12 +33,25 @@
 .ib-fbtn.on { border-color: var(--mm-brand); color: var(--mm-link); background: var(--mm-wash); }
 .ib-fbtn-n { background: var(--mm-brand); color: var(--mm-on-brand); border-radius: var(--mm-r-pill); padding: 0 7px; font-weight: 600; line-height: 1.5; }
 .ib-fbtn-n[hidden] { display: none; }
-.ib-quick { display: flex; flex-wrap: wrap; gap: 6px; }
-.ib-q { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: var(--mm-r-pill); font: inherit; white-space: nowrap;
-  border: 1px solid var(--mm-line); background: none; color: var(--mm-muted); cursor: pointer; }
-.ib-q svg { width: 16px; height: 16px; }
-.ib-q.on { border-color: var(--mm-text); color: var(--mm-text); font-weight: 600; }
+/* the "who" dropdown (26.10.314): one button with the current view and its count, a menu with a line per view */
+.ib-quick { display: flex; position: relative; }
+.ib-who { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: var(--mm-r-btn); font: inherit; white-space: nowrap;
+  border: 1px solid var(--mm-line); background: var(--mm-field); color: var(--mm-text); cursor: pointer; max-width: 100%; }
+.ib-who svg { width: 16px; height: 16px; flex: none; }
+.ib-who.you { border-color: var(--mm-warn); }
+.ib-who-t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.ib-who-you { background: var(--mm-bad); color: var(--mm-on-brand); border-radius: var(--mm-r-pill); padding: 0 7px; font-weight: 600; line-height: 1.5; }
 .ib-qn { color: var(--mm-dim); font-weight: 400; }
+.ib-wm { top: calc(100% + 6px); left: 0; right: auto; width: min(340px, calc(100vw - 32px)); padding: 6px; }
+.ib-wm-o { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: var(--mm-r-btn); background: none;
+  color: var(--mm-text); font: inherit; text-align: left; cursor: pointer; }
+.ib-wm-o:hover, .ib-wm-o:focus-visible { background: var(--mm-wash); }
+.ib-wm-o.on { background: var(--mm-wash); }
+.ib-wm-o > svg { width: 16px; height: 16px; flex: none; }
+.ib-wm-t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ib-wm-t small { color: var(--mm-muted); }
+.ib-wm-ck { width: 18px; flex: none; color: var(--mm-brand); }
+.ib-wm-ck svg { width: 18px; height: 18px; }
 .ib-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; background: var(--mm-muted); }
 .ib-dot.w-you { background: var(--mm-warn); } .ib-dot.w-ai { background: var(--mm-brand); }
 .ib-dot.w-owner { background: var(--mm-link); } .ib-dot.w-log { background: var(--mm-muted); }
@@ -230,8 +243,12 @@
   .ib-fm-ft { grid-column: 1; }
 }
 @media (max-width: 640px) {
-  .ib-quick { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .ib-q { flex: none; }
+  /* An open chat takes the whole phone screen (26.10.314, theo Javis 0.397): no page title, tabs or app bar above
+     it, the composer stays at the bottom; the back arrow in the chat head returns to the list. */
+  .ht-wrap.ib-v5.thread-on .ht-body { position: fixed; inset: 0; z-index: 1500; height: 100dvh; min-height: 0; border: 0;
+    border-radius: 0; background: var(--mm-bg); padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .ht-wrap.ib-v5.thread-on .ht-thread { min-height: 0; height: 100%; flex: 1 1 auto; }
+  .ib-toast { z-index: 3200; }
   .ib-mode-l { display: none; }
   .ib-mode { width: 100%; }
   .ib-m { flex: 1 1 0; justify-content: center; padding: 7px 4px; }
@@ -294,6 +311,8 @@
 .kn-unsaved { color: var(--mm-warn); font-weight: 600; }
 .kn-card { padding: 12px 16px 0; }
 .kn-card .ht-acc { margin: 0; }
+.kn-auto { margin-top: var(--mm-sp-3); padding: var(--mm-sp-3); border: 1px solid var(--mm-line); border-radius: var(--mm-r-card); font-size: var(--mm-fs-16); }
+.kn-auto p { margin: 4px 0 8px; }
 .kn-ch { padding: 12px 0 0; }
 .kn-chh { display: flex; gap: 10px; align-items: center; padding: 0 16px; flex-wrap: wrap; }
 .kn-chh b { font-size: var(--mm-fs-16); }
@@ -327,7 +346,19 @@
   box-shadow: 0 1px 3px var(--mm-scrim); transition: left .15s; }
 .ib-tg.on { background: var(--mm-brand); }
 .ib-tg.on::after { left: 25px; }
-.ib-tg:disabled { opacity: .45; cursor: not-allowed; }
+.ib-tg:disabled, .ib-tg[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+/* Channels tab: the account card behind an Info button (26.10.314) */
+.kn-info { position: relative; display: inline-flex; gap: 6px; align-items: center; font-size: var(--mm-fs-16); }
+.kn-info-bad { position: absolute; top: 2px; right: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--mm-bad); }
+.kn-infobox { width: min(520px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); overflow: auto; }
+.kn-ih { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.kn-ih h3 { margin: 0; font-size: var(--mm-fs-20); }
+.kn-infobox .kn-card { padding: 12px 0 0; }
+@media (max-width: 640px) {
+  .kn-infomodal { align-items: flex-end; }
+  .kn-infobox { width: 100%; border-radius: var(--mm-r-field) var(--mm-r-field) 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .kn-info span:not(.kn-info-bad) { display: none; }
+}
 .kn-bulkbox { max-width: 460px; }
 .kn-bl { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--mm-line); font-size: var(--mm-fs-16); }
 .kn-bl small { margin-left: auto; color: var(--mm-dim); font-size: var(--mm-fs-16); }
@@ -438,3 +469,41 @@
 @media (max-width: 900px) { .ht-top .ht-title { order: 0; } .ht-top .mm-ops-open { order: 1; margin-left: auto; } .ht-top .ht-tabs { order: 2; } }
 
 @media (max-width: 900px) { .ht-page .ht-top .ht-title { width: auto; flex: 1 1 auto; min-width: 0; } .ht-page .ht-top .mm-ops-open { flex: none; } }
+
+/* ---- Stats: what the A.I. did for you, hours, per account (26.10.314) ---- */
+.st-hero { border-radius: var(--mm-r-field); background: var(--mm-wash); border: 1px solid var(--mm-line); padding: 16px; display: flex;
+  flex-direction: column; gap: 12px; }
+.st-hero-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--mm-fs-20); color: var(--mm-text); }
+.st-hero-h svg { width: 22px; height: 22px; color: var(--mm-brand); }
+.st-hero-k { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.st-hero-k div { display: flex; flex-direction: column; gap: 2px; }
+.st-hero-k b { font-size: var(--mm-fs-24); color: var(--mm-text); font-variant-numeric: tabular-nums; }
+.st-hero-k span { color: var(--mm-muted); }
+.st-speed .st-v { font-size: var(--mm-fs-20); }
+.st-sp { display: flex; flex-direction: column; gap: 2px; }
+.st-sp-ai { color: var(--mm-brand); }
+.st-panel h3 small { color: var(--mm-dim); font-weight: 400; }
+.st-cols { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; align-items: end; height: 120px; }
+.st-col { height: 100%; display: flex; align-items: flex-end; }
+.st-col > span { display: block; width: 100%; background: var(--mm-brand); border-radius: 3px 3px 0 0; opacity: .85; }
+.st-col.rest > span { background: var(--mm-muted); }
+.st-col.peak > span { opacity: 1; }
+.st-cols-x { display: flex; justify-content: space-between; color: var(--mm-dim); margin-top: 4px; }
+.st-legend { display: flex; align-items: center; gap: 6px; color: var(--mm-muted); margin: 10px 0 0; }
+.st-lg { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--mm-brand); }
+.st-lg.rest, .st-lg.hu { background: var(--mm-muted); }
+.st-lg.hu { margin-left: 10px; }
+.st-acc { padding: 6px 0; }
+.st-acc-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.st-acc-h b { color: var(--mm-brand); font-variant-numeric: tabular-nums; }
+.st-split { display: flex; margin: 6px 0 4px; }
+.st-split .st-fill { border-radius: 0; }
+.st-split .st-fill.hu { background: var(--mm-muted); }
+.st-acc-n { color: var(--mm-dim); }
+.st-accsel { border: 1px solid var(--mm-line); border-radius: var(--mm-r-btn); padding: 8px 10px; background: var(--mm-field); color: var(--mm-text);
+  font: inherit; font-size: var(--mm-fs-16); max-width: 240px; }
+@media (max-width: 640px) {
+  .st-hero-k { grid-template-columns: 1fr; }
+  .st-cols { height: 90px; gap: 2px; }
+  .st-accsel { max-width: 100%; flex: 1 1 100%; }
+}
