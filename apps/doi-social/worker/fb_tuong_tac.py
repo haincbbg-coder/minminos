@@ -194,7 +194,7 @@ def fb_tuong_tac_bai_app(nc) -> str:
                                                             "không biểu tượng, không khen lố"})
                 cau = str(kq_ai.get("noi_dung") or "").strip()
                 if cau and nc.che_do in ("chay_thu", "duyet_truoc"):
-                    nc.ban_nhap(loai="binh_luan", noi_dang="fb_nhom", nhom=nhom, link_goc=link,
+                    nc.ban_nhap(loai="binh_luan", noi_dang="fb_nhom" if nhom else "fb_tuong", nhom=nhom, link_goc=link,
                                 bai_goc=bai.get("chu", "")[:1000], ly_do="Tương tác bài đội đã đăng",
                                 noi_dung=cau, san_pham_id=nc.ts.get("san_pham", ""))
                     nc.su_kien("binh_luan", "thong_tin",

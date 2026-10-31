@@ -780,6 +780,7 @@ async def cap_nhat_so_lieu(trang_id: str = "", now: Optional[float] = None) -> d
     ngay = fp._ngay_str(now)
     ids = [trang_id] if trang_id else fp.ids_trang()
     so_trang, so_bai = 0, 0
+    loi_insights: list = []
     for tid in ids:
         ds_tok = await token_trang(tid)
         if not ds_tok:
@@ -789,18 +790,31 @@ async def cap_nhat_so_lieu(trang_id: str = "", now: Optional[float] = None) -> d
         d = await _get(tid, {"fields": "followers_count,fan_count"}, tok)
         if not _loi(d):
             kw["nguoi_theo_doi"] = d.get("followers_count", d.get("fan_count"))
-        metric = {"page_impressions_unique": "tiep_can", "page_post_engagements": "tuong_tac",
-                  "page_views_total": "luot_xem"}
-        d = await _get(f"{tid}/insights", {"metric": ",".join(metric), "period": "day"}, tok)
+        # 26.10.311: Meta bỏ page_impressions_unique (15/6/2025) và page_impressions (15/11/2025): gọi chỉ số
+        # đã bỏ thì cả lô lỗi "invalid metric". Dùng chỉ số thay thế, lấy số của NGÀY HÔM QUA (ngày đã chốt;
+        # giá trị cuối của period=day là hôm nay còn dở, thường bằng 0).
+        metric = {"page_total_media_view_unique": "tiep_can", "page_post_engagements": "tuong_tac",
+                  "page_media_view": "luot_xem"}
+        tham = {"period": "day", "date_preset": "yesterday"}
+        d = await _get(f"{tid}/insights", {"metric": ",".join(metric), **tham}, tok)
         ds_m = [] if _loi(d) else (d.get("data") or [])
+        loi_m = []
         if _loi(d):
             for m in metric:
-                d1 = await _get(f"{tid}/insights", {"metric": m, "period": "day"}, tok)
-                if not _loi(d1):
+                d1 = await _get(f"{tid}/insights", {"metric": m, **tham}, tok)
+                if _loi(d1):
+                    loi_m.append(f"{m}: {str((_loi(d1) or {}).get('message', ''))[:80]}")
+                else:
                     ds_m += d1.get("data") or []
+        kw_hq = {}
         for m in ds_m:
             if m.get("name") in metric and _gia_tri_cuoi(m) is not None:
-                kw[metric[m["name"]]] = _gia_tri_cuoi(m)
+                kw_hq[metric[m["name"]]] = _gia_tri_cuoi(m)
+        if kw_hq:      # chỉ số của ngày hôm qua ghi vào dòng hôm qua; người theo dõi là số của hôm nay
+            fp.ghi_so_lieu_trang(tid, fp._ngay_str(now - 86400), **kw_hq)
+            so_trang += 0 if kw else 1
+        if loi_m and len(loi_m) == len(metric):
+            loi_insights.append(f"{tid}: " + "; ".join(loi_m))
         if kw:
             fp.ghi_so_lieu_trang(tid, ngay, **kw)
             so_trang += 1
@@ -817,20 +831,25 @@ async def cap_nhat_so_lieu(trang_id: str = "", now: Optional[float] = None) -> d
             sl["cam_xuc"] = int(((d.get("reactions") or {}).get("summary") or {}).get("total_count") or 0)
             sl["binh_luan"] = int(((d.get("comments") or {}).get("summary") or {}).get("total_count") or 0)
             sl["chia_se"] = int((d.get("shares") or {}).get("count") or 0)
-        d = await _get(f"{b['post_id']}/insights", {"metric": "post_impressions_unique,post_clicks"}, tok)
+        d = await _get(f"{b['post_id']}/insights", {"metric": "post_total_media_view_unique,post_clicks"}, tok)
+        if _loi(d):          # post_clicks có thể không có với một số loại bài: lấy riêng tiếp cận
+            d = await _get(f"{b['post_id']}/insights", {"metric": "post_total_media_view_unique"}, tok)
         if not _loi(d):
             for m in d.get("data") or []:
                 v = _gia_tri_cuoi(m)
                 if v is None:
                     continue
-                if m.get("name") == "post_impressions_unique":
+                if m.get("name") == "post_total_media_view_unique":
                     sl["tiep_can"] = v
                 elif m.get("name") == "post_clicks":
                     sl["click"] = v
         if sl:
             fp.ghi_so_lieu_bai(b["id"], sl)
             so_bai += 1
-    return {"trang": so_trang, "bai": so_bai}
+    if loi_insights:
+        fp.ghi_nk("so_lieu", "", None, "loi", f"Facebook không trả số liệu tiếp cận/tương tác cho "
+                  f"{len(loi_insights)} Trang. Ví dụ: {loi_insights[0][:300]}")
+    return {"trang": so_trang, "bai": so_bai, "loi_insights": len(loi_insights)}
 
 
 # ------------------------------------------------------------------ đổi info Trang

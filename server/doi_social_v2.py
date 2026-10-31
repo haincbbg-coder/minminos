@@ -359,6 +359,12 @@ def _han_muc(c, nick_id: str, nen_tang: str, hanh_dong: Iterable, g: Optional[di
         da = c.execute("SELECT COUNT(*) FROM su_kien WHERE nick_id=? AND nen_tang=? AND hanh_dong=? "
                        "AND ket_qua='thanh_cong' AND luc>=?", (nick_id, nen_tang, hd, dau)).fetchone()[0]
         ra[hd] = max(0, tr - da)
+        if hd == "vao_nhom":          # 26.10.311: trần theo giờ trước đây chỉ nằm trong cài đặt, không ai đọc
+            gio = ((g.get("nen_tang") or {}).get(nen_tang) or {}).get("vao_nhom_moi_gio")
+            if isinstance(gio, (int, float)) and gio > 0:
+                da_h = c.execute("SELECT COUNT(*) FROM su_kien WHERE nick_id=? AND nen_tang=? AND hanh_dong='vao_nhom' "
+                                 "AND ket_qua='thanh_cong' AND luc>=?", (nick_id, nen_tang, now - 3600)).fetchone()[0]
+                ra[hd] = min(ra[hd], max(0, int(gio) - da_h))
     return ra
 
 
@@ -476,6 +482,14 @@ def chuan_bi_giao(c, r, g: dict) -> str:
         cuoi = c.execute("SELECT MAX(xong_luc) FROM viec WHERE nick_id=? AND trang_thai IN ('xong','loi') "
                          "AND bat_dau IS NOT NULL AND chay_thu=0 AND ky_nang NOT IN ('dang_ban_nhap','fb_gui_tin')",
                          (r["nick_id"],)).fetchone()[0]
+        nghi = random.Random(int(r["id"])).uniform(float(a), float(b)) * 60
+        if cuoi and now - cuoi < nghi:
+            return "cho"
+    if ky == "dang_ban_nhap" and not r["chay_thu"] and (ts.get("tham_so") or {}).get("loai") == "bai_dang":
+        # 26.10.311: duyệt 10 bài cùng lúc cho một nick không được đăng dồn liền nhau.
+        a, b = (g["chung"].get("nghi_phut") or [0, 0])[:2]
+        cuoi = c.execute("SELECT MAX(xong_luc) FROM viec WHERE nick_id=? AND ky_nang='dang_ban_nhap' "
+                         "AND trang_thai='xong' AND chay_thu=0 AND id!=?", (r["nick_id"], r["id"])).fetchone()[0]
         nghi = random.Random(int(r["id"])).uniform(float(a), float(b)) * 60
         if cuoi and now - cuoi < nghi:
             return "cho"
@@ -1586,7 +1600,8 @@ def _hd_nhap(n: dict) -> list:
         return ["tra_loi_binh_luan"]
     if n["loai"] == "binh_luan":
         return ["binh_luan_nhom" if n["noi_dang"] == "fb_nhom" else "binh_luan"]
-    return [{"fb_nhom": "dang_nhom", "fb_trang": "dang_trang"}.get(n["noi_dang"], "dang_tuong")]
+    return [{"fb_nhom": "dang_nhom", "fb_trang": "dang_trang", "tiktok": "dang_video",
+             "youtube": "dang_video"}.get(n["noi_dang"], "dang_tuong")]
 
 
 def duyet_ban_nhap(nid, dong_y: bool) -> dict:
@@ -2157,7 +2172,7 @@ def tra_loi_tay(hid, noi_dung: str) -> dict:
         if not nk:
             raise ValueError("nick của hội thoại không còn trên máy ở nhà")
         vts = {"kich_ban": "fb_gui_tin", "nen_tang": "facebook", "chay_thu": False, "dot_id": None, "han_muc": {},
-               "nghi_giay": [], "hanh_dong": ["nhan_tin"],
+               "nghi_giay": [], "hanh_dong": ["tra_loi_tin_nhan"],
                "tham_so": {"khach_link": h["khach_link"], "noi_dung": noi_dung, "hoi_thoai_id": h["id"]}}
         vid = c.execute("INSERT INTO viec(ky_nang, may_id, nick_id, nick_ten, tham_so, trang_thai, tao_luc, duyet_luc, "
                         "nguon, chay_thu) VALUES('fb_gui_tin',?,?,?,?,'cho_chay',?,?,'web',0)",

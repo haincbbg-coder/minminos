@@ -422,7 +422,7 @@ class Engine:
                 post = v2.lay_ban_nhap(old['id']) if old else v2.tao_ban_nhap(loai='bai_dang', noi_dang=target['platform'],
                     noi_dung=out['text'], nick_id=target['nick'], nick_ten=target['nick_name'], nhom=target.get('destination', ''),
                     ly_do='Chiến dịch AI: ' + row['title'], viec_tao=marker, hen_luc=hen,
-                    tep=[(fp.ten_goc(i), fp.duong_media(i)) for i in ids])
+                    tep=[(fp.ten_goc(i), fp.duong_media(i).read_bytes()) for i in ids])
                 if len(post.get('tep') or []) != len(ids):
                     raise ValueError('Nháp thiếu media; cần kiểm tra trước khi duyệt')
                 if config['auto_publish'] and post['trang_thai'] == 'cho_duyet':
@@ -483,7 +483,12 @@ class Engine:
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:
-                    message = str(exc)[:500] if isinstance(exc, ValueError) else 'Tác vụ chưa hoàn tất: ' + type(exc).__name__ + '. Kiểm tra kết nối và nhật ký.'
+                    if not isinstance(exc, ValueError):
+                        import sys
+                        import traceback
+                        print(f'[doi-social] chiến dịch {cid} lỗi:', file=sys.stderr)
+                        traceback.print_exc()
+                    message = str(exc)[:500] if isinstance(exc, ValueError) else 'Tác vụ chưa hoàn tất: ' + type(exc).__name__ + ': ' + str(exc)[:200]
                     with ds._db() as c:
                         c.execute("UPDATE social_campaign_run SET state='error',message=?,updated=? WHERE campaign=? AND state IN ('new','writing','generating','waiting_media')", (message, time.time(), cid))
                         c.execute("UPDATE social_campaign SET errors=errors+1,message=?,state=CASE WHEN state='planning' OR errors>=2 THEN 'error' ELSE state END,updated=? WHERE id=?", (message, time.time(), cid))

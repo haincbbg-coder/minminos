@@ -12,9 +12,9 @@
     title: "Tài khoản",
     render: function (el, ctx) {
       var F = { tim: "", thu_muc: "", nhan: "", may: "", dd: "" }, chon = {}, ds = [];
-      el.innerHTML = DS.ph("Tài khoản", "Profile GPM Login trên các máy ở nhà. Gắn nhãn nền tảng để lọc nick khi chạy mẫu.",
+      el.innerHTML = DS.ph("Tài khoản", "Profile GPM Login trên máy ở nhà và profile Chrome MinMin. Gắn nhãn nền tảng để lọc nick khi chạy mẫu.",
         '<button class="btn" data-act="tai-lai">' + ic("refresh") + 'Làm mới</button><button class="btn btn-pri" data-act="quet" id="tk-quet">' + ic("scan") + "Quét Trang &amp; tài khoản</button>") +
-        '<div class="note mb">' + ic("info") + "<span>Tài khoản lấy từ GPM Login trên máy ở nhà, đã đăng nhập sẵn - không cần thêm tài khoản hay proxy. Muốn thêm nick, tạo profile trong GPM rồi máy ở nhà tự báo lên.</span></div>" +
+        '<div class="note mb">' + ic("info") + "<span>Tài khoản lấy từ GPM Login trên máy ở nhà, hoặc từ profile Chrome MinMin (mục Chrome). Muốn thêm nick, tạo profile trong GPM hoặc ở mục Chrome rồi đăng nhập sẵn các nền tảng.</span></div>" +
         '<div class="card card-x"><div class="filters" id="tk-loc"></div><div id="tk-bulk"></div><div id="tk-ds">' + '<div class="tw"><table class="tbl tbl-in"><tbody>' + DS.skelDong(8, 6) + "</tbody></table></div></div></div>";
 
       function loc() {

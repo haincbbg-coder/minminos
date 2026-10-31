@@ -36,7 +36,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PHIEN_BAN = "26.10.319"
+PHIEN_BAN = "26.10.320"
 THU_MUC = Path(__file__).resolve().parent
 CAU_HINH = THU_MUC / "worker.json"
 NHAT_KY = THU_MUC / "worker.log"
@@ -382,6 +382,11 @@ def lam_viec(may_chu, tao_gpm, viec: dict, kb: dict = None, day_buoc=None, toc_d
             cdp = gpm.mo(viec["nick_id"])
             nhat_ky("Đã kết nối được trình duyệt")
         except Exception as e:
+            try:          # 26.10.311: GPM đã mở dở profile mà không kết nối được: đóng lại, lượt sau khỏi kẹt
+                if "gpm" in locals() and gpm is not None:
+                    gpm.dong(viec["nick_id"])
+            except Exception:
+                pass
             gui(False, f"không chuẩn bị được: {e}", dem=dem0)
             return {"ok": False, "thong_diep": str(e), "dem": dem0}
         try:

@@ -70,7 +70,7 @@ def dang_bai(page, viec: dict, tep_cuc_bo: list, nhat_ky) -> str:
     tay.nghi(2.5, 5.0)
     url = page.url.lower()
     if "/login" in url or "checkpoint" in url or page.locator("input[name='pass']").count():
-        raise LoiKyNang("nick chưa đăng nhập Facebook hoặc đang bị checkpoint - mở profile trong GPM kiểm tra tay")
+        raise LoiKyNang("nick chưa đăng nhập Facebook hoặc đang bị checkpoint - mở profile của nick (GPM hoặc Chrome MinMin) kiểm tra tay")
     if ts.get("noi_dang"):
         # Trang (kiểu mới) mà nick là quản trị: Facebook mời "Chuyển sang Trang" mới đăng được
         # với danh nghĩa Trang. Bấm chuyển, đợi tải lại, rồi mở lại đúng nơi đăng.

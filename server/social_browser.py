@@ -516,7 +516,8 @@ def register(app, blocked, worker_auth):
             data = await request.json()
             job = ds.lay_viec(int(data.get('job', 0))) or {}
             pid = str(data.get('profile') or '')
-            if job.get('may_id') != machine['id'] or job.get('nick_id') != pid or job.get('trang_thai') != 'dang_chay':
+            if job.get('may_id') != machine['id'] or job.get('nick_id') != pid or (
+                    job.get('trang_thai') != 'dang_chay' and operation != 'close'):
                 raise ValueError('Profile không thuộc tác vụ đang chạy của máy này')
             if operation == 'open':
                 endpoint = await HOST.endpoint(pid, bool((job.get('tham_so') or {}).get('chay_an')))
