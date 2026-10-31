@@ -631,8 +631,16 @@
     if (!list.length) { cards.innerHTML = `<div class="empty">${esc(t("studio.ag_no_match"))}</div>`; return; }
     cards.innerHTML = "";
     list.forEach(a => {
-      const div = document.createElement("div"); div.className = "ag-card";
-      div.innerHTML = `<div class="ag-name"><input type="checkbox" class="ag-sel" data-slug="${esc(a.slug)}" title="${esc(t("studio.sel_one"))}"> ${ic("bot")} ${esc(a.name)} <span class="ag-model">${esc(a.model || "")}</span></div><div class="ag-role">${esc(a.role)}</div><div class="ag-skills">${(a.skills || []).map(s => `<span class="chip-skill">${esc(s)}</span>`).join("") || `<span class="dim">${esc(t("studio.no_skills"))}</span>`}</div><div class="ag-group">${ic("folder-open")} ${esc(nhomCua(a))}</div><div class="wf-actions"><button class="s-btn-ghost edit">${esc(t("common.edit"))}</button><button class="s-btn-ghost exp" title="${esc(t("studio.export_title"))}">${esc(t("studio.export"))}</button><button class="s-btn-ghost del">${esc(t("common.delete"))}</button></div>`;
+      const div = document.createElement("div"); div.className = "ag-card lp-rowcard";
+      const skills = (a.skills || []).join(", ");
+      div.innerHTML = `<div class="lp-r"><input type="checkbox" class="ag-sel" data-slug="${esc(a.slug)}" title="${esc(t("studio.sel_one"))}"><span class="lp-ic">${ic("bot")}</span><div class="lp-m"><div class="wf-name">${esc(a.name)}</div><div class="lp-sub"><span class="ag-group">${ic("folder-open")} ${esc(nhomCua(a))}</span> ${esc(a.role || "")}</div></div><div class="lp-st">${esc(a.model || "")}</div><div class="lp-b"><button type="button" class="s-btn-ghost agCt">${esc(t("knn.chi_tiet"))}</button></div></div><div class="wf-actions"><button class="s-btn-ghost edit">${esc(t("common.edit"))}</button><button class="s-btn-ghost exp" title="${esc(t("studio.export_title"))}">${esc(t("studio.export"))}</button><button class="s-btn-ghost del">${esc(t("common.delete"))}</button></div>`;
+      div.querySelector(".agCt").onclick = () => {
+        if (!window.MinMinNgan) { editAgent(a); return; }
+        window.MinMinNgan.mo({ title: a.name, icon: "bot", actions: div.querySelector(".wf-actions"), rows: [
+          [t("knn.mo_ta"), a.role || ""], [t("studio.ag_model"), a.model || ""],
+          [t("studio.ag_skills"), skills || t("studio.no_skills")], [t("studio.ag_group"), nhomCua(a)],
+        ] });
+      };
       noiSel("agent", "agDl", div.querySelector(".ag-sel"), a.slug);
       div.querySelector(".exp").onclick = () => exportItem("agent", a.slug);
       div.querySelector(".edit").onclick = () => editAgent(a);

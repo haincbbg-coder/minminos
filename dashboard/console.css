@@ -2788,3 +2788,10 @@ details.h2-sec[open] > summary.h2-h { margin-bottom: 6px; }
 }
 details.kn-gt > summary { cursor: pointer; font-size: var(--mm-fs-12); color: var(--text3); }
 details#hdWrap > summary { cursor: pointer; }
+
+/* Danh sách agent dạng dòng gọn (26.10.318) */
+#agCards.cards { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 6px; }
+.ag-card.lp-rowcard { padding: 8px 12px; }
+.ag-card .lp-r .ag-sel { flex: none; }
+.ag-card .lp-st { max-width: 110px; overflow: hidden; text-overflow: ellipsis; color: var(--text3); }
+@media (max-width: 640px) { #agCards.cards { grid-template-columns: minmax(0, 1fr); } }

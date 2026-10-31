@@ -1,5 +1,10 @@
 # MinMin OS
 
+## [26.10.319] - 2026-10-31
+### Cải thiện
+- **Tinh gọn đợt 4**: danh sách Agent thành dòng gọn có icon, tên, vai trò, model; xem được 2 đến 3 agent mỗi hàng.
+- Bấm **Chi tiết** để mở ngăn bên phải xem skill, nhóm và sửa, xuất, xoá. Trên điện thoại ngăn trượt lên từ dưới.
+
 ## [26.10.317] - 2026-10-31
 ### Thêm mới
 - **Kế Hoạch tài chính** tại Kết Nối Ngoài: kế hoạch bán/nhập hàng, P&L, hòa vốn, công nợ và dòng tiền 12 tháng liên thông.
