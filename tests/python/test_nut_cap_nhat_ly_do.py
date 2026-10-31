@@ -156,7 +156,7 @@ for f in ("DEPLOY.md", "docs/01-bat-dau-thiet-lap.md", "docs/17-khac-phuc-su-co.
     t = io.open(os.path.join(ROOT, f), encoding="utf-8").read()
     check(f"{f} ghi đúng lệnh bật Watchtower cho stack cũ",
           "docker compose --profile update up -d" in t)
-    check(f"{f} nói cách TỰ cập nhật khỏi bấm nút", "JAVIS_AUTO_UPDATE" in t)
+    check(f"{f} nói cách TỰ cập nhật khỏi bấm nút", ("MINMIN_AUTO_UPDATE" if f == "DEPLOY.md" else "JAVIS_AUTO_UPDATE") in t)
 
 _sc = io.open(os.path.join(ROOT, "docs", "17-khac-phuc-su-co.md"), encoding="utf-8").read()
 check("tài liệu sự cố có bảng phân biệt ba kiểu 'not found'",

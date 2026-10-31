@@ -1,53 +1,50 @@
-# Minmin OS - Quick start
+# MinMin OS quick start
 
-*[Tiếng Việt](QUICKSTART.md) · **English***
+[Tiếng Việt](QUICKSTART.md) · [English](QUICKSTART.en.md)
 
-Get Minmin OS running in a few minutes. Full guides: [docs/](docs/README.md).
+## Windows PC
 
-## Option 1 - Hostinger VPS (Docker Manager, one click)
+Install Python 3.12 and Node.js LTS. Download and extract the ZIP from [MinMin's repository](https://github.com/haincbbg-coder/minminos). Open CMD in the folder containing `install.ps1`:
 
-1. hPanel → VPS → **Docker Manager** → **Compose** → **Compose from URL**.
-2. Paste this URL:
-   ```
-   https://raw.githubusercontent.com/blogminhquy/javis-os/main/docker-compose.hostinger.yml
-   ```
-3. (Optional, for HTTPS + a domain) set this in the **Environment** box:
-   ```
-   DOMAIN_NAME=javis.<vps-hostname>.hstgr.cloud
-   ```
-   (Find the hostname under hPanel → VPS, e.g. `javis.srv1782015.hstgr.cloud`.)
-4. **Deploy**. Wait 1-3 minutes. Open the app with the **Open** button (or `https://<DOMAIN_NAME>`).
-5. On first run the screen asks you to create an admin account. After that, sign in to Claude Code once inside the container terminal: `claude auth login --claudeai`.
-
-To update: press **Redeploy** in Docker Manager (image `:latest`, `pull_policy: always`). Brain data stays in the volume.
-
-## Option 2 - Docker on any machine or VPS
-
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 ```
-docker compose -f docker-compose.yml up -d
+
+Open `http://localhost:7777`. Use `start-minmin.bat` on later visits and `stop-minmin.bat` to stop. Restart after installing additional CLI tools.
+
+## Hostinger
+
+In **Docker Manager → Compose → URL**, paste:
+
+```text
+https://raw.githubusercontent.com/haincbbg-coder/minminos/main/docker-compose.minmin.hostinger.yml
 ```
-Open http://localhost:7777. For HTTPS through Caddy, add `-f docker-compose.https.yml`.
 
-## Option 3 - Run directly (Windows, no Docker)
+Set your `DOMAIN_NAME`, `MINMIN_ADMIN_USER` and `MINMIN_ADMIN_PASSWORD` before deploying. Configure DNS and HTTPS; see [deployment instructions](DEPLOY.en.md).
 
-1. Install Python 3.12 + Node 22.
-2. In the project folder run `setup.bat` once - it creates .venv, installs dependencies, and installs the two CLI engines (Claude Code, Codex) for you.
-3. `start-javis.bat` to run in the background (`stop-javis.bat` to stop).
-4. Open http://localhost:7777.
+## VPS with Docker
 
-## Once it is running
+On a VPS with Git, Docker and Docker Compose:
 
-- **Pick an engine/model**: the **Models** page (Claude Code, ChatGPT/Codex, Antigravity CLI, OpenRouter, OpenAI, Google Gemini, Anthropic API, Groq, Ollama).
-- **Wire up connections** (POS, ads, calendar, Zalo...) so reports run on real numbers: the **Connections** page - see [docs/09](docs/09-mcp-va-so-lieu.md).
-- **Back the brain up to GitHub** so you do not lose data: the **Self-learning** page - see [docs/18](docs/18-sao-luu-github.md).
-- **Watch token spend**: the **Usage** page - see [docs/23](docs/23-muc-dung-token.md).
+```bash
+git clone https://github.com/haincbbg-coder/minminos.git /opt/minminos
+cd /opt/minminos
+cp .env.minmin.example .env
+nano .env
+```
 
-## Full documentation
+Replace the example password, then start:
 
-See [docs/README.md](docs/README.md) - a guide per feature (chat/voice, knowledge graph, skills, agents, workflows, recurring jobs, Kanban, self-learning, connections, Telegram, Zalo, plugins, security, backup...). Most pages are in Vietnamese; [docs/en/](docs/en/README.md) holds what has been translated so far.
+```bash
+docker compose -f docker-compose.minmin.yml up -d --pull always
+```
 
-## Common problems
+Open `http://<VPS-IP>:7777`. Set up HTTPS before connecting service accounts.
 
-- **The in-app update button does nothing on Hostinger**: that is by design - on Hostinger use **Redeploy** in Docker Manager. The in-app button needs Watchtower, and Hostinger usually blocks the Docker socket.
-- **ChatGPT/Codex says "model not supported"**: pick a valid Codex model on the Models page (e.g. `gpt-5.5`). Do not use `gpt-5-mini` or `gpt-4o` - those are API models and a Codex account cannot run them.
-- More: [docs/17 - Troubleshooting](docs/17-khac-phuc-su-co.md).
+## First setup and maintenance
+
+Connect your AI provider in **Models**, shop accounts in **Connections**, and choose **Skills** and **Agents**. See the [user guide](docs/en/README.md).
+
+Back up data before updating. Docker installations must retain the Compose file and project they were created with. For the new configuration above, repeat the `up -d --pull always` command. Never use `down -v` for updates.
+
+On Windows, use `stop-minmin.bat` then `start-minmin.bat` to restart and check `server/minmin.log` for errors. ZIP installations require a backup and data-migration check before replacing the old folder. Refresh with Ctrl + F5 after updating.

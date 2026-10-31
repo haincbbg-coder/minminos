@@ -1,5 +1,5 @@
 # ============================================================================
-# Javis OS - override để chạy NHIỀU BẢN trên cùng một VPS, mỗi bản một tên miền riêng.
+# MinMin OS - override để chạy NHIỀU BẢN trên cùng một VPS, mỗi bản một tên miền riêng.
 #
 # Dùng KÈM docker-compose.yml, và cần proxy dùng chung đã chạy trước
 # (docker-compose.proxy.yml - làm một lần cho cả máy).
@@ -7,8 +7,8 @@
 # CÁCH DÙNG - mỗi bản một THƯ MỤC RIÊNG:
 #
 #   mkdir -p ~/javis-shop && cd ~/javis-shop
-#   curl -fsSLO https://raw.githubusercontent.com/blogminhquy/javis-os/main/docker-compose.yml
-#   curl -fsSLO https://raw.githubusercontent.com/blogminhquy/javis-os/main/docker-compose.multi.yml
+#   curl -fsSLO https://raw.githubusercontent.com/haincbbg-coder/minminos/main/docker-compose.yml
+#   curl -fsSLO https://raw.githubusercontent.com/haincbbg-coder/minminos/main/docker-compose.multi.yml
 #   cat > .env <<'EOF'
 #   JAVIS_NAME=javis-shop
 #   JAVIS_HOST_PORT=7777

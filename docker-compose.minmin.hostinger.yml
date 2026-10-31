@@ -1,0 +1,58 @@
+# MinMin OS - new Hostinger Docker Manager installation
+# Guide: https://github.com/haincbbg-coder/minminos/blob/main/DEPLOY.md
+services:
+  minmin:
+    image: ghcr.io/haincbbg-coder/minminos:latest
+    container_name: ${MINMIN_NAME:-minminos}
+    restart: unless-stopped
+    pull_policy: always
+    command: ["sh", "-c", "JAVIS_DEPLOY_TARGET=hostinger exec python -m uvicorn main:app --app-dir server --host 0.0.0.0 --port 7777"]
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME:-localhost}
+      JAVIS_ADMIN_USER: ${MINMIN_ADMIN_USER:-admin}
+      JAVIS_ADMIN_PASSWORD: ${MINMIN_ADMIN_PASSWORD:?Set MINMIN_ADMIN_PASSWORD before Deploy}
+      WATCHTOWER_TOKEN: minmin-update
+    ports:
+      - "${MINMIN_HOST_PORT:-7777}:7777"
+    volumes:
+      - minmin-data:/data
+      - minmin-brains:/brains
+      - claude-auth:/home/javis/.claude
+      - codex-auth:/home/javis/.codex
+    labels:
+      - org.opencontainers.image.documentation=https://github.com/haincbbg-coder/minminos/blob/main/DEPLOY.md
+      - org.opencontainers.image.source=https://github.com/haincbbg-coder/minminos
+      - com.hostinger.documentation=https://github.com/haincbbg-coder/minminos/blob/main/docs/README.md
+      - com.hostinger.quickstart=https://github.com/haincbbg-coder/minminos/blob/main/QUICKSTART.md
+      - traefik.enable=true
+      - traefik.http.routers.${MINMIN_NAME:-minminos}.rule=Host(`${DOMAIN_NAME:-localhost}`)
+      - traefik.http.routers.${MINMIN_NAME:-minminos}.entrypoints=websecure
+      - traefik.http.routers.${MINMIN_NAME:-minminos}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${MINMIN_NAME:-minminos}.service=${MINMIN_NAME:-minminos}
+      - traefik.http.services.${MINMIN_NAME:-minminos}.loadbalancer.server.port=7777
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7777/health',timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+  watchtower:
+    image: ghcr.io/nicholas-fedor/watchtower:1
+    container_name: ${MINMIN_NAME:-minminos}-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_HTTP_API_ENDPOINTS: update
+      WATCHTOWER_HTTP_API_TOKEN: minmin-update
+      WATCHTOWER_HTTP_API_PERIODIC_POLLS: ${MINMIN_AUTO_UPDATE:-false}
+      WATCHTOWER_POLL_INTERVAL: 86400
+      WATCHTOWER_CLEANUP: "true"
+    labels:
+      - traefik.enable=false
+    command: ${MINMIN_NAME:-minminos}
+volumes:
+  minmin-data:
+  minmin-brains:
+  claude-auth:
+  codex-auth:

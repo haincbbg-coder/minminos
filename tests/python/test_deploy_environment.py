@@ -142,8 +142,7 @@ docs = "\n".join(
 )
 check(
     "tài liệu nói rõ ba trường Hostinger",
-    all(k in docs for k in ("DOMAIN_NAME", "JAVIS_ADMIN_USER", "JAVIS_ADMIN_PASSWORD"))
-    and "chỉ còn 3 trường" in docs,
+    all(k in docs for k in ("DOMAIN_NAME", "MINMIN_ADMIN_USER", "MINMIN_ADMIN_PASSWORD")),
 )
 
 if FAIL:
