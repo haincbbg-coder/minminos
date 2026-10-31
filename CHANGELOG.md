@@ -1,5 +1,10 @@
 # MinMin OS
 
+## [26.10.333] - 2026-10-31
+### Cải thiện
+- Hướng dẫn cài đặt dùng thống nhất tên MinMin và đường dẫn GitHub của MinMin.
+- Bộ cài có lệnh mở và dừng mang tên MinMin; hướng dẫn Hostinger dùng đúng ảnh Docker MinMin.
+
 ## [26.10.332] - 2026-10-31
 ### Sửa lỗi
 - **Đội Social, tương tác bài theo link**: link bài video giờ Facebook mở trong trình xem thước phim, nút ghi kèm số ("Thích, 116 reactions") nên Worker không nhận ra. Worker nhận được nút này và chọn đúng nút của reel đang phát, không bấm nhầm reel kế tiếp.
