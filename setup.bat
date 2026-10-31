@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title Javis OS
+title MinMin OS
 echo.
 echo  ==========================================
-echo   JAVIS OS
+echo   MinMin OS
 echo  ==========================================
 echo   Muon cai MOT LUOT ca 4 bo nao CLI
 echo   (claude, codex, agy, grok) thi chay:
@@ -36,7 +36,7 @@ call .venv\Scripts\activate.bat
 pip install -r requirements.txt -q
 if errorlevel 1 (
   echo.
-  echo  [LOI] Cai thu vien Python THAT BAI - Javis se thieu claude-agent-sdk va khong chay duoc.
+  echo  [LOI] Cai thu vien Python THAT BAI - MinMin se thieu claude-agent-sdk va khong chay duoc.
   echo        Chay tay de doc loi day du:
   echo          .venv\Scripts\python.exe -m pip install -r requirements.txt
   echo.
@@ -72,7 +72,7 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":7777" ^| findstr "LISTENING
 
 echo.
 echo  ==========================================
-echo   Javis OS dang chay tai: http://localhost:7777
+echo   MinMin OS dang chay tai: http://localhost:7777
 echo   (Chon bo nao o trang Models - khong bat buoc mua API key)
 echo   Nhan Ctrl+C de dung.
 echo  ==========================================

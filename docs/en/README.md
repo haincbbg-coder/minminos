@@ -44,7 +44,7 @@ The dashboard's navigation rail groups **19 pages** into **7 groups**: Assistant
 - [11 - The Telegram channel](11-telegram.md) - asking Minmin from a phone, sending and receiving files.
 - [26 - The Zalo Bot channel](26-zalo-bot-channel.md) - asking Minmin on Zalo through the official API, paired with one click.
 - [12 - Zalo Agent MCP](12-zalo-agent-mcp.md) - signing in by QR, reading and searching history, sending messages through the standard MCP.
-- [24 - The Minmin CLI (terminal)](24-cli.md) - typing `javis "..."` from a terminal, API tokens, composing in scripts.
+- [24 - The Minmin CLI (terminal)](24-cli.md) - terminal access, API tokens and script integration.
 
 ### The brain and data
 - [13 - Second Brain: memory, Wiki, INGEST](13-second-brain.md) - multiple brains, living memory, digesting knowledge.

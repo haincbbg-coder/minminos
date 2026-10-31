@@ -1,53 +1,55 @@
-# Minmin OS - Quick start
+# Bắt đầu với MinMin OS
 
-***Tiếng Việt** · [English](QUICKSTART.en.md)*
+[Tiếng Việt](QUICKSTART.md) · [English](QUICKSTART.en.md)
 
-Chạy Minmin OS trong vài phút. Chi tiết từng phần: [docs/](docs/README.md).
+## PC Windows
 
-## Cách 1 - Hostinger VPS (Docker Manager, 1-click)
+1. Cài Python 3.12 và Node.js LTS.
+2. Tải ZIP từ [repo MinMin](https://github.com/haincbbg-coder/minminos), giải nén.
+3. Mở CMD trong thư mục có `install.ps1` và chạy:
 
-1. hPanel → VPS → **Docker Manager** → **Compose** → **Compose from URL**.
-2. Dán URL:
-   ```
-   https://raw.githubusercontent.com/blogminhquy/javis-os/main/docker-compose.hostinger.yml
-   ```
-3. (Tùy chọn, để có HTTPS + tên miền) ở ô **Environment** đặt:
-   ```
-   DOMAIN_NAME=javis.<hostname-vps>.hstgr.cloud
-   ```
-   (hostname xem ở hPanel → VPS; ví dụ `javis.srv1782015.hstgr.cloud`.)
-4. **Deploy**. Đợi 1-3 phút. Mở app bằng nút **Open** (hoặc `https://<DOMAIN_NAME>`).
-5. Lần đầu: màn hình sẽ hỏi tạo tài khoản admin. Sau đó đăng nhập Claude Code trong terminal container 1 lần: `claude auth login --claudeai`.
-
-Cập nhật bản mới: bấm **Redeploy** trong Docker Manager (image `:latest`, `pull_policy: always`). Dữ liệu brain giữ nguyên trong volume.
-
-## Cách 2 - Docker ở máy/VPS bất kỳ
-
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 ```
-docker compose -f docker-compose.yml up -d
+
+4. Mở `http://localhost:7777`.
+5. Lần sau chạy `start-minmin.bat`; dừng bằng `stop-minmin.bat`.
+
+## Hostinger
+
+**Docker Manager → Compose → URL**:
+
+```text
+https://raw.githubusercontent.com/haincbbg-coder/minminos/main/docker-compose.minmin.hostinger.yml
 ```
-Mở http://localhost:7777. Muốn HTTPS qua Caddy: thêm `-f docker-compose.https.yml`.
 
-## Cách 3 - Chạy trực tiếp (Windows, không Docker)
+Đặt `DOMAIN_NAME`, `MINMIN_ADMIN_USER`, `MINMIN_ADMIN_PASSWORD` riêng trước khi Deploy. Trỏ DNS về VPS để dùng HTTPS. Chi tiết: [Hướng dẫn VPS](DEPLOY.md).
 
-1. Cài Python 3.12 + Node 22.
-2. Trong thư mục dự án: `setup.bat` một lần - tạo .venv, cài deps, và cài sẵn hai engine CLI (Claude Code, Codex).
-3. `start-javis.bat` để chạy nền (tắt: `stop-javis.bat`).
-4. Mở http://localhost:7777.
+## VPS dùng Docker
 
-## Sau khi chạy
+Với VPS đã có Git, Docker và Docker Compose:
 
-- **Chọn engine/model**: trang **Models** (Claude Code, ChatGPT/Codex, Antigravity CLI, OpenRouter, OpenAI, Google Gemini, Anthropic API, Groq, Ollama).
-- **Đấu kết nối** (POS, quảng cáo, lịch, Zalo...) để báo cáo số liệu thật: trang **Kết nối** - xem [docs/09](docs/09-mcp-va-so-lieu.md).
-- **Sao lưu brain lên GitHub** để không mất dữ liệu: trang **Tự học** - xem [docs/18](docs/18-sao-luu-github.md).
-- **Theo dõi token đã dùng**: trang **Mức dùng** - xem [docs/23](docs/23-muc-dung-token.md).
+```bash
+git clone https://github.com/haincbbg-coder/minminos.git /opt/minminos
+cd /opt/minminos
+cp .env.minmin.example .env
+nano .env
+```
 
-## Tài liệu đầy đủ
+Thay mật khẩu mẫu rồi chạy:
 
-Xem [docs/README.md](docs/README.md) - hướng dẫn từng chức năng (chat/voice, đồ thị tri thức, skills, agents, workflows, việc định kỳ, Kanban, tự học, kết nối, Telegram, Zalo, plugins, bảo mật, backup...).
+```bash
+docker compose -f docker-compose.minmin.yml up -d --pull always
+```
 
-## Sự cố hay gặp
+Mở `http://<IP-VPS>:7777`. Đặt tên miền và HTTPS trước khi kết nối tài khoản dịch vụ.
 
-- **Không cập nhật được bằng nút trong app trên Hostinger**: đúng thiết kế - trên Hostinger dùng **Redeploy** trong Docker Manager (nút trong app cần Watchtower, Hostinger hay chặn Docker socket).
-- **ChatGPT/Codex báo "model không hỗ trợ"**: chọn model Codex hợp lệ ở trang Models (vd `gpt-5.5`), không dùng `gpt-5-mini`/`gpt-4o` (đó là model API, Codex account không chạy).
-- Thêm: [docs/17 - Khắc phục sự cố](docs/17-khac-phuc-su-co.md).
+## Sau khi cài
+
+Chọn AI ở **Models**, thêm tài khoản cửa hàng ở **Kết nối**, rồi chọn **Skills** và **Agents**. Mỗi khách dùng tài khoản riêng. Xem [hướng dẫn sử dụng](docs/README.md).
+
+## Cập nhật và xử lý lỗi
+
+Docker: dùng đúng file Compose của bản đang chạy. Với bản mới ở trên, chạy lại lệnh `up -d --pull always`. Sao lưu trước khi cập nhật; không dùng `down -v`.
+
+PC: chạy `stop-minmin.bat` rồi `start-minmin.bat` để khởi động lại; xem lỗi trong `server/minmin.log`. Với ZIP, giữ bản cũ và sao lưu dữ liệu trước khi chuyển bản mới. Nhấn Ctrl + F5 sau khi cập nhật.
