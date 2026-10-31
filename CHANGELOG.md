@@ -1,5 +1,9 @@
 # MinMin OS
 
+## [26.10.328] - 2026-10-31
+### Sửa lỗi
+- Đọc đúng danh mục sản phẩm và biến thể từ hợp đồng công cụ Pancake POS đang hoạt động; tách khỏi danh sách nhãn sản phẩm.
+
 ## [26.10.326] - 2026-10-31
 ### Thêm mới
 - **Thứ tự dùng mô hình** trên trang Bộ não AI: thẻ MAIN rồi Dự phòng 1, 2, kéo hoặc bấm Đảo để đổi. Hết lượt trước khi kịp trả lời thì MinMin tự hỏi lại bằng thẻ kế; hết giữa chừng có nút **Chạy lại ngay**. Đã gọi công cụ thì không bao giờ tự chạy lại.

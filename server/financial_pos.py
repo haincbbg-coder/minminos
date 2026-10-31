@@ -23,16 +23,16 @@ async def selected(connection_id):
     return specs, routes
 
 
-def args_for(schema, shop=None, page=1, size=50):
+def args_for(schema, shop=None, page=1, size=50, action='list'):
     props = schema.get('properties', {})
     if page > 1 and not any(k in props for k in ('page', 'page_number')):
         raise ValueError('Nguồn này chưa công bố phân trang; không đọc lại trang đầu làm trang sau.')
     args = {}
     if 'action' in props:
         choices = props['action'].get('enum', [])
-        if choices and 'list' not in choices:
+        if choices and action not in choices:
             raise ValueError('Nguồn POS chưa cung cấp thao tác danh sách tương thích.')
-        args['action'] = 'list'
+        args['action'] = action
     for key in ('shop_id', 'shopId'):
         if key in props and shop is not None:
             args[key] = int(shop) if props[key].get('type') in ('number', 'integer') else str(shop)
@@ -51,9 +51,20 @@ def unpack(value):
     if isinstance(value, str):
         if value.startswith('ERROR:'):
             raise ValueError('POS không trả dữ liệu thành công. Kiểm tra lại kết nối và quyền đọc.')
-        try:
-            value = json.loads(value)
-        except ValueError:
+        # MCP text can wrap JSON in a heading or fenced block (the existing
+        # connector validation label parser supports these same envelopes).
+        candidates = (value, value[value.find('{'):value.rfind('}') + 1] if '{' in value else '',
+                      value[value.find('['):value.rfind(']') + 1] if '[' in value else '')
+        parsed = False
+        for candidate in candidates:
+            try:
+                decoded = json.loads(candidate)
+                if isinstance(decoded, (dict, list)):
+                    value, parsed = decoded, True
+                    break
+            except ValueError:
+                pass
+        if not parsed:
             raise ValueError('POS trả dữ liệu không đúng cấu trúc JSON hỗ trợ.')
     if isinstance(value, dict) and value.get('isError'):
         raise ValueError('POS báo lỗi. Kiểm tra lại kết nối.')
@@ -69,19 +80,18 @@ def rows(value, kind):
     if isinstance(value, list):
         return value
     if isinstance(value, dict):
-        for key in (kind, 'data', 'items', 'results'):
+        for key in (kind, 'variations', 'products_variations', 'data', 'items', 'results'):
             if key in value and isinstance(value[key], (dict, list)):
                 return rows(value[key], kind)
     raise ValueError('Chưa ánh xạ được danh sách POS; giữ nguyên kế hoạch hiện tại.')
 
 
-async def read_tool(specs, routes, name, shop=None, page=1):
+async def call_read(specs, routes, name, args):
     import mcp_hub
     import mcp_catalog
     spec = next((s for s in specs if s['name'] == name), None)
     if spec is None:
         raise ValueError('Kết nối này chưa cung cấp danh mục ' + ('cửa hàng.' if name == 'pos_shop' else 'sản phẩm tương thích.'))
-    args = args_for(spec['schema'], shop, page)
     raw_entry = routes[spec['fn']]
     entry = dict(raw_entry, conn=dict(raw_entry['conn'], perm='readonly'))
     connector = mcp_catalog.get('pancake-pos')
@@ -92,6 +102,52 @@ async def read_tool(specs, routes, name, shop=None, page=1):
     except Exception:
         raise ValueError('Đọc POS chưa thành công hoặc quá thời gian. Không thay đổi kế hoạch.')
     return unpack(result)
+
+
+def action_for(spec, name):
+    actions = spec['schema'].get('properties', {}).get('action', {}).get('enum', [])
+    if name == 'pos_product' and 'list_products_variations' in actions:
+        return 'list_products_variations'
+    if 'list' in actions and name == 'pos_product':
+        description = spec['schema']['properties']['action'].get('description', '').lower()
+        if 'list: product tags' in description:
+            raise ValueError('Nguồn đang mô tả nhãn sản phẩm, chưa có danh mục hàng tương thích.')
+    return 'list'
+
+
+def described_schema(value):
+    value = unpack(value)
+    if isinstance(value, dict):
+        if isinstance(value.get('properties'), dict):
+            return value
+        for key in ('inputSchema', 'input_schema', 'schema', 'parameters', 'data', 'result'):
+            if key in value:
+                found = described_schema(value[key])
+                if found:
+                    return found
+    return None
+
+
+async def contract(specs, routes, name):
+    spec = next((s for s in specs if s['name'] == name), None)
+    if spec is None:
+        raise ValueError('Nguồn POS chưa cung cấp danh mục tương thích.')
+    action = action_for(spec, name)
+    schema = spec['schema']
+    if any(s['name'] == 'pos_describe' for s in specs):
+        detail = await call_read(specs, routes, 'pos_describe', {'tool': name, 'action': action})
+        schema = described_schema(detail)
+        if schema is None:
+            raise ValueError('Chưa đọc được hợp đồng tham số POS; giữ nguyên kế hoạch.')
+    return action, schema
+
+
+async def read_tool(specs, routes, name, shop=None, page=1):
+    action, schema = await contract(specs, routes, name)
+    args = args_for(schema, shop, page, action=action)
+    # pos_describe may omit the multiplexer's action from its per-action schema.
+    args['action'] = action
+    return await call_read(specs, routes, name, args)
 
 
 async def shops(connection_id):
@@ -117,6 +173,13 @@ def numeric(item, keys):
 def normalize_products(items, connection_id, shop_id):
     result, seen, skipped = [], set(), 0
     for product in items:
+        # Current POS action may return flat variations with the parent product nested.
+        if isinstance(product, dict) and (product.get('product_id') is not None or isinstance(product.get('product'), dict)):
+            variant = product
+            parent = product.get('product') or {}
+            parent_id = product.get('product_id') or parent.get('id')
+            if parent_id is not None:
+                product = dict(parent, id=parent_id, name=parent.get('name') or variant.get('product_name') or variant.get('name'), variations=[variant])
         if not isinstance(product, dict) or product.get('id') is None:
             skipped += 1
             continue

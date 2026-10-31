@@ -195,8 +195,16 @@ def register(app, dashboard_dir, terms_check):
             return denied
         import financial_pos
         try:
-            specs, _ = await financial_pos.selected(connection)
-            return {'tools': [{'name': s['name'], 'schema': s['schema']} for s in specs if s['name'].startswith('pos_')]}
+            specs, routes = await financial_pos.selected(connection)
+            contracts = []
+            if any(s['name'] == 'pos_describe' for s in specs):
+                for name in ('pos_shop', 'pos_product'):
+                    spec = next((s for s in specs if s['name'] == name), None)
+                    if spec:
+                        action = financial_pos.action_for(spec, name)
+                        detail = await financial_pos.call_read(specs, routes, 'pos_describe', {'tool': name, 'action': action})
+                        contracts.append({'name': name, 'action': action, 'description': detail})
+            return {'tools': [{'name': s['name'], 'schema': s['schema']} for s in specs if s['name'].startswith('pos_')], 'contracts': contracts}
         except ValueError as e:
             return JSONResponse({'error': str(e)}, status_code=400)
 
