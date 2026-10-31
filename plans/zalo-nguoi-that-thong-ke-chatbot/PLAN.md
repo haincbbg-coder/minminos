@@ -51,9 +51,10 @@ Branch: feature/zalo-nguoi-that-thong-ke-chatbot
 - **Typing "đang soạn tin": NO-GO bây giờ.** Không có tool MCP/lệnh CLI ở 1.6.2 (kể cả 1.7.0 chưa publish). Chỉ nằm ở lõi zca-js (`sendTypingEvent`) hoặc bản fork riêng. Hoãn tới khi có/kiểm chứng fork javis-zalo. => Cần bố quyết.
 - **Rủi ro nâng gói (đã loại khỏi vòng này):** 1.7.0 đổi thứ tự chuẩn hoá tin + backfill → có thể làm bot trả lời tin cũ. Không nâng.
 
-### Phase 04 (sửa lại theo spike)
-- CHỈ làm chữ màu/đậm qua CLI `--md` trong server/channels/zalo_personal.py. An toàn, không đụng nhận tin, KHÔNG cần nâng gói trên VPS.
-- Bỏ "đang soạn tin" khỏi vòng này (hoãn, chờ bố quyết chuyện xin bản fork javis-zalo).
+### Phase 04 (ĐÃ NGHIỆM THU ✅ - chỉ chữ màu, bỏ typing)
+- server/channels/zalo_personal.py: thêm co_dinh_dang / bo_dinh_dang / gui_md; cắm vào _gui() chỉ khi câu có `**đậm**` hoặc `{red|green|yellow:...}`. Gửi qua CLI `msg send --md`, lỗi thì rơi về gửi chữ ĐÃ BỎ DẤU (khách không thấy `**`). Đường tag nhóm giữ nguyên (không lệch offset tag).
+- Kiểm: cú pháp + 4 unit test (nhận diện/bỏ dấu/dựng argv) đúng; 4 test cũ (bot zalo cá nhân, chia tin, gom tin, gửi tệp) XANH.
+- Render màu thật lên Zalo = bước bố test tay ở GATE (cần tài khoản thật). Bố quyết typing sau: GÁC lại.
 
 ## Thiết kế UI (tính năng B)
 Trang Thống kê chatbot bám design-system MinMin (phương án "Nổi mềm tinh gọn", chỉ --mm-*), mô phỏng bố cục trang Thống kê/Mức dùng hiện có: khối lợi ích đầu trang + các ô số + 1-2 biểu đồ. Con làm mockup cho bố xem ở đầu Phase 02 nếu bố muốn chọn bố cục trước.

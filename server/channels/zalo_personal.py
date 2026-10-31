@@ -131,6 +131,60 @@ async def gui_tep(conn_id: str, thread: str, path: str, loai_chat: str = "privat
         return False, f"{type(ex).__name__}: {ex}"[:200]
 
 
+import re as _re
+
+# Dấu định dạng mà lệnh `msg send --md` của zalo-agent-cli hiểu: **đậm** và {màu:chữ}.
+_DAM = _re.compile(r"\*\*(.+?)\*\*", _re.S)
+_MAU = _re.compile(r"\{(red|green|yellow)\s*:\s*(.+?)\}", _re.S | _re.I)
+
+
+def co_dinh_dang(text: str) -> bool:
+    """Câu có dấu đậm/màu để đáng gửi bằng `--md` không."""
+    t = str(text or "")
+    return bool(_DAM.search(t) or _MAU.search(t))
+
+
+def bo_dinh_dang(text: str) -> str:
+    """Bỏ dấu định dạng, chỉ còn chữ trần. Dùng khi phải rơi về gửi thường để khách KHÔNG
+    thấy `**` hay `{red:...}`."""
+    t = str(text or "")
+    t = _DAM.sub(r"\1", t)
+    t = _MAU.sub(r"\2", t)
+    return t
+
+
+async def gui_md(conn_id: str, thread: str, cau: str, loai_chat: str = "private"):
+    """Gửi tin CÓ chữ đậm/màu bằng lệnh `msg send ... --md` của chính zalo-agent-cli (cùng gói đã
+    ghim, cùng thư mục đăng nhập) - tool MCP `zalo_send_message` chỉ nhận chữ trần. Hỏng bất cứ
+    chỗ nào thì rơi về gửi chữ ĐÃ BỎ DẤU qua MCP: câu vẫn tới, chỉ mất màu, không lộ `**`/`{..}`."""
+    import zalo_personal_channel as zc
+    try:
+        conn = zc.ket_noi_theo_id(conn_id)
+        argv = lenh_cli(conn, "msg", "send", str(thread), str(cau),
+                        "-t", "1" if str(loai_chat) == "group" else "0", "--md")
+        if not argv:
+            raise RuntimeError("không dựng được lệnh CLI")
+        import os
+        env = dict(os.environ)
+        env.update({k: str(v) for k, v in (conn.get("env") or {}).items()})
+        import winproc
+        proc = await asyncio.create_subprocess_exec(
+            *argv, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
+            **winproc.kwargs_no_window())
+        try:
+            _o, e = await asyncio.wait_for(proc.communicate(), timeout=25)
+        except asyncio.TimeoutError:
+            proc.kill()
+            raise RuntimeError("CLI quá hạn")
+        if proc.returncode != 0:
+            raise RuntimeError((e or b"").decode("utf-8", "replace").strip()[-200:]
+                               or f"CLI thoát mã {proc.returncode}")
+        return True, ""
+    except Exception as ex:
+        print(f"[zalo-personal] gửi chữ màu lỗi, gửi chữ thường: {ex}", file=sys.stderr)
+        return await gui({"id": conn_id}, thread, bo_dinh_dang(cau), loai_chat)
+
+
 GIOI_HAN_TIN = 1800   # ký tự mỗi tin: Zalo từ chối tin quá dài, khách chẳng nhận được gì
 
 
@@ -406,8 +460,16 @@ class Transport:
         for i, m in enumerate(manh):
             # Nhớ TRƯỚC khi gửi: tiếng vọng có thể về vòng đọc ngay trong nhịp kế tiếp.
             zc.ghi_da_gui(self.conn_id, thread, m)
+            tag_i = specs if i == 0 else []
             if meta and meta.get("chat_type") == "group":
-                ok, loi = await gui_co_tag(self.conn_id, thread, m, specs if i == 0 else [])
+                if tag_i:                                   # có tag: giữ đường --mention (đừng đụng offset tag)
+                    ok, loi = await gui_co_tag(self.conn_id, thread, m, tag_i)
+                elif co_dinh_dang(m):                       # nhóm, không tag, có chữ màu/đậm
+                    ok, loi = await gui_md(self.conn_id, thread, m, "group")
+                else:
+                    ok, loi = await gui_co_tag(self.conn_id, thread, m, [])
+            elif co_dinh_dang(m):                           # chat riêng, có chữ màu/đậm
+                ok, loi = await gui_md(self.conn_id, thread, m, "private")
             else:
                 ok, loi = await gui({"id": self.conn_id}, thread, m, "private")
             if not ok:
