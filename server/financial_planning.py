@@ -120,10 +120,13 @@ def register(app, dashboard_dir, terms_check):
 
     @app.get("/apps/financial-planning/")
     def financial_planning_index():
-        return financial_planning_asset("index.html")
+        return serve_asset("index.html")
 
     @app.get("/apps/financial-planning/{name}")
     def financial_planning_asset(name: str):
+        return serve_asset(name)
+
+    def serve_asset(name: str):
         denied = guard()
         if denied is not None:
             return denied
