@@ -8938,5 +8938,15 @@
    "POST"
   ],
   "trong": null
+ },
+ {
+  "order": 897,
+  "type": "APIRoute",
+  "path": "/api/chatbot/stats",
+  "name": "chatbot_stats_api",
+  "methods": [
+   "GET"
+  ],
+  "trong": null
  }
 ]

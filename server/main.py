@@ -24846,6 +24846,28 @@ async def _meta_ads_duyet_callback(data: str, chat_key: str):
 meta_ads_duyet.dat_gui_telegram(_meta_ads_gui_tg)
 meta_fb_routes.register(app)
 
+# Thống kê hộp thư chatbot (tính năng "Thống kê chatbot", Phase 01): GET /api/chatbot/stats -
+# server/chatbot_stats.py đọc THẲNG kho hội thoại khách, trả JSON theo kỳ + kỳ liền trước.
+# Đăng ký ở ĐUÔI cho bảng route (docs/quy-uoc-dev.md).
+import chatbot_stats   # noqa: E402
+
+
+@app.get("/api/chatbot/stats")
+async def chatbot_stats_api(period: str = "7d", from_: str = Query("", alias="from"),
+                            to: str = "", account: str = "",
+                            mins_per_reply: float = chatbot_stats.DEFAULT_MINS_PER_REPLY):
+    """Tổng hợp thống kê hộp thư chatbot. `period`: today|7d|30d|90d|last_month|custom (custom cần
+    `from`,`to` dạng YYYY-MM-DD). `account`: lọc 1 nick (tuỳ chọn). `mins_per_reply`: phút/tin để
+    ước tính giờ rảnh."""
+    try:
+        return chatbot_stats.tinh(period=period, frm=from_, to=to, account=account,
+                                  mins_per_reply=mins_per_reply)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": f"{type(e).__name__}: {e}"}, status_code=500)
+
+
 if __name__ == "__main__":
     import uvicorn
     # 127.0.0.1: chỉ máy này truy cập được (an toàn - tránh người khác trong mạng LAN

@@ -39,5 +39,21 @@ Branch: feature/zalo-nguoi-that-thong-ke-chatbot
 - Bản javis-zalo mới có thể đổi cách chuẩn hoá tin (conversations.py nhắc 1.6.2 cũ khác) => P03 phải kiểm nhận tin không vỡ. Nếu P03 báo không tương thích an toàn => dừng tính năng A, vẫn giao tính năng B.
 - Thống kê "giờ rảnh" là ƯỚC TÍNH theo số phút/tin bố tự đặt, không quy ra tiền (giống Javis). Ghi rõ trên trang.
 
+## Kết quả Phase 01 - API thống kê (ĐÃ NGHIỆM THU ✅)
+- server/chatbot_stats.py đọc thẳng kho `conversations.py` (bảng messages/conversations/channel_accounts/customers, schema khớp 100%). Route GET /api/chatbot/stats đăng ký cuối main.py, 400 khi sai kỳ.
+- Tự chạy test dữ liệu giả có kết quả biết trước: ai/owner count, %, giờ rảnh, tin đêm, khách phục vụ, trung vị tốc độ trả lời, histogram giờ, kỳ + kỳ trước + delta ĐỀU ĐÚNG.
+- test_route_table.py: xanh (898 mục). 
+- Lưu ý đã ghi vào `_notes`: new_customers đếm theo lúc khách lần đầu vào kho (không theo giờ tin).
+
+## Kết quả Phase 03 - SPIKE Zalo (đã nghiệm thu)
+- `javis-zalo` KHÔNG có trên npm (bản fork riêng, private của cùng tác giả). Gói công khai là `zalo-agent-cli`, bản mới nhất = **1.6.2** (đúng bản MinMin ghim). Không có gì để nâng.
+- **Chữ đậm/màu: GO, rủi ro thấp, KHÔNG nâng gói.** CLI 1.6.2 đã hỗ trợ `msg send <thread> <text> --md` (`**đậm**`, `{red:}`, `{green:}`, `{yellow:}`). MinMin đã có mẫu shell qua CLI: `server/channels/zalo_personal.py` (`lenh_cli`, `gui_co_tag` dùng `msg send --mention`). Chỉ thêm 1 nhánh gọi `--md`.
+- **Typing "đang soạn tin": NO-GO bây giờ.** Không có tool MCP/lệnh CLI ở 1.6.2 (kể cả 1.7.0 chưa publish). Chỉ nằm ở lõi zca-js (`sendTypingEvent`) hoặc bản fork riêng. Hoãn tới khi có/kiểm chứng fork javis-zalo. => Cần bố quyết.
+- **Rủi ro nâng gói (đã loại khỏi vòng này):** 1.7.0 đổi thứ tự chuẩn hoá tin + backfill → có thể làm bot trả lời tin cũ. Không nâng.
+
+### Phase 04 (sửa lại theo spike)
+- CHỈ làm chữ màu/đậm qua CLI `--md` trong server/channels/zalo_personal.py. An toàn, không đụng nhận tin, KHÔNG cần nâng gói trên VPS.
+- Bỏ "đang soạn tin" khỏi vòng này (hoãn, chờ bố quyết chuyện xin bản fork javis-zalo).
+
 ## Thiết kế UI (tính năng B)
 Trang Thống kê chatbot bám design-system MinMin (phương án "Nổi mềm tinh gọn", chỉ --mm-*), mô phỏng bố cục trang Thống kê/Mức dùng hiện có: khối lợi ích đầu trang + các ô số + 1-2 biểu đồ. Con làm mockup cho bố xem ở đầu Phase 02 nếu bố muốn chọn bố cục trước.
