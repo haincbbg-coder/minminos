@@ -71,6 +71,22 @@ with sync_playwright() as p:
     page.set_content("<div role='main'><h1>Trang</h1></div><div role='dialog'><div role='article'>Bài popup"
                      "<div role='button' aria-label='Thích'>Thích</div></div></div>")
     check("dialog bài popup vẫn được nhận", "Bài popup" in f.pham_vi_bai(page).inner_text())
+    # Hộp đòi mã PIN Messenger: bỏ qua (Đóng), không nhập mã, không bấm "Không khôi phục", không báo lỗi
+    import fb_tin  # noqa: E402
+    page.set_content("<div role='main'><div role='textbox' contenteditable='true' aria-label='Tin nhắn'></div></div>"
+                     "<div role='dialog'>Nhập mã PIN để khôi phục tin nhắn<input type='password' id='pin'>"
+                     "<div role='button' aria-label='Không khôi phục tin nhắn' onclick=\"window.huy=1\">Không khôi phục</div>"
+                     "<div role='button' aria-label='Đóng' onclick='this.parentNode.remove()'>x</div></div>")
+    ghi = []
+    tay = types.SimpleNamespace(bam=lambda l: l.click(), phim=lambda k: page.keyboard.press(k), nghi=lambda *a: None)
+    nc2 = types.SimpleNamespace(page=page, tay=tay, nhat_ky=lambda m: ghi.append(m))
+    loi = None
+    try:
+        fb_tin._kiem_pin(nc2)
+    except Exception as e:      # noqa: BLE001
+        loi = e
+    check("hộp PIN được đóng, không lỗi", loi is None and not fb_tin._co_pin(nc2), loi)
+    check("không bấm 'Không khôi phục', không gõ PIN", page.evaluate("window.huy") is None and any("bỏ qua" in m for m in ghi))
     b.close()
 
 print("ALL PASS" if ok else "CÓ LỖI")
