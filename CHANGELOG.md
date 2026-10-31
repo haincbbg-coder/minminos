@@ -1,5 +1,11 @@
 # MinMin OS
 
+## [26.10.334] - 2026-10-31
+### Thêm mới
+- **Sổ hoa hồng Affiliate** trong Kết nối ngoài: gom hoa hồng TikTok Shop và Shopee của nhiều nick vào một sổ, xem đơn, hoa hồng tạm tính, đã duyệt, bị huỷ, phí MCN và **thực nhận ước tính**.
+- Nhập file báo cáo tải từ Shopee Affiliate hoặc TikTok, hoặc nối API khi sàn đã cấp quyền. Xem nội dung (sub ID, video, phiên live) nào ra tiền.
+- Trang Thuế ước tính theo mốc luật (từ 1/7/2026 là 5%), xuất file cho kế toán. Hỏi MinMin trong chat "tháng này hoa hồng bao nhiêu" là có số.
+
 ## [26.10.333] - 2026-10-31
 ### Cải thiện
 - Hướng dẫn cài đặt dùng thống nhất tên MinMin và đường dẫn GitHub của MinMin.
