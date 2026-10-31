@@ -70,6 +70,19 @@ with sync_playwright() as p:
     ghi0 = []
     f.chan_doan_nut(types.SimpleNamespace(nhat_ky=ghi0.append), page.locator("[role='main']"), "Thích")
     check("chan_doan_nut liệt kê nhãn nút", ghi0 and "Thích" in ghi0[0] and "nút" in ghi0[0], ghi0)
+    # Trình xem reel (DOM thật 31/10): nhãn kèm số, 2 reel xếp chồng, reel kế tiếp ở ngoài khung nhìn
+    page.set_content("<div role='main'><div style='height:300px'></div>"
+                     "<div role='button' aria-label='Thích, 116 reactions' id='a'>x</div>"
+                     "<div role='button' aria-label='Chia sẻ, 0 lượt chia sẻ' id='c'>s</div>"
+                     "<div style='height:3000px'></div><div role='button' aria-label='Thích, 540 reactions' id='b'>y</div></div>")
+    m = page.locator("[role='main']")
+    n1 = f.nut_kem_so(m, f._THICH_CHUA, 1500)
+    check("reel: chọn nút Thích của reel đang phát", n1 is not None and n1.get_attribute("id") == "a",
+          n1 and n1.get_attribute("id"))
+    n2 = f.nut_kem_so(m, ["Chia sẻ", "Share"], 1500)
+    check("reel: thấy nút Chia sẻ kèm số", n2 is not None and n2.get_attribute("id") == "c")
+    check("nhãn 'Thích' trần không bị nut_kem_so bắt nhầm 'Bày tỏ cảm xúc'",
+          f.nut_kem_so(page.locator("body"), ["Bày"], 500) is None)
     # Bài mở dạng popup thật vẫn được nhận
     page.set_content("<div role='main'><h1>Trang</h1></div><div role='dialog'><div role='article'>Bài popup"
                      "<div role='button' aria-label='Thích'>Thích</div></div></div>")

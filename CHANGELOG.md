@@ -1,5 +1,9 @@
 # MinMin OS
 
+## [26.10.332] - 2026-10-31
+### Sửa lỗi
+- **Đội Social, tương tác bài theo link**: link bài video giờ Facebook mở trong trình xem thước phim, nút ghi kèm số ("Thích, 116 reactions") nên Worker không nhận ra. Worker nhận được nút này và chọn đúng nút của reel đang phát, không bấm nhầm reel kế tiếp.
+
 ## [26.10.331] - 2026-10-31
 ### Cải thiện
 - **Đội Social, Facebook**: khi không thấy nút Thích hoặc Chia sẻ, Worker ghi vào nhật ký các nút đang thấy trên bài để biết Facebook đổi giao diện chỗ nào.
