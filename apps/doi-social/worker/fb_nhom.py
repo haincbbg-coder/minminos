@@ -275,6 +275,7 @@ def fb_tham_gia_nhom_sp(nc) -> str:
     ung_vien = [n for n in ds if _tinh_trang(n, nid) not in ("da_vao", "cho_duyet", "bi_tu_choi")
                 and n.get("trang_thai", "da_duyet") == "da_duyet" and _vai(n, nid) in ("chinh", "tuong_tac", "chua_gan")]
     ung_vien.sort(key=lambda n: {"chinh": 0, "tuong_tac": 1}.get(_vai(n, nid), 2))
+    tim_thay: list = []
     if len(ung_vien) < so and nc.ts.get("tu_tim", True):
         meta = nc.nhom_fb_tho if isinstance(nc.nhom_fb_tho, dict) else {}
         spm = meta.get("san_pham") if isinstance(meta.get("san_pham"), dict) else {}
@@ -289,14 +290,24 @@ def fb_tham_gia_nhom_sp(nc) -> str:
                 break
             kq_tim = [r for r in _tim_nhom(nc, kw) if r["link"] not in da_co]
             if not kq_tim:
+                nc.nhat_ky(f"Tìm nhóm '{kw}': không đọc được nhóm mới nào trên trang kết quả")
+                tim_thay.append(f"'{kw}': 0 nhóm")
                 continue
             chon = nc.ai("chon_nhom", {"ket_qua_tim": kq_tim, "san_pham_id": sp}).get("chon") or []
+            nc.nhat_ky(f"Tìm nhóm '{kw}': thấy {len(kq_tim)} nhóm, AI chọn {len(chon)}")
+            tim_thay.append(f"'{kw}': thấy {len(kq_tim)}, AI chọn {len(chon)}")
             for l in chon:
                 l = chuan_link(str(l))
                 if l and l not in da_co:
                     da_co.add(l)
                     ung_vien.append({"link": l, "ten": next((r["ten"] for r in kq_tim if r["link"] == l), ""), "_moi": True})
             nc.nghi_thao_tac()
+    if not ung_vien:
+        ly_do = ("Kho group FB không còn nhóm chưa vào cho nick này"
+                 + (f"; tự tìm: {', '.join(tim_thay)}" if tim_thay else "")
+                 + ("" if tim_thay or not nc.ts.get("tu_tim", True) else "; chưa có từ khoá sản phẩm để tự tìm"))
+        nc.su_kien("vao_nhom", "bo_qua", ly_do, san_pham=sp)
+        return f"Không có nhóm để xin vào ({ly_do})."
     vao = 0
     for n in ung_vien[:max(so, 0) * 2]:
         if vao >= so or phai_dung(nc) or nc.con_lai("vao_nhom") <= 0:

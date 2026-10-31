@@ -74,11 +74,36 @@ def phim_cong_khai(nc, ten: str, mo_ta: str, hanh_dong: str = "") -> bool:
     return True
 
 
+_DONG_CHAT = ["Đóng đoạn chat", "Close chat", "Đóng cửa sổ chat", "Close chat window"]
+_TIEU_DE_LA = re.compile(r"^(Đoạn chat|Chats|Tin nhắn|Messages|Messenger|Thông báo|Notifications|Menu)$", re.I)
+
+
+def don_chat_noi(nc) -> int:
+    """Đóng khung chat Messenger nổi còn sót từ lần nhắn tin trước. Khung này có ô gõ và tiêu đề
+    riêng nên làm Worker đọc nhầm tên nhóm ('Đoạn chat') và tìm nút Thích/Chia sẻ trong khung chat."""
+    page, n = nc.page, 0
+    try:
+        for _ in range(6):
+            nut = page.locator(", ".join(f"[aria-label=\"{t}\"]" for t in _DONG_CHAT))
+            if not nut.count() or not nut.first.is_visible():
+                break
+            nut.first.click(timeout=ms(3000))
+            n += 1
+            time.sleep(0.4)
+    except Exception:
+        pass
+    if n:
+        nc.nhat_ky(f"Đã đóng {n} khung chat Messenger đang nổi")
+    return n
+
+
 def mo_va_kiem(nc, url: str) -> None:
     nc.nhat_ky(f"Mở {url}")
     nc.mo(url)
     nc.tay.nghi(2.0, 4.5)
     nc.kiem_dang_nhap()
+    if "/messages" not in url:
+        don_chat_noi(nc)
 
 
 # ---------------------------------------------------------------------------- link
@@ -139,6 +164,7 @@ def link_bai(pham_vi) -> str:
 
 # ---------------------------------------------------------------------------- đọc bài
 _BAI_FEED = "div[aria-posinset]"
+_O_BL_BAI = re.compile(r"(Viết bình luận|Write a (public )?comment|Bình luận dưới tên|Comment as)", re.I)
 _BAI_ARTICLE = ("div[role='article']:not([aria-label*='Bình luận']):not([aria-label*='Comment'])"
                 ":not([aria-label*='Phản hồi']):not([aria-label*='Reply'])")
 _BL_ARTICLE = ("[role='article'][aria-label*='Bình luận'], [role='article'][aria-label*='Comment'], "
@@ -161,7 +187,10 @@ def ds_bai(page) -> list:
 def pham_vi_bai(page):
     """Phạm vi của bài đang mở theo link: hộp thoại bài (nếu Facebook mở dạng popup), bài đầu tiên,
     rồi vùng chính của trang."""
-    hop = page.get_by_role("dialog").filter(has=page.locator("[role='article'], [contenteditable='true']"))
+    # Hộp thoại bài phải có bài hoặc ô "Viết bình luận"; khung chat Messenger cũng là dialog có ô gõ
+    # nhưng không phải bài, nên không nhận.
+    hop = page.get_by_role("dialog").filter(has=page.locator("[role='article']").or_(
+        page.get_by_role("textbox", name=_O_BL_BAI)))
     for loc in (hop, page.locator(_BAI_FEED), page.locator(_BAI_ARTICLE), page.locator("[role='main']")):
         try:
             if loc.count() and loc.first.is_visible():
@@ -458,12 +487,15 @@ def trang_thai_nhom(page) -> str:
 
 
 def ten_trang(page) -> str:
-    try:
-        h = page.locator("h1")
-        if h.count():
-            return h.first.inner_text(timeout=ms(2000)).strip().splitlines()[0][:120]
-    except Exception:
-        pass
+    """Tên nhóm/Trang đang mở: h1 trong vùng chính trước, bỏ tiêu đề của khung chat, thông báo."""
+    for sel in ("[role='main'] h1", "h1"):
+        try:
+            for t in page.locator(sel).all_inner_texts()[:8]:
+                dong = (t or "").strip().splitlines()
+                if dong and dong[0].strip() and not _TIEU_DE_LA.match(dong[0].strip()):
+                    return dong[0].strip()[:120]
+        except Exception:
+            pass
     try:
         return (page.title() or "").replace("| Facebook", "").strip()[:120]
     except Exception:
