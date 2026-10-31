@@ -1,5 +1,9 @@
 # MinMin OS
 
+## [26.10.330] - 2026-10-31
+### Sửa lỗi
+- Đọc đúng phản hồi POS có nhiều khối JSON và lấy schema riêng, không ghép nhầm với ví dụ gọi lệnh.
+
 ## [26.10.328] - 2026-10-31
 ### Sửa lỗi
 - Đọc đúng danh mục sản phẩm và biến thể từ hợp đồng công cụ Pancake POS đang hoạt động; tách khỏi danh sách nhãn sản phẩm.

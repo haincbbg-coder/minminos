@@ -108,4 +108,10 @@ assert pos.normalize_products(flat,'c1','s1')[0][0]['id']==products[0]['id']
 assert pos.rows({'data':{'variations':flat}},'products')==flat
 assert pos.rows('Shop information\n```json\n{"shops":[{"id":123,"name":"Shop"}]}\n```','shops')==[{'id':123,'name':'Shop'}]
 assert pos.described_schema('Action input\n```json\n{"inputSchema":{"properties":{"shop_id":{"type":"integer"}}}}\n```')['properties']['shop_id']['type']=='integer'
+live_description='Input schema for pos_product.list_products_variations\n## Schema\n```json\n{"type":"object","properties":{"action":{"const":"list_products_variations","type":"string"},"shop_id":{"type":"integer"},"page_number":{"type":"integer"},"page_size":{"type":"integer"}},"required":["action","shop_id"]}\n```\n## Example invocation\n```json\n{"name":"pos_product","arguments":{"action":"list_products_variations","shop_id":123,"page_size":30,"page_number":1}}\n```'
+schema=pos.described_schema(live_description)
+assert 'properties' in schema and 'name' not in schema
+assert pos.args_for(schema,'123',2,action='list_products_variations')=={'action':'list_products_variations','shop_id':123,'page_number':2,'page_size':50}
+try:pos.unpack('{"data":[{"id":"valid-inner"}');raise AssertionError('must not salvage an inner object from a truncated root')
+except ValueError:pass
 print('OK live POS contract expansion, product action rather than tags, pagination and flat variation identity')

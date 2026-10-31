@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import json
 import math
+import re
 from datetime import datetime, timezone
 
 
@@ -51,17 +52,18 @@ def unpack(value):
     if isinstance(value, str):
         if value.startswith('ERROR:'):
             raise ValueError('POS không trả dữ liệu thành công. Kiểm tra lại kết nối và quyền đọc.')
-        # MCP text can wrap JSON in a heading or fenced block (the existing
-        # connector validation label parser supports these same envelopes).
-        candidates = (value, value[value.find('{'):value.rfind('}') + 1] if '{' in value else '',
-                      value[value.find('['):value.rfind(']') + 1] if '[' in value else '')
+        # pos_describe returns a Schema JSON block followed by an Example
+        # invocation JSON block. Decode one complete root, never concatenate them.
         parsed = False
-        for candidate in candidates:
+        decoder = json.JSONDecoder()
+        # The guard may prepend its own warning line; it remains in audit logs.
+        text = value.split('\n', 1)[-1] if value.startswith('[CẢNH BÁO TIÊM LỆNH') else value
+        match = re.search(r'[\[{]', text)
+        if match:
             try:
-                decoded = json.loads(candidate)
+                decoded, _ = decoder.raw_decode(text, match.start())
                 if isinstance(decoded, (dict, list)):
                     value, parsed = decoded, True
-                    break
             except ValueError:
                 pass
         if not parsed:
