@@ -67,6 +67,9 @@ with sync_playwright() as p:
     nc = types.SimpleNamespace(page=page, nhat_ky=lambda *a, **k: None)
     check("don_chat_noi đóng khung chat", f.don_chat_noi(nc) == 1 and page.locator("text=Đoạn chat").count() == 0)
     check("không có chat thì không làm gì", f.don_chat_noi(nc) == 0)
+    ghi0 = []
+    f.chan_doan_nut(types.SimpleNamespace(nhat_ky=ghi0.append), page.locator("[role='main']"), "Thích")
+    check("chan_doan_nut liệt kê nhãn nút", ghi0 and "Thích" in ghi0[0] and "nút" in ghi0[0], ghi0)
     # Bài mở dạng popup thật vẫn được nhận
     page.set_content("<div role='main'><h1>Trang</h1></div><div role='dialog'><div role='article'>Bài popup"
                      "<div role='button' aria-label='Thích'>Thích</div></div></div>")

@@ -1,5 +1,10 @@
 # MinMin OS
 
+## [26.10.331] - 2026-10-31
+### Cải thiện
+- **Đội Social, Facebook**: khi không thấy nút Thích hoặc Chia sẻ, Worker ghi vào nhật ký các nút đang thấy trên bài để biết Facebook đổi giao diện chỗ nào.
+- **Trả lời tin nhắn**: báo rõ vì sao bỏ qua một hội thoại (không đọc được tin do Messenger khoá tin mã hoá, hoặc tin cuối là của nick) thay vì bỏ qua im lặng.
+
 ## [26.10.330] - 2026-10-31
 ### Sửa lỗi
 - Đọc đúng phản hồi POS có nhiều khối JSON và lấy schema riêng, không ghép nhầm với ví dụ gọi lệnh.
