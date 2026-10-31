@@ -195,9 +195,10 @@ Chuông **Thông báo** trên thanh trên chỉ nổi chấm đỏ (và chỉ đ
 
 | Việc kết thúc ở | Kết quả về khung chat | Vào hòm thư | Chấm đỏ + thông báo đẩy |
 |---|---|---|---|
-| Bị chặn | có | có | **có** |
+| Hỏi bố / xin quyền | có | có | **có** |
 | Chờ duyệt ngoại lệ | có | có | **có** |
-| Chạy xong trót lọt | có | có | không |
+| Tạm dừng vì lý do kỹ thuật (từ 26.10.312) | có | có (Đã lọc) | không |
+| Chạy xong trót lọt | có | có (Đã lọc) | không |
 
 Việc chạy xong vẫn nằm nguyên trong danh sách chuông để bạn mở ra xem lại, chỉ là nó không gọi bạn dậy: kết quả đã rơi thẳng vào đúng khung chat đã giao việc rồi. Đổi cách này vì chủ repo báo (01/09/2026) chuông kêu liên hồi giữa lúc đang trò chuyện.
 
@@ -344,6 +345,30 @@ Mỗi việc là một phiên AI thật. Hạ số worker song song bằng `JAVI
 - Lỗi rõ ràng từ dịch vụ: được gọi lại.
 
 Giới hạn cần biết: sổ này chỉ bảo vệ việc chạy bằng **Claude Code** hoặc bằng bộ não API. Việc chạy qua Codex, Grok Build, Antigravity hay Muse Code chưa mang được mã việc tới hub nên chưa được bảo vệ. Chat thường và việc định kỳ không đi qua sổ này.
+
+## Trang Công việc yên hơn (26.10.312)
+
+**Cần bố xử lý chỉ còn việc thật sự chờ bố**: một câu hỏi, một lần xin quyền thao tác ra ngoài, hoặc kết quả chờ duyệt. Việc dừng vì lý do kỹ thuật (lỗi tạm, gói AI hết lượt, bộ não chưa sẵn sàng) nằm ở khu riêng **MinMin đang tự xử lý**, chỉ hiện khi có việc. Thẻ việc hiện một câu dễ hiểu thay cho dòng lỗi đỏ; lỗi gốc, các lần chạy và nhật ký nằm trong mục **Chi tiết kỹ thuật và nhật ký** thu gọn ở ngăn chi tiết.
+
+**Nhắn thêm**: mọi việc không đang chạy và không đang chờ câu trả lời đều có nút Nhắn thêm. Lời dặn vào sổ hỏi đáp kèm kết quả lần trước, việc quay lại hàng đợi và làm tiếp từ đó (không làm lại phần đã gửi, đã đăng). Số lần thử tính lại từ đầu vì đây là yêu cầu mới.
+
+**Đã kiểm / Chưa kiểm**: việc đã xong mang dấu Chưa kiểm cho tới khi bấm **Kiểm lại**. Một lượt AI chỉ đọc so kết quả với mục tiêu và điều kiện hoàn thành: đạt thì ghi Đã kiểm, chưa đạt thì việc sang Cần bố xử lý với lý do làm câu hỏi để bố dặn cách sửa.
+
+**Gợi ý việc lặp**: việc bố giao tay 3 lần trong 60 ngày (so tên bỏ số, ví dụ "Báo cáo doanh thu 28/10" và "29/10") hiện gợi ý đầu trang. **Đặt lịch tự chạy** nhờ MinMin đề xuất một việc hằng ngày trong khung chat; **Bỏ qua** thì gợi ý đó không hiện lại.
+
+**Không còn chấm Xong oan**: lượt chạy kết thúc lỗi (hết lượt gói như "You're out of extra usage", API 429/529) không bao giờ thành việc Xong với câu báo lỗi làm kết quả. Hết lượt thì việc hoãn tới giờ gói mở lại; nếu máy có chuỗi bộ não dự phòng và lượt hỏng chưa kịp gọi công cụ nào thì việc chạy ngay bằng bộ não kế tiếp.
+
+**Ô trả lời giữ chữ**: bảng tự làm mới 3 giây một lần nhưng không còn xoá câu bố đang gõ dở.
+
+### Chuông theo nhóm và mức (26.10.312)
+
+Mỗi thông báo có nhóm (Nhắc lịch, Câu hỏi chờ bố, Chatbot và khách, Kết nối và đăng nhập, Sự cố, Kết quả việc, Chi phí, Cập nhật, Khác) và mức (bình thường, đáng chú ý, khẩn). Mặc định mọi nhóm "Chỉ tin khẩn": chỉ tin khẩn mới nổi chấm đỏ, đẩy lên điện thoại và gửi Telegram mặc định. Tin còn lại vẫn được giữ, ở dạng đã đọc trong ngăn **Đã lọc** của chuông. Chỗ đã giao việc (khung chat, Telegram hay Zalo đã nhắn việc) vẫn nhận kết quả như cũ.
+
+Mức khẩn mặc định: nhắc hẹn, câu hỏi và xin quyền của việc, kết quả chờ duyệt, bước GATE, khách đang đợi người, canh rào Mắt Nhà, hết ngân sách API, trang web đang theo dõi có thay đổi. Kết quả việc, kết nối chập chờn, sự cố, chi phí thường là đáng chú ý; việc xong trót lọt và bản cập nhật là bình thường.
+
+Chuông chỉ hiện tin chưa đọc; **Đọc tất cả** là sạch chuông, link **Xem N thông báo đã đọc** hiện lại tin cũ cho lần mở đó. Nút **×** xoá một tin. **Không cần báo** đánh dấu đã đọc và lần sau lọc loại tin đó; **Nên báo** trên tin đã lọc thì loại đó luôn kêu. Trong ngăn Đã lọc có chỗ chỉnh từng nhóm và nút **Hoàn tác** cho các thay đổi gần đây.
+
+Câu trả lời của nhắc hẹn dạng chạy việc và của vòng loop mang cờ `[SILENT]` ở **đầu hoặc cuối** thì không báo gì.
 
 ## Liên quan
 

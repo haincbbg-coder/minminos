@@ -888,7 +888,11 @@ class LoopFeature:
             # trạng thái và tên loop, nên bản web bỏ câu đầu có emoji.
             viec = {"kind": "loop", "id": slug, "title": str(loop.get("name") or slug)[:160],
                     "status": "blocked" if paused_now else ("failed" if failed else "done")}
-            if loop.get("notify", True) and self.deps.report:
+            # Cờ [SILENT] ở đầu HOẶC cuối câu trả lời của một vòng trót lọt (26.10.312): vòng này
+            # không có gì đáng báo, nên không gửi gì cả (nhật ký loop vẫn ghi ở trên).
+            im = (not failed and not paused_now
+                  and channel_context.is_silent_report(str(summary or "")))
+            if loop.get("notify", True) and self.deps.report and not im:
                 head = "⚠" if failed else "✅"
                 parts = [f"{head} Loop '{loop['name']}' vừa chạy ({reason})."]
                 if summary:

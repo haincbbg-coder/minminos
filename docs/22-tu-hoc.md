@@ -310,6 +310,45 @@ Nó chạy 24 giờ một lần, và bỏ qua brain đã im lặng quá 14 ngày
 **Sợ tự học làm hỏng ghi chú viết tay.**
 Tiến trình học không có quyền ghi. Code ghi thì không đè file ký ức đã có, không đè note Wiki đã có, không đè skill đã có, không xoá gì, chỉ sửa agent/workflow đã có khi có lý do rõ ràng và bạn chưa khoá file đó, và chỉ được động vào các thư mục `memory/`, `Wiki/`, `skills/`, `agents/`, `workflows/`, `Javis/`. Đường dẫn nào lọt ra ngoài bị khôi phục lại ngay.
 
+## Học từ trò chuyện (từ 26.10.308)
+
+Khối **Học từ trò chuyện** ngay dưới dòng Chỉ số. Phần trên trang học *tri thức* (ký ức, Wiki, skill mới); khối này
+sửa *cách làm* của skill, trợ lý và quy trình đang có, khi chính chúng làm sai lúc bạn dùng.
+
+Nó đi theo đúng các công tắc ở trên: **Bật tự học**, **Chế độ ghi**, và ba công tắc **Kỹ năng**, **Vai (Agent)**,
+**Chuỗi bước (Workflow)**. Không có cài đặt riêng nào khác.
+
+1. **Ghi lượt.** Lượt chat của bạn có nạp skill, lượt chat với trợ lý (trang Cộng sự), lần chạy quy trình bạn tự bấm
+   được ghi lại, kèm tin bạn nhắn ngay sau đó (ví dụ "sai rồi, quên VAT"). Lượt của bot bán hàng, Zalo, việc tự chạy
+   thì không ghi: không có bạn ở đó để nhắn sửa.
+2. **Chấm** bằng **model việc nền** (rẻ). Chỉ lỗi mà hướng dẫn tốt hơn tránh được, và biến được thành một câu thử, mới
+   được tính. Tối đa **40 lượt chấm** mỗi bộ não mỗi ngày.
+3. **Học** khi cùng một mục tiêu có **đủ 3 lỗi**, đã nghỉ **3 ngày** kể từ lần học trước, và bộ não chưa học lần nào
+   hôm nay (**1 lần mỗi ngày**). MinMin tự soạn 12 đến 18 câu thử, một phần để sửa, một phần **niêm phong** người sửa
+   không bao giờ thấy. Bài thử chạy bằng **bộ não chính** (để kết quả đo đúng model đang trả lời bạn); chấm, soạn câu
+   và viết bản sửa chạy bằng model việc nền. Bản mới chỉ được giữ khi thắng rõ trên phần niêm phong (kiểm định dấu,
+   p không quá 0,05) và không làm hỏng câu nào bản cũ vốn đúng. Kết quả rõ ngay vòng đầu thì dừng sớm.
+4. **Ghi**, luôn có bản cũ để **Hoàn tác** (lưu ngoài brain, kèm commit `learn:` nếu brain là git):
+   - Skill hay quy trình **do tự học tạo** (`origin: javis-learned`) ở chế độ **Tự ghi**: áp dụng ngay, hòm thư báo.
+   - Skill hay quy trình **bạn tự viết**, hoặc chế độ **Đề xuất**: chỉ thành **đề xuất**. Bạn xem bản mới, bấm
+     **Áp dụng** hoặc **Bỏ**. Học từ trò chuyện không bao giờ tự ghi đè chữ bạn viết.
+   - Trợ lý: file `agents/<slug>.md` của bạn **không bao giờ** bị sửa. Phần học được nằm ở
+     `memory/agents/<slug>/quy-trinh-hoc.md` và được nạp kèm lời dặn của trợ lý.
+   - **Chạy thử**: chỉ chấm và ghi nhận, không học.
+
+Không bao giờ đụng: skill hệ thống, file có `learn_lock: true`, phần đầu file (tên, nhóm, mô tả, trạng thái). Mọi lần
+học chỉ-chữ: không công cụ, không MCP, nên không gửi tin, không tạo đơn, không đăng bài được.
+
+**Tạm dừng mọi cải tiến** (theo từng bộ não): dừng học từ trò chuyện, mẻ học tự động của trang này và Cải tiến có đối
+chứng (chạy và áp dụng). Nút **Học ngay** và **Hoàn tác** vẫn dùng được.
+
+Vì sao không trái luật 2026-08-16 (cấm vòng nền quét và viết lại hàng loạt skill/agent): không có lượt nào quét kho.
+Một mục tiêu chỉ được đụng sau ít nhất 3 lỗi thật bạn nhắn sửa, tối đa một lần mỗi ngày, nghỉ 3 ngày giữa hai lần,
+và chỉ giữ khi đối chứng thắng rõ. Đó vẫn là tự sửa lúc dùng, chỉ thêm bằng chứng.
+
+Endpoint: `GET /hoc-tu-chat/tong-quan`, `POST /hoc-tu-chat/tam-dung`, `/hoc-tu-chat/ap-dung`, `/hoc-tu-chat/bo`,
+`/hoc-tu-chat/hoan-tac`. Dữ liệu ở `STATE_DIR/hoc-tu-chat/`. Tắt hẳn bằng biến môi trường `MINMIN_HOC_TU_CHAT_TAT=1`.
+
 ## Liên quan
 
 - [Second Brain: bộ nhớ và Wiki](13-second-brain-bo-nho-wiki.md) - cấu trúc `memory/facts/`, `MEMORY.md` và thư mục Wiki mà tự học ghi vào

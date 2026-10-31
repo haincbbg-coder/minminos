@@ -10,6 +10,7 @@ git-backed) + để scheduler nền (main._scheduler_loop, tick 30s) đánh th�
   - mode "script"          : job KHÔNG cần LLM (rẻ, để giám sát) - chạy script có sẵn trong
                              <brain>/Javis/scripts, đẩy stdout về Telegram; exit≠0 → cảnh báo lỗi,
                              stdout rỗng hoặc có cờ [SILENT] → im lặng (port ý no_agent của Hermes).
+                             mode "task": câu trả lời MỞ ĐẦU hoặc KẾT THÚC bằng [SILENT] cũng im lặng.
 
 Lịch: hẹn 1-lần (delay_min|at|due_at) HOẶC định kỳ bằng biểu thức CRON 5 trường (cron_util.py,
 tự viết, không phụ thuộc lib). Có cron thì mỗi lần fire xong tự tính due_at kế tiếp.
@@ -577,7 +578,10 @@ class RemindersFeature:
         if mode == "task":
             async with self.lock:
                 body, err = await self._run_task(brain, text, muc_quyen_cua(rem))
-            if body:
+            if body and channel_context.is_silent_report(body):
+                # Cờ [SILENT] ở đầu HOẶC cuối câu trả lời (26.10.312): không có gì để báo, im lặng.
+                deliver = False
+            elif body:
                 # `text`/`head` là prompt nội bộ để agent làm việc, có thể dài và chứa đường dẫn,
                 # vai trò, quy trình. Telegram chỉ cần KẾT QUẢ cuối; ghép prompt vào đây vừa rối
                 # vừa làm lộ chỉ dẫn máy như ca Coach Mục Tiêu & Kỷ Luật.

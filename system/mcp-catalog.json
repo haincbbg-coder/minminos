@@ -1361,9 +1361,15 @@
             "label": "Refresh token (không bắt buộc, lấy từ API Explorer)",
             "placeholder": "Dán refresh token nếu không dùng code...",
             "optional": true
+          },
+          {
+            "key": "oa_secret",
+            "label": "OA Secret Key (mục Webhook của app, chỉ cần khi dùng OA làm kênh Chatbot)",
+            "placeholder": "Để trống nếu chỉ dùng công cụ",
+            "optional": true
           }
         ],
-        "guide": "1. Vào developers.zalo.me, đăng nhập bằng Zalo của quản trị viên OA và tạo ứng dụng mới.\n2. Trong ứng dụng, mở Official Account, liên kết OA cần quản lý và bật các quyền đọc tin, quản lý người dùng, gửi tin tư vấn.\n3. Khai Callback URL trong phần thiết lập Official Account. Chép App ID và Khóa bí mật vào kết nối này, điền Callback URL rồi lưu.\n4. Hỏi MinMin \"tạo link ủy quyền Zalo OA\" (tool zalo_oa_lien_ket_uy_quyen), mở link, chọn OA và đồng ý.\n5. Trang được chuyển về Callback URL có dạng ...?code=XXXX. Chép phần sau code= vào ô Mã ủy quyền rồi lưu.\nCách khác: mở Zalo API Explorer, chọn ứng dụng và loại OA Access Token, lấy refresh token rồi dán vào ô Refresh token.\n6. MinMin tự đổi code lấy token và tự làm mới token (access token sống khoảng 25 giờ, refresh token 3 tháng).\n\nMỗi OA một kết nối: OA thứ hai thì thêm kết nối mới, dùng lại App ID và Khóa bí mật, chỉ khác code.\nRefresh token chỉ dùng được một lần. Đừng dán cùng một refresh token cho hai kết nối hay cho công cụ khác, kẻo kết nối hỏng phải ủy quyền lại.",
+        "guide": "1. Vào developers.zalo.me, đăng nhập bằng Zalo của quản trị viên OA và tạo ứng dụng mới.\n2. Trong ứng dụng, mở Official Account, liên kết OA cần quản lý và bật các quyền đọc tin, quản lý người dùng, gửi tin tư vấn.\n3. Khai Callback URL trong phần thiết lập Official Account. Chép App ID và Khóa bí mật vào kết nối này, điền Callback URL rồi lưu.\n4. Hỏi MinMin \"tạo link ủy quyền Zalo OA\" (tool zalo_oa_lien_ket_uy_quyen), mở link, chọn OA và đồng ý.\n5. Trang được chuyển về Callback URL có dạng ...?code=XXXX. Chép phần sau code= vào ô Mã ủy quyền rồi lưu.\nCách khác: mở Zalo API Explorer, chọn ứng dụng và loại OA Access Token, lấy refresh token rồi dán vào ô Refresh token.\n6. MinMin tự đổi code lấy token và tự làm mới token (access token sống khoảng 25 giờ, refresh token 3 tháng).\n\nMỗi OA một kết nối: OA thứ hai thì thêm kết nối mới, dùng lại App ID và Khóa bí mật, chỉ khác code.\nRefresh token chỉ dùng được một lần. Đừng dán cùng một refresh token cho hai kết nối hay cho công cụ khác, kẻo kết nối hỏng phải ủy quyền lại.\n\nMuốn bot Chatbot trả lời khách nhắn OA: vào Chatbot, tab Kênh, Thêm kênh, chọn Zalo OA. Kênh dùng chung token của kết nối này, không cần lấy refresh token mới.",
         "guide_url": "https://developers.zalo.me/docs/official-account/bat-dau/xac-thuc-va-uy-quyen-cho-ung-dung-new"
       },
       "validate": {

@@ -69,7 +69,7 @@
   // channel accounts (the channel picker) and tags any/none (the Filter menu). Saved with the rest by JavisConvFilters.
   var _who = "you", _accs = [], _tagsAny = [], _tagsNone = [], _whoCounts = null;
   var _when = null, _lastBy = "", _pinned = "";   // when the last message came, who wrote it, pinned only (Filter menu)
-  var _pick = false, _pickQ = "", _fm = false, _fmCat = "time";   // channel picker / Filter menu open, picker search, menu category
+  var _pick = false, _pickQ = "", _fm = false, _fmCat = "time", _wm = false;   // + the "who" dropdown (26.10.314)   // channel picker / Filter menu open, picker search, menu category
   var _info = null;         // Info panel: null = decided by the width (open on wide screens), true/false = the owner chose
   var _aiBusy = "";         // "ask" | "redo" | "send" | "now" while the A.I. writes or a draft goes out
   var _draftEdit = null;    // {ts, text}: the owner's edits to the waiting draft, kept across the 5-second redraws
@@ -321,7 +321,7 @@
       _who = saved.who; _accs = saved.accs; _tagsAny = saved.tagsAny; _tagsNone = saved.tagsNone;
       _when = saved.when; _lastBy = saved.lastBy; _pinned = saved.pinned;
     }
-    _pick = false; _fm = false;
+    _pick = false; _fm = false; _wm = false;
     body.innerHTML =
       '<div class="ht-wrap ib-v5">' +
         '<div class="ht-body">' +
@@ -333,7 +333,9 @@
                 esc(window.t("ib.search_ph")) + '"></span>' +
                 '<button type="button" class="ib-fbtn" aria-haspopup="dialog" aria-expanded="false">' + ic("sliders-horizontal") +
                   ' <span>' + esc(window.t("ib.f_btn")) + '</span><span class="ib-fbtn-n" hidden></span></button></div>' +
-              '<div class="ib-quick" role="group" aria-label="' + esc(window.t("ib.quick_aria")) + '"></div>' +
+              '<div class="ib-quick"><button type="button" class="ib-who" aria-haspopup="menu" aria-expanded="false" aria-label="' +
+                esc(window.t("ib.quick_aria")) + '"></button>' +
+                '<div class="ib-pop ib-wm" role="menu" aria-label="' + esc(window.t("ib.quick_aria")) + '" hidden></div></div>' +
               '<div class="ib-activef"></div>' +
               '<div class="ib-pop ib-pk" role="dialog" aria-label="' + esc(window.t("ib.pk_aria")) + '" hidden></div>' +
               '<div class="ib-pop ib-fm" role="dialog" aria-label="' + esc(window.t("ib.f_title")) + '" hidden></div>' +
@@ -355,10 +357,13 @@
     s.oninput = function () { _q = s.value.trim(); tai(); };
     body.querySelector(".ib-picker").onclick = function () { setPop(_pick ? "" : "pick"); };
     body.querySelector(".ib-fbtn").onclick = function () { setPop(_fm ? "" : "fm"); };
-    body.querySelector(".ib-quick").onclick = function (e) {
-      var b = e.target.closest && e.target.closest(".ib-q");
+    body.querySelector(".ib-who").onclick = function () { setPop(_wm ? "" : "who"); };
+    body.querySelector(".ib-wm").onclick = function (e) {
+      var b = e.target.closest && e.target.closest(".ib-wm-o");
       if (!b) return;
       _who = b.dataset.who || "";
+      setPop("");
+      focusOpener(".ib-who");
       onFilterChange();
     };
     body.querySelector(".ib-activef").onclick = function (e) {
@@ -411,11 +416,14 @@
         '<span class="ib-pk-tt"><b>' + esc(sum.title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : "") + '</span>' + ic("chevron-down");
       if (pb.dataset.sig !== ph) { pb.innerHTML = ph; pb.dataset.sig = ph; }
     }
-    var q = _host.querySelector(".ib-quick");
+    var q = _host.querySelector(".ib-who");
     if (q) {
-      var qh = V.quickHtml(_who, _whoCounts, ic);
+      var qh = V.whoButtonHtml(_who, _whoCounts, ic);
       if (q.dataset.sig !== qh) { q.innerHTML = qh; q.dataset.sig = qh; }
+      q.classList.toggle("you", _who === "you" && V.whoCount("you", _whoCounts) > 0);
     }
+    var wm = _host.querySelector(".ib-wm");
+    if (wm && _wm) wm.innerHTML = V.whoMenuHtml(_who, _whoCounts, ic);
     var st = filterState();
     var chips = V.activeChips(st, _tags, _botList);
     if (_kenhLoc) chips.unshift({ k: "channel", v: "", text: nhanKenh(_kenhLoc) });
@@ -450,10 +458,11 @@
   // actions, never on the 5-second refresh, so a tick or a typed search is never lost under the cursor.
   function setPop(which) {
     if (!_host) return;
-    _pick = which === "pick"; _fm = which === "fm";
+    _pick = which === "pick"; _fm = which === "fm"; _wm = which === "who";
     if (_pick) _pickQ = "";
     paintPops();
-    var f = _pick ? _host.querySelector(".ib-pk .ib-pk-q") : _fm ? _host.querySelector(".ib-fm .ib-fm-cat.on") : null;
+    var f = _pick ? _host.querySelector(".ib-pk .ib-pk-q") : _fm ? _host.querySelector(".ib-fm .ib-fm-cat.on") :
+      _wm ? _host.querySelector(".ib-wm .ib-wm-o.on") : null;
     if (f) f.focus();
   }
 
@@ -468,6 +477,12 @@
       pk.hidden = !_pick;
       pk.innerHTML = _pick ? V.pickerHtml(accList(), _accs, youByAcc(), _pickQ, logoPick, nhanKenh, ic) : "";
       pk.querySelectorAll("input[data-half]").forEach(function (x) { x.indeterminate = true; });
+    }
+    var wb = _host.querySelector(".ib-who"), wm = _host.querySelector(".ib-wm");
+    if (wb) wb.setAttribute("aria-expanded", String(_wm));
+    if (wm) {
+      wm.hidden = !_wm;
+      wm.innerHTML = _wm ? V.whoMenuHtml(_who, _whoCounts, ic) : "";
     }
     if (fm) {
       fm.hidden = !_fm;
@@ -571,14 +586,15 @@
       if (mq.addEventListener) mq.addEventListener("change", follow); else if (mq.addListener) mq.addListener(follow);
     } catch (e) { /* old browser: the panel keeps its state */ }
     document.addEventListener("mousedown", function (ev) {
-      if ((!_pick && !_fm) || !_host || !document.body.contains(_host)) return;
+      if ((!_pick && !_fm && !_wm) || !_host || !document.body.contains(_host)) return;
       var t = ev.target;
-      if (t.closest && (t.closest(".ib-pop") || t.closest(".ib-picker") || t.closest(".ib-fbtn") || t.closest(".dr-pop"))) return;
+      if (t.closest && (t.closest(".ib-pop") || t.closest(".ib-picker") || t.closest(".ib-fbtn") || t.closest(".ib-who") ||
+                        t.closest(".dr-pop"))) return;
       setPop("");
     });
     document.addEventListener("keydown", function (ev) {
-      if (ev.key !== "Escape" || (!_pick && !_fm) || !_host || document.querySelector(".dr-pop")) return;
-      var from = _pick ? ".ib-picker" : ".ib-fbtn";
+      if (ev.key !== "Escape" || (!_pick && !_fm && !_wm) || !_host || document.querySelector(".dr-pop")) return;
+      var from = _pick ? ".ib-picker" : _wm ? ".ib-who" : ".ib-fbtn";
       setPop("");
       focusOpener(from);
     });
@@ -839,6 +855,8 @@
   // What the menu offers is pure data in conversations-filters.js (rowMenuItems / rowMenuHtml / tagMenuHtml).
   var _rm = null;           // open menu: {id, view: "main" | "tags" | "copy", done, err, kb}
   var PHONE_MQ = "(max-width: 640px)";
+  // The finger is the main pointer (a phone or tablet): Enter in the reply box is a new line there.
+  function chamLaChinh() { try { return window.matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } }
   function isPhone() { try { return window.matchMedia(PHONE_MQ).matches; } catch (e) { return false; } }
   function rmItem(id) { return _items.filter(function (k) { return k.id === id; })[0] || (_conv && _conv.id === id ? _conv : null); }
   function rmEl() { return document.getElementById("htRowMenu"); }
@@ -1306,8 +1324,12 @@
     if (ta) {
       ta.value = nhapDo;
       if (goDo) { ta.focus(); try { ta.setSelectionRange(nhapDo.length, nhapDo.length); } catch (e) { /* ignore */ } }
+      // Same Enter rule as the main chat (26.10.314, theo Javis 0.398): on a phone (finger is the main pointer) Enter is a
+      // new line and the Send button sends, so a reply can have several lines; on a computer Enter sends and
+      // Shift+Enter is a new line. An IME composition (Vietnamese Telex) never sends.
       ta.onkeydown = function (e) {
-        if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); gui(c); }
+        if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229 || chamLaChinh()) return;
+        e.preventDefault(); gui(c);
       };
       box.querySelector(".ht-send").onclick = function () { gui(c); };
       var ask = box.querySelector(".ib-ask");
@@ -1825,7 +1847,7 @@
       (draft && V ? V.draftHtml(draft, busy || (_aiBusy ? "x" : ""), ic) : "") +
       (ghiChu ? '<div class="ht-compose-note">' + ic("info") + ' ' + esc(ghiChu) + '</div>' : "") +
       '<div class="ib-cin">' +
-        '<textarea rows="1" placeholder="' + esc(t(laBot ? "ib.cin_ph_ai" : "ht.gui_ph")) + '" aria-label="' + esc(t("ht.gui_ph")) + '"></textarea>' +
+        '<textarea rows="1" placeholder="' + esc(t(laBot ? "ib.cin_ph_ai" : chamLaChinh() ? "ib.cin_ph_touch" : "ht.gui_ph")) + '" aria-label="' + esc(t("ib.cin_aria")) + '"></textarea>' +
         (laBot ? '<button type="button" class="s-btn-ghost ib-ask"' + (_aiBusy ? " disabled" : "") + ' title="' + esc(t("ib.ai_reply_t")) + '">' +
           ic(_aiBusy === "ask" ? "loader" : "sparkles") + '<span>' + esc(t(_aiBusy === "ask" ? "ib.ai_busy" : "ib.ai_reply")) + '</span></button>' : "") +
         '<button type="button" class="s-btn ht-send">' + ic("send") + '<span>' + esc(t("ht.gui")) + '</span></button>' +
@@ -2193,16 +2215,42 @@
       o.innerHTML = "";
       if (!k.webhook) return;
       try {
-        var r = await api("/channels/webhook-info?channel=" + encodeURIComponent(k.id));
+        // Zalo OA (26.10.314) has its own route: the address plus the domain codes saved for Zalo's domain check.
+        var zo = k.id === "zalo_oa";
+        var r = await api(zo ? "/zalo-oa/webhook-info" : "/channels/webhook-info?channel=" + encodeURIComponent(k.id));
         if (chon !== k.id) return;
-        o.innerHTML = '<b>' + esc(window.t("ht.wh_url")) + '</b> <code>' + esc(r.webhook_url || "") + '</code><br>' +
-          '<b>' + esc(window.t("ht.wh_token")) + '</b> <code>' + esc(r.verify_token || "") + '</code>' +
-          (r.https ? "" : '<br><span class="cb-warn">' + esc(window.t("ht.wh_can_https")) + '</span>');
+        o.innerHTML = '<b>' + esc(window.t("ht.wh_url")) + '</b> <code>' + esc(r.webhook_url || "") + '</code>' +
+          (r.verify_token ? '<br><b>' + esc(window.t("ht.wh_token")) + '</b> <code>' + esc(r.verify_token) + '</code>' : "") +
+          (r.https ? "" : '<br><span class="cb-warn">' + esc(window.t(zo ? "ht.zo_can_https" : "ht.wh_can_https")) + '</span>') +
+          (zo ? maXacThucHtml(r.ma_xac_thuc || []) : "");
         o.hidden = false;
+        if (zo) noiMaXacThuc(o);
       } catch (e) {
         o.innerHTML = '<span class="cb-warn">' + esc(e.message) + '</span>';
         o.hidden = false;
       }
+    }
+    // Zalo checks the webhook domain by fetching /zalo_verifier<code>.html BEFORE it accepts the webhook, so the code is
+    // saved on its own here, before the account exists.
+    function maXacThucHtml(ds) {
+      return '<div class="ht-zo-site"><b>' + esc(window.t("ht.zo_site_lb")) + '</b>' +
+        '<div class="cb-row"><input id="htZoSite" placeholder="' + esc(window.t("ht.zo_site_ph")) + '">' +
+        '<button class="s-btn-ghost" id="htZoSiteLuu" type="button">' + esc(window.t("ht.zo_site_luu")) + '</button></div>' +
+        '<div id="htZoSiteNote">' + (ds.length ? esc(window.t("ht.zo_site_da", { file: "/zalo_verifier" + ds[0] + ".html" })) : "") +
+        '</div></div>';
+    }
+    function noiMaXacThuc(o) {
+      var nut = o.querySelector("#htZoSiteLuu");
+      if (!nut) return;
+      nut.onclick = async function () {
+        var note = o.querySelector("#htZoSiteNote"), v = o.querySelector("#htZoSite").value.trim();
+        if (!v) return;
+        try {
+          var r = await api("/zalo-oa/xac-thuc", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                   body: JSON.stringify({ ma: v }) });
+          note.textContent = window.t("ht.zo_site_da", { file: r.file || "" });
+        } catch (e) { note.innerHTML = '<span class="cb-warn">' + esc(e.message) + '</span>'; }
+      };
     }
     box.querySelectorAll(".cb-kenh-o").forEach(function (n) { n.onclick = function () { apKenh(n.dataset.k); }; });
     if (chon) apKenh(chon);

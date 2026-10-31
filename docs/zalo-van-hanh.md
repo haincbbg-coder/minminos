@@ -23,6 +23,19 @@ hội thoại và kết nối hiện có, không cần mua gói LohaZalo hoặc 
 6. Trong **Vận hành**, chọn kênh, cửa sổ trượt 24 giờ / 7 ngày / 30 ngày và mục tiêu
    phản hồi. Bấm Mở ở khách đang chờ để về đúng hội thoại. Bấm Làm mới để cập nhật số.
 
+## Bản 26.10.306: bot Zalo cá nhân
+
+- **Bot đọc file khách gửi** (PDF, Word .docx, Excel .xlsx, file chữ), tải từ CDN Zalo vào
+  `attachments/zalo/<chat>/tep/` của brain bot. Trong nhóm: gửi file rồi gọi bot trong 10 phút vẫn được (chỉ người gửi).
+- **Chat riêng ở chế độ Tự phán đoán**: câu khó (giá riêng, khiếu nại, hoàn tiền) bot im và báo chuông,
+  một lần mỗi 10 phút mỗi cuộc chat. Bot tự tách câu dài thành tối đa 4 tin ngắn.
+- **Tag Zalo của cuộc chat** (Gia đình, Khách...) đọc bằng `label list` của chính gói zalo-agent-cli đã
+  ghim, ở nền mỗi 10 phút. Form bot có ô "Không trả lời các cuộc chat có tag Zalo".
+- Zalo báo gửi thành công mà không có id tin thì coi là **chưa gửi**: Hộp thư có dòng báo, chuông kêu.
+
+Chưa làm vì zalo-agent-cli 1.6.2 (bản mới nhất trên npm) không có: đọc/thả cảm xúc qua MCP, đọc
+ghi chú ghim của nhóm. Javis dùng bản CLI riêng (javis-zalo 1.7, 1.8) cho hai việc này.
+
 ## Ý nghĩa báo cáo
 
 - Một đợt chờ bắt đầu ở tin khách đầu tiên sau lần đáp trước và kết thúc ở lần đáp đầu

@@ -191,12 +191,56 @@ ENGINE_FIX = {
 ENGINE_FIX_DEFAULT = "Vào trang Models để kết nối và sử dụng Javis."
 
 
+_ENGINE_NOTICE_FILE = "engine_down_notified.json"   # trong STATE_DIR (26.10.312)
+
+
+def _engine_notice_path():
+    import config
+    from pathlib import Path
+    return Path(config.STATE_DIR) / _ENGINE_NOTICE_FILE
+
+
+def _engine_notified_saved() -> dict:
+    """{tên bộ não: lúc báo} của các tin "MinMin chưa dùng được" đã gửi mà chưa thấy hồi lại.
+    Ghi ra đĩa để khởi động lại giữa lúc bộ não vẫn hỏng không gửi lại đúng tin đó lần nữa."""
+    import json
+    try:
+        d = json.loads(_engine_notice_path().read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _engine_notified_set(name: str, on: bool) -> None:
+    import json
+    d = _engine_notified_saved()
+    if bool(d.get(name)) == on:
+        return
+    if on:
+        d[name] = time.time()
+    else:
+        d.pop(name, None)
+    try:
+        _engine_notice_path().write_text(json.dumps(d), encoding="utf-8")
+    except OSError as e:
+        print(f"[engine health] không ghi được trạng thái đã báo: {e}", file=sys.stderr)
+
+
+def looks_like_error_line(text) -> bool:
+    """Kết quả đủ NGẮN để là một dòng lỗi chứ không phải một câu trả lời (26.10.312). Lỗi đăng
+    nhập thật về dưới dạng một dòng ngắn ("Invalid API key · Please run /login"); một câu trả lời
+    chỉ nhắc tới mấy chữ đó thì dài hơn nhiều."""
+    t = str(text or "").strip()
+    return bool(t) and len(t) <= 300 and t.count("\n") <= 2
+
+
 def _set_engine(name, ok, message="", source="probe"):
     prev = _engines.get(name) or {}
     rec = {"ok": ok, "message": message, "source": source, "ts": time.time(),
-           "notified": bool(prev.get("notified"))}
+           "notified": bool(prev.get("notified")) or bool(_engine_notified_saved().get(name))}
     if ok:
         rec["notified"] = False   # hồi sinh → lần chết sau lại được báo
+        _engine_notified_set(name, False)
     _engines[name] = rec
     if not ok and not rec["notified"] and on_engine_down:
         # Chỉ báo Telegram khi bộ não này ĐANG là Main Model. Đèn của bộ não khác (vd lượt
@@ -209,6 +253,7 @@ def _set_engine(name, ok, message="", source="probe"):
         except Exception:
             pass
         rec["notified"] = True
+        _engine_notified_set(name, True)
         try:
             # Nói theo góc NGƯỜI DÙNG: với họ chỉ có một sự thật là chưa dùng được Javis,
             # và một việc phải làm. Tên engine để trong ngoặc cho ai cần đi tra, không đặt
@@ -225,7 +270,13 @@ def _set_engine(name, ok, message="", source="probe"):
 
 def flag_engine_auth_error(name, raw) -> bool:
     """Gọi từ engine khi một lượt chạy kết thúc: text khớp mẫu lỗi đăng nhập thì bật đèn đỏ.
-    Trả True nếu đã bật (caller khỏi phân tích lại)."""
+    Trả True nếu đã bật (caller khỏi phân tích lại).
+
+    26.10.312: chỉ một DÒNG LỖI ngắn mới tính (`looks_like_error_line`). Engine đưa vào đây kết
+    quả của MỌI lượt, nên một câu trả lời bình thường có trích "not logged in" hay "invalid api
+    key" từng thắp đèn đỏ và báo bố rằng MinMin không dùng được."""
+    if not looks_like_error_line(raw):
+        return False
     low = (raw or "").lower()
     if not any(p in low for p in _ENGINE_AUTH_PATTERNS):
         return False

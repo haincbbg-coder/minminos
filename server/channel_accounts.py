@@ -120,24 +120,32 @@ def list_accounts(channel: str = "", brain: str = "") -> List[dict]:
     return out
 
 
-def _ao_cua(conn_id: str, label: str = "") -> dict:
-    """Bản ảo của một tài khoản kênh kiểu "account" (Zalo cá nhân), cùng hình với `_public`."""
-    s = channels.spec("zalo_personal")
+def _ao_cua(conn_id: str, label: str = "", kenh: str = "zalo_personal") -> dict:
+    """Bản ảo của một tài khoản kênh kiểu "account" (Zalo cá nhân, Page Pancake), cùng hình với `_public`."""
+    s = channels.spec(kenh)
     return {
-        "id": conn_id, "channel": "zalo_personal", "label": label or (s.nhan if s else "Zalo"),
+        "id": conn_id, "channel": kenh, "label": label or (s.nhan if s else kenh),
         "external_id": "", "brain": "", "meta": {}, "token_set": True, "kind": "account",
-        "channel_label": s.nhan if s else "Zalo cá nhân", "logo": s.logo if s else "zalo",
+        "channel_label": s.nhan if s else kenh, "logo": s.logo if s else kenh,
         "ao": True,
     }
 
 
 def tai_khoan_ao() -> List[dict]:
-    """Tài khoản Zalo cá nhân đang có ở trang Kết nối, dưới dạng tài khoản kênh để CHỌN cho bot."""
-    try:
-        import zalo_personal_channel
-        return [_ao_cua(str(a["id"]), a.get("label") or "") for a in zalo_personal_channel.tai_khoan()]
-    except Exception:
-        return []
+    """Tài khoản của mọi kênh kind "account" (Zalo cá nhân, từ 26.10.315 cả Page Pancake), dưới dạng tài khoản kênh
+    để CHỌN cho bot. Đọc theo sổ đăng ký, không nhánh theo tên kênh; một kênh hỏng không làm mất kênh khác."""
+    out: List[dict] = []
+    for s in channels.danh_sach():
+        if s.kind != "account":
+            continue
+        fn = getattr(channels.module(s.id), "tai_khoan", None)
+        if not callable(fn):
+            continue
+        try:
+            out += [_ao_cua(str(a["id"]), a.get("label") or "", s.id) for a in fn()]
+        except Exception:
+            continue
+    return out
 
 
 def get_account(account_id: str) -> Optional[dict]:

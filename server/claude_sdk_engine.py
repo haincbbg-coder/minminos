@@ -366,6 +366,10 @@ def map_message(msg):
             # lại được - nó phải biết mà nhảy sang bộ não kế tiếp.
             "dua_token": dua_token,
             "resume_failed": resume_failed,
+            # Lượt KẾT THÚC LỖI mà vẫn có chữ (hết lượt gói, API 429/529): chữ đó là câu của nhà cung
+            # cấp, không phải câu trả lời. Việc nền đọc cờ này để không chấm việc là Xong (26.10.312).
+            "is_error": bool(getattr(msg, "is_error", False)),
+            "subtype": str(getattr(msg, "subtype", "") or ""),
             "session_id": None if resume_failed else msg.session_id,
             "cost_usd": msg.total_cost_usd,
             "duration_ms": msg.duration_ms,

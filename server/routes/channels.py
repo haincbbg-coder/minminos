@@ -11,6 +11,7 @@ một kiểu, Zalo cá nhân một kiểu); trang Chatbot hỏi `/chatbots` đ�
     POST /channels/accounts/{id}/watch  bật/tắt ghi vào hộp thư (kênh kind=account)
     POST /channels/accounts/{id}/delete xoá tài khoản token (từ chối khi còn bot trực)
     POST /channels/accounts/{id}/bot    đổi bot trực tài khoản này (Chatbot v5, tab Kênh)
+    POST /channels/accounts/{id}/auto-reply  bật/tắt A.I. tự trả lời riêng một tài khoản (Page Pancake, có xác nhận)
     POST /channels/no-bot               đánh dấu "Không cần bot" cho một tài khoản (Chatbot v5)
 
 Id tài khoản trong API này là id THÔ (`acc_...`, `bot_...` di trú, hoặc id kết nối Zalo). Kho
@@ -143,6 +144,9 @@ def _tai_khoan_thong_nhat(brain: str = "") -> list:
                     "so_hoi_thoai": int(tk.get("so_hoi_thoai") or 0),
                     "chua_doc": int(tk.get("chua_doc") or 0),
                     "nang_luc": nl, "xoa_duoc": False, "sua_duoc": False,
+                    # 26.10.315: per-account "A.I. replies" opt-in (Pancake Pages); None = the channel has no such gate.
+                    "auto_reply": bool(a["tu_tra_loi"]) if "tu_tra_loi" in a else None,
+                    "avatar": a.get("avatar") or "",
                 })
         # kind == "webhook": chưa có kênh nào; khi có, module tự liệt kê qua `tai_khoan()`.
     # Chatbot v5: the owner marked it "No bot needed" (Channels tab), so it is not a job to do.
@@ -150,6 +154,20 @@ def _tai_khoan_thong_nhat(brain: str = "") -> list:
     for a in out:
         a["no_bot"] = a["account_key"] in nb
     return out
+
+
+def _token_luu(kenh: str, token: str, external_id: str = ""):
+    """(chuỗi lưu, lỗi). Kênh khai `token_luu` (Zalo OA) đổi thứ chủ dán thành chuỗi lưu (id kết nối, không có bí
+    mật); kênh khác lưu nguyên token như cũ."""
+    m = channels.module(kenh)
+    fn = getattr(m, "token_luu", None) if m else None
+    if not callable(fn):
+        return token, ""
+    luu = fn(token, external_id)
+    if not luu:
+        return "", localefmt.chu("Chưa liên kết được tài khoản này. Bấm Kiểm tra trước rồi mới Lưu.",
+                                 "This account is not linked yet. Press Check before Save.")
+    return luu, ""
 
 
 def register(app, deps: ChannelsDeps):
@@ -194,6 +212,9 @@ def register(app, deps: ChannelsDeps):
                 return r if isinstance(r, JSONResponse) else _400(r.get("error") or localefmt.chu("Token không hợp lệ", "Invalid token"))
             ext = r.get("username") or ""
             meta = {k: r[k] for k in ("vao_duoc_nhom", "account_type", "bot_name") if k in r}
+        token, loi = _token_luu(channel, token, ext)
+        if loi:
+            return _400(loi)
         aid, loi = channel_accounts.create_account({
             "channel": channel, "token": token, "label": label, "external_id": ext, "meta": meta,
             # Thêm từ brain nào thì thuộc brain đó (0.62.4). Không truyền = chưa gán chủ, thẻ
@@ -214,7 +235,11 @@ def register(app, deps: ChannelsDeps):
         if isinstance(brain, str):
             patch["brain"] = brain.strip()
         if token.strip():
-            patch["token"] = token
+            kenh = (channel_accounts.get_account(account_id) or {}).get("channel") or ""
+            luu, loi = _token_luu(kenh, token, bot_username.strip())
+            if loi:
+                return _400(loi)
+            patch["token"] = luu
             if bot_username.strip():
                 patch["external_id"] = bot_username
         ok, loi = channel_accounts.update_account(account_id, patch)
@@ -248,6 +273,26 @@ def register(app, deps: ChannelsDeps):
                                        "A bot account writes to the inbox while its bot is on; it has no separate switch."))
         return _404(localefmt.chu("không có tài khoản kênh nào id đó (hoặc đang tắt ở trang Kết nối)",
                                   "no channel account with that id (or it is off on the Connections page)"))
+
+    @router.post("/channels/accounts/{account_id}/auto-reply")
+    async def channels_account_auto_reply(account_id: str, on: str = Form("0"), xac_nhan: str = Form(""),
+                                          channel: str = Form("")):
+        """Bật/tắt "A.I. tự trả lời" cho MỘT tài khoản của kênh có công tắc này (26.10.315, Page Pancake). Bật cần
+        `xac_nhan=1`: chủ đã đọc cảnh báo nhân viên cũng đang trả lời. Thiếu thì 409 kèm câu cảnh báo."""
+        k = str(channel or "").strip().lower()
+        for s in channels.danh_sach():
+            if k and s.id != k:
+                continue
+            fn = getattr(channels.module(s.id), "dat_tu_tra_loi", None) if s.kind == "account" else None
+            if not callable(fn):
+                continue
+            r = fn(account_id, _bat(on), _bat(xac_nhan))
+            if r.get("ok"):
+                return r
+            if r.get("code") == "can_xac_nhan":
+                return JSONResponse({"ok": False, **r}, status_code=409)
+        return _404(localefmt.chu("không có tài khoản nào id đó có công tắc A.I. tự trả lời",
+                                  "no account with that id has an A.I. auto-reply switch"))
 
     @router.post("/channels/accounts/{account_id}/import-history")
     async def channels_account_import_history(account_id: str, channel: str = Form("")):

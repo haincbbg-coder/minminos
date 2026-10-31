@@ -223,6 +223,14 @@ class TaskStore:
 
                 CREATE INDEX IF NOT EXISTS idx_jobs_board
                     ON jobs(brain_root, created_at DESC);
+
+                -- 26.10.312: gợi ý "việc này bố giao tay hoài" mà bố đã bấm bỏ qua, theo từng brain.
+                CREATE TABLE IF NOT EXISTS goi_y_lap_bo_qua (
+                    brain_root TEXT NOT NULL,
+                    hint_key TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    PRIMARY KEY(brain_root, hint_key)
+                );
                 """
             )
             self._db.commit()
@@ -1067,6 +1075,210 @@ class TaskStore:
                 self._db.rollback()
                 raise
         return self.get_task(task_id), ""
+
+    # ------------------------------------------------------------------
+    # 26.10.312: trang Công việc yên hơn (ý từ Javis 0.411, viết lại cho MinMin)
+    # ------------------------------------------------------------------
+    # Việc dừng lại mà CHỈ CHỦ gỡ được: một câu hỏi, một lần xin quyền thao tác ra ngoài, hoặc
+    # kết quả chờ duyệt. Mọi kiểu dừng khác (lỗi tạm, hết lượt gói, máy AI chưa sẵn sàng) là
+    # việc MinMin tự lo, bày vào "Cần bố xử lý" chỉ làm bố lo mà không làm gì được.
+    OWNER_BLOCK_KINDS = ("needs_input", "capability")
+
+    @classmethod
+    def waits_for_owner(cls, task: dict) -> bool:
+        st = str((task or {}).get("status") or "")
+        if st == "review":
+            return True
+        return st == "blocked" and str(task.get("block_kind") or "") in cls.OWNER_BLOCK_KINDS
+
+    def archive_stopped(self, brain_root: str, owner: bool) -> int:
+        """Dọn một trong hai khu việc dừng: `owner=True` khu "Cần bố xử lý", False khu "MinMin
+        đang tự xử lý". Cùng hậu quả với `archive_by_status` (archive, không xoá hẳn)."""
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT id, status, block_kind FROM tasks WHERE brain_root=? "
+                "AND status IN ('blocked', 'review')", (brain_root,)).fetchall()
+        ids = [str(r["id"]) for r in rows if self.waits_for_owner(dict(r)) == bool(owner)]
+        if not ids:
+            return 0
+        with self._lock:
+            self._tx()
+            try:
+                ts = now()
+                for tid in ids:
+                    self._db.execute(
+                        """UPDATE tasks SET status='archived', block_kind='', block_reason='',
+                           claimed_by='', claim_expires_at=0, current_run_id='', updated_at=?
+                           WHERE id=? AND status IN ('blocked', 'review')""",
+                        (ts, tid),
+                    )
+                    self._event(tid, "operator_move", "-> archived: xoá tất cả")
+                self._db.commit()
+            except Exception:
+                self._db.rollback()
+                raise
+        return len(ids)
+
+    # "Nhắn thêm" được cho mọi việc KHÔNG đang chạy và KHÔNG đang chờ câu trả lời (việc đó đi
+    # đường `answer`). Việc đã xong cũng được: "viết ngắn lại đoạn 2" sau khi đọc kết quả là ca
+    # hay gặp nhất.
+    FOLLOWUP_STATUS = ("blocked", "review", "done", "cancelled", "triage", "todo", "ready")
+    FOLLOWUP_Q = "Bố nhắn thêm cho việc này"
+
+    def followup(self, task_id: str, text: str, by: str = "owner") -> tuple[Optional[dict], str]:
+        """Lời dặn thêm của chủ cho một việc, rồi đưa việc về hàng đợi.
+
+        Trước bản này cách duy nhất để đổi một việc đã dừng hay đã xong là Thử lại, chạy lại y
+        nguyên. Lời dặn vào sổ hỏi đáp như một lượt ĐÃ có câu trả lời, kèm kết quả lần trước ở
+        `progress`, nên lần chạy sau (`TasksFeature._hoi_dap`) đi tiếp từ kết quả cũ chứ không
+        làm lại từ đầu, và không gửi lại thứ đã gửi. Số lần thử tính lại từ 0: đây là một yêu
+        cầu mới chứ không phải thêm một lần thử cho yêu cầu cũ.
+        Trả (task, "") hoặc (None, "empty" | "not_found" | "running" | "waiting" | "gate")."""
+        text = (text or "").strip()
+        if not text:
+            return None, "empty"
+        with self._lock:
+            self._tx()
+            try:
+                row = self._db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+                if not row:
+                    self._db.rollback()
+                    return None, "not_found"
+                if row["capability"] == "gate":
+                    self._db.rollback()
+                    return None, "gate"
+                if row["status"] == "running":
+                    self._db.rollback()
+                    return None, "running"
+                if row["status"] == "blocked" and row["block_kind"] == "needs_input":
+                    self._db.rollback()
+                    return None, "waiting"
+                if row["status"] not in self.FOLLOWUP_STATUS:
+                    self._db.rollback()
+                    return None, "not_found"
+                meta = _loads(row["metadata_json"], {})
+                qa = [x for x in (meta.get("qa") or []) if isinstance(x, dict)]
+                ts = now()
+                qa.append({
+                    "q": self.FOLLOWUP_Q, "a": text[:QA_TEXT_MAX], "kind": "followup", "by": by,
+                    "asked_at": ts, "answered_at": ts,
+                    "progress": str(row["result"] or "").strip()[:QA_PROGRESS_MAX],
+                })
+                meta["qa"] = qa[-QA_KEEP:]
+                meta.pop("once_pending", None)
+                meta.pop("kiem", None)          # kết quả sẽ khác, dấu đã kiểm của bản cũ không còn đúng
+                self._db.execute(
+                    """UPDATE tasks SET status='ready', block_kind='', block_reason='', attempts=0,
+                       metadata_json=?, claimed_by='', claim_expires_at=0, not_before=0,
+                       current_run_id='', updated_at=?
+                       WHERE id=?""",
+                    (_json(meta), ts, task_id),
+                )
+                self._event(task_id, "followup", text[:500], metadata={"by": by, "from": row["status"]})
+                self._db.commit()
+            except Exception:
+                self._db.rollback()
+                raise
+        return self.get_task(task_id), ""
+
+    def set_check(self, task_id: str, state: str, why: str = "") -> Optional[dict]:
+        """Ghi kết quả lượt KIỂM một việc đã xong. `state`: "dang_kiem" lúc đang chạy, "dat" khi
+        đạt, "chua_dat" khi chưa đạt (việc chuyển sang Cần bố xử lý với lý do làm câu hỏi, để ô
+        trả lời dùng luôn được), "loi" khi lượt kiểm không chạy nổi (việc vẫn Xong, chỉ là chưa
+        kiểm). Chỉ đụng việc đang done hoặc review."""
+        if state not in ("dang_kiem", "dat", "chua_dat", "loi"):
+            return None
+        with self._lock:
+            self._tx()
+            try:
+                row = self._db.execute(
+                    "SELECT status, metadata_json FROM tasks WHERE id=?", (task_id,)).fetchone()
+                if not row or row["status"] not in ("done", "review"):
+                    self._db.rollback()
+                    return None
+                meta = _loads(row["metadata_json"], {})
+                ts = now()
+                meta["kiem"] = {"state": state, "why": str(why or "")[:QA_TEXT_MAX], "at": ts}
+                if state == "chua_dat":
+                    reason = ("Kiểm lại thấy chưa đạt: " + (why or "lượt kiểm không nói rõ chỗ nào.")
+                              + " Bố muốn MinMin sửa thế nào?")[:QA_TEXT_MAX]
+                    qa = [x for x in (meta.get("qa") or []) if isinstance(x, dict)]
+                    qa.append({"q": reason, "asked_at": ts})
+                    meta["qa"] = qa[-QA_KEEP:]
+                    self._db.execute(
+                        """UPDATE tasks SET status='blocked', block_kind='needs_input', block_reason=?,
+                           metadata_json=?, updated_at=? WHERE id=?""",
+                        (reason, _json(meta), ts, task_id),
+                    )
+                    self._event(task_id, "kiem_chua_dat", reason[:500])
+                else:
+                    self._db.execute("UPDATE tasks SET metadata_json=?, updated_at=? WHERE id=?",
+                                     (_json(meta), ts, task_id))
+                    if state != "dang_kiem":
+                        self._event(task_id, "kiem_" + state, str(why or "")[:500])
+                self._db.commit()
+            except Exception:
+                self._db.rollback()
+                raise
+        return self.get_task(task_id)
+
+    # Gợi ý việc lặp: việc bố giao TAY (trang Công việc, chat, giọng nói) 3 lần trong 60 ngày,
+    # so tên bỏ số, là một việc hằng ngày đang chờ được đặt lịch. Việc do loop, nhắc hẹn, trợ lý
+    # sinh ra thì đã tự chạy rồi, không tính.
+    HINT_SOURCES = ("user", "chat", "voice", "web", "telegram", "zalo")
+    HINT_MIN_COUNT = 3
+    HINT_WINDOW_DAYS = 60
+    HINT_SCAN = 300
+
+    @staticmethod
+    def hint_words(title: str) -> frozenset:
+        """Chữ của một tên việc, bỏ số: "Báo cáo doanh thu 28/10" và "... 4/11" là một việc."""
+        return frozenset(w for w in norm_title(title).split()
+                         if len(w) > 1 and not any(c.isdigit() for c in w))
+
+    def repeat_hints(self, brain_root: str, limit: int = 3) -> list[dict]:
+        root = str(brain_root)
+        since = now() - self.HINT_WINDOW_DAYS * 86400
+        marks = ",".join("?" for _ in self.HINT_SOURCES)
+        with self._lock:
+            rows = self._db.execute(
+                f"""SELECT id, title, intent, created_at FROM tasks
+                    WHERE brain_root=? AND created_at>=? AND job_id IS NULL
+                      AND created_by IN ({marks})
+                    ORDER BY created_at DESC LIMIT ?""",
+                (root, since, *self.HINT_SOURCES, self.HINT_SCAN),
+            ).fetchall()
+            bo_qua = {r["hint_key"] for r in self._db.execute(
+                "SELECT hint_key FROM goi_y_lap_bo_qua WHERE brain_root=?", (root,)).fetchall()}
+        nhom: list[dict] = []
+        for r in rows:
+            words = self.hint_words(r["title"])
+            if len(words) < 2:
+                continue
+            for g in nhom:
+                chung = len(words & g["words"])
+                if chung and chung / len(words | g["words"]) >= 0.7:
+                    g["count"] += 1
+                    break
+            else:
+                nhom.append({"words": words, "count": 1, "title": r["title"], "intent": r["intent"],
+                             "task_id": r["id"], "last_at": float(r["created_at"])})
+        out = []
+        for g in nhom:
+            key = " ".join(sorted(g["words"]))
+            if g["count"] >= self.HINT_MIN_COUNT and key not in bo_qua:
+                out.append({"key": key, "count": g["count"], "title": g["title"],
+                            "intent": str(g["intent"] or "")[:600], "task_id": g["task_id"],
+                            "last_at": g["last_at"]})
+        out.sort(key=lambda h: (-h["count"], -h["last_at"]))
+        return out[:max(1, int(limit))]
+
+    def dismiss_hint(self, brain_root: str, hint_key: str) -> None:
+        with self._lock:
+            self._db.execute(
+                "INSERT OR REPLACE INTO goi_y_lap_bo_qua(brain_root, hint_key, created_at) VALUES (?, ?, ?)",
+                (str(brain_root), str(hint_key)[:500], now()))
+            self._db.commit()
 
     def move(self, task_id: str, status: str, reason: str = "operator") -> bool:
         if status not in VALID_STATUS:

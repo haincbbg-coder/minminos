@@ -131,7 +131,18 @@ def _hub_on():
 
 def _save(d):
     with _LOCK:
-        STORE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Ghi file tạm rồi thay một phát (26.10.314). Ghi đè trực tiếp mà máy tắt giữa chừng là file cụt, `_load` đọc
+        # hỏng ra danh sách rỗng và mất sạch kết nối, kể cả refresh token Zalo OA vừa xoay (dùng một lần, mất là phải
+        # ủy quyền lại).
+        tmp = STORE.with_name(STORE.name + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(d, ensure_ascii=False, indent=2))
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass
+        os.replace(tmp, STORE)
     # Hub bật (mặc định): KHÔNG sinh file fallback .mcp_config.json - file đó chứa header/env
     # ĐÃ GIẢI MÃ (plaintext), để nằm lại là vô hiệu hoá mã hoá at-rest. Xoá bản cũ nếu có.
     if _hub_on():

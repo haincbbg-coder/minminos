@@ -303,6 +303,11 @@ _SUB_PATTERNS: tuple[tuple[str, str, str, re.Pattern], ...] = (
     # "gói thuê bao đang dùng" - thà nói ít hơn là nói sai.
     ("sub_session", "", "",
      re.compile(r"(you'?ve\s+)?(hit|reached)\s+your\s+session\s+limit", re.I)),
+    # "You're out of extra usage · resets 3pm (Asia/Saigon)": Claude Code khi phần dùng thêm trả
+    # tiền của gói cũng cạn. Không khớp thì việc trên trang Công việc đọc câu này như báo cáo và
+    # bị đánh dấu Xong (26.10.312). Câu không nói nhà nào nên engine rỗng, hint của chỗ gọi quyết.
+    ("sub_extra", "", "",
+     re.compile(r"you'?re\s+out\s+of\s+extra\s+usage", re.I)),
     # Gemini CLI. Câu chữ lấy từ chính bundle @google/gemini-cli và từ lỗi backend Google trả
     # về ("Quota exceeded for quota metric...", RESOURCE_EXHAUSTED). Gói đăng nhập Google có
     # hạn mức theo NGÀY, nên nói được "hết lượt hôm nay" là đúng chuyện đang xảy ra.

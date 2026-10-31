@@ -589,8 +589,11 @@ class _FallbackChain:
                     fail = f"{self._name(e)} không sẵn sàng"
                     continue
                 got_final, got_error = False, None
+                da_lam = False     # mắt này đã gọi công cụ chưa (đã "làm" gì đó ra ngoài chưa)
                 async for ev in e.query(prompt):
                     t = (ev or {}).get("type")
+                    if t == "tool_call":
+                        da_lam = True
                     if t == "error":
                         got_error = ev.get("content") or f"{self._name(e)} trả error"
                         break
@@ -608,6 +611,18 @@ class _FallbackChain:
                     if t == "final" and final_loi_dang_nhap(ev.get("content")):
                         got_error = (f"{self._name(e)} mất đăng nhập: "
                                      + (ev.get("content") or "").strip()[:200])
+                        break
+                    # Claude Code kết thúc lượt hỏng (hết lượt gói, API 429) bằng một final cắm cờ
+                    # `is_error`, chữ là câu báo của nhà cung cấp. Cho qua như thành công thì mắt sau
+                    # không bao giờ được chạy và việc bị báo Xong với đúng câu đó (26.10.312).
+                    if t == "final" and ev.get("is_error"):
+                        got_error = ((ev.get("content") or "").strip()[:300]
+                                     or f"{self._name(e)} kết thúc lỗi ({ev.get('subtype') or 'final'})")
+                        if da_lam:
+                            # Đã gọi công cụ rồi mới hỏng: chạy lại từ đầu ở mắt sau có thể gửi tin,
+                            # đăng bài hay tạo đơn lần hai. Dừng ở đây, báo đúng lỗi này.
+                            yield {"type": "error", "content": got_error}
+                            return
                         break
                     yield ev
                     if t == "final":

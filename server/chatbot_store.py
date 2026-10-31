@@ -308,6 +308,36 @@ def _clean_tu_khoa(v: Any) -> List[str]:
     return out[:40]
 
 
+def _bo_dau_tag(s: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFD", " ".join(str(s or "").lower().replace("đ", "d").split()))
+    return "".join(c for c in s if unicodedata.category(c) != "Mn")
+
+
+def _clean_bo_qua_tag(v: Any) -> List[str]:
+    """Tên tag Zalo mà bot KHÔNG trả lời (26.10.306): "Gia đình", "Bạn bè"... Danh sách JSON hoặc chữ
+    cách nhau bằng dấu phẩy."""
+    if isinstance(v, str) and v.strip().startswith("["):
+        try:
+            import json
+            v = json.loads(v)
+        except Exception:
+            pass
+    items = re.split(r"[,;\n]+", v) if isinstance(v, str) else (list(v) if isinstance(v, (list, tuple)) else [])
+    out: List[str] = []
+    for x in items:
+        x = " ".join(str(x).split())[:60]
+        if x and _bo_dau_tag(x) not in [_bo_dau_tag(o) for o in out]:
+            out.append(x)
+    return out[:30]
+
+
+def bo_qua_theo_tag(bot: dict, tags) -> bool:
+    """Cuộc chat mang một tag Zalo chủ dặn bot tránh: so không phân biệt hoa thường và dấu."""
+    tranh = {_bo_dau_tag(x) for x in ((bot or {}).get("bo_qua_tag") or [])}
+    return bool(tranh) and any(_bo_dau_tag(t) in tranh for t in (tags or []))
+
+
 def co_tu_khoa_cam(bot: dict, text: str) -> bool:
     t = str(text or "").lower()
     return any(k.lower() in t for k in ((bot or {}).get("cam_tu_khoa") or []))
@@ -504,6 +534,7 @@ def _public(b: dict) -> dict:
     # không có khoá này; thiếu nó thì prompt rơi vào nhánh mặc định của Python chứ không phải
     # nhánh mình chọn, và bug đó chỉ hiện ra trên máy người đã dùng - đúng chỗ khó dò nhất.
     out.setdefault("nguon_tra_loi", NGUON_DEFAULT)
+    out.setdefault("bo_qua_tag", [])
     # Cùng lý do: bot tạo trước 0.22.0 không có khoá này. Thiếu nó mà đọc bằng `.get()` thì ra
     # None, và None rơi vào nhánh mặc định của người gọi chứ không phải nhánh mình chọn - ở đây
     # nhánh đó quyết định bot CÓ TOOL hay không, nên đoán sai một lần là cấp nhầm quyền.
@@ -740,6 +771,7 @@ def create_bot(data: dict) -> tuple[Optional[str], str]:
             "noi_duoc": _clean_chu_de(data.get("noi_duoc")),
             "noi_cam": _clean_chu_de(data.get("noi_cam")),
             "cam_tu_khoa": _clean_tu_khoa(data.get("cam_tu_khoa")),
+            "bo_qua_tag": _clean_bo_qua_tag(data.get("bo_qua_tag")),
             "ngoai_pham_vi": (data.get("ngoai_pham_vi") if data.get("ngoai_pham_vi") in NGOAI_PHAM_VI else "tu_choi"),
             "reply_when": (data.get("reply_when") if data.get("reply_when") in REPLY_WHEN else "mention"),
             "nguon_tra_loi": (data.get("nguon_tra_loi") if data.get("nguon_tra_loi") in NGUON
@@ -780,7 +812,8 @@ _PATCHABLE = ("name", "icon", "groups", "reply_when", "handoff_to", "rate_limit"
               "agent_slug", "agent_brain", "brain", "bot_username", "token", "enabled",
               "nguon_tra_loi", "muc_quyen", "ngon_ngu", "account_ids",
               "agents_phu", "rieng_pham_vi", "rieng_cho_phep", "gio_truc_tu", "gio_truc_den",
-              "noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi", "nhom_khach", "nguoi_la", "blocked", "chat_on", "nhuong_tay_phut", "reply_scopes")
+              "noi_duoc", "noi_cam", "cam_tu_khoa", "ngoai_pham_vi", "nhom_khach", "nguoi_la", "blocked", "chat_on", "nhuong_tay_phut", "reply_scopes",
+              "bo_qua_tag")
 # `channel` CỐ Ý đứng ngoài danh sách trắng. Đổi kênh của một bot đã tạo là đổi sang một CON
 # BOT KHÁC: token khác, danh tính khác, khách khác, và cả đống id nhóm đang lưu lập tức vô
 # nghĩa. Cho sửa tại chỗ thì bản ghi còn nguyên tên và lịch sử của con cũ trong khi nó đã là
@@ -873,6 +906,8 @@ def update_bot(bot_id: str, patch: dict) -> tuple[bool, str]:
                     b[k] = _clean_chu_de(v)
                 elif k == "cam_tu_khoa":
                     b[k] = _clean_tu_khoa(v)
+                elif k == "bo_qua_tag":
+                    b[k] = _clean_bo_qua_tag(v)
                 elif k == "ngoai_pham_vi":
                     if v in NGOAI_PHAM_VI:
                         b[k] = v

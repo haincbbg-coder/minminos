@@ -29,13 +29,21 @@ const V = win.JavisInboxV5;
 const I = (n) => "[" + n + "]";
 const L = (ch) => "<" + ch + ">";
 
-// ---- 1. quick filters ----
-const q = V.quickHtml("you", { you: 3, ai: 9, owner: 2, log: 6 }, I);
-check("four quick filters in order: Needs you, A.I. handling, You handling, All", /data-who="you"[\s\S]*data-who="ai"[\s\S]*data-who="owner"[\s\S]*data-who=""/.test(q));
-check("each has its colour dot and count; All counts every chat (log included)", /ib-dot w-you"><\/span><span>ib\.who_you<\/span><span class="ib-qn">3/.test(q) &&
-  /\[inbox\]<span>ib\.who_all<\/span><span class="ib-qn">20/.test(q));
-check("the current one is pressed", /class="ib-q on" data-who="you" aria-pressed="true"/.test(q) && /data-who="" aria-pressed="false"/.test(q));
-check("no counts yet (first paint): no numbers", V.quickHtml("", null, I).indexOf("ib-qn") < 0);
+// ---- 1. the "who" dropdown (26.10.314: one button instead of four chips) ----
+const CN = { you: 3, ai: 9, owner: 2, log: 6 };
+const wb = V.whoButtonHtml("you", CN, I);
+check("the button shows the current view and its count", /ib-dot w-you"><\/span><span class="ib-who-t">ib\.wq_you<\/span><span class="ib-qn">3</.test(wb) &&
+  /\[chevron-down\]$/.test(wb));
+const wa = V.whoButtonHtml("", CN, I);
+check("All counts every chat (log included); someone waiting keeps a red Needs-you count on the button",
+  /\[inbox\]<span class="ib-who-t">ib\.wq_all<\/span><span class="ib-qn">20</.test(wa) && /class="ib-who-you"[^>]*>3</.test(wa));
+check("nobody waiting: no red count", V.whoButtonHtml("ai", { ai: 1 }, I).indexOf("ib-who-you") < 0);
+check("no counts yet (first paint): no numbers", V.whoButtonHtml("", null, I).indexOf("ib-qn") < 0);
+const wm = V.whoMenuHtml("ai", CN, I);
+check("the menu: Needs you, A.I. handles, You handle, All, each with a line on what it means",
+  /data-who="you"[\s\S]*data-who="ai"[\s\S]*data-who="owner"[\s\S]*data-who=""/.test(wm) && /ib\.wq_ai_d/.test(wm) && /ib\.wq_all_d/.test(wm));
+check("the current view is checked", /role="menuitemradio" aria-checked="true" data-who="ai"/.test(wm) &&
+  (wm.match(/aria-checked="true"/g) || []).length === 1 && /\[check\]/.test(wm));
 
 // ---- 2. channel picker ----
 const ACC = [

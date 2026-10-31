@@ -125,7 +125,8 @@ check("_notify_owner đổi đích trước khi bỏ hòm thư",
       < MAIN.index("vao_hom = await _bo_vao_hom_thu("))
 check("main.py truyền _brain_keys", "brain_keys=lambda b: _brain_keys(b)" in MAIN)
 check("GATE đổi đích về Bảng Việc", '_HOP_VIEC.doi_dich, chat, None, "bang"' in MAIN)
-check("báo gộp việc kẹt mang khối việc", 'viec={"kind": "task", "status": "blocked"' in TASKS)
+check("báo gộp việc kẹt mang khối việc",
+      'viec={"kind": "task", "status": "cho_quyen" if can_bo else "blocked"' in TASKS)
 check("không có gạch dài", not any(c in (SERVER / "viec_hang_ngay.py").read_text(encoding="utf-8")
                                    for c in "–—"))
 

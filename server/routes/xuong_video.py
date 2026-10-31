@@ -67,7 +67,7 @@ def _giu(coro) -> None:
 def _thong_bao(tieu_de: str, noi_dung: str = "") -> None:
     try:
         import inbox
-        inbox.add(noi_dung or tieu_de, kind="system", title=tieu_de, source="xuong_video", label="Xưởng video")
+        inbox.add(noi_dung or tieu_de, kind="system", title=tieu_de, source="xuong_video", label="Xưởng video", tu_phan_loai=True)
     except Exception:
         pass
 

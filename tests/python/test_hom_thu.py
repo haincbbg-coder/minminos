@@ -191,7 +191,7 @@ check("CANARY: owner là Telegram (không có phiên web) thì kênh để trố
 # hẳn thông báo - lúc đó cái đáng báo (loop hỏng, loop tự tạm dừng) cũng mất theo. Đây đúng
 # luật việc Kanban đã theo từ 01/09/2026.
 _si = (ROOT / "server" / "self_improve.py").read_text(encoding="utf-8")
-_i = _si.index("if loop.get(\"notify\", True) and self.deps.report:")
+_i = _si.index("if loop.get(\"notify\", True) and self.deps.report")
 _khoi = _si[_i:_i + 1800]
 check("loop báo kèm cờ quiet", "quiet=not (failed or paused_now)" in _khoi)
 check("CANARY: vòng HỎNG và vòng tự tạm dừng vẫn kêu",
@@ -200,8 +200,8 @@ check("CANARY: vòng HỎNG và vòng tự tạm dừng vẫn kêu",
 # Cảnh báo ngân sách là Javis TỰ nói, không phải trả lời ai - inbox.py đặt sẵn nhãn "system"
 # cho đúng ca này, và nhãn đó là thứ người dùng đọc trên thẻ thư để biết tin từ đâu ra.
 _mp = (ROOT / "server" / "main.py").read_text(encoding="utf-8")
-check("cảnh báo ngân sách vào hòm với nhãn hệ thống",
-      '_notify_owner("", tin, kind="system")' in _mp)
+check("cảnh báo ngân sách vào hòm với nhãn hệ thống (26.10.312: nhóm Chi phí, hết thì khẩn)",
+      '_notify_owner("", tin, kind="system", source="cost"' in _mp)
 
 _tk = (ROOT / "server" / "tasks.py").read_text(encoding="utf-8")
 check("CANARY: việc Kanban vẫn giữ luật cũ (xong thì lặng, chặn/chờ duyệt thì kêu)",

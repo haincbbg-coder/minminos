@@ -11,10 +11,14 @@
   var READ_KEY = "javis.notifications.read";
   var INIT_KEY = "javis.notifications.initialized";
   var TAB_KEY = "javis.notifications.tab";
+  var HIDE_KEY = "minmin.notifications.hidden";
   var MAX_ITEMS = 30;
   var PAGE_SIZE = 5;
   var state = { items: [], read: new Set(), loadedAt: 0, loading: false, visibleCount: PAGE_SIZE,
-                thu: [], thuChuaDoc: 0, tab: "mine" };
+                thu: [], thuChuaDoc: 0, tab: "mine",
+                // 26.10.312: chuông chỉ hiện tin CHƯA ĐỌC. Tin đã đọc hiện lại khi bấm "Xem N thông báo
+                // đã đọc" (chỉ cho lần mở này); tin bộ chỉ huy đã lọc nằm trong ngăn "Đã lọc".
+                showRead: false, showFiltered: false, learned: "", policy: null, hidden: new Set() };
   // Ngày giờ đi theo NGÔN NGỮ đang chọn, không viết cứng "vi-VN": người đọc bản tiếng Anh
   // mà thấy định dạng ngày kiểu Việt là lạc quẻ. Cả dashboard lấy locale từ đúng chỗ này.
   function LOC() { return (window.JavisI18n && JavisI18n.locale()) || "vi-VN"; }
@@ -34,6 +38,15 @@
       var raw = JSON.parse(localStorage.getItem(READ_KEY) || "[]");
       state.read = new Set(Array.isArray(raw) ? raw.map(String) : []);
     } catch (e) { state.read = new Set(); }
+  }
+  function loadHidden() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(HIDE_KEY) || "[]");
+      state.hidden = new Set(Array.isArray(raw) ? raw.map(String) : []);
+    } catch (e) { state.hidden = new Set(); }
+  }
+  function saveHidden() {
+    try { localStorage.setItem(HIDE_KEY, JSON.stringify(Array.from(state.hidden).slice(-300))); } catch (e) {}
   }
   function saveRead() {
     try { localStorage.setItem(READ_KEY, JSON.stringify(Array.from(state.read).slice(-300))); } catch (e) {}
@@ -80,6 +93,7 @@
       // chỉ tô lại màu trên máy này.
       state.thu.forEach(function (t) { t.read = true; });
       state.thuChuaDoc = 0;
+      state.showRead = false;
       docThu({ all: true }).then(render);
       render();
       return;
@@ -91,6 +105,7 @@
   function kindLabel(kind) {
     if (kind === "marketing") return window.t("noti.kind_marketing");
     if (kind === "community") return window.t("noti.kind_community");
+    if (kind === "security") return window.t("noti.kind_security");
     return window.t("noti.kind_update");
   }
   function openUpdates() {
@@ -164,38 +179,152 @@
     } catch (e) {}
     try { if (window.JavisSessions) window.JavisSessions.open(item.session_id); } catch (e) {}
   }
+  // Bảng TÊN KHOÁ đầy đủ (không ghép chuỗi) để test i18n quét ra được mọi khoá.
+  var KHOA_NHOM = { reminder: "noti.g_reminder", question: "noti.g_question", chatbot: "noti.g_chatbot",
+    connection: "noti.g_connection", incident: "noti.g_incident", job: "noti.g_job", cost: "noti.g_cost",
+    update: "noti.g_update", other: "noti.g_other" };
+  var KHOA_CHE_DO = { all: "noti.mode_all", important: "noti.mode_important", urgent: "noti.mode_urgent",
+    off: "noti.mode_off" };
+  function tenNhom(g) { return window.t(KHOA_NHOM[g] || KHOA_NHOM.other); }
+  function nhanNhom(item) {
+    var g = item.group ? tenNhom(item.group) : nhanLoai(item.kind);
+    if (item.level === "urgent") g += " · " + window.t("noti.lv_urgent");
+    else if (item.level === "important") g += " · " + window.t("noti.lv_important");
+    return g;
+  }
   function theThu(item) {
     var chua = !item.read ? " unread" : "";
     var phu = item.session_id ? window.t("noti.reopen_chat") : "";
-    return '<article class="noti-card' + chua + '" tabindex="0" role="button" data-thu-id="' + esc(item.id) + '">' +
+    var nut = "";
+    if (item.filtered) nut = '<button class="noti-mini" type="button" data-thu-act="needed">' + esc(window.t("noti.needed")) + "</button>";
+    else if (!item.read) nut = '<button class="noti-mini" type="button" data-thu-act="not_needed">' + esc(window.t("noti.not_needed")) + "</button>";
+    return '<article class="noti-card' + chua + (item.level === "urgent" ? " urgent" : "") +
+      '" tabindex="0" role="button" data-thu-id="' + esc(item.id) + '">' +
       '<div class="noti-card-top"><span class="noti-kind ' + esc(item.kind || "answer") + '">' +
-      esc(nhanLoai(item.kind)) + '</span><span class="noti-time">' + esc(thoiGian(item.ts)) + "</span></div>" +
+      esc(nhanNhom(item)) + '</span><span class="noti-time">' + esc(thoiGian(item.ts)) + "</span>" +
+      '<button class="noti-x" type="button" data-thu-act="xoa" aria-label="' + esc(window.t("noti.dismiss")) +
+      '" title="' + esc(window.t("noti.dismiss")) + '">×</button></div>' +
       "<h4>" + esc(item.title || window.t("noti.msg_title")) + "</h4>" +
       '<p class="noti-card-body">' + esc(item.body || "") + "</p>" +
-      (phu ? '<span class="noti-cta">' + phu + "</span>" : "") + "</article>";
+      (phu || nut ? '<div class="noti-card-foot">' + (phu ? '<span class="noti-cta">' + phu + "</span>" : "<span></span>") + nut + "</div>" : "") +
+      "</article>";
+  }
+  async function xoaThu(id) {
+    state.thu = state.thu.filter(function (x) { return String(x.id) !== String(id); });
+    render();
+    try {
+      var r = await fetch("/inbox/delete", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: id }) });
+      var d = await r.json();
+      if (typeof d.unread === "number") state.thuChuaDoc = d.unread;
+    } catch (e) {}
+    render();
+  }
+  // "Không cần báo" / "Nên báo": MinMin nhớ loại tin này cho lần sau, và nói ra một lần đã nhớ gì.
+  async function phanHoi(item, axis) {
+    item.read = true;
+    render();
+    try {
+      var r = await fetch("/inbox/react", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, axis: axis }) });
+      var d = await r.json();
+      if (typeof d.unread === "number") state.thuChuaDoc = d.unread;
+      state.learned = d.message || "";
+      state.policy = null;
+    } catch (e) {}
+    taiThu();
   }
   function veHomThu(list) {
-    if (!state.thu.length) {
-      list.innerHTML = '<div class="noti-empty">' + esc(window.t("noti.inbox_empty")) + "<br>" +
-        esc(window.t("noti.inbox_empty_sub")) + "</div>";
-      return;
+    var chuaDoc = state.thu.filter(function (x) { return !x.read; });
+    var daDoc = state.thu.filter(function (x) { return x.read && !x.filtered; });
+    var daLoc = state.thu.filter(function (x) { return x.filtered; });
+    var hien = chuaDoc.concat(state.showRead ? daDoc : []).slice(0, MAX_ITEMS);
+    var html = "";
+    if (state.learned) html += '<div class="noti-learned">' + esc(state.learned) + "</div>";
+    if (hien.length) html += hien.map(theThu).join("");
+    else html += '<div class="noti-empty">' + esc(window.t(state.thu.length ? "noti.inbox_clear" : "noti.inbox_empty")) +
+      "<br>" + esc(window.t("noti.inbox_empty_sub")) + "</div>";
+    if (daDoc.length && !state.showRead) html += '<button class="noti-load-more" type="button" id="notiShowRead">' +
+      esc(window.t("noti.show_read", { count: daDoc.length })) + "</button>";
+    html += '<button class="noti-load-more" type="button" id="notiShowFiltered">' +
+      esc(window.t(state.showFiltered ? "noti.filtered_hide" : "noti.filtered_show", { count: daLoc.length })) + "</button>";
+    if (state.showFiltered) {
+      html += '<div class="noti-filtered"><p class="noti-filtered-note">' + esc(window.t("noti.filtered_note")) + "</p>" +
+        daLoc.slice(0, MAX_ITEMS).map(theThu).join("") + '<div id="notiPolicy"></div></div>';
     }
-    list.innerHTML = state.thu.slice(0, MAX_ITEMS).map(theThu).join("");
+    list.innerHTML = html;
+    var sr = byId("notiShowRead");
+    if (sr) sr.addEventListener("click", function () { state.showRead = true; render(); });
+    var sf = byId("notiShowFiltered");
+    if (sf) sf.addEventListener("click", function () { state.showFiltered = !state.showFiltered; render(); });
+    if (state.showFiltered) vePolicy();
     list.querySelectorAll("[data-thu-id]").forEach(function (card) {
       function chay() {
         var it = state.thu.find(function (x) { return String(x.id) === card.dataset.thuId; });
         if (it) moThu(it);
       }
+      card.querySelectorAll("[data-thu-act]").forEach(function (b) {
+        b.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var it = state.thu.find(function (x) { return String(x.id) === card.dataset.thuId; });
+          if (!it) return;
+          if (b.dataset.thuAct === "xoa") xoaThu(it.id);
+          else phanHoi(it, b.dataset.thuAct);
+        });
+      });
       card.addEventListener("click", chay);
       card.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); chay(); }
       });
     });
   }
+  async function vePolicy() {
+    var hop = byId("notiPolicy");
+    if (!hop) return;
+    if (!state.policy) {
+      try { state.policy = await (await fetch("/thong-bao/muc", { cache: "no-store" })).json(); } catch (e) { return; }
+      hop = byId("notiPolicy");
+      if (!hop) return;
+    }
+    var p = state.policy || {};
+    var modes = p.modes || [];
+    var h = '<h5 class="noti-policy-h">' + esc(window.t("noti.policy_title")) + "</h5>";
+    (p.groups || []).forEach(function (g) {
+      h += '<label class="noti-policy-row"><span>' + esc(tenNhom(g.group)) + "</span>" +
+        '<select data-nhom="' + esc(g.group) + '">' + modes.map(function (m) {
+          return '<option value="' + esc(m.id) + '"' + (m.id === g.mode ? " selected" : "") + ">" +
+            esc(window.t(KHOA_CHE_DO[m.id] || "noti.mode_urgent")) + "</option>";
+        }).join("") + "</select></label>";
+    });
+    var ch = (p.changes || []).filter(function (c) { return !c.undone; }).slice(0, 5);
+    if (ch.length) {
+      h += '<h5 class="noti-policy-h">' + esc(window.t("noti.policy_changes")) + "</h5>";
+      ch.forEach(function (c) {
+        h += '<div class="noti-policy-row"><span>' + esc(c.text || "") + '</span><button class="noti-mini" type="button" data-undo="' +
+          esc(c.id) + '">' + esc(window.t("noti.undo")) + "</button></div>";
+      });
+    }
+    hop.innerHTML = h;
+    async function gui(url, body) {
+      try {
+        var r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        var d = await r.json();
+        if (d && d.ok) state.policy = d;
+      } catch (e) {}
+      vePolicy();
+    }
+    hop.querySelectorAll("select[data-nhom]").forEach(function (sel) {
+      sel.addEventListener("change", function () { gui("/thong-bao/muc/nhom", { group: sel.dataset.nhom, mode: sel.value }); });
+    });
+    hop.querySelectorAll("[data-undo]").forEach(function (b) {
+      b.addEventListener("click", function () { gui("/thong-bao/muc/hoan-tac", { id: b.dataset.undo }); });
+    });
+  }
   function chonTab(tab) {
     state.tab = tab === "news" ? "news" : "mine";
     try { localStorage.setItem(TAB_KEY, state.tab); } catch (e) {}
     state.visibleCount = PAGE_SIZE;
+    state.showRead = false;
     render();
   }
 
@@ -233,7 +362,9 @@
         esc(window.t("noti.news_empty_sub")) + "</div>";
       return;
     }
-    var limited = state.items.slice(0, MAX_ITEMS);
+    var conLai = state.items.filter(function (x) { return !state.hidden.has(String(x.id)); });
+    var tinDaDoc = conLai.filter(function (x) { return !chuaDoc(x); });
+    var limited = (state.showRead ? conLai : conLai.filter(chuaDoc)).slice(0, MAX_ITEMS);
     var visible = limited.slice(0, state.visibleCount);
     var cards = visible.map(function (item) {
       var id = String(item.id);
@@ -250,7 +381,9 @@
       var cta = ctaLabel ? '<span class="noti-cta">' + esc(ctaLabel) + "</span>" : "";
       return '<article class="noti-card' + unreadClass + '" tabindex="0" role="button" data-noti-id="' + esc(id) + '">' +
         '<div class="noti-card-top"><span class="noti-kind ' + esc(kind) + '">' + esc(kindLabel(kind)) + '</span>' +
-        '<span class="noti-time">' + esc(item.published_at || "") + "</span></div>" +
+        '<span class="noti-time">' + esc(item.published_at || "") + "</span>" +
+        '<button class="noti-x" type="button" data-an-tin="' + esc(id) + '" aria-label="' + esc(window.t("noti.dismiss")) +
+        '" title="' + esc(window.t("noti.dismiss")) + '">×</button></div>' +
         "<h4>" + esc(item.title || window.t("noti.card_untitled")) + "</h4>" +
         '<p class="noti-card-summary">' + esc(item.summary || "") + "</p>" + body + cta + "</article>";
     }).join("");
@@ -259,7 +392,22 @@
       ? '<button class="noti-load-more" id="notificationLoadMore" type="button">' +
         esc(window.t("noti.load_more", { count: Math.min(PAGE_SIZE, remaining) })) + "</button>"
       : "";
-    list.innerHTML = cards + loadMore;
+    var xemDaDoc = (!state.showRead && tinDaDoc.length)
+      ? '<button class="noti-load-more" type="button" id="notiNewsShowRead">' +
+        esc(window.t("noti.show_read", { count: tinDaDoc.length })) + "</button>"
+      : "";
+    var trong = !visible.length ? '<div class="noti-empty">' + esc(window.t("noti.inbox_clear")) + "</div>" : "";
+    list.innerHTML = trong + cards + loadMore + xemDaDoc;
+    var nr = byId("notiNewsShowRead");
+    if (nr) nr.addEventListener("click", function () { state.showRead = true; render(); });
+    list.querySelectorAll("[data-an-tin]").forEach(function (b) {
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        state.hidden.add(String(b.dataset.anTin));
+        state.read.add(String(b.dataset.anTin));
+        saveHidden(); saveRead(); render();
+      });
+    });
     list.querySelectorAll("[data-noti-id]").forEach(function (card) {
       function activate() {
         var item = state.items.find(function (x) { return String(x.id) === card.dataset.notiId; });
@@ -312,6 +460,8 @@
     var panel = byId("notificationPanel"), shade = byId("notificationShade"), trigger = byId("notificationTrigger");
     if (!panel || !trigger) return;
     panel.hidden = false; panel.setAttribute("aria-hidden", "false");
+    // Mỗi lần mở lại chuông: về danh sách chưa đọc, câu "đã nhớ" chỉ nói một lần.
+    state.showRead = false; state.learned = "";
     if (shade) shade.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
     load(false);
@@ -391,6 +541,7 @@
     var trigger = byId("notificationTrigger");
     if (!trigger) return;
     loadRead();
+    loadHidden();
     try { state.tab = localStorage.getItem(TAB_KEY) === "news" ? "news" : "mine"; } catch (e) {}
     trigger.addEventListener("click", function () {
       byId("notificationPanel").hidden ? openPanel() : closePanel();

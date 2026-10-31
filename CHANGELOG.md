@@ -1,5 +1,17 @@
 # MinMin OS
 
+## [26.10.320] - 2026-10-31
+### Thêm mới
+- **Fanpage qua Pancake vào hộp thư Chatbot**: mỗi Page là một tài khoản. Nhân viên trả lời trên Pancake thì A.I. tự nhường. Mặc định A.I. chỉ soạn nháp chờ bố duyệt, muốn tự trả lời phải bật riêng từng Page.
+- **Kênh Zalo OA** trong Chatbot, MinMin tự làm mới token. Bot Zalo cá nhân nhắn được chữ đậm, chữ màu, đọc được file PDF, Word, Excel khách gửi. Gặp câu khó ở chat riêng thì bot im và báo bố.
+- **Thống kê "A.I. giúp bố được gì"**, tách theo từng nick/Page. Trên điện thoại, mở chat là toàn màn hình và Enter là xuống dòng.
+- **Tua lại hội thoại** từ một câu hỏi cũ, **thanh mục tiêu** `/goal`, Telegram ghim model theo từng cuộc trò chuyện.
+### Cải thiện
+- **Chuông chỉ kêu tin khẩn**: thông báo có nhóm và mức, tin khác vào ngăn Đã lọc. Trang Công việc chỉ hỏi bố khi thật sự cần, có Đã kiểm / Chưa kiểm. Việc hết lượt không còn bị ghi là Xong.
+- **MinMin tự học từ trò chuyện**, có giới hạn mỗi ngày, hoàn tác được và có nút Tạm dừng mọi cải tiến.
+### Bảo mật
+- Vá Node.js tháng 10/2026.
+
 ## [26.10.319] - 2026-10-31
 ### Sửa lỗi
 - **Chiến dịch AI kèm ảnh/video từ kho:** trước đây tệp bị chuyển khỏi kho sang nháp đầu tiên, nên đích thứ hai trở đi và các lượt sau hỏng ("Media không còn trong kho"). Giờ chỉ chép, kho giữ nguyên.

@@ -422,7 +422,9 @@
         var d = await api("/chatbots/" + encodeURIComponent(b.id) + "/thu", { method: "POST",
           body: fd({ cau_hoi: cau, chat_type: g && g.checked ? "group" : "private" }) });
         var h = '';
-        if (d.im_lang) h += '<div class="cb-sum">' + esc(window.t("cb.thu_im")) + '</div>';
+        if (d.bao_chu) h += '<div class="cb-sum"><b>' + esc(window.t("cb.thu_bao_chu")) + '</b>' +
+          (d.ghi_chu ? ': ' + esc(d.ghi_chu) : '') + '</div>';
+        else if (d.im_lang) h += '<div class="cb-sum">' + esc(window.t("cb.thu_im")) + '</div>';
         else h += '<div class="cb-thu-tl">' + esc(d.text || "") + '</div>';
         h += '<div class="cb-sum">' +
           (d.co_tai_lieu ? esc(window.t("cb.thu_nguon")) + ': ' + esc((d.nguon || []).join(", "))
@@ -831,6 +833,13 @@
           '<label>' + esc(window.t("cb.lb_tu_khoa")) + '</label>' +
           '<input id="cbTuKhoa" value="' + esc(((b && b.cam_tu_khoa) || []).join(", ")) + '" placeholder="' +
             esc(window.t("cb.ph_tu_khoa")) + '">' +
+          // Tag Zalo bot tránh (26.10.306): chỉ có nghĩa với Zalo cá nhân, ô gợi ý tag lấy từ chính Zalo.
+          '<div id="cbBoQuaTagHop">' +
+            '<label>' + esc(window.t("cb.lb_bo_qua_tag")) + '</label>' +
+            '<input id="cbBoQuaTag" value="' + esc(((b && b.bo_qua_tag) || []).join(", ")) + '" placeholder="' +
+              esc(window.t("cb.ph_bo_qua_tag")) + '">' +
+            '<div class="cb-hint">' + esc(window.t("cb.hint_bo_qua_tag")) + ' <span id="cbTagZalo"></span></div>' +
+          '</div>' +
           '<label>' + esc(window.t("cb.lb_ngoai_pv")) + '</label>' +
           '<select id="cbNgoaiPV">' +
             '<option value="tu_choi"' + (!b || b.ngoai_pham_vi !== "im" ? " selected" : "") + '>' + esc(window.t("cb.npv_tu_choi")) + '</option>' +
@@ -1093,6 +1102,32 @@
     }
     function veMoiDanhBa() {
       Array.prototype.forEach.call(box.querySelectorAll(".cb-db"), veDanhBa);
+      veTagZalo();
+    }
+
+    // Ô "Không trả lời chat có tag Zalo" (26.10.306): chỉ hiện khi có tích Zalo cá nhân, và gợi ý
+    // các tag đang có trong Zalo, bấm một tag là thêm vào ô.
+    function veTagZalo() {
+      var hop = box.querySelector("#cbBoQuaTagHop"), goiY = box.querySelector("#cbTagZalo");
+      var o = box.querySelector("#cbBoQuaTag");
+      if (!hop || !o) return;
+      var aid = zaloDangChon();
+      hop.style.display = aid || o.value.trim() ? "" : "none";
+      if (!aid || !goiY) return;
+      api("/zalo-tag?account_ids=" + encodeURIComponent(aid)).then(function (d) {
+        var ds = d.items || [];
+        if (!ds.length) { goiY.innerHTML = ""; return; }
+        goiY.innerHTML = esc(window.t("cb.tag_zalo_co")) + ' ' + ds.map(function (t) {
+          return '<button type="button" class="s-btn-ghost cb-tag-zalo" data-t="' + esc(t) + '">' + esc(t) + '</button>';
+        }).join(" ");
+        Array.prototype.forEach.call(goiY.querySelectorAll(".cb-tag-zalo"), function (n) {
+          n.onclick = function () {
+            var co = o.value.split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+            if (co.indexOf(n.dataset.t) < 0) co.push(n.dataset.t);
+            o.value = co.join(", ");
+          };
+        });
+      }).catch(function () {});
     }
 
     // Dòng tóm tắt ở đầu bước 2: bot này sẽ trả lời ở đâu, và lối quay lại đổi. Không có nó thì
@@ -1202,6 +1237,7 @@
                     noi_duoc: (box.querySelector("#cbNoiDuoc") || {}).value || "",
                     noi_cam: (box.querySelector("#cbNoiCam") || {}).value || "",
                     cam_tu_khoa: (box.querySelector("#cbTuKhoa") || {}).value || "",
+                    bo_qua_tag: (box.querySelector("#cbBoQuaTag") || {}).value || "",
                     ngoai_pham_vi: (box.querySelector("#cbNgoaiPV") || {}).value || "tu_choi" };
       try {
         if (sua) {

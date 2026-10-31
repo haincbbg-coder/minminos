@@ -49,7 +49,8 @@
   // ---- helpers ----
   function accs() { return C.accounts().filter(function (a) { return a && a.account_key; }); }
   function acc(key) { return accs().filter(function (a) { return a.account_key === key; })[0] || null; }
-  function unit(ch) { return t(C.channel(ch).kind === "account" ? "ib.kn_unit_nick" : "ib.kn_unit_page"); }
+  // A personal nick (Zalo) vs a Page: an "account" channel that joins groups is a nick; Pancake Pages are Pages.
+  function unit(ch) { var k = C.channel(ch) || {}; return t(k.kind === "account" && (k.nang_luc || {}).nhom !== false ? "ib.kn_unit_nick" : "ib.kn_unit_page"); }
   function current(a) { return a.bot_id || (a.no_bot ? "__none" : ""); }
   // Something to do on this account: an error, or no bot and the owner did not say none is needed.
   function needsWork(a) { return !!a.loi || (!a.bot_id && !a.no_bot); }
@@ -143,16 +144,28 @@
           (changed ? '<span class="kn-unsaved">' + esc(t("ib.kn_unsaved")) + '</span>' +
             '<button type="button" class="s-btn-ghost kn-cancel">' + esc(t("common.cancel")) + '</button>' +
             '<button type="button" class="s-btn kn-save"' + (_busy ? " disabled" : "") + '>' + ic("check") + ' ' + esc(t("common.save")) + '</button>'
-          : (a.bot_id ? '<button type="button" class="s-btn-ghost kn-botset">' + ic("settings") + ' ' + esc(t("ib.kn_bot_settings")) + '</button>' : "")) +
+          : "") +
+          // The account card lives behind this button (26.10.314, theo Javis 0.404: it took the top of the pane, worst on
+          // a phone). A red dot when the account has an error, so hiding the card never hides the error.
+          '<button type="button" class="s-btn-ghost kn-info" aria-haspopup="dialog"' + (a.loi ? ' title="' + esc(a.loi) + '"' : "") + '>' +
+            ic("info") + ' <span>' + esc(t("ib.kn_info")) + '</span>' + (a.loi ? '<span class="kn-info-bad" aria-label="' + esc(t("ib.kn_info_bad")) + '"></span>' : "") +
+          '</button>' +
         '</div></div>' +
-      '<div class="kn-card"></div>' +
       '<div class="kn-ch"><div class="kn-chh"><b>' + esc(t("ib.kn_chats")) + '</b>' +
         '<input type="search" class="kn-q" placeholder="' + esc(t("ib.kn_q")) + '" aria-label="' + esc(t("ib.kn_q")) + '"></div>' +
-        '<p class="ib-hint">' + esc(t(a.bot_id ? "ib.kn_hint" : "ib.kn_hint_nobot")) + '</p><div class="kn-list">' + chatRows(a) + '</div></div>';
+        '<div class="kn-list">' + chatRows(a) + '</div></div>';
     var q = box.querySelector(".kn-q");
     q.value = _chatQ;
-    var card = C.accountCard(a);
-    if (card) box.querySelector(".kn-card").appendChild(card);
+    // 26.10.315: a channel that gates "A.I. replies" per account (Pancake Pages) sends `auto_reply` true/false.
+    if (a.auto_reply === true || a.auto_reply === false) {
+      var au = document.createElement("div");
+      au.className = "kn-auto";
+      au.innerHTML = '<b>' + esc(t("ib.pc_auto_t")) + '</b><p class="ib-hint">' + esc(t(a.auto_reply ? "ib.pc_auto_on" : "ib.pc_auto_off")) + '</p>' +
+        '<button type="button" class="' + (a.auto_reply ? "s-btn-ghost" : "s-btn") + ' kn-auto-b">' + ic(a.auto_reply ? "pen-line" : "sparkles") + ' ' +
+        esc(t(a.auto_reply ? "ib.pc_auto_tat" : "ib.pc_auto_bat")) + '</button>';
+      var ch = box.querySelector(".kn-ch");
+      ch.parentNode.insertBefore(au, ch);
+    }
     if (_chatsFor !== a.account_key) loadChats(a.account_key, _page);
   }
 
@@ -171,7 +184,7 @@
             esc(t("ib.allow")) + '</button>' : "") +
           '<button type="button" class="ib-link kn-open" data-id="' + c.id + '">' + esc(t("ib.kn_open")) + '</button></span></span>' +
         '<label class="kn-sw"><span>' + esc(t("ib.kn_ai_here")) + '</span><button type="button" class="ib-tg' + (on ? " on" : "") +
-          '" role="switch" aria-checked="' + on + '" data-id="' + c.id + '"' + (a.bot_id ? "" : " disabled") + ' aria-label="' +
+          '" role="switch" aria-checked="' + on + '" data-id="' + c.id + '"' + (a.bot_id ? "" : ' aria-disabled="true"') + ' aria-label="' +
           esc(t("ib.kn_ai_here") + ": " + ten) + '"></button></label></div>';
     }).join("") + pagerHtml();
   }
@@ -210,6 +223,36 @@
 
   function refreshChats() { var l = _body && _body.querySelector(".kn-list"); var a = acc(_sel); if (l && a) l.innerHTML = chatRows(a); }
 
+  // The account card of the picked nick or Page in a popup (a sheet from the bottom on a phone): record switch, import
+  // history, edit, delete, and Bot settings. A card button that leads elsewhere closes the popup first.
+  function openInfo(a, from) {
+    var box = document.createElement("div");
+    box.className = "ht-modal kn-infomodal";
+    var tt = esc(t("ib.kn_info_title", { unit: unit(a.channel) }));
+    box.innerHTML = '<div class="ht-form ib-v5 kn-infobox" role="dialog" aria-modal="true" aria-label="' + tt + '">' +
+      '<div class="kn-ih"><h3>' + tt + '</h3><button type="button" class="s-btn-ghost kn-ix" aria-label="' + esc(t("common.close")) + '">' +
+        ic("x") + '</button></div><div class="kn-card"></div>' +
+      (a.bot_id ? '<div class="ht-form-acts"><button type="button" class="s-btn-ghost kn-botset">' + ic("settings") + ' ' +
+        esc(t("ib.kn_bot_settings")) + '</button></div>' : "") + '</div>';
+    var card = C.accountCard(a);
+    if (card) box.querySelector(".kn-card").appendChild(card);
+    document.body.appendChild(box);
+    var close = function () {
+      if (!box.parentNode) return;
+      box.parentNode.removeChild(box);
+      if (from && document.body.contains(from)) from.focus();
+    };
+    box.onmousedown = function (e) { if (e.target === box) close(); };
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+    box.querySelector(".kn-ix").onclick = close;
+    var bs = box.querySelector(".kn-botset");
+    if (bs) bs.onclick = function () { close(); C.openBot(a.bot_id); };
+    box.querySelector(".kn-card").addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest(".ht-acc-acts button")) setTimeout(close, 0);
+    });
+    box.querySelector(".kn-ix").focus();
+  }
+
   // ---- events ----
   function onClick(e) {
     var b = e.target.closest && e.target.closest("button");
@@ -226,10 +269,19 @@
     if (b.classList.contains("kn-bulk")) return openBulk(b.dataset.ch);
     if (b.classList.contains("kn-cancel")) { _pend = null; paintPane(); return; }
     if (b.classList.contains("kn-save")) return saveDuty();
+    if (b.classList.contains("kn-auto-b")) return toggleAuto(acc(_sel));
     if (b.classList.contains("kn-botset")) { var a = acc(_sel); if (a) C.openBot(a.bot_id); return; }
+    if (b.classList.contains("kn-info")) { var a = acc(_sel); if (a) openInfo(a, b); return; }
     if (b.classList.contains("kn-open")) return C.openChat(parseInt(b.dataset.id, 10));
     if (b.classList.contains("kn-allow")) return setAi(parseInt(b.dataset.id, 10), true);
     if (b.classList.contains("ib-tg")) {
+      // No bot on duty yet: the dimmed switch says so when pressed, instead of a hint line above the list.
+      var ac = acc(_sel);
+      if (ac && !ac.bot_id) {
+        C.toast(t("ib.kn_need_bot", { unit: unit(ac.channel) }));
+        var sb = _body.querySelector(".kn-bot"); if (sb) sb.focus();
+        return;
+      }
       var c = _chats.filter(function (x) { return x.id === parseInt(b.dataset.id, 10); })[0];
       if (c) setAi(c.id, !c.ai_allowed);
     }
@@ -285,6 +337,21 @@
   function after() {
     _chatsFor = "";
     C.reloadAccounts().then(paint, paint);
+  }
+
+  // Per-Page "A.I. replies" (Pancake): switching on needs the owner to accept the warning that staff also answer there.
+  async function toggleAuto(a) {
+    if (!a || _busy) return;
+    var on = !a.auto_reply;
+    if (on && !confirm(t("ib.pc_auto_warn"))) return;
+    _busy = true;
+    try {
+      var r = await C.api("/channels/accounts/" + encodeURIComponent(a.id) + "/auto-reply",
+                          { method: "POST", body: C.fd({ on: on ? "1" : "0", xac_nhan: on ? "1" : "", channel: a.channel }) });
+      C.toast(on ? t("ib.pc_auto_da_bat") : t("ib.pc_auto_da_tat", { n: r.doi_ve_nhap || 0 }));
+    } catch (e) { C.toast(t("ht.act_fail", { err: e.message })); }
+    _busy = false;
+    after();
   }
 
   async function setAi(id, on) {
