@@ -26,6 +26,14 @@ class MinMinPublicGuidesTests(unittest.TestCase):
         self.assertIn('server\\minmin.log', vbs)
         self.assertIn('.venv\\Scripts\\python.exe server\\main.py', vbs)
 
+    def test_minmin_app_launcher_preserves_running_work(self):
+        launcher = (ROOT / 'MINMIN OS.bat').read_text(encoding='utf-8')
+        self.assertLess(launcher.index('/health'), launcher.index('wscript //nologo start-minmin.vbs'))
+        self.assertIn('--app=', launcher)
+        startup = (ROOT / 'minmin-autostart.ps1').read_text(encoding='utf-8')
+        self.assertIn('start-minmin.vbs', startup)
+        self.assertIn('MINMIN OS.lnk', startup)
+
     def test_compose_wires_brand_inputs_to_runtime(self):
         for filename in COMPOSES:
             with self.subTest(filename=filename):
@@ -59,7 +67,9 @@ class MinMinPublicGuidesTests(unittest.TestCase):
                 cfg = json.loads(result.stdout)
                 app = cfg['services']['minmin']
                 self.assertEqual(app['environment']['JAVIS_ADMIN_USER'], env['MINMIN_ADMIN_USER'])
-                self.assertEqual(app['environment']['JAVIS_ADMIN_PASSWORD'], env['MINMIN_ADMIN_PASSWORD'])
+                # Config output escapes dollars so the serialized model is reusable.
+                rendered_password = app['environment']['JAVIS_ADMIN_PASSWORD']
+                self.assertEqual(rendered_password.replace('$$', '$'), env['MINMIN_ADMIN_PASSWORD'])
                 self.assertEqual(str(app['ports'][0]['published']), '7788')
                 self.assertEqual(app['container_name'], 'minmin-test')
                 missing = dict(env); missing.pop('MINMIN_ADMIN_PASSWORD')
@@ -68,4 +78,3 @@ class MinMinPublicGuidesTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -1,5 +1,5 @@
 # ============================================================================
-# Javis OS - PROXY DÙNG CHUNG cho NHIỀU BẢN Javis trên cùng một VPS.
+# MinMin OS - PROXY DÙNG CHUNG cho NHIỀU BẢN Javis trên cùng một VPS.
 #
 # Chạy MỘT LẦN cho cả máy (không phải mỗi bản một cái). Nó giữ cổng 80/443, tự xin
 # và tự gia hạn chứng chỉ Let's Encrypt, rồi lái mỗi tên miền về đúng bản Javis của nó.
@@ -10,7 +10,7 @@
 #
 # CÀI (làm một lần cho cả VPS):
 #   docker network create javis-web
-#   curl -fsSLO https://raw.githubusercontent.com/blogminhquy/javis-os/main/docker-compose.proxy.yml
+#   curl -fsSLO https://raw.githubusercontent.com/haincbbg-coder/minminos/main/docker-compose.proxy.yml
 #   docker compose -f docker-compose.proxy.yml -p javis-proxy up -d
 #
 # SAU ĐÓ mỗi bản Javis chạy ở THƯ MỤC RIÊNG với .env riêng (xem docker-compose.multi.yml):

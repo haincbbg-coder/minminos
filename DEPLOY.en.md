@@ -80,6 +80,14 @@ On Hostinger, use the application update action when its updater is available, o
 
 Existing installations must use their existing Compose file and project. Switching project names or deployment files can create empty volumes instead of loading existing data.
 
+Older stacks that keep their updater behind a profile can enable it using their existing configuration:
+
+```bash
+docker compose --profile update up -d
+```
+
+Existing multi-instance deployments may use [docker-compose.proxy.yml](docker-compose.proxy.yml) and [docker-compose.multi.yml](docker-compose.multi.yml). Keep their project, network and volume names during maintenance. Do not combine these older overrides with the new MinMin Compose file without adapting service and network names.
+
 ## Backups and access
 
 Back up application data, brains, credentials and encryption keys before upgrades or migration. Do not use `docker compose down -v` for updates: it deletes volumes. Keep `.env`, secrets and customer data out of public repositories and support screenshots.

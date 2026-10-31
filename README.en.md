@@ -1,6 +1,6 @@
 # MinMin OS
 
-MinMin OS is a self-hosted AI assistant for your PC or VPS. Connect your shop data, use skills and agents, maintain a private knowledge base, and choose an AI provider for your work.
+**Model-agnostic agentic AI.** MinMin OS is a self-hosted AI assistant for your PC or VPS. Connect your shop data, use skills and agents, maintain a private knowledge base, and choose an AI provider for your work.
 
 **[Tiếng Việt](README.md) · [English](README.en.md)**
 
@@ -66,6 +66,10 @@ Follow the installer output and open `http://localhost:7777`.
 ## First setup
 
 Connect an AI provider in **Models**, add your shop accounts in **Connections**, and select or customize **Skills** and **Agents**. Each customer supplies their own accounts. Some applications require a separate license, and AI usage is billed by the chosen provider.
+
+MinMin supports **20 providers**; its interface organizes work into **6 groups**. Shared tools remain available when changing providers, while host-command access depends on the engine.
+
+Open **MINMIN OS.bat** for an app window. Enable Windows startup with `minmin-autostart.bat install`; disable it with `minmin-autostart.bat uninstall`.
 
 MinMin provides chat and voice, memory and wiki, a knowledge graph, skills, agents, workflows, recurring work, business connections, file management, sessions, usage tracking and backups. See the [user guide](docs/en/README.md).
 

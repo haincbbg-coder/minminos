@@ -1,6 +1,6 @@
 # MinMin OS
 
-MinMin OS là trợ lý AI tự chạy trên máy tính hoặc VPS của bạn. Kết nối dữ liệu cửa hàng, sử dụng skill và agent, lưu kiến thức trong bộ não riêng và chọn nhà cung cấp AI phù hợp với công việc.
+**AI agentic đổi được bộ não.** MinMin OS là trợ lý AI tự chạy trên máy tính hoặc VPS của bạn. Kết nối dữ liệu cửa hàng, sử dụng skill và agent, lưu kiến thức trong bộ não riêng và chọn nhà cung cấp AI phù hợp với công việc.
 
 **[Tiếng Việt](README.md) · [English](README.en.md)**
 
@@ -87,6 +87,9 @@ Mỗi khách dùng tài khoản và dữ liệu riêng. Một số ứng dụng 
 
 ## Năng lực của MinMin
 
+Triết lý: **năng lực nằm ở Minmin, không nằm ở model**. MinMin hỗ trợ **20 nhà cung cấp** AI; giao diện gom công việc thành **6 nhóm**. Đổi nhà cung cấp vẫn giữ bộ công cụ chung, còn khả năng chạy lệnh máy phụ thuộc engine.
+
+
 - Trò chuyện, giọng nói và lựa chọn nhà cung cấp AI.
 - Bộ nhớ, wiki và đồ thị tri thức từ dữ liệu của bạn.
 - Skill, agent, workflow và công việc định kỳ.
@@ -94,6 +97,8 @@ Mỗi khách dùng tài khoản và dữ liệu riêng. Một số ứng dụng 
 - Quản lý tệp, phiên hội thoại, mức sử dụng và sao lưu.
 
 Xem [mục lục hướng dẫn](docs/README.md) để tìm từng chức năng.
+
+Mở như cửa sổ ứng dụng: nhấp đúp **MINMIN OS.bat**. Tự chạy khi đăng nhập Windows: `minmin-autostart.bat install`; tắt tự chạy: `minmin-autostart.bat uninstall`.
 
 ## Cập nhật
 
@@ -123,4 +128,5 @@ Không đăng công khai mật khẩu, API key, token hay bộ não của khách
 - [Bắt đầu nhanh](QUICKSTART.md)
 - [Triển khai VPS và Hostinger](DEPLOY.md)
 - [Hướng dẫn sử dụng](docs/README.md)
+- [Cấu hình nâng cao](docs/16-cau-hinh-env.md)
 - [Giấy phép MIT và thông báo bản quyền](LICENSE)

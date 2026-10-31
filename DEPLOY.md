@@ -98,6 +98,14 @@ Trên Hostinger, dùng nút Cập nhật của ứng dụng nếu dịch vụ c�
 
 Với bản cài đã có từ trước, chạy lệnh cập nhật bằng đúng file Compose, project và volume đang dùng. Không đổi tên project hay thay file triển khai chỉ để đổi tên hiển thị: bạn có thể vô tình tạo một bộ volume trống.
 
+Với stack cũ còn đặt dịch vụ cập nhật sau một profile, bật lại bằng đúng cấu hình đang dùng:
+
+```bash
+docker compose --profile update up -d
+```
+
+Cấu hình nhiều bản hiện có có thể dùng [docker-compose.proxy.yml](docker-compose.proxy.yml) và [docker-compose.multi.yml](docker-compose.multi.yml). Đây là cặp file cho cấu hình cũ; cần giữ nguyên project, mạng và volume khi bảo trì. Không ghép chúng với file MinMin mới nếu chưa điều chỉnh tên service và mạng.
+
 ## Sao lưu và bảo mật
 
 Sao lưu cấu hình, dữ liệu ứng dụng, bộ não và thông tin đăng nhập trước khi nâng cấp hoặc chuyển VPS. Bảo vệ cả khóa mã hóa đi kèm dữ liệu; không đăng chúng lên repo công khai.
