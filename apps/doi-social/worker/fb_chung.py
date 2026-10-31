@@ -288,6 +288,24 @@ def da_tha_cam_xuc(pham_vi) -> bool:
         return False
 
 
+def chan_doan_nut(nc, pham_vi, ten: str) -> None:
+    """Không thấy nút: ghi vào nhật ký phạm vi đang tìm và nhãn các nút trong đó để biết Facebook đổi gì."""
+    try:
+        d = pham_vi.evaluate("""e => {
+          const nhan = x => (x.getAttribute('aria-label') || x.innerText || '').trim().replace(/\\s+/g, ' ').slice(0, 40);
+          const nut = [...e.querySelectorAll('[role=button],button')].filter(x => x.offsetParent).map(nhan).filter(Boolean);
+          return {the: e.tagName + (e.getAttribute('role') ? '[' + e.getAttribute('role') + ']' : '')
+                    + (e.getAttribute('aria-label') ? ' ' + e.getAttribute('aria-label').slice(0, 40) : ''),
+                  so: nut.length, nut: [...new Set(nut)].slice(0, 25),
+                  dialog: document.querySelectorAll('[role=dialog]').length,
+                  article: document.querySelectorAll('[role=article]').length};
+        }""")
+        nc.nhat_ky(f"Chẩn đoán '{ten}': phạm vi {d.get('the')}, {d.get('so')} nút, {d.get('dialog')} dialog, "
+                   f"{d.get('article')} article; nhãn: {' | '.join(d.get('nut') or [])}")
+    except Exception as e:      # noqa: BLE001
+        nc.nhat_ky(f"Chẩn đoán '{ten}' không đọc được: {e}")
+
+
 def tha_cam_xuc(nc, pham_vi, cam_xuc: str = "thich") -> str:
     """Thả cảm xúc lên bài. Trả 'thanh_cong' | 'da_co' | 'chay_thu' | 'khong_thay' | 'khong_doi'."""
     if cam_xuc == "ngau_nhien":
@@ -296,6 +314,7 @@ def tha_cam_xuc(nc, pham_vi, cam_xuc: str = "thich") -> str:
         return "da_co"
     nut = tim_nut(pham_vi, _THICH_CHUA, 6000)
     if not nut:
+        chan_doan_nut(nc, pham_vi, "Thích")
         return "khong_thay"
     ten = {"thich": "Thích", "yeu_thich": "Yêu thích", "thuong_thuong": "Thương thương"}.get(cam_xuc, cam_xuc)
     if not nc.duoc_bam_cong_khai(f"thả cảm xúc '{ten}'", "thich"):
@@ -419,6 +438,7 @@ def chia_se(nc, pham_vi) -> str:
     """Chia sẻ bài lên tường (Chia sẻ ngay). Trả 'thanh_cong' | 'chay_thu' | 'khong_thay' | 'khong_chac'."""
     nut = tim_nut(pham_vi, _NUT_CHIA_SE, 6000)
     if not nut:
+        chan_doan_nut(nc, pham_vi, "Chia sẻ")
         return "khong_thay"
     if not nc.duoc_bam_cong_khai("chia sẻ bài lên tường", "chia_se"):
         return "chay_thu"

@@ -418,7 +418,14 @@ def fb_tra_loi_tin_nhan(nc) -> str:
                 nc.nhat_ky(f"Bỏ qua nhóm chat: {h['ten']}")
                 continue
             tin = _doc_hoi_thoai(nc)
-            if not tin or tin[-1]["tu"] != "khach":
+            if not tin:
+                nc.su_kien("tra_loi_tin_nhan", "bo_qua", f"Không đọc được tin trong hội thoại {h['ten']}"
+                           + (" (Messenger đang khoá tin mã hoá, cần nhập PIN một lần)" if _co_pin(nc) else ""),
+                           link=h["link"])
+                continue
+            if tin[-1]["tu"] != "khach":
+                nc.su_kien("tra_loi_tin_nhan", "bo_qua", f"Tin cuối của {h['ten']} là của nick, không cần trả lời",
+                           link=h["link"])
                 continue
             ht = nc.hoi_thoai(khach_ten=h["ten"], khach_link=h["link"], tin=tin, san_pham_id=sp)
             if not ht.get("bot_duoc_tra_loi", True):
